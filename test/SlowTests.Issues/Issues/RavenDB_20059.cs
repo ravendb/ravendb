@@ -6,6 +6,7 @@ using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Documents.ETL;
 using Tests.Infrastructure;
 using Xunit;
+using Raven.Server.Documents.TasksErrors;
 
 namespace SlowTests.Issues
 {

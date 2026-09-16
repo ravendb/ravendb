@@ -64,6 +64,9 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("AI Assistant")]
         AiAssistant,
 
+        [Description("Quill")]
+        Quill,
+
         [Description("Cores Limit")]
         Cores,
 
@@ -121,6 +124,9 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("Server Wide Analyzers")]
         ServerWideAnalyzers,
 
+        [Description("Server Wide Connection Strings")]
+        ServerWideConnectionStrings,
+
         [Description("Index Cleanup")]
         IndexCleanup,
 
@@ -135,6 +141,9 @@ namespace Raven.Client.Exceptions.Commercial
 
         [Description("Queue Sink")]
         QueueSink,
+
+        [Description("CDC Sink")]
+        CdcSink,
 
         [Description("Data Archival")]
         DataArchival,

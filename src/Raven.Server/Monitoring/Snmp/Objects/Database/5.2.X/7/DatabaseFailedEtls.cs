@@ -1,7 +1,7 @@
+using Raven.Server.Documents.TasksErrors;
 using System.Linq;
 using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
-using Raven.Server.Documents.ETL;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database;
 
@@ -18,6 +18,6 @@ public sealed class DatabaseFailedEtls : DatabaseScalarObjectBase<Integer32>
     
     private static int GetCount(DocumentDatabase database)
     {
-        return database.EtlLoader.Processes.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Failed);
+        return database.EtlLoader.Processes.Count(x => x.Statistics.HealthStatus == OngoingTaskHealthStatus.Failed);
     }
 }

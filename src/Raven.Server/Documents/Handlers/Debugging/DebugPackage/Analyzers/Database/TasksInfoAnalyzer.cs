@@ -61,7 +61,7 @@ public class TasksInfoAnalyzer(
 
         var taskCounts = new DatabaseOngoingTasksInfoItem();
 
-        TasksInfo = new TasksAnalysisInfo { TaskCounts = taskCounts };
+        TasksInfo = new TasksAnalysisInfo { TaskCounts = taskCounts, OngoingTasksEntry = ongoingTasksEntry };
 
         foreach (var ongoingTask in ongoingTasks.OngoingTasks)
         {
@@ -137,6 +137,9 @@ public class TasksInfoAnalyzer(
                     break;
                 case OngoingTaskType.GenAi:
                     taskCounts.GenAiCount++;
+                    break;
+                case OngoingTaskType.CdcSink:
+                    taskCounts.CdcSinkCount++;
                     break;
                 default:
                     throw new NotSupportedException($"Unknown task type: {ongoingTask.TaskType}");

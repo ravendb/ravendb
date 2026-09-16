@@ -1,155 +1,97 @@
-@use "sass:color";
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
-@use "Content/scss/bs5variables";
 
-$translate-before-hover-x: 0;
-$translate-hover-x: 100%;
-
-%ongoing-task-card {
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    min-height: 131.55px;
-    border: 1px solid colors.$border-color-light-var;
-    border-radius: sizes.$border-radius;
-    transition: bs5variables.$transition-base;
-
-    .card-body {
-        position: relative;
-        z-index: 4;
-    }
-
-    &::before {
-        content: "";
-        position: absolute;
-        width: 66.66%;
-        height: 100%;
-        background: transparent;
-        filter: blur(50px);
-        transition: bs5variables.$transition-base;
-    }
+.add-new-ongoing-task .radio-toggle .toggle-knob i {
+    align-items: center;
 }
-
-$variants: (
-    AI: (
-        border-color: map-get(colors.$task-colors, "ai"),
-        before-gradient: linear-gradient(
-                102deg,
-                rgba(map-get(colors.$task-colors, "ai"), 0.3) 0%,
-                rgba(map-get(colors.$task-colors, "ai"), 0.2) 33%,
-                rgba(123, 81, 255, 0.1) 66%,
-                rgba(123, 81, 255, 0) 91.78%
-            ),
-        before-transform: translateX(50%),
-        before-hover-transform: translateX($translate-hover-x),
-    ),
-    Replication: (
-        border-color: map-get(colors.$task-colors, "replication"),
-        before-gradient: linear-gradient(
-                102deg,
-                rgba(map-get(colors.$task-colors, "replication"), 0.35) 1.5%,
-                rgba(map-get(colors.$task-colors, "replication"), 0) 91.78%
-            ),
-        before-transform: translateX($translate-before-hover-x),
-        before-hover-transform: translateX($translate-hover-x),
-        icon-color: map-get(colors.$task-colors, "replication"),
-    ),
-    Backups: (
-        border-color: map-get(colors.$task-colors, "backups"),
-        before-gradient: linear-gradient(
-                102deg,
-                rgba(map-get(colors.$task-colors, "backups"), 0.35) 1.5%,
-                rgba(map-get(colors.$task-colors, "backups"), 0) 91.78%
-            ),
-        before-transform: translateX($translate-before-hover-x),
-        before-hover-transform: translateX($translate-hover-x),
-        icon-color: map-get(colors.$task-colors, "backups"),
-    ),
-    Subscriptions: (
-        border-color: map-get(colors.$task-colors, "subscriptions"),
-        before-gradient: linear-gradient(
-                102deg,
-                rgba(map-get(colors.$task-colors, "subscriptions"), 0.35) 1.5%,
-                rgba(map-get(colors.$task-colors, "subscriptions"), 0) 91.78%
-            ),
-        before-transform: translateX($translate-before-hover-x),
-        before-hover-transform: translateX($translate-hover-x),
-        icon-color: map-get(colors.$task-colors, "subscriptions"),
-    ),
-    ETL: (
-        border-color: map-get(colors.$task-colors, "etl"),
-        before-gradient: linear-gradient(
-                102deg,
-                rgba(map-get(colors.$task-colors, "etl"), 0.35) 1.5%,
-                rgba(map-get(colors.$task-colors, "etl"), 0) 91.78%
-            ),
-        before-transform: translateX($translate-before-hover-x),
-        before-hover-transform: translateX($translate-hover-x),
-        icon-color: map-get(colors.$task-colors, "etl"),
-    ),
-    Sink: (
-        border-color: map-get(colors.$task-colors, "sink"),
-        before-gradient: linear-gradient(
-                102deg,
-                rgba(map-get(colors.$task-colors, "sink"), 0.35) 1.5%,
-                rgba(map-get(colors.$task-colors, "sink"), 0) 91.78%
-            ),
-        before-transform: translateX($translate-before-hover-x),
-        before-hover-transform: translateX($translate-hover-x),
-        icon-color: map-get(colors.$task-colors, "sink"),
-    ),
-);
 
 .add-new-ongoing-task {
-    @each $name, $props in $variants {
-        $selector: unquote(".add-new-ongoing-task__card.variant-#{$name}");
-        #{$selector} {
-            @extend %ongoing-task-card;
+    height: calc(100% - #{sizes.$gutter});
+    margin: #{sizes.$gutter} #{sizes.$gutter} 0 #{sizes.$gutter};
+}
 
-            .task-icon {
-                color: map-get($props, icon-color);
-            }
+.add-new-ongoing-task-layout {
+    flex: 1;
+    min-height: 0;
 
-            &::before {
-                width: 100%;
-                background: map-get($props, before-gradient);
-                left: -100%;
-                filter: blur(2px);
-                transition: bs5variables.$transition-base;
-                transform: map-get($props, before-transform);
-            }
-
-            &:hover {
-                border-color: map-get($props, border-color);
-
-                &::before {
-                    transform: map-get($props, before-hover-transform);
-                }
-            }
-        }
+    @media (max-width: #{sizes.$screen-sm-max}) {
+        margin-top: 0 !important;
     }
 }
 
-.ongoing-tasks-grid {
-    grid-template-columns: 1fr;
+.add-new-ongoing-task-content {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    container-type: inline-size;
+}
 
-    @media (min-width: sizes.$screen-sm) {
-        grid-template-columns: 1fr 1fr;
-    }
+.add-new-ongoing-task-sidebar {
+    width: 250px;
+    min-width: 0;
+    height: fit-content;
+    background: colors.$panel-bg-1;
+    border-radius: sizes.$border-radius;
 
-    @media (min-width: sizes.$screen-lg) {
-        grid-template-columns: 1fr 1fr 1fr;
+    @media (max-width: #{sizes.$screen-sm-max}) {
+        display: none;
     }
 }
 
-.variant-AI {
-    i {
-        &::before {
-            background: colors.$ai-gradient;
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+.add-new-ongoing-task-horizontal-nav {
+    display: none;
+
+    @media (max-width: #{sizes.$screen-sm-max}) {
+        display: flex;
+        flex-direction: column;
+        margin-top: sizes.$gutter-sm;
+    }
+}
+
+.add-new-ongoing-task-sidebar,
+.add-new-ongoing-task-horizontal-nav {
+    .form-control.filtering-input {
+        min-width: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 32px;
+        padding-top: 0;
+        padding-bottom: 0;
+        padding-left: sizes.$gutter-xs !important;
+        padding-right: sizes.$gutter-xs !important;
+    }
+}
+
+a.add-new-ongoing-task-nav-item {
+    display: flex;
+    align-items: center;
+    gap: sizes.$gutter-xxs;
+    width: 100%;
+    padding: sizes.$gutter-xxs sizes.$gutter-xs;
+    border-radius: sizes.$border-radius-sm;
+    text-align: left;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+        background: colors.$panel-bg-2-var;
+    }
+}
+
+.add-new-ongoing-task-filter-item.form-check {
+    padding: sizes.$gutter-xxs;
+    border-radius: sizes.$border-radius-sm;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+        background: colors.$panel-bg-2-var;
+    }
+
+    .form-check {
+        min-height: 0 !important;
+    }
+
+    .form-check-label {
+        width: 100%;
+        cursor: pointer;
     }
 }

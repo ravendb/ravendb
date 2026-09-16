@@ -12,7 +12,7 @@ export default {
     parameters: {
         design: {
             type: "figma",
-            url: "https://www.figma.com/design/Pnq4o0bS339PuDPeeVmRUZ/Pages---Gather-Debug-Info?node-id=0-1&t=Fy6eq722sNuFRbIu-1",
+            url: "https://www.figma.com/design/0AC6Rm0JBS5FBt3rsRKxOl/Pages---Debug-Package-Analyzer?node-id=232-7456",
         },
     },
 } satisfies Meta<typeof GatherDebugInfo>;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 using PgSqlParser;
 using Sparrow.Extensions;
 
@@ -14,6 +15,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
     internal sealed record ParsedNot(ParsedWhere Child) : ParsedWhere;
 
     internal sealed record ParsedBinary(IReadOnlyList<string> FieldPath, string Operator, ParsedValue Value) : ParsedWhere;
+    internal sealed record ParsedLike(IReadOnlyList<string> FieldPath, ParsedValue Pattern, bool CaseInsensitive, bool Negated) : ParsedWhere;
     internal sealed record ParsedIn(IReadOnlyList<string> FieldPath, IReadOnlyList<ParsedValue> Values, bool Negated) : ParsedWhere;
     internal sealed record ParsedBetween(IReadOnlyList<string> FieldPath, ParsedValue Lower, ParsedValue Upper) : ParsedWhere;
     internal sealed record ParsedIsNull(IReadOnlyList<string> FieldPath, bool Negated) : ParsedWhere;
@@ -23,6 +25,106 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
     // For the Parameter kind, Raw holds the 1-based PG parameter index (int) from a $N
     // placeholder — not a literal value. The value itself isn't known until Bind time.
     internal sealed record ParsedValue(object Raw, ParsedValueKind Kind);
+
+    internal enum SqlLikeShape { Equals, StartsWith, EndsWith }
+
+    // LIKE / ILIKE pattern shapes that map onto an RQL predicate, and readable limitations for the ones
+    // that don't. Shared by the translator (which emits the RQL) and UnhandledQueryDiagnoser (which turns
+    // a rejection into the wire error), so both agree on exactly which shapes are supported.
+    internal static class SqlLikePattern
+    {
+        public static bool IsLikeOperator(string op) => op is "~~" or "!~~" or "~~*" or "!~~*";
+
+        public static bool IsCaseInsensitive(string op) => op is "~~*" or "!~~*";
+
+        public static bool IsNegated(string op) => op is "!~~" or "!~~*";
+
+        public static bool TryClassify(string pattern, out SqlLikeShape shape, out string literal, out string limitation)
+        {
+            shape = default;
+            literal = null;
+            limitation = null;
+
+            if (pattern == null)
+            {
+                limitation = NonLiteralPattern;
+                return false;
+            }
+
+            if (pattern.Contains('\\'))
+            {
+                limitation = "A LIKE / ILIKE pattern containing a backslash escape (e.g. `\\%`, `\\_`) is not supported by the PostgreSQL bridge. RQL's startsWith / endsWith take a plain prefix or suffix and cannot express an escaped wildcard, so the pattern is rejected rather than matched incorrectly. Rewrite the filter without escapes, or run it as RQL.";
+                return false;
+            }
+
+            if (pattern.Contains('_'))
+            {
+                limitation = "The LIKE / ILIKE single-character wildcard `_` is not supported by the PostgreSQL bridge. RQL has no single-character wildcard — startsWith / endsWith match a literal prefix or suffix — so the pattern is rejected rather than matched incorrectly. Use a `%` prefix / suffix pattern instead, or run the filter as RQL.";
+                return false;
+            }
+
+            var wildcards = 0;
+            foreach (var ch in pattern)
+            {
+                if (ch == '%')
+                    wildcards++;
+            }
+
+            if (wildcards == 0)
+            {
+                shape = SqlLikeShape.Equals;
+                literal = pattern;
+                return true;
+            }
+
+            if (wildcards == 1)
+            {
+                if (pattern[^1] == '%')
+                {
+                    shape = SqlLikeShape.StartsWith;
+                    literal = pattern[..^1];
+                }
+                else if (pattern[0] == '%')
+                {
+                    shape = SqlLikeShape.EndsWith;
+                    literal = pattern[1..];
+                }
+                else
+                {
+                    limitation = InteriorWildcard;
+                    return false;
+                }
+
+                if (literal.Length == 0)
+                {
+                    limitation = MatchesEverything;
+                    return false;
+                }
+
+                return true;
+            }
+
+            if (wildcards == 2 && pattern[0] == '%' && pattern[^1] == '%' && pattern.AsSpan(1, pattern.Length - 2).Contains('%') == false)
+            {
+                limitation = pattern.Length == 2
+                    ? MatchesEverything
+                    : "A `%text%` (contains) LIKE / ILIKE pattern is not supported by the PostgreSQL bridge. RQL has no substring predicate: search() matches whole analyzed tokens rather than substrings (`search(Name, 'choc')` does not match `Chocolade`), and regex() runs against the index terms, so neither reproduces LIKE's semantics. Use a `text%` (starts-with) or `%text` (ends-with) filter instead, or run the query as RQL.";
+                return false;
+            }
+
+            limitation = InteriorWildcard;
+            return false;
+        }
+
+        public const string NonLiteralPattern =
+            "A LIKE / ILIKE pattern that is not a plain string literal is not supported by the PostgreSQL bridge. The pattern shape decides which RQL predicate the filter becomes, so it has to be known when the statement is translated — a `$n` placeholder or an ESCAPE clause is not. Inline the pattern into the SQL text, or run the query as RQL.";
+
+        private const string InteriorWildcard =
+            "A LIKE / ILIKE pattern with a `%` wildcard in the middle (e.g. `a%b`) is not supported by the PostgreSQL bridge. RQL can express a literal prefix (startsWith) or suffix (endsWith), not an arbitrary wildcard position, so the pattern is rejected rather than matched incorrectly. Split the filter, or run the query as RQL.";
+
+        private const string MatchesEverything =
+            "A LIKE / ILIKE pattern consisting only of `%` wildcards matches every value and has no RQL equivalent. Drop the filter, or use `IS NOT NULL` if the intent was to exclude missing values.";
+    }
 
     internal static class SqlWhereParser
     {
@@ -124,6 +226,26 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
             if (TryGetBinaryOp(aExpr, out var op) == false)
                 return false;
 
+            if (SqlLikePattern.IsLikeOperator(op))
+            {
+                if (TryExtractFieldPath(aExpr.Lexpr, outerAliasToStrip, out var likeField) == false)
+                    return false;
+
+                // A rexpr that isn't a scalar (an ESCAPE clause parses as pg_catalog.like_escape(...))
+                // fails here; UnhandledQueryDiagnoser names the limitation for the user.
+                if (TryExtractScalar(aExpr.Rexpr, out var pattern) == false)
+                    return false;
+
+                result = new ParsedLike(likeField, pattern, SqlLikePattern.IsCaseInsensitive(op), SqlLikePattern.IsNegated(op));
+                return true;
+            }
+
+            // IS [NOT] DISTINCT FROM, NULLIF and the ANY/ALL forms are all built as an A_Expr whose
+            // operator name is a plain "=", so without this gate they pass IsKnownBinaryOp and become
+            // an ordinary equality test — the inverse of what IS DISTINCT FROM means.
+            if (IsAExprKind(aExpr, A_Expr_Kind.AexprOp) == false)
+                return false;
+
             if (IsKnownBinaryOp(op) == false)
                 return false;
 
@@ -205,6 +327,9 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
             }
 
             if (TryExtractTimestampLiteral(node, out value))
+                return true;
+
+            if (TryExtractTimestampFunction(node, out value))
                 return true;
 
             var c = node.AConst;
@@ -323,6 +448,97 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                 return false;
 
             value = new ParsedValue(dt.GetDefaultRavenFormat(), ParsedValueKind.Timestamp);
+            return true;
+        }
+
+        // Superset's Time Range filter emits every datetime bound as to_timestamp(<literal>, <format>).
+        private static bool TryExtractTimestampFunction(Node node, out ParsedValue value)
+        {
+            value = null;
+
+            if (node?.FuncCall?.Funcname is not { Count: > 0 } names)
+                return false;
+
+            var funcName = names[names.Count - 1]?.String?.Sval;
+            var dateOnly = string.Equals(funcName, "to_date", StringComparison.OrdinalIgnoreCase);
+            if (dateOnly == false && string.Equals(funcName, "to_timestamp", StringComparison.OrdinalIgnoreCase) == false)
+                return false;
+
+            // The single-argument to_timestamp(epoch) overload takes no format string; only the
+            // two-literal form is recognised, everything else falls through to rejection.
+            if (node.FuncCall.Args is not { Count: 2 } args)
+                return false;
+
+            var raw = args[0]?.AConst?.Sval?.Sval;
+            var format = args[1]?.AConst?.Sval?.Sval;
+            if (raw == null || format == null)
+                return false;
+
+            if (TryConvertPgDateFormat(format, out var netFormat) == false)
+                return false;
+
+            if (DateTime.TryParseExact(raw, netFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt) == false)
+                return false;
+
+            if (dateOnly)
+                dt = dt.Date;
+
+            value = new ParsedValue(dt.GetDefaultRavenFormat(), ParsedValueKind.Timestamp);
+            return true;
+        }
+
+        private static readonly (string Pg, string Net)[] PgDateFormatTokens =
+        {
+            ("YYYY", "yyyy"),
+            ("HH24", "HH"),
+            ("MM", "MM"),
+            ("DD", "dd"),
+            ("MI", "mm"),
+            ("SS", "ss"),
+            ("US", "ffffff"),
+            ("MS", "fff"),
+        };
+
+        private const string PgDateFormatSeparators = "-/:. ,T";
+
+        // Only the subset of PG's format language listed above translates; an unrecognised token has to
+        // fail the whole format rather than be passed through as a literal, which would shift the value.
+        private static bool TryConvertPgDateFormat(string format, out string netFormat)
+        {
+            netFormat = null;
+            if (string.IsNullOrWhiteSpace(format))
+                return false;
+
+            var builder = new StringBuilder(format.Length * 2);
+            var i = 0;
+            while (i < format.Length)
+            {
+                var matched = false;
+                foreach (var (pg, net) in PgDateFormatTokens)
+                {
+                    if (i + pg.Length > format.Length)
+                        continue;
+
+                    if (string.Compare(format, i, pg, 0, pg.Length, StringComparison.OrdinalIgnoreCase) != 0)
+                        continue;
+
+                    builder.Append(net);
+                    i += pg.Length;
+                    matched = true;
+                    break;
+                }
+
+                if (matched)
+                    continue;
+
+                if (PgDateFormatSeparators.IndexOf(format[i]) < 0)
+                    return false;
+
+                builder.Append('\\').Append(format[i]);
+                i++;
+            }
+
+            netFormat = builder.ToString();
             return true;
         }
     }

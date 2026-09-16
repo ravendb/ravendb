@@ -29,21 +29,16 @@ type AzureServiceBusSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskAzureS
 
 function Details(props: AzureServiceBusSinkPanelProps & { canEdit: boolean }) {
     const { data, canEdit } = props;
-    const { appUrl } = useAppUrls();
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(
-        databaseName,
-        "AzureServiceBus",
-        data.shared.connectionStringName
-    );
     return (
         <RichPanelDetails>
             <ConnectionStringItem
                 connectionStringDefined
                 canEdit={canEdit}
                 connectionStringName={data.shared.connectionStringName}
-                connectionStringsUrl={connectionStringsUrl}
+                connectionStringType="AzureServiceBus"
+                databaseName={databaseName}
             />
         </RichPanelDetails>
     );

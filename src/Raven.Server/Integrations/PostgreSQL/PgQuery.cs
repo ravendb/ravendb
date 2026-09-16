@@ -60,6 +60,9 @@ namespace Raven.Server.Integrations.PostgreSQL
                 if (PgVirtualInterpreter.TryExecute(queryText, new VirtualQueryContext { Database = documentDatabase, Username = username }, out var virtualTable))
                     return new VirtualInterpreterQuery(queryText, parametersDataTypes, virtualTable);
 
+                if (PgSqlToRqlTranslator.TryParseScalarCount(queryText, documentDatabase, out var countRql, out var countColumns))
+                    return new PgScalarCountQuery(countRql, parametersDataTypes, documentDatabase, countColumns);
+
                 if (PgSqlToRqlTranslator.TryParse(queryText, parametersDataTypes, documentDatabase, out var rql, out var hasExplicitProjection))
                 {
                     return hasExplicitProjection

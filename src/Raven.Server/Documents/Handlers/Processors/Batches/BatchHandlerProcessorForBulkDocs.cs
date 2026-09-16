@@ -44,10 +44,10 @@ internal sealed class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
         return command.Reply;
     }
 
-    protected override async ValueTask WaitForIndexesAsync(IndexBatchOptions options, string lastChangeVector, long lastTombstoneEtag,
+    protected override async ValueTask WaitForIndexesAsync(IndexBatchOptions options, ChangeVector lastChangeVector, long lastTombstoneEtag,
         HashSet<string> modifiedCollections, CancellationToken token = default)
     {
-        long lastEtag = ChangeVectorUtils.GetEtagById(lastChangeVector, RequestHandler.Database.DbBase64Id);
+        long lastEtag = ChangeVectorUtils.GetEtagById(lastChangeVector.Order, RequestHandler.Database.DbBase64Id);
         await WaitForIndexesAsync(RequestHandler.Database, options.WaitForIndexesTimeout, options.WaitForSpecificIndexes, options.ThrowOnTimeoutInWaitForIndexes, lastEtag, lastTombstoneEtag, modifiedCollections, token);
     }
 
@@ -121,19 +121,17 @@ internal sealed class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
         }
     }
 
-    protected override async ValueTask WaitForReplicationAsync(DocumentsOperationContext context, ReplicationBatchOptions options, string lastChangeVector)
+    protected override async ValueTask WaitForReplicationAsync(DocumentsOperationContext context, ReplicationBatchOptions options, ChangeVector lastChangeVector)
     {
         var numberOfReplicasToWaitFor = options.Majority
             ? RequestHandler.Database.ReplicationLoader.GetMinNumberOfReplicas()
             : options.NumberOfReplicasToWaitFor;
 
-        var changeVector = context.GetChangeVector(lastChangeVector);
-
         var replicatedPast = await RequestHandler.Database.ReplicationLoader.WaitForReplicationAsync(
             context,
             numberOfReplicasToWaitFor,
             options.WaitForReplicasTimeout,
-            changeVector);
+            lastChangeVector.Order);
 
         if (replicatedPast < numberOfReplicasToWaitFor && options.ThrowOnTimeoutInWaitForReplicas)
         {

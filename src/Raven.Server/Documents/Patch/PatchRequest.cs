@@ -21,7 +21,8 @@ namespace Raven.Server.Documents.Patch
         QueueSink,
         SnowflakeEtl,
         EmbeddingsGeneration,
-        GenAi
+        GenAi,
+        CdcSink
     }
 
     /// <summary>
@@ -93,18 +94,28 @@ namespace Raven.Server.Documents.Patch
                 case PatchRequestType.Patch:
                 case PatchRequestType.GenAi:
                 case PatchRequestType.EmbeddingsGeneration:
-                    return $@"
- function __actual_func(args) {{ 
-Raven_ExplodeArgs(this, args);
-{Script}
+                    return $$"""
+                            function __actual_func(args) {
+                                Raven_ExplodeArgs(this, args);
+                                {{Script}}
+                            };
 
-}};
-
-function execute(doc, args){{ 
-    __actual_func.call(doc, args);
-    return doc;
-}}";
-                
+                            function execute(doc, args){
+                                __actual_func.call(doc, args);
+                                return doc;
+                            }
+                            """;
+                case PatchRequestType.CdcSink:
+                    return $$"""
+                        function __actual_func(rows) {
+                            {{Script}}
+                        };
+                        
+                        function execute(doc, rows){
+                            __actual_func.call(doc, rows);
+                            return doc;
+                        }
+                        """;
                 case PatchRequestType.Conflict:
                     throw new NotSupportedException($"Use {nameof(ConflictPatchRequest)} to represent a patch request that is a result of a conflict");
 

@@ -2,6 +2,7 @@
 
 [assembly: InternalsVisibleTo("Raven.Client")]
 [assembly: InternalsVisibleTo("Raven.Server")]
+[assembly: InternalsVisibleTo("Raven.Quill")]
 [assembly: InternalsVisibleTo("Raven.TestDriver")]
 [assembly: InternalsVisibleTo("Raven.Embedded")]
 [assembly: InternalsVisibleTo("Sparrow.Server")]

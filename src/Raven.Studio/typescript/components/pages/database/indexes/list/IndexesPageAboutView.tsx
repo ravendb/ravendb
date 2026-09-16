@@ -45,13 +45,7 @@ export default function IndexesPageAboutView({ isUnlimited }: IndexesPageAboutVi
 
     return (
         <AboutViewFloating>
-            <AccordionItemWrapper
-                icon="about"
-                color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
-                targetId="about-view"
-            >
+            <AccordionItemWrapper icon="about" color="info" targetId="about-view">
                 <p>
                     Manage all indexes in the database from this view.
                     <br />
@@ -96,23 +90,27 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: Infinity },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
+        quill: { value: Infinity },
     },
     {
         featureName: "Static indexes limit per cluster",
         community: { value: Infinity },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
+        quill: { value: Infinity },
     },
     {
         featureName: "Auto indexes limit per database",
         community: { value: Infinity },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
+        quill: { value: Infinity },
     },
     {
         featureName: "Static indexes limit per database",
         community: { value: Infinity },
         professional: { value: Infinity },
         enterprise: { value: Infinity },
+        quill: { value: Infinity },
     },
 ];

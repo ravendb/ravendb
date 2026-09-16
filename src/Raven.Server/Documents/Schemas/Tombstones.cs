@@ -26,7 +26,10 @@ namespace Raven.Server.Documents.Schemas
             Collection = 5,
             Flags = 6,
             ChangeVector = 7,
-            LastModified = 8
+            LastModified = 8,
+
+            // Parent revision's cv.Version; populated only on RT (Type=Revision) and RAT (Type=Attachment, 'r') rows. Readers dispatch on tvr.Count >= 10.
+            RevisionVersion = 9
         }
 
         static Tombstones()

@@ -2,7 +2,6 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { useServices } from "components/hooks/useServices";
-import { connectionStringsActions } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import { useEffect } from "react";
@@ -36,7 +35,6 @@ export default function useEditAiAgent(queryParams: QueryParams) {
 
     // Set connection strings view context on mount and reset store on unmount
     useEffect(() => {
-        dispatch(connectionStringsActions.viewContextSet("aiTask"));
         dispatch(editAiAgentActions.getAllIdentifiers(databaseName));
 
         return () => {

@@ -17,8 +17,10 @@ namespace Raven.Server.Documents.Studio
         public long CountOfIndexingErrors { get; set; }
 
         public long CountOfEtlTasksErrors { get; set; }
-        
+
         public long CountOfAiTasksErrors { get; set; }
+
+        public long CountOfCdcSinkTasksErrors { get; set; }
 
         public void CombineWith(FooterStatistics stats)
         {
@@ -28,6 +30,7 @@ namespace Raven.Server.Documents.Studio
             CountOfIndexingErrors += stats.CountOfIndexingErrors;
             CountOfEtlTasksErrors += stats.CountOfEtlTasksErrors;
             CountOfAiTasksErrors += stats.CountOfAiTasksErrors;
+            CountOfCdcSinkTasksErrors += stats.CountOfCdcSinkTasksErrors;
 
             if (StaleIndexes == null)
                 StaleIndexes = stats.StaleIndexes;

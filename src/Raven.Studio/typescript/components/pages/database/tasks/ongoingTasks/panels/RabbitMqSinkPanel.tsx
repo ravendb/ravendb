@@ -29,21 +29,16 @@ type RabbitMqSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskRabbitMqSinkI
 
 function Details(props: RabbitMqSinkPanelProps & { canEdit: boolean }) {
     const { data, canEdit } = props;
-    const { appUrl } = useAppUrls();
-
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(
-        databaseName,
-        "RabbitMQ",
-        data.shared.connectionStringName
-    );
+
     return (
         <RichPanelDetails>
             <ConnectionStringItem
                 connectionStringDefined
                 canEdit={canEdit}
                 connectionStringName={data.shared.connectionStringName}
-                connectionStringsUrl={connectionStringsUrl}
+                connectionStringType="RabbitMQ"
+                databaseName={databaseName}
             />
         </RichPanelDetails>
     );

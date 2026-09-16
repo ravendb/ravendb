@@ -515,6 +515,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     task.Disabled = true;
                 }
             }
+
+            if (databaseRecord.CdcSinks != null)
+            {
+                foreach (var task in databaseRecord.CdcSinks)
+                {
+                    task.Disabled = true;
+                }
+            }
         }
 
         private ClusterTopology GetClusterTopology()
@@ -627,6 +635,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.RevisionsForConflicts = smugglerDatabaseRecord.RevisionsForConflicts;
                     databaseRecord.DataArchival = smugglerDatabaseRecord.DataArchival;
                     databaseRecord.QueueSinks = smugglerDatabaseRecord.QueueSinks;
+                    databaseRecord.CdcSinks = smugglerDatabaseRecord.CdcSinks;
                     databaseRecord.SupportedFeatures = smugglerDatabaseRecord.SupportedFeatures;
                     databaseRecord.SnowflakeEtls = smugglerDatabaseRecord.SnowflakeEtls;
                     databaseRecord.SnowflakeConnectionStrings = smugglerDatabaseRecord.SnowflakeConnectionStrings;

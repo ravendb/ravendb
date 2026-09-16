@@ -7,6 +7,7 @@ using Raven.Server.Integrations.PostgreSQL.Translation;
 using Sparrow.Extensions;
 using Tests.Infrastructure;
 using Xunit;
+using static Tests.Infrastructure.PostgreSqlHelper;
 
 namespace FastTests.Server.Integrations.PostgreSQL.PowerBI
 {
@@ -115,6 +116,54 @@ namespace FastTests.Server.Integrations.PostgreSQL.PowerBI
 
             Assert.True(PowerBIFetchQuery.TryParse(sql, Array.Empty<int>(), documentDatabase: null, out var pgQuery));
             Assert.IsType<PgSqlTranslatedRqlQuery>(pgQuery);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql | RavenTestCategory.PowerBi)]
+        public void Wrapped_select_star_over_inner_explicit_projection_routes_to_PgSqlTranslatedRqlQuery()
+        {
+            const string sql = """
+                select * from
+                (
+                    SELECT "Name", "Phone"
+                    FROM "public"."Companies"
+                    LIMIT 10
+                ) "_"
+                """;
+
+            Assert.True(PowerBIFetchQuery.TryParse(sql, Array.Empty<int>(), documentDatabase: null, out var pgQuery));
+            Assert.IsType<PgSqlTranslatedRqlQuery>(pgQuery);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql | RavenTestCategory.PowerBi)]
+        public void Wrapped_select_star_over_inner_grouped_aggregate_routes_to_PgSqlTranslatedRqlQuery()
+        {
+            const string sql = """
+                select * from
+                (
+                    SELECT "ShipVia", COUNT(*)
+                    FROM "public"."Orders"
+                    GROUP BY "ShipVia"
+                ) "_"
+                """;
+
+            Assert.True(PowerBIFetchQuery.TryParse(sql, Array.Empty<int>(), documentDatabase: null, out var pgQuery));
+            Assert.IsType<PgSqlTranslatedRqlQuery>(pgQuery);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql | RavenTestCategory.PowerBi)]
+        public void Wrapped_select_star_over_inner_select_star_routes_to_PowerBIRqlQuery()
+        {
+            const string sql = """
+                select * from
+                (
+                    SELECT *
+                    FROM "public"."Companies"
+                    LIMIT 10
+                ) "_"
+                """;
+
+            Assert.True(PowerBIFetchQuery.TryParse(sql, Array.Empty<int>(), documentDatabase: null, out var pgQuery));
+            Assert.IsType<PowerBIRqlQuery>(pgQuery);
         }
 
         [RavenFact(RavenTestCategory.PostgreSql | RavenTestCategory.PowerBi)]
@@ -1570,20 +1619,6 @@ SELECT {
                 """;
 
             Assert.False(PowerBIQuery.TryParse(sql, Array.Empty<int>(), documentDatabase: null, out _));
-        }
-
-        private static string GetQueryString(PgQuery pgQuery)
-        {
-            return (string)typeof(PgQuery)
-                .GetField("QueryString", BindingFlags.Instance | BindingFlags.NonPublic)
-                ?.GetValue(pgQuery);
-        }
-
-        private static int? GetLimit(PgQuery pgQuery)
-        {
-            return (int?)typeof(RqlQuery)
-                .GetField("_limit", BindingFlags.Instance | BindingFlags.NonPublic)
-                ?.GetValue(pgQuery);
         }
 
         private static Dictionary<string, ReplaceColumnValue> GetReplaces(PgQuery pgQuery)

@@ -45,6 +45,19 @@ namespace FastTests.Server.Cluster
         }
 
         [RavenFact(RavenTestCategory.Cluster)]
+        public void ModifyDatabaseSupportedFeaturesCommandRequires72_001()
+        {
+            Assert.Equal(72_001, ClusterCommandsVersionManager.ClusterCommandsVersions[nameof(ModifyDatabaseSupportedFeaturesCommand)]);
+
+            var versionManager = new ClusterCommandsVersionManager();
+            versionManager.SetClusterVersion(72_000);
+            Assert.False(versionManager.CanPutCommand(nameof(ModifyDatabaseSupportedFeaturesCommand)));
+
+            versionManager.SetClusterVersion(72_001);
+            Assert.True(versionManager.CanPutCommand(nameof(ModifyDatabaseSupportedFeaturesCommand)));
+        }
+
+        [RavenFact(RavenTestCategory.Cluster)]
         public void AllClusterCommandHasCtor()
         {
             List<Exception> exceptions = new List<Exception>();

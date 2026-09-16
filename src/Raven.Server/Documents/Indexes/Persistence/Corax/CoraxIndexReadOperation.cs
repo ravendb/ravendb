@@ -69,6 +69,29 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         protected readonly IndexSearcher IndexSearcher;
 
         private readonly IndexFieldsMapping _fieldMappings;
+
+        private Dictionary<string, VectorChunkHighlightingCapture> _vectorChunkHighlightings;
+
+        // RavenDB-27117: called from QueryPlanBuilder while the vector clause is resolved, because that is the only
+        // point where the query vectors exist. Read back per document once the results are produced.
+        internal void CaptureVectorChunkHighlighting(string fieldName, string taskId, float minimumSimilarity, List<byte[]> queryVectors)
+        {
+            _vectorChunkHighlightings ??= new Dictionary<string, VectorChunkHighlightingCapture>(StringComparer.OrdinalIgnoreCase);
+
+            // Several vector.search() calls can target the same field (e.g. several query texts). They resolve against
+            // the same embeddings, so merge their vectors instead of letting the last call overwrite the earlier ones,
+            // which would surface only the chunks near the last query text.
+            if (_vectorChunkHighlightings.TryGetValue(fieldName, out VectorChunkHighlightingCapture existing) && existing.TaskId == taskId)
+            {
+                existing.QueryVectors.AddRange(queryVectors);
+                // The merged vectors match as a union (nearest of any), so keep the least restrictive threshold - a
+                // chunk that satisfied one clause must not be dropped because another clause was stricter.
+                existing.RelaxMinimumSimilarity(minimumSimilarity);
+                return;
+            }
+
+            _vectorChunkHighlightings[fieldName] = new VectorChunkHighlightingCapture(fieldName, taskId, minimumSimilarity, queryVectors);
+        }
         private readonly ByteStringContext _allocator;
         private readonly global::Voron.Impl.LowLevelTransaction _lowLevelTransaction;
 
@@ -631,6 +654,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             THasProjection hasProjections = default;
             THighlighting highlightings = default;
             highlightings.Initialize(queryTimings);
+            _vectorChunkHighlightings = null;
 
             long docsToLoad = pageSize;
             bool runQuery = true;
@@ -942,10 +966,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 return default;
             }
 
+            var highlightingResult = highlightings.Execute(query, documentsContext, _fieldMappings, ref entryReader, document, IndexSearcher);
+
+            if (_vectorChunkHighlightings is { Count: > 0 } && document != null)
+            {
+                highlightingResult ??= new Dictionary<string, Dictionary<string, string[]>>(StringComparer.OrdinalIgnoreCase);
+                CoraxVectorChunkHighlighter.Apply(highlightingResult, _vectorChunkHighlightings, query, document, documentsContext, _index.DocumentDatabase);
+            }
+
             return new QueryResult
             {
                 Result = document,
-                Highlightings = highlightings.Execute(query, documentsContext, _fieldMappings, ref entryReader, document, IndexSearcher),
+                Highlightings = highlightingResult,
             };
         }
 

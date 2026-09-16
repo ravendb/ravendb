@@ -65,6 +65,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             private readonly TransactionOperationContext _context;
             private readonly (string Name, List<string> Transformations) _deletingEtl;
             private readonly (string Name, List<string> Scripts) _deletingQueueSink;
+            private readonly string _deletingCdcSink;
             private readonly TRequestHandler _requestHandler;
 
             public DeleteOngoingTaskAction(TRequestHandler requestHandler, long id, OngoingTaskType type, ServerStore serverStore, TransactionOperationContext context)
@@ -129,6 +130,12 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                             if (genAi != null)
                                 _deletingEtl = (genAi.Name, genAi.Transforms.Select(x => x.Name).ToList());
                             break;
+                        case OngoingTaskType.CdcSink:
+                            var cdcSinks = rawRecord.CdcSinks;
+                            var cdcSink = cdcSinks?.Find(x => x.TaskId == id);
+                            if (cdcSink != null)
+                                _deletingCdcSink = cdcSink.Name;
+                            break;
                     }
                 }
             }
@@ -158,6 +165,14 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
                         maxIndex = maxIndex.HasValue == false ? index : Math.Max(maxIndex.Value, index);
                     }
+                }
+
+                if (_deletingCdcSink != null)
+                {
+                    var (index, _) = await _serverStore.RemoveCdcSinkProcessState(_context, _requestHandler.DatabaseName, _deletingCdcSink,
+                        $"{raftRequestId}/{_deletingCdcSink}");
+
+                    maxIndex = maxIndex.HasValue == false ? index : Math.Max(maxIndex.Value, index);
                 }
 
                 if (maxIndex.HasValue)

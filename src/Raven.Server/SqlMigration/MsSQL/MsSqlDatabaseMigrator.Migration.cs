@@ -67,13 +67,18 @@ namespace Raven.Server.SqlMigration.MsSQL
 
         protected override string LimitRowsNumber(string inputQuery, int? rowsLimit)
         {
-            if (rowsLimit.HasValue) 
+            if (rowsLimit.HasValue)
                 return "select top " + rowsLimit + " rowsLimited.* from (" + inputQuery + ") rowsLimited";
-            
+
             return inputQuery;
         }
 
-        
+        protected override string BuildLimitedSelectQuery(string quotedTable, string whereClause, string orderByClause, int maxRows)
+        {
+            var where = string.IsNullOrEmpty(whereClause) ? string.Empty : $" where {whereClause}";
+            return $"select top {maxRows} * from {quotedTable}{where}{orderByClause}";
+        }
+
         protected override string GetSelectAllQueryForTable(string tableSchema, string tableName)
         {
             return "select * from " + QuoteTable(tableSchema, tableName);

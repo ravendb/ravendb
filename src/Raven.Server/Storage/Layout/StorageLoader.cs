@@ -89,6 +89,13 @@ namespace Raven.Server.Storage.Layout
                                            "This switch is meant to be use only for recovery purposes. Please make sure that you won't use it after you manage to recover your data. " +
                                            $"Eventually you should delete the system storage at '{basePath.FullPath}', start the server and create your databases again with the usage of existing data.";
                                 break;
+                            case StorageEnvironmentWithType.StorageEnvironmentType.SharedJournals:
+                                message += "This is the shared index-journals storage: it holds journal bookkeeping shared by all indexes of the " +
+                                           "database, so the database cannot be loaded without it even though it contains no index data of its own. " +
+                                           "You can start the server in dangerous mode temporarily so it will ignore invalid journals on startup:" +
+                                           $"{Environment.NewLine}{ravenServer} --{RavenConfiguration.GetKey(x => x.Storage.IgnoreInvalidJournalErrors)}=true{Environment.NewLine}" +
+                                           "This switch is meant to be use only for recovery purposes. Please make sure that you won't use it after you manage to recover your data.";
+                                break;
                             default:
                                 throw new ArgumentException($"Unknown storage type: {type}", nameof(type));
 

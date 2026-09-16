@@ -192,6 +192,7 @@ class autoCompleteBindingHandler {
         }
 
         $input.val(selectedValue.text());
+        $input.trigger("input"); // notify knockout textInput binding about the programmatic value change
         const htmlElement: HTMLElement = $input[0];
         htmlElement.scrollLeft = htmlElement.scrollWidth;
     }

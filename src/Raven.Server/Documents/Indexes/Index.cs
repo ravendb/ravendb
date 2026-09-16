@@ -13,7 +13,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Corax.Utils;
 using Microsoft.AspNetCore.Http;
-using Nito.AsyncEx;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
@@ -246,7 +245,7 @@ namespace Raven.Server.Documents.Indexes
         private Lazy<Size?> _transactionSizeLimit;
         private bool _scratchSpaceLimitExceeded;
 
-        private readonly AsyncReaderWriterLock _currentlyRunningQueriesLock = new AsyncReaderWriterLock();
+        private readonly ReaderDrainLock _currentlyRunningQueriesLock = new ReaderDrainLock();
         private readonly AsyncLocal<bool> _isRunningQueriesWriteLockTaken = new AsyncLocal<bool>();
         private readonly MultipleUseFlag _priorityChanged = new MultipleUseFlag();
         private readonly MultipleUseFlag _hadRealIndexingWorkToDo = new MultipleUseFlag();
@@ -359,6 +358,8 @@ namespace Raven.Server.Documents.Indexes
             {
                 using (DrainRunningQueries())
                     DisposeIndex();
+
+                _currentlyRunningQueriesLock.Dispose();
             });
         }
 
@@ -867,7 +868,7 @@ namespace Raven.Server.Documents.Indexes
             try
             {
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
-                    currentlyRunningQueriesWriteLock = _currentlyRunningQueriesLock.WriterLock(cts.Token);
+                    currentlyRunningQueriesWriteLock = _currentlyRunningQueriesLock.EnterWrite(cts.Token);
 
                 _isRunningQueriesWriteLockTaken.Value = true;
             }
@@ -4604,6 +4605,8 @@ namespace Raven.Server.Documents.Indexes
         private int? _minBatchSize;
 
         private const int MinMapBatchSize = 128;
+
+        public const int CanContinueBatchCheckInterval = 128;
         internal const int MinMapReduceBatchSize = 64;
 
         private int MinBatchSize
@@ -4697,7 +4700,7 @@ namespace Raven.Server.Documents.Indexes
             RenewTransaction
         }
 
-        public CanContinueBatchResult CanContinueBatch(in CanContinueBatchParameters parameters, ref TimeSpan maxTimeForDocumentTransactionToRemainOpen)
+        public CanContinueBatchResult CanContinueBatch(in CanContinueBatchParameters parameters, ref TimeSpan maxTimeForDocumentTransactionToRemainOpen, ref long lastCheckedSeenItemsCount)
         {
             if (Configuration.MapBatchSize.HasValue && parameters.Count >= Configuration.MapBatchSize.Value)
             {
@@ -4711,11 +4714,13 @@ namespace Raven.Server.Documents.Indexes
                 return CanContinueBatchResult.False;
             }
 
-            if (parameters.Count % 128 != 0)
+            if (lastCheckedSeenItemsCount > 0 && parameters.SeenCount - lastCheckedSeenItemsCount < CanContinueBatchCheckInterval)
             {
-                // do the actual check only every N ops
+                // the counter advances in jumps (fanout results, loaded items) - do the actual check on the first call and then once per at least CanContinueBatchCheckInterval seen items
                 return CanContinueBatchResult.True;
             }
+
+            lastCheckedSeenItemsCount = parameters.SeenCount;
 
             if (parameters.Sw.Elapsed > maxTimeForDocumentTransactionToRemainOpen)
             {
@@ -4753,11 +4758,10 @@ namespace Raven.Server.Documents.Indexes
                 return CanContinueBatchResult.False;
             }
 
-            var cpuCreditsAlertFlag = DocumentDatabase.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised;
-            if (cpuCreditsAlertFlag.IsRaised())
+            if (DocumentDatabase.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
             {
                 HandleStoppedBatchesConcurrently(parameters.Stats, parameters.Count,
-                   canContinue: () => cpuCreditsAlertFlag.IsRaised() == false,
+                   canContinue: () => DocumentDatabase.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised() == false,
                    reason: "CPU credits balance is low", parameters.WorkType);
 
                 parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, $"The batch was stopped after processing {parameters.Count:#,#;;0} documents because the CPU credits balance is almost completely used");
@@ -5497,18 +5501,8 @@ namespace Raven.Server.Documents.Indexes
 
             private static readonly TimeSpan ExtendedLockTimeout = TimeSpan.FromSeconds(30);
 
-            private static readonly CancellationToken CancelledToken;
-
-            static IndexQueryDoneRunning()
-            {
-                var cts = new CancellationTokenSource();
-                cts.Cancel();
-
-                CancelledToken = cts.Token;
-            }
-
             private readonly Index _parent;
-            private IDisposable _lock;
+            private bool _heldLock;
 
             public IndexQueryDoneRunning(Index parent)
             {
@@ -5521,13 +5515,14 @@ namespace Raven.Server.Documents.Indexes
                     ? ExtendedLockTimeout
                     : DefaultLockTimeout;
 
-                if (_lock != null)
+                if (_heldLock)
                     ThrowLockAlreadyTaken();
 
                 try
                 {
                     using (var cts = new CancellationTokenSource(timeout))
-                        _lock = _parent._currentlyRunningQueriesLock.ReaderLock(cts.Token);
+                        _parent._currentlyRunningQueriesLock.AcquireRead(cts.Token);
+                    _heldLock = true;
                 }
                 catch (OperationCanceledException)
                 {
@@ -5535,19 +5530,33 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            public async ValueTask HoldLockAsync()
+            public ValueTask HoldLockAsync()
             {
+                if (_heldLock)
+                    ThrowLockAlreadyTaken();
+
+                // The common case must stay allocation-free and complete synchronously.
+                // Only fall back to the async slow path when a writer is pending.
+                if (_parent._currentlyRunningQueriesLock.TryAcquireRead())
+                {
+                    _heldLock = true;
+                    return ValueTask.CompletedTask;
+                }
+
                 var timeout = _parent._isReplacing
                     ? ExtendedLockTimeout
                     : DefaultLockTimeout;
 
-                if (_lock != null)
-                    ThrowLockAlreadyTaken();
+                return HoldLockSlowAsync(timeout);
+            }
 
+            private async ValueTask HoldLockSlowAsync(TimeSpan timeout)
+            {
                 try
                 {
                     using (var cts = new CancellationTokenSource(timeout))
-                        _lock = await _parent._currentlyRunningQueriesLock.ReaderLockAsync(cts.Token);
+                        await _parent._currentlyRunningQueriesLock.AcquireReadAsync(cts.Token).ConfigureAwait(false);
+                    _heldLock = true;
                 }
                 catch (OperationCanceledException)
                 {
@@ -5557,18 +5566,13 @@ namespace Raven.Server.Documents.Indexes
 
             public bool TryHoldLock()
             {
-                if (_lock != null)
+                if (_heldLock)
                     ThrowLockAlreadyTaken();
 
-                try
-                {
-                    _lock = _parent._currentlyRunningQueriesLock.ReaderLock(CancelledToken);
-                }
-                catch (OperationCanceledException)
-                {
+                if (_parent._currentlyRunningQueriesLock.TryAcquireRead() == false)
                     return false;
-                }
 
+                _heldLock = true;
                 return true;
             }
 
@@ -5588,14 +5592,26 @@ namespace Raven.Server.Documents.Indexes
 
             public void ReleaseLock()
             {
-                _lock?.Dispose();
-                _lock = null;
+                if (_heldLock == false)
+                    return;
+                _parent._currentlyRunningQueriesLock.ReleaseRead();
+                _heldLock = false;
             }
 
             public void Dispose()
             {
                 ReleaseLock();
+#if DEBUG
+                GC.SuppressFinalize(this);
+#endif
             }
+
+#if DEBUG
+            ~IndexQueryDoneRunning()
+            {
+                Debug.Assert(_heldLock == false, $"IndexQueryDoneRunning for '{_parent?.Name}' finalized without ReleaseLock - read leaked");
+            }
+#endif
         }
 
         internal sealed class ExitWriteLock : IDisposable

@@ -1,0 +1,23 @@
+@use "Content/scss/sizes";
+
+.analysis-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: sizes.$gutter-sm;
+    align-items: start;
+}
+
+@media (min-width: 1200px) {
+    .analysis-layout {
+        grid-template-columns: var(--analysis-rail-width, 220px) minmax(0, 1fr);
+    }
+}
+
+.analysis-content {
+    min-width: 0;
+}
+
+.analysis-section {
+    scroll-margin-top: sizes.$gutter-sm;
+    min-width: 0;
+}

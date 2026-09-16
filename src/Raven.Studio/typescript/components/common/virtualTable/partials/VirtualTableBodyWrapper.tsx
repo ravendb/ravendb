@@ -29,7 +29,7 @@ export default function VirtualTableBodyWrapper<T>({
     children,
 }: PropsWithChildren<VirtualTableBodyWrapperProps<T>> & ClassNameProps) {
     const paddingInPx = isPaddingDisabled ? 0 : virtualTableConstants.paddingInPx;
-    const tableHeightInPx = heightInPx - paddingInPx;
+    const tableHeightInPx = Math.max(heightInPx - paddingInPx, virtualTableConstants.minTableHeightInPx);
 
     return (
         <div

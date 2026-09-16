@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Raven.Server.Documents.ETL;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.TransactionMerger.Commands;
 

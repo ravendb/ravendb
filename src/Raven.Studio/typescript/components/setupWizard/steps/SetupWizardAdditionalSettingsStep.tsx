@@ -61,14 +61,16 @@ function useAdditionalSettingsFormSideEffects() {
     const { licenseKeyStep } = useWatch({ control });
 
     useEffect(() => {
-        if (getLicenseType(licenseKeyStep.licenseInfo).isDeveloper()) {
-            setValue("additionalSettingsStep.studioEnvironment", "Development", {
-                shouldDirty: true,
-            });
-        } else if (getLicenseType(licenseKeyStep.licenseInfo).isProfessionalOrHigher()) {
-            setValue("additionalSettingsStep.studioEnvironment", "Production", {
-                shouldDirty: true,
-            });
+        if (licenseKeyStep.licenseInfo?.licenseStatus?.HasStudioConfiguration) {
+            if (getLicenseType(licenseKeyStep.licenseInfo).isDeveloper()) {
+                setValue("additionalSettingsStep.studioEnvironment", "Development", {
+                    shouldDirty: true,
+                });
+            } else if (getLicenseType(licenseKeyStep.licenseInfo).isProfessionalOrHigher()) {
+                setValue("additionalSettingsStep.studioEnvironment", "Production", {
+                    shouldDirty: true,
+                });
+            }
         }
 
         const { unsubscribe } = watch((values, { name }) => {
@@ -152,7 +154,7 @@ function ServerEnvironmentSection({
     control: Control<SetupWizardFormData>;
     licenseInfo: SetupWizardFormData["licenseKeyStep"]["licenseInfo"];
 }) {
-    if (getLicenseType(licenseInfo).isHigherThan("Community")) {
+    if (licenseInfo?.licenseStatus?.HasStudioConfiguration) {
         return (
             <FormGroup>
                 <FormLabel className="d-flex">
@@ -230,7 +232,7 @@ interface ExperimentalFeaturesSectionProps {
 }
 
 function ExperimentalFeaturesSection({ control, licenseInfo }: ExperimentalFeaturesSectionProps) {
-    if (!getLicenseType(licenseInfo).isHigherThan("Community")) {
+    if (!licenseInfo?.licenseStatus?.HasPostgreSqlIntegration) {
         return null;
     }
 

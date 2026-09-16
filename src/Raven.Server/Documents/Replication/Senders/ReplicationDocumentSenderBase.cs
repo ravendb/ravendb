@@ -209,7 +209,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
                         var msg = $"Found {_orderedReplicaItems.Count:#,#;;0} documents " +
                                   $"and {_replicaAttachmentStreams.Count} attachment's streams " +
-                                  $"to replicate to {_parent.Node.FromString()}, ";
+                                  $"to replicate to {_parent.Destination.FromString()}, ";
 
                         var encryptionSize = documentsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
                         if (encryptionSize > 0)
@@ -245,7 +245,7 @@ namespace Raven.Server.Documents.Replication.Senders
                             Log.Debug($"Sending heartbeat (empty batch, {reason}){skippedInfo}. Last scanned etag: '{_lastEtag}'. WasInterrupted: '{wasInterrupted}'.");
                         }
 
-                        _parent.SendHeartbeat(changeVector);
+                        SendEmptyBatchHeartbeat(changeVector, mergedChangeVector);
                         return hasModification;
                     }
                     
@@ -336,7 +336,7 @@ namespace Raven.Server.Documents.Replication.Senders
             if (item.Type == ReplicationBatchItem.ReplicationItemType.TimeSeriesSegment || item.Type == ReplicationBatchItem.ReplicationItemType.DeletedTimeSeriesRange)
             {
                 // the other side doesn't support TimeSeries, stopping replication
-                var message = $"{_parent.Node.FromString()} found an item of type 'TimeSeries' to replicate to {_parent.Destination.FromString()}, " +
+                var message = $"Replication '{_parent.FromToString}' found an item of type 'TimeSeries', " +
                               $"while we are in legacy mode (downgraded our replication version to match the destination). " +
                               $"Can't send TimeSeries in legacy mode, destination {_parent.Destination.FromString()} does not support TimeSeries feature. Stopping replication. {item}";
 
@@ -353,8 +353,7 @@ namespace Raven.Server.Documents.Replication.Senders
             {
                 // the other side doesn't support counters, stopping replication
                 var message =
-                    $"{_parent.Node.FromString()} found an item of type `{nameof(ReplicationBatchItem.ReplicationItemType.CounterGroup)}` " +
-                    $"to replicate to {_parent.Destination.FromString()}, " +
+                    $"Replication '{_parent.FromToString}' found an item of type `{nameof(ReplicationBatchItem.ReplicationItemType.CounterGroup)}`, " +
                     "while we are in legacy mode (downgraded our replication version to match the destination). " +
                     $"Can't send Counters in legacy mode, destination {_parent.Destination.FromString()} ";
 
@@ -378,7 +377,7 @@ namespace Raven.Server.Documents.Replication.Senders
                 doc.Flags.HasFlag(DocumentFlags.FromClusterTransaction))
             {
                 // the other side doesn't support cluster transactions, stopping replication
-                var message = $"{_parent.Node.FromString()} found a document {doc.Id} with flag `FromClusterTransaction` to replicate to {_parent.Destination.FromString()}, " +
+                var message = $"Replication '{_parent.FromToString}' found a document {doc.Id} with flag `FromClusterTransaction`, " +
                               "while we are in legacy mode (downgraded our replication version to match the destination). " +
                               $"Can't use Cluster Transactions legacy mode, destination {_parent.Destination.FromString()} does not support this feature. " +
                               "Stopping replication.";
@@ -414,7 +413,7 @@ namespace Raven.Server.Documents.Replication.Senders
                 }
 
                 // the other side doesn't support incremental time series, stopping replication
-                var message = $"{_parent.Node.FromString()} found an item of type 'IncrementalTimeSeries' to replicate to {_parent.Destination.FromString()}, " +
+                var message = $"Replication '{_parent.FromToString}' found an item of type 'IncrementalTimeSeries', " +
                               $"while we are in legacy mode (downgraded our replication version to match the destination). " +
                               $"Can't send Incremental-TimeSeries in legacy mode, destination {_parent.Destination.FromString()} does not support Incremental-TimeSeries feature. Stopping replication.";
 
@@ -451,6 +450,11 @@ namespace Raven.Server.Documents.Replication.Senders
         }
 
         protected virtual TimeSpan GetDelayReplication() => TimeSpan.Zero;
+
+        protected virtual void SendEmptyBatchHeartbeat(ChangeVector databaseChangeVector, ChangeVector completedSourceFrontier)
+        {
+            _parent.SendHeartbeat(databaseChangeVector, lastSentSourceChangeVector: null);
+        }
 
         protected sealed class SkippedReplicationItemsInfo
         {
@@ -653,6 +657,7 @@ namespace Raven.Server.Documents.Replication.Senders
             {
                 [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Documents,
                 [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastEtag,
+                [nameof(ReplicationMessageHeader.LastSentChangeVector)] = _parent.LastSentChangeVector,
                 [nameof(ReplicationMessageHeader.ItemsCount)] = _orderedReplicaItems.Count,
                 [nameof(ReplicationMessageHeader.AttachmentStreamsCount)] = _replicaAttachmentStreams.Count
             };
@@ -663,12 +668,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
             foreach (var item in _orderedReplicaItems)
             {
-                // we will dispose item.Value when we are done with writing the stream in the loop below
-                using (item.Value is AttachmentReplicationItem ? item.Value : null)
-                using (Slice.From(documentsContext.Allocator, item.Value.ChangeVector, out var cv))
-                {
-                    item.Value.Write(cv, _stream, _tempBuffer, stats);
-                }
+                WriteReplicationItem(documentsContext, item.Value, stats);
             }
 
             foreach (var item in _replicaAttachmentStreams)
@@ -698,6 +698,26 @@ namespace Raven.Server.Documents.Replication.Senders
 
             _parent._lastDocumentSentTime = DateTime.UtcNow;
         }
+
+        protected virtual void WriteReplicationItem(DocumentsOperationContext documentsContext, ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
+        {
+            // pre-6.0  stored revisions with the full CV as the key (6.0+ always use cv.Version).
+            // to avoid duplicate revisions for pre-6.0 we need to send only the version
+            if (_parent.SupportedFeatures.Replication.RevisionTombstonesWithId == false && IsRevisionItem(item))
+                item.ChangeVector = documentsContext.GetChangeVector(item.ChangeVector).Version;
+
+            // we will dispose item when we are done with writing the stream in the loop below
+            using (item is AttachmentReplicationItem ? item : null)
+            using (Slice.From(documentsContext.Allocator, item.ChangeVector, out var cv))
+            {
+                item.Write(cv, _stream, _tempBuffer, stats);
+            }
+        }
+
+        private static bool IsRevisionItem(ReplicationBatchItem item) =>
+            item is RevisionTombstoneReplicationItem ||
+            (item is DocumentReplicationItem doc &&
+             (doc.Flags.Contain(DocumentFlags.Revision) || doc.Flags.Contain(DocumentFlags.DeleteRevision)));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureValidStats(OutgoingReplicationStatsScope stats)
@@ -781,7 +801,7 @@ namespace Raven.Server.Documents.Replication.Senders
                         if (_parent.Log.IsDebugEnabled)
                              _parent.Log.Debug($"Sending keep-alive heartbeat during active filtering. Current read count: '{ReadCount}'. Last sent etag: '{_parent._lastEtag}'.");
 
-                        _parent._parent.SendHeartbeat(null);
+                        _parent._parent.SendHeartbeat(databaseChangeVector: null, lastSentSourceChangeVector: null);
                         _lastHeartbeatTicks = now;
                     }
                 }

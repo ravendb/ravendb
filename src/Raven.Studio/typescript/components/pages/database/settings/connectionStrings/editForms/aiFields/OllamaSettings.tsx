@@ -9,6 +9,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { connectionStringSelectors } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
@@ -24,6 +25,7 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
     const { control, trigger } = useFormContext<FormData>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const formValues = useWatch({ control });
 
@@ -33,12 +35,15 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             return;
         }
 
-        return tasksService.testAiConnectionString(databaseName, "Ollama", formValues.modelType, {
+        const settings = {
             Model: formValues.ollamaSettings.model,
             Uri: formValues.ollamaSettings.uri,
             Think: formValues.ollamaSettings.think,
             Temperature: formValues.ollamaSettings.isSetTemperature ? formValues.ollamaSettings.temperature : null,
-        });
+        };
+        return isServerWide
+            ? tasksService.testServerWideAiConnectionString("Ollama", formValues.modelType, settings)
+            : tasksService.testAiConnectionString(databaseName, "Ollama", formValues.modelType, settings);
     });
 
     const asyncGetModelOptions = useAsyncDebounce(

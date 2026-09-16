@@ -1,0 +1,393 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Server.Documents;
+using Raven.Client.Documents.Operations.CdcSink.Test;
+using Raven.Server.Documents.CdcSink.Test;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.SqlMigration;
+using Tests.Infrastructure;
+using Xunit;
+using DisposableAction = Raven.Client.Util.DisposableAction;
+
+namespace SlowTests.Server.Documents.CdcSink
+{
+    [Collection(nameof(CdcSinkPostgresTests))]
+    public class CdcSinkPostgresTestMappingTests : CdcSinkIntegrationTestBase
+    {
+        public CdcSinkPostgresTestMappingTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
+        private void ExecuteNpgSql(string connectionString, string sql)
+        {
+            ExecuteSqlQuery(MigrationProvider.NpgSQL, connectionString, sql);
+        }
+
+        private async Task<(DocumentDatabase Db, DocumentsOperationContext Ctx, Raven.Client.Documents.IDocumentStore Store, IDisposable Scope)> SetupAsync()
+        {
+            var store = GetDocumentStore();
+            var db = await GetDatabase(store.Database);
+            var ctxScope = db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx);
+            // Wrap the context allocation + store in a single IDisposable so each test can do
+            // `using var _ = scope;` and release both at the end of the method. Without this,
+            // ContextPool.AllocateOperationContext's disposable was discarded (leaking pooled
+            // contexts across slow-test runs) and the store stayed alive until fixture teardown.
+            var scope = new DisposableAction(() => { ctxScope.Dispose(); store.Dispose(); });
+            return (db, ctx, store, scope);
+        }
+
+        private static CdcSinkTableConfig BuildLecturersTableConfig()
+        {
+            return new CdcSinkTableConfig
+            {
+                CollectionName = "Lecturers",
+                SourceTableSchema = "public",
+                SourceTableName = "lecturers",
+                PrimaryKeyColumns = new List<string> { "id" },
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "id", Name = "DbId" },
+                    new() { Column = "name", Name = "Name" },
+                    new() { Column = "email", Name = "Email" },
+                },
+            };
+        }
+
+        private static async Task<TestCdcSinkMappingResult> RunAsync(
+            DocumentDatabase db,
+            DocumentsOperationContext ctx,
+            string connectionString,
+            CdcSinkConfiguration config,
+            CdcSinkTableConfig table,
+            TestCdcSinkRowSelector selector,
+            string[] pkValues,
+            TestCdcSinkOperation op,
+            int maxRows = 1)
+        {
+            var driver = DatabaseDriverDispatcher.CreateDriver(MigrationProvider.NpgSQL, connectionString);
+            var fetched = await driver.FetchRowsAsync(
+                table.SourceTableSchema, table.SourceTableName, table.PrimaryKeyColumns,
+                selector == TestCdcSinkRowSelector.First ? RowFetchMode.First : RowFetchMode.ByPrimaryKey,
+                pkValues, maxRows, db.DatabaseShutdown);
+
+            return CdcSinkTestRunner.Run(db, ctx, config, table, fetched.ColumnNames, fetched.Rows, op, defaultSchema: "public");
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task HappyPath_SingleRow_Upsert()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200), email VARCHAR(200));
+                INSERT INTO lecturers (id, name, email) VALUES (1, 'Alice', 'alice@example.com');");
+
+            var (db, ctx, _, scope) = await SetupAsync(); using var _scope = scope;
+            var table = BuildLecturersTableConfig();
+            var config = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { table } };
+
+            var result = await RunAsync(db, ctx, connectionString, config, table,
+                TestCdcSinkRowSelector.First, pkValues: null, TestCdcSinkOperation.Upsert, maxRows: 1);
+
+            Assert.Empty(result.Errors);
+            Assert.Single(result.Results);
+
+            var row = result.Results[0];
+            Assert.Null(row.Error);
+            Assert.Equal("Lecturers/1", row.DocumentId);
+            Assert.False(row.WouldDelete);
+            Assert.NotNull(row.Document);
+            Assert.NotNull(row.Document);
+            Assert.Contains("\"Name\":\"Alice\"", row.Document);
+            Assert.Contains("\"Email\":\"alice@example.com\"", row.Document);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task MultiRow_OrderedByPrimaryKey()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200), email VARCHAR(200));
+                INSERT INTO lecturers (id, name, email) VALUES (3, 'C', 'c@x');
+                INSERT INTO lecturers (id, name, email) VALUES (1, 'A', 'a@x');
+                INSERT INTO lecturers (id, name, email) VALUES (5, 'E', 'e@x');
+                INSERT INTO lecturers (id, name, email) VALUES (2, 'B', 'b@x');
+                INSERT INTO lecturers (id, name, email) VALUES (4, 'D', 'd@x');");
+
+            var (db, ctx, _, scope) = await SetupAsync(); using var _scope = scope;
+            var table = BuildLecturersTableConfig();
+            var config = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { table } };
+
+            var result = await RunAsync(db, ctx, connectionString, config, table,
+                TestCdcSinkRowSelector.First, pkValues: null, TestCdcSinkOperation.Upsert, maxRows: 3);
+
+            Assert.Empty(result.Errors);
+            Assert.Equal(3, result.Results.Count);
+            Assert.Equal(new[] { "Lecturers/1", "Lecturers/2", "Lecturers/3" }, result.Results.Select(r => r.DocumentId).ToArray());
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task PatchScript_AppliedToDocument()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200), email VARCHAR(200));
+                INSERT INTO lecturers (id, name, email) VALUES (1, 'Alice', 'alice@example.com');");
+
+            var (db, ctx, _, scope) = await SetupAsync(); using var _scope = scope;
+            var table = BuildLecturersTableConfig();
+            table.Patch = "this.Greeting = 'hello ' + $row.name;";
+            var config = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { table } };
+
+            var result = await RunAsync(db, ctx, connectionString, config, table,
+                TestCdcSinkRowSelector.First, pkValues: null, TestCdcSinkOperation.Upsert, maxRows: 1);
+
+            Assert.Empty(result.Errors);
+            var row = Assert.Single(result.Results);
+            Assert.Null(row.Error);
+            Assert.Contains("\"Greeting\":\"hello Alice\"", row.Document);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task ByPrimaryKey_FetchesMatchingRow()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200), email VARCHAR(200));
+                INSERT INTO lecturers (id, name, email) VALUES (42, 'Forty-Two', 'fortytwo@example.com');");
+
+            var (db, ctx, _, scope) = await SetupAsync(); using var _scope = scope;
+            var table = BuildLecturersTableConfig();
+            var config = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { table } };
+
+            var result = await RunAsync(db, ctx, connectionString, config, table,
+                TestCdcSinkRowSelector.ByPrimaryKey, pkValues: new[] { "42" }, TestCdcSinkOperation.Upsert);
+
+            Assert.Empty(result.Errors);
+            var row = Assert.Single(result.Results);
+            Assert.Equal("Lecturers/42", row.DocumentId);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task PerRowErrorIsolation_PatchThrowsOnOneRow()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200), email VARCHAR(200));
+                INSERT INTO lecturers (id, name, email) VALUES (1, 'A', 'a@x');
+                INSERT INTO lecturers (id, name, email) VALUES (2, 'B', 'b@x');
+                INSERT INTO lecturers (id, name, email) VALUES (3, 'C', 'c@x');
+                INSERT INTO lecturers (id, name, email) VALUES (4, 'D', 'd@x');
+                INSERT INTO lecturers (id, name, email) VALUES (5, 'E', 'e@x');");
+
+            var (db, ctx, _, scope) = await SetupAsync(); using var _scope = scope;
+            var table = BuildLecturersTableConfig();
+            // Patch: emit a unique output() per row, then on row 3 throw before setting Marker.
+            // Row 3 must fail; rows 1/2/4/5 must succeed AND must each carry their own marker
+            // in Document AND each row's DebugOutput must contain only its own output() string
+            // (no leftover noise from neighbouring rows).
+            table.Patch = """
+                output('row-' + $row.id);
+                if ($row.id === 3) throw 'boom';
+                this.Marker = 'row-' + $row.id;
+                """;
+            var config = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { table } };
+
+            var result = await RunAsync(db, ctx, connectionString, config, table,
+                TestCdcSinkRowSelector.First, pkValues: null, TestCdcSinkOperation.Upsert, maxRows: 5);
+
+            Assert.Empty(result.Errors);
+            Assert.Equal(5, result.Results.Count);
+
+            // Per-row error isolation: only row 3 fails.
+            Assert.Null(result.Results[0].Error);
+            Assert.Null(result.Results[1].Error);
+            Assert.NotNull(result.Results[2].Error);
+            Assert.Contains("boom", result.Results[2].Error);
+            Assert.Null(result.Results[3].Error);
+            Assert.Null(result.Results[4].Error);
+
+            // Post-patch Document carries this row's marker (verifies the patch actually ran
+            // and the response holds the post-patch state, not the pre-patch mapping).
+            Assert.Contains("\"Marker\":\"row-1\"", result.Results[0].Document);
+            Assert.Contains("\"Marker\":\"row-2\"", result.Results[1].Document);
+            Assert.Contains("\"Marker\":\"row-4\"", result.Results[3].Document);
+            Assert.Contains("\"Marker\":\"row-5\"", result.Results[4].Document);
+            // Row 3 threw before setting Marker — Document stays at the pre-patch mapping.
+            Assert.DoesNotContain("\"Marker\"", result.Results[2].Document);
+
+            // DebugOutput per row: each row sees only its own output() call. The runner clears
+            // runner.DebugOutput between rows; verify no cross-contamination.
+            for (var i = 0; i < result.Results.Count; i++)
+            {
+                var rowResult = result.Results[i];
+                Assert.NotNull(rowResult.DebugOutput);
+                Assert.Single(rowResult.DebugOutput);
+                Assert.Equal($"row-{i + 1}", rowResult.DebugOutput[0]);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task DeleteMode_ReportsWouldDeleteAndRunsOnDeletePatch()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200), email VARCHAR(200));
+                INSERT INTO lecturers (id, name, email) VALUES (1, 'Alice', 'alice@example.com');");
+
+            var (db, ctx, _, scope) = await SetupAsync(); using var _scope = scope;
+            var table = BuildLecturersTableConfig();
+            table.OnDelete = new CdcSinkOnDeleteConfig
+            {
+                Patch = "output('delete called for ' + $row.id);"
+            };
+            var config = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { table } };
+
+            var result = await RunAsync(db, ctx, connectionString, config, table,
+                TestCdcSinkRowSelector.First, pkValues: null, TestCdcSinkOperation.Delete, maxRows: 1);
+
+            Assert.Empty(result.Errors);
+            var row = Assert.Single(result.Results);
+            Assert.True(row.WouldDelete);
+            Assert.False(row.IgnoreDeletes);
+            Assert.NotNull(row.DebugOutput);
+            Assert.Contains(row.DebugOutput, line => line.Contains("delete called for 1"));
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task DeleteMode_IgnoreDeletes_FlippedFlag()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200), email VARCHAR(200));
+                INSERT INTO lecturers (id, name, email) VALUES (1, 'Alice', 'alice@example.com');");
+
+            var (db, ctx, _, scope) = await SetupAsync(); using var _scope = scope;
+            var table = BuildLecturersTableConfig();
+            table.OnDelete = new CdcSinkOnDeleteConfig { IgnoreDeletes = true };
+            var config = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { table } };
+
+            var result = await RunAsync(db, ctx, connectionString, config, table,
+                TestCdcSinkRowSelector.First, pkValues: null, TestCdcSinkOperation.Delete, maxRows: 1);
+
+            Assert.Empty(result.Errors);
+            var row = Assert.Single(result.Results);
+            Assert.False(row.WouldDelete);
+            Assert.True(row.IgnoreDeletes);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task LinkedOrEmbeddedTables_SurfacesAdvisoryInWarningsNotErrors()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200), email VARCHAR(200), dept_id INT);
+                INSERT INTO lecturers (id, name, email, dept_id) VALUES (1, 'Alice', 'alice@example.com', 7);");
+
+            var (db, ctx, _, scope) = await SetupAsync(); using var _scope = scope;
+            var table = BuildLecturersTableConfig();
+            // BuildLecturersTableConfig only configures id/name/email; the linked table's join
+            // column must also be in Columns so SetSourceColumnNames accepts the layout.
+            table.Columns.Add(new CdcColumnMapping { Column = "dept_id", Name = "DeptId" });
+            table.LinkedTables = new List<CdcSinkLinkedTableConfig>
+            {
+                new()
+                {
+                    SourceTableSchema = "public",
+                    SourceTableName = "departments",
+                    PropertyName = "Department",
+                    JoinColumns = new List<string> { "dept_id" },
+                    LinkedCollectionName = "Departments",
+                },
+            };
+            var config = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { table } };
+
+            var result = await RunAsync(db, ctx, connectionString, config, table,
+                TestCdcSinkRowSelector.First, pkValues: null, TestCdcSinkOperation.Upsert, maxRows: 1);
+
+            // Results still populated — the root mapping ran fine.
+            Assert.Empty(result.Errors);
+            Assert.Single(result.Results);
+
+            // The "linked/embedded not exercised" note is advisory and must land in Warnings, not Errors.
+            var warning = Assert.Single(result.Warnings);
+            Assert.Contains("Linked and embedded tables", warning);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task PatchCallingPut_RunsUnderWriteTxAndIsRolledBack()
+        {
+            // Production CDC patches can legitimately call put() or del() on other documents.
+            // Test mode used to run under OpenReadTransaction, which the script runner rejects
+            // for those calls — valid patches would surface a per-row "Transaction must be
+            // opened in WRITE mode" error in the preview. Switch to a write tx that we never
+            // commit so the put/del semantics match production while the dry-run guarantee
+            // (no persistent side-effects) is preserved.
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200), email VARCHAR(200));
+                INSERT INTO lecturers (id, name, email) VALUES (1, 'Alice', 'alice@example.com');");
+
+            var (db, ctx, _, scope) = await SetupAsync(); using var _scope = scope;
+            var table = BuildLecturersTableConfig();
+            // A side-doc put followed by a marker on `this`. If put() runs, the patch reaches the
+            // marker assignment; if the runner rejects it under a read tx, the patch throws before
+            // the marker is set and result.Results[0].Error is populated.
+            table.Patch = "put('Audit/' + $row.id, { Source: 'cdc-test', Id: $row.id }); this.Marker = 'patched-' + $row.id;";
+            var config = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { table } };
+
+            var result = await RunAsync(db, ctx, connectionString, config, table,
+                TestCdcSinkRowSelector.First, pkValues: null, TestCdcSinkOperation.Upsert, maxRows: 1);
+
+            Assert.Empty(result.Errors);
+            var row = Assert.Single(result.Results);
+            Assert.Null(row.Error);
+            // Patch ran end-to-end — the marker assignment after put() succeeded.
+            Assert.Contains("\"Marker\":\"patched-1\"", row.Document);
+
+            // Rollback guarantee: the put() call must not have committed to the RavenDB store.
+            using var session = (await GetDatabase(db.Name)).DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext checkCtx);
+            using (checkCtx.OpenReadTransaction())
+            {
+                var audit = db.DocumentsStorage.Get(checkCtx, "Audit/1");
+                Assert.Null(audit);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task FetchRowsAsync_ByPrimaryKey_AppliesServerSideMaxRows()
+        {
+            // BuildSelectByPrimaryKeyQuery used to emit `SELECT * FROM <table> WHERE pk1=@p0 AND ...`
+            // with no `LIMIT N`. The handler validates MaxRows=1 for ByPrimaryKey, but that gates
+            // only the request shape — the SQL itself wasn't limited. If the CDC config has
+            // pk_columns pointing at a non-unique column (mis-config, or a source table without
+            // enforced PK uniqueness), the row-fetch could return every match. Server-side cap
+            // must enforce maxRows regardless of source metadata quality.
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+
+            // Note: the table has a true PK on `id`, but the test calls FetchRowsAsync using
+            // `group_id` as the "primaryKeyColumns" argument (simulating a misconfig). Three
+            // rows match group_id=100; the migrator must still return only `maxRows` of them.
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE things (id SERIAL PRIMARY KEY, group_id INT NOT NULL, label VARCHAR(50));
+                INSERT INTO things (id, group_id, label) VALUES (1, 100, 'A');
+                INSERT INTO things (id, group_id, label) VALUES (2, 100, 'B');
+                INSERT INTO things (id, group_id, label) VALUES (3, 100, 'C');");
+
+            var driver = DatabaseDriverDispatcher.CreateDriver(MigrationProvider.NpgSQL, connectionString);
+            var fetched = await driver.FetchRowsAsync(
+                tableSchema: "public",
+                tableName: "things",
+                primaryKeyColumns: new List<string> { "group_id" },
+                mode: RowFetchMode.ByPrimaryKey,
+                primaryKeyValues: new[] { "100" },
+                maxRows: 1,
+                ct: default);
+
+            Assert.Single(fetched.Rows);
+        }
+    }
+}

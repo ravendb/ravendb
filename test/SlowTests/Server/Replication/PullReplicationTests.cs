@@ -1,31 +1,29 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Exceptions.Sharding;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Extensions;
-using Raven.Client.Http;
-using Raven.Client.Json;
-using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Documents.Replication.Incoming;
+using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
@@ -243,6 +241,15 @@ namespace SlowTests.Server.Replication
                 };
                 await AddWatcherToReplicationTopology(sink, pull, hub2.Urls);
 
+                await WaitForAssertionAsync(async () =>
+                {
+                    var sinkTask = (OngoingTaskPullReplicationAsSink)await GetTaskInfo(sink, pullTasks[0].TaskId, OngoingTaskType.PullReplicationAsSink);
+
+                    Assert.Equal(definitionName2, sinkTask.HubName);
+                    Assert.Equal(hub2.Database, sinkTask.DestinationDatabase);
+                    Assert.Equal(hub2.Urls[0], sinkTask.DestinationUrl);
+                }, TimeSpan.FromSeconds(5));
+
                 using (var main = hub.OpenSession())
                 {
                     main.Store(new User(), "hub1/2");
@@ -353,6 +360,574 @@ namespace SlowTests.Server.Replication
                 }
                 Assert.True(WaitForDocument(sink, "hub/2", timeout), sink.Identifier);
                 Assert.True(WaitForDocument(sink, "hub/3", timeout), sink.Identifier);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public async Task DisableHubToSinkPullReplicationOnSinkShouldDropIncomingHandler()
+        {
+            DoNotReuseServer();
+
+            var hubPort = GetReservedPort();
+            var hubSettings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = $"http://127.0.0.1:{hubPort}",
+                [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = $"http://localhost:{hubPort}"
+            };
+
+            var definitionName = $"pull-replication {GetDatabaseName()}";
+            var connectionStringName = $"ConnectionString-{definitionName}";
+            const int timeout = 10_000;
+
+            using (var sinkServer = GetNewServer())
+            using (var hubServer = GetNewServer(new ServerCreationOptions { CustomSettings = hubSettings }))
+            using (var sink = GetDocumentStore(new Options { Server = sinkServer }))
+            using (var hub = GetDocumentStore(new Options { Server = hubServer }))
+            {
+                var sinkDatabase = await GetDatabase(sink.Database, sinkServer);
+                // The sink connects to the hub through the bound URL, but the hub advertises PublicServerUrl
+                // in the handshake. URL-based cleanup cannot treat those strings as the task identity.
+                sinkDatabase.ReplicationLoader.ForTestingPurposesOnly().SelectPullReplicationRemoteUrls = (_, _, _) => hub.Urls;
+
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(definitionName)
+                {
+                    Mode = PullReplicationMode.HubToSink
+                }));
+
+                await sink.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                {
+                    Name = connectionStringName,
+                    Database = hub.Database,
+                    TopologyDiscoveryUrls = hub.Urls
+                }));
+
+                var sinkTask = await sink.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink(hub.Database, connectionStringName, definitionName)
+                {
+                    Mode = PullReplicationMode.HubToSink
+                }));
+
+                using (var session = hub.OpenSession())
+                {
+                    session.Store(new User { Name = "before-disable" }, "users/before-disable");
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument<User>(sink, "users/before-disable", u => u.Name == "before-disable", timeout), sink.Identifier);
+
+                Assert.True(WaitForValue(() => HasIncomingHubToSinkPullHandler(sinkDatabase, sinkTask.TaskId), true, timeout),
+                    "Expected an active IncomingPullReplicationHandlerAsSink before disabling the sink task.");
+
+                await sink.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(sinkTask.TaskId, OngoingTaskType.PullReplicationAsSink, disable: true));
+
+                Assert.False(WaitForValue(() => HasIncomingHubToSinkPullHandler(sinkDatabase, sinkTask.TaskId), false, timeout),
+                    "Disabling the HubToSink pull replication task on the sink should dispose the active incoming pull handler.");
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public async Task UpdatingHubToSinkPullReplicationInPlaceShouldReplaceIncomingHandler()
+        {
+            DoNotReuseServer();
+
+            var hubPort = GetReservedPort();
+            var hubSettings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = $"http://127.0.0.1:{hubPort}",
+                [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = $"http://localhost:{hubPort}"
+            };
+
+            var definitionName = $"pull-replication {GetDatabaseName()}";
+            var originalConnectionStringName = $"ConnectionString-{definitionName}-original";
+            var updatedConnectionStringName = $"ConnectionString-{definitionName}-updated";
+            var sinkTaskName = $"Sink task {definitionName}";
+            const int timeout = 10_000;
+
+            using (var sinkServer = GetNewServer())
+            using (var hubServer = GetNewServer(new ServerCreationOptions { CustomSettings = hubSettings }))
+            using (var sink = GetDocumentStore(new Options { Server = sinkServer }))
+            using (var hub = GetDocumentStore(new Options { Server = hubServer }))
+            {
+                var sinkDatabase = await GetDatabase(sink.Database, sinkServer);
+                // The sink connects to the hub through the bound URL, but the hub advertises PublicServerUrl
+                // in the handshake. URL-based cleanup cannot treat those strings as the task identity.
+                sinkDatabase.ReplicationLoader.ForTestingPurposesOnly().SelectPullReplicationRemoteUrls = (_, _, _) => hub.Urls;
+
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(definitionName)
+                {
+                    Mode = PullReplicationMode.HubToSink
+                }));
+
+                await PutHubConnectionString(originalConnectionStringName);
+                await PutHubConnectionString(updatedConnectionStringName);
+
+                var sinkTask = await sink.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(CreateSinkTask(originalConnectionStringName)));
+
+                using (var session = hub.OpenSession())
+                {
+                    session.Store(new User { Name = "before-update" }, "users/before-update");
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument<User>(sink, "users/before-update", u => u.Name == "before-update", timeout), sink.Identifier);
+
+                var originalHandler = WaitForHubToSinkHandler(
+                    "Expected an active IncomingPullReplicationHandlerAsSink before updating the sink task in place.");
+
+                await sink.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(CreateSinkTask(updatedConnectionStringName, sinkTask.TaskId)));
+
+                Assert.True(WaitForValue(() => originalHandler.IsDisposed, true, timeout),
+                    "Updating the HubToSink sink task in place should dispose the previous incoming handler.");
+
+                var replacementHandler = WaitForHubToSinkHandler(
+                    "Expected a replacement IncomingPullReplicationHandlerAsSink after updating the sink task in place.");
+
+                Assert.NotSame(originalHandler, replacementHandler);
+                Assert.False(replacementHandler.IsDisposed);
+
+                using (var session = hub.OpenSession())
+                {
+                    session.Store(new User { Name = "after-update" }, "users/after-update");
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument<User>(sink, "users/after-update", u => u.Name == "after-update", timeout), sink.Identifier);
+
+                async Task PutHubConnectionString(string connectionStringName)
+                {
+                    await sink.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                    {
+                        Name = connectionStringName,
+                        Database = hub.Database,
+                        TopologyDiscoveryUrls = hub.Urls
+                    }));
+                }
+
+                PullReplicationAsSink CreateSinkTask(string connectionStringName, long taskId = 0)
+                {
+                    return new PullReplicationAsSink(hub.Database, connectionStringName, definitionName)
+                    {
+                        Name = sinkTaskName,
+                        TaskId = taskId,
+                        Mode = PullReplicationMode.HubToSink
+                    };
+                }
+
+                IncomingPullReplicationHandlerAsSink WaitForHubToSinkHandler(string message)
+                {
+                    IncomingPullReplicationHandlerAsSink handler = null;
+                    Assert.True(WaitForValue(() =>
+                    {
+                        handler = GetIncomingHubToSinkPullHandler(sinkDatabase, sinkTask.TaskId);
+                        return handler != null && handler.IsDisposed == false;
+                    }, true, timeout), message);
+
+                    return handler;
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [PullReplicationMode.SinkToHub])]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [PullReplicationMode.HubToSink])]
+        public async Task UpdatingDualModePullReplicationShouldDropOnlyRemovedLane(Options options, PullReplicationMode remainingMode)
+        {
+            DoNotReuseServer();
+
+            var definitionName = $"pull-replication {GetDatabaseName()}";
+            var connectionStringName = $"ConnectionString-{definitionName}";
+            var sinkTaskName = $"Sink task {definitionName}";
+            const int timeout = 15_000;
+
+            var customSettings = new Dictionary<string, string>();
+            var certificates = Certificates.SetupServerAuthentication(customSettings: customSettings);
+            var serverCertificate = certificates.ServerCertificateForCommunication.Value;
+            var pullReplicationCertificate = certificates.ClientCertificate1.Value;
+            var pullReplicationCertificateWithPrivateKey = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Pfx));
+
+            using (var server = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings }))
+            using (var sink = GetDocumentStore(new Options(options)
+            {
+                Server = server,
+                ModifyDatabaseName = s => $"Sink_{s}",
+                ClientCertificate = serverCertificate,
+                AdminCertificate = serverCertificate
+            }))
+            using (var hub = GetDocumentStore(new Options(options)
+            {
+                Server = server,
+                ModifyDatabaseName = s => $"Hub_{s}",
+                ClientCertificate = serverCertificate,
+                AdminCertificate = serverCertificate
+            }))
+            {
+                var sinkDatabase = await GetDatabase(sink.Database, server);
+
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(definitionName)
+                {
+                    Name = definitionName,
+                    Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink
+                }));
+
+                await hub.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(definitionName, new ReplicationHubAccess
+                {
+                    Name = definitionName,
+                    CertificateBase64 = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Cert))
+                }));
+
+                await sink.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                {
+                    Database = hub.Database,
+                    Name = connectionStringName,
+                    TopologyDiscoveryUrls = hub.Urls
+                }));
+
+                var sinkTask = await sink.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(CreateSinkTask(PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub)));
+
+                using (var session = hub.OpenSession())
+                {
+                    session.Store(new User { Name = "hub-before-mode-change" }, "users/hub-before-mode-change");
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument<User>(sink, "users/hub-before-mode-change", u => u.Name == "hub-before-mode-change", timeout), sink.Identifier);
+                var originalHubToSinkHandler = WaitForHubToSinkHandler(
+                    "Expected an active HubToSink incoming handler before narrowing the dual-mode sink task.");
+
+                using (var session = sink.OpenSession())
+                {
+                    session.Store(new User { Name = "sink-before-mode-change" }, "users/sink-before-mode-change");
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument<User>(hub, "users/sink-before-mode-change", u => u.Name == "sink-before-mode-change", timeout), hub.Identifier);
+                var originalSinkToHubHandler = WaitForSinkToHubHandler(
+                    "Expected an active SinkToHub outgoing handler before narrowing the dual-mode sink task.");
+
+                await sink.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(CreateSinkTask(remainingMode, sinkTask.TaskId)));
+
+                switch (remainingMode)
+                {
+                    case PullReplicationMode.SinkToHub:
+                        Assert.False(WaitForValue(() => HasIncomingHubToSinkPullHandler(sinkDatabase, sinkTask.TaskId), false, timeout),
+                            "Updating the dual-mode sink task to SinkToHub only should dispose the HubToSink incoming handler.");
+
+                        var currentSinkToHubHandler = WaitForSinkToHubHandler(
+                            "Updating the dual-mode sink task to SinkToHub only should keep the SinkToHub outgoing handler alive.");
+                        Assert.Same(originalSinkToHubHandler, currentSinkToHubHandler);
+
+                        using (var session = sink.OpenSession())
+                        {
+                            session.Store(new User { Name = "sink-after-mode-change" }, "users/sink-after-mode-change");
+                            session.SaveChanges();
+                        }
+
+                        Assert.True(WaitForDocument<User>(hub, "users/sink-after-mode-change", u => u.Name == "sink-after-mode-change", timeout), hub.Identifier);
+                        break;
+
+                    case PullReplicationMode.HubToSink:
+                        Assert.False(WaitForValue(() => GetOutgoingSinkToHubPullHandler(sinkDatabase, sinkTask.TaskId) != null, false, timeout),
+                            "Updating the dual-mode sink task to HubToSink only should dispose the SinkToHub outgoing handler.");
+
+                        var currentHubToSinkHandler = WaitForHubToSinkHandler(
+                            "Updating the dual-mode sink task to HubToSink only should keep the HubToSink incoming handler alive.");
+                        Assert.Same(originalHubToSinkHandler, currentHubToSinkHandler);
+
+                        using (var session = hub.OpenSession())
+                        {
+                            session.Store(new User { Name = "hub-after-mode-change" }, "users/hub-after-mode-change");
+                            session.SaveChanges();
+                        }
+
+                        Assert.True(WaitForDocument<User>(sink, "users/hub-after-mode-change", u => u.Name == "hub-after-mode-change", timeout), sink.Identifier);
+                        break;
+
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(remainingMode), remainingMode, null);
+                }
+
+                PullReplicationAsSink CreateSinkTask(PullReplicationMode mode, long taskId = 0)
+                {
+                    return new PullReplicationAsSink(hub.Database, connectionStringName, definitionName)
+                    {
+                        Name = sinkTaskName,
+                        TaskId = taskId,
+                        Mode = mode,
+                        CertificateWithPrivateKey = pullReplicationCertificateWithPrivateKey
+                    };
+                }
+
+                IncomingPullReplicationHandlerAsSink WaitForHubToSinkHandler(string message)
+                {
+                    IncomingPullReplicationHandlerAsSink handler = null;
+                    Assert.True(WaitForValue(() =>
+                    {
+                        handler = GetIncomingHubToSinkPullHandler(sinkDatabase, sinkTask.TaskId);
+                        return handler != null;
+                    }, true, timeout), message);
+
+                    return handler;
+                }
+
+                OutgoingPullReplicationHandlerAsSink WaitForSinkToHubHandler(string message)
+                {
+                    OutgoingPullReplicationHandlerAsSink handler = null;
+                    Assert.True(WaitForValue(() =>
+                    {
+                        handler = GetOutgoingSinkToHubPullHandler(sinkDatabase, sinkTask.TaskId);
+                        return handler != null;
+                    }, true, timeout), message);
+
+                    return handler;
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public async Task SuccessfulHubToSinkPullReplicationHandoffShouldClearQueuedReconnect()
+        {
+            DoNotReuseServer();
+
+            var customSettings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter)] = "60",
+                [RavenConfiguration.GetKey(x => x.Replication.RetryMaxTimeout)] = "1"
+            };
+
+            var definitionName = $"pull-replication {GetDatabaseName()}";
+            const int timeout = 20_000;
+
+            using (var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings }))
+            using (var hubServer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings }))
+            using (var sink = GetDocumentStore(new Options { Server = sinkServer }))
+            using (var hub = GetDocumentStore(new Options { Server = hubServer }))
+            {
+                var pullDefinition = new PullReplicationDefinition(definitionName)
+                {
+                    Mode = PullReplicationMode.HubToSink
+                };
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(pullDefinition));
+
+                var failTcpInfoLookup = true;
+                var sinkDatabase = await GetDatabase(sink.Database, sinkServer);
+                sinkDatabase.ReplicationLoader.ForTestingPurposesOnly().SelectPullReplicationRemoteUrls = (_, _, remoteUrls) =>
+                    failTcpInfoLookup ? ["http://127.0.0.1:1234"] : remoteUrls;
+
+                var pullReplication = new PullReplicationAsSink(hub.Database, $"ConnectionString-{hub.Database}", definitionName)
+                {
+                    Mode = PullReplicationMode.HubToSink
+                };
+                var sinkTask = await AddWatcherToReplicationTopology(sink, pullReplication, hub.Urls);
+
+                Assert.True(WaitForValue(() => HasHubToSinkReconnectQueued(sinkDatabase, sinkTask.TaskId), true, timeout),
+                    "Expected the sink to queue a HubToSink reconnect attempt after the first outgoing TCP info lookup fails.");
+
+                var queuedDestination = GetQueuedHubToSinkDestination(sinkDatabase, sinkTask.TaskId);
+                Assert.NotNull(queuedDestination);
+
+                failTcpInfoLookup = false;
+                sinkDatabase.ReplicationLoader.AddAndStartOutgoingReplication(queuedDestination);
+
+                using (var session = hub.OpenSession())
+                {
+                    session.Store(new User { Name = "after-handoff" }, "users/after-handoff");
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument<User>(sink, "users/after-handoff", u => u.Name == "after-handoff", timeout), sink.Identifier);
+                Assert.True(WaitForValue(() => HasIncomingHubToSinkPullHandler(sinkDatabase, sinkTask.TaskId), true, timeout),
+                    "Expected the sink to complete a successful outgoing-to-incoming HubToSink handoff.");
+
+                Assert.False(HasHubToSinkReconnectQueued(sinkDatabase, sinkTask.TaskId),
+                    "A successful HubToSink handoff should clear the queued reconnect for the same sink task.");
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public async Task SuccessfulHubToSinkPullReplicationHandoffShouldNotOpenDuplicateConnectorOnReconnectTimer()
+        {
+            DoNotReuseServer();
+
+            var customSettings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter)] = "1",
+                [RavenConfiguration.GetKey(x => x.Replication.RetryMaxTimeout)] = "1"
+            };
+
+            var definitionName = $"pull-replication {GetDatabaseName()}";
+            const int timeout = 20_000;
+            const int reconnectTimerObservationTimeout = 5_000;
+
+            using (var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings }))
+            using (var hubServer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings }))
+            using (var sink = GetDocumentStore(new Options { Server = sinkServer }))
+            using (var hub = GetDocumentStore(new Options { Server = hubServer }))
+            {
+                var pullDefinition = new PullReplicationDefinition(definitionName)
+                {
+                    Mode = PullReplicationMode.HubToSink
+                };
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(pullDefinition));
+
+                var failTcpInfoLookup = true;
+                var sinkDatabase = await GetDatabase(sink.Database, sinkServer);
+                sinkDatabase.ReplicationLoader.ForTestingPurposesOnly().SelectPullReplicationRemoteUrls = (_, _, remoteUrls) =>
+                    failTcpInfoLookup ? ["http://127.0.0.1:1234"] : remoteUrls;
+
+                var pullReplication = new PullReplicationAsSink(hub.Database, $"ConnectionString-{hub.Database}", definitionName)
+                {
+                    Mode = PullReplicationMode.HubToSink
+                };
+                var sinkTask = await AddWatcherToReplicationTopology(sink, pullReplication, hub.Urls);
+
+                Assert.True(WaitForValue(() => HasHubToSinkReconnectQueued(sinkDatabase, sinkTask.TaskId), true, timeout),
+                    "Expected the sink to queue a HubToSink reconnect attempt after the first outgoing TCP info lookup fails.");
+
+                var queuedDestination = GetQueuedHubToSinkDestination(sinkDatabase, sinkTask.TaskId);
+                Assert.NotNull(queuedDestination);
+
+                var outgoingConnectorStarts = 0;
+                void CountHubToSinkConnector(DatabaseOutgoingReplicationHandler handler)
+                {
+                    if (handler is OutgoingPullReplicationHandlerAsSink &&
+                        handler.Destination is PullReplicationAsSink { TaskId: var destinationTaskId, Mode: PullReplicationMode.HubToSink } &&
+                        destinationTaskId == sinkTask.TaskId)
+                    {
+                        Interlocked.Increment(ref outgoingConnectorStarts);
+                    }
+                }
+
+                sinkDatabase.ReplicationLoader.OutgoingReplicationAdded += CountHubToSinkConnector;
+                try
+                {
+                    failTcpInfoLookup = false;
+                    sinkDatabase.ReplicationLoader.AddAndStartOutgoingReplication(queuedDestination);
+
+                    using (var session = hub.OpenSession())
+                    {
+                        session.Store(new User { Name = "after-handoff" }, "users/after-handoff");
+                        session.SaveChanges();
+                    }
+
+                    Assert.True(WaitForDocument<User>(sink, "users/after-handoff", u => u.Name == "after-handoff", timeout), sink.Identifier);
+                    Assert.True(WaitForValue(() => CountIncomingHubToSinkPullHandlers(sinkDatabase, sinkTask.TaskId), 1, timeout) == 1,
+                        "Expected the sink to complete a successful outgoing-to-incoming HubToSink handoff.");
+
+                    Assert.Equal(1, WaitForValue(() => Volatile.Read(ref outgoingConnectorStarts), 1, timeout));
+
+                    var connectorStartsAfterHandoff = Volatile.Read(ref outgoingConnectorStarts);
+                    Assert.False(WaitForValue(() => Volatile.Read(ref outgoingConnectorStarts) > connectorStartsAfterHandoff, true, reconnectTimerObservationTimeout),
+                        "The reconnect timer should not open another HubToSink outgoing connector after a successful handoff.");
+
+                    Assert.Equal(1, CountIncomingHubToSinkPullHandlers(sinkDatabase, sinkTask.TaskId));
+                    Assert.Equal(0, CountOutgoingHubToSinkPullHandlers(sinkDatabase, sinkTask.TaskId));
+                }
+                finally
+                {
+                    sinkDatabase.ReplicationLoader.OutgoingReplicationAdded -= CountHubToSinkConnector;
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public async Task DisabledHubToSinkPullReplicationShouldNotKeepReplicatingAfterStaleHandoff()
+        {
+            DoNotReuseServer();
+
+            var definitionName = $"pull-replication {GetDatabaseName()}";
+            const int timeout = 20_000;
+
+            using (var sinkServer = GetNewServer())
+            using (var hubServer = GetNewServer())
+            using (var sink = GetDocumentStore(new Options { Server = sinkServer }))
+            using (var hub = GetDocumentStore(new Options { Server = hubServer }))
+            {
+                var sinkDatabase = await GetDatabase(sink.Database, sinkServer);
+                var firstHandoffReached = new AsyncManualResetEvent();
+                var allowFirstHandoffToContinue = new AsyncManualResetEvent();
+                var handoffAttempt = 0;
+
+                sinkDatabase.ReplicationLoader.ForTestingPurposesOnly().BeforePullReplicationAsSinkHandoff = () =>
+                {
+                    if (Interlocked.Increment(ref handoffAttempt) != 1)
+                        return;
+
+                    firstHandoffReached.Set();
+                    if (allowFirstHandoffToContinue.WaitAsync(TimeSpan.FromMilliseconds(timeout)).GetAwaiter().GetResult() == false)
+                        throw new TimeoutException("Timed out while waiting to continue the first HubToSink handoff.");
+                };
+
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(definitionName)
+                {
+                    Mode = PullReplicationMode.HubToSink
+                }));
+
+                var pullReplication = new PullReplicationAsSink(hub.Database, $"ConnectionString-{hub.Database}", definitionName)
+                {
+                    Mode = PullReplicationMode.HubToSink
+                };
+                var sinkTask = await AddWatcherToReplicationTopology(sink, pullReplication, hub.Urls);
+
+                Assert.True(await firstHandoffReached.WaitAsync(TimeSpan.FromMilliseconds(timeout)), "Expected the first HubToSink handoff to reach the test barrier.");
+
+                await sink.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(sinkTask.TaskId, OngoingTaskType.PullReplicationAsSink, disable: true));
+                await AssertPullReplicationAsSinkTaskDisabled(sink, sinkTask.TaskId);
+                Assert.True(WaitForValue(() => HasOutgoingHubToSinkPullConnection(sinkDatabase, sinkTask.TaskId) == false, true, timeout),
+                    "Disabling the HubToSink task should remove the first outgoing connector.");
+                Assert.False(HasIncomingHubToSinkPullHandler(sinkDatabase, sinkTask.TaskId),
+                    "Disabling the HubToSink task before handoff completes should not leave a tracked incoming handler.");
+
+                await sink.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(sinkTask.TaskId, OngoingTaskType.PullReplicationAsSink, disable: false));
+
+                using (var session = hub.OpenSession())
+                {
+                    session.Store(new User { Name = "before-stale-handoff" }, "users/before-stale-handoff");
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument<User>(sink, "users/before-stale-handoff", u => u.Name == "before-stale-handoff", timeout), sink.Identifier);
+                Assert.True(WaitForValue(() => HasIncomingHubToSinkPullHandler(sinkDatabase, sinkTask.TaskId), true, timeout),
+                    "Expected the re-enabled HubToSink task to complete a replacement handoff.");
+                Assert.False(HasOutgoingHubToSinkPullConnection(sinkDatabase, sinkTask.TaskId),
+                    "After the replacement handoff, the sink should track HubToSink as incoming only.");
+
+                var staleIncomingAdded = new AsyncManualResetEvent();
+                sinkDatabase.ReplicationLoader.IncomingReplicationAdded += handler =>
+                {
+                    if (handler is IncomingPullReplicationHandlerAsSink pullAsSink &&
+                        pullAsSink.IncomingPullReplicationParams.TaskId == sinkTask.TaskId &&
+                        pullAsSink.IncomingPullReplicationParams.Mode == PullReplicationMode.HubToSink)
+                    {
+                        staleIncomingAdded.Set();
+                    }
+                };
+
+                allowFirstHandoffToContinue.Set();
+
+                await staleIncomingAdded.WaitAsync(TimeSpan.FromSeconds(3));
+
+                using (var session = hub.OpenSession())
+                {
+                    session.Store(new User { Name = "after-stale-handoff" }, "users/after-stale-handoff");
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument<User>(sink, "users/after-stale-handoff", u => u.Name == "after-stale-handoff", timeout), sink.Identifier);
+
+                await sink.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(sinkTask.TaskId, OngoingTaskType.PullReplicationAsSink, disable: true));
+                await AssertPullReplicationAsSinkTaskDisabled(sink, sinkTask.TaskId);
+                Assert.True(WaitForValue(() => HasIncomingHubToSinkPullHandler(sinkDatabase, sinkTask.TaskId) == false, true, timeout),
+                    "Disabling the HubToSink task should remove the tracked incoming handler.");
+                Assert.True(WaitForValue(() => HasOutgoingHubToSinkPullConnection(sinkDatabase, sinkTask.TaskId) == false, true, timeout),
+                    "The disabled HubToSink task should not have an outgoing connector.");
+
+                using (var session = hub.OpenSession())
+                {
+                    session.Store(new User { Name = "after-disable" }, "users/after-disable");
+                    session.SaveChanges();
+                }
+
+                Assert.False(WaitForDocument<User>(sink, "users/after-disable", u => u.Name == "after-disable", 5_000),
+                    "The disabled HubToSink task must not keep replicating through an untracked stale incoming handler.");
             }
         }
 
@@ -1131,22 +1706,13 @@ namespace SlowTests.Server.Replication
 
         //TODO write test for deletion! - make sure replication is stopped after we delete hub!
 
-        public static Task<List<ModifyOngoingTaskResult>> SetupPullReplicationAsync(string remoteName, DocumentStore sink, params DocumentStore[] hub)
-        {
-            return SetupPullReplicationAsync(remoteName, sink, null, hub);
-        }
-
-        private static async Task<List<ModifyOngoingTaskResult>> SetupPullReplicationAsync(string remoteName, DocumentStore sink, X509Certificate2 certificate, params DocumentStore[] hub)
+        public static async Task<List<ModifyOngoingTaskResult>> SetupPullReplicationAsync(string remoteName, DocumentStore sink, params DocumentStore[] hub)
         {
             var tasks = new List<Task<ModifyOngoingTaskResult>>();
             var resList = new List<ModifyOngoingTaskResult>();
             foreach (var store in hub)
             {
                 var pull = new PullReplicationAsSink(store.Database, $"ConnectionString-{store.Database}", remoteName) { Url = sink.Urls[0] };
-                if (certificate != null)
-                {
-                    pull.CertificateWithPrivateKey = Convert.ToBase64String(certificate.Export(X509ContentType.Pfx));
-                }
                 tasks.Add(AddWatcherToReplicationTopology(sink, pull, store.Urls));
             }
             await Task.WhenAll(tasks);
@@ -1155,6 +1721,539 @@ namespace SlowTests.Server.Replication
                 resList.Add(await task);
             }
             return resList;
+        }
+
+        // Reproduces the "zombie pull connection" deadlock on a busy sink.
+        //
+        // RavenDB_25412 proved that when the hub stops sending, the sink's read-timeout
+        // (Replication.ActiveConnectionTimeout) fires, the hung connection is reaped, and the sink reconnects.
+        //
+        // This test adds the one ingredient that was present in the production incident but missing from
+        // that test: OTHER incoming replication traffic on the same sink node. Every time any other incoming
+        // connection receives a batch, ReplicationLoader.OnIncomingReceiveSucceeded calls
+        // OnReplicationFromAnotherSource() on EVERY other incoming handler. That wakes the handler's read loop
+        // (the "notify" branch) and makes InterruptibleRead.ParseToMemory return Interrupted with a brand-new
+        // per-call timeout window. On a busy node these wake-ups arrive faster than the timeout, so msg.Timeout
+        // never fires: before the fix the hung connection became an immortal zombie that was never reaped and
+        // never reconnected, and only a task restart (which disposes it via DropIncomingConnections) cleared it.
+        //
+        // The fix tracks time since the last REAL receive and reaps on that, so the timeout fires regardless of
+        // how many notify wake-ups occur. EXPECTED: this test FAILS on the pre-fix code (reproduces the bug) and
+        // passes with the fix.
+        [RavenFact(RavenTestCategory.Replication)]
+        public async Task BusySink_ShouldStillTimeoutAndReconnect_HangingPullConnection()
+        {
+            DoNotReuseServer();
+
+            // keep the read-timeout short so the test is fast
+            var customSettings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Replication.ActiveConnectionTimeout)] = "5"
+            };
+
+            using var hubServer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
+            using var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
+
+            using var hubStore = GetDocumentStore(new Options
+            {
+                Server = hubServer
+            });
+
+            using var sinkStore = GetDocumentStore(new Options
+            {
+                Server = sinkServer
+            });
+
+            var pullReplicationName = $"{hubStore.Database}-pull";
+            var connectionStringName = "ConnectionString-" + hubStore.Database;
+
+            var sinkDb = await GetDatabase(sinkStore.Database, sinkServer);
+
+            // Open = normal, Closed = reads hang (socket stays up, no data arrives).
+            var networkGate = new AsyncGate();
+            var connectionCounter = 0;
+
+            var forTesting = sinkDb.ReplicationLoader.ForTestingPurposesOnly();
+            forTesting.WrapIncomingReplicationStream = innerStream =>
+            {
+                // Hang ONLY the first connection (the one we will strangle). Any reconnection must read
+                // normally, otherwise the global gate would block the recovered connection too and the
+                // second document could never arrive -- on buggy AND fixed code alike.
+                var n = Interlocked.Increment(ref connectionCounter);
+                return n == 1
+                    ? new SmartHangingStreamWrapper(innerStream, networkGate)
+                    : innerStream;
+            };
+
+            await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(pullReplicationName)));
+            await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            {
+                Name = connectionStringName,
+                Database = hubStore.Database,
+                TopologyDiscoveryUrls = hubStore.Urls
+            }));
+            await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+            {
+                Name = pullReplicationName,
+                HubName = pullReplicationName,
+                ConnectionStringName = connectionStringName
+            }));
+
+            // 1. initial replication works
+            using (var session = hubStore.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Id = "Users/1-A", Name = "Lev" });
+                await session.SaveChangesAsync();
+            }
+            Assert.True(WaitForDocument<User>(sinkStore, "Users/1-A", u => u.Name == "Lev"), "Initial replication failed");
+
+            var initialConnections = connectionCounter;
+
+            // The incoming pull handler must be established before we strangle it.
+            Assert.True(WaitForValue(() => sinkDb.ReplicationLoader.IncomingHandlers.OfType<IncomingReplicationHandler>().Any(), true),
+                "Expected an incoming pull replication handler on the sink");
+
+            // 2. Simulate a busy sink node: keep poking the notify event on every live incoming handler,
+            // exactly as OnIncomingReceiveSucceeded would when sibling connections receive batches.
+            using var pumpCts = new CancellationTokenSource();
+            var pump = NotifyPump(sinkDb, pumpCts.Token);
+
+            // 3. The hub goes silent on this connection (socket up, nothing arrives). The notify wake-ups keep driving
+            // the "notify" branch, so before the fix the read-timeout never fired. The fix must reap it regardless.
+            networkGate.Close();
+
+            using (var session = hubStore.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Id = "Users/2-A", Name = "Lev" });
+                await session.SaveChangesAsync();
+            }
+
+            // Allow several timeout windows for the zombie to be reaped, the sink to reconnect, and the doc to arrive.
+            var timeout = (int)sinkDb.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds * 4;
+
+            // PRIMARY assertion (gates the read-timeout fix): even on a busy sink, the read-timeout must fire, reap the
+            // zombie, and trigger a reconnect. A reconnect creates a new incoming stream, so connectionCounter increments.
+            var reconnected = WaitForValue(() => connectionCounter > initialConnections, true, timeout: timeout, interval: 200);
+            Assert.True(reconnected,
+                $"The hung pull connection was never reaped while the sink was busy. connectionCounter={connectionCounter}, initial={initialConnections}. " +
+                $"The notify wake-ups kept resetting the read-timeout, leaving an immortal zombie incoming handler that only a task restart would clear.");
+
+            // SECONDARY assertion (end-to-end recovery): once reaped, the sink reconnects on a clean stream and the
+            // second document arrives.
+            Assert.True(WaitForDocument<User>(sinkStore, "Users/2-A", u => u.Name == "Lev", timeout), "Second replication failed (end-to-end recovery)");
+
+            pumpCts.Cancel();
+            try
+            { await pump; }
+            catch { /* ignored */ }
+        }
+
+        // The flip side of the read-timeout fix: it must NOT reap a HEALTHY idle connection, EVEN under heavy notify
+        // fan-out. A healthy idle source keeps sending heartbeats (every ReplicationMinimalHeartbeat); the sink RECEIVES
+        // them (the msg.Document != null branch) and restarts the read-timeout. Because the timeout is evaluated only
+        // AFTER the read has had its chance to return, a heartbeat that already arrived is always consumed before any
+        // reap -- so the notify flood cannot reap a live connection. (Before the fix this test FAILED: the read-timeout
+        // was decided at the top of the loop, so under a notify flood a buffered heartbeat could be reaped before it was
+        // consumed.)
+        [RavenFact(RavenTestCategory.Replication)]
+        public async Task HealthyIdleConnection_IsNotReaped_UnderNotifyFanOut()
+        {
+            DoNotReuseServer();
+
+            // read-timeout (5s) > heartbeat interval (2s): a healthy idle peer's heartbeats keep the connection alive.
+            var customSettings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Replication.ActiveConnectionTimeout)] = "5",
+                [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "2"
+            };
+
+            using var hubServer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
+            using var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
+
+            using var hubStore = GetDocumentStore(new Options { Server = hubServer });
+            using var sinkStore = GetDocumentStore(new Options { Server = sinkServer });
+
+            var pullReplicationName = $"{hubStore.Database}-pull";
+            var connectionStringName = "ConnectionString-" + hubStore.Database;
+            var sinkDb = await GetDatabase(sinkStore.Database, sinkServer);
+
+            var connectionCounter = 0;
+            var forTesting = sinkDb.ReplicationLoader.ForTestingPurposesOnly();
+            forTesting.WrapIncomingReplicationStream = innerStream =>
+            {
+                // Passthrough: the connection stays healthy; we only count (re)connections.
+                Interlocked.Increment(ref connectionCounter);
+                return innerStream;
+            };
+
+            await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(pullReplicationName)));
+            await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            {
+                Name = connectionStringName,
+                Database = hubStore.Database,
+                TopologyDiscoveryUrls = hubStore.Urls
+            }));
+            await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+            {
+                Name = pullReplicationName,
+                HubName = pullReplicationName,
+                ConnectionStringName = connectionStringName
+            }));
+
+            using (var session = hubStore.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Id = "Users/1-A", Name = "Lev" });
+                await session.SaveChangesAsync();
+            }
+            Assert.True(WaitForDocument<User>(sinkStore, "Users/1-A", u => u.Name == "Lev"), "Initial replication failed");
+
+            var initialConnections = connectionCounter;
+
+            IncomingReplicationHandler pullHandler = null;
+            Assert.True(WaitForValue(() =>
+            {
+                pullHandler = sinkDb.ReplicationLoader.IncomingHandlers.OfType<IncomingReplicationHandler>().FirstOrDefault();
+                return pullHandler != null;
+            }, true), "Expected an incoming pull replication handler on the sink");
+
+            // Flood the handler with notify wake-ups, exactly as a busy node would. The connection is healthy: the hub
+            // keeps sending heartbeats which the sink receives. It must survive every read-timeout window unchanged.
+            using var pumpCts = new CancellationTokenSource();
+            var pump = NotifyPump(sinkDb, pumpCts.Token);
+
+            var readTimeoutMs = (int)sinkDb.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds;
+            for (var i = 0; i < (readTimeoutMs * 3) / 1000; i++)
+            {
+                await Task.Delay(1000);
+                Assert.Equal(initialConnections, connectionCounter); // a reconnect would increment this => reaped
+                var current = sinkDb.ReplicationLoader.IncomingHandlers.OfType<IncomingReplicationHandler>().FirstOrDefault();
+                Assert.True(ReferenceEquals(current, pullHandler),
+                    $"The healthy incoming handler was reaped/replaced while idle under notify fan-out " +
+                    $"(connectionCounter={connectionCounter}, initial={initialConnections}).");
+            }
+
+            // And it still works: a new document flows over the SAME connection (no reconnect).
+            using (var session = hubStore.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Id = "Users/2-A", Name = "Lev" });
+                await session.SaveChangesAsync();
+            }
+            Assert.True(WaitForDocument<User>(sinkStore, "Users/2-A", u => u.Name == "Lev", 10_000), "Healthy connection stopped replicating");
+            Assert.Equal(initialConnections, connectionCounter);
+
+            pumpCts.Cancel();
+            try
+            { await pump; }
+            catch { /* ignored */ }
+        }
+
+        // Realistic fleet-load check (external replication, same code path as a hub): many sources replicate into one
+        // destination. One source stays idle (the "victim"); the others push continuously, so every batch fires
+        // ReplicationLoader.OnIncomingReceiveSucceeded -> OnReplicationFromAnotherSource on the victim's handler (genuine
+        // notify fan-out). The idle victim keeps sending heartbeats, so with the fix it must NOT be reaped: the timeout
+        // is only evaluated after a read, and received heartbeats reset it. We assert ZERO churn on the destination
+        // (no reconnect of any handler) and that the idle victim keeps replicating.
+        [RavenFact(RavenTestCategory.Replication)]
+        public async Task BusyDestination_IdleSource_IsNotReaped_AndKeepsReplicating()
+        {
+            DoNotReuseServer();
+
+            var customSettings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Replication.ActiveConnectionTimeout)] = "10",
+                [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "2"
+            };
+            using var server = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
+
+            using var dest = GetDocumentStore(new Options { Server = server });
+            using var victim = GetDocumentStore(new Options { Server = server });
+            var noisy = new List<DocumentStore>();
+            for (var i = 0; i < 4; i++)
+                noisy.Add((DocumentStore)GetDocumentStore(new Options { Server = server }));
+
+            var destDb = await GetDatabase(dest.Database, server);
+
+            var connectionCounter = 0;
+            destDb.ReplicationLoader.ForTestingPurposesOnly().WrapIncomingReplicationStream = s =>
+            {
+                Interlocked.Increment(ref connectionCounter); // count every incoming (re)connection on the destination
+                return s;
+            };
+
+            var sources = new List<DocumentStore> { victim };
+            sources.AddRange(noisy);
+
+            // external replication: every source -> destination
+            foreach (var src in sources)
+                await SetupReplicationAsync(src, dest);
+
+            // seed one doc per source so all connections establish and replicate
+            for (var i = 0; i < sources.Count; i++)
+            {
+                using var s = sources[i].OpenAsyncSession();
+                await s.StoreAsync(new User { Id = $"seed/{i}", Name = "x" });
+                await s.SaveChangesAsync();
+            }
+            Assert.True(WaitForValue(() => destDb.ReplicationLoader.IncomingHandlers.Count() == sources.Count, true, timeout: 30_000),
+                $"Expected {sources.Count} incoming handlers on the destination, got {destDb.ReplicationLoader.IncomingHandlers.Count()}");
+
+            await Task.Delay(2000); // let things settle
+            var initialConnections = connectionCounter;
+
+            // The noisy sources push continuously -> genuine OnIncomingReceiveSucceeded fan-out onto every handler.
+            using var noiseCts = new CancellationTokenSource();
+            var noiseTasks = noisy.Select((src, idx) => Task.Run(async () =>
+            {
+                var k = 0;
+                while (noiseCts.IsCancellationRequested == false)
+                {
+                    try
+                    {
+                        using var s = src.OpenAsyncSession();
+                        await s.StoreAsync(new User { Id = $"noise/{idx}/{k++}", Name = "n" });
+                        await s.SaveChangesAsync();
+                    }
+                    catch { /* shutting down */ }
+                    try
+                    { await Task.Delay(100, noiseCts.Token); }
+                    catch { /* cancelled */ }
+                }
+            })).ToList();
+
+            // Run under heavy notify fan-out for several read-timeout windows. The idle victim keeps sending heartbeats,
+            // so its connection must never be reaped: no handler on the destination should reconnect (zero churn).
+            var readTimeoutMs = (int)destDb.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan.TotalMilliseconds;
+            await Task.Delay(readTimeoutMs * 3);
+
+            Assert.Equal(initialConnections, connectionCounter); // any reconnect under load => a healthy connection was reaped
+
+            // The idle victim is still connected and still replicates.
+            Assert.True(destDb.ReplicationLoader.IncomingHandlers.Any(h => h.ConnectionInfo.SourceDatabaseName == victim.Database),
+                "The idle victim's incoming connection was dropped under fleet load.");
+
+            using (var s = victim.OpenAsyncSession())
+            {
+                await s.StoreAsync(new User { Id = "victim/final", Name = "v" });
+                await s.SaveChangesAsync();
+            }
+            Assert.True(WaitForDocument<User>(dest, "victim/final", u => u.Name == "v", 20_000),
+                "The idle victim source stopped replicating under fleet load.");
+
+            noiseCts.Cancel();
+            foreach (var t in noiseTasks)
+            { try { await t; } catch { /* ignored */ } }
+            foreach (var s in noisy)
+                s.Dispose();
+        }
+
+        // Pokes the notify event on every live incoming handler, exactly as ReplicationLoader.OnIncomingReceiveSucceeded
+        // does when sibling connections receive batches. This is the "busy node" ingredient.
+        private static Task NotifyPump(Raven.Server.Documents.DocumentDatabase db, CancellationToken token)
+        {
+            return Task.Run(async () =>
+            {
+                while (token.IsCancellationRequested == false)
+                {
+                    foreach (var handler in db.ReplicationLoader.IncomingHandlers)
+                    {
+                        try
+                        {
+                            (handler as IncomingReplicationHandler)?.OnReplicationFromAnotherSource();
+                        }
+                        catch
+                        {
+                            // handler may be disposed mid-iteration; ignore
+                        }
+                    }
+
+                    try
+                    { await Task.Delay(100, token); }
+                    catch { /* cancelled */ }
+                }
+            });
+        }
+
+        private static bool HasIncomingHubToSinkPullHandler(Raven.Server.Documents.DocumentDatabase database, long taskId)
+        {
+            return GetIncomingHubToSinkPullHandler(database, taskId) != null;
+        }
+
+        private static int CountIncomingHubToSinkPullHandlers(Raven.Server.Documents.DocumentDatabase database, long taskId)
+        {
+            return database.ReplicationLoader.IncomingHandlers
+                .OfType<IncomingPullReplicationHandlerAsSink>()
+                .Count(x => x.IncomingPullReplicationParams.TaskId == taskId && x.IncomingPullReplicationParams.Mode == PullReplicationMode.HubToSink);
+        }
+
+        private static IncomingPullReplicationHandlerAsSink GetIncomingHubToSinkPullHandler(Raven.Server.Documents.DocumentDatabase database, long taskId)
+        {
+            return database.ReplicationLoader.IncomingHandlers
+                .OfType<IncomingPullReplicationHandlerAsSink>()
+                .FirstOrDefault(x => x.IncomingPullReplicationParams.TaskId == taskId && x.IncomingPullReplicationParams.Mode == PullReplicationMode.HubToSink);
+        }
+
+        private static int CountOutgoingHubToSinkPullHandlers(Raven.Server.Documents.DocumentDatabase database, long taskId)
+        {
+            return database.ReplicationLoader.OutgoingHandlers
+                .OfType<OutgoingPullReplicationHandlerAsSink>()
+                .Count(x => x.Destination is PullReplicationAsSink { TaskId: var destinationTaskId, Mode: PullReplicationMode.HubToSink } &&
+                            destinationTaskId == taskId);
+        }
+
+        private static bool HasOutgoingHubToSinkPullConnection(Raven.Server.Documents.DocumentDatabase database, long taskId)
+        {
+            return CountOutgoingHubToSinkPullHandlers(database, taskId) > 0;
+        }
+
+        private static OutgoingPullReplicationHandlerAsSink GetOutgoingSinkToHubPullHandler(Raven.Server.Documents.DocumentDatabase database, long taskId)
+        {
+            return database.ReplicationLoader.OutgoingHandlers
+                .OfType<OutgoingPullReplicationHandlerAsSink>()
+                .FirstOrDefault(x => x.Destination is PullReplicationAsSink { TaskId: var destinationTaskId, Mode: PullReplicationMode.SinkToHub } &&
+                                     destinationTaskId == taskId);
+        }
+
+        private static bool HasHubToSinkReconnectQueued(Raven.Server.Documents.DocumentDatabase database, long taskId)
+        {
+            return database.ReplicationLoader.ReconnectQueue.OfType<PullReplicationAsSink>().Any(x => x.TaskId == taskId && x.Mode == PullReplicationMode.HubToSink);
+        }
+
+        private static PullReplicationAsSink GetQueuedHubToSinkDestination(Raven.Server.Documents.DocumentDatabase database, long taskId)
+        {
+            return database.ReplicationLoader.ReconnectQueue.OfType<PullReplicationAsSink>().FirstOrDefault(x => x.TaskId == taskId && x.Mode == PullReplicationMode.HubToSink);
+        }
+
+        private static async Task AssertPullReplicationAsSinkTaskDisabled(IDocumentStore store, long taskId)
+        {
+            var taskInfo = (OngoingTaskPullReplicationAsSink)await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.PullReplicationAsSink));
+            Assert.Equal(OngoingTaskState.Disabled, taskInfo.TaskState);
+        }
+
+        private class AsyncGate
+        {
+            private readonly object _lock = new object();
+            private TaskCompletionSource<object> _openTcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            private TaskCompletionSource<object> _closeTcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            private volatile bool _isOpen = true;
+
+            public AsyncGate()
+            {
+                _openTcs.SetResult(null);
+            }
+
+            public bool IsOpen => _isOpen;
+
+            public void Close()
+            {
+                lock (_lock)
+                {
+                    if (!_isOpen)
+                        return;
+                    _isOpen = false;
+                    _openTcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    _closeTcs.TrySetResult(null);
+                }
+            }
+
+            public void Open()
+            {
+                lock (_lock)
+                {
+                    if (_isOpen)
+                        return;
+                    _isOpen = true;
+                    _closeTcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    _openTcs.TrySetResult(null);
+                }
+            }
+
+            public Task WaitToOpenAsync(CancellationToken token)
+            {
+                lock (_lock)
+                {
+                    if (_isOpen)
+                        return Task.CompletedTask;
+                    return _openTcs.Task.WithCancellation(token);
+                }
+            }
+
+            public Task WaitToCloseAsync(CancellationToken token)
+            {
+                lock (_lock)
+                {
+                    if (!_isOpen)
+                        return Task.CompletedTask;
+                    return _closeTcs.Task.WithCancellation(token);
+                }
+            }
+        }
+
+        private class SmartHangingStreamWrapper : Stream
+        {
+            private readonly Stream _inner;
+            private readonly AsyncGate _gate;
+            private readonly CancellationTokenSource _disposeCts = new CancellationTokenSource();
+
+            public SmartHangingStreamWrapper(Stream inner, AsyncGate gate)
+            {
+                _inner = inner;
+                _gate = gate;
+            }
+
+            public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            {
+                while (true)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _disposeCts.Token))
+                    {
+                        try
+                        {
+                            await _gate.WaitToOpenAsync(linkedCts.Token);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            if (_disposeCts.IsCancellationRequested)
+                                throw new IOException("Stream disposed");
+                            throw;
+                        }
+
+                        var readTask = _inner.ReadAsync(buffer, offset, count, cancellationToken);
+                        var closeGateTask = _gate.WaitToCloseAsync(linkedCts.Token);
+
+                        var completedTask = await Task.WhenAny(readTask, closeGateTask);
+                        if (completedTask == closeGateTask)
+                        {
+                            continue;
+                        }
+
+                        return await readTask;
+                    }
+                }
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    _disposeCts.Cancel();
+                    _inner.Dispose();
+                    _disposeCts.Dispose();
+                }
+                base.Dispose(disposing);
+            }
+
+            public override void Flush() => _inner.Flush();
+            public override int Read(byte[] buffer, int offset, int count) => _inner.Read(buffer, offset, count);
+            public override long Seek(long offset, SeekOrigin origin) => _inner.Seek(offset, origin);
+            public override void SetLength(long value) => _inner.SetLength(value);
+            public override void Write(byte[] buffer, int offset, int count) => _inner.Write(buffer, offset, count);
+            public override bool CanRead => _inner.CanRead;
+            public override bool CanSeek => _inner.CanSeek;
+            public override bool CanWrite => _inner.CanWrite;
+            public override long Length => _inner.Length;
+            public override long Position { get => _inner.Position; set => _inner.Position = value; }
         }
     }
 }

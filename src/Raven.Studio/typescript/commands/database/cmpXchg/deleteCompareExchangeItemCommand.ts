@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class deleteCompareExchangeItemCommand extends commandBase {
 
-    constructor(private database: database, private key: string, private index: number) {
+    constructor(private database: database | string, private key: string, private index: number) {
         super();
     }
 

@@ -23,6 +23,12 @@ public sealed class NotificationCenterDatabaseStats
 
     public long CountOfIndexingErrors;
 
+    public long CountOfEtlTasksErrors;
+
+    public long CountOfAiTasksErrors;
+
+    public long CountOfCdcSinkTasksErrors;
+
     public string GlobalChangeVector;
 
     public DateTime? LastIndexingErrorTime;
@@ -41,6 +47,9 @@ public sealed class NotificationCenterDatabaseStats
                CountOfDocuments == other.CountOfDocuments &&
                CountOfIndexes == other.CountOfIndexes &&
                CountOfIndexingErrors == other.CountOfIndexingErrors &&
+               CountOfEtlTasksErrors == other.CountOfEtlTasksErrors &&
+               CountOfAiTasksErrors == other.CountOfAiTasksErrors &&
+               CountOfCdcSinkTasksErrors == other.CountOfCdcSinkTasksErrors &&
                LastEtag == other.LastEtag &&
                CountOfStaleIndexes == other.CountOfStaleIndexes &&
                GlobalChangeVector == other.GlobalChangeVector &&
@@ -70,6 +79,9 @@ public sealed class NotificationCenterDatabaseStats
             hashCode = (hashCode * 397) ^ CountOfIndexes.GetHashCode();
             hashCode = (hashCode * 397) ^ LastEtag.GetHashCode();
             hashCode = (hashCode * 397) ^ CountOfIndexingErrors.GetHashCode();
+            hashCode = (hashCode * 397) ^ CountOfEtlTasksErrors.GetHashCode();
+            hashCode = (hashCode * 397) ^ CountOfAiTasksErrors.GetHashCode();
+            hashCode = (hashCode * 397) ^ CountOfCdcSinkTasksErrors.GetHashCode();
             hashCode = (hashCode * 397) ^ CountOfStaleIndexes.GetHashCode();
             hashCode = (hashCode * 397) ^ GlobalChangeVector.GetHashCode();
             hashCode = (hashCode * 397) ^ (Collections != null ? Collections.GetHashCode() : 0);
@@ -86,6 +98,9 @@ public sealed class NotificationCenterDatabaseStats
         
         CountOfIndexes = stats.CountOfIndexes; // every node has the same amount of indexes
         CountOfIndexingErrors += stats.CountOfIndexingErrors;
+        CountOfEtlTasksErrors += stats.CountOfEtlTasksErrors;
+        CountOfAiTasksErrors += stats.CountOfAiTasksErrors;
+        CountOfCdcSinkTasksErrors += stats.CountOfCdcSinkTasksErrors;
 
         if (StaleIndexes == null)
             StaleIndexes = stats.StaleIndexes;

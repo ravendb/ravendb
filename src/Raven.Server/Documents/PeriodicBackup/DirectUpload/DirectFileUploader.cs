@@ -30,19 +30,20 @@ public class DirectFileUploader : FileUploaderBase
             case BackupConfiguration.BackupDestination.AmazonS3:
                 return new AwsS3DirectUploadStream(GetDirectUploadParameters(
                     progress => new RavenAwsS3Client(_settings.S3Settings, database.Configuration.Backup, progress, TaskCancelToken.Token),
-                    _settings.S3Settings.RemoteFolderName, folderName, fileName));
+                    _settings.S3Settings.RemoteFolderName, folderName, fileName, _backupResult.S3Backup));
 
             case BackupConfiguration.BackupDestination.Azure:
                 return new AzureDirectUploadStream(GetDirectUploadParameters(
                     progress => RavenAzureClient.Create(_settings.AzureSettings, database.Configuration.Backup, progress, TaskCancelToken.Token),
-                    _settings.AzureSettings.RemoteFolderName, folderName, fileName));
+                    _settings.AzureSettings.RemoteFolderName, folderName, fileName, _backupResult.AzureBackup));
 
             default:
                 throw new ArgumentOutOfRangeException($"Missing implementation for direct upload destination '{_destination}'");
         }
     }
 
-    private DirectUploadStream<T>.Parameters GetDirectUploadParameters<T>(Func<Progress, T> clientFactory, string remoteFolderName, string folderName, string fileName) where T : IDirectUploader
+    private DirectUploadStream<T>.Parameters GetDirectUploadParameters<T>(Func<Progress, T> clientFactory, string remoteFolderName, string folderName, string fileName,
+        CloudUploadStatus cloudUploadStatus) where T : IDirectUploader
     {
         return new DirectUploadStream<T>.Parameters
         {
@@ -54,8 +55,8 @@ public class DirectFileUploader : FileUploaderBase
             },
             IsFullBackup = _isFullBackup,
             RetentionPolicyParameters = _retentionPolicyParameters,
-            CloudUploadStatus = _backupResult.S3Backup,
-            OnBackupException = _settings.OnBackupException,
+            CloudUploadStatus = cloudUploadStatus,
+            RegisterOnBackupException = _settings.RegisterOnBackupException,
             OnProgress = AddInfo
         };
     }

@@ -66,6 +66,12 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
     /// </summary>
     public TimeSpan EmbeddingsCacheForQueryingExpiration { get; set; } = TimeSpan.FromDays(14);
 
+    /// <summary>
+    /// Store the text of each chunk in the database alongside its embedding. 
+    /// Useful for debugging or highlighting, but increases storage requirements. Defaults to false.
+    /// </summary>
+    public bool StoreChunkText { get; set; }
+
     private const string PathsTransformationName = "embeddings-from-paths";
     private const string ScriptTransformationName = "embeddings-transform-script";
 
@@ -78,6 +84,9 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
     /// </summary>
     [JsonDeserializationIgnore]
     [JsonIgnore]
+#if NETCOREAPP3_1_OR_GREATER
+    [System.Text.Json.Serialization.JsonIgnore]
+#endif
     [Obsolete($"{nameof(EmbeddingsGenerationConfiguration)} doesn't support multiple transformations. Please use {nameof(EmbeddingsTransformation)} property instead.")]
 #pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
     public override List<Transformation> Transforms
@@ -215,6 +224,7 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
         json[nameof(EmbeddingsCacheExpiration)] = EmbeddingsCacheExpiration;
         json[nameof(ChunkingOptionsForQuerying)] = ChunkingOptionsForQuerying;
         json[nameof(EmbeddingsCacheForQueryingExpiration)] = EmbeddingsCacheForQueryingExpiration;
+        json[nameof(StoreChunkText)] = StoreChunkText;
 
         return json;
     }
@@ -238,6 +248,7 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
 
         if (Collection != other.Collection ||
             Quantization != other.Quantization ||
+            StoreChunkText != other.StoreChunkText ||
             EmbeddingsCacheExpiration != other.EmbeddingsCacheExpiration ||
             EmbeddingsCacheForQueryingExpiration != other.EmbeddingsCacheForQueryingExpiration ||
             EmbeddingsTransformation.AreEqual(EmbeddingsTransformation, other.EmbeddingsTransformation) == false ||

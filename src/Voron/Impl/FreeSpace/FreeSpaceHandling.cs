@@ -18,7 +18,8 @@ namespace Voron.Impl.FreeSpace
         private readonly FreeSpaceHandlingDisabler _disableStatus = new FreeSpaceHandlingDisabler();
 
         private readonly FreeSpaceRecursiveCallGuard _guard;
-        internal const int NumberOfFreePagesForSparseConsideration = NumberOfPagesInSection/4;
+        internal const int MinNumberOfFreePagesInSectionForSparseConsideration = NumberOfPagesInSection / 4; // 512
+        internal const int MinNumberOfContiguousFreePagesForSparseRegion = Constants.Size.Megabyte / Constants.Storage.PageSize; // 128
 
         private readonly Dictionary<long, SectionMetadata> _maxConsecutiveRangePerSection = new();
 
@@ -413,7 +414,7 @@ namespace Voron.Impl.FreeSpace
                 json["FreePagesCount"] = totalNumberFreePages;
                 json["FreeSpaceSizeHumane"] = new Size(totalNumberFreePages * Constants.Storage.PageSize, SizeUnit.Bytes).ToString();
                 json["FreeSpaceSize"] = totalNumberFreePages * Constants.Storage.PageSize;
-                long sparseSize = load.Where(x => x.Key >= NumberOfFreePagesForSparseConsideration)
+                long sparseSize = load.Where(x => x.Key >= MinNumberOfFreePagesInSectionForSparseConsideration)
                     .Sum(x => x.Value * x.Key) * Constants.Storage.PageSize;
                 json["ExpectedSparseSizeHumane"] = new Size(sparseSize, SizeUnit.Bytes).ToString();
                 json["ExpectedSparseSize"] = sparseSize;
@@ -464,7 +465,7 @@ namespace Voron.Impl.FreeSpace
                 do
                 {
                     int freePagesInSegment = it.CreateReaderForCurrent().Read<int>();
-                    if (freePagesInSegment >= NumberOfFreePagesForSparseConsideration)
+                    if (freePagesInSegment >= MinNumberOfFreePagesInSectionForSparseConsideration)
                     {
                         yield return it.CurrentKey;
                     }
@@ -495,7 +496,7 @@ namespace Voron.Impl.FreeSpace
                 var index = (int)(pageNumber % NumberOfPagesInSection);
                 sba.Set(index, true);
                 
-                if (_disableSparseRegions == false && sba.SetCount > NumberOfFreePagesForSparseConsideration)
+                if (_disableSparseRegions == false && sba.SetCount > MinNumberOfFreePagesInSectionForSparseConsideration)
                 {
                     tx.RecordSparseRangeCandidate(section);
                 }
@@ -550,7 +551,7 @@ namespace Voron.Impl.FreeSpace
                         continue;
 
                     var section = new StreamBitArray(result.CreateReader().Base);
-                    if(section .SetCount < NumberOfFreePagesForSparseConsideration)
+                    if(section .SetCount < MinNumberOfFreePagesInSectionForSparseConsideration)
                         continue;
 
                     var start = -1;
@@ -566,7 +567,7 @@ namespace Voron.Impl.FreeSpace
 
                         var freeRange = nextUnsetBit  - start;
 
-                        if (freeRange >= 128)
+                        if (freeRange >= MinNumberOfContiguousFreePagesForSparseRegion)
                         {
                             results.Add(((sectionId * NumberOfPagesInSection) + start, freeRange));
                         }

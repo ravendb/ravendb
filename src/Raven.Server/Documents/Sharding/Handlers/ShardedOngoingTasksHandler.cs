@@ -149,5 +149,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedOngoingTasksHandlerProcessorForAddQueueSink(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/admin/cdc-sink", "PUT")]
+        public async Task AddCdcSink()
+        {
+            using (var processor = new ShardedOngoingTasksHandlerProcessorForAddCdcSink(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

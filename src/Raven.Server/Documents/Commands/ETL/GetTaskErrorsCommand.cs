@@ -1,4 +1,3 @@
-using System;
 using System.Net.Http;
 using Microsoft.AspNetCore.WebUtilities;
 using Raven.Client.Documents.Conventions;
@@ -6,6 +5,7 @@ using Raven.Client.Http;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Stats;
 using Sparrow.Json;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.Commands.ETL;
 
@@ -25,14 +25,7 @@ internal sealed class GetTaskErrorsCommand : RavenCommand<TaskErrors[]>
 
     public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
     {
-        var endpoint = _taskCategory switch
-        {
-            TaskCategory.Etl => "etl/errors",
-            TaskCategory.Ai => "ai/errors",
-            _ => throw new ArgumentOutOfRangeException(nameof(_taskCategory), _taskCategory, null)
-        };
-
-        url = $"{node.Url}/databases/{node.Database}/{endpoint}";
+        url = $"{node.Url}/databases/{node.Database}/{_taskCategory.GetErrorsEndpoint()}";
 
         if (_names is { Length: > 0 })
         {

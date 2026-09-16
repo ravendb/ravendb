@@ -1,65 +1,19 @@
 import { AboutViewAnchored, AccordionItemWrapper } from "components/common/AboutView";
-import FeatureAvailabilitySummaryWrapper, {
-    FeatureAvailabilityData,
-} from "components/common/FeatureAvailabilitySummary";
-import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
 import useConnectionStringsLicense from "./useConnectionStringsLicense";
+import appUrl from "common/appUrl";
+import { Icon } from "components/common/Icon";
+import { useRavenLink } from "hooks/useRavenLink";
 
 export function ConnectionStringsInfoHub() {
-    const { hasAll, features } = useConnectionStringsLicense();
+    const { hasAll, featureAvailability } = useConnectionStringsLicense();
 
-    const featureAvailability = useLimitedFeatureAvailability({
-        defaultFeatureAvailability,
-        overwrites: [
-            {
-                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "ravendb-etl").featureName,
-                value: features.hasRavenEtl,
-            },
-            {
-                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "sql-etl").featureName,
-                value: features.hasSqlEtl,
-            },
-            {
-                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "snowflake-etl").featureName,
-                value: features.hasSnowflakeEtl,
-            },
-            {
-                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "olap-etl").featureName,
-                value: features.hasOlapEtl,
-            },
-            {
-                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "elastic-search-etl").featureName,
-                value: features.hasElasticSearchEtl,
-            },
-            {
-                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "kafka-etl").featureName,
-                value: features.hasQueueEtl,
-            },
-            {
-                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "rabbitmq-etl").featureName,
-                value: features.hasQueueEtl,
-            },
-            {
-                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "azure-queue-storage-etl")
-                    .featureName,
-                value: features.hasQueueEtl,
-            },
-            {
-                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "amazon-sqs-etl").featureName,
-                value: features.hasQueueEtl,
-            },
-        ],
-    });
+    const connectionStringsOverviewDocsLink = useRavenLink({ hash: "P5XJOV" });
+    const connectionStringsPerDatabaseDocsLink = useRavenLink({ hash: "BOYDGL" });
 
     return (
         <AboutViewAnchored defaultOpen={hasAll ? null : "licensing"}>
-            <AccordionItemWrapper
-                targetId="about"
-                icon="about"
-                color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
-            >
+            <AccordionItemWrapper targetId="about" icon="about" color="info">
                 <div>
                     <ul>
                         <li>
@@ -78,7 +32,24 @@ export function ConnectionStringsInfoHub() {
                             Connection strings that are in use by ongoing-tasks cannot be deleted, as they are essential
                             for task functionality and data access.
                         </li>
+                        <li className="margin-top-xxs">
+                            Connection strings can also be defined at the cluster level in the{" "}
+                            <a href={appUrl.forServerWideConnectionStrings()} target="_blank">
+                                Server-Wide Connection Strings view
+                            </a>
+                            . Those connection strings are propagated to all databases in the cluster, unless specific
+                            databases are excluded.
+                        </li>
                     </ul>
+                    <hr />
+                    <div className="small-label mb-2">useful links</div>
+                    <a href={connectionStringsOverviewDocsLink} target="_blank">
+                        <Icon icon="newtab" /> Docs - Connection Strings Overview
+                    </a>
+                    <br />
+                    <a href={connectionStringsPerDatabaseDocsLink} target="_blank">
+                        <Icon icon="newtab" /> Docs - Connection Strings Per Database
+                    </a>
                 </div>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
@@ -89,76 +60,3 @@ export function ConnectionStringsInfoHub() {
         </AboutViewAnchored>
     );
 }
-
-const defaultFeatureAvailability: FeatureAvailabilityData[] = [
-    {
-        featureName: "AI",
-        featureIcon: "ai-etl",
-        community: { value: true },
-        professional: { value: true },
-        enterprise: { value: true },
-    },
-    {
-        featureName: "RavenDB ETL",
-        featureIcon: "ravendb-etl",
-        community: { value: false },
-        professional: { value: true },
-        enterprise: { value: true },
-    },
-    {
-        featureName: "SQL ETL",
-        featureIcon: "sql-etl",
-        community: { value: false },
-        professional: { value: true },
-        enterprise: { value: true },
-    },
-    {
-        featureName: "Snowflake ETL",
-        featureIcon: "snowflake-etl",
-        community: { value: false },
-        professional: { value: false },
-        enterprise: { value: true },
-    },
-    {
-        featureName: "OLAP ETL",
-        featureIcon: "olap-etl",
-        community: { value: false },
-        professional: { value: false },
-        enterprise: { value: true },
-    },
-    {
-        featureName: "Elasticsearch ETL",
-        featureIcon: "elastic-search-etl",
-        community: { value: false },
-        professional: { value: false },
-        enterprise: { value: true },
-    },
-    {
-        featureName: "Kafka ETL",
-        featureIcon: "kafka-etl",
-        community: { value: false },
-        professional: { value: false },
-        enterprise: { value: true },
-    },
-    {
-        featureName: "RabbitMQ ETL",
-        featureIcon: "rabbitmq-etl",
-        community: { value: false },
-        professional: { value: false },
-        enterprise: { value: true },
-    },
-    {
-        featureName: "Azure Queue Storage ETL",
-        featureIcon: "azure-queue-storage-etl",
-        community: { value: false },
-        professional: { value: false },
-        enterprise: { value: true },
-    },
-    {
-        featureName: "Amazon SQS ETL",
-        featureIcon: "amazon-sqs-etl",
-        community: { value: false },
-        professional: { value: false },
-        enterprise: { value: true },
-    },
-];

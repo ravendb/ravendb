@@ -10,15 +10,17 @@ public class DebugPackageReport
     public readonly string PackageId = Guid.NewGuid().ToString("N").Substring(0, 10);
     private DebugPackageAnalysisSummary _summary;
 
-    public DebugPackageReport(DebugPackageNodeReport[] nodeReports, DebugPackageAnalysisIssues clusterWideIssues)
+    public DebugPackageReport(DebugPackageNodeReport[] nodeReports, Dictionary<string, string> unreachableNodes, DebugPackageAnalysisIssues clusterWideIssues)
     {
         Reports = nodeReports;
+        UnreachableNodes = unreachableNodes;
         ClusterWideIssues = clusterWideIssues;
     }
-    
+
     public DateTime LastAccessTime { get; set; }
     public DebugPackageAnalysisIssues ClusterWideIssues { get; set; }
     public DebugPackageNodeReport[] Reports { get; }
+    public Dictionary<string, string> UnreachableNodes { get; }
 
     public DebugPackageAnalysisSummary GetSummary()
     {

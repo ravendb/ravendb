@@ -364,7 +364,7 @@ namespace Raven.Server.Documents.Indexes.Static
 #pragma warning disable CS0618
             //Here we construct the function so if we iterate only functions we will be able to iterate ArrowFunctions too
             var statement =
-                arrowFunctionExpression.Expression
+                arrowFunctionExpression.Body is not FunctionBody body
                     ? new FunctionBody(NodeList.From(new List<Statement> { new ReturnStatement(arrowFunctionExpression.Body.As<Expression>()) }), strict: true)
                     : arrowFunctionExpression.Body.As<FunctionBody>();
 #pragma warning restore CS0618

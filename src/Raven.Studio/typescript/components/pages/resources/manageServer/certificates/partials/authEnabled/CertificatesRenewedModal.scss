@@ -1,0 +1,55 @@
+@use "Content/scss/colors";
+
+.certificates-renewed-modal {
+    // Top-level Browser Access / Application Access segmented tabs.
+    // Layout (flex/gap/border/radius/padding/width) is applied via Bootstrap
+    // utility classes in the markup; only stateful styling lives here.
+    .access-tab-container {
+        .nav-link {
+            color: colors.$text-emphasis-color;
+            background-image: none !important;
+
+            &[aria-selected="false"] {
+                color: colors.$text-muted-color;
+                background-color: colors.$body-bg-var;
+            }
+
+            &[aria-selected="true"] {
+                border-color: colors.$primary-var !important;
+                background-color: var(--faded-primary);
+            }
+        }
+    }
+
+    // Segmented tab set (browser + client code) - mirrors .browser-tab-container
+    .segmented-tab-container {
+        border-radius: var(--bs-border-radius);
+        border: 1px solid var(--border-color-light);
+        background-color: var(--panel-bg-2);
+
+        .nav-link {
+            color: colors.$text-emphasis-color;
+            background-image: none !important;
+
+            &[aria-selected="false"] {
+                color: colors.$text-muted-color;
+                background-color: var(--bs-body-bg);
+                border-bottom: 1px solid var(--border-color-light);
+            }
+        }
+
+        .nav-item {
+            &:not(:last-child) .nav-link {
+                border-right: 1px solid var(--border-color-light);
+            }
+
+            &:first-child .nav-link {
+                border-top-left-radius: var(--bs-border-radius);
+            }
+
+            &:last-child .nav-link {
+                border-top-right-radius: var(--bs-border-radius);
+            }
+        }
+    }
+}

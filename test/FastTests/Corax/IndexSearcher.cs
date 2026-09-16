@@ -26,6 +26,8 @@ using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Tests.Infrastructure;
 using Voron;
+using Corax.Querying.Primitives;
+using Voron.Data.RoaringBitmaps;
 using Xunit;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using IndexWriter = Corax.Indexing.IndexWriter;
@@ -1042,6 +1044,109 @@ namespace FastTests.Corax
                 var results = ExecuteRQLQuery("FROM TestIndex WHERE Content != '4'");
                 Assert.Equal(3, results.Count);
                 AssertIds(ResolveDocumentIds(results), "entry/1", "entry/2", "entry/3");
+            }
+        }
+
+        // RavenDB-27286: glob matching over a field's terms. Forward and backward iteration must return exactly
+        // the same set - the backward provider is bounded by the successor of the pattern's literal prefix, so a
+        // mistake there shows up as a direction-dependent count.
+        [RavenFact(RavenTestCategory.Corax)]
+        public void WildcardQueryStatement()
+        {
+            var entries = new[]
+            {
+                new IndexSingleEntry {Id = "entry/1", Content = "a-cat-b"},
+                new IndexSingleEntry {Id = "entry/2", Content = "xa*b"},
+                new IndexSingleEntry {Id = "entry/3", Content = "b-cat-a"},
+                new IndexSingleEntry {Id = "entry/4", Content = "ab-x-cd"},
+                new IndexSingleEntry {Id = "entry/5", Content = "abcd"},
+                new IndexSingleEntry {Id = "entry/6", Content = "a"},
+                new IndexSingleEntry {Id = "entry/7", Content = "b-ab"},
+                new IndexSingleEntry {Id = "entry/8", Content = "x-ab-b"},
+                new IndexSingleEntry {Id = "entry/9", Content = "a\u00e9b"},
+                new IndexSingleEntry {Id = "entry/10", Content = "ac"}
+            };
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, entries, CreateKnownFields(bsc));
+
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+            var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
+
+            var cases = new (string Pattern, int Expected)[]
+            {
+                ("*a*b", 5),
+                ("**a**b", 5),
+                ("ab*cd", 2),
+                ("ab*x*d", 1),
+                ("a*a", 0),
+                ("*ab*b", 1),
+                ("*a*b*c*d", 2),
+                ("*a*c*b*d", 0),
+                ("*a?b", 2),
+                ("*a??b", 2),
+                ("*?at*", 2),
+                ("a?cd", 1),
+                ("a?b", 1),
+                ("*\u00e9*", 1),
+                ("*?\u00e9*", 1),
+            };
+
+            Span<long> ids = stackalloc long[16];
+            foreach (var (pattern, expected) in cases)
+            {
+                using var _ = Slice.From(bsc, pattern, out var patternSlice);
+                foreach (var forward in new[] { true, false })
+                {
+                    var match = searcher.PatternQuery(contentMetadata, patternSlice, forward: forward);
+
+                    Assert.Equal(expected, match.Fill(ids));
+                    if (expected > 0)
+                        Assert.Equal(0, match.Fill(ids));
+                }
+            }
+
+            using (Slice.From(bsc, "abcd", out var termWithoutPattern))
+                Assert.Throws<InvalidOperationException>(() => { searcher.PatternQuery(contentMetadata, termWithoutPattern); });
+        }
+
+        // The v8.0 original called IQueryMatch.AndWith twice; Corax 2.0 has no generic AndWith (only the
+        // spatial/vector post-filter one), so the same property is asserted against the bitmap pipeline:
+        // intersecting the same pattern leaf twice must yield the same set, which is what preserveLeaf buys.
+        [RavenFact(RavenTestCategory.Corax)]
+        public void PatternQueryCanBeAndedMoreThanOnce()
+        {
+            var entries = new[]
+            {
+                new IndexSingleEntry {Id = "entry/1", Content = "ab-x-cd"},
+                new IndexSingleEntry {Id = "entry/2", Content = "abcd"},
+                new IndexSingleEntry {Id = "entry/3", Content = "b-cat-a"}
+            };
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, entries, CreateKnownFields(bsc));
+
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+            var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
+            using var _ = Slice.From(bsc, "ab*cd", out var patternSlice);
+
+            var match = searcher.PatternQuery(contentMetadata, patternSlice);
+
+            for (int i = 0; i < 2; i++)
+            {
+                var bitmap = new BitmapMatch(searcher.Allocator);
+                RoaringBitmap tempData = new(searcher.Allocator);
+                try
+                {
+                    QueryPrimitives.OrWithMatch(searcher.AllEntries(), ref bitmap.BitmapState);
+                    QueryPrimitives.AndWithMatch(match, ref bitmap.BitmapState, ref tempData, preserveLeaf: true);
+                    Assert.Equal(2, bitmap.BitmapState.ComputeCount());
+                }
+                finally
+                {
+                    tempData.Dispose();
+                    bitmap.Dispose();
+                }
             }
         }
 

@@ -80,6 +80,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public string SourceCollection;
 
+        public int LoadedItemsCount;
+
         public readonly TransactionOperationContext IndexContext;
 
         public readonly IndexDefinitionBaseServerSide IndexDefinition;
@@ -122,6 +124,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 var results = new List<DynamicAttachment>();
                 foreach (var attachmentName in attachmentNames)
                 {
+                    LoadedItemsCount++;
+
                     var attachment = _documentsStorage.AttachmentsStorage.GetAttachment(QueryContext.Documents, documentId, attachmentName, AttachmentType.Document, null);
                     if (attachment == null)
                         continue;
@@ -200,6 +204,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (attachmentName == null)
                     return DynamicNullObject.Null;
 
+                LoadedItemsCount++;
+
                 var attachment = _documentsStorage.AttachmentsStorage.GetAttachment(QueryContext.Documents, documentId, attachmentName, AttachmentType.Document, null);
                 if (attachment == null)
                     return DynamicNullObject.Null;
@@ -247,6 +253,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 var references = GetReferencesForItem(idSlice);
 
                 references.Add(keySlice);
+
+                LoadedItemsCount++;
 
                 // when there is conflict, we need to apply same behavior as if the document would not exist
                 var document = _documentsStorage.Get(QueryContext.Documents, keySlice, throwOnConflict: false);
@@ -351,6 +359,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 var references = GetCompareExchangeReferencesForItem(idSlice);
 
                 references.Add(keySlice);
+
+                LoadedItemsCount++;
 
                 var value = _documentsStorage.DocumentDatabase.ServerStore.Cluster.GetCompareExchangeValue(QueryContext.Server, keySlice);
 

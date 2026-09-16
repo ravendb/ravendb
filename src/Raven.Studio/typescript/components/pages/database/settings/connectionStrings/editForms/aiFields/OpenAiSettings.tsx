@@ -13,6 +13,7 @@ import {
 } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import { useAppSelector } from "components/store";
 import { useAsyncCallback } from "react-async-hook";
+import { connectionStringSelectors } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
 import { useFormContext, useWatch } from "react-hook-form";
 import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
 import { SelectOption } from "components/common/select/Select";
@@ -26,6 +27,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
     const { control, trigger } = useFormContext<FormData>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const formValues = useWatch({ control });
 
@@ -35,15 +37,19 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             return;
         }
 
-        return tasksService.testAiConnectionString(databaseName, "OpenAi", formValues.modelType, {
+        const settings = {
             ApiKey: formValues.openAiSettings.apiKey,
             Endpoint: formValues.openAiSettings.endpoint,
             EnablePromptCache: formValues.openAiSettings.enablePromptCache,
             Model: formValues.openAiSettings.model,
             OrganizationId: formValues.openAiSettings.organizationId,
             ProjectId: formValues.openAiSettings.projectId,
+            ReasoningEffort: formValues.modelType === "Chat" ? formValues.openAiSettings.reasoningEffort : null,
             Temperature: formValues.openAiSettings.isSetTemperature ? formValues.openAiSettings.temperature : null,
-        });
+        };
+        return isServerWide
+            ? tasksService.testServerWideAiConnectionString("OpenAi", formValues.modelType, settings)
+            : tasksService.testAiConnectionString(databaseName, "OpenAi", formValues.modelType, settings);
     });
 
     const asyncGetModelOptions = useAsyncDebounce(
@@ -177,6 +183,46 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 </FormLabel>
                 <FormInput control={control} name="openAiSettings.projectId" type="text" />
             </div>
+            {formValues.modelType === "Chat" && (
+                <div className="mb-2">
+                    <FormLabel>
+                        Reasoning effort <OptionalLabel />
+                        <PopoverWithHoverWrapper
+                            message={
+                                <>
+                                    <p>
+                                        The <code>reasoning_effort</code> to send to the provider, controlling the
+                                        reasoning depth of supported models (such as the GPT-5 family). Lower values
+                                        reduce internal reasoning, which may improve latency and reduce variability in
+                                        responses.
+                                    </p>
+                                    <p>
+                                        Typical values are <code>none</code>, <code>minimal</code>, <code>low</code>,{" "}
+                                        <code>medium</code>, <code>high</code>, <code>xhigh</code> and <code>max</code>.
+                                        Model families accept different subsets, for example <code>minimal</code> is
+                                        rejected by <code>gpt-5.1</code> and later, which take <code>none</code>{" "}
+                                        instead.
+                                    </p>
+                                    <p>
+                                        The value is sent as supplied and is not validated by RavenDB. Providers match
+                                        it exactly, e.g. OpenAI accepts lowercase values only. If not set, the field is
+                                        omitted and the model applies its own default.
+                                    </p>
+                                </>
+                            }
+                        >
+                            <Icon icon="info" color="info" id="reasoningEffort" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </FormLabel>
+                    <FormSelectAutocomplete
+                        control={control}
+                        name="openAiSettings.reasoningEffort"
+                        placeholder="Select a reasoning effort or enter a new one (leave empty for model default)"
+                        options={reasoningEffortOptions}
+                        isClearable
+                    />
+                </div>
+            )}
             {formValues.modelType === "TextEmbeddings" && (
                 <div className="mb-2">
                     <FormLabel>
@@ -213,3 +259,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
 }
 
 const endpointOptions: SelectOption[] = ["https://api.openai.com/v1/"].map((x) => ({ label: x, value: x }));
+
+const reasoningEffortOptions: SelectOption[] = ["none", "minimal", "low", "medium", "high", "xhigh", "max"].map(
+    (x) => ({ label: x, value: x })
+);

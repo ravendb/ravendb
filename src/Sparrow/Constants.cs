@@ -22,6 +22,14 @@ namespace Sparrow.Global
 
             internal const string DefaultLayout = "${longdate:universalTime=true}|${level:uppercase=true}|${threadid}|${event-properties:item=Resource}|${event-properties:item=Component}|${logger}|${message:withexception=true}|${event-properties:item=Data}";
 
+            // Server-only variants: they include the cluster NodeTag column via the ${rvn:...} layout renderer,
+            // which is registered only in the Raven.Server assembly (see RavenLayoutRenderer.cs). Offline tools
+            // (rvn, Voron.Recovery) must NOT use these - they have no node identity, and rvn does not register
+            // the renderer, so parsing ${rvn:...} there would fail.
+            internal const string DefaultServerHeaderAndFooterLayout = "Date|NodeTag|Level|ThreadID|Resource|Component|Logger|Message|Data";
+
+            internal const string DefaultServerLayout = "${longdate:universalTime=true}|${rvn:NodeTag}|${level:uppercase=true}|${threadid}|${event-properties:item=Resource}|${event-properties:item=Component}|${logger}|${message:withexception=true}|${event-properties:item=Data}";
+
             internal class Properties
             {
                 private Properties()

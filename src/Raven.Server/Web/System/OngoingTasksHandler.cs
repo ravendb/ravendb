@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Http;
@@ -186,6 +187,25 @@ namespace Raven.Server.Web.System
         {
             using (var processor = new OngoingTasksHandlerProcessorForAddQueueSink(this))
                 await processor.ExecuteAsync();
+        }
+
+        [RavenAction("/databases/*/admin/cdc-sink", "PUT", AuthorizationStatus.DatabaseAdmin)]
+        public async Task AddCdcSink()
+        {
+            using (var processor = new OngoingTasksHandlerProcessorForAddCdcSink(this))
+                await processor.ExecuteAsync();
+        }
+
+        internal static OngoingTaskState GetCdcSinkTaskState(CdcSinkConfiguration config)
+        {
+            var taskState = OngoingTaskState.Enabled;
+
+            if (config.Disabled || config.Tables.All(x => x.Disabled))
+                taskState = OngoingTaskState.Disabled;
+            else if (config.Tables.Any(x => x.Disabled))
+                taskState = OngoingTaskState.PartiallyEnabled;
+
+            return taskState;
         }
 
         internal static OngoingTaskState GetEtlTaskState<T>(EtlConfiguration<T> config) where T : ConnectionString

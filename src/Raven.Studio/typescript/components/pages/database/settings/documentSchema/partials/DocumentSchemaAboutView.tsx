@@ -23,12 +23,7 @@ export default function DocumentSchemaAboutView() {
 
     return (
         <AboutViewAnchored>
-            <AccordionItemWrapper
-                icon="about"
-                color="info"
-                description="Get additional info on this feature"
-                heading="About this view"
-            >
+            <AccordionItemWrapper icon="about" color="info">
                 <div>
                     <ul>
                         <li>
@@ -101,5 +96,6 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: false },
         professional: { value: true },
         enterprise: { value: true },
+        quill: { value: true },
     },
 ];

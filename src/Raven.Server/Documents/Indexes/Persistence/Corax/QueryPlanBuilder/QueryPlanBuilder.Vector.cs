@@ -86,6 +86,42 @@ internal static partial class QueryPlanBuilder
         return items;
     }
 
+    // RavenDB-27117: record the query vectors behind a vector.search so CoraxIndexReadOperation can hand the
+    // matching chunk's source text back through include highlight(). Only embeddings-generation tasks store that
+    // text, so anything else is skipped.
+    private static void CaptureVectorHighlighting(QueryBuilderParameters builderParameters, ClauseExecution exec, string embeddingsGenerationTaskIdentifier,
+        float minimumMatch, VectorValue? singleVector, VectorValue[] multiVector)
+    {
+        if (embeddingsGenerationTaskIdentifier is null)
+            return;
+
+        if (builderParameters.Metadata.HasHighlightings == false)
+            return;
+
+        if (builderParameters.IndexReadOperation is not CoraxIndexReadOperation readOperation)
+            return; // vector search is Corax-only; a non-Corax read operation would have failed far earlier
+
+        List<byte[]> queryVectors = new();
+        if (singleVector is { IsNull: false } single)
+            queryVectors.Add(single.GetEmbedding().ToArray());
+
+        if (multiVector is not null)
+        {
+            foreach (VectorValue vector in multiVector)
+            {
+                if (vector.IsNull == false)
+                    queryVectors.Add(vector.GetEmbedding().ToArray());
+            }
+        }
+
+        if (queryVectors.Count == 0)
+            return;
+
+        // On a dynamic index highlight() names the source document field, not the generated vector field.
+        string highlightFieldName = exec.Clause.VectorSourceFieldName ?? exec.Clause.FieldName;
+        readOperation.CaptureVectorChunkHighlighting(highlightFieldName, embeddingsGenerationTaskIdentifier, minimumMatch, queryVectors);
+    }
+
     private static CoraxVectorItem HandleVector(QueryBuilderParameters builderParameters, ClauseExecution exec)
     {
         Debug.Assert(exec.ClauseType ==ClauseType.Vector);
@@ -155,6 +191,8 @@ internal static partial class QueryPlanBuilder
 
             var vector = VectorHelpers.GetEmbeddingsForQueryParameter(builderParameters, valueTokenType, methodParameter, embeddingsGenerationTaskIdentifier, vectorOptions, fieldName);
 
+            CaptureVectorHighlighting(builderParameters, exec, embeddingsGenerationTaskIdentifier, minimumMatch, vector.SingleVector, vector.MultiVector);
+
             if (vector.SingleVector != null)
                 return CoraxVectorItem.BuildSingleVector(builderParameters, fieldMetadata, vector.SingleVector.Value, numberOfCandidates, minimumMatch, isExact);
 
@@ -171,6 +209,8 @@ internal static partial class QueryPlanBuilder
         {
             var vectorOptions = VectorHelpers.GetExplicitVectorOptions(builderParameters, fieldName, out indexField);
             transformedEmbeddings = VectorHelpers.GetEmbeddingsForQueryParameter(builderParameters, valueType, value, embeddingsGenerationTaskIdentifier, vectorOptions, fieldName);
+
+            CaptureVectorHighlighting(builderParameters, exec, embeddingsGenerationTaskIdentifier, minimumMatch, transformedEmbeddings.SingleVector, transformedEmbeddings.MultiVector);
         }
         else
         {

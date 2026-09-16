@@ -21,6 +21,7 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
@@ -520,6 +521,13 @@ namespace Raven.Server.Smuggler.Documents
                             WriteQueueSinks(databaseRecord.QueueSinks);
                         }
 
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.CdcSinks))
+                        {
+                            _writer.WriteComma();
+                            _writer.WritePropertyName(nameof(databaseRecord.CdcSinks));
+                            WriteCdcSinks(databaseRecord.CdcSinks);
+                        }
+
                         if (databaseRecordItemType.Contain(DatabaseRecordItemType.EmbeddingsGenerations))
                         {
                             _writer.WriteComma();
@@ -852,6 +860,27 @@ namespace Raven.Server.Smuggler.Documents
 
                 var first = true;
                 foreach (var configuration in queueSinkConfiguration)
+                {
+                    if (first == false)
+                        _writer.WriteComma();
+                    first = false;
+                    _context.Write(_writer, configuration.ToJson());
+                }
+
+                _writer.WriteEndArray();
+            }
+
+            private void WriteCdcSinks(List<CdcSinkConfiguration> cdcSinkConfiguration)
+            {
+                if (cdcSinkConfiguration == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                _writer.WriteStartArray();
+
+                var first = true;
+                foreach (var configuration in cdcSinkConfiguration)
                 {
                     if (first == false)
                         _writer.WriteComma();

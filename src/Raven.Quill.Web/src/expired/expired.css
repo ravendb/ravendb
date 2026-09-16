@@ -1,0 +1,50 @@
+/* Stylesheet for the expired-build notice (expired.html), which the backend's expiry gate answers every
+   request with. `source(none)` keeps automatic content detection off: scanning the SPA's sources would
+   drag the whole app's utilities into a page that must stay a small, fully inlined single file. */
+@import "tailwindcss" source(none);
+@import "tw-animate-css";
+@import "../styles/theme.css";
+
+@source "../../expired.html";
+
+@layer base {
+    /* Mirrors the SPA's base rule (index.css); without it Tailwind's `border` utility falls back to
+       currentColor and the notice ends up outlined in the foreground colour. */
+    * {
+        border-color: var(--color-border);
+    }
+
+    body {
+        background-color: var(--color-background);
+    }
+
+    button:not(:disabled) {
+        cursor: pointer;
+    }
+
+    ::selection {
+        background-color: color-mix(in oklab, var(--brand-500) 30%, transparent);
+        color: var(--color-foreground);
+    }
+}
+
+/* Same brand wash as the SPA's auth screens (auth-screen-layout.tsx). */
+.expiry-wash {
+    background: radial-gradient(
+        70% 55% at 50% -10%,
+        color-mix(in oklch, var(--brand-500) 16%, transparent),
+        transparent 70%
+    );
+}
+
+/* Data-safety note: a soft success wash that glows from the icon side and fades out, so the panel reads as
+   a distinct positive note without the heaviness of a flat green fill. The green border still defines the
+   panel edges where the gradient has faded to nothing. */
+.data-note {
+    background: linear-gradient(
+        105deg,
+        color-mix(in oklch, var(--success) 15%, transparent),
+        color-mix(in oklch, var(--success) 5%, transparent) 50%,
+        transparent 90%
+    );
+}

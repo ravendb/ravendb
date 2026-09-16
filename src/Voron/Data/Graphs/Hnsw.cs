@@ -77,6 +77,26 @@ public unsafe partial class Hnsw
     }
 
     /// <summary>
+    /// Translates a minimum similarity on the [0, 1] scale into the maximum distance the similarity method reports for
+    /// it. Cosine distance is <c>1 - cos</c> over [0, 2] and similarity is <c>(cos + 1) / 2</c>, so the bound is
+    /// <c>2 * (1 - minimumSimilarity)</c>. Hamming distance counts differing bits and similarity is the fraction of
+    /// matching bits, so the bound is the number of bits that may differ: <c>numberOfBits * (1 - minimumSimilarity)</c>.
+    /// </summary>
+    internal static float MinimumSimilarityToDistance(SimilarityMethod similarityMethod, int vectorSizeBytes, float minimumSimilarity)
+    {
+        switch (similarityMethod)
+        {
+            case SimilarityMethod.CosineSimilaritySingles:
+            case SimilarityMethod.CosineSimilarityI8:
+                return 2f * (1.0f - minimumSimilarity);
+            case SimilarityMethod.HammingDistance:
+                return vectorSizeBytes * 8 * (1f - minimumSimilarity); // number_of_bits * (1 - minimum_similarity) = allowed differing bits
+            default:
+                throw new InvalidDataException($"Unknown similarity method {similarityMethod}");
+        }
+    }
+
+    /// <summary>
     /// Returns the distance kernel to use for a given HNSW <see cref="Options"/>. For
     /// <see cref="SimilarityMethod.CosineSimilaritySingles"/> the kernel depends on the on-disk
     /// version: at or above <see cref="Constants.Graphs.HnswVersion.SinglesWithL2Norm"/> the
@@ -173,10 +193,10 @@ public unsafe partial class Hnsw
             return (nint)_nodes.RawItems != before;
         }
 
-        // Test-only: grow the node array, then fill a buffer of the vacated capacity with a poison pattern.
-        // If the grow freed the old buffer (the RavenDB-26809 bug), the allocator reuses that memory and a
-        // dangling reader sees poison; if it was retained (the fix), the reader is unaffected. The poison
-        // buffer is retained so it occupies the vacated region.
+        // Test-only: grow the node array, then claim a buffer of the vacated capacity and fill it with a
+        // poison pattern. If the grow freed the old buffer (the RavenDB-26809 bug) the allocator reuses
+        // that same memory and a dangling reader sees poison; if it was retained (the fix) the reader is
+        // unaffected. The poison buffer is retained so it occupies the region past the reader's resume.
         internal bool GrowNodesAndPoisonVacatedForTesting()
         {
             var before = (nint)_nodes.RawItems;
@@ -259,20 +279,6 @@ public unsafe partial class Hnsw
         }
 
         private const int InitialNodesCapacityWithCache = 256;
-
-        public float MinimumSimilarityToDistance(float minimumSimilarity)
-        {
-            switch (Options.SimilarityMethod)
-            {
-                case SimilarityMethod.CosineSimilaritySingles:
-                case SimilarityMethod.CosineSimilarityI8:
-                    return 2f * (1.0f - minimumSimilarity);
-                case SimilarityMethod.HammingDistance:
-                    return Options.VectorSizeBytes * 8 * (1f - minimumSimilarity); // number_of_bits * minimum_similarity
-                default:
-                    throw new InvalidDataException($"Unknown similarity method {Options.SimilarityMethod}");
-            }
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float DistanceToScore(float score)
@@ -977,10 +983,11 @@ public unsafe partial class Hnsw
 
         internal TestingStuff ForTestingPurposesOnly() => _forTestingPurposes ??= new TestingStuff();
 
-        // Deterministically reproduces the RavenDB-26809 interleaving: parks a placement worker holding a
-        // reference into a node's edges, then has the LLT thread move both that edge buffer and the node
-        // array before the worker resumes. With the fix (private edge snapshot + retained node buffer) the
-        // build completes and stays queryable; reverting either guard turns this into a use-after-free.
+        // Deterministically reproduces the RavenDB-26809 interleaving for tests: the LLT thread picks a
+        // victim (node, level) in PrepareEdgesOnLLT, the worker dispatched for it parks, and the LLT thread
+        // then moves both that edge buffer and the node array before releasing it. With the fix in place
+        // the worker reads a private edge snapshot and the grown-from node buffer is retained, so the build
+        // completes and the graph stays queryable; reverting either guard turns this into a use-after-free.
         internal sealed class TestingStuff
         {
             internal bool SimulateConcurrentRealloc;
@@ -1001,29 +1008,42 @@ public unsafe partial class Hnsw
 
             private int _victim = -1;
             private int _victimLevel;
-            private nint _victimEdgeBufferBeforeMove;
             private nint _victimNodePtr;
             private long _victimNodeIdExpected;
             private readonly ManualResetEventSlim _workerParked = new(false);
             private readonly ManualResetEventSlim _lltMoved = new(false);
 
-            // Worker thread: the first worker about to consume a node's edges at a level with real storage
-            // parks here until the LLT thread has moved that storage and the node array.
-            internal void OnWorkerCapturedEdgeListRef(SearchState searchState, int nodeIndex, int level)
+            // LLT thread: pick the victim here, where the node and its edge lists are stable because we
+            // own the allocator. Capturing it on a worker instead races the LLT thread's own SetCapacity /
+            // ResetAndEnsureCapacity on that node and dereferences a freed edge buffer (RavenDB-27393).
+            // Refs are re-derived here rather than passed in: PrepareEdgesOnLLT's own ref into the node
+            // array can be pointing at a retired buffer by the time it calls us, since its mirror-rebuild
+            // loop can grow that array through GetNodeIndexById.
+            internal void OnLltPreparedEdges(SearchState searchState, int nodeIndex, int level)
             {
-                if (SimulateConcurrentRealloc == false || Volatile.Read(ref _victim) >= 0)
+                if (SimulateConcurrentRealloc == false || _victim >= 0)
                     return;
 
-                ref var candidate = ref searchState.GetNodeByIndex(nodeIndex);
-                if (candidate.EdgesIndexesPerLevel.Count <= level || candidate.EdgesIndexesPerLevel[level].Count == 0)
-                    return;
-                if (Interlocked.CompareExchange(ref _victim, nodeIndex, -1) != -1)
+                ref var node = ref searchState.GetNodeByIndex(nodeIndex);
+                if (node.EdgesIndexesPerLevel[level].Count == 0)
                     return;
 
                 _victimLevel = level;
-                _victimEdgeBufferBeforeMove = (nint)candidate.EdgesIndexesPerLevel[level].RawItems;
-                _victimNodePtr = (nint)Unsafe.AsPointer(ref candidate);
-                _victimNodeIdExpected = candidate.NodeId;
+                _victimNodePtr = (nint)Unsafe.AsPointer(ref node);
+                _victimNodeIdExpected = node.NodeId;
+                // Published last: a worker that observes _victim also observes everything above it.
+                Volatile.Write(ref _victim, nodeIndex);
+            }
+
+            // Worker thread: the worker dispatched for the victim (node, level) parks here until the LLT
+            // thread has moved that storage and the node array. Reads no shared native state.
+            internal void OnWorkerAboutToConsumeEdges(int nodeIndex, int level)
+            {
+                if (SimulateConcurrentRealloc == false || _lltMoved.IsSet)
+                    return;
+                if (Volatile.Read(ref _victim) != nodeIndex || _victimLevel != level)
+                    return;
+
                 VictimSelected = true;
                 _workerParked.Set();
                 WakeLltLoop?.Invoke();
@@ -1044,10 +1064,11 @@ public unsafe partial class Hnsw
 
                 ref var inner = ref searchState.GetNodeByIndex(_victim).EdgesIndexesPerLevel[_victimLevel];
                 var saved = inner.ToSpan().ToArray();
+                var before = (nint)inner.RawItems;
                 inner.ResetAndEnsureCapacity(searchState.Llt.Allocator, Math.Max(inner.Capacity * 2, saved.Length + 1));
                 foreach (var v in saved)
                     inner.AddUnsafe(v);
-                if ((nint)inner.RawItems != _victimEdgeBufferBeforeMove)
+                if ((nint)inner.RawItems != before)
                     InnerEdgeBufferMovedWhileWorkerParked = true;
 
                 if (searchState.GrowNodesAndPoisonVacatedForTesting())

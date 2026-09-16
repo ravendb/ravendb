@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Operations.AI;
+﻿using System;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
@@ -7,6 +8,7 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.ConnectionStrings
@@ -29,6 +31,16 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         {
             json[nameof(ConnectionStringName)] = ConnectionStringName;
         }
+
+        protected static void AssertNotServerWideConnectionString(string name)
+        {
+            if (name.StartsWith(ServerWideConnectionString.NamePrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Can't remove connection string: '{name}'. " +
+                    $"Server-wide connection strings can only be removed via the server-wide connection strings API.");
+            }
+        }
     }
 
     public sealed class RemoveRavenConnectionStringCommand : RemoveConnectionStringCommand<RavenConnectionString>
@@ -45,6 +57,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            AssertNotServerWideConnectionString(ConnectionStringName);
             record.RavenConnectionStrings.Remove(ConnectionStringName);
         }
     }
@@ -63,6 +76,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            AssertNotServerWideConnectionString(ConnectionStringName);
             record.SqlConnectionStrings.Remove(ConnectionStringName);
         }
     }
@@ -80,6 +94,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            AssertNotServerWideConnectionString(ConnectionStringName);
             record.ElasticSearchConnectionStrings.Remove(ConnectionStringName);
         }
     }
@@ -98,6 +113,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            AssertNotServerWideConnectionString(ConnectionStringName);
             record.OlapConnectionStrings.Remove(ConnectionStringName);
         }
     }
@@ -115,6 +131,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            AssertNotServerWideConnectionString(ConnectionStringName);
             record.QueueConnectionStrings.Remove(ConnectionStringName);
         }
     }
@@ -132,6 +149,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            AssertNotServerWideConnectionString(ConnectionStringName);
             record.SnowflakeConnectionStrings.Remove(ConnectionStringName);
         }
     }
@@ -148,6 +166,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            AssertNotServerWideConnectionString(ConnectionStringName);
             record.AiConnectionStrings.Remove(ConnectionStringName);
         }
     }

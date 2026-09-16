@@ -14,6 +14,8 @@ import EditGenAiTaskCancelButton from "../EditGenAiTaskCancelButton";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { aiConnectionStringUtils } from "components/pages/database/settings/connectionStrings/editForms/aiConnectionStringUtils";
+import { connectionStringSelectors } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
+import { mapAiConnectionStringToDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsToDto";
 
 export function EditGenAiTaskStepBasic() {
     const hasGenAi = useAppSelector(licenseSelectors.statusValue("HasGenAi"));
@@ -54,11 +56,13 @@ export function EditGenAiTaskStepBasicFooter() {
     const formValues = useWatch({ control });
 
     const connectionStringTest = useAppSelector(editGenAiTaskSelectors.connectionStringTest);
-    const aiConnectionStrings = useAppSelector(editGenAiTaskSelectors.aiConnectionStrings);
+    const aiConnections = useAppSelector(connectionStringSelectors.connectionsByType("Ai"));
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
-    const handleTest = async () => {
-        const connectionString = aiConnectionStrings[formValues.connectionStringName];
+    const selectedConnection = aiConnections.find((x) => x.name === formValues.connectionStringName);
+
+    const handleTest = () => {
+        const connectionString = mapAiConnectionStringToDto(selectedConnection);
 
         dispatch(
             editGenAiTaskActions.testConnectionString({
@@ -93,12 +97,19 @@ export function EditGenAiTaskStepBasicFooter() {
 
             {hasGenAi && (
                 <div className="hstack gap-2">
-                    <PopoverWithHoverWrapper message="Test the connection to the specified connection string.">
+                    <PopoverWithHoverWrapper
+                        message={
+                            selectedConnection
+                                ? "Test the connection to the specified connection string."
+                                : "Select a connection string to test."
+                        }
+                    >
                         <ButtonWithSpinner
                             variant="info"
                             className="rounded-pill"
                             onClick={handleTest}
                             isSpinning={connectionStringTest.status === "loading"}
+                            disabled={!selectedConnection}
                             icon="test"
                         >
                             Test connection

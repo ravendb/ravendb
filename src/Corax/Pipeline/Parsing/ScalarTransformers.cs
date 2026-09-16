@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -9,6 +10,12 @@ namespace Corax.Pipeline.Parsing
 {
     internal static class ScalarTransformers
     {
+        // Lucene's LowerCaseKeywordTokenizer lowercases per UTF-16 code unit. Surrogate code units have no case
+        // mapping, so characters outside the BMP (i.e. encoded as surrogate pairs) are left unchanged by Lucene.
+        // To keep Corax terms byte-for-byte identical to Lucene, we must NOT case fold non-BMP runes here.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Rune ToLowerInvariantLikeLucene(Rune rune) => rune.IsBmp ? Rune.ToLowerInvariant(rune) : rune;
+
         public static int ToLowercaseAscii(ReadOnlySpan<byte> source, ReadOnlySpan<Token> tokens, ref Span<byte> dest, ref Span<Token> destTokens)
         {
             nint pos = 0;
@@ -87,6 +94,60 @@ namespace Corax.Pipeline.Parsing
 
         public static int ToLowercase(ReadOnlySpan<byte> source, ReadOnlySpan<Token> tokens, ref Span<byte> dest, ref Span<Token> destTokens)
         {
+            return tokens.Length == 1 
+                ? ToLowercaseSingleToken<Default>(source, tokens, ref dest, ref destTokens) 
+                : ToLowercaseMultipleTokens(source, tokens, ref dest, ref destTokens);
+        }
+        
+        public static int ToLowercasePre24423(ReadOnlySpan<byte> source, ReadOnlySpan<Token> tokens, ref Span<byte> dest, ref Span<Token> destTokens)
+        {
+            return ToLowercaseSingleToken<Pre24423>(source, tokens, ref dest, ref destTokens);
+        }
+        
+        private interface IMode{ }
+        private record struct Pre24423 : IMode;
+        private record struct Default : IMode;
+        
+        private static int ToLowercaseMultipleTokens(ReadOnlySpan<byte> source, ReadOnlySpan<Token> tokens, ref Span<byte> dest, ref Span<Token> destTokens)
+        {
+            int destPos = 0;
+            int tokenIdx;
+
+            for (tokenIdx = 0; tokenIdx < tokens.Length; tokenIdx++)
+            {
+                Token token = tokens[tokenIdx];
+                int destStart = destPos;
+                int destUsed = 0;
+                ReadOnlySpan<byte> sourceSpan = source.Slice(token.Offset, (int)token.Length);
+                while (sourceSpan.IsEmpty == false)
+                {
+                    var opStatus = Rune.DecodeFromUtf8(sourceSpan, out var rune, out int bytesSourceConsumed);
+                    if (opStatus != OperationStatus.Done)
+                        throw new InvalidDataException($"Invalid UTF8 stream received. Operation Status: {opStatus}");
+                    
+                    sourceSpan = sourceSpan.Slice(bytesSourceConsumed);
+
+                    rune = ToLowerInvariantLikeLucene(rune);
+                    if (rune.TryEncodeToUtf8(dest.Slice(destPos + destUsed), out int bytesWritten) == false)
+                        throw new InvalidDataException($"Destination buffer is too small. Buffer Size: {dest.Length}, Write Position: {destPos + destUsed}");
+                    
+                    destUsed += bytesWritten;
+                }
+                
+
+                destTokens[tokenIdx] = token with { Offset = destStart, Length = (uint)destUsed };
+                destPos += destUsed;
+            }
+            
+            dest = dest.Slice(0, destPos);
+            destTokens = destTokens.Slice(0, tokenIdx);
+            return source.Length;
+        }
+
+        private static int ToLowercaseSingleToken<TMode>(ReadOnlySpan<byte> source, ReadOnlySpan<Token> tokens, ref Span<byte> dest, ref Span<Token> destTokens)
+        where TMode : IMode
+        {
+            Debug.Assert(typeof(TMode) == typeof(Pre24423) || tokens.Length == 1);
             nint sourcePos = 0;
             nint destPos = 0;
             nint len = source.Length;
@@ -153,9 +214,9 @@ namespace Corax.Pipeline.Parsing
                 var opStatus = Rune.DecodeFromUtf8(source.Slice((int)sourcePos), out var rune, out int bytesConsumed);
                 if (opStatus != OperationStatus.Done)
                     throw new InvalidDataException($"Invalid UTF8 stream received. Operation Status: {opStatus}");
-                
-                rune = Rune.ToLowerInvariant(rune);
-                
+
+                rune = ToLowerInvariantLikeLucene(rune);
+
                 // Encode the rune into UTF8
                 if (rune.TryEncodeToUtf8(dest.Slice((int)destPos), out int bytesWritten) == false)
                     throw new InvalidDataException($"Destination buffer is too small. Buffer Size: {dest.Length}, Write Position: {destPos}");
@@ -168,22 +229,17 @@ namespace Corax.Pipeline.Parsing
                 tokens.CopyTo(destTokens);
 
             // We need to shrink the tokens and bytes output. 
-            destTokens = destTokens.Slice(0, tokens.Length);
+            if (typeof(TMode) == typeof(Default))
+            {
+                destTokens = destTokens.Slice(0, 1);
+                destTokens[0].Length = (uint)destPos;
+            }
+            else if (typeof(TMode) == typeof(Pre24423))
+            {
+                destTokens = destTokens.Slice(0, tokens.Length);
+            }
+            
             dest = dest.Slice(0, (int)destPos);
-
-            return source.Length;
-        }
-
-        public static int ToLowercase(ReadOnlySpan<char> source, ReadOnlySpan<Token> tokens, ref Span<char> dest, ref Span<Token> destTokens)
-        {
-            int consumed = source.ToLowerInvariant(dest);
-
-            if (tokens != destTokens)
-                tokens.CopyTo(destTokens);
-
-            // We need to shrink the tokens and bytes output. 
-            destTokens = destTokens.Slice(0, tokens.Length);
-            dest = dest.Slice(0, consumed);
 
             return source.Length;
         }

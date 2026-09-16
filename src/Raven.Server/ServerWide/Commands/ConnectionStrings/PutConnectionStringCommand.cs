@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Server.Rachis;
 using Sparrow.Json.Parsing;
@@ -33,6 +34,17 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         {
             json[nameof(ConnectionString)] = ConnectionString.ToJson();
         }
+
+        protected static void AssertNotServerWideConnectionString(string name)
+        {
+            if (name.StartsWith(ServerWideConnectionString.NamePrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Can't create or update connection string: '{name}'. " +
+                    $"A regular (non server-wide) connection string name can't start with prefix '{ServerWideConnectionString.NamePrefix}'. " +
+                    $"Use the server-wide connection strings API instead.");
+            }
+        }
     }
 
     public sealed class PutRavenConnectionStringCommand : PutConnectionStringCommand<RavenConnectionString>
@@ -56,6 +68,8 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
                                                           $"A regular (non server-wide) connection string name can't start with prefix '{ServerWideExternalReplication.RavenConnectionStringPrefix}'");
             }
 
+            AssertNotServerWideConnectionString(ConnectionString.Name);
+
             record.RavenConnectionStrings[ConnectionString.Name] = ConnectionString;
         }
     }
@@ -74,6 +88,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            AssertNotServerWideConnectionString(ConnectionString.Name);
             record.SqlConnectionStrings[ConnectionString.Name] = ConnectionString;
         }
     }
@@ -92,6 +107,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            AssertNotServerWideConnectionString(ConnectionString.Name);
             record.OlapConnectionStrings[ConnectionString.Name] = ConnectionString;
         }
     }
@@ -110,6 +126,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            AssertNotServerWideConnectionString(ConnectionString.Name);
             record.ElasticSearchConnectionStrings[ConnectionString.Name] = ConnectionString;
         }
     }
@@ -128,6 +145,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            AssertNotServerWideConnectionString(ConnectionString.Name);
             record.QueueConnectionStrings[ConnectionString.Name] = ConnectionString;
         }
     }
@@ -146,6 +164,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            AssertNotServerWideConnectionString(ConnectionString.Name);
             record.SnowflakeConnectionStrings[ConnectionString.Name] = ConnectionString;
         }
     }
@@ -164,6 +183,8 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            AssertNotServerWideConnectionString(ConnectionString.Name);
+
             try
             {
                 ConnectionString.Identifier ??= ConnectionString.GenerateIdentifier();

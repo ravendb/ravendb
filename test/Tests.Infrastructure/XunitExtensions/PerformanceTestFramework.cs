@@ -6,6 +6,6 @@ namespace Tests.Infrastructure.XunitExtensions
     public class PerformanceTestFramework : XunitTestFramework
     {
         protected override ITestFrameworkExecutor CreateExecutor(Assembly assembly)
-            => new PerformanceTestExecutor(new XunitTestAssembly(assembly));
+            => new PerformanceTestExecutor(new XunitTestAssembly(assembly, configFilePath: null, assemblyName: null));
     }
 }

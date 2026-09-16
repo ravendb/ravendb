@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Data.Common;
 using Raven.Server.SqlMigration.Schema;
 
@@ -6,18 +6,7 @@ namespace Raven.Server.SqlMigration.NpgSQL
 {
     internal partial class NpgSqlDatabaseMigrator : GenericDatabaseMigrator
     {
-        public const string SelectPrimaryKeys = "SELECT TC.TABLE_SCHEMA, TC.TABLE_NAME, COLUMN_NAME " +
-                                                "FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS TC " +
-                                                "INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS KU " +
-                                                "ON TC.CONSTRAINT_TYPE = 'PRIMARY KEY' AND TC.CONSTRAINT_NAME = KU.CONSTRAINT_NAME" +
-                                                " ORDER BY ORDINAL_POSITION";
-
-        public const string SelectReferentialConstraints = "SELECT CONSTRAINT_NAME, UNIQUE_CONSTRAINT_NAME " +
-                                                           "FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS";
-
-        public const string SelectKeyColumnUsage = "SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME" +
-                                                                      " FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE " +
-                                                                      "ORDER BY ORDINAL_POSITION";
+        private readonly NpgSqlSchemaQueries _schemaQueries;
 
         public override DatabaseSchema FindSchema()
         {
@@ -40,12 +29,14 @@ namespace Raven.Server.SqlMigration.NpgSQL
         {
             using (var cmd = connection.CreateCommand())
             {
-                cmd.CommandText = _selectColumns;
+                cmd.CommandText = _schemaQueries.SelectColumnsQuery;
+                _schemaQueries.AddSchemaParameter(cmd, connection);
+
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
                     {
-                        var schemaAndTableName = GetTableNameFromReader(reader);
+                        var schemaAndTableName = SqlSchemaQueries.GetTableNameFromReader(reader);
 
                         var tableSchema = dbSchema.GetTable(schemaAndTableName.Schema, schemaAndTableName.TableName);
 
@@ -69,18 +60,19 @@ namespace Raven.Server.SqlMigration.NpgSQL
         {
             using (var cmd = connection.CreateCommand())
             {
-                cmd.CommandText = SelectPrimaryKeys;
+                cmd.CommandText = _schemaQueries.SelectPrimaryKeysQuery;
+                _schemaQueries.AddSchemaParameter(cmd, connection);
+
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
                     {
-                        var schemaAndTableName = GetTableNameFromReader(reader);
+                        var schemaAndTableName = SqlSchemaQueries.GetTableNameFromReader(reader);
                         var table = dbSchema.GetTable(schemaAndTableName.Schema, schemaAndTableName.TableName);
                         table?.PrimaryKeyColumns.Add(reader["COLUMN_NAME"].ToString());
                     }
                 }
             }
-
         }
 
         private void FindForeignKeys(DbConnection connection, DatabaseSchema dbSchema)
@@ -89,7 +81,9 @@ namespace Raven.Server.SqlMigration.NpgSQL
 
             using (var cmd = connection.CreateCommand())
             {
-                cmd.CommandText = SelectReferentialConstraints;
+                cmd.CommandText = _schemaQueries.SelectReferentialConstraintsQuery;
+                _schemaQueries.AddSchemaParameter(cmd, connection);
+
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
@@ -120,13 +114,15 @@ namespace Raven.Server.SqlMigration.NpgSQL
 
             using (var cmd = connection.CreateCommand())
             {
-                cmd.CommandText = SelectKeyColumnUsage;
+                cmd.CommandText = _schemaQueries.SelectKeyColumnUsageQuery;
+                _schemaQueries.AddSchemaParameter(cmd, connection);
+
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
                     {
                         var cacheKey = reader["CONSTRAINT_NAME"].ToString();
-                        (string schema, string tableName) = GetTableNameFromReader(reader);
+                        (string schema, string tableName) = SqlSchemaQueries.GetTableNameFromReader(reader);
                         var columnName = reader["COLUMN_NAME"].ToString();
 
                         if (cache.TryGetValue(cacheKey, out var cacheValue) == false)
@@ -141,11 +137,6 @@ namespace Raven.Server.SqlMigration.NpgSQL
             }
 
             return cache;
-        }
-
-        private static (string Schema, string TableName) GetTableNameFromReader(DbDataReader reader)
-        {
-            return (reader["TABLE_SCHEMA"].ToString(), reader["TABLE_NAME"].ToString());
         }
     }
 }

@@ -22,8 +22,6 @@ using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
-using Sparrow.Server.Utils;
-using Sparrow.Utils;
 using Voron;
 
 namespace Raven.Server.Documents.Replication.Outgoing
@@ -49,21 +47,31 @@ namespace Raven.Server.Documents.Replication.Outgoing
         public event Action<DatabaseOutgoingReplicationHandler> DocumentsSend;
 
         protected DatabaseOutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, TcpConnectionInfo connectionInfo)
-        : base(connectionInfo, parent._server, database.Name, database.NotificationCenter, node, database.DocumentsStorage.ContextPool, database.DatabaseShutdown)
+            : this(parent, database, node, connectionInfo, CreateTcpConnectionOptions(database))
+        {
+        }
+
+        protected DatabaseOutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, TcpConnectionInfo connectionInfo, TcpConnectionOptions tcpConnectionOptions)
+            : base(connectionInfo, parent._server, database.Name, database.NotificationCenter, node, database.DocumentsStorage.ContextPool, database.DatabaseShutdown)
         {
             _parent = parent;
             _database = database;
             _waitForChanges = new AsyncManualResetEvent(database.DatabaseShutdown);
             _replicationMinimalHeartbeatInMs = (int)database.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
-            _tcpConnectionOptions = new TcpConnectionOptions
-            {
-                DocumentDatabase = database,
-                Operation = TcpConnectionHeaderMessage.OperationTypes.Replication
-            };
+            _tcpConnectionOptions = tcpConnectionOptions;
 
             _database.Changes.OnDocumentChange += OnDocumentChange;
             _database.Changes.OnCounterChange += OnCounterChange;
             _database.Changes.OnTimeSeriesChange += OnTimeSeriesChange;
+        }
+
+        private static TcpConnectionOptions CreateTcpConnectionOptions(DocumentDatabase database)
+        {
+            return new TcpConnectionOptions
+            {
+                DocumentDatabase = database,
+                Operation = TcpConnectionHeaderMessage.OperationTypes.Replication
+            };
         }
 
         public override int GetHashCode()
@@ -153,10 +161,28 @@ namespace Raven.Server.Documents.Replication.Outgoing
             }
         }
 
-        protected override void HandleReplicationErrors(Action replicationAction)
+        internal void DetachTcpConnectionForPullReplicationAsSink(TcpConnectionOptions tcpConnectionOptions)
+        {
+            if (ReferenceEquals(tcpConnectionOptions.Stream, _stream) == false ||
+                ReferenceEquals(tcpConnectionOptions.TcpClient, _tcpClient) == false)
+                throw new InvalidOperationException("Cannot detach pull replication TCP connection because it was not initialized.");
+
+            Interlocked.Exchange(ref _stream, null);
+            Interlocked.Exchange(ref _tcpClient, null);
+
+            if (ReferenceEquals(_tcpConnectionOptions.Stream, tcpConnectionOptions.Stream))
+                _tcpConnectionOptions.Stream = null;
+
+            if (ReferenceEquals(_tcpConnectionOptions.TcpClient, tcpConnectionOptions.TcpClient))
+                _tcpConnectionOptions.TcpClient = null;
+
+            _interruptibleRead = null;
+        }
+
+        protected override void RunReplicationWithErrorHandling(Action replicationAction)
         {
             _parent.ForTestingPurposes?.OnOutgoingReplicationStart?.Invoke(this);
-            base.HandleReplicationErrors(replicationAction);
+            base.RunReplicationWithErrorHandling(replicationAction);
         }
 
         public long NextReplicateTicks;
@@ -204,6 +230,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                                     _parent.EnsureNotDeleted(dest.NodeTag);
                                 }
 
+                                ForTestingPurposes?.BeforeExecuteReplicationOnce?.Invoke(this);
                                 var didWork = documentSender.ExecuteReplicationOnce(_tcpConnectionOptions, scope, ref NextReplicateTicks);
                                 if (documentSender.MissingAttachmentsInLastBatch)
                                     continue;
@@ -263,18 +290,18 @@ namespace Raven.Server.Documents.Replication.Outgoing
                         var etag = _database.DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
                         if (etag == _lastSentDocumentEtag)
                         {
-                            SendHeartbeat(DocumentsStorage.GetDatabaseChangeVector(ctx));
+                            SendHeartbeat(databaseChangeVector: DocumentsStorage.GetDatabaseChangeVector(ctx), lastSentSourceChangeVector: null);
                             _parent.CompleteDeletionIfNeeded(_cts);
                         }
                         else if (NextReplicateTicks > DateTime.UtcNow.Ticks)
                         {
-                            SendHeartbeat(null);
+                            SendHeartbeat(databaseChangeVector: null, lastSentSourceChangeVector: null);
                         }
                         else
                         {
                             //Send a heartbeat first so we will get an updated CV of the destination
                             var currentChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
-                            SendHeartbeat(null);
+                            SendHeartbeat(databaseChangeVector: null, lastSentSourceChangeVector: null);
                             //If our previous CV is already merged to the destination wait a bit more
                             if (ChangeVectorUtils.GetConflictStatus(LastAcceptedChangeVector, currentChangeVector) ==
                                 ConflictStatus.AlreadyMerged)
@@ -321,12 +348,16 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         private bool WaitForChanges(int timeout, CancellationToken token)
         {
+            var sinceLastReceive = Stopwatch.StartNew();
+
             while (true)
             {
+                var remaining = timeout - (int)sinceLastReceive.ElapsedMilliseconds;
+
                 using (var result = _interruptibleRead.ParseToMemory(
                     _waitForChanges,
                     "replication notify message",
-                    timeout,
+                    remaining,
                     _buffer,
                     token))
                 {
@@ -439,6 +470,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
             public bool DisableWaitForChangesForExternalReplication;
 
             public ManualResetEventSlim DebugWaitAndRunReplicationOnce;
+
+            public Action<DatabaseOutgoingReplicationHandler> BeforeExecuteReplicationOnce;
         }
     }
 

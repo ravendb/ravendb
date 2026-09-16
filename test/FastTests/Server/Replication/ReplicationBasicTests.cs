@@ -16,6 +16,42 @@ namespace FastTests.Server.Replication
             public string Name { get; set; }
             public int Age { get; set; }
         }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void PullReplicationAsSinkAllowedPathsArePartOfConnectionShape()
+        {
+            var original = new PullReplicationAsSink("Hub", "ConnectionString", "HubTask")
+            {
+                TaskId = 1,
+                AllowedHubToSinkPaths = ["users/*", "companies/*"],
+                AllowedSinkToHubPaths = ["orders/*", "invoices/*"]
+            };
+
+            var same = new PullReplicationAsSink("Hub", "ConnectionString", "HubTask")
+            {
+                TaskId = 1,
+                AllowedHubToSinkPaths = ["companies/*", "users/*"],
+                AllowedSinkToHubPaths = ["invoices/*", "orders/*"]
+            };
+
+            var changedHubToSinkFilter = new PullReplicationAsSink("Hub", "ConnectionString", "HubTask")
+            {
+                TaskId = 1,
+                AllowedHubToSinkPaths = ["users/*", "products/*"],
+                AllowedSinkToHubPaths = ["orders/*", "invoices/*"]
+            };
+
+            var changedSinkToHubFilter = new PullReplicationAsSink("Hub", "ConnectionString", "HubTask")
+            {
+                TaskId = 1,
+                AllowedHubToSinkPaths = ["users/*", "companies/*"],
+                AllowedSinkToHubPaths = ["orders/*", "products/*"]
+            };
+
+            Assert.True(original.IsEqualTo(same));
+            Assert.False(original.IsEqualTo(changedHubToSinkFilter));
+            Assert.False(original.IsEqualTo(changedSinkToHubFilter));
+        }
      
         [RavenTheory(RavenTestCategory.Replication, LicenseRequired = true)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]

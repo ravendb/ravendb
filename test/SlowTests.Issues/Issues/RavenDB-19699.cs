@@ -67,7 +67,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                replication.Mend();
+                await replication.MendAsync();
 
                 Assert.True(WaitForDocument<User>(replica, id, u => u.Name == "ayende2"));
 
@@ -166,7 +166,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                replication.Mend();
+                await replication.MendAsync();
 
                 Assert.True(WaitForDocumentDeletion(replica, id, 5000));
 
@@ -201,23 +201,23 @@ namespace SlowTests.Issues
 
                 Assert.True(WaitForDocument<User>(replica, id, u => u.Name == "ayende"));
 
-                replication.Break();
-
-                using (var session = store.OpenAsyncSession())
+                await using (replication.Break())
                 {
-                    session.TimeSeriesFor(id, "heartrate").Append(DateTime.UtcNow, 1);
-                    await session.SaveChangesAsync();
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        session.TimeSeriesFor(id, "heartrate").Append(DateTime.UtcNow, 1);
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = replica.OpenAsyncSession())
+                    {
+                        var doc = await session.LoadAsync<User>(id);
+                        doc.Name = "ayende2";
+
+                        await session.SaveChangesAsync();
+                    }
                 }
-
-                using (var session = replica.OpenAsyncSession())
-                {
-                    var doc = await session.LoadAsync<User>(id);
-                    doc.Name = "ayende2";
-
-                    await session.SaveChangesAsync();
-                }
-
-                replication.Mend();
+                await replication.MendAsync();
 
                 await AssertWaitForNotNullAsync(async () =>
                 {

@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using FastTests;
 using Microsoft.Data.SqlClient;
@@ -14,8 +14,8 @@ using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Model;
 using Raven.Server.SqlMigration.Schema;
 using Tests.Infrastructure.ConnectionString;
-using DisposableAction = Raven.Client.Util.DisposableAction;
 using Xunit;
+using DisposableAction = Raven.Client.Util.DisposableAction;
 
 namespace Tests.Infrastructure
 {
@@ -129,7 +129,7 @@ namespace Tests.Infrastructure
             }
         }
 
-        internal DisposableAction WithSqlDatabase(MigrationProvider provider, out string connectionString, out string schemaName, string dataSet = "northwind", bool includeData = true)
+        internal virtual DisposableAction WithSqlDatabase(MigrationProvider provider, out string connectionString, out string schemaName, string dataSet = "northwind", bool includeData = true)
         {
             switch (provider)
             {
@@ -354,7 +354,8 @@ namespace Tests.Infrastructure
                     using (var dbCommand = dbConnection.CreateCommand())
                     {
                         dbCommand.CommandTimeout = CommandTimeout;
-                        var textStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.npgsql." + dataSet + ".create.sql"));
+                        var prefix = "SlowTests.Data.npgsql." + dataSet;
+                        using var textStreamReader = new StreamReader(OpenSqlResource(assembly, prefix + ".create"));
                         dbCommand.CommandText = textStreamReader.ReadToEnd();
                         dbCommand.ExecuteNonQuery();
                     }
@@ -364,7 +365,8 @@ namespace Tests.Infrastructure
                         using (var dbCommand = dbConnection.CreateCommand())
                         {
                             dbCommand.CommandTimeout = CommandTimeout;
-                            var dataStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.npgsql." + dataSet + ".insert.sql"));
+                            var prefix = "SlowTests.Data.npgsql." + dataSet;
+                            using var dataStreamReader = new StreamReader(OpenSqlResource(assembly, prefix + ".insert"));
                             dbCommand.CommandText = dataStreamReader.ReadToEnd();
                             dbCommand.ExecuteNonQuery();
                         }
@@ -390,6 +392,77 @@ namespace Tests.Infrastructure
       AND pid <> pg_backend_pid();";
 
                         dbCommand.ExecuteNonQuery();
+
+                        // Drop any logical replication slots for this database.
+                        // PostgreSQL refuses to drop a database that has active slots. Terminate
+                        // any wal_sender attached to a slot FIRST, then retry the drop. If the
+                        // sink's replication loop reconnects mid-retry, re-terminate each iteration.
+                        // All pre-DROP steps are best-effort — we must reach DROP DATABASE below
+                        // even if slot cleanup fails, otherwise we'd leak both the slot AND the DB.
+                        try
+                        {
+                            TerminateWalSender(dbCommand, dbName);
+                        }
+                        catch
+                        {
+                            /* best effort */
+                        }
+
+                        for (int attempt = 0; attempt < 10; attempt++)
+                        {
+                            try
+                            {
+                                dbCommand.Parameters.Clear();
+                                dbCommand.CommandText = @"
+                                    SELECT pg_drop_replication_slot(slot_name)
+                                    FROM pg_replication_slots
+                                    WHERE database = @dbName";
+                                dbCommand.Parameters.AddWithValue("dbName", dbName);
+                                dbCommand.ExecuteNonQuery();
+                                break;
+                            }
+                            catch (PostgresException ex) when (ex.SqlState == "55006")
+                            {
+                                // 55006 = object_in_use (slot still active — sink may have reconnected).
+                                // Re-terminate the wal_sender and wait. The outer sibling catch does NOT
+                                // catch exceptions thrown from inside this catch block, so we must swallow
+                                // locally to avoid escaping the retry loop.
+                                try
+                                {
+                                    TerminateWalSender(dbCommand, dbName);
+
+                                }
+                                catch
+                                {
+                                    /* best effort */
+                                }
+                                Thread.Sleep(1000);
+                            }
+                            catch (PostgresException)
+                            {
+                                // Ignore other exceptions, such as "slot does not exist".
+                                // We want to make sure the database is dropped, even if we fail to drop the slots.
+                                break;
+                            }
+                        }
+
+                        // Warn (don't throw) if anything still remains so CI logs surface leaks.
+                        // Wrapped so a transient error here can't skip DROP DATABASE below.
+                        try
+                        {
+                            dbCommand.Parameters.Clear();
+                            dbCommand.CommandText = "SELECT count(*) FROM pg_replication_slots WHERE database = @dbName";
+                            dbCommand.Parameters.AddWithValue("dbName", dbName);
+                            var remainingSlots = (long)dbCommand.ExecuteScalar();
+                            if (remainingSlots > 0)
+                                Console.Error.WriteLine($"[CDC-TEST-CLEANUP] WARN: {remainingSlots} replication slot(s) still on {dbName} after teardown");
+                        }
+                        catch
+                        {
+                            // diagnostic only — don't block DROP DATABASE
+                        }
+
+                        dbCommand.Parameters.Clear();
                         const string dropDatabaseQuery = "DROP DATABASE IF EXISTS \"{0}\"";
                         dbCommand.CommandText = string.Format(dropDatabaseQuery, dbName);
                         dbCommand.ExecuteNonQuery();
@@ -397,6 +470,86 @@ namespace Tests.Infrastructure
                     con.Close();
                 }
             });
+        }
+
+        private static Stream OpenSqlResource(System.Reflection.Assembly assembly, string prefix)
+        {
+            var zipStream = assembly.GetManifestResourceStream(prefix + ".zip");
+            if (zipStream != null)
+            {
+                // ZipArchive in Read mode does not dispose its underlying stream
+                // until the archive itself is disposed; entry.Open() returns a
+                // sub-stream whose lifetime is bounded by the archive. Returning
+                // it bare meant the caller's `using` on the returned stream only
+                // disposed the entry — the archive + manifest stream leaked
+                // until process exit. OwningSqlResourceStream cascades disposal
+                // back through the chain.
+                var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
+                var entry = archive.Entries.FirstOrDefault(e => e.Name.EndsWith(".sql", StringComparison.OrdinalIgnoreCase));
+                if (entry == null)
+                {
+                    archive.Dispose();
+                    zipStream.Dispose();
+                    throw new InvalidOperationException(
+                        $"SQL resource zip '{prefix}.zip' has no .sql entry; cannot open SQL fixture.");
+                }
+                return new OwningSqlResourceStream(entry.Open(), archive, zipStream);
+            }
+
+            return assembly.GetManifestResourceStream(prefix + ".sql")
+                ?? throw new InvalidOperationException($"No SQL resource found for prefix '{prefix}'");
+        }
+
+        private sealed class OwningSqlResourceStream : Stream
+        {
+            private readonly Stream _entryStream;
+            private readonly ZipArchive _archive;
+            private readonly Stream _zipStream;
+
+            public OwningSqlResourceStream(Stream entryStream, ZipArchive archive, Stream zipStream)
+            {
+                _entryStream = entryStream;
+                _archive = archive;
+                _zipStream = zipStream;
+            }
+
+            public override bool CanRead => _entryStream.CanRead;
+            public override bool CanSeek => _entryStream.CanSeek;
+            public override bool CanWrite => _entryStream.CanWrite;
+            public override long Length => _entryStream.Length;
+            public override long Position
+            {
+                get => _entryStream.Position;
+                set => _entryStream.Position = value;
+            }
+
+            public override void Flush() => _entryStream.Flush();
+            public override int Read(byte[] buffer, int offset, int count) => _entryStream.Read(buffer, offset, count);
+            public override long Seek(long offset, SeekOrigin origin) => _entryStream.Seek(offset, origin);
+            public override void SetLength(long value) => _entryStream.SetLength(value);
+            public override void Write(byte[] buffer, int offset, int count) => _entryStream.Write(buffer, offset, count);
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    _entryStream.Dispose();
+                    _archive.Dispose();
+                    _zipStream.Dispose();
+                }
+                base.Dispose(disposing);
+            }
+        }
+
+        private static void TerminateWalSender(NpgsqlCommand dbCommand, string dbName)
+        {
+            dbCommand.Parameters.Clear();
+            dbCommand.CommandText = @"
+                            SELECT pg_terminate_backend(active_pid)
+                            FROM pg_replication_slots
+                            WHERE database = @dbName AND active_pid IS NOT NULL";
+            dbCommand.Parameters.AddWithValue("dbName", dbName);
+            dbCommand.ExecuteNonQuery();
         }
 
         private DisposableAction WithOracleDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)

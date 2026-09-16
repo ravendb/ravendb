@@ -53,7 +53,7 @@ export const Default: StoryObj<KafkaProps> = {
             tasksService.withGetTasks(mockedValue);
         }
 
-        tasksService.withEtlErrors([]);
+        tasksService.withTaskErrors([]);
         tasksService.withEtlStats([]);
 
         if (args.multipleScripts) {
@@ -144,5 +144,13 @@ export const EmptyScript: StoryObj<KafkaProps> = {
         ...Default.args,
         completed: true,
         emptyScript: true,
+    },
+};
+
+export const MultipleScripts: StoryObj<KafkaProps> = {
+    ...Default,
+    args: {
+        ...Default.args,
+        multipleScripts: true,
     },
 };

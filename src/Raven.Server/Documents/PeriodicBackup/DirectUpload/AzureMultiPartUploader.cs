@@ -60,7 +60,7 @@ public class AzureMultiPartUploader : IMultiPartUploader
                 _progress.UploadProgress.SetUploaded(uploadedSoFar + value);
                 _progress.OnUploadProgress?.Invoke();
             })
-        }, _cancellationToken);
+        }, _cancellationToken).ConfigureAwait(false);
     }
 
     public void CompleteUpload()
@@ -73,6 +73,17 @@ public class AzureMultiPartUploader : IMultiPartUploader
         await _blockBlobClient.CommitBlockListAsync(_base64BlockIds, new CommitBlockListOptions
         {
             Metadata = _metadata
-        }, _cancellationToken);
+        }, _cancellationToken).ConfigureAwait(false);
+    }
+
+    public void Abort()
+    {
+    }
+
+    public Task AbortAsync()
+    {
+        // nothing to abort explicitly: a block blob only materializes on CommitBlockList, and blocks that were
+        // staged but never committed are automatically discarded by Azure (after ~7 days)
+        return Task.CompletedTask;
     }
 }

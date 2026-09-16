@@ -20,6 +20,8 @@ public class RequestBody
 
     public List<AiAttachment> Attachments { get; set; }
 
+    public AiServerOutputOptions OutputOptions { get; set; }
+
     public object Content
     {
         get

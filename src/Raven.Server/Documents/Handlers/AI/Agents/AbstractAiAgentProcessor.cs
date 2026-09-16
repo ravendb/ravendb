@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Server.Documents.AI;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Attachments;
 using Raven.Server.Documents.Handlers.Batches;
@@ -56,39 +57,43 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             handler.Initialize(configuration, conversationId, body, changeVector, RequestHandler.GetRaftRequestIdFromQuery(), debugOverride, cancelPendingActionTools);
             AiInternalConversationResult r;
 
-            if (streaming)
+            try
             {
-                var streamPropertyPath = RequestHandler.GetStringQueryString("streamPropertyPath");
-                HttpContext.Response.Headers.ContentType = "text/event-stream";
-                RequestHandler.DisableResponseBuffering();
+                if (streaming)
+                {
+                    var streamPropertyPath = RequestHandler.GetStringQueryString("streamPropertyPath", required: handler.Schema != null);
+                    HttpContext.Response.Headers.ContentType = "text/event-stream";
+                    RequestHandler.DisableResponseBuffering();
 
-                r = await handler.HandleStreamingRequestAsync(context, RequestHandler.ResponseBodyStream(), streamPropertyPath, token.Token);
-            }
-            else
-            {
-                try
+                    r = await handler.HandleStreamingRequestAsync(context, RequestHandler.ResponseBodyStream(), streamPropertyPath, token.Token);
+                }
+                else
                 {
                     r = await handler.HandleRequestAsync(context, token.Token);
                 }
-                catch (ConcurrencyException)
+            }
+            catch (ConcurrencyException)
+            {
+                throw;
+            }
+            catch (MissingAiAgentParameterException)
+            {
+                throw;
+            }
+            catch (QueryToolFailedException)
+            {
+                throw;
+            }
+            catch (AttachmentDoesNotExistException)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                throw new AiException($"Failed to communicate with the agent '{configuration.Identifier}', conversation: '{conversationId}'.", e)
                 {
-                    throw;
-                }
-                catch (MissingAiAgentParameterException)
-                {
-                    throw;
-                }
-                catch (AttachmentDoesNotExistException)
-                {
-                    throw;
-                }
-                catch (Exception e)
-                {
-                    throw new AiException($"Failed to communicate with the agent '{configuration.Identifier}', conversation: '{conversationId}'.", e)
-                    {
-                        RequestId = RequestHandler.HttpContext.Response.Headers.RequestId
-                    };
-                }
+                    RequestId = RequestHandler.HttpContext.Response.Headers.RequestId
+                };
             }
 
             await using var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream());
@@ -127,14 +132,17 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 MaxModelIterationsPerCall = maxModelIterationsPerCall
             };
 
-            return new RequestBody
+            var request = new RequestBody
             {
                 ActionResponses = actionResponses,
                 ArtificialActions = artificialActions,
                 UserPrompt = userPrompt,
                 Parameters = parameters,
-                CreationOptions = options
+                CreationOptions = options,
+                OutputOptions = AiServerOutputOptions.From(body)
             };
+
+            return request;
         }
 
         public async Task<RequestBody> ReadRequestBodyAsync(DocumentsOperationContext context, string destinationDocumentId, CancellationToken token)

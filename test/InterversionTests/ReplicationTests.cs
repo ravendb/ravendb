@@ -239,7 +239,7 @@ namespace InterversionTests
         public async Task ExternalReplicationWithRevisionTombstones_ShardedToOldServer()
         {
             using (var store = Sharding.GetDocumentStore())
-            using (var oldStore = await GetDocumentStoreAsync(Server54Version))
+            using (var oldStore = await GetDocumentStoreAsync(Server62Version))
             {
                 await InsertData(store, "$users/1");
                 await InsertData(oldStore, "");
@@ -254,6 +254,13 @@ namespace InterversionTests
                 await EnsureReplicatingAsync(store, oldStore);
 
                 var location = await Sharding.GetShardNumberForAsync(store, id);
+
+                int sourceRevisions;
+                using (var s = store.OpenAsyncSession())
+                    sourceRevisions = (await s.Advanced.Revisions.GetMetadataForAsync(id, pageSize: 100)).Count;
+
+                const int expectedSourceRevisions = 2;
+                Assert.Equal(expectedSourceRevisions, sourceRevisions);
 
                 using (var s1 = store.OpenSession())
                 {
@@ -271,7 +278,6 @@ namespace InterversionTests
                 using (context.OpenReadTransaction())
                 {
                     var tombs = storage.GetTombstonesFrom(context, 0).ToList();
-                    Assert.Equal(5, tombs.Count);
 
                     int revisionTombsCount = 0, documentTombsCount = 0;
                     foreach (var item in tombs)
@@ -282,8 +288,9 @@ namespace InterversionTests
                             documentTombsCount++;
                     }
 
-                    Assert.Equal(4, revisionTombsCount);
+                    Assert.Equal(sourceRevisions, revisionTombsCount);
                     Assert.Equal(1, documentTombsCount);
+                    Assert.Equal(sourceRevisions + 1, tombs.Count);
                 }
 
                 await Task.Delay(3000);

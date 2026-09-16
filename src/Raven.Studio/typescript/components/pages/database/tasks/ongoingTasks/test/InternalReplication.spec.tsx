@@ -7,8 +7,7 @@ describe("Internal Replication", function () {
     it("can render", async () => {
         const Story = composeStory(stories.Default, stories.default);
 
-        const { screen, fireClick, user } = rtlRender(<Story />);
-        const { hover } = user;
+        const { screen, fireClick } = rtlRender(<Story />);
         const container = screen;
         expect(await container.findByRole("heading", { name: /Internal Replication/ })).toBeInTheDocument();
 
@@ -20,9 +19,12 @@ describe("Internal Replication", function () {
         expect(await container.findByText(/Last Sent Etag/)).toBeInTheDocument();
 
         expect(await container.findAllByText(/Running/)).toHaveLength(6);
-        const distributionItems = container.queryAllByClassName("distribution-item");
-        expect(distributionItems.length).toBeGreaterThan(0);
-        await hover(distributionItems[0]);
+        const progressCircles = container.queryAllByClassName("progress-circle");
+        expect(progressCircles.length).toBeGreaterThan(0);
+        await fireClick(progressCircles[0]);
+
+        const expandDebugInfoBtn = await screen.findByText(/Expand/);
+        await fireClick(expandDebugInfoBtn);
 
         expect(await screen.findByText(/Source database CV/)).toBeInTheDocument();
     });

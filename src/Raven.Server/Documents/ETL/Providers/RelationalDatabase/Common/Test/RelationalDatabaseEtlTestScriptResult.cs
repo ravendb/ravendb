@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using Raven.Server.Documents.ETL.Test;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test;
 

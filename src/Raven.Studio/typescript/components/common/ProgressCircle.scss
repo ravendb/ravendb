@@ -52,6 +52,7 @@
         align-items: center;
         background-color: colors.$text-muted-var;
         position: relative;
+        transition: box-shadow 0.25s ease;
 
         i {
             font-size: 1.1rem;

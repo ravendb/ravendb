@@ -81,23 +81,23 @@ for(const comment of this.Comments)
 
             foreach (var doc in docs)
             {
-                Assert.Equal(4, doc.Messages.Count); // prompt, agent parameters, context, model response
+                // GenAI context reaches the model exactly once, as the user prompt - no separate
+                // "AI Agent Parameters:" echo message (RavenDB-26767): prompt, context, model response.
+                Assert.Equal(3, doc.Messages.Count);
+                // explicitly: NO message anywhere is the "AI Agent Parameters:" echo
+                Assert.DoesNotContain(doc.Messages, m => (m.Content?.ToString() ?? string.Empty).Contains("AI Agent Parameters"));
 
                 Assert.Equal(config.Prompt, doc.Messages[0].Content.ToString());
                 Assert.Equal("system", doc.Messages[0].Role);
 
-                var paramsMsg = doc.Messages[1].Content.ToString();
-                Assert.Contains("AI Agent Parameters", paramsMsg);
-                Assert.Equal("user", doc.Messages[1].Role);
-
-                var ctx = doc.Messages[2].Content.ToString();
+                var ctx = doc.Messages[1].Content.ToString();
                 Assert.True(comments.Any(c => ctx.Contains($"\"Text\":\"{c.Text}\",\"Author\":\"{c.Author}\",\"Id\":\"{c.Id}\"")));
                 Assert.Equal("user", doc.Messages[1].Role);
 
-                var response = doc.Messages[3].Content.ToString();
+                var response = doc.Messages[2].Content.ToString();
                 Assert.True(response.Contains("\"Blocked\":"));
                 Assert.True(response.Contains("\"Reason\":"));
-                Assert.Equal("assistant", doc.Messages[3].Role);
+                Assert.Equal("assistant", doc.Messages[2].Role);
 
                 // verify document has expiration set up 
                 var metadata = session.Advanced.GetMetadataFor(doc);
@@ -218,7 +218,12 @@ if($output.Blocked)
         try
         {
             Assert.True(document.TryGet(nameof(ConversationDocument.Messages), out BlittableJsonReaderArray messages));
-            Assert.Equal(4, messages.Length);
+            // GenAI context reaches the model exactly once, as the user message. There is no separate
+            // "AI Agent Parameters:" echo message (RavenDB-26767): system prompt, context, model response.
+            Assert.Equal(3, messages.Length);
+            // explicitly: NO message anywhere is the "AI Agent Parameters:" echo
+            foreach (BlittableJsonReaderObject m in messages)
+                Assert.DoesNotContain("AI Agent Parameters", m.ToString());
 
             // prompt message
             var msgAsObj = messages[0] as BlittableJsonReaderObject;
@@ -229,17 +234,8 @@ if($output.Blocked)
             Assert.True(msgAsObj.TryGet("role", out string role));
             Assert.Equal("system", role);
 
-            // agent parameters message
+            // context object message (the raw context, delivered once as the user prompt)
             msgAsObj = messages[1] as BlittableJsonReaderObject;
-            Assert.NotNull(msgAsObj);
-            Assert.True(msgAsObj.TryGet("content", out content));
-            Assert.Contains("AI Agent Parameters", content);
-
-            Assert.True(msgAsObj.TryGet("role", out role));
-            Assert.Equal("user", role);
-
-            // context object message
-            msgAsObj = messages[2] as BlittableJsonReaderObject;
             Assert.NotNull(msgAsObj);
             Assert.True(msgAsObj.TryGet("content", out content));
             Assert.True(comments.Any(c => content.Contains($"\"Text\":\"{c.Text}\",\"Author\":\"{c.Author}\",\"Id\":\"{c.Id}\"")));
@@ -248,7 +244,7 @@ if($output.Blocked)
             Assert.Equal("user", role);
 
             // model response message
-            msgAsObj = messages[3] as BlittableJsonReaderObject;
+            msgAsObj = messages[2] as BlittableJsonReaderObject;
             Assert.NotNull(msgAsObj);
             Assert.True(msgAsObj.TryGet("content", out BlittableJsonReaderObject contentObj));
 

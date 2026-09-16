@@ -1,9 +1,13 @@
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import { Row as ReactTableRow } from "@tanstack/react-table";
-import { useState } from "react";
 import Code from "components/common/Code";
 import { useViewSheet, ViewSheet } from "components/common/splitView/ViewSheet";
+import {
+    SheetNavigationButtons,
+    SheetSlideTransition,
+    useSheetSlideNavigation,
+} from "components/common/splitView/SheetSlideNavigation";
 import CellDocumentValue from "components/common/virtualTable/cells/CellDocumentValue";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -19,13 +23,13 @@ export default function IndexErrorsSheet({ errorDetails, allRows, initialIndex }
     const { close } = useViewSheet();
     const dbName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { appUrl } = useAppUrls();
-    const [currentIndex, setCurrentIndex] = useState(initialIndex);
+    const { currentIndex, direction, navigate, hasPrevious, hasNext } = useSheetSlideNavigation(
+        initialIndex,
+        allRows.length
+    );
 
     const currentRow = allRows.length > 0 ? allRows[currentIndex] : errorDetails;
     const error = currentRow.original;
-
-    const hasPrevious = currentIndex > 0;
-    const hasNext = currentIndex < allRows.length - 1;
 
     return (
         <ViewSheet>
@@ -36,7 +40,7 @@ export default function IndexErrorsSheet({ errorDetails, allRows, initialIndex }
                 </h3>
             </ViewSheet.Header>
             <ViewSheet.Body className="m-2">
-                <div className="vstack gap-3">
+                <SheetSlideTransition currentIndex={currentIndex} direction={direction} className="vstack gap-3">
                     {error.IndexName && (
                         <div className="d-flex justify-content-between align-items-center pb-1 border-bottom border-secondary">
                             <div className="small-label">Index name</div>
@@ -64,19 +68,10 @@ export default function IndexErrorsSheet({ errorDetails, allRows, initialIndex }
                         </div>
                     )}
                     {error.Error && <Code code={error.Error} language="csharp" />}
-                </div>
+                </SheetSlideTransition>
             </ViewSheet.Body>
             <ViewSheet.Footer className="d-flex justify-content-between">
-                <div className="d-flex gap-2">
-                    <Button variant="secondary" disabled={!hasPrevious} onClick={() => setCurrentIndex((i) => i - 1)}>
-                        <Icon icon="arrow-left" />
-                        Previous
-                    </Button>
-                    <Button variant="secondary" disabled={!hasNext} onClick={() => setCurrentIndex((i) => i + 1)}>
-                        Next
-                        <Icon icon="arrow-right" margin="ms-1" />
-                    </Button>
-                </div>
+                <SheetNavigationButtons hasPrevious={hasPrevious} hasNext={hasNext} navigate={navigate} />
                 <Button variant="secondary" onClick={close}>
                     <Icon icon="close" />
                     Close

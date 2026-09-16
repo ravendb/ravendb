@@ -55,6 +55,8 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     private bool _cancelPendingActionTools;
     protected int _maxModelIterationsPerCall;
     internal List<string> _persistedAttachmentsNames;
+    private string _schema;
+    public string Schema => _schema;
     public required RavenServer.AuthenticateConnection Authentication;
     public void Initialize(AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector, string raftId = null, bool? debugOverride = null, bool cancelPendingActionTools = false)
     {
@@ -66,7 +68,27 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         _debugOverride = debugOverride;
         _maxModelIterationsPerCall = GetMaxModelIterationsPerCall(body, configuration);
         _cancelPendingActionTools = cancelPendingActionTools;
+        _schema = GetSchema(configuration, body.OutputOptions);
     }
+
+    private static string GetSchema(AiAgentConfiguration configuration, AiServerOutputOptions opts)
+    {
+        if (opts != null)
+        {
+            if (opts.NoSchema)
+                return null;
+
+            if (string.IsNullOrWhiteSpace(opts.OutputSchema) == false)
+                return opts.OutputSchema;
+
+            if (string.IsNullOrWhiteSpace(opts.SampleObject) == false)
+                return ChatCompletionClient.GetSchemaFromSampleObject(opts.SampleObject);
+        }
+
+        // take from the agent configuration, if exists.
+        return ChatCompletionClient.GetSchemaForRequest(configuration.OutputSchema, configuration.SampleObject);
+    }
+
 
     protected virtual async Task InitializeDocumentAsync(DocumentsOperationContext context, CancellationToken token)
     {
@@ -198,7 +220,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 continue;
             }
 
-            if (GetValueType(value, out var actualType, out var unsupportedType) == false)
+            if (TryGetValueType(value, out var actualType, out var unsupportedType) == false)
                 throw new InvalidCastException(
                     $"Parameter '{configParam.Name}' has unsupported type. " +
                     $"Actual: {unsupportedType}");
@@ -212,7 +234,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         }
     }
 
-    private static bool GetValueType(object value, out AiAgentParameterValueType type, out string unsupportedType)
+    internal static bool TryGetValueType(object value, out AiAgentParameterValueType type, out string unsupportedType)
     {
         type = default;
         unsupportedType = null;
@@ -248,6 +270,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 return true;
 
             case BlittableJsonReaderArray array:
+                if (array.Length == 0)
+                    return true; // empty array: a provided empty query value (no element type to infer)
+
                 bool first = true;
                 var elementType = AiAgentParameterValueType.Default;
 
@@ -255,7 +280,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 // make sure all elements have a valid type
                 foreach (var element in array)
                 {
-                    if (GetValueType(element, out var curType, out var elementUnsupportedType) == false)
+                    if (TryGetValueType(element, out var curType, out var elementUnsupportedType) == false)
                     {
                         unsupportedType = $"Array contains an element of unsupported type '{elementUnsupportedType}'.";
                         return false;
@@ -367,7 +392,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         Func<Memory<byte>, Task> streaming,
         CancellationToken token)
     {
-        using var talker = new Talker(this, context, _configuration, _document, firstStreamPropertyPath, streaming);
+        using var talker = new Talker(this, context, _configuration, _schema, _document, firstStreamPropertyPath, streaming);
         return await RunInternalAsync(context, talker, token);
     }
         
@@ -375,7 +400,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         JsonOperationContext context,
         CancellationToken token)
     {
-        using var talker = new Talker(this, context, _configuration, _document, firstStreamPropertyPath: null, streaming: null);
+        using var talker = new Talker(this, context, _configuration, _schema, _document, firstStreamPropertyPath: null, streaming: null);
         return await RunInternalAsync(context, talker, token);
     }
 
@@ -423,7 +448,8 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 }
                 isFirstIteration = false;
 
-                _document.AddMessage(context, r.Message, currentTurnUsage);
+                bool isNoSchema = r.Type is AiResponseType.Result && _schema == null;
+                _document.AddMessage(context, r.Message, currentTurnUsage, isNoSchema);
                 _document.UpdateUsage(talker.AiUsage);
                 OnUpdateUsage?.Invoke(database.Name, currentTurnUsage);
 
@@ -730,9 +756,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         var usage = new AiUsage();
         var tools = client.GenerateTools(context, configuration, this);
         using var request = client.CreateCompletionRequest(context, messages, attachments: null, tools, useTools: false, streaming: false, schema: SummarizationOutputSchema);
-        var result = await client.CompleteAsync(context, request, usage, trace: null, token);
+        var result = await client.CompleteAsync(context, request, usage, SummarizationOutputSchema, trace: null, token);
 
-        if (result.Result.TryGet(nameof(SummarizationSampleObject.Answer), out string messagesSummary) == false)
+        if (result.Result is not BlittableJsonReaderObject resultObj || resultObj.TryGet(nameof(SummarizationSampleObject.Answer), out string messagesSummary) == false)
             throw new UnexpectedResponseException($"Unable to get a summary from response of agent '{oldChat.Agent}'.") { RequestId = null };
 
         oldChat.Messages.Clear();
@@ -1073,7 +1099,8 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         List<Task<SubConversationResult>> tasks = [];
         foreach (var (conversationId, conversationReqs) in reqs)
         {
-            _document.SubConversationIds.Add(conversationId);
+            if (conversationId != QueryVirtualSubConversationId)
+                _document.SubConversationIds.Add(conversationId);
             tasks.Add(ExecuteSingleSubConversationToolCallsAsync(conversationId, conversationReqs, token));
         }
 
@@ -1170,6 +1197,11 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                             // Missing parameter detected in sub-agent execution
                             throw;
                         }
+                        catch (QueryToolFailedException)
+                        {
+                            // A query tool failed inside the sub-agent (e.g. a non-existing index) - surface it to the user
+                            throw;
+                        }
                         catch (Exception e)
                         {
                             result.Messages.Add(context.ReadObject(
@@ -1184,7 +1216,18 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                         }
                         break;
                     case AiAgentToolQuery:
-                        var requestResult = getRequestResult.Invoke();
+                    {
+                        BlittableJsonReaderObject requestResult;
+                        try
+                        {
+                            requestResult = getRequestResult.Invoke();
+                        }
+                        catch (Exception e)
+                        {
+                            // Wrap query failures (e.g. a non-existing index) so they propagate to the user instead of being swallowed into a tool message.
+                            throw new QueryToolFailedException($"Query tool '{currentCall.Name}' failed to execute. (Query - Id: {currentCall.Id})", e);
+                        }
+
                         if (requestResult.TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) is false)
                             throw new InvalidOperationException($"Query output is missing the '{nameof(QueryResult.Results)}' field. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
 
@@ -1196,6 +1239,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                                 [ChatCompletionClient.Constants.ResponseFields.Content] = GetToolResultContent(queryResult)
                             }, "tool-call/response"));
                         break;
+                    }
                     default:
                         throw new InvalidOperationException(
                             $"Type mismatch for tool '{currentCall.Name}' in sub-conversation '{conversationId}'. " +
@@ -1243,17 +1287,45 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 var response = (BlittableJsonReaderObject)results[i];
                 if (response.TryGet(nameof(GetResponse.StatusCode), out int statusCode) == false)
                     throw new InvalidOperationException("Missing status code");
-                if (response.TryGet(nameof(GetResponse.Result), out BlittableJsonReaderObject requestResult) is false)
+
+                response.TryGet(nameof(GetResponse.Result), out BlittableJsonReaderObject requestResult);
+                if (statusCode == 200 && requestResult == null)
                     throw new InvalidOperationException("Missing Result from query request output");
 
+                var index = i;
                 yield return (() =>
                 {
                     if (statusCode != 200)
-                        throw ExceptionDispatcher.Get(requestResult, (HttpStatusCode)statusCode);
+                    {
+                        if (requestResult != null)
+                            throw ExceptionDispatcher.Get(requestResult, (HttpStatusCode)statusCode);
+
+                        // Failed sub-request with no body (e.g. query against a non-existing index -> 404).
+                        // Synthesize a schema to surface the real failure instead of dereferencing a null result.
+                        var (requestUrl, request) = GetRequestAndUrl(context, reqs, index);
+                        var msg = $"The request to '{requestUrl}' failed with status code {statusCode} and returned an empty response body. Request: {request}";
+
+                        var schema = new ExceptionDispatcher.ExceptionSchema
+                        {
+                            Url = requestUrl,
+                            Type = typeof(RavenException).FullName,
+                            Message = msg,
+                            Error = msg
+                        };
+                        throw ExceptionDispatcher.Get(schema, (HttpStatusCode)statusCode);
+                    }
                     return requestResult;
                 }, i);
             }
         }
+    }
+
+    private static (string Url, string Request) GetRequestAndUrl(JsonOperationContext context, DynamicJsonArray reqs, int index)
+    {
+        var request = reqs.Items[index] as DynamicJsonValue;
+        var reqBjro = context.ReadObject(request, "ai-agent/failed-request");
+        reqBjro.TryGet(nameof(GetRequest.Url), out string url);
+        return (url, reqBjro.ToString());
     }
 
     public async Task<AiInternalConversationResult> HandleRequestAsync(
@@ -1316,7 +1388,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         public string Answer = "Summary of the following chat messages history";
     }
 
-    public virtual DynamicJsonValue GetConversationResponse(JsonOperationContext context, BlittableJsonReaderObject response, int toolsIterations)
+    public virtual DynamicJsonValue GetConversationResponse(JsonOperationContext context, object response, int toolsIterations)
     {
         return new DynamicJsonValue
         {

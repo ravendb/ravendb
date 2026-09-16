@@ -23,9 +23,10 @@ export default {
 
 export const Basic: StoryObj = {
     render: () => {
-        const { cluster, collectionsTracker, license } = mockStore;
+        const { cluster, collectionsTracker, license, databases } = mockStore;
         const { tasksService, aiAssistantService } = mockServices;
 
+        databases.withActiveDatabase();
         cluster.with_Single();
         collectionsTracker.with_Collections();
 

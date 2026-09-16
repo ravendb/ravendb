@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
@@ -139,7 +140,11 @@ namespace Corax
         
         public static class Search
         {
-            public const byte Wildcard = (byte)'*';
+            public const byte Asterisk = (byte)'*';
+
+            public const byte QuestionMark = (byte)'?';
+
+            public static readonly SearchValues<byte> PatternSymbols = SearchValues.Create([Asterisk, QuestionMark]);
 
             [Flags]
             public enum SearchMatchOptions
@@ -148,7 +153,8 @@ namespace Corax
                 StartsWith = 1,
                 EndsWith = 1 << 1,
                 Exists = 1 << 2,
-                Contains = StartsWith | EndsWith
+                Contains = StartsWith | EndsWith,
+                PatternMatch = 1 << 3
             }
 
             public enum Operator

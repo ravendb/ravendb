@@ -1,7 +1,7 @@
+using Raven.Server.Documents.TasksErrors;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Server.Documents.ETL;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Utils.Monitoring;
@@ -10,7 +10,7 @@ public sealed class EtlMetrics
 {
     public string ProcessName { get; set; }
     public long ErrorsCount { get; set; }
-    public EtlProcessHealthStatus HealthStatus { get; set; }
+    public OngoingTaskHealthStatus HealthStatus { get; set; }
     public double? LastSuccessfulBatchTimeInSec { get; set; }
     public double DocumentsProcessedPerSec { get; set; }
     

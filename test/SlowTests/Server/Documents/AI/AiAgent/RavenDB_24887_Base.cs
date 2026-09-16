@@ -31,6 +31,9 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             public string Id { get; set; }
             public string Name { get; set; }
             public HashSet<string> WatchedMovies { get; set; }
+
+            public override string ToString()
+                => $"User - Id: {Id}, Name: {Name}, WatchedMovies: [{string.Join(", ", WatchedMovies ?? new HashSet<string>())}]";
         }
 
         internal class Rating
@@ -40,6 +43,10 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             public string MovieId { get; set; }
             public double RatingValue { get; set; }
             public DateTime TimeStamp { get; set; }
+
+            public override string ToString()
+                => $"Rating - Id: {Id}, UserId: {UserId}, MovieId: {MovieId}, RatingValue: {RatingValue}, TimeStamp: {TimeStamp}";
+            
         }
 
         internal class Chat
@@ -90,6 +97,11 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             public string MovieName { get; set; }
             public double RateValue { get; set; }
+
+            public override string ToString()
+            {
+                return $"{{\"MovieName\": \"{MovieName}\", \"RateValue\": {RateValue}}}";
+            }
         }
 
         internal class AddMovieToWatchedListSampleRequest
@@ -100,12 +112,22 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             };
 
             public string MovieName { get; set; }
+
+            public override string ToString()
+            {
+                return $"{{\"MovieName\": \"{MovieName}\"}}";
+            }
         }
 
         internal class ActionToolResult
         {
             public bool IsSuccessful { get; set; }
             public string Answer { get; set; }
+
+            public override string ToString()
+            {
+                return $"{{\"IsSuccessful\": {IsSuccessful.ToString().ToLower()}, \"Answer\": \"{Answer}\"}}";
+            }
         }
 
         internal class ChangeUserNameSampleRequest
@@ -120,6 +142,11 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             public string UserId { get; set; }
             public string NewUserName { get; set; }
             public string OldUserName { get; set; }
+
+            public override string ToString()
+            {
+                return $"{{\"UserId\": \"{UserId}\", \"OldUserName\": \"{OldUserName}\", \"NewUserName\": \"{NewUserName}\"}}";
+            }
         }
 
 

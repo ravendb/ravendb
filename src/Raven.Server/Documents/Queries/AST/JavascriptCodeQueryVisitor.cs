@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Client;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -31,6 +32,98 @@ namespace Raven.Server.Documents.Queries.AST
                 }
             }
 
+        }
+
+        /// <summary>
+        /// Widens a null comparison against a metadata property so that it also covers the
+        /// property being absent:
+        /// '@metadata'.'@refresh' = null becomes "not exists(...) or ... = null" and
+        /// '@metadata'.'@refresh' != null becomes "exists(...) and ... != null".
+        /// A document that carries no such metadata property at all reads as undefined in
+        /// JavaScript, and 'undefined === null' is false, so the absent case has to be
+        /// spelled out as an existence check. The original comparison is kept alongside it
+        /// so a property that is present and explicitly null still matches. This applies to
+        /// properties under '@metadata' whose name starts with '@', the reserved namespace
+        /// RavenDB uses for '@refresh', '@expires', '@archive-at', '@archived' and the like,
+        /// because those are removed rather than set to null when they do not apply.
+        /// Metadata whose name does not start with '@' is left alone and compares exactly as
+        /// written. Callers apply this to a boolean clause (a subscription where clause or a
+        /// query filter clause) before visiting it.
+        /// </summary>
+        internal static QueryExpression HandleMetadataNullComparison(QueryExpression qe)
+        {
+            // the comparison may sit anywhere in the clause, so we recurse through the
+            // logical operators and negations to reach it
+            switch (qe)
+            {
+                case NegatedExpression ne:
+                    QueryExpression inner = HandleMetadataNullComparison(ne.Expression);
+                    return ReferenceEquals(inner, ne.Expression) ? ne : new NegatedExpression(inner);
+
+                case MethodExpression method when method.Name.Value.Equals("intersect", StringComparison.OrdinalIgnoreCase):
+                    // intersect(...) combines boolean statements as well, so the comparisons
+                    // can sit inside its arguments
+                    List<QueryExpression> arguments = null;
+                    for (int i = 0; i < method.Arguments.Count; i++)
+                    {
+                        QueryExpression argument = HandleMetadataNullComparison(method.Arguments[i]);
+                        if (arguments == null)
+                        {
+                            if (ReferenceEquals(argument, method.Arguments[i]))
+                                continue;
+
+                            arguments = new List<QueryExpression>(method.Arguments);
+                        }
+
+                        arguments[i] = argument;
+                    }
+
+                    return arguments == null ? method : new MethodExpression(method.Name, arguments);
+
+                case BinaryExpression { Operator: OperatorType.And or OperatorType.Or } logical:
+                    QueryExpression left = HandleMetadataNullComparison(logical.Left);
+                    QueryExpression right = HandleMetadataNullComparison(logical.Right);
+                    if (ReferenceEquals(left, logical.Left) && ReferenceEquals(right, logical.Right))
+                        return logical;
+                    return new BinaryExpression(left, right, logical.Operator) { Parenthesis = logical.Parenthesis };
+
+                case BinaryExpression { Operator: OperatorType.Equal or OperatorType.NotEqual } be:
+                    if (IsSystemMetadataProperty(be.Left) == false ||
+                        be.Right is not ValueExpression { Value: ValueTokenType.Null })
+                        return qe;
+
+                    // 'be' is reused as the explicit null half of the result, so the original
+                    // comparison keeps matching a property that is present and set to null
+                    MethodExpression exists = new MethodExpression("exists", [be.Left]);
+
+                    if (be.Operator is OperatorType.NotEqual)
+                    {
+                        // present, and holding something other than null
+                        return new BinaryExpression(exists, be, OperatorType.And) { Parenthesis = true };
+                    }
+
+                    // absent entirely, or present and explicitly null
+                    return new BinaryExpression(new NegatedExpression(exists), be, OperatorType.Or) { Parenthesis = true };
+
+                default:
+                    return qe;
+            }
+        }
+
+        private static bool IsSystemMetadataProperty(QueryExpression qe)
+        {
+            // a property directly under '@metadata', written with or without the from alias,
+            // so we match on the path shape: both '@metadata'.'X' and e.'@metadata'.'X'
+            if (qe is not FieldExpression fe || fe.Compound.Count < 2)
+                return false;
+
+            if (fe.Compound[^2] != Constants.Documents.Metadata.Key)
+                return false;
+
+            // only the reserved '@' prefixed names, which are removed rather than nulled out
+            StringSegment property = fe.Compound[^1];
+
+            return property.Length > 0 && property[0] == '@';
         }
 
         public override void VisitInclude(List<QueryExpression> includes)

@@ -25,7 +25,7 @@ namespace Raven.Server.Json
             if (value.Length < MinLengthForLazyStringStreamReader && _reader == null)
                 return new ReusableStringReader(GetStringFor(value));
 
-            return GetTextReader(value.Buffer, value.Length);
+            return GetTextReader(value.Buffer, value.Size);
         }
 
         public TextReader GetTextReader(byte* buffer, int len)

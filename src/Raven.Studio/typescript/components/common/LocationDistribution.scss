@@ -95,5 +95,45 @@
                 bs5variables.$box-shadow-sm,
                 0 0 20px 0 inset rgba(colors.$shard-color, 0.2);
         }
+
+        &.active {
+            border-color: rgba(colors.$node-color, 0.4);
+            box-shadow:
+                bs5variables.$box-shadow-sm,
+                0 0 12px 0 inset rgba(colors.$node-color, 0.1);
+        }
+
+        .clickable-progress {
+            flex-direction: column;
+            padding-bottom: sizes.$gutter-xs;
+
+            .progress-circle {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding-bottom: 0;
+            }
+
+            .clickable-progress-hint {
+                font-size: sizes.$font-size-xs;
+                color: colors.$link-color-var;
+                opacity: 0;
+                transition: opacity 0.2s ease;
+                white-space: nowrap;
+                margin-top: sizes.$gutter-xs;
+            }
+        }
+
+        &:hover {
+            .clickable-progress-hint {
+                opacity: 1;
+            }
+
+            .progress-circle.cursor-pointer {
+                .state-indicator {
+                    box-shadow: 0 0 0 3px rgba(colors.$progress-color, 0.35);
+                }
+            }
+        }
     }
 }

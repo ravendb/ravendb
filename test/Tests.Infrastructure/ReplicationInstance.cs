@@ -18,6 +18,7 @@ namespace Tests.Infrastructure
         public readonly string DatabaseName;
         private readonly RavenTestBase.ReplicationManager.ReplicationOptions _options;
         private ManualResetEventSlim _replicateOnceMre;
+        private ManualResetEventSlim _breakBlockedMre;
         private bool _replicateOnceInitialized = false;
 
         public ReplicationInstance(DocumentDatabase database, string databaseName, RavenTestBase.ReplicationManager.ReplicationOptions options)
@@ -39,19 +40,84 @@ namespace Tests.Infrastructure
 
         }
 
-        public void Break()
+        public IAsyncDisposable Break()
         {
-            var mre = new ManualResetEventSlim(false);
-            _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = mre;
+            _breakBlockedMre = new ManualResetEventSlim(true);
+            _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = _breakBlockedMre;
+            return new BreakHandle(this);
         }
 
-        public void Mend()
+        private async Task WaitForResetAsync(ManualResetEventSlim mre, int timeout = 15_000)
         {
-            var mre = _database.ReplicationLoader.DebugWaitAndRunReplicationOnce;
-            Assert.NotNull(mre);
-            _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < timeout)
+            {
+                if (mre?.IsSet == false)
+                    return;
+
+                await Task.Delay(16);
+            }
+
+            throw new TimeoutException("Replication cycle did not complete within timeout");
+        }
+
+        private sealed class BreakHandle : IAsyncDisposable
+        {
+            private readonly ReplicationInstance _owner;
+            public BreakHandle(ReplicationInstance owner) => _owner = owner;
+
+            public async ValueTask DisposeAsync()
+            {
+                try
+                {
+                    await _owner.WaitForResetAsync(_owner._breakBlockedMre, timeout: 15_000);
+                }
+                catch (TimeoutException)
+                {
+                    // Fail-safe, mirrors MendAsync(): if this instance (e.g. one shard out of many)
+                    // genuinely has nothing to replicate, its handler is parked in the heartbeat loop
+                    // and never re-checks DebugWaitAndRunReplicationOnce(), so it can't observe a
+                    // Reset() here. That's a legitimate "unfinished cycle", not a real failure.
+                }
+            }
+        }
+
+        public async Task MendAsync()
+        {
             _database.Configuration.Replication.MaxItemsCount = null;
-            mre.Set();
+
+            // Capture whatever the handler might currently be blocked on - either Break()'s
+            // _breakBlockedMre, or the initial MRE from BreakReplicationOnStart - before we
+            // replace it, so we can release it below.
+            ManualResetEventSlim previousMre = _replicateOnceMre;
+
+            // nextMre starts SET — handler runs its next loop iteration, then calls Reset() and
+            // blocks. That Reset() is our signal that the handler is running again.
+            ManualResetEventSlim nextMre = new(true);
+            _replicateOnceMre = nextMre;
+            _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = nextMre;
+
+            _breakBlockedMre?.Set();
+            previousMre?.Set();
+
+            try
+            {
+                // Short timeout: if there's genuinely nothing to replicate, the handler's first
+                // iteration after waking returns didWork == false and breaks out before ever
+                // re-checking nextMre, so this path legitimately can't observe a Reset() signal.
+                await WaitForResetAsync(nextMre, timeout: 3_000);
+            }
+            catch (TimeoutException)
+            {
+                // Fail-safe: the handler may have had nothing to replicate and gone straight to
+                // WaitForChanges() without re-entering the inner loop to observe nextMre. That's
+                // an "unfinished cycle" we can't observe directly, not a real failure.
+            }
+            finally
+            {
+                _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
+                nextMre.Set();
+            }
         }
 
         private void InitializeReplicateOnce()
@@ -115,6 +181,10 @@ namespace Tests.Infrastructure
             _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
             if (_options.KeepMaxItemsCountOnDispose == false)
                 _database.Configuration.Replication.MaxItemsCount = null;
+
+            // Fail-safe: releases the handler if Break() was engaged but MendAsync() was never
+            // reached (e.g. an exception escaped the await-using scope), so teardown doesn't hang.
+            _breakBlockedMre?.Set();
             _replicateOnceMre?.Set();
         }
 

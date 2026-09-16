@@ -162,6 +162,7 @@ namespace SlowTests.Sharding.Issues
                 await Sharding.Resharding.MoveShardForId(store1, id, toShard: 1);
 
                 await Sharding.EnsureNoDatabaseChangeVectorLeakAsync(store1.Database);
+                await Sharding.EnsureNoReplicationLoopForShardingAsync(Server, store1.Database);
             }
         }
     }

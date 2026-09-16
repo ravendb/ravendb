@@ -23,8 +23,8 @@ export default function ModelTypeField({ initialModelType }: ModelTypeFieldProps
 
     const viewContext = useAppSelector(connectionStringSelectors.viewContext);
 
-    const isChatVisible = viewContext !== "aiTask" || initialModelType !== "TextEmbeddings";
-    const isTextEmbeddingsVisible = viewContext !== "aiTask" || initialModelType !== "Chat";
+    const isChatVisible = viewContext !== "task" || initialModelType !== "TextEmbeddings";
+    const isTextEmbeddingsVisible = viewContext !== "task" || initialModelType !== "Chat";
     const isAllVisible = isChatVisible && isTextEmbeddingsVisible;
 
     return (

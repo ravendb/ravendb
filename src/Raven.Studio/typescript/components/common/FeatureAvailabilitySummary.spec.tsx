@@ -8,14 +8,16 @@ const { FeatureAvailabilitySummaryStory } = composeStories(stories);
 
 const selectors = {
     developerLicenseLink: /Developer license/,
-    ifYouDevelopingText: /If you are developing you can test this and many more features/,
+    ifYouDevelopingText: /If you are developing, you can test this and many more features/,
 };
 
 describe("FeatureAvailabilitySummary", () => {
     it("can render", () => {
         const { screen } = rtlRender(<FeatureAvailabilitySummaryStory />);
 
-        expect(screen.getByText(/See which plans offer this and more exciting features/)).toBeInTheDocument();
+        expect(
+            screen.getByText(/See which plans include this feature and other exciting features/)
+        ).toBeInTheDocument();
     });
 
     it("can show 'Cloud pricing' for cloud license", () => {

@@ -17,7 +17,9 @@ using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
+using Raven.Server.Documents.Replication.Outgoing;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -27,6 +29,107 @@ namespace SlowTests.Server.Replication
     {
         public PullReplicationPreventDeletionsTests(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
+        public async Task PreventSinkToHubDeletionsAloneUsesCompositeLaneAndSkipsDeletionSilently()
+        {
+            const string pullName = "pullRepHub";
+            const string acceptedBeforeDeleteId = "users/insink/composite-before-delete";
+            const string deletedOnSinkId = "users/insink/deleted-on-sink";
+            const string acceptedAfterDeleteId = "users/insink/composite-after-delete";
+
+            var certificates = Certificates.SetupServerAuthentication();
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
+                .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+
+            var hubDatabase = GetDatabaseName("HUB");
+            var sinkDatabase = GetDatabaseName("SINK");
+
+            using var hubStore = GetDocumentStore(new RavenTestBase.Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = x => hubDatabase
+            });
+
+            using var sinkStore = GetDocumentStore(new RavenTestBase.Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = x => sinkDatabase
+            });
+
+#pragma warning disable SYSLIB0057
+            using var pullCert = new X509Certificate2(await File.ReadAllBytesAsync(certificates.ClientCertificate2Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+#pragma warning restore SYSLIB0057
+
+            await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+            {
+                Name = pullName,
+                Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
+                PreventDeletionsMode = PreventDeletionsMode.PreventSinkToHubDeletions
+            }));
+
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation(pullName,
+                new ReplicationHubAccess
+                {
+                    Name = "hubAccess",
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))
+                }));
+
+            await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            {
+                Database = hubStore.Database,
+                Name = hubStore.Database + "ConStr",
+                TopologyDiscoveryUrls = hubStore.Urls
+            }));
+
+            await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+            {
+                ConnectionStringName = hubStore.Database + "ConStr",
+                Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
+                CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
+                HubName = pullName
+            }));
+
+            await StoreUserAsync(sinkStore, acceptedBeforeDeleteId, "accepted-before-delete");
+            await StoreUserAsync(sinkStore, deletedOnSinkId, "deleted-on-sink");
+
+            Assert.True(WaitForDocument(hubStore, acceptedBeforeDeleteId, 30_000));
+            Assert.True(WaitForDocument(hubStore, deletedOnSinkId, 30_000));
+
+            var handler = await AssertOutgoingPullHandlerAsSinkAsync(
+                sinkStore,
+                PullReplicationChangeVectorWireMode.SendAsIs);
+
+            Assert.False(handler.IsConnectionDisposed);
+            Assert.Contains("|", GetChangeVectorFor(hubStore, acceptedBeforeDeleteId));
+
+            using (var session = sinkStore.OpenAsyncSession())
+            {
+                session.Delete(deletedOnSinkId);
+                await session.SaveChangesAsync();
+            }
+
+            Assert.True(WaitForDocumentDeletion(sinkStore, deletedOnSinkId, 30_000));
+
+            await StoreUserAsync(sinkStore, acceptedAfterDeleteId, "accepted-after-delete");
+            Assert.True(WaitForDocument(hubStore, acceptedAfterDeleteId, 30_000));
+
+            handler = await AssertOutgoingPullHandlerAsSinkAsync(
+                sinkStore,
+                PullReplicationChangeVectorWireMode.SendAsIs);
+
+            Assert.False(handler.IsConnectionDisposed);
+            Assert.Contains("|", GetChangeVectorFor(hubStore, acceptedAfterDeleteId));
+
+            using (var session = hubStore.OpenAsyncSession())
+            {
+                var hubDocument = await session.LoadAsync<User>(deletedOnSinkId);
+                Assert.NotNull(hubDocument);
+            }
         }
 
         [RavenFact(RavenTestCategory.Replication)]
@@ -789,6 +892,38 @@ namespace SlowTests.Server.Replication
             };
 
             await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config);
+        }
+
+        private async Task<OutgoingPullReplicationHandlerAsSink> AssertOutgoingPullHandlerAsSinkAsync(
+            DocumentStore store,
+            PullReplicationChangeVectorWireMode expectedWireMode)
+        {
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+            var handler = await AssertWaitForNotNullAsync(
+                () => Task.FromResult(database.ReplicationLoader.OutgoingHandlers
+                    .OfType<OutgoingPullReplicationHandlerAsSink>()
+                    .FirstOrDefault(x =>
+                        x.ChangeVectorWireMode == expectedWireMode &&
+                        x.IsConnectionDisposed == false)),
+                timeout: 30_000);
+
+            Assert.Equal(expectedWireMode, handler.ChangeVectorWireMode);
+            return handler;
+        }
+
+        private static async Task StoreUserAsync(DocumentStore store, string id, string source)
+        {
+            using var session = store.OpenAsyncSession();
+            await session.StoreAsync(new User { Source = source }, id);
+            await session.SaveChangesAsync();
+        }
+
+        private static string GetChangeVectorFor(DocumentStore store, string id)
+        {
+            using var session = store.OpenSession();
+            var item = session.Load<User>(id);
+            Assert.NotNull(item);
+            return session.Advanced.GetChangeVectorFor(item);
         }
 
         private class User

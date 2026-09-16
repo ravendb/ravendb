@@ -52,9 +52,16 @@ const userDomainsWithIpsSchema = yup.object().shape({
 const licenseKeyStepSchema = yup.object({
     key: yup.string(),
     licenseInfo: yup.object({
-        licenseType: yup.string<Raven.Server.Commercial.LicenseType>(),
+        licenseStatus:
+            yup.mixed<
+                Partial<
+                    Pick<
+                        LicenseStatus,
+                        "Type" | "MaxClusterSize" | "HasStudioConfiguration" | "HasPostgreSqlIntegration"
+                    >
+                >
+            >(),
         userDomainsWithIps: userDomainsWithIpsSchema,
-        maxClusterSize: yup.number(),
     }),
     licenseTypeToGenerate: yup.string<LicenseTypeToGenerate>().nullable(),
     isAcceptTerms: yup.boolean().oneOf([true], "The terms and conditions must be accepted.").required(),

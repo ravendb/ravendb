@@ -10,6 +10,7 @@ using Jint.Native.Object;
 using Jint.Runtime;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
@@ -42,6 +43,7 @@ namespace Raven.Server.Documents.Patch
 
         public ProjectionOptions Projection;
 
+        public bool IsMetadata;
         public BlittableObjectInstance Metadata;
 
         public SpatialResult? Distance => _doc?.Distance;
@@ -125,7 +127,7 @@ namespace Raven.Server.Documents.Patch
                     }
                 }
             }
-            
+
             private bool TryGetValueFromIndex(BlittableObjectInstance parent, string property, out JsValue value)
             {
                 value = null;
@@ -144,7 +146,7 @@ namespace Raven.Server.Documents.Patch
                     ? TryGetValueFromLucene(parent, property, indexField, out value)
                     : TryGetValueFromCorax(parent, property, indexField, out value);
             }
-            
+
             private bool TryGetValueFromCorax(BlittableObjectInstance parent, string property, IndexField indexField, out JsValue value)
             {
                 value = null;
@@ -168,13 +170,13 @@ namespace Raven.Server.Documents.Patch
                 long fieldRootPage = indexSearcher.FieldCache.GetLookupRootPage(fieldName);
 
                 reader.Reset();
-             
+
                 while (reader.FindNextStored(fieldRootPage))
                 {
                     // Even though the vector hash is stored, it is Corax's internal value and is not meant to be projected.
                     if (reader.IsVectorHash)
                         return false;
-                    
+
                     // check if stored value is an array and we haven't initialized it yet
                     if (reader.IsList)
                     {
@@ -208,7 +210,7 @@ namespace Raven.Server.Documents.Patch
                     }
                     else if (reader.HasNumeric)
                     {
-                        if (Utf8Parser.TryParse(span.ToReadOnlySpan(), out long l, out var consumed) && 
+                        if (Utf8Parser.TryParse(span.ToReadOnlySpan(), out long l, out var consumed) &&
                             consumed == span.Length)
                         {
                             SetValue(ref value, l);
@@ -268,13 +270,17 @@ namespace Raven.Server.Documents.Patch
                 parent.Blittable.GetPropertyByIndex(index.Value, ref propertyDetails, true);
 
                 value = TranslateToJs(parent, property, propertyDetails.Token, propertyDetails.Value);
+
+                if (value is BlittableObjectInstance boi && property == Constants.Documents.Metadata.Key)
+                    boi.IsMetadata = true;
+
                 return true;
             }
 
             private bool TryGetValueFromLucene(BlittableObjectInstance parent, string property, IndexField indexField, out JsValue value)
             {
                 value = null;
-                
+
                 if (indexField != null && indexField.Storage == FieldStorage.No)
                     return false;
 
@@ -299,12 +305,16 @@ namespace Raven.Server.Documents.Patch
                             arrayItems[i] = TranslateToJs(parent, field.Name, BlittableJsonToken.StartObject, itemAsBlittable);
                         }
 
-                        value = FromObject(parent.Engine, arrayItems);
+                        value = new JsArray(parent.Engine, arrayItems);
                         return true;
                     }
 
                     var values = parent.IndexRetriever.LuceneDocument.GetValues(property, parent.IndexRetriever.State);
-                    value = FromObject(parent.Engine, values);
+                    var jsValues = new JsValue[values.Length];
+                    for (int i = 0; i < values.Length; i++)
+                        jsValues[i] = values[i];
+
+                    value = new JsArray(parent.Engine, jsValues);
                     return true;
                 }
 
@@ -532,12 +542,33 @@ namespace Raven.Server.Documents.Patch
 
         public PropertyDescriptor GetOwnProperty(string property)
         {
-            BlittableObjectProperty val = default;
-            if (OwnValues?.TryGetValue(property, out val) == true &&
+            if (OwnValues?.TryGetValue(property, out BlittableObjectProperty val) == true &&
                 val != null)
                 return val;
 
             Deletes?.Remove(property);
+
+            if (IsMetadata)
+            {
+                switch (property)
+                {
+                    case Constants.Documents.Metadata.IndexScore:
+                        if (_parent.IndexScore.HasValue)
+                            return new PropertyDescriptor(JsNumber.Create(_parent.IndexScore.Value), writable: false, enumerable: false, configurable: false);
+                        break;
+                    case Constants.Documents.Metadata.SpatialResult:
+                        if (_parent.Distance != null)
+                        {
+                            var spatialObj = new JsObject(Engine);
+                            spatialObj.Set(nameof(SpatialResult.Distance), (JsValue)_parent.Distance.Value.Distance, spatialObj);
+                            spatialObj.Set(nameof(SpatialResult.Latitude), (JsValue)_parent.Distance.Value.Latitude, spatialObj);
+                            spatialObj.Set(nameof(SpatialResult.Longitude), (JsValue)_parent.Distance.Value.Longitude, spatialObj);
+
+                            return new PropertyDescriptor(spatialObj, writable: false, enumerable: false, configurable: false);
+                        }
+                        break;
+                }
+            }
 
             val = new BlittableObjectProperty(this, property);
 

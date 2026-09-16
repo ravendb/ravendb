@@ -39,7 +39,7 @@ public class RavenDB_24327 : StorageTest
 
         using (var tx = Env.WriteTransaction())
         {
-            for (int i = 0; i < FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 200; i++)
+            for (int i = 0; i < FreeSpaceHandling.MinNumberOfFreePagesInSectionForSparseConsideration + 200; i++)
             {
                 var p = tx.LowLevelTransaction.AllocatePage(1, zeroPage: true);
 
@@ -69,7 +69,7 @@ public class RavenDB_24327 : StorageTest
 
         using (var tx = Env.WriteTransaction())
         {
-            for (int i = 0; i < FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 200; i++)
+            for (int i = 0; i < FreeSpaceHandling.MinNumberOfFreePagesInSectionForSparseConsideration + 200; i++)
             {
                 long pageNumber = startPageNumber + i;
                 var p = tx.LowLevelTransaction.ModifyPage(pageNumber);
@@ -84,7 +84,7 @@ public class RavenDB_24327 : StorageTest
 
         using (var tx = Env.WriteTransaction())
         {
-            for (int i = 0; i < FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 100; i++)
+            for (int i = 0; i < FreeSpaceHandling.MinNumberOfFreePagesInSectionForSparseConsideration + 100; i++)
             {
                 tx.LowLevelTransaction.FreePage(startPageNumber + i + 10);
             }
@@ -125,7 +125,7 @@ public class RavenDB_24327 : StorageTest
         {
             using (var tx = Env.WriteTransaction())
             {
-                for (int i = 0; i < FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 200; i++)
+                for (int i = 0; i < FreeSpaceHandling.MinNumberOfFreePagesInSectionForSparseConsideration + 200; i++)
                 {
                     var p = tx.LowLevelTransaction.AllocatePage(1, zeroPage: true);
 
@@ -158,7 +158,7 @@ public class RavenDB_24327 : StorageTest
         {
             using (var tx = Env.WriteTransaction())
             {
-                for (int i = 0; i < FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 200; i++)
+                for (int i = 0; i < FreeSpaceHandling.MinNumberOfFreePagesInSectionForSparseConsideration + 200; i++)
                 {
                     long pageNumber = startPageNumber[repeatTx] + i;
                     var p = tx.LowLevelTransaction.ModifyPage(pageNumber);
@@ -173,7 +173,7 @@ public class RavenDB_24327 : StorageTest
 
             using (var tx = Env.WriteTransaction())
             {
-                for (int i = 0; i < FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 100; i++)
+                for (int i = 0; i < FreeSpaceHandling.MinNumberOfFreePagesInSectionForSparseConsideration + 100; i++)
                 {
                     tx.LowLevelTransaction.FreePage(startPageNumber[repeatTx] + i + 10);
                 }
@@ -206,7 +206,7 @@ public class RavenDB_24327 : StorageTest
 
         using (var tx = Env.WriteTransaction())
         {
-            for (int i = 0; i < FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 200; i++)
+            for (int i = 0; i < FreeSpaceHandling.MinNumberOfFreePagesInSectionForSparseConsideration + 200; i++)
             {
                 var p = tx.LowLevelTransaction.AllocatePage(1, zeroPage: true);
 
@@ -236,7 +236,7 @@ public class RavenDB_24327 : StorageTest
 
         using (var tx = Env.WriteTransaction())
         {
-            for (int i = 0; i < FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 200; i++)
+            for (int i = 0; i < FreeSpaceHandling.MinNumberOfFreePagesInSectionForSparseConsideration + 200; i++)
             {
                 long pageNumber = startPageNumber + i;
                 var p = tx.LowLevelTransaction.ModifyPage(pageNumber);
@@ -253,7 +253,7 @@ public class RavenDB_24327 : StorageTest
         
         using (var tx = Env.WriteTransaction())
         {
-            for (int i = 0; i < FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 100; i++)
+            for (int i = 0; i < FreeSpaceHandling.MinNumberOfFreePagesInSectionForSparseConsideration + 100; i++)
             {
                 var pageNumber = startPageNumber + i + 10;
 
@@ -331,7 +331,7 @@ public class RavenDB_24327 : StorageTest
 
         using (var tx = Env.WriteTransaction())
         {
-            for (int i = 0; i < FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 200; i++)
+            for (int i = 0; i < FreeSpaceHandling.MinNumberOfFreePagesInSectionForSparseConsideration + 200; i++)
             {
                 var p = tx.LowLevelTransaction.AllocatePage(1, zeroPage: true);
 
@@ -361,7 +361,7 @@ public class RavenDB_24327 : StorageTest
 
         using (var tx = Env.WriteTransaction())
         {
-            for (int i = 0; i < FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 200; i++)
+            for (int i = 0; i < FreeSpaceHandling.MinNumberOfFreePagesInSectionForSparseConsideration + 200; i++)
             {
                 long pageNumber = startPageNumber + i;
                 var p = tx.LowLevelTransaction.ModifyPage(pageNumber);
@@ -376,7 +376,7 @@ public class RavenDB_24327 : StorageTest
 
         using (var tx = Env.WriteTransaction())
         {
-            for (int i = 0; i < FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 100; i++)
+            for (int i = 0; i < FreeSpaceHandling.MinNumberOfFreePagesInSectionForSparseConsideration + 100; i++)
             {
                 tx.LowLevelTransaction.FreePage(startPageNumber + i + 10);
             }

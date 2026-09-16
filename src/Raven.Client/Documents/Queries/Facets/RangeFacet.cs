@@ -305,7 +305,7 @@ namespace Raven.Client.Documents.Queries.Facets
         {
             try
             {
-                var invoke = Expression.Lambda(expression).Compile();
+                var invoke = Expression.Lambda(expression).Compile(preferInterpretation: true);
                 return invoke.DynamicInvoke();
             }
             catch (Exception e)

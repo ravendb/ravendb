@@ -23,6 +23,42 @@ namespace FastTests.Server.Integrations.PostgreSQL
             Assert.Contains("include", message);
         }
 
+        // A JOIN whose relations are all system-catalog tables (pg_catalog / information_schema)
+        // is a client bootstrap probe, NOT a user query over RavenDB collections. The diagnoser
+        // must not label it as the latter (which would send the user chasing a load/include rewrite
+        // for a query they never wrote — the exact confusion in Zoho Desk #7031, the SQLAlchemy
+        // hstore probe).
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Join_OverCatalogTables_NotLabeledAsRavenCollectionJoin()
+        {
+            var sql = """
+                SELECT t.oid FROM pg_type t
+                JOIN pg_namespace ns ON ns.oid = t.typnamespace
+                """;
+
+            Assert.True(UnhandledQueryDiagnoser.TryDiagnose(sql, out var message));
+            Assert.Contains("catalog", message);
+            // Must not claim it's an unsupported collection JOIN, nor push the RQL load/include
+            // rewrite — that guidance is nonsensical for a client's system-catalog probe.
+            Assert.DoesNotContain("JOIN over RavenDB collections is not supported", message);
+            Assert.DoesNotContain("load", message);
+            Assert.DoesNotContain("include", message);
+        }
+
+        // A JOIN that mixes a catalog table with a real user collection must keep the
+        // RavenDB-collections message — the user IS joining a collection.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Join_MixingCatalogAndUserCollection_KeepsRavenCollectionMessage()
+        {
+            var sql = """
+                SELECT o."Company" FROM "public"."Orders" o
+                JOIN pg_namespace ns ON 1=1
+                """;
+
+            Assert.True(UnhandledQueryDiagnoser.TryDiagnose(sql, out var message));
+            Assert.Contains("RavenDB collections", message);
+        }
+
         [RavenFact(RavenTestCategory.PostgreSql)]
         public void Join_LeftOuter_AlsoDetected()
         {
@@ -320,6 +356,164 @@ namespace FastTests.Server.Integrations.PostgreSQL
 
             Assert.True(UnhandledQueryDiagnoser.TryDiagnose(sql, out var message));
             Assert.Contains("min()", message);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void CountDistinct_Detected()
+        {
+            var sql = """
+                SELECT "Company", count(distinct "ShipVia")
+                FROM "public"."Orders"
+                GROUP BY "Company"
+                """;
+
+            Assert.True(UnhandledQueryDiagnoser.TryDiagnose(sql, out var message));
+            Assert.Contains("DISTINCT", message);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void SumDistinct_Detected()
+        {
+            var sql = """
+                SELECT "Company", sum(distinct "Freight")
+                FROM "public"."Orders"
+                GROUP BY "Company"
+                """;
+
+            Assert.True(UnhandledQueryDiagnoser.TryDiagnose(sql, out var message));
+            Assert.Contains("DISTINCT", message);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void AggregateFilterClause_Detected()
+        {
+            var sql = """
+                SELECT "Company", count(*) FILTER (WHERE "Freight" > 10)
+                FROM "public"."Orders"
+                GROUP BY "Company"
+                """;
+
+            Assert.True(UnhandledQueryDiagnoser.TryDiagnose(sql, out var message));
+            Assert.Contains("FILTER", message);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void WindowFunction_Detected()
+        {
+            var sql = """
+                SELECT "Company", count(*) OVER ()
+                FROM "public"."Orders"
+                GROUP BY "Company"
+                """;
+
+            Assert.True(UnhandledQueryDiagnoser.TryDiagnose(sql, out var message));
+            Assert.Contains("OVER", message);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void CountOverColumn_DetectedWithCountStarHint()
+        {
+            var sql = """
+                SELECT "Company", count("ShipVia")
+                FROM "public"."Orders"
+                GROUP BY "Company"
+                """;
+
+            Assert.True(UnhandledQueryDiagnoser.TryDiagnose(sql, out var message));
+            Assert.Contains("count(<column>)", message);
+            Assert.Contains("count(*)", message);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void CountStar_IsNotReportedAsCountOverColumn()
+        {
+            var sql = """
+                SELECT "Company", count(*)
+                FROM "public"."Orders"
+                GROUP BY "Company"
+                """;
+
+            Assert.False(UnhandledQueryDiagnoser.TryDiagnose(sql, out _));
+        }
+
+        // The WHERE-clause check takes priority over the scalar-aggregate check for count(*).
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("""SELECT count(*) FROM "public"."Orders" WHERE "Freight" NOT BETWEEN 1 AND 10""", "NOT BETWEEN")]
+        [InlineData("""SELECT count(*) FROM "public"."Orders" WHERE "Company" SIMILAR TO 'A%'""", "SIMILAR TO")]
+        public void ScalarCountStar_WithUnsupportedWhere_BlamesTheWhereClause(string sql, string predicate)
+        {
+            Assert.True(UnhandledQueryDiagnoser.TryDiagnose(sql, out var message));
+            Assert.Contains(predicate, message);
+            Assert.DoesNotContain("Scalar aggregate", message);
+        }
+
+        // sum() has no scalar form at all, so the aggregate message is still the right one there.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void ScalarSum_WithUnsupportedWhere_StillBlamesTheAggregate()
+        {
+            var sql = """SELECT sum("Freight") FROM "public"."Orders" WHERE "Freight" NOT BETWEEN 1 AND 10""";
+
+            Assert.True(UnhandledQueryDiagnoser.TryDiagnose(sql, out var message));
+            Assert.Contains("Scalar aggregate", message);
+        }
+
+        // A translatable WHERE must not be blamed.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void ScalarCountStar_WithSupportedWhere_IsNotBlamedOnTheWhereClause()
+        {
+            var sql = """SELECT count(*) FROM "public"."Orders" WHERE "Freight" BETWEEN 1 AND 10""";
+
+            Assert.True(UnhandledQueryDiagnoser.TryDiagnose(sql, out var message));
+            Assert.DoesNotContain("WHERE clause", message);
+        }
+
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("""SELECT "Freight" FROM "public"."Orders" ORDER BY "Freight" DESC NULLS LAST""", "NULLS")]
+        [InlineData("""SELECT "Freight" FROM "public"."Orders" ORDER BY "Freight" NULLS FIRST""", "NULLS")]
+        [InlineData("""SELECT "Freight" FROM "public"."Orders" ORDER BY "Freight" USING >""", "USING")]
+        public void UnsupportedSortModifier_Detected(string sql, string expected)
+        {
+            Assert.True(UnhandledQueryDiagnoser.TryDiagnose(sql, out var message));
+            Assert.Contains(expected, message);
+        }
+
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("""SELECT "Freight" FROM "public"."Orders" ORDER BY "Freight" DESC""")]
+        [InlineData("""SELECT "Freight" FROM "public"."Orders" ORDER BY "Freight" ASC""")]
+        [InlineData("""SELECT "Freight" FROM "public"."Orders" ORDER BY "Freight" """)]
+        public void PlainSortDirection_NoClassification(string sql)
+        {
+            Assert.False(UnhandledQueryDiagnoser.TryDiagnose(sql, out _));
+        }
+
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("""SELECT * FROM "public"."Orders" WHERE "Company" IS DISTINCT FROM 'companies/85-A' """)]
+        [InlineData("""SELECT * FROM "public"."Orders" WHERE "Company" IS NOT DISTINCT FROM 'companies/85-A' """)]
+        [InlineData("""SELECT * FROM "public"."Orders" WHERE NULLIF("Company", 'companies/85-A') """)]
+        public void DistinctFromPredicate_Detected(string sql)
+        {
+            Assert.True(UnhandledQueryDiagnoser.TryDiagnose(sql, out var message));
+            Assert.Contains("IS DISTINCT FROM", message);
+        }
+
+        // The predicate check has to win over the scalar-aggregate check here: the aggregate is
+        // count(*), which is supported, so blaming it would point at the wrong half of the query.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void DistinctFromPredicate_WithCountStar_IsNotReportedAsScalarAggregate()
+        {
+            var sql = """SELECT count(*) FROM "public"."Orders" WHERE "Company" IS DISTINCT FROM 'companies/85-A' """;
+
+            Assert.True(UnhandledQueryDiagnoser.TryDiagnose(sql, out var message));
+            Assert.Contains("IS DISTINCT FROM", message);
+            Assert.DoesNotContain("Scalar aggregate", message);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void PlainEqualityPredicate_NoClassification()
+        {
+            var sql = """SELECT * FROM "public"."Orders" WHERE "Company" != 'companies/85-A' """;
+
+            Assert.False(UnhandledQueryDiagnoser.TryDiagnose(sql, out _));
         }
     }
 }

@@ -50,6 +50,9 @@ namespace Raven.Server.Documents.Indexes.Configuration
                 if (updateTypeAttribute.UpdateType == IndexUpdateType.Reset)
                     return IndexUpdateType.Reset; // worst case, we do not need to check further
 
+                if (updateTypeAttribute.UpdateType == IndexUpdateType.None)
+                    continue;
+
                 result = updateTypeAttribute.UpdateType;
             }
 

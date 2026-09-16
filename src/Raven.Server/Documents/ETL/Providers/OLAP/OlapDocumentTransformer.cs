@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using Jint;
 using Jint.Native;
@@ -231,17 +232,15 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             JsValue array;
             if (args.Length == 1 && args[0].IsArray() == false)
             {
-                array = JsValue.FromObject(DocumentScript.ScriptEngine, new[]
-                {
-                    JsValue.FromObject(DocumentScript.ScriptEngine, new[]
-                    {
-                        new JsString(DefaultPartitionColumnName), args[0]
-                    })
-                });
+                var defaultPartition = new JsArray(DocumentScript.ScriptEngine, [
+                    new JsString(DefaultPartitionColumnName), args[0]
+                ]);
+
+                array = new JsArray(DocumentScript.ScriptEngine, [defaultPartition]);
             }
             else
             {
-                array = JsValue.FromObject(DocumentScript.ScriptEngine, args);
+                array = new JsArray(DocumentScript.ScriptEngine, args.ToArray());
             }
 
             var o = new JsObject(DocumentScript.ScriptEngine);

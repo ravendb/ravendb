@@ -55,7 +55,7 @@ public class AwsS3MultiPartUploader : IMultiPartUploader
 
         RavenAwsS3Client.FillMetadata(multipartRequest.Metadata, _metadata);
 
-        var initiateResponse = await _client.InitiateMultipartUploadAsync(multipartRequest, _cancellationToken);
+        var initiateResponse = await _client.InitiateMultipartUploadAsync(multipartRequest, _cancellationToken).ConfigureAwait(false);
         _uploadId = initiateResponse.UploadId;
         _partNumber = 1;
         _partEtags = new List<PartETag>();
@@ -68,7 +68,7 @@ public class AwsS3MultiPartUploader : IMultiPartUploader
 
     public async Task UploadPartAsync(Stream stream)
     {
-        await UploadPartAsync(stream, stream.Length);
+        await UploadPartAsync(stream, stream.Length).ConfigureAwait(false);
     }
 
     public async Task UploadPartAsync(Stream stream, long size)
@@ -92,7 +92,7 @@ public class AwsS3MultiPartUploader : IMultiPartUploader
                     _progress?.UploadProgress.UpdateUploaded(args.IncrementTransferred);
                     _progress?.OnUploadProgress?.Invoke();
                 }
-            }, _cancellationToken);
+            }, _cancellationToken).ConfigureAwait(false);
 
         _partEtags.Add(new PartETag(uploadResponse.PartNumber.GetValueOrDefault(), uploadResponse.ETag));
     }
@@ -112,6 +112,24 @@ public class AwsS3MultiPartUploader : IMultiPartUploader
                 Key = _key,
                 PartETags = _partEtags
             },
-            _cancellationToken);
+            _cancellationToken).ConfigureAwait(false);
+    }
+
+    public void Abort()
+    {
+        AsyncHelpers.RunSync(AbortAsync);
+    }
+
+    public async Task AbortAsync()
+    {
+        if (_uploadId == null)
+            return;
+
+        await _client.AbortMultipartUploadAsync(new AbortMultipartUploadRequest
+        {
+            BucketName = _bucketName,
+            Key = _key,
+            UploadId = _uploadId
+        }, CancellationToken.None).ConfigureAwait(false);
     }
 }

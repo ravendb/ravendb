@@ -36,7 +36,8 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
 
             if (document == null)
             {
-                throw new InvalidOperationException($"Cannot apply json patch because the document {_id} does not exist");
+                _patchResult = new JsonPatchResult { Status = PatchStatus.DocumentDoesNotExist };
+                return 1;
             }
 
             try
@@ -105,7 +106,7 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
                     };
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not Raven.Client.Exceptions.SchemaValidation.SchemaValidationException)
             {
                 throw new InvalidOperationException($"An error occurred while trying to apply json patch operation to document {_id}.", ex);
             }

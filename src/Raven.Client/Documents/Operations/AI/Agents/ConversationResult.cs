@@ -39,7 +39,6 @@ public class ConversationResult<TAnswer>
     internal static ConversationResult<TAnswer> Convert(BlittableJsonReaderObject response, DocumentConventions conventions)
     {
         response.TryGet(nameof(TotalUsage), out BlittableJsonReaderObject totalUsage);
-        response.TryGet(nameof(Response), out BlittableJsonReaderObject resultBjo);
         response.TryGet(nameof(ConversationId), out string conversationId);
         response.TryGet(nameof(ChangeVector), out string changeVector);
         response.TryGet(nameof(Usage), out BlittableJsonReaderObject usage);
@@ -56,13 +55,25 @@ public class ConversationResult<TAnswer>
             }
         }
 
+        TAnswer responseValue;
+        if (typeof(TAnswer) == typeof(string))
+        {
+            response.TryGet(nameof(Response), out string responseStr);
+            responseValue = (TAnswer)(object)responseStr;
+        }
+        else
+        {
+            response.TryGet(nameof(Response), out BlittableJsonReaderObject resultBjo);
+            responseValue = resultBjo == null ? default : conventions.Serialization.DefaultConverter.FromBlittable<TAnswer>(resultBjo, conversationId);
+        }
+
         return new ConversationResult<TAnswer>
         {
             ConversationId = conversationId,
             ChangeVector = changeVector,
             ActionRequests = requests,
             TotalUsage = JsonDeserializationClient.AiUsage(totalUsage),
-            Response = resultBjo == null ? default : conventions.Serialization.DefaultConverter.FromBlittable<TAnswer>(resultBjo, conversationId),
+            Response = responseValue,
             Usage = JsonDeserializationClient.AiUsage(usage),
             Elapsed = elapsedStr
         };

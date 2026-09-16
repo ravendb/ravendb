@@ -22,7 +22,7 @@ public class RavenDB_24609(ITestOutputHelper output) : RavenTestBase(output)
     private const string AgentName = "params-test-agent";
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GetConversationMessages_ReturnsParameters(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -143,7 +143,7 @@ public class RavenDB_24609(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GetConversationMessages_ReturnsParameters_NoParametersReturnsEmptyObject(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -164,7 +164,7 @@ public class RavenDB_24609(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GetConversationMessages_StitchesAcrossTwoSummarizationHistoryDocs(Options options, GenAiConfiguration config)
     {
         // Drives a conversation through TWO summarizations so two history snapshots get persisted.
@@ -245,7 +245,7 @@ public class RavenDB_24609(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanGetConversationMessages_ArrayContentJoinsTextParts_FromRealConversation(Options options, GenAiConfiguration config)
     {
         // End-to-end version of CanGetConversationMessages_ArrayContentJoinsTextParts:

@@ -25,7 +25,7 @@ namespace Corax.Pipeline.Parsing
         public static int ToLowercaseAscii(ReadOnlySpan<byte> source, ReadOnlySpan<Token> tokens, ref Span<byte> dest, ref Span<Token> destTokens)
         {
             Debug.Assert(source.Length <= dest.Length);
-            Debug.Assert(source.Length <= destTokens.Length);
+            Debug.Assert(tokens.Length <= destTokens.Length);
 
             return ScalarTransformers.ToLowercaseAscii(source, tokens, ref dest, ref destTokens);
         }
@@ -33,15 +33,7 @@ namespace Corax.Pipeline.Parsing
         public static int ToLowercase(ReadOnlySpan<byte> source, ReadOnlySpan<Token> tokens, ref Span<byte> dest, ref Span<Token> destTokens)
         {
             Debug.Assert(source.Length <= dest.Length);
-            Debug.Assert(source.Length <= destTokens.Length);
-
-            return ScalarTransformers.ToLowercase(source, tokens, ref dest, ref destTokens);
-        }
-
-        public static int ToLowercase(ReadOnlySpan<char> source, ReadOnlySpan<Token> tokens, ref Span<char> dest, ref Span<Token> destTokens)
-        {
-            Debug.Assert(source.Length <= dest.Length);
-            Debug.Assert(source.Length <= destTokens.Length);
+            Debug.Assert(tokens.Length <= destTokens.Length);
 
             return ScalarTransformers.ToLowercase(source, tokens, ref dest, ref destTokens);
         }

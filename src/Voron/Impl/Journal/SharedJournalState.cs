@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using Sparrow.Server.Platform;
 
@@ -42,14 +43,23 @@ public class SharedJournalState()
 
     public void SetException(Exception e)
     {
+        var edi = ExceptionDispatchInfo.Capture(e);
+
         while (_mergedCommitsQueue.TryDequeue(out var rec))
         {
+            MarkCatastrophicFailure(rec.Transaction.Environment, edi);
             rec.Tcs.TrySetException(e);
         }
 
         foreach (var record in _mergedJournalJournalRecordsBuffer)
         {
+            MarkCatastrophicFailure(record.Transaction.Environment, edi);
             record.Tcs.TrySetException(e);
+        }
+
+        static void MarkCatastrophicFailure(StorageEnvironment env, ExceptionDispatchInfo edi)
+        {
+            try { env.Options.SetCatastrophicFailure(edi); } catch { /* best-effort */ }
         }
     }
 

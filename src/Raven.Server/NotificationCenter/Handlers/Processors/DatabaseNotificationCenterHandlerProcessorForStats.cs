@@ -51,6 +51,18 @@ internal sealed class DatabaseNotificationCenterHandlerProcessorForStats : Abstr
             writer.WriteInteger(stats.CountOfIndexingErrors);
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(stats.CountOfEtlTasksErrors));
+            writer.WriteInteger(stats.CountOfEtlTasksErrors);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(stats.CountOfAiTasksErrors));
+            writer.WriteInteger(stats.CountOfAiTasksErrors);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(stats.CountOfCdcSinkTasksErrors));
+            writer.WriteInteger(stats.CountOfCdcSinkTasksErrors);
+            writer.WriteComma();
+
             writer.WritePropertyName(nameof(stats.GlobalChangeVector));
             writer.WriteString(stats.GlobalChangeVector);
             writer.WriteComma();

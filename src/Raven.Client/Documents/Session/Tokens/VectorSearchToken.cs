@@ -38,7 +38,29 @@ public sealed class VectorSearchToken : WhereToken
         
         PortableExceptions.ThrowIf<InvalidOperationException>(embeddingsGenerationTaskIdentifier != null && embeddingsGenerationTaskIdentifierByValue != null, $"Embeddings generation task identifier set in value factory cannot be used with field factory. It solely purpose to use already generated embeddings.");
     }
-    
+
+    public override WhereToken AddAlias(string alias)
+    {
+        if (FieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+            return this;
+
+        var token = new VectorSearchToken(
+            fieldName: alias + "." + FieldName,
+            parameterName: ParameterName,
+            sourceQuantizationType: _sourceQuantizationType,
+            targetQuantizationType: _targetQuantizationType,
+            similarityThreshold: _similarityThreshold,
+            numberOfCandidatesForQuerying: _numberOfCandidatesForQuerying,
+            isExact: Options.Exact,
+            isDocumentId: _isDocumentId,
+            embeddingsGenerationTaskIdentifier: _embeddingsGenerationTaskIdentifier,
+            embeddingsGenerationTaskIdentifierByValue: _embeddingsGenerationTaskIdentifierByValue);
+
+        token.Options = Options;
+        token.WhereOperator = WhereOperator;
+        return token;
+    }
+
     public override void WriteTo(StringBuilder writer)
     {
         if (Options.Boost.HasValue)

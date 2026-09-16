@@ -1,11 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using Raven.Server.Integrations.PostgreSQL;
+using Raven.Server.Integrations.PostgreSQL.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.VirtualCatalog;
 using Tests.Infrastructure;
 using Xunit;
+using static Tests.Infrastructure.PostgreSqlHelper;
 
 namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
 {
@@ -65,6 +69,146 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
         public void Format_type_unresolvable_oid_falls_through()
         {
             Assert.False(PgVirtualInterpreter.TryExecute("select format_type('not_an_oid')", EmptyCtx(), out _));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_table_is_visible_returns_true()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("select pg_table_is_visible(16384)", EmptyCtx(), out var table));
+            Assert.NotNull(table);
+            Assert.Single(table.Columns);
+            Assert.Equal("pg_table_is_visible", table.Columns[0].Name);
+            Assert.Single(table.Data);
+            Assert.Equal("t", DecodeCell(table, row: 0, column: 0));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_function_is_visible_returns_true()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("select pg_function_is_visible(2400)", EmptyCtx(), out var table));
+            Assert.NotNull(table);
+            Assert.Single(table.Data);
+            Assert.Equal("t", DecodeCell(table, row: 0, column: 0));
+        }
+
+        // The visibility functions are strict in PG: NULL in, NULL out.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_table_is_visible_null_oid_is_null()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("select pg_table_is_visible(NULL)", EmptyCtx(), out var table));
+            Assert.Single(table.Data);
+            Assert.False(table.Data[0].ColumnData.Span[0].HasValue);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_function_is_visible_null_oid_is_null()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("select pg_function_is_visible(NULL)", EmptyCtx(), out var table));
+            Assert.Single(table.Data);
+            Assert.False(table.Data[0].ColumnData.Span[0].HasValue);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_type_is_visible_null_oid_is_null()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("select pg_type_is_visible(NULL)", EmptyCtx(), out var table));
+            Assert.Single(table.Data);
+            Assert.False(table.Data[0].ColumnData.Span[0].HasValue);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_table_is_visible_wrong_arity_falls_through()
+        {
+            Assert.False(PgVirtualInterpreter.TryExecute("select pg_table_is_visible()", EmptyCtx(), out _));
+            Assert.False(PgVirtualInterpreter.TryExecute("select pg_table_is_visible(16384, 16385)", EmptyCtx(), out _));
+        }
+
+        // 23 = int4, a pg_catalog builtin.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_type_is_visible_is_true_for_a_pg_catalog_type()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("select pg_type_is_visible(23)", EmptyCtx(), out var table));
+            Assert.NotNull(table);
+            Assert.Single(table.Columns);
+            Assert.Equal("pg_type_is_visible", table.Columns[0].Name);
+            Assert.Single(table.Data);
+            Assert.Equal("t", DecodeCell(table, row: 0, column: 0));
+        }
+
+        // 13183 is information_schema.yes_or_no, a domain off the search_path.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_type_is_visible_is_false_for_an_information_schema_domain()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("select pg_type_is_visible(13183)", EmptyCtx(), out var table));
+            Assert.Single(table.Data);
+            Assert.Equal("f", DecodeCell(table, row: 0, column: 0));
+        }
+
+        // PG checks the syscache first, so "no such type" stays distinct from "off the search_path".
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_type_is_visible_unknown_oid_is_null()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("select pg_type_is_visible(999999)", EmptyCtx(), out var table));
+            Assert.Single(table.Data);
+            Assert.False(table.Data[0].ColumnData.Span[0].HasValue);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_type_is_visible_wrong_arity_falls_through()
+        {
+            Assert.False(PgVirtualInterpreter.TryExecute("select pg_type_is_visible()", EmptyCtx(), out _));
+            Assert.False(PgVirtualInterpreter.TryExecute("select pg_type_is_visible(23, 25)", EmptyCtx(), out _));
+        }
+
+        // SQLAlchemy's PGDialect._load_domains(), verbatim off the wire (1.4.54 + psycopg2).
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void SqlAlchemy_load_domains_reports_the_information_schema_domains_as_not_visible()
+        {
+            const string sql = """
+                SELECT t.typname as "name",
+                   pg_catalog.format_type(t.typbasetype, t.typtypmod) as "attype",
+                   not t.typnotnull as "nullable",
+                   t.typdefault as "default",
+                   pg_catalog.pg_type_is_visible(t.oid) as "visible",
+                   n.nspname as "schema"
+                FROM pg_catalog.pg_type t
+                   LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+                WHERE t.typtype = 'd'
+                """;
+
+            Assert.True(PgVirtualInterpreter.TryExecute(sql, EmptyCtx(), out var table));
+
+            var columnNames = new List<string>();
+            foreach (var column in table.Columns)
+                columnNames.Add(column.Name);
+            Assert.Equal(new[] { "name", "attype", "nullable", "default", "visible", "schema" }, columnNames);
+
+            var byName = new Dictionary<string, string[]>(StringComparer.Ordinal);
+            for (int row = 0; row < table.Data.Count; row++)
+            {
+                var span = table.Data[row].ColumnData.Span;
+                var values = new string[table.Columns.Count];
+                for (int column = 0; column < values.Length; column++)
+                    values[column] = span[column].HasValue ? Encoding.UTF8.GetString(span[column].Value.Span) : null;
+                byName[values[0]] = values;
+            }
+
+            var names = new List<string>(byName.Keys);
+            names.Sort(StringComparer.Ordinal);
+            Assert.Equal(new[] { "cardinal_number", "character_data", "sql_identifier", "time_stamp", "yes_or_no" }, names);
+
+            foreach (var values in byName.Values)
+            {
+                // "f", not "False": the column must be typed boolean.
+                Assert.Equal("f", values[4]);
+                Assert.Equal("information_schema", values[5]);
+                Assert.Equal("t", values[2]); // none of the five domains is NOT NULL
+            }
+
+            Assert.Equal("integer", byName["cardinal_number"][1]);
+            Assert.Null(byName["cardinal_number"][3]);
+            // time_stamp is the only one of the five with a DEFAULT.
+            Assert.Equal("CURRENT_TIMESTAMP(2)", byName["time_stamp"][3]);
         }
 
         [RavenFact(RavenTestCategory.PostgreSql)]
@@ -391,34 +535,7 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
             // has_schema_privilege() function, EXISTS (SELECT 1 FROM pg_class WHERE ...) correlated
             // subqueries, deeply nested NOT (a OR b OR c) WHERE shape, LIKE with E'...' escape
             // string (NOT LIKE E'pg\_%' to hide internal pg_* schemas).
-            const string sql = """
-                SELECT
-                nsp.oid,
-                nsp.nspname as name,
-                pg_catalog.has_schema_privilege(nsp.oid, 'CREATE') as can_create,
-                pg_catalog.has_schema_privilege(nsp.oid, 'USAGE') as has_usage,
-                des.description
-                FROM
-                pg_catalog.pg_namespace nsp
-                LEFT OUTER JOIN pg_catalog.pg_description des ON
-                (des.objoid=nsp.oid AND des.classoid='pg_namespace'::regclass)
-                WHERE
-                nspname NOT LIKE E'pg\\_%' AND
-                NOT (
-                (nsp.nspname = 'pg_catalog' AND EXISTS
-                (SELECT 1 FROM pg_catalog.pg_class WHERE relname = 'pg_class' AND
-                relnamespace = nsp.oid LIMIT 1)) OR
-                (nsp.nspname = 'pgagent' AND EXISTS
-                (SELECT 1 FROM pg_catalog.pg_class WHERE relname = 'pga_job' AND
-                relnamespace = nsp.oid LIMIT 1)) OR
-                (nsp.nspname = 'information_schema' AND EXISTS
-                (SELECT 1 FROM pg_catalog.pg_class WHERE relname = 'tables' AND
-                relnamespace = nsp.oid LIMIT 1))
-                )
-                ORDER BY nspname
-                """;
-
-            Assert.True(PgVirtualInterpreter.TryExecute(sql, EmptyCtx(), out var table));
+            Assert.True(PgVirtualInterpreter.TryExecute(PgAdminSchemaTreeQuery, EmptyCtx(), out var table));
             Assert.Equal(5, table.Columns.Count);
             Assert.Equal("oid", table.Columns[0].Name);
             Assert.Equal("name", table.Columns[1].Name);
@@ -1394,13 +1511,247 @@ ORDER BY ord";
             Assert.NotEqual(Regex.InfiniteMatchTimeout, regex.MatchTimeout);
         }
 
-        private static VirtualQueryContext EmptyCtx() => new();
-
-        private static string DecodeCell(Raven.Server.Integrations.PostgreSQL.Messages.PgTable table, int row, int column)
+        // SQLAlchemy's psycopg2 dialect runs this hstore probe on EVERY connect (Apache Superset,
+        // among others). Real PG returns 0 rows (no hstore type) and the client disables native
+        // hstore and proceeds. RavenDB must do the same. The JOIN over pg_type/pg_namespace is
+        // handled by JoinExecutor; the only thing that used to break it was pg_type missing the
+        // projected `typarray` column, which made the interpreter bail and the query get mislabeled
+        // as an unsupported "JOIN over RavenDB collections" (Zoho Desk #7031).
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Sqlalchemy_hstore_probe_returns_empty_rowset_with_2_columns()
         {
-            var cell = table.Data[row].ColumnData.Span[column];
-            Assert.True(cell.HasValue);
-            return Encoding.UTF8.GetString(cell.Value.Span);
+            const string sql =
+                "SELECT t.oid, typarray FROM pg_type t JOIN pg_namespace ns " +
+                "ON typnamespace = ns.oid WHERE typname = 'hstore'";
+
+            Assert.True(PgVirtualInterpreter.TryExecute(sql, EmptyCtx(), out var table));
+            Assert.Equal(2, table.Columns.Count);
+            Assert.Equal("oid", table.Columns[0].Name);
+            Assert.Equal("typarray", table.Columns[1].Name);
+            Assert.Empty(table.Data);
         }
+
+        // Locks in the typarray catalog data: a base type's typarray must resolve to its array
+        // type's oid (int4 oid 23 -> _int4 oid 1007), and an array type's typarray is 0.
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Typarray_resolves_to_array_type_oid_for_base_type()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "SELECT typarray FROM pg_type WHERE typname = 'int4'", EmptyCtx(), out var table));
+            Assert.Single(table.Data);
+            Assert.Equal("1007", DecodeCell(table, row: 0, column: 0));
+
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "SELECT typarray FROM pg_type WHERE typname = '_int4'", EmptyCtx(), out var arrayTable));
+            Assert.Single(arrayTable.Data);
+            Assert.Equal("0", DecodeCell(arrayTable, row: 0, column: 0));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Current_schema_function_returns_public()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("select current_schema()", EmptyCtx(), out var table));
+            Assert.NotNull(table);
+            Assert.Single(table.Columns);
+            Assert.Equal("current_schema", table.Columns[0].Name);
+            Assert.Single(table.Data);
+            Assert.Equal("public", DecodeCell(table, row: 0, column: 0));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Current_schema_with_argument_falls_through()
+        {
+            Assert.False(PgVirtualInterpreter.TryExecute("select current_schema('public')", EmptyCtx(), out var table));
+            Assert.Null(table);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Show_transaction_isolation_level_returns_read_committed()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("show transaction isolation level", EmptyCtx(), out var table));
+            Assert.NotNull(table);
+            Assert.Single(table.Columns);
+            Assert.Equal("transaction_isolation", table.Columns[0].Name);
+            Assert.Single(table.Data);
+            Assert.Equal("read committed", DecodeCell(table, row: 0, column: 0));
+        }
+
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("SHOW TRANSACTION ISOLATION LEVEL")]
+        [InlineData("Show Transaction Isolation Level")]
+        [InlineData("show transaction_isolation")]
+        [InlineData("SHOW TRANSACTION_ISOLATION")]
+        public void Show_transaction_isolation_is_case_insensitive(string sql)
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(sql, EmptyCtx(), out var table));
+            Assert.Single(table.Columns);
+            Assert.Equal("transaction_isolation", table.Columns[0].Name);
+            Assert.Single(table.Data);
+            Assert.Equal("read committed", DecodeCell(table, row: 0, column: 0));
+        }
+
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("show standard_conforming_strings", "standard_conforming_strings", "on")]
+        [InlineData("show server_version", "server_version", "13.3")]
+        [InlineData("show client_encoding", "client_encoding", "UTF8")]
+        [InlineData("SHOW TIME ZONE", "timezone", "UTC")]
+        public void Show_resolves_known_settings_from_shared_table(string sql, string expectedColumn, string expectedValue)
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(sql, EmptyCtx(), out var table));
+            Assert.Single(table.Columns);
+            Assert.Equal(expectedColumn, table.Columns[0].Name);
+            Assert.Single(table.Data);
+            Assert.Equal(expectedValue, DecodeCell(table, row: 0, column: 0));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Show_unrecognized_setting_raises_undefined_object()
+        {
+            var ex = Assert.Throws<PgErrorException>(
+                () => PgVirtualInterpreter.TryExecute("show not_a_real_setting", EmptyCtx(), out _));
+
+            Assert.Equal(PgErrorCodes.UndefinedObject, ex.ErrorCode);
+            Assert.Equal("unrecognized configuration parameter \"not_a_real_setting\"", ex.Message);
+        }
+
+        [RavenTheory(RavenTestCategory.PostgreSql)]
+        [InlineData("transaction_isolation")]
+        [InlineData("standard_conforming_strings")]
+        [InlineData("server_version")]
+        [InlineData("search_path")]
+        public void Show_and_current_setting_return_the_same_value(string setting)
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute($"show {setting}", EmptyCtx(), out var showTable));
+            Assert.True(PgVirtualInterpreter.TryExecute($"select current_setting('{setting}')", EmptyCtx(), out var currentSettingTable));
+
+            Assert.Single(showTable.Data);
+            Assert.Single(currentSettingTable.Data);
+            Assert.Equal(DecodeCell(currentSettingTable, row: 0, column: 0), DecodeCell(showTable, row: 0, column: 0));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Show_all_lists_the_known_settings()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("show all", EmptyCtx(), out var table));
+            Assert.Equal(3, table.Columns.Count);
+            Assert.Equal("name", table.Columns[0].Name);
+            Assert.Equal("setting", table.Columns[1].Name);
+            Assert.Equal("description", table.Columns[2].Name);
+            Assert.NotEmpty(table.Data);
+
+            var settings = new Dictionary<string, string>();
+            for (var row = 0; row < table.Data.Count; row++)
+            {
+                Assert.False(table.Data[row].ColumnData.Span[2].HasValue);
+                settings[DecodeCell(table, row, column: 0)] = DecodeCell(table, row, column: 1);
+            }
+
+            Assert.Equal("read committed", settings["transaction_isolation"]);
+            Assert.Equal("on", settings["standard_conforming_strings"]);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Show_result_carries_the_show_command_tag()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute("show transaction isolation level", EmptyCtx(), out var table));
+            Assert.Equal("SHOW", table.CommandTag);
+
+            Assert.True(PgVirtualInterpreter.TryExecute("select version()", EmptyCtx(), out var selectTable));
+            Assert.Null(selectTable.CommandTag);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_am_is_registered_and_holds_no_rows()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "select oid, amname from pg_catalog.pg_am", EmptyCtx(), out var table));
+
+            Assert.Equal(new[] { "oid", "amname" }, table.Columns.Select(c => c.Name));
+            Assert.Empty(table.Data);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_attrdef_is_registered_and_holds_no_rows()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "select oid, adrelid, adnum, adbin from pg_catalog.pg_attrdef", EmptyCtx(), out var table));
+
+            Assert.Equal(new[] { "oid", "adrelid", "adnum", "adbin" }, table.Columns.Select(c => c.Name));
+            Assert.Empty(table.Data);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_get_expr_is_not_implemented_and_is_never_reached_over_an_empty_pg_attrdef()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "select pg_catalog.pg_get_expr(d.adbin, d.adrelid) from pg_catalog.pg_attrdef d",
+                EmptyCtx(), out var overEmptyTable));
+            Assert.Empty(overEmptyTable.Data);
+
+            Assert.False(PgVirtualInterpreter.TryExecute(
+                "select pg_catalog.pg_get_expr(null, null)", EmptyCtx(), out _));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_attribute_with_null_db_returns_empty_rowset()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "select attrelid, attname, atttypid, attnum from pg_attribute", EmptyCtx(), out var table));
+
+            Assert.Equal(4, table.Columns.Count);
+            Assert.Empty(table.Data);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_class_with_null_db_returns_empty_rowset()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "select oid, relname, relkind, relnamespace from pg_class", EmptyCtx(), out var table));
+
+            Assert.Equal(4, table.Columns.Count);
+            Assert.Empty(table.Data);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_constraint_is_registered_and_holds_no_rows()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "select oid, conname, conrelid, contype, conkey, confrelid, conindid from pg_catalog.pg_constraint",
+                EmptyCtx(), out var table));
+
+            Assert.Equal(
+                new[] { "oid", "conname", "conrelid", "contype", "conkey", "confrelid", "conindid" },
+                table.Columns.Select(c => c.Name));
+            Assert.Empty(table.Data);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_index_is_registered_and_holds_no_rows()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "select indrelid, indexrelid, indisunique, indisprimary, indexprs, indpred, " +
+                "indkey, indoption, indnkeyatts from pg_catalog.pg_index",
+                EmptyCtx(), out var table));
+
+            Assert.Equal(
+                new[] { "indrelid", "indexrelid", "indisunique", "indisprimary", "indexprs", "indpred", "indkey", "indoption", "indnkeyatts" },
+                table.Columns.Select(c => c.Name));
+            Assert.Empty(table.Data);
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
+        public void Pg_sequence_is_registered_and_holds_no_rows()
+        {
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                "select seqrelid, seqstart, seqincrement, seqmin, seqmax, seqcache, seqcycle from pg_catalog.pg_sequence",
+                EmptyCtx(), out var table));
+
+            Assert.Equal(
+                new[] { "seqrelid", "seqstart", "seqincrement", "seqmin", "seqmax", "seqcache", "seqcycle" },
+                table.Columns.Select(c => c.Name));
+            Assert.Empty(table.Data);
+        }
+
+        private static VirtualQueryContext EmptyCtx() => new();
     }
 }

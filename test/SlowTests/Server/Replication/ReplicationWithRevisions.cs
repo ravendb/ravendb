@@ -8,7 +8,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
-using Raven.Server.Utils;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -312,16 +312,22 @@ namespace SlowTests.Server.Replication
                     var expectedFlags1 = (DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.Conflicted).ToString();
                     var expectedFlags2 = (DocumentFlags.Revision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication | DocumentFlags.Conflicted).ToString();
 
-                    AssertRevisionFlags(metadata[1]);
-                    AssertRevisionFlags(metadata[2]);
-
-                    void AssertRevisionFlags(IMetadataDictionary revisionMetadata)
+                    using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     {
-                        flags = revisionMetadata["@flags"];
-                        var cv = revisionMetadata["@change-vector"].ToString();
-                        var etag = ChangeVectorUtils.GetEtagById(cv, db2.DbBase64Id);
-                        var expected = etag != 0 ? expectedFlags1 : expectedFlags2;
-                        Assert.Equal(expected, flags);
+                        AssertRevisionFlags(metadata[1]);
+                        AssertRevisionFlags(metadata[2]);
+
+                        void AssertRevisionFlags(IMetadataDictionary revisionMetadata)
+                        {
+                            flags = revisionMetadata["@flags"];
+                            var cv = revisionMetadata["@change-vector"].ToString();
+                            // Origin is decided by the VERSION part only. The exposed @change-vector is the full
+                            // order|version CV, and the local node appears in the order part even for a remotely-
+                            // authored version -- so test db2 against the version, parsed via ChangeVector.
+                            var version = ctx.GetChangeVector(cv).Version.AsString();
+                            var expected = version.Contains(db2.DbBase64Id) ? expectedFlags1 : expectedFlags2;
+                            Assert.Equal(expected, flags);
+                        }
                     }
                 }
             }

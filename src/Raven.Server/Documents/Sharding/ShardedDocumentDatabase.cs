@@ -227,6 +227,9 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
 
     public async Task DeleteBucketAsync(int bucket, long migrationIndex, long confirmationIndex, string uptoChangeVector)
     {
+        if (ForTestingPurposes?.DelayDeleteBucket != null)
+            await ForTestingPurposes.DelayDeleteBucket.WaitAsync(DatabaseShutdown);
+
         if (string.IsNullOrEmpty(uptoChangeVector))
         {
             if (_logger.IsDebugEnabled)

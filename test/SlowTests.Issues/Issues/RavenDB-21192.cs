@@ -36,7 +36,9 @@ using Raven.Server.Utils.Metrics;
 using Raven.Server.Utils.Monitoring;
 using Sparrow.Json;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Commands;
 using Xunit;
+using Raven.Server.Documents.TasksErrors;
 
 namespace SlowTests.Issues;
 
@@ -334,7 +336,7 @@ public class RavenDB_21192 : RavenTestBase
 
             var etlStats = await GetEtlStatsAsync(src, processName);
             Assert.Equal(0, etlStats.TransformationErrors);
-            Assert.Equal(EtlProcessHealthStatus.Healthy, etlStats.HealthStatus);
+            Assert.Equal(OngoingTaskHealthStatus.Healthy, etlStats.HealthStatus);
             
             var brokenConfig = new RavenEtlConfiguration
             {
@@ -364,11 +366,11 @@ public class RavenDB_21192 : RavenTestBase
                 await session.SaveChangesAsync();
             }
 
-            await WaitForEtlStatsAsync(src, processName, stats => stats.TransformationErrors >= 10 && stats.HealthStatus == EtlProcessHealthStatus.Failed);
+            await WaitForEtlStatsAsync(src, processName, stats => stats.TransformationErrors >= 10 && stats.HealthStatus == OngoingTaskHealthStatus.Failed);
 
             etlStats = await GetEtlStatsAsync(src, processName);
             Assert.True(etlStats.TransformationErrors >= 10);
-            Assert.Equal(EtlProcessHealthStatus.Failed, etlStats.HealthStatus);
+            Assert.Equal(OngoingTaskHealthStatus.Failed, etlStats.HealthStatus);
             
             var fixedConfig = new RavenEtlConfiguration
             {
@@ -408,17 +410,17 @@ public class RavenDB_21192 : RavenTestBase
 
             etlStats = await GetEtlStatsAsync(src, processName);
             Assert.Equal(0, etlStats.TransformationErrors);
-            Assert.Equal(EtlProcessHealthStatus.Healthy, etlStats.HealthStatus);
+            Assert.Equal(OngoingTaskHealthStatus.Healthy, etlStats.HealthStatus);
             
             var disableResult = await dest.Maintenance.Server.SendAsync(new ToggleDatabasesStateOperation(dest.Database, disable: true));
             Assert.True(disableResult.Disabled);
 
             src.Maintenance.Send(new UpdateEtlOperation<RavenConnectionString>(taskId, fixedConfig, [transformationName]));
-            await WaitForEtlStatsAsync(src, processName, stats => stats.LoadErrors > 0 && stats.HealthStatus == EtlProcessHealthStatus.Failed);
+            await WaitForEtlStatsAsync(src, processName, stats => stats.LoadErrors > 0 && stats.HealthStatus == OngoingTaskHealthStatus.Failed);
 
             etlStats = await GetEtlStatsAsync(src, processName);
             Assert.True(etlStats.LoadErrors > 0);
-            Assert.Equal(EtlProcessHealthStatus.Failed, etlStats.HealthStatus);
+            Assert.Equal(OngoingTaskHealthStatus.Failed, etlStats.HealthStatus);
         }
     }
 
@@ -480,6 +482,7 @@ public class RavenDB_21192 : RavenTestBase
             }
 
             await WaitForEtlStatsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1), stats => stats.TransformationErrors == 5);
+            await WaitForPersistedItemErrorsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1), 5);
 
             AddEtlTask(src, dest, etlName2, connectionStringName2, [transformationName2, transformationName3], [script2, script3], collections2);
 
@@ -604,6 +607,7 @@ public class RavenDB_21192 : RavenTestBase
             }
 
             await WaitForEtlStatsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1), stats => stats.TransformationErrors == 5, shardNumber);
+            await WaitForPersistedItemErrorsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1), 5, shardNumber);
 
             AddEtlTask(src, dest, etlName2, connectionStringName2, [transformationName2, transformationName3], [script2, script3], collections2);
 
@@ -692,6 +696,9 @@ public class RavenDB_21192 : RavenTestBase
             await WaitForEtlStatsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1), stats => stats.TransformationErrors == 5);
             await WaitForEtlStatsAsync(src, EtlProcess.GetProcessName(etlName2, transformationName2), stats => stats.TransformationErrors == 5);
 
+            await WaitForPersistedItemErrorsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1), 5);
+            await WaitForPersistedItemErrorsAsync(src, EtlProcess.GetProcessName(etlName2, transformationName2), 5);
+
             using (var commands = src.Commands())
             {
                 await commands.ExecuteAsync(new DeleteEtlTaskErrorsCommand([EtlProcess.GetProcessName(etlName1, transformationName1)]));
@@ -770,13 +777,13 @@ public class RavenDB_21192 : RavenTestBase
                 await session.SaveChangesAsync();
             }
 
-            await WaitForEtlStatsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1), stats => stats.TransformationErrors == 10 && stats.HealthStatus == EtlProcessHealthStatus.Failed);
+            await WaitForEtlStatsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1), stats => stats.TransformationErrors == 10 && stats.HealthStatus == OngoingTaskHealthStatus.Failed);
 
             var etlStats = await GetEtlStatsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1));
 
             Assert.Equal(0, etlStats.LoadSuccesses);
             Assert.NotEqual(0, etlStats.TransformationErrors);
-            Assert.Equal(EtlProcessHealthStatus.Failed, etlStats.HealthStatus);
+            Assert.Equal(OngoingTaskHealthStatus.Failed, etlStats.HealthStatus);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -791,7 +798,7 @@ public class RavenDB_21192 : RavenTestBase
 
             Assert.Equal(50, etlStats.LoadSuccesses);
             Assert.NotEqual(0, etlStats.TransformationErrors);
-            Assert.Equal(EtlProcessHealthStatus.Impaired, etlStats.HealthStatus);
+            Assert.Equal(OngoingTaskHealthStatus.Impaired, etlStats.HealthStatus);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -806,7 +813,7 @@ public class RavenDB_21192 : RavenTestBase
             
             Assert.Equal(950, etlStats.LoadSuccesses);
             Assert.NotEqual(0, etlStats.TransformationErrors);
-            Assert.Equal(EtlProcessHealthStatus.Impaired, etlStats.HealthStatus);
+            Assert.Equal(OngoingTaskHealthStatus.Impaired, etlStats.HealthStatus);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -824,7 +831,7 @@ public class RavenDB_21192 : RavenTestBase
             Assert.Equal(960, etlStats.LoadSuccesses);
             Assert.NotEqual(0, etlStats.TransformationErrors);
 
-            Assert.Equal(EtlProcessHealthStatus.Impaired, etlStats.HealthStatus);
+            Assert.Equal(OngoingTaskHealthStatus.Impaired, etlStats.HealthStatus);
         }
     }
 
@@ -866,10 +873,10 @@ public class RavenDB_21192 : RavenTestBase
                 await session.SaveChangesAsync();
             }
             
-            await WaitForEtlStatsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1), stats => stats.HealthStatus == EtlProcessHealthStatus.Failed);
+            await WaitForEtlStatsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1), stats => stats.HealthStatus == OngoingTaskHealthStatus.Failed);
                     
             var etlStats = await GetEtlStatsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1));
-            Assert.Equal(EtlProcessHealthStatus.Failed, etlStats.HealthStatus);
+            Assert.Equal(OngoingTaskHealthStatus.Failed, etlStats.HealthStatus);
 
             await src.Maintenance.SendAsync(new PutDatabaseSettingsOperation(src.Database, new Dictionary<string, string>
             {
@@ -910,11 +917,11 @@ public class RavenDB_21192 : RavenTestBase
                 await session.SaveChangesAsync();
             }
 
-            await WaitForEtlStatsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1), stats => stats.HealthStatus == EtlProcessHealthStatus.Failed);
+            await WaitForEtlStatsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1), stats => stats.HealthStatus == OngoingTaskHealthStatus.Failed);
 
             var etlStats = await GetEtlStatsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1));
-            Assert.Equal(EtlProcessHealthStatus.Failed, etlStats.HealthStatus);
-            await AssertHealthStatusNotificationAsync(src, processTag, EtlProcess.GetProcessName(etlName1, transformationName1), EtlProcessHealthStatus.Failed);
+            Assert.Equal(OngoingTaskHealthStatus.Failed, etlStats.HealthStatus);
+            await AssertHealthStatusNotificationAsync(src, processTag, EtlProcess.GetProcessName(etlName1, transformationName1), OngoingTaskHealthStatus.Failed);
         }
     }
 
@@ -953,7 +960,7 @@ public class RavenDB_21192 : RavenTestBase
             Assert.Equal(0, etlStats.LoadSuccesses);
             Assert.NotEqual(0, etlStats.TransformationErrors);
 
-            await AssertHealthStatusNotificationAsync(src, processTag, EtlProcess.GetProcessName(etlName1, transformationName1), EtlProcessHealthStatus.Failed);
+            await AssertHealthStatusNotificationAsync(src, processTag, EtlProcess.GetProcessName(etlName1, transformationName1), OngoingTaskHealthStatus.Failed);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -969,7 +976,7 @@ public class RavenDB_21192 : RavenTestBase
             Assert.Equal(50, etlStats.LoadSuccesses);
             Assert.NotEqual(0, etlStats.TransformationErrors);
 
-            await AssertHealthStatusNotificationAsync(src, processTag, EtlProcess.GetProcessName(etlName1, transformationName1), EtlProcessHealthStatus.Impaired);
+            await AssertHealthStatusNotificationAsync(src, processTag, EtlProcess.GetProcessName(etlName1, transformationName1), OngoingTaskHealthStatus.Impaired);
 
             const int healthyBatches = 10;
             const int healthyBatchSize = 200;
@@ -986,23 +993,23 @@ public class RavenDB_21192 : RavenTestBase
 
             const int expectedLoadSuccesses = 50 + healthyBatches * healthyBatchSize;
             await WaitForEtlStatsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1),
-                stats => stats.LoadSuccesses == expectedLoadSuccesses && stats.HealthStatus == EtlProcessHealthStatus.Healthy);
+                stats => stats.LoadSuccesses == expectedLoadSuccesses && stats.HealthStatus == OngoingTaskHealthStatus.Healthy);
 
             etlStats = await GetEtlStatsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1));
 
             Assert.Equal(expectedLoadSuccesses, etlStats.LoadSuccesses);
-            Assert.Equal(EtlProcessHealthStatus.Healthy, etlStats.HealthStatus);
+            Assert.Equal(OngoingTaskHealthStatus.Healthy, etlStats.HealthStatus);
 
-            await AssertHealthStatusNotificationAsync(src, processTag, EtlProcess.GetProcessName(etlName1, transformationName1), EtlProcessHealthStatus.Healthy);
+            await AssertHealthStatusNotificationAsync(src, processTag, EtlProcess.GetProcessName(etlName1, transformationName1), OngoingTaskHealthStatus.Healthy);
         }
     }
 
-    private async Task AssertHealthStatusNotificationAsync(IDocumentStore store, string processTag, string processName, EtlProcessHealthStatus healthStatus)
+    private async Task AssertHealthStatusNotificationAsync(IDocumentStore store, string processTag, string processName, OngoingTaskHealthStatus healthStatus)
     {
         var db = await GetDatabase(store.Database);
 
-        var expectedMessage = healthStatus == EtlProcessHealthStatus.Healthy
-            ? $"Task recovered to {nameof(EtlProcessHealthStatus.Healthy)} status."
+        var expectedMessage = healthStatus == OngoingTaskHealthStatus.Healthy
+            ? $"Task recovered to {nameof(OngoingTaskHealthStatus.Healthy)} status."
             : $"Task health status was changed to {healthStatus}.";
 
         await WaitForAssertionAsync(() =>
@@ -1521,7 +1528,7 @@ public class RavenDB_21192 : RavenTestBase
                 
                 Assert.Equal(250, ((Integer32)result.Single().Data).ToInt32());
                 
-                var serverHealthyEtlsCount = serverOidsObjectList.Single(x => x.Description == $"{nameof(EtlProcessHealthStatus.Healthy)} ETL tasks count").OID;
+                var serverHealthyEtlsCount = serverOidsObjectList.Single(x => x.Description == $"{nameof(OngoingTaskHealthStatus.Healthy)} ETL tasks count").OID;
                 
                 result = Messenger.Get(VersionCode.V2,
                     endpoint,
@@ -1531,7 +1538,7 @@ public class RavenDB_21192 : RavenTestBase
                 
                 Assert.Equal(0, ((Integer32)result.Single().Data).ToInt32());
                 
-                var serverImpairedEtlsCount = serverOidsObjectList.Single(x => x.Description == $"{nameof(EtlProcessHealthStatus.Impaired)} ETL tasks count").OID;
+                var serverImpairedEtlsCount = serverOidsObjectList.Single(x => x.Description == $"{nameof(OngoingTaskHealthStatus.Impaired)} ETL tasks count").OID;
                 
                 result = Messenger.Get(VersionCode.V2,
                     endpoint,
@@ -1541,7 +1548,7 @@ public class RavenDB_21192 : RavenTestBase
                 
                 Assert.Equal(0, ((Integer32)result.Single().Data).ToInt32());
                 
-                var serverFailedEtlsCount = serverOidsObjectList.Single(x => x.Description == $"{nameof(EtlProcessHealthStatus.Failed)} ETL tasks count").OID;
+                var serverFailedEtlsCount = serverOidsObjectList.Single(x => x.Description == $"{nameof(OngoingTaskHealthStatus.Failed)} ETL tasks count").OID;
                                 
                 result = Messenger.Get(VersionCode.V2,
                     endpoint,
@@ -1568,7 +1575,7 @@ public class RavenDB_21192 : RavenTestBase
                 
                 Assert.Equal(250, ((Integer32)result.Single().Data).ToInt32());
                 
-                var databaseHealthyEtlsCount = databaseOidsObjectList.Single(x => x.Description == $"{nameof(EtlProcessHealthStatus.Healthy)} ETL tasks count").OID;
+                var databaseHealthyEtlsCount = databaseOidsObjectList.Single(x => x.Description == $"{nameof(OngoingTaskHealthStatus.Healthy)} ETL tasks count").OID;
                 
                 result = Messenger.Get(VersionCode.V2,
                     endpoint,
@@ -1578,7 +1585,7 @@ public class RavenDB_21192 : RavenTestBase
                 
                 Assert.Equal(0, ((Integer32)result.Single().Data).ToInt32());
                 
-                var databaseImpairedEtlsCount = databaseOidsObjectList.Single(x => x.Description == $"{nameof(EtlProcessHealthStatus.Impaired)} ETL tasks count").OID;
+                var databaseImpairedEtlsCount = databaseOidsObjectList.Single(x => x.Description == $"{nameof(OngoingTaskHealthStatus.Impaired)} ETL tasks count").OID;
                 
                 result = Messenger.Get(VersionCode.V2,
                     endpoint,
@@ -1588,7 +1595,7 @@ public class RavenDB_21192 : RavenTestBase
                 
                 Assert.Equal(0, ((Integer32)result.Single().Data).ToInt32());
                 
-                var databaseFailedEtlsCount = databaseOidsObjectList.Single(x => x.Description == $"{nameof(EtlProcessHealthStatus.Failed)} ETL tasks count").OID;
+                var databaseFailedEtlsCount = databaseOidsObjectList.Single(x => x.Description == $"{nameof(OngoingTaskHealthStatus.Failed)} ETL tasks count").OID;
                 
                 result = Messenger.Get(VersionCode.V2,
                     endpoint,
@@ -1755,12 +1762,12 @@ public class RavenDB_21192 : RavenTestBase
                 var databaseResults = results.Single(x => x.DatabaseName == src.Database);
                 
                 var firstProcessResults = databaseResults.Etls.Single(x => x.ProcessName == EtlProcess.GetProcessName(etlName1, transformationName1));
-                Assert.Equal(EtlProcessHealthStatus.Healthy, firstProcessResults.HealthStatus);
+                Assert.Equal(OngoingTaskHealthStatus.Healthy, firstProcessResults.HealthStatus);
                 Assert.NotNull(firstProcessResults.LastSuccessfulBatchTimeInSec);
                 Assert.Equal(0, firstProcessResults.ErrorsCount);
                 
                 var secondProcessResults = databaseResults.Etls.Single(x => x.ProcessName == EtlProcess.GetProcessName(etlName1, transformationName2));
-                Assert.Equal(EtlProcessHealthStatus.Failed, secondProcessResults.HealthStatus);
+                Assert.Equal(OngoingTaskHealthStatus.Failed, secondProcessResults.HealthStatus);
                 Assert.Null(secondProcessResults.LastSuccessfulBatchTimeInSec);
                 Assert.Equal(123, secondProcessResults.ErrorsCount);
             }
@@ -1816,24 +1823,33 @@ public class RavenDB_21192 : RavenTestBase
         }
     }
 
-    private async Task<EtlProcessStatistics> GetEtlStatsAsync(DocumentStore store, string etlName, int shardNumber = 0)
+    private async Task<DocumentDatabase> GetEtlDatabaseAsync(DocumentStore store, int shardNumber)
     {
         var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
 
-        DocumentDatabase database;
         if (record.IsSharded)
         {
             var bucket = await Sharding.GetBucketAsync(store, shardNumber.ToString());
-            database = await Sharding.GetShardedDocumentDatabaseForBucketAsync(store.Database, bucket);
+            return await Sharding.GetShardedDocumentDatabaseForBucketAsync(store.Database, bucket);
         }
-        else
-        {
-            database = await GetDatabase(store.Database);
-        }
-        
+
+        return await GetDatabase(store.Database);
+    }
+
+    private async Task<EtlProcessStatistics> GetEtlStatsAsync(DocumentStore store, string etlName, int shardNumber = 0)
+    {
+        var database = await GetEtlDatabaseAsync(store, shardNumber);
         var etl = database.EtlLoader.Processes.Single(x => x.Name == etlName);
 
         return etl.Statistics;
+    }
+
+    private async Task WaitForPersistedItemErrorsAsync(DocumentStore store, string etlName, int expectedCount, int shardNumber = 0)
+    {
+        var database = await GetEtlDatabaseAsync(store, shardNumber);
+        var etl = database.EtlLoader.Processes.Single(x => x.Name == etlName);
+
+        await AssertWaitForValueAsync(() => Task.FromResult(database.TaskErrorsStorage.ReadItemErrorsOfTask(etl.TaskCategory, etlName).Count), expectedCount);
     }
 
     private async Task WaitForEtlStatsAsync(DocumentStore store, string etlName, Func<EtlProcessStatistics, bool> predicate = null, int shardNumber = 0, int timeout = 10_000, int interval = 500)
@@ -1898,12 +1914,6 @@ public class RavenDB_21192 : RavenTestBase
         public string Name { get; set; }
     }
 
-    private class SnmpEntry
-    {
-        public string OID { get; set; }
-        public string Description { get; set; }
-    }
-    
     private class GetEtlTaskErrorsCommand : RavenCommand<object>
     {
         private readonly List<string> _taskNames;
@@ -1998,29 +2008,6 @@ public class RavenDB_21192 : RavenTestBase
         public override bool IsReadRequest => true;
     }
     
-    private class GetSnmpOidsCommand : RavenCommand<object>
-    {
-        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-        {
-            url = $"{node.Url}/monitoring/snmp/oids";
-            
-            return new HttpRequestMessage
-            {
-                Method = HttpMethod.Get
-            };
-        }
-    
-        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-        {
-            if (response == null)
-                ThrowInvalidResponse();
-    
-            Result = response;
-        }
-    
-        public override bool IsReadRequest => true;
-    }
-
     private class GetEtlsMonitoringDataCommand : RavenCommand<object>
     {
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -2157,14 +2144,22 @@ public class RavenDB_21192_Multinode : ClusterTestBase
             Assert.Empty(otherItemErrors);
         }
         
+        await WaitAndAssertForValueAsync(() =>
+        {
+            var state = EtlProcess.GetProcessState(mentorDatabase, etlName, transformationName);
+            return state.LastProcessedEtagPerDbId.Count > 0;
+        }, true, timeout: 30_000);
+
         var newMentorTag = nodes[1].ServerStore.NodeTag;
         configuration.MentorNode = newMentorTag;
         src.Maintenance.Send(new UpdateEtlOperation<RavenConnectionString>(addResult.TaskId, configuration));
 
         var newMentorNode = nodes[1];
         var newMentorDatabase = await GetDatabase(newMentorNode, srcDatabaseName);
-        
+
         await WaitAndAssertForValueAsync(() => newMentorDatabase.EtlLoader.Processes.Any(x => x.Name == $"{etlName}/{transformationName}"), true, timeout: 30_000);
+
+        await WaitAndAssertForValueAsync(() => mentorDatabase.EtlLoader.Processes.Any(x => x.Name == $"{etlName}/{transformationName}"), false, timeout: 30_000);
 
         using (var session = src.OpenSession())
         {
@@ -2305,6 +2300,8 @@ public class RavenDB_21192_Multinode : ClusterTestBase
         var newMentorDatabase = await GetDatabase(newMentorNode, databaseName);
 
         await WaitAndAssertForValueAsync(() => newMentorDatabase.EtlLoader.Processes.Any(x => x.Name == processName), true, timeout: 30_000);
+
+        await WaitAndAssertForValueAsync(() => mentorDatabase.EtlLoader.Processes.Any(x => x.Name == processName), false, timeout: 30_000);
 
         using (var session = store.OpenSession())
         {

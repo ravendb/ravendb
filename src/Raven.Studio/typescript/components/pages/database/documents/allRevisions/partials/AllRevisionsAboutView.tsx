@@ -10,13 +10,7 @@ export default function AllRevisionsAboutView() {
 
     return (
         <AboutViewFloating>
-            <AccordionItemWrapper
-                targetId="1"
-                icon="about"
-                color="info"
-                description="Get additional info on this feature"
-                heading="About this view"
-            >
+            <AccordionItemWrapper targetId="1" icon="about" color="info">
                 <p>
                     This view displays ALL revisions for every document in the database.
                     <br />

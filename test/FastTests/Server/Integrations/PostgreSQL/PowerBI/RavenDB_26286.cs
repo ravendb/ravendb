@@ -1,9 +1,10 @@
 using System;
-using System.Reflection;
 using Raven.Server.Integrations.PostgreSQL;
 using Raven.Server.Integrations.PostgreSQL.PowerBI;
+using Raven.Server.Integrations.PostgreSQL.Translation;
 using Tests.Infrastructure;
 using Xunit;
+using static Tests.Infrastructure.PostgreSqlHelper;
 
 namespace FastTests.Server.Integrations.PostgreSQL.PowerBI
 {
@@ -31,7 +32,7 @@ where ""Title"" = 'Sales Representative'
 limit 0";
 
             Assert.True(PowerBIFetchQuery.TryParse(sql, Array.Empty<int>(), documentDatabase: null, out var pgQuery));
-            Assert.IsType<PowerBIRqlQuery>(pgQuery);
+            Assert.IsType<PgSqlTranslatedRqlQuery>(pgQuery);
 
             var queryString = GetQueryString(pgQuery);
             Assert.NotNull(queryString);
@@ -549,22 +550,6 @@ limit 501";
             Assert.Contains("Orders", queryString, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("Company", queryString, StringComparison.Ordinal);
             Assert.DoesNotContain(" company ", queryString, StringComparison.Ordinal);
-        }
-
-        // Helpers
-
-        private static string GetQueryString(PgQuery pgQuery)
-        {
-            return (string)typeof(PgQuery)
-                .GetField("QueryString", BindingFlags.Instance | BindingFlags.NonPublic)
-                ?.GetValue(pgQuery);
-        }
-
-        private static int? GetLimit(PgQuery pgQuery)
-        {
-            return (int?)typeof(RqlQuery)
-                .GetField("_limit", BindingFlags.Instance | BindingFlags.NonPublic)
-                ?.GetValue(pgQuery);
         }
     }
 }

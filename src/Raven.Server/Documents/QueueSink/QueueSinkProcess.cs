@@ -276,14 +276,15 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                                     Logger.Error(msg, e);
 
                                 readScope.RecordReadError();
-                                Statistics.RecordConsumeError(e.Message);
-
+                                
                                 if (batchStarted == false)
                                 {
+                                    // Need to check this before RecordConsumeError
                                     // failed to consume any message, let's do the fallback then
                                     EnterFallbackMode();
                                 }
 
+                                Statistics.RecordConsumeError(e.Message);
                                 break;
                             }
                         }
@@ -515,10 +516,14 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
             // double the fallback time (but don't cross QueueSink.MaxFallbackTimeInSec)
             var secondsSinceLastError = (now - Statistics.LastConsumeErrorTime.Value).TotalSeconds;
 
-            FallbackTime = TimeSpan.FromSeconds(Math.Min(
+            // Jitter: add up to 10% random variation to avoid synchronized retries
+            // across multiple processes when a shared source goes down.
+            var baseSeconds = Math.Min(
                 Database.Configuration.QueueSink
                     .MaxFallbackTime.AsTimeSpan.TotalSeconds,
-                Math.Max(5, secondsSinceLastError * 2)));
+                Math.Max(5, secondsSinceLastError * 2));
+            var jitter = baseSeconds * Random.Shared.NextDouble() * 0.1;
+            FallbackTime = TimeSpan.FromSeconds(baseSeconds + jitter);
         }
         Statistics.LastConsumeErrorTime = now;
     }

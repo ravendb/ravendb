@@ -4,13 +4,7 @@ import React from "react";
 export default function UnusedDatabaseIdsAboutView() {
     return (
         <AboutViewAnchored>
-            <AccordionItemWrapper
-                targetId="about"
-                icon="about"
-                color="info"
-                description="Get additional info on this feature"
-                heading="About this view"
-            >
+            <AccordionItemWrapper targetId="about" icon="about" color="info">
                 <ul>
                     <li className="margin-top-xm">
                         Each database instance in the cluster has its own database ID (listed under &quot;

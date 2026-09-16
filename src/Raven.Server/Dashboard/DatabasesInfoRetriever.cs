@@ -21,6 +21,7 @@ using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Raven.Server.Dashboard.DatabaseNotifications;
 using Raven.Server.Documents;
+using Raven.Server.Documents.CdcSink;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.QueueSink;
 using Raven.Server.Documents.Replication;
@@ -408,10 +409,14 @@ namespace Raven.Server.Dashboard
             long azureServiceBusSinkCountOnNode = GetTaskCountOnNode<Client.Documents.Operations.QueueSink.QueueSinkConfiguration>(database, dbRecord, serverStore, database.QueueSinkLoader.Sinks,
                 task => QueueSinkLoader.GetProcessState(task.Scripts, database, task.Name), task => task.BrokerType == QueueBrokerType.AzureServiceBus);
 
+            var cdcSinkCount = database.CdcSinkLoader.Sinks.Count;
+            long cdcSinkCountOnNode = GetTaskCountOnNode<Client.Documents.Operations.CdcSink.CdcSinkConfiguration>(database, dbRecord, serverStore, database.CdcSinkLoader.Sinks,
+                task => CdcSinkProcess.GetProcessState(database, task.Name));
+
             ongoingTasksCount = extRepCount + replicationHubCount + replicationSinkCount +
                                 ravenEtlCount + sqlEtlCount + elasticSearchEtlCount + olapEtlCount + kafkaEtlCount +
                                 rabbitMqEtlCount + azureQueueStorageEtlCount + amazonSqsEtlCount + periodicBackupCount +
-                                subscriptionCount + kafkaSinkCount + rabbitMqSinkCount + azureServiceBusSinkCount + snowflakeEtlCount + embeddingsGenerationCount + genAiCount;
+                                subscriptionCount + kafkaSinkCount + rabbitMqSinkCount + azureServiceBusSinkCount + snowflakeEtlCount + embeddingsGenerationCount + genAiCount + cdcSinkCount;
 
             return new DatabaseOngoingTasksInfoItem
             {
@@ -434,7 +439,8 @@ namespace Raven.Server.Dashboard
                 AzureServiceBusSinkCount = azureServiceBusSinkCountOnNode,
                 SnowflakeEtlCount = snowflakeEtlCountOnNode,
                 EmbeddingsGenerationCount = embeddingsGenerationCountOnNode,
-                GenAiCount = genAiCountOnNode
+                GenAiCount = genAiCountOnNode,
+                CdcSinkCount = cdcSinkCountOnNode
             };
         }
 

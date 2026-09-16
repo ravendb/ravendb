@@ -7,13 +7,13 @@ class registrationInfoCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Server.Commercial.UserDomainsAndLicenseInfo> {
+    execute(): JQueryPromise<UserDomainsAndLicenseInfo> {
         const url = endpoints.global.setup.setupUserDomains;
         const payload = {
             License: this.license
         };
 
-        const task = $.Deferred<Raven.Server.Commercial.UserDomainsAndLicenseInfo>();
+        const task = $.Deferred<UserDomainsAndLicenseInfo>();
 
         this.post(url, JSON.stringify(payload), null)
             .done(result => task.resolve(result))

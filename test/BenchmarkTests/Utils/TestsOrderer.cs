@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Xunit.Sdk;
@@ -5,8 +6,10 @@ using Xunit.v3;
 
 namespace BenchmarkTests.Utils
 {
-    public class TestsOrderer : ITestCaseOrderer, ITestCollectionOrderer
+    public class TestsOrderer : ITestCaseOrderer, ITestCollectionOrderer, ITestClassOrderer, ITestMethodOrderer
     {
+        private static readonly string InitClassName = typeof(Init).FullName;
+
         private static readonly string InitTestName = $"{typeof(Init).FullName}.{nameof(Init.Initialize)}";
 
         public IReadOnlyCollection<TTestCase> OrderTestCases<TTestCase>(IReadOnlyCollection<TTestCase> testCases) where TTestCase : ITestCase
@@ -42,6 +45,35 @@ namespace BenchmarkTests.Utils
                     continue;
 
                 result.Add(collection);
+            }
+
+            return result;
+        }
+
+        public IReadOnlyCollection<TTestClass> OrderTestClasses<TTestClass>(IReadOnlyCollection<TTestClass> testClasses) where TTestClass : ITestClass
+        {
+            return Hoist(testClasses, x => x.TestClassName, InitClassName);
+        }
+
+        public IReadOnlyCollection<TTestMethod> OrderTestMethods<TTestMethod>(IReadOnlyCollection<TTestMethod> testMethods) where TTestMethod : ITestMethod
+        {
+            return Hoist(testMethods, x => x.MethodName, nameof(Init.Initialize));
+        }
+
+        private static IReadOnlyCollection<T> Hoist<T>(IReadOnlyCollection<T> items, Func<T, string> nameSelector, string nameToHoist)
+        {
+            List<T> result = new List<T>();
+            T itemToHoist = items.SingleOrDefault(x => nameSelector(x) == nameToHoist);
+
+            if (itemToHoist != null)
+                result.Add(itemToHoist);
+
+            foreach (T item in items.OrderBy(nameSelector))
+            {
+                if (ReferenceEquals(item, itemToHoist))
+                    continue;
+
+                result.Add(item);
             }
 
             return result;

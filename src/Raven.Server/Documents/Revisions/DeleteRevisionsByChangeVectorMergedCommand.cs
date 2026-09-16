@@ -50,7 +50,7 @@ public partial class RevisionsStorage
                 foreach (var cv in _cvs)
                 {
                     var result = revisionsStorage.ForceDeleteAllRevisionsFor(context, lowerId, prefixSlice, collectionName,
-                        (table, _) => GetRevision(context, table, cv));
+                        (table, _) => GetRevision(context, revisionsStorage, table, cv));
                     deleted += result.Deleted;
                 }
             }
@@ -58,12 +58,12 @@ public partial class RevisionsStorage
             return deleted;
         }
 
-        private IEnumerable<Document> GetRevision(DocumentsOperationContext context, Table table, string cv)
+        private IEnumerable<Document> GetRevision(DocumentsOperationContext context, RevisionsStorage revisionsStorage, Table table, string cv)
         {
             Document revision;
-            using (Slice.From(context.Allocator, cv, out var cvSlice))
+            using (BuildRevisionKey(context, cv, out RevisionKey revisionKey, strict: false))
             {
-                if (table.ReadByKey(cvSlice, out TableValueReader tvr) == false)
+                if (revisionsStorage.TryReadRevision(table, in revisionKey, out TableValueReader tvr) == false)
                     yield break;
 
                 revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId | DocumentFields.Id);

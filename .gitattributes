@@ -61,6 +61,10 @@ scripts/raspberry-pi/ravendbd    text eol=lf
 
 scripts/linux/pkg/deb/assets/** text eol=lf
 scripts/linux/pkg/deb/assets/ravendb/etc/** text eol=lf
+docker/quill/s6-rc.d/** text eol=lf
+docker/quill/Dockerfile* text eol=lf
+docker/quill/scripts/** text eol=lf
+docker/quill/nginx.conf text eol=lf
 
 * -crlf
 

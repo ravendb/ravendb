@@ -31,6 +31,7 @@ import {
     OngoingTaskReplicationHubNodeInfoDetails,
     OngoingInternalReplicationNodeInfo,
     OngoingTaskAmazonSqsEtlSharedInfo,
+    OngoingTaskCdcSinkSharedInfo,
     OngoingTaskEmbeddingsGenerationSharedInfo,
     OngoingTaskGenAiSharedInfo,
     OngoingTaskAzureServiceBusSinkSharedInfo,
@@ -55,6 +56,7 @@ import { produce, Draft } from "immer";
 import OngoingTaskSubscription = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription;
 import OngoingTaskQueueEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl;
 import OngoingTaskQueueSinkListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink;
+import OngoingTaskCdcSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskCdcSink;
 import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup;
 import SubscriptionConnectionsDetails = Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails;
 import DatabaseUtils from "components/utils/DatabaseUtils";
@@ -408,6 +410,23 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                     throw new Error("Invalid broker type: " + incoming.BrokerType);
             }
         }
+        case "CdcSink": {
+            const incoming = task as OngoingTaskCdcSink;
+            const result: OngoingTaskCdcSinkSharedInfo = {
+                ...commonProps,
+                connectionStringName: incoming.ConnectionStringName,
+                factoryName: incoming.FactoryName,
+                configuration: incoming.Configuration,
+                lastBatchTime: incoming.LastBatchTime,
+                lastCheckpoint: incoming.LastCheckpoint,
+                secondsSinceLastBatch: incoming.SecondsSinceLastBatch,
+                lastActivityTime: incoming.LastActivityTime,
+                secondsSinceLastActivity: incoming.SecondsSinceLastActivity,
+                healthIssue: incoming.HealthIssue,
+                error: incoming.Error,
+            };
+            return result;
+        }
         case "Backup": {
             const incoming = task as OngoingTaskBackup;
             // noinspection UnnecessaryLocalVariableJS
@@ -446,6 +465,8 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                 topologyDiscoveryUrls: incoming.TopologyDiscoveryUrls,
                 hubName: incoming.HubName,
                 mode: incoming.Mode,
+                hubCursor: incoming.HubCursor,
+                sinkCursor: incoming.SinkCursor,
             };
             return result;
         }

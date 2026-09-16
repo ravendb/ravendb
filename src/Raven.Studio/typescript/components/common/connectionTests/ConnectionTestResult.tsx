@@ -3,7 +3,7 @@ import ConnectionStringError from "./ConnectionTestError";
 import RichAlert from "components/common/RichAlert";
 
 interface ConnectionTestResultProps {
-    testResult: Raven.Server.Web.System.NodeConnectionTestResult;
+    testResult: Pick<Raven.Server.Web.System.NodeConnectionTestResult, "Success" | "Error">;
 }
 
 export default function ConnectionTestResult({ testResult }: ConnectionTestResultProps) {

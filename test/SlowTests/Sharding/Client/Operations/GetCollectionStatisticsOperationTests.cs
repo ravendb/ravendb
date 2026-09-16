@@ -55,9 +55,9 @@ namespace SlowTests.Sharding.Client.Operations
                     var tsTime = DateTime.UtcNow;
                     var ts = session.TimeSeriesFor("users/1", "heartrate");
                     ts.Append(tsTime, 72, "wrist");
+                    session.SaveChanges();
 
                     ts.Delete(tsTime.AddMinutes(-5), tsTime.AddMinutes(-1));
-
 
                     session.SaveChanges();
                 }

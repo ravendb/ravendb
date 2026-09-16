@@ -35,7 +35,8 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog
                 }
             }
 
-            await writer.WriteAsync(builder.CommandComplete($"SELECT {_result?.Data?.Count ?? 0}"), token);
+            var tag = _result?.CommandTag ?? $"SELECT {_result?.Data?.Count ?? 0}";
+            await writer.WriteAsync(builder.CommandComplete(tag), token);
         }
 
         public override void Dispose()

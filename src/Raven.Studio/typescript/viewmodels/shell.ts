@@ -34,6 +34,7 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 import footer = require("common/shell/footer");
 import chooseTheme = require("viewmodels/shell/chooseTheme");
 import continueTest = require("common/shell/continueTest");
+import shellAccessor = require("common/shell/shellAccessor");
 import globalSettings = require("common/settings/globalSettings");
 
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
@@ -148,6 +149,7 @@ class shell extends viewModelBase {
         super();
 
         shell.instance = this;
+        shellAccessor.registerShell(this);
 
         this.studioLoadingFakeRequest = protractedCommandsDetector.instance.requestStarted(0);
 

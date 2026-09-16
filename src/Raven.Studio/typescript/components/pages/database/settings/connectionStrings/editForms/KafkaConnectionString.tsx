@@ -8,10 +8,10 @@ import { Icon } from "components/common/Icon";
 import { ConnectionFormData, EditConnectionStringFormProps, KafkaConnection } from "../connectionStringsTypes";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
+import ExcludedDatabasesFormSelect from "./shared/ExcludedDatabasesFormSelect";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import ConnectionTestError from "components/common/connectionTests/ConnectionTestError";
@@ -35,6 +35,7 @@ export default function KafkaConnectionString({
     onSave,
 }: KafkaConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["Kafka"].map((x) => x.name);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const { control, handleSubmit, trigger, setValue } = useForm<FormData>({
         mode: "all",
@@ -52,7 +53,6 @@ export default function KafkaConnectionString({
     });
 
     const formValues = useWatch({ control });
-    const { forCurrentDatabase } = useAppUrls();
     const { tasksService } = useServices();
 
     const isSecureServer = useAppSelector(accessManagerSelectors.isSecureServer);
@@ -73,12 +73,15 @@ export default function KafkaConnectionString({
             return;
         }
 
-        return tasksService.testKafkaServerConnection(
-            databaseName,
-            formValues.bootstrapServers,
-            false,
-            getConnectionOptionsDto(formValues.connectionOptions)
-        );
+        const connectionOptionsDto = getConnectionOptionsDto(formValues.connectionOptions);
+        return isServerWide
+            ? tasksService.testServerWideKafkaServerConnection(formValues.bootstrapServers, false, connectionOptionsDto)
+            : tasksService.testKafkaServerConnection(
+                  databaseName,
+                  formValues.bootstrapServers,
+                  false,
+                  connectionOptionsDto
+              );
     });
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {
@@ -205,10 +208,14 @@ export default function KafkaConnectionString({
                     Add new connection option
                 </Button>
             </div>
-            <ConnectionStringUsedByTasks
-                tasks={initialConnection.usedByTasks}
-                urlProvider={forCurrentDatabase.editKafkaEtl}
-            />
+            <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
+            {isServerWide && (
+                <ExcludedDatabasesFormSelect
+                    control={control}
+                    name="excludedDatabases"
+                    usedBy={initialConnection.usedBy}
+                />
+            )}
         </Form>
     );
 }
@@ -246,6 +253,7 @@ const schema = yupObjectSchema<FormData>({
         }),
     connectionOptions: yup.array().of(connectionOptionSchema),
     isUseRavenCertificate: yup.boolean(),
+    excludedDatabases: yup.array().of(yup.string()).optional(),
 });
 
 const yupSchemaResolver = yupResolver(schema);
@@ -259,7 +267,7 @@ function getDefaultValues(initialConnection: KafkaConnection, isForNewConnection
         };
     }
 
-    return _.omit(initialConnection, "type", "usedByTasks");
+    return _.omit(initialConnection, "type", "usedBy");
 }
 
 const sslCaLocation = "ssl.ca.location";

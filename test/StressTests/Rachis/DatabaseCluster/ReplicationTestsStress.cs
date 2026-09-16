@@ -123,7 +123,7 @@ namespace StressTests.Rachis.DatabaseCluster
                     await Task.Delay(TimeSpan.FromSeconds(5));
                 }
 
-                await EnsureReplicatingAsync(src, dst);
+                await WaitForMarkerAsync(src, dst);
             }
         }
 

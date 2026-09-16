@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <RuntimeFrameworkVersion>10.0.9</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>10.0.12</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>SlowTests</AssemblyName>
     <PackageId>SlowTests</PackageId>
@@ -36,6 +36,12 @@
     <EmbeddedResource Include="Data\npgsql.basic.insert.sql" />
     <EmbeddedResource Include="Data\npgsql.northwind.create.sql" />
     <EmbeddedResource Include="Data\npgsql.northwind.insert.sql" />
+    <EmbeddedResource Include="Data\Quill\npgsql.northwind-full.create.zip">
+      <LogicalName>SlowTests.Data.npgsql.northwind-full.create.zip</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Data\Quill\npgsql.northwind-full.insert.zip">
+      <LogicalName>SlowTests.Data.npgsql.northwind-full.insert.zip</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="Data\oraclesql.basic.create.sql" />
     <EmbeddedResource Include="Data\oraclesql.basic.insert.sql" />
     <EmbeddedResource Include="Data\oraclesql.northwind.create.sql" />
@@ -47,6 +53,7 @@
     <EmbeddedResource Include="Data\mysql.basic.create.sql" />
     <EmbeddedResource Include="Data\mysql.basic.insert.sql" />
     <None Remove="Data\RavenDB_22999\RavenDB-22999.ravendb-snapshot.zip" />
+    <None Remove="Data\RavenDB_27171\RavenDB_27171.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_22999\RavenDB-22999.ravendb-snapshot.zip" />
     <None Remove="Data\RavenDB_25738\ControlChars.ravendb-full-backup" />
     <EmbeddedResource Include="Data\RavenDB_25738\ControlChars.ravendb-full-backup" />
@@ -54,6 +61,10 @@
     <EmbeddedResource Include="Data\RavenDB_25738\ControlChars.ravendb-snapshot" />
     <None Remove="Data\RavenDB_25738\Dump.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_25738\Dump.ravendbdump" />
+    <None Remove="Data\RavenDB-24423\PreRavenDB_24423.gz" />
+    <EmbeddedResource Include="Data\RavenDB_24423\PreRavenDB_24423.gz" />
+    <None Remove="Data\RavenDB_24423\PreRavenDB_24423.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_24423\PreRavenDB_24423.ravendb-snapshot" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values-2.txt" />
@@ -81,6 +92,7 @@
     <EmbeddedResource Include="Data\RavenDB_24648\banana.png" />
     <EmbeddedResource Include="Data\RavenDB_24648\heart.png" />
     <EmbeddedResource Include="Data\RavenDB_24648\star.png" />
+    <EmbeddedResource Include="Data\RavenDB_27171\RavenDB_27171.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorter.cs" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />
     <EmbeddedResource Include="Data\testing.ravendbdump" />
@@ -112,7 +124,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.v3.mtp-off" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />

@@ -22,11 +22,17 @@ public class RavenDB_23264 : StorageTest
     }
     
     [RavenFact(RavenTestCategory.Voron)]
-    public void Piggybacking_tx_failure_after_flush_action_should_not_cause_double_free_on_retry()
+    public void Piggybacking_tx_failure_after_flush_action_should_poison_the_environment_and_recover_on_restart()
     {
-        // RavenDB-23264: This test validates that if the _updateJournalStateAfterFlush action
-        // is invoked by a piggybacking write tx that then fails to commit, the flush thread's
-        // retry succeeds because the free loop is idempotent (entries are nulled after freeing).
+        // RavenDB-23264: the _updateJournalStateAfterFlush action invoked by a piggybacking write tx that then
+        // fails to commit must not double-free on the flush thread's retry (the free loop nulls entries after
+        // freeing them). RavenDB-27166 then revoked the retry contract entirely: such a rollback would restore
+        // the freed scratch entries, so it marks the environment as catastrophically failed and the recovery
+        // happens on restart.
+
+        // file-based so RestartDatabase builds fresh options, the way a real database reload does - the
+        // catastrophic-failure mark set by the RavenDB-27166 fix lives on the options instance
+        RequireFileBasedPager();
 
         long p1, p2, p3;
 
@@ -114,16 +120,27 @@ public class RavenDB_23264 : StorageTest
         // OnTransactionCompleted will NOT clear the action because Committed = false.
         txBlocker.Dispose();
 
-        // Step 11: Flush thread wakes up, creates its own tx, Commit() →
-        // CommitStage1 → OnTransactionCommitted → action invoked AGAIN.
-        // With the fix (idempotent free loop): entries are null → skip → success.
-        // Without the fix: double-free → crash.
+        // Step 11 (RavenDB-27166): the flush thread wakes up, but txBlocker's rollback marked the environment
+        // as catastrophically failed - its retry transaction is refused and the flush surfaces the failure.
         flushThread.Join(TimeSpan.FromSeconds(30));
-
-        // Step 12: Verify no exception from flush thread
-        Assert.Null(flushException);
 
         // Clean up
         Env.Journal.Applicator.ForTestingPurposesOnly().OnWaitForJournalStateToBeUpdated_AfterAssigning_updateJournalStateAfterFlush = null;
+
+        Assert.True(Env.Options.IsCatastrophicFailureSet, "the rollback did not mark the environment as catastrophically failed");
+        Assert.NotNull(flushException);
+
+        // Step 12: no committed data was lost (the failed transaction never reached the journal) - the forced
+        // restart recovers a consistent state
+        RestartDatabase();
+
+        using (var rtx = Env.ReadTransaction())
+        {
+            foreach (var pageNumber in new[] { p1, p2, p3 })
+            {
+                var page = rtx.LowLevelTransaction.GetPage(pageNumber);
+                Assert.Equal(pageNumber, page.PageNumber);
+            }
+        }
     }
 }

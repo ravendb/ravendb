@@ -25,6 +25,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             count += GetNumberOfQueueSinks(database);
             count += GetNumberOfEmbeddingsGenerationTasks(database);
             count += GetNumberOfGenAiTasks(database);
+            count += GetNumberOfCdcSinks(database);
 
             return count;
         }

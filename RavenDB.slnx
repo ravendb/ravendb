@@ -14,13 +14,13 @@
     <Project Path="bench/Corax.QueryCatalog/Corax.QueryCatalog.csproj">
       <BuildType Solution="Validate|*" Project="Release" />
     </Project>
+    <Project Path="bench/DocumentsTxCache.Benchmark/DocumentsTxCache.Benchmark.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
     <Project Path="bench/Indexing.Benchmark/Indexing.Benchmark.csproj">
       <BuildType Solution="Validate|*" Project="Release" />
     </Project>
     <Project Path="bench/Micro.Benchmark/Micro.Benchmark.csproj">
-      <BuildType Solution="Validate|*" Project="Release" />
-    </Project>
-    <Project Path="bench/Regression.Benchmark/Regression.Benchmark.csproj">
       <BuildType Solution="Validate|*" Project="Release" />
     </Project>
     <Project Path="bench/RequestHandler.Benchmark/RequestHandler.Benchmark.csproj">
@@ -49,7 +49,7 @@
     </Project>
   </Folder>
   <Folder Name="/Solution Items/">
-    <File Path="agents.md" />
+    <File Path="AGENTS.md" />
     <File Path="Directory.Packages.props" />
     <File Path="global.json" />
     <File Path="RavenDB.ruleset" />
@@ -66,6 +66,21 @@
       <Platform Solution="Debug|Any CPU" Project="Win32" />
       <Platform Solution="Release|Any CPU" Project="Win32" />
       <Build Solution="*|Any CPU" Project="false" />
+    </Project>
+    <Project Path="src/Raven.Quill.Web/Raven.Quill.Web.esproj">
+      <BuildType Solution="Validate|Any CPU" Project="Release" />
+      <BuildType Solution="Validate|x64" Project="Debug" />
+      <BuildType Solution="Validate|x86" Project="Debug" />
+      <Platform Project="AnyCPU" />
+      <Build Solution="*|x64" />
+      <Build Solution="*|x86" />
+      <Deploy Solution="*|x64" />
+      <Deploy Solution="*|x86" />
+    </Project>
+    <Project Path="src/Raven.Quill/Raven.Quill.csproj">
+      <BuildType Solution="Validate|Any CPU" Project="Release" />
+      <BuildType Solution="Validate|x64" Project="Debug" />
+      <BuildType Solution="Validate|x86" Project="Debug" />
     </Project>
     <Project Path="src/Raven.Server/Raven.Server.csproj" />
     <Project Path="src/Raven.Studio/Raven.Studio.csproj">
@@ -93,6 +108,11 @@
     </Project>
     <Project Path="test/LicenseTests/LicenseTests.csproj">
       <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
+    <Project Path="test/QuillTests/QuillTests.csproj">
+      <BuildType Solution="Validate|Any CPU" Project="Release" />
+      <BuildType Solution="Validate|x64" Project="Debug" />
+      <BuildType Solution="Validate|x86" Project="Debug" />
     </Project>
     <Project Path="test/RachisTests/RachisTests.csproj">
       <BuildType Solution="Validate|*" Project="Release" />

@@ -12,25 +12,24 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import moment from "moment";
 import genUtils from "common/generalUtils";
-import EtlErrorDetailsSheet from "./EtlErrorDetailsSheet";
+import TaskErrorDetailsSheet from "./TaskErrorDetailsSheet";
 import {
-    AI_ONLY_TASK_TYPES,
-    EtlErrorStep,
+    TaskErrorStep,
     EtlHealthStatus,
     FlatError,
     getEtlEditLink,
-    getEtlTypeIcon,
-    getEtlTypeLabel,
     getPopoverMessageForErrorType,
     getPopoverMessageForTaskHealth,
     getStepIcon,
+    getTaskTypeDisplay,
     healthStatusToBadge,
+    taskHasTransformations,
 } from "../utils/tasksErrorsUtils";
 import colorsManager from "common/colorsManager";
 
 export { CellWithCopyWrapper };
 
-export const CellErrorStepWrapper = ({ getValue }: CellContext<FlatError, EtlErrorStep>) => {
+export const CellErrorStepWrapper = ({ getValue }: CellContext<FlatError, TaskErrorStep>) => {
     const value = getValue();
 
     if (!value) {
@@ -105,7 +104,7 @@ export const CellValueButtonWrapper = (args: CellContext<FlatError, unknown>) =>
         const index = currentIndex >= 0 ? currentIndex : 0;
         open({
             component: (
-                <EtlErrorDetailsSheet
+                <TaskErrorDetailsSheet
                     key={index}
                     error={args.row.original}
                     allErrors={allErrors}
@@ -138,18 +137,17 @@ export const HyperLinkDocumentCellValue = ({ getValue }: Pick<CellContext<FlatEr
 
 export const CellTaskWrapper = ({ row }: CellContext<FlatError, string>) => {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const { etlName, transformationName, taskId, etlType } = row.original;
+    const { etlName, transformationName, taskId, etlType, category } = row.original;
 
     const taskLink =
         etlName && taskId != null && etlType != null ? getEtlEditLink(databaseName, taskId, etlType) : null;
 
-    const isAiTask = AI_ONLY_TASK_TYPES.includes(etlType);
-    const content = isAiTask ? (
-        <>{etlName}</>
-    ) : (
+    const content = taskHasTransformations(category) ? (
         <>
             {etlName}/{transformationName}
         </>
+    ) : (
+        <>{etlName}</>
     );
 
     return <div className="cell-value">{taskLink ? <a href={taskLink}>{content}</a> : content}</div>;
@@ -206,9 +204,9 @@ export const CellAffectedDocumentsWrapper = ({ getValue }: CellContext<FlatError
     return <CellValue value={getValue()} />;
 };
 
-export const CellEtlTypeWrapper = ({ getValue }: CellContext<FlatError, StudioEtlType>) => {
-    const icon = getEtlTypeIcon(getValue());
-    const label = getEtlTypeLabel(getValue());
+export const CellTaskTypeWrapper = ({ row }: CellContext<FlatError, StudioEtlType>) => {
+    const { category, etlType } = row.original;
+    const { icon, label } = getTaskTypeDisplay(category, etlType);
     return (
         <div className="cell-value value-string">
             <Icon icon={icon} />

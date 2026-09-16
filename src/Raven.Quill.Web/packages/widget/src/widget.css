@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+/* No preflight base reset beyond Tailwind's: the widget owns the whole document. */
+
+/* Aliasing the runtime custom properties into Tailwind's theme is what lets components write
+   `bg-rq-bg` / `rounded-rq` instead of `bg-[var(--rq-bg)]` everywhere. The values are set on the
+   root element by `widgetThemeStyle`, so a theme change is a style-attribute update, not a rebuild. */
+@theme inline {
+    --color-rq-bg: var(--rq-bg);
+    --color-rq-surface: var(--rq-surface);
+    --color-rq-fg: var(--rq-fg);
+    --color-rq-muted: var(--rq-muted-fg);
+    --color-rq-border: var(--rq-border);
+    --color-rq-accent: var(--rq-accent);
+    --color-rq-accent-fg: var(--rq-accent-fg);
+    --color-rq-accent-hover: var(--rq-accent-hover);
+    --color-rq-user-bubble: var(--rq-user-bubble-bg);
+    --color-rq-user-bubble-fg: var(--rq-user-bubble-fg);
+    --color-rq-code: var(--rq-code-bg);
+    --color-rq-code-border: var(--rq-code-border);
+
+    --radius-rq: var(--rq-radius);
+    --radius-rq-sm: var(--rq-radius-sm);
+    --radius-rq-pill: var(--rq-radius-pill);
+    --radius-rq-logo: var(--rq-logo-radius);
+
+    --font-rq: var(--rq-font);
+}
+
+/* Painted before the bundle mounts, so a dark-mode host never flashes white. `color-scheme` and an
+   operator background (if any) come from the server's nonce'd inline style; the mounted tree then sets
+   the full resolved palette. */
+html {
+    background: var(--rq-bg, light-dark(#ffffff, #0d1117));
+}
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+}
+
+#rq-root {
+    height: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

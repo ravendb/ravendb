@@ -2,7 +2,6 @@ import React from "react";
 import {
     ConnectionStringItem,
     EmptyScriptsWarning,
-    ICanShowTransformationScriptPreview,
     OngoingTaskActions,
     OngoingTaskName,
     OngoingTaskResponsibleNode,
@@ -26,14 +25,14 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import { EtlPanelBaseProps, useEtlPanel } from "./etlPanelUtils";
-import { EtlPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
+import { TaskPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
 
 type AzureQueueStorageEtlPanelProps = EtlPanelBaseProps<OngoingTaskAzureQueueStorageEtlInfo>;
 
-export function AzureQueueStorageEtlPanel(props: AzureQueueStorageEtlPanelProps & ICanShowTransformationScriptPreview) {
+export function AzureQueueStorageEtlPanel(props: AzureQueueStorageEtlPanelProps) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
 
-    const { forCurrentDatabase, appUrl } = useAppUrls();
+    const { forCurrentDatabase } = useAppUrls();
     const editUrl = forCurrentDatabase.editAzureQueueStorageEtl(data.shared.taskId)();
 
     const {
@@ -42,7 +41,6 @@ export function AzureQueueStorageEtlPanel(props: AzureQueueStorageEtlPanelProps 
         detailsVisible,
         toggleDetails,
         onEdit,
-        showPreview,
         taskHealth,
         errorCount,
         errorsByLocation,
@@ -50,11 +48,6 @@ export function AzureQueueStorageEtlPanel(props: AzureQueueStorageEtlPanelProps 
     } = useEtlPanel(props, editUrl);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(
-        databaseName,
-        "AzureQueueStorage",
-        data.shared.connectionStringName
-    );
 
     return (
         <RichPanel>
@@ -101,10 +94,11 @@ export function AzureQueueStorageEtlPanel(props: AzureQueueStorageEtlPanelProps 
                     connectionStringDefined
                     canEdit={canEdit}
                     connectionStringName={data.shared.connectionStringName}
-                    connectionStringsUrl={connectionStringsUrl}
+                    connectionStringType="AzureQueueStorage"
+                    databaseName={databaseName}
                 />
                 <EtlPanelHealthBadge taskHealth={taskHealth} />
-                <EtlPanelErrors
+                <TaskPanelErrors
                     errorCount={errorCount}
                     errorsByLocation={errorsByLocation}
                     goToTaskErrors={goToTaskErrors}
@@ -114,7 +108,7 @@ export function AzureQueueStorageEtlPanel(props: AzureQueueStorageEtlPanelProps 
             </RichPanelDetails>
             <Collapse in={detailsVisible}>
                 <div>
-                    <OngoingEtlTaskDistribution task={data} showPreview={showPreview} etlStats={etlStats} />
+                    <OngoingEtlTaskDistribution task={data} etlStats={etlStats} />
                 </div>
             </Collapse>
         </RichPanel>

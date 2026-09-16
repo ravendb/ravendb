@@ -26,8 +26,7 @@ internal sealed unsafe class LuceneAnalyzerAdapterForQuerying : LuceneAnalyzerAd
     private static ITermAttribute Term;
     
     private LuceneAnalyzerAdapterForQuerying(LuceneAnalyzer analyzer,
-        delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> functionUtf8,
-        delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> functionUtf16) : base(analyzer, functionUtf8, functionUtf16)
+        delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, ref byte[], void> functionUtf8) : base(analyzer, functionUtf8)
     {
     }
 
@@ -84,6 +83,6 @@ internal sealed unsafe class LuceneAnalyzerAdapterForQuerying : LuceneAnalyzerAd
 
     internal static LuceneAnalyzerAdapterForQuerying Create(LuceneAnalyzer analyzer)
     {
-        return new LuceneAnalyzerAdapterForQuerying(analyzer, &Run, &Run);
+        return new LuceneAnalyzerAdapterForQuerying(analyzer, &Run);
     }
 }

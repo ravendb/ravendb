@@ -105,7 +105,7 @@ public sealed class SpatialMatch<TBoosting> : IPostFilterMatch, ISpatialFilterQu
 
     public long Count => -1;
 
-    public bool IsBoosting => false;
+    public bool IsBoosting => typeof(TBoosting) == typeof(HasBoosting);
 
     public int Fill(Span<long> matches)
     {
@@ -233,10 +233,11 @@ public sealed class SpatialMatch<TBoosting> : IPostFilterMatch, ISpatialFilterQu
 
     private bool IsTrue(SpatialRelation answer) => answer switch
     {
-        SpatialRelation.Within or SpatialRelation.Contains => _spatialRelation is Utils.Spatial.SpatialRelation.Within
-            or Utils.Spatial.SpatialRelation.Contains,
+        // RavenDB-27508: Corax indexes points only, so a point inside the shape satisfies within, contains and
+        // intersects alike. Anything but Disjoint is a match for all three.
+        SpatialRelation.Within or SpatialRelation.Contains or SpatialRelation.Intersects
+            => _spatialRelation is not Utils.Spatial.SpatialRelation.Disjoint,
         SpatialRelation.Disjoint => _spatialRelation is Utils.Spatial.SpatialRelation.Disjoint,
-        SpatialRelation.Intersects => _spatialRelation is Utils.Spatial.SpatialRelation.Intersects,
         _ => throw new NotSupportedException()
     };
 

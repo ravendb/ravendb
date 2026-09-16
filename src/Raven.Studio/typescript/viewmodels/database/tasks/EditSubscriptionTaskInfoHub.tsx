@@ -10,9 +10,11 @@ import FeatureAvailabilitySummaryWrapper, {
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditSubscriptionTaskInfoHub() {
-    const hasConcurrentDataSubscriptions = useAppSelector(licenseSelectors.statusValue("HasConcurrentDataSubscriptions"));
+    const hasConcurrentDataSubscriptions = useAppSelector(
+        licenseSelectors.statusValue("HasConcurrentDataSubscriptions")
+    );
     const hasRevisionsInSubscriptions = useAppSelector(licenseSelectors.statusValue("HasRevisionsInSubscriptions"));
-    
+
     const featureAvailability = useLimitedFeatureAvailability({
         defaultFeatureAvailability,
         overwrites: [
@@ -31,13 +33,7 @@ export function EditSubscriptionTaskInfoHub() {
 
     return (
         <AboutViewFloating>
-            <AccordionItemWrapper
-                targetId="about"
-                icon="about"
-                color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
-            >
+            <AccordionItemWrapper targetId="about" icon="about" color="info">
                 <p>
                     Define a <strong>Subscription Query</strong> in this view to create a subscription-task on the
                     RavenDB server to which clients can subscribe.
@@ -60,8 +56,8 @@ export function EditSubscriptionTaskInfoHub() {
                         The <strong>starting point</strong> from where to send the matching documents can be configured.
                     </li>
                     <li className="margin-top-xxs">
-                        You can <strong>test the subscription query</strong> in this view to preview sample document results
-                        that will be sent to the client.
+                        You can <strong>test the subscription query</strong> in this view to preview sample document
+                        results that will be sent to the client.
                     </li>
                 </ul>
                 <hr />
@@ -86,6 +82,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: false },
         professional: { value: true },
         enterprise: { value: true },
+        quill: { value: true },
     },
     {
         featureName: "Subscriptions Revisions",
@@ -93,5 +90,6 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },
-    }
+        quill: { value: true },
+    },
 ];

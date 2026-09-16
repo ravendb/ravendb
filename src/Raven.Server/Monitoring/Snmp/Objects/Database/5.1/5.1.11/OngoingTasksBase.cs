@@ -79,4 +79,6 @@ public abstract class OngoingTasksBase : DatabaseBase<Integer32>
     }
 
     protected internal static int GetNumberOfQueueSinks(RawDatabaseRecord database) => database.QueueSinks?.Count(x => x.Disabled == false) ?? 0;
+
+    protected internal static int GetNumberOfCdcSinks(RawDatabaseRecord database) => database.CdcSinks?.Count(x => x.Disabled == false) ?? 0;
 }

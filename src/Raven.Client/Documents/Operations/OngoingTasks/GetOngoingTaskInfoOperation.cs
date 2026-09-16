@@ -127,6 +127,9 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
                         case OngoingTaskType.QueueSink:
                             Result = JsonDeserializationClient.GetOngoingTaskQueueSinkResult(response);
                             break;
+                        case OngoingTaskType.CdcSink:
+                            Result = JsonDeserializationClient.GetOngoingTaskCdcSinkResult(response);
+                            break;
                         case OngoingTaskType.EmbeddingsGeneration:
                             Result = JsonDeserializationClient.GetOngoingTaskEmbeddingsGenerationResult(response);
                             break;

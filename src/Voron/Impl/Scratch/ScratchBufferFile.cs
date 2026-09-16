@@ -199,16 +199,26 @@ namespace Voron.Impl.Scratch
                 _freePagesBySize[value.Size] = list;
             }
 
-            list.AddFirst(new PendingPage
+            var pending = new PendingPage
             {
                 Page = value.PositionInScratchBuffer,
                 ValidAfterTransactionId = asOfTxId,
                 AllocatedInTransaction = value.AllocatedInTransaction,
-            });
+            };
 
-            _txIdAfterWhichLatestFreePagesBecomeAvailable = asOfTxId;
+            if (asOfTxId >= 0)
+            {
+                _txIdAfterWhichLatestFreePagesBecomeAvailable = asOfTxId;
+                list.AddFirst(pending);
+            }
+            else
+            { 
+                // -1 indicates that this is visible to all transactions, so make it the first available in the queue 
+                list.AddLast(pending);
+            }
 
-            return NumberOfAllocations == 0; 
+
+            return NumberOfAllocations == 0;
         }
 
         public ref Pager.State GetStateRef() => ref _scratchPagerState;

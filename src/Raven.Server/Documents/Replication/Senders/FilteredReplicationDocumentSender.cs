@@ -1,10 +1,10 @@
-﻿using System.IO;
-using Raven.Client.Documents.Operations.Replication;
+using System;
+using System.IO;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Logging;
+using Raven.Server.Utils;
 using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Replication.Senders
@@ -12,19 +12,48 @@ namespace Raven.Server.Documents.Replication.Senders
     public sealed class FilteredReplicationDocumentSender : ExternalReplicationDocumentSender
     {
         private readonly AllowedPathsValidator _pathsToSend, _destinationAcceptablePaths;
-        private readonly bool _shouldSkipSendingTombstones;
+        private readonly OutgoingPullReplicationHandler _pullReplicationHandler;
 
         public FilteredReplicationDocumentSender(Stream stream, OutgoingPullReplicationHandler parent, RavenLogger log, string[] pathsToSend, string[] destinationAcceptablePaths) : base(stream, parent, log)
         {
+            _pullReplicationHandler = parent;
+
             if (pathsToSend != null && pathsToSend.Length > 0)
                 _pathsToSend = new AllowedPathsValidator(pathsToSend);
+
             if (destinationAcceptablePaths != null && destinationAcceptablePaths.Length > 0)
                 _destinationAcceptablePaths = new AllowedPathsValidator(destinationAcceptablePaths);
-            
-            _shouldSkipSendingTombstones = _parent.Destination is PullReplicationAsSink sink && sink.Mode == PullReplicationMode.SinkToHub && 
-                                           _parent is OutgoingPullReplicationHandler pull &&
-                                           pull.OutgoingPullReplicationParams?.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
-                                           _parent._database.ForTestingPurposes?.ForceSendTombstones != true;
+        }
+
+        protected override void WriteReplicationItem(DocumentsOperationContext documentsContext, ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
+        {
+            switch (_pullReplicationHandler.ChangeVectorWireMode)
+            {
+                case PullReplicationChangeVectorWireMode.SendAsIs:
+                    break;
+
+                case PullReplicationChangeVectorWireMode.SendLegacyCompatible:
+                    item.ChangeVector = documentsContext.GetChangeVector(item.ChangeVector).Version;
+
+                    var timeSeriesItem = item as TimeSeriesReplicationItem;
+                    if (timeSeriesItem != null)
+                        timeSeriesItem.ParentDocChangeVector = documentsContext.GetChangeVector(timeSeriesItem.ParentDocChangeVector).Version;
+
+                    if (_pullReplicationHandler is OutgoingPullReplicationHandlerAsHub)
+                    {
+                        var hubDatabaseChangeVector = documentsContext.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(documentsContext);
+                        item.ChangeVector = ChangeVectorUtils.MaskUnknownEntriesWithSinkTag(documentsContext, item.ChangeVector, hubDatabaseChangeVector);
+
+                        if (timeSeriesItem != null)
+                            timeSeriesItem.ParentDocChangeVector = ChangeVectorUtils.MaskUnknownEntriesWithSinkTag(documentsContext, timeSeriesItem.ParentDocChangeVector, hubDatabaseChangeVector);
+                    }
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(_pullReplicationHandler.ChangeVectorWireMode), _pullReplicationHandler.ChangeVectorWireMode, "Unknown pull replication change-vector wire mode.");
+            }
+
+            base.WriteReplicationItem(documentsContext, item, stats);
         }
 
         protected override bool ShouldSkip(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
@@ -32,12 +61,11 @@ namespace Raven.Server.Documents.Replication.Senders
             if (ValidatorSaysToSkip(_pathsToSend) || ValidatorSaysToSkip(_destinationAcceptablePaths))
                 return true;
 
-            if (_shouldSkipSendingTombstones && ReplicationLoader.IsOfTypePreventDeletions(item))
+            if (_pullReplicationHandler.ShouldSkipPreventableSinkToHubDeletion(item))
                 return true;
 
             return base.ShouldSkip(context, item, stats, skippedReplicationItemsInfo);
 
-            
             bool ValidatorSaysToSkip(AllowedPathsValidator validator)
             {
                 if (validator == null)
@@ -57,6 +85,19 @@ namespace Raven.Server.Documents.Replication.Senders
 
                 return true;
             }
+        }
+
+        protected override void SendEmptyBatchHeartbeat(ChangeVector databaseChangeVector, ChangeVector completedSourceFrontier)
+        {
+            if (_pullReplicationHandler.ChangeVectorWireMode == PullReplicationChangeVectorWireMode.SendLegacyCompatible)
+            {
+                base.SendEmptyBatchHeartbeat(databaseChangeVector, completedSourceFrontier);
+                return;
+            }
+
+            // Pull replication progress is carried by the completed source frontier when this scan actually advanced it.
+            // Idle pull heartbeats deliberately avoid sending the source database CV.
+            _parent.SendHeartbeat(databaseChangeVector: null, lastSentSourceChangeVector: completedSourceFrontier?.AsString());
         }
 
         public override void Dispose()

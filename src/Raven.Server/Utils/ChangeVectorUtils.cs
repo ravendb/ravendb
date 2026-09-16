@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -428,6 +428,69 @@ namespace Raven.Server.Utils
                     .Append('-').Append(clusterTransactionId);
             }
             return stringBuilder.ToString();
+        }
+
+        internal static string MaskUnknownEntriesWithSinkTag(DocumentsOperationContext context, string incomingVersion, ChangeVector globalChangeVector,
+            List<ChangeVectorEntry> knownEntries = null, bool trackIgnoredDbIds = false)
+        {
+            var global = globalChangeVector?.AsString().ToChangeVectorList();
+            var incoming = incomingVersion.ToChangeVectorList();
+            if (incoming == null)
+                return incomingVersion;
+
+            var newIncoming = new List<ChangeVectorEntry>();
+
+            foreach (var entry in incoming)
+            {
+                if (ContainsDbId(global, entry.DbId))
+                {
+                    newIncoming.Add(entry);
+                    knownEntries?.Add(entry);
+                }
+                else if (entry.DbId == context.DocumentDatabase.ClusterTransactionId)
+                {
+                    // TRXN
+                    newIncoming.Add(new ChangeVectorEntry
+                    {
+                        DbId = entry.DbId,
+                        Etag = entry.Etag,
+                        NodeTag = ChangeVectorParser.TrxnInt
+                    });
+
+                    continue;
+                }
+                else
+                {
+                    newIncoming.Add(new ChangeVectorEntry
+                    {
+                        DbId = entry.DbId,
+                        Etag = entry.Etag,
+                        NodeTag = ChangeVectorParser.SinkInt
+                    });
+
+                    if (trackIgnoredDbIds)
+                    {
+                        context.DbIdsToIgnore ??= new HashSet<string>();
+                        context.DbIdsToIgnore.Add(entry.DbId);
+                    }
+                }
+            }
+
+            return newIncoming.SerializeVector();
+        }
+
+        private static bool ContainsDbId(List<ChangeVectorEntry> changeVector, string dbId)
+        {
+            if (changeVector == null)
+                return false;
+
+            for (int i = 0; i < changeVector.Count; i++)
+            {
+                if (changeVector[i].DbId == dbId)
+                    return true;
+            }
+
+            return false;
         }
     }
 }

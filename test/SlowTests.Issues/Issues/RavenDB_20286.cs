@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using FastTests;
 using Tests.Infrastructure;
@@ -22,8 +23,21 @@ public class RavenDB_20286 : NoDisposalNeeded
 
         Assert.True(csharpFiles.Length > 0);
 
+        // MySQL-specific source files legitimately need a direct MySqlConnector dependency
+        // (CDC sink binlog streaming, schema discovery, the migrator's MySQL provider). The
+        // rule the rest of Raven.Server should follow is unchanged — only these contained
+        // subtrees may import MySqlConnector.
+        var mySqlSpecificPathFragments = new[]
+        {
+            Path.DirectorySeparatorChar + "MySQL" + Path.DirectorySeparatorChar,
+            Path.DirectorySeparatorChar + "MySql",
+        };
+
         foreach (string filePath in csharpFiles)
         {
+            if (mySqlSpecificPathFragments.Any(fragment => filePath.Contains(fragment)))
+                continue;
+
             using (var file = File.OpenText(filePath))
             {
                 string line = file.ReadToEnd();

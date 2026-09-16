@@ -8,6 +8,7 @@ import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 const {
     Single,
     Cluster,
+    ClusterViewedFromUnrelatedNode,
     Sharded,
     DifferentNodeStates,
     WithLoadErrorOnSingleNode,
@@ -50,6 +51,16 @@ describe("DatabasesPage", function () {
         await screen.findByText(/Manage group/i);
 
         await screen.findByText("9 Indexing errors");
+    });
+
+    it("can render cluster database stats when current node is not part of database group", async () => {
+        const { screen } = rtlRender(<ClusterViewedFromUnrelatedNode />);
+
+        await screen.findByText(/Manage group/i);
+
+        expect(await screen.findAllByText("7 Bytes")).not.toHaveLength(0);
+        expect(await screen.findAllByText("1,024")).not.toHaveLength(0);
+        expect(screen.queryByText("0 Bytes")).not.toBeInTheDocument();
     });
 
     it("can render load error on single node", async () => {

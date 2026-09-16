@@ -69,6 +69,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             nameof(DatabaseRecord.Sharding),
             nameof(DatabaseRecord.RevisionsBin),
+            nameof(DatabaseRecord.CdcSinks),
         };
 
         private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<ServerWideDebugInfoPackageHandler>();
@@ -144,7 +145,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             }
                             catch (Exception e)
                             {
-                                await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, $"Node - [{ServerStore.NodeTag}]");
+                                await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, $"Node - [{tag}]");
                             }
                         }
                     }

@@ -17,9 +17,10 @@ namespace Tests.Infrastructure.XunitExtensions
                 testCases,
                 ctxt.ExplicitOption,
                 ctxt.MessageBus,
-                ctxt.TestCaseOrderer,
                 ctxt.Aggregator,
                 ctxt.CancellationTokenSource,
+                ctxt.ParallelMode,
+                ctxt.Scheduler,
                 ctxt.CollectionFixtureMappings);
         }
     }

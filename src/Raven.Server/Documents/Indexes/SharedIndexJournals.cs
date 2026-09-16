@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using Raven.Server.Config.Categories;
 using Raven.Server.Logging;
+using Raven.Server.Storage.Layout;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow;
@@ -58,7 +59,7 @@ public class SharedIndexJournals : IJournalMerger, IDisposable
         options.OnIntegrityErrorOfAlreadySyncedData += (s, e) => documentDatabase.HandleOnIndexIntegrityErrorOfAlreadySyncedData(IndexingConfiguration.SharedJournalsStorageName, s, e);
         options.OnRecoverableFailure += documentDatabase.HandleRecoverableFailure;
 
-        _env = new StorageEnvironment(options);
+        _env = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.SharedJournals);
         _logger = RavenLogManager.Instance.GetLoggerForDatabase<SharedIndexJournals>(documentDatabase);
         _env.Journal.BranchJournalMerger = this;
         _env.Journal.OnBranchHardLinkLimitReached = OnBranchHardLinkLimitReached;

@@ -16,23 +16,31 @@ public sealed class MergedBatchCommandDto : IReplayableCommandDto<DocumentsOpera
     {
         foreach (var parsedCommand in ParsedCommands)
         {
-            if (parsedCommand.Type != CommandType.PATCH)
-                continue;
-
-            parsedCommand.PatchCommand = new PatchDocumentCommand(
-                context: context,
-                id: parsedCommand.Id,
-                expectedChangeVector: parsedCommand.ChangeVector,
-                skipPatchIfChangeVectorMismatch: false,
-                patch: (parsedCommand.Patch, parsedCommand.PatchArgs),
-                patchIfMissing: (parsedCommand.PatchIfMissing, parsedCommand.PatchIfMissingArgs),
-                identityPartsSeparator: database.IdentityPartsSeparator,
-                createIfMissing: parsedCommand.CreateIfMissing,
-                isTest: false,
-                debugMode: false,
-                collectResultsNeeded: true,
-                returnDocument: parsedCommand.ReturnDocument
-            );
+            if (parsedCommand.Type == CommandType.PATCH)
+            {
+                parsedCommand.PatchCommand = new PatchDocumentCommand(
+                    context: context,
+                    id: parsedCommand.Id,
+                    expectedChangeVector: parsedCommand.ChangeVector,
+                    skipPatchIfChangeVectorMismatch: false,
+                    patch: (parsedCommand.Patch, parsedCommand.PatchArgs),
+                    patchIfMissing: (parsedCommand.PatchIfMissing, parsedCommand.PatchIfMissingArgs),
+                    identityPartsSeparator: database.IdentityPartsSeparator,
+                    createIfMissing: parsedCommand.CreateIfMissing,
+                    isTest: false,
+                    debugMode: false,
+                    collectResultsNeeded: true,
+                    returnDocument: parsedCommand.ReturnDocument
+                );
+            }
+            else if (parsedCommand.Type == CommandType.JsonPatch)
+            {
+                parsedCommand.JsonPatchCommand = new JsonPatchCommand(
+                    parsedCommand.Id,
+                    parsedCommand.JsonPatchCommands,
+                    parsedCommand.ReturnDocument,
+                    context);
+            }
         }
 
         var newCmd = new MergedBatchCommand(database)

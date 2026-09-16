@@ -42,6 +42,8 @@ public class RavenDB_14548 : RavenTestBase
 
             var packageReport = analyzer.Analyze();
 
+            Assert.Empty(packageReport.UnreachableNodes);
+
             var report = packageReport.ForNode("A");
 
             Assert.Equal(2, report.Machine.NumberOfCores);
@@ -255,10 +257,17 @@ public class RavenDB_14548 : RavenTestBase
                 Assert.True(summaryResult.SummaryPerNode.ContainsKey("A"));
 
                 // node C was down - intentionally
+                const string nodeCUrl = "https://c.rdb14548.arek-t3st.cloudtest.ravendb.org";
+
                 Assert.NotNull(summaryResult.SummaryPerNode["A"]);
                 Assert.NotNull(summaryResult.SummaryPerNode["B"]);
+                Assert.False(summaryResult.SummaryPerNode.ContainsKey("C"));
 
-                foreach (var item in summaryResult.SummaryPerNode.Where(x => x.Key != "C"))
+                var unreachableNode = Assert.Single(summaryResult.UnreachableNodes);
+                Assert.Equal("C", unreachableNode.Key);
+                Assert.Equal(nodeCUrl, unreachableNode.Value);
+
+                foreach (var item in summaryResult.SummaryPerNode)
                 {
                     var nodeSummary = item.Value;
                     var nodeTag = item.Key;
@@ -354,10 +363,11 @@ public class RavenDB_14548 : RavenTestBase
 
                 Assert.NotNull(summaryResult.ClusterWideIssues);
                 
-                Assert.Equal(1, summaryResult.ClusterWideIssues.ClusterIssues.Count);
+                Assert.Equal(2, summaryResult.ClusterWideIssues.ClusterIssues.Count);
 
-                Assert.Contains("Custom Election Timeout", summaryResult.ClusterWideIssues.ClusterIssues[0].Title);
-                
+                Assert.Contains(summaryResult.ClusterWideIssues.ClusterIssues, x => x.Title.Contains("Custom Election Timeout"));
+                Assert.Contains(summaryResult.ClusterWideIssues.ClusterIssues, x => x.Title.Contains("unreachable") && x.Description.Contains($"Node C ({nodeCUrl})"));
+
                 Assert.Equal(0, summaryResult.ClusterWideIssues.DatabaseIssues.Count);
                 Assert.Equal(0, summaryResult.ClusterWideIssues.ServerIssues.Count);
             }

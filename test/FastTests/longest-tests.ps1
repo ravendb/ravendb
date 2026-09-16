@@ -1,4 +1,11 @@
-dotnet test --logger "trx;LogFileName=output.xml"
+$resultsFile = "test-timings.xml"
 
-[xml]$tests = Get-Content .\TestResults\output.xml
-$tests.TestRun.Results.UnitTestResult | sort @{e={$_.duration} } -descending | select testName, duration -first 25
+if (Test-Path $resultsFile) { del $resultsFile }
+
+# xUnit.net v3 test projects are self-executing - the 'dotnet xunit' tool no longer exists.
+dotnet run --configuration Release -- -result-xml $resultsFile
+
+[xml]$tests = Get-Content $resultsFile
+$tests.assemblies.assembly.collection.test | 
+    sort @{e={$_.time -as [double]} } -descending | 
+    select time, name -first 25

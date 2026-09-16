@@ -228,7 +228,7 @@ Update
 }"
             }));
             var e = Assert.Throws<JavaScriptException>(() => operation.WaitForCompletion(ttl));
-            Assert.Contains("Unit is not defined", e.Message);
+            Assert.Contains("Cannot convert undefined or null to object", e.Message);
         }
 
         private class PermittedDocumentAge

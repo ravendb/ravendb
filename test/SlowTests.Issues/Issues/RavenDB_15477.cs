@@ -50,7 +50,7 @@ namespace SlowTests.Issues
                     Assert.True(item.TryGetMember(nameof(DatabaseInfo.IndexingStatus), out var indexingStatus));
                     Assert.Null(indexingStatus);
                     var dbInfo = JsonDeserializationServer.DatabaseInfo(item);
-                    Assert.Equal(IndexRunningStatus.Running, dbInfo.IndexingStatus);
+                    Assert.Null(dbInfo.IndexingStatus);
                 }
             }
         }

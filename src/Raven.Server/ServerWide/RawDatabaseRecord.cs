@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.DataArchival;
 using Raven.Client.Documents.Operations.ETL;
@@ -624,9 +625,9 @@ namespace Raven.Server.ServerWide
         private List<PullReplicationDefinition> _hubPullReplications;
 
         public List<PullReplicationDefinition> HubPullReplications
-        {
+                {
             get
-            {
+                    {
                 if (_materializedRecord != null)
                     return _materializedRecord.HubPullReplications;
 
@@ -640,8 +641,8 @@ namespace Raven.Server.ServerWide
                     select JsonDeserializationClient.PullReplicationDefinition(element)).ToList();
 
                 return _hubPullReplications;
-            }
-        }
+                    }
+                }
 
         private List<PullReplicationAsSink> _sinkPullReplications;
 
@@ -943,6 +944,29 @@ namespace Raven.Server.ServerWide
                 }
 
                 return _queueSinks;
+            }
+        }
+
+        private List<CdcSinkConfiguration> _cdcSinks;
+
+        public List<CdcSinkConfiguration> CdcSinks
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.CdcSinks;
+
+                if (_cdcSinks == null)
+                {
+                    _cdcSinks = new List<CdcSinkConfiguration>();
+                    if (_record.TryGet(nameof(DatabaseRecord.CdcSinks), out BlittableJsonReaderArray bjra) && bjra != null)
+                    {
+                        foreach (BlittableJsonReaderObject element in bjra)
+                            _cdcSinks.Add(JsonDeserializationCluster.CdcSinkConfiguration(element));
+                    }
+                }
+
+                return _cdcSinks;
             }
         }
 

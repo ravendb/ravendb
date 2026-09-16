@@ -23,8 +23,8 @@ public class AiAgentBackupRestore : ReplicationTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { BackupType.Backup })]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { BackupType.Snapshot })]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { BackupType.Backup })]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { BackupType.Snapshot })]
     public async Task CanBackupAndRestoreAiAgents(Options options, GenAiConfiguration aiConfig, BackupType backupType)
     {
         var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -49,7 +49,7 @@ public class AiAgentBackupRestore : ReplicationTestBase
                     FolderPath = backupPath
                 }
             }));
-            var result = (BackupResult)await backupOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
+            var result = (BackupResult)await backupOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(90));
 
             using var dis = Backup.RestoreDatabase(destination,
                 new RestoreBackupConfiguration

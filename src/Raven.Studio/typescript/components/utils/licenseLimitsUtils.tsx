@@ -24,10 +24,12 @@ export function getLicenseLimitReachStatus(count: number, limit: number): Licens
     return "notReached";
 }
 
-export type LicenseAvailabilityType = "community" | "professional" | "enterprise" | "enterpriseAi";
+export type LicenseAvailabilityType = "community" | "professional" | "enterprise" | "enterpriseAi" | "quill";
 
 export function getLicenseAvailabilityType(licenseType: Raven.Server.Commercial.LicenseType): LicenseAvailabilityType {
     switch (licenseType) {
+        case "Quill":
+            return "quill";
         case "Essential":
         case "Community":
             return "community";
@@ -70,6 +72,7 @@ export function useProfessionalOrAboveLicenseAvailability(isFeatureInLicense: bo
             community: { value: false },
             professional: { value: true },
             enterprise: { value: true },
+            quill: { value: true },
         },
     ];
 
@@ -82,6 +85,7 @@ export function useEnterpriseLicenseAvailability(isFeatureInLicense: boolean): F
             community: { value: false },
             professional: { value: false },
             enterprise: { value: true },
+            quill: { value: true },
         },
     ];
 

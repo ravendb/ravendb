@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Schemas
         {
             LowerId = 0,
             Etag = 1,
-            Id = 2, // format of lazy string id is detailed in GetLowerIdSliceAndStorageKeyForBackwardCompatibility
+            Id = 2, // format of lazy string id is detailed in DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey
             Data = 3,
             ChangeVector = 4,
             LastModified = 5,

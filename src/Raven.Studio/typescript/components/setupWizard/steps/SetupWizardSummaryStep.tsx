@@ -6,7 +6,7 @@ import React from "react";
 import Card from "react-bootstrap/Card";
 import { DistributionItem, DistributionLegend, LocationDistribution } from "components/common/LocationDistribution";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
-import { getFullDomain, getLicenseType } from "components/setupWizard/utils/setupWizardUtils";
+import { getFullDomain } from "components/setupWizard/utils/setupWizardUtils";
 import LicenseType = Raven.Server.Commercial.LicenseType;
 import License = Raven.Server.Commercial.License;
 
@@ -30,7 +30,7 @@ export function SetupWizardSummaryStep() {
         !!additionalSettingsStep?.staticIndexingEngineType ||
         !!additionalSettingsStep?.setupCertificatePath ||
         !!(
-            getLicenseType(licenseKeyStep.licenseInfo).isHigherThan("Professional") &&
+            licenseKeyStep.licenseInfo?.licenseStatus?.HasStudioConfiguration &&
             additionalSettingsStep?.studioEnvironment
         ) ||
         !!(securityOption !== "none" && additionalSettingsStep?.adminCertificateExpirationTime) ||
@@ -55,8 +55,8 @@ export function SetupWizardSummaryStep() {
                             {securityOption !== "none" && <CardRow label="License ID" value={license?.Id} />}
                             <CardRow
                                 label="License type"
-                                value={licenseKeyStep.licenseInfo?.licenseType ?? "AGPLv3"}
-                                valueClassName={colorizeLicenseType(licenseKeyStep.licenseInfo?.licenseType)}
+                                value={licenseKeyStep.licenseInfo?.licenseStatus?.Type ?? "AGPLv3"}
+                                valueClassName={colorizeLicenseType(licenseKeyStep.licenseInfo?.licenseStatus?.Type)}
                             />
                             {securityOption === "letsEncrypt" && (
                                 <CardRow label="Full domain" value={getFullDomain(domainStep)} />
@@ -86,7 +86,7 @@ export function SetupWizardSummaryStep() {
                         <Card className="mb-4">
                             <Card.Body>
                                 <div className="vstack gap-1">
-                                    {getLicenseType(licenseKeyStep.licenseInfo).isHigherThan("Community") && (
+                                    {licenseKeyStep.licenseInfo?.licenseStatus?.HasStudioConfiguration && (
                                         <CardRow
                                             label="Studio environment"
                                             value={additionalSettingsStep.studioEnvironment}
@@ -98,7 +98,7 @@ export function SetupWizardSummaryStep() {
                                             value={`${additionalSettingsStep.adminCertificateExpirationTime} months`}
                                         />
                                     )}
-                                    {getLicenseType(licenseKeyStep.licenseInfo).isHigherThan("Community") && (
+                                    {licenseKeyStep.licenseInfo?.licenseStatus?.HasPostgreSqlIntegration && (
                                         <CardRow
                                             label="Experimental features"
                                             value={

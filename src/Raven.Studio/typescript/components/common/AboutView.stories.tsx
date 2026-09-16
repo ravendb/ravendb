@@ -60,12 +60,7 @@ const FloatingButton = ({ isCloud, licenseType, isEnabled, isIsv }: FloatingButt
                     </Col>
                     <Col sm="auto">
                         <AboutViewFloating defaultOpen={isEnabled ? null : "licensing"}>
-                            <AccordionItemWrapper
-                                icon="zombie"
-                                color="info"
-                                heading="About this view"
-                                description="haha"
-                            >
+                            <AccordionItemWrapper icon="zombie" color="info" description="haha">
                                 <Col>
                                     <p>
                                         <strong>Admin JS Console</strong> is a specialized feature primarily intended
@@ -131,12 +126,7 @@ const AnchoredHub = (args: { featureAvailable: boolean }) => {
                     </Col>
                     <Col sm={12} md={4}>
                         <AboutViewAnchored>
-                            <AccordionItemWrapper
-                                icon="about"
-                                color="info"
-                                heading="About this view"
-                                description="Get additional info on this feature"
-                            >
+                            <AccordionItemWrapper icon="about" color="info">
                                 <p>
                                     <strong>Admin JS Console</strong> is a specialized feature primarily intended for
                                     resolving server errors. It provides a direct interface to the underlying system,
@@ -222,6 +212,7 @@ function getLicenseAvailabilityData(props: GetLicenseAvailabilityDataProps): Fea
             community: { value: false },
             professional: { value: true },
             enterprise: { value: true },
+            quill: { value: true },
         },
         {
             featureName: "Max revisions",
@@ -229,6 +220,7 @@ function getLicenseAvailabilityData(props: GetLicenseAvailabilityDataProps): Fea
             community: { value: 2 },
             professional: { value: Infinity },
             enterprise: { value: Infinity },
+            quill: { value: Infinity },
         },
         {
             featureName: "Max revision days",
@@ -236,6 +228,7 @@ function getLicenseAvailabilityData(props: GetLicenseAvailabilityDataProps): Fea
             community: { value: isCloud ? 38 : 45 },
             professional: { value: Infinity },
             enterprise: { value: Infinity },
+            quill: { value: Infinity },
         },
     ];
 
@@ -258,6 +251,7 @@ const availabilityDataSimple: FeatureAvailabilityData[] = [
     {
         community: { value: false },
         enterprise: { value: true },
+        quill: { value: true },
         professional: { value: true },
     },
 ];

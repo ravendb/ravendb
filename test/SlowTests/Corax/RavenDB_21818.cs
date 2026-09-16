@@ -29,21 +29,21 @@ public class RavenDB_21818 : RavenTestBase
         session.Store(new Dto(1, new []{1, 1}, "Maciej", 2));
         session.Store(new Dto(1, new []{1, 1, 1}, "Maciej", 1));
         session.SaveChanges();
-
+        
         var results = session.Advanced.DocumentQuery<Dto>()
             .WaitForNonStaleResults()
-            .WhereEquals(nameof(Dto.Numbers), 1)
+            .WhereEquals(nameof(Dto.Numbers), "1")
             .AndAlso()
             .WhereEquals(x => x.Name, "maciej")
             .OrderBy(x => x.SomeNum, type)
             .OrderByScore()
             .ToList();
-        
+
         Assert.Equal(2, results.Count);
         Assert.Equal(1, results[0].ExpectedOrder);
         Assert.Equal(2, results[1].ExpectedOrder);
     }
-    
+
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(OrderingType.AlphaNumeric)]
     [InlineData(OrderingType.String)]
@@ -55,10 +55,10 @@ public class RavenDB_21818 : RavenTestBase
         session.Store(new Dto(1, new []{1, 1}, "Maciej", 2));
         session.Store(new Dto(1, new []{1, 1, 1}, "Maciej", 1));
         session.SaveChanges();
-
+        
         var results = session.Advanced.DocumentQuery<Dto>()
             .WaitForNonStaleResults()
-            .WhereEquals(nameof(Dto.Numbers), 1)
+            .WhereEquals(nameof(Dto.Numbers), "1")
             .AndAlso()
             .WhereEquals(x => x.Name, "maciej")
             .OrderBy(x => x.SomeNum, type)

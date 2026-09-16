@@ -10,13 +10,7 @@ export function RevisionsBinCleanerInfoHub() {
 
     return (
         <AboutViewAnchored>
-            <AccordionItemWrapper
-                targetId="about"
-                icon="about"
-                color="info"
-                heading="About this view"
-                description="Get additional info on this feature"
-            >
+            <AccordionItemWrapper targetId="about" icon="about" color="info">
                 <div>
                     <strong>Automatic deletion</strong>:
                     <br />

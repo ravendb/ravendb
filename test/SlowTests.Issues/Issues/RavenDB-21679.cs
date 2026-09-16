@@ -177,7 +177,7 @@ namespace SlowTests.Issues
                 {
                     Assert.NotNull(stream);
 
-                    using (DocumentDatabase database = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName2).Result)
+                    var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName2);
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (var source = new StreamSource(stream, context, database.Name, new DatabaseSmugglerOptionsServerSide(AuthorizationStatus.ValidUser)))
                     {

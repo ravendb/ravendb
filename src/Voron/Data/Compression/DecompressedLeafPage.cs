@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Sparrow;
 using Sparrow.Server;
 using Voron.Data.BTrees;
+using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
 
@@ -28,6 +30,17 @@ namespace Voron.Data.Compression
 
         public DecompressionUsage Usage;
 
+        private bool _invalidated = false;
+        public void Invalidate() => _invalidated = true;
+        
+#if DEBUG
+        public bool IsInvalidated => _invalidated;
+#endif
+        
+        // the Write decompression applied deferred work (tombstones, updates) to the tree state, the original page must be rewritten from this one.
+        // Reset once that happened, a cached copy must not force another write-back later
+        public bool MustBeWrittenBack;
+
         public void Dispose()
         {
             if (Cached)
@@ -38,6 +51,20 @@ namespace Voron.Data.Compression
 
         public void CopyToOriginal(LowLevelTransaction tx, bool defragRequired, bool wasModified, Tree tree)
         {
+            if (_invalidated)
+            {
+                tree.DecompressionsCache.Invalidate(PageNumber, DecompressionUsage.Write);
+                return;
+            }
+
+#if DEBUG
+            if (tx.DirtyPageStillBelongsTo(Original.Base, PageNumber) == false)
+            {
+                VoronUnrecoverableErrorException.Raise(tx,
+                    $"Attempt to write decompressed page #{PageNumber} back into scratch memory that no longer belongs to it - the page was freed and its scratch slot re-issued (the slot's header now claims page #{Original.PageNumber}). The page should have been invalidated when it was freed, tree: {tree.Name}");
+            }
+#endif
+
             if (CalcSizeUsed() < Original.PageMaxSpace)
             {
                 // no need to compress
@@ -60,8 +87,8 @@ namespace Voron.Data.Compression
                 {
                     if (compressed == null)
                     {
-                        if (wasModified == false)
-                            return;
+                        if (wasModified == false && MustBeWrittenBack == false)
+                            return; // the original page is still a valid representation of this one
 
                         if (NumberOfEntries > 0)
                         {
@@ -83,10 +110,13 @@ namespace Voron.Data.Compression
                     LeafPageCompressor.CopyToPage(compressed, Original);
                 }
             }
+
+            MustBeWrittenBack = false; // the original page has just been rewritten from this one
         }
 
         private void SplitPage(LowLevelTransaction tx, Tree tree)
         {
+            Debug.Assert(_invalidated == false);
             // let's take a node from the middle and add it again with the page splitting
             // this way we'll copy half of the page to a new page
 
@@ -103,11 +133,17 @@ namespace Voron.Data.Compression
                 var node = GetNode(middleNodeIndex);
 
                 var flags = node->Flags;
-                var valueReader = tree.GetValueReaderFromHeader(node);
 
-                using (tx.Allocator.Allocate(valueReader.Length, out var tempValueOutput))
+                // the value of an overflow entry stays on its overflow page, only the reference moves
+                var isPageRef = flags == TreeNodeFlags.PageRef;
+                var valueReader = isPageRef ? default : tree.GetValueReaderFromHeader(node);
+                var len = isPageRef ? -1 : valueReader.Length;
+                var pageNumber = isPageRef ? node->PageNumber : PageNumber;
+
+                using (tx.Allocator.Allocate(isPageRef ? 0 : len, out var tempValueOutput))
                 {
-                    Memory.Copy(tempValueOutput.Ptr, valueReader.Base, valueReader.Length);
+                    if (isPageRef == false)
+                        Memory.Copy(tempValueOutput.Ptr, valueReader.Base, len);
 
                     RemoveNode(middleNodeIndex);
 
@@ -117,12 +153,13 @@ namespace Voron.Data.Compression
                     {
                         cursor.SetTopPage(this); // we need to use uncompressed page here because it might have some modifications (e.g. deleted node)
 
-                        var pageSplitter = new TreePageSplitter(tx, tree, key, valueReader.Length, PageNumber, flags, cursor,
+                        var pageSplitter = new TreePageSplitter(tx, tree, key, len, pageNumber, flags, cursor,
                             splittingOnDecompressed: true);
 
                         var pos = pageSplitter.Execute();
 
-                        tempValueOutput.CopyTo(pos);
+                        if (isPageRef == false)
+                            tempValueOutput.CopyTo(pos);
                     }
                 }
             }

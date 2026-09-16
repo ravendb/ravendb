@@ -287,7 +287,7 @@ namespace Raven.Server.Documents.Patch
             }
 
             public string OriginalDocumentId;
-            public bool RefreshOriginalDocument;
+            public bool RefreshOriginalDocument, OriginalDocumentUpdatedOrDeleted;
             private readonly ConcurrentLruRegexCache _regexCache;
             public HashSet<string> DocumentCountersToUpdate;
             public HashSet<string> DocumentTimeSeriesToUpdate;
@@ -1375,8 +1375,11 @@ namespace Raven.Server.Documents.Patch
                         });
                     }
 
-                    if (RefreshOriginalDocument == false && string.Equals(putResult.Id, OriginalDocumentId, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(putResult.Id, OriginalDocumentId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        OriginalDocumentUpdatedOrDeleted = true;
                         RefreshOriginalDocument = true;
+                    }
 
                     return putResult.Id;
                 }
@@ -1437,8 +1440,11 @@ namespace Raven.Server.Documents.Patch
 
                 var result = _database.DocumentsStorage.Delete(_docsCtx, id, changeVector);
 
-                if (RefreshOriginalDocument && string.Equals(OriginalDocumentId, id, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(OriginalDocumentId, id, StringComparison.OrdinalIgnoreCase))
+                {
+                    OriginalDocumentUpdatedOrDeleted = true;
                     RefreshOriginalDocument = false;
+                }
 
                 if (DebugMode)
                 {
@@ -2378,6 +2384,7 @@ namespace Raven.Server.Documents.Patch
                 UnarchiveCalled = false;
                 OriginalDocumentId = null;
                 RefreshOriginalDocument = false;
+                OriginalDocumentUpdatedOrDeleted = false;
                 ScriptEngine.Advanced.ResetCallStack();
                 ScriptEngine.Constraints.Reset();
             }
@@ -2461,6 +2468,7 @@ namespace Raven.Server.Documents.Patch
 
                 _run.OriginalDocumentId = null;
                 _run.RefreshOriginalDocument = false;
+                _run.OriginalDocumentUpdatedOrDeleted = false;
 
                 _run.DocumentCountersToUpdate?.Clear();
                 _run.DocumentTimeSeriesToUpdate?.Clear();

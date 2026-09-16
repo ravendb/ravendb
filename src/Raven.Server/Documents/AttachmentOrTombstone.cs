@@ -1,38 +1,52 @@
-﻿using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Context;
 using Voron;
 
 namespace Raven.Server.Documents
 {
-    public class AttachmentOrTombstone
+    // At most one of Attachment / Tombstone is non-null; both null means Missing.
+    public readonly struct AttachmentOrTombstone
     {
-        public Attachment Attachment;
-        public Tombstone Tombstone;
+        public readonly Attachment Attachment;
+        public readonly Tombstone Tombstone;
+
+        private AttachmentOrTombstone(Attachment attachment, Tombstone tombstone)
+        {
+            Attachment = attachment;
+            Tombstone = tombstone;
+        }
+
+        public static AttachmentOrTombstone Of(Attachment attachment) => new(attachment, tombstone: null);
+
+        public static AttachmentOrTombstone Of(Tombstone tombstone) => new(attachment: null, tombstone);
+
+        public static AttachmentOrTombstone Empty => default;
 
         public bool Missing => Attachment == null && Tombstone == null;
+
         public string ChangeVector => Attachment?.ChangeVector ?? Tombstone?.ChangeVector;
 
+        // Live table first, then tombstones.
         public static AttachmentOrTombstone GetAttachmentOrTombstone(DocumentsOperationContext context, Slice attachmentKey)
         {
-            var storage = context.DocumentDatabase.DocumentsStorage.AttachmentsStorage;
-            var attachment = storage.GetAttachmentByKey(context, attachmentKey);
+            AttachmentsStorage storage = context.DocumentDatabase.DocumentsStorage.AttachmentsStorage;
+            Attachment attachment = storage.GetAttachmentByKey(context, attachmentKey);
             if (attachment != null)
-            {
-                return new AttachmentOrTombstone
-                {
-                    Attachment = attachment
-                };
-            }
+                return Of(attachment);
 
-            var tombstone = storage.GetAttachmentTombstoneByKey(context, attachmentKey);
-            if (tombstone != null)
-            {
-                return new AttachmentOrTombstone
-                {
-                    Tombstone = tombstone
-                };
-            }
+            Tombstone tombstone = storage.GetAttachmentTombstoneByKey(context, attachmentKey);
+            return tombstone != null ? Of(tombstone) : Empty;
+        }
 
-            return new AttachmentOrTombstone();
+        // Dual-form live, then dual-form tombstones (each per-pair helper handles both probes internally).
+        internal static AttachmentOrTombstone GetRevisionAttachmentOrTombstone(DocumentsOperationContext context, in RevisionAttachmentKey pair)
+        {
+            AttachmentsStorage storage = context.DocumentDatabase.DocumentsStorage.AttachmentsStorage;
+            Attachment attachment = storage.GetRevisionAttachmentByPair(context, in pair);
+            if (attachment != null)
+                return Of(attachment);
+
+            Tombstone tombstone = storage.GetRevisionAttachmentTombstoneByPair(context, in pair);
+            return tombstone != null ? Of(tombstone) : Empty;
         }
     }
 }

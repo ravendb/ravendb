@@ -286,11 +286,12 @@ namespace Voron.Impl.Journal
             return journal;
         }
 
-        public bool RecoverDatabase(TransactionHeader* txHeader, out long lastJournalNumber, Action<LogLevel, string> addToInitLog)
+        public bool RecoverDatabase(TransactionHeader* txHeader, Action<LogLevel, string> addToInitLog, out long lastJournalNumber, out bool skippedInvalidJournals)
         {
             // note, we don't need to do any concurrency here, happens as a single threaded
             // fashion on db startup
             var requireHeaderUpdate = false;
+            skippedInvalidJournals = false;
 
             var currentFileHeader = _headerAccessor.CopyHeader();
             var logInfo = currentFileHeader.Journal;
@@ -429,22 +430,32 @@ namespace Voron.Impl.Journal
 
                     lastProcessedJournal = journalNumber;
 
+                    // Must run before the RequireHeaderUpdate break: a journal that ends with an incomplete transaction
+                    // may still have grown the pager for its earlier valid transactions, and skipping the publish leaves
+                    // DataPagerState smaller than NextPageNumber
+                    _env.UpdateDataPagerState(dataPagerState);
+
+                    addToInitLog?.Invoke(LogLevel.Debug, $"Journal {journalNumber:#,#;;0} Recovered (requireHeaderUpdate: {journalReader.RequireHeaderUpdate})");
+
                     if (journalReader.RequireHeaderUpdate) //this should prevent further load of transactions
                     {
                         requireHeaderUpdate = true;
                         break;
                     }
-
-                    addToInitLog?.Invoke(LogLevel.Debug, $"Journal {journalNumber:#,#;;0} Recovered");
-
-                    _env.UpdateDataPagerState(dataPagerState);
                 }
                 catch (InvalidJournalException)
                 {
+                    // the journal may have grown the data pager (and the file) for transactions applied before
+                    // the error - the published state must reflect that even when we skip the journal
+                    _env.UpdateDataPagerState(dataPagerState);
+
                     if (_env.Options.IgnoreInvalidJournalErrors == true)
                     {
+                        skippedInvalidJournals = true;
+
                         addToInitLog?.Invoke(LogLevel.Warn,
-                            $"Encountered invalid journal {journalNumber} @ {_env.Options}. Skipping this journal and keep going the recovery operation because '{nameof(_env.Options.IgnoreInvalidJournalErrors)}' options is set");
+                            $"Encountered invalid journal {journalNumber} @ {_env.Options}. Skipping this journal and keep going the recovery operation because '{nameof(_env.Options.IgnoreInvalidJournalErrors)}' options is set. " +
+                            $"Any transactions applied from it before the error remain in the data file (data pager: {dataPagerState.NumberOfAllocatedPages:#,#;;0} pages)");
                         continue;
                     }
 
@@ -458,6 +469,9 @@ namespace Voron.Impl.Journal
                     throw;
                 }
             }
+
+            Debug.Assert(_env.CurrentStateRecord.DataPagerState.NumberOfAllocatedPages >= dataPagerState.NumberOfAllocatedPages,
+                $"Published data pager state ({_env.CurrentStateRecord.DataPagerState.NumberOfAllocatedPages} pages) is behind the state recovery produced ({dataPagerState.NumberOfAllocatedPages} pages)");
 
             if (_env.Options.Encryption.IsEnabled == false) // for encryption, we already use AEAD, so no need
             {

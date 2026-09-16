@@ -56,6 +56,7 @@ namespace rvn
             ConfigureSetupPackage();
             ConfigureInitSetupParams();
             ConfigurePutClientCertificateCommand();
+            ConfigureDnsCommand();
 
             _app.OnExecute(() =>
             {
@@ -319,6 +320,72 @@ namespace rvn
                         logStream.Connect().Wait();
 
                     return 0;
+                });
+            });
+        }
+
+        private static void ConfigureDnsCommand()
+        {
+            _app.Command("dns", cmd =>
+            {
+                cmd.Description = "Manage DNS records for a licensed RavenDB domain through api.ravendb.net.";
+                cmd.HelpOption(HelpOptionString);
+
+                cmd.Command("update", subcmd =>
+                {
+                    subcmd.Description = "Register/update DNS record(s) for a licensed RavenDB domain using a license.json file.";
+                    subcmd.ExtendedHelpText =
+                        """
+
+                        Usage examples:
+                        rvn dns update -l license.json -d mycompany.development.run -n 10.0.0.1=a -n 10.0.0.2,2001:db8::1=b
+                        rvn dns update -l license.json -d mycompany.development.run -n 10.0.0.2=dashboard,db
+
+                        The first registers a.mycompany.development.run and b.mycompany.development.run (b with two IPs).
+                        The second points both dashboard.mycompany.development.run and db.mycompany.development.run at 10.0.0.2.
+                        Each -n|--node maps IP address(es) to one or more subdomains.
+
+                        """;
+                    subcmd.HelpOption(HelpOptionString);
+
+                    var licenseOpt = subcmd.Option("-l|--license", "Path to the license.json file.", CommandOptionType.SingleValue);
+                    var domainOpt = subcmd.Option("-d|--domain", "The full domain to update, e.g. 'mycompany.development.run'.", CommandOptionType.SingleValue);
+                    var nodeOpt = subcmd.Option("-n|--node", "A record in the form <ip>[,<ip>...]=<subdomain>[,<subdomain>...]. Can be specified multiple times, e.g. -n 10.0.0.1=a -n 10.0.0.2=dashboard,db -n 12.23.1.2,2001:db8::1=web.", CommandOptionType.MultipleValue);
+                    var registerTcpOpt = subcmd.Option("--register-tcp", "Also register the '<subdomain>-tcp' DNS record(s) for each node.", CommandOptionType.NoValue);
+
+                    subcmd.OnExecuteAsync(async token =>
+                    {
+                        if (licenseOpt.HasValue() == false)
+                            return ExitWithError("-l|--license must be provided.", subcmd);
+
+                        if (domainOpt.HasValue() == false)
+                            return ExitWithError("-d|--domain must be provided.", subcmd);
+
+                        if (nodeOpt.HasValue() == false)
+                            return ExitWithError("At least one -n|--node <ip>[,<ip>...]=<subdomain>[,<subdomain>...] must be provided.", subcmd);
+
+                        try
+                        {
+                            await DnsRecordUpdate.RunAsync(
+                                licenseOpt.Value(),
+                                domainOpt.Value(),
+                                nodeOpt.Values,
+                                registerTcpOpt.HasValue(),
+                                token);
+
+                            return 0;
+                        }
+                        catch (Exception e)
+                        {
+                            return ExitWithError(e.ToString(), subcmd);
+                        }
+                    });
+                });
+
+                cmd.OnExecute(() =>
+                {
+                    cmd.ShowHelp();
+                    return 1;
                 });
             });
         }

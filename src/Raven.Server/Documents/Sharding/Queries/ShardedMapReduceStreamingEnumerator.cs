@@ -40,6 +40,7 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
 
     private readonly Queue<BlittableJsonReaderObject> _resultsBuffer = new();
     private readonly List<BlittableJsonReaderObject> _currentBatch = new();
+    private readonly List<int> _matchedEnumerators = new();
     private readonly List<IDisposable> _enumeratorsToDispose = new();
 
     public ShardedMapReduceStreamingEnumerator(
@@ -133,27 +134,35 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
             var minKeyItem = minEnumerator.Current;
 
             _currentBatch.Clear();
+            _matchedEnumerators.Clear();
 
+            // Collect every shard positioned on the min key WITHOUT advancing yet, and only advance
+            // (MoveNext) after the batch has been reduced. MoveNext may reallocate the memory, so we MUST
+            // first process this, and only after ReduceBatch can we call MoveNext
             // iterate backwards to easily remove exhausted enumerators
             for (int i = WorkEnumerators.Count - 1; i >= 0; i--)
             {
-                var enumerator = WorkEnumerators[i];
-
-                if (Comparer.Compare(enumerator.Current, minKeyItem) == 0)
+                if (Comparer.Compare(WorkEnumerators[i].Current, minKeyItem) == 0)
                 {
-                    _currentBatch.Add(enumerator.Current);
-
-                    if (enumerator.MoveNext() == false)
-                    {
-                        _enumeratorsToDispose.Add(WorkEnumerators[i]);
-                        WorkEnumerators.RemoveAt(i);
-                    }
+                    _currentBatch.Add(WorkEnumerators[i].Current);
+                    _matchedEnumerators.Add(i);
                 }
             }
 
-            // re-reduce on this specific batch
+            // re-reduce on this specific batch (all collected items are still valid - no MoveNext yet)
             _reducer ??= CreateBatchReducer();
             item = _reducer.ReduceBatch(_currentBatch);
+
+            // now that the batch is consumed, advance the matched enumerators. _matchedEnumerators is in
+            // descending index order, so RemoveAt does not shift indices we still need to visit.
+            foreach (var i in _matchedEnumerators)
+            {
+                if (WorkEnumerators[i].MoveNext() == false)
+                {
+                    _enumeratorsToDispose.Add(WorkEnumerators[i]);
+                    WorkEnumerators.RemoveAt(i);
+                }
+            }
 
             if (_queryFilter != null)
             {

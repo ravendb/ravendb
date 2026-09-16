@@ -41,6 +41,12 @@
             public const string DictionaryTraining = "Corax/DictionaryTraining";
         }
 
+        internal static class Cleanup
+        {
+            public const string Documents = "DocumentsCleanup";
+            public const string TimeSeries = "TimeSeriesCleanup";
+        }
+
         internal static class Storage
         {
             public const string Commit = "Storage/Commit";

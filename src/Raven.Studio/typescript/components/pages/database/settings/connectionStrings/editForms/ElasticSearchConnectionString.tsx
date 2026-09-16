@@ -25,7 +25,7 @@ import messagePublisher from "common/messagePublisher";
 import { mapElasticSearchAuthenticationToDto } from "../store/connectionStringsMapsToDto";
 import ConnectionTestResult from "../../../../../common/connectionTests/ConnectionTestResult";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
-import { useAppUrls } from "components/hooks/useAppUrls";
+import ExcludedDatabasesFormSelect from "./shared/ExcludedDatabasesFormSelect";
 import ElasticSearchCertificate from "./ElasticSearchCertificate";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
@@ -46,6 +46,7 @@ export default function ElasticSearchConnectionString({
     onSave,
 }: ElasticSearchStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["ElasticSearch"].map((x) => x.name);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const { control, formState, handleSubmit, setValue, trigger } = useForm<FormData>({
         mode: "all",
@@ -63,7 +64,6 @@ export default function ElasticSearchConnectionString({
     });
 
     const formValues = useWatch({ control });
-    const { forCurrentDatabase } = useAppUrls();
 
     const onCertificateUploaded = (data: string) => {
         const currentCertificates = formValues.certificatesBase64 ?? [];
@@ -249,10 +249,14 @@ export default function ElasticSearchConnectionString({
                     )}
                 </div>
             )}
-            <ConnectionStringUsedByTasks
-                tasks={initialConnection.usedByTasks}
-                urlProvider={forCurrentDatabase.editElasticSearchEtl}
-            />
+            <ConnectionStringUsedByTasks tasks={initialConnection.usedBy} connectionType={initialConnection.type} />
+            {isServerWide && (
+                <ExcludedDatabasesFormSelect
+                    control={control}
+                    name="excludedDatabases"
+                    usedBy={initialConnection.usedBy}
+                />
+            )}
         </Form>
     );
 }
@@ -268,6 +272,7 @@ interface NodeUrlProps {
 
 function NodeUrl({ idx, control, formValues, isDeleteButtonVisible, onDelete, trigger }: NodeUrlProps) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
     const { tasksService } = useServices();
 
     const asyncTest = useAsyncCallback(async () => {
@@ -277,11 +282,10 @@ function NodeUrl({ idx, control, formValues, isDeleteButtonVisible, onDelete, tr
         }
 
         const url = formValues.nodes[idx].url;
-        return tasksService.testElasticSearchNodeConnection(
-            databaseName,
-            url,
-            mapElasticSearchAuthenticationToDto(formValues)
-        );
+        const authDto = mapElasticSearchAuthenticationToDto(formValues);
+        return isServerWide
+            ? tasksService.testServerWideElasticSearchNodeConnection(url, authDto)
+            : tasksService.testElasticSearchNodeConnection(databaseName, url, authDto);
     });
 
     return (
@@ -395,6 +399,7 @@ const schema = yupObjectSchema<FormData>({
         .array()
         .of(yup.object({ url: yup.string().basicUrl().nullable().required() }))
         .min(1),
+    excludedDatabases: yup.array().of(yup.string()).optional(),
 });
 
 const yupSchemaResolver = yupResolver(schema);
@@ -413,5 +418,5 @@ function getDefaultValues(initialConnection: any, isForNewConnection: any): Form
         };
     }
 
-    return _.omit(initialConnection, "type", "usedByTasks");
+    return _.omit(initialConnection, "type", "usedBy");
 }

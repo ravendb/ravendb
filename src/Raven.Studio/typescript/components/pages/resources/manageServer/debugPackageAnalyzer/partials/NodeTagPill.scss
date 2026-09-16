@@ -1,0 +1,29 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.node-tag-circle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 21px;
+    height: 21px;
+    border-radius: sizes.$border-radius-pill;
+    font-size: 0.625rem;
+    font-weight: 800;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    color: colors.$black;
+    box-sizing: content-box;
+}
+
+tr {
+    .node-tag-circle {
+        border: 2px solid colors.$row-even-bg-var;
+    }
+
+    &.is-odd {
+        .node-tag-circle {
+            border-color: colors.$row-bg-var;
+        }
+    }
+}

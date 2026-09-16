@@ -16,6 +16,8 @@ namespace Raven.Client.Documents.Session.Tokens
             WhereTokens = new LinkedList<QueryToken>();
         }
 
+        public override WhereToken AddAlias(string alias) => this;
+
         public override void WriteTo(StringBuilder writer)
         {
             writer.Append("moreLikeThis(");

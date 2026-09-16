@@ -67,6 +67,13 @@ _NCrunch_RavenDB/
 artifacts/
 
 
+# Node
+node_modules/
+
+# Quill
+src/Raven.Quill.Web/dist/
+src/Raven.Quill.WhatsAppBridge/dist/
+
 # DNX Studio
 src/Raven.Studio/junit.xml
 junit.xml
@@ -126,7 +133,7 @@ temp
 /.idea
 .vscode
 /test/Tryouts/Databases/*
-bench/Micro.Benchmark/BenchmarkDotNet.Artifacts/
+BenchmarkDotNet.Artifacts/
 /src/Raven.Server/*.DotSettings
 /src/Raven.Pal/osxcross
 /src/Raven.Pal/*.nativecodeanalysis.xml
@@ -158,7 +165,11 @@ src/Raven.Pal/test-runner
 .cursorignore
 
 .agents/
+AGENTS.override.md
 
 .claude/
 src/.cache/
 src/Raven.Server/embeddings/
+
+# E2E setup-package zips carry real licenses + admin certs — never commit.
+/docker/quill/compose/.env

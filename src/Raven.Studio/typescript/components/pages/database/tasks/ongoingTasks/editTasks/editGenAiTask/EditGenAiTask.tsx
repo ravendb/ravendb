@@ -18,7 +18,6 @@ import EditGenAiTaskSteps from "./partials/EditGenAiTaskSteps";
 import EditGenAiTaskPlayground from "./partials/EditGenAiTaskPlayground";
 import useEditGenAiCancel from "./hooks/useEditGenAiCancel";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
-import { connectionStringsActions } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
 import { defaultItemsToProcess } from "components/pages/database/settings/documentExpiration/DocumentExpiration";
 import { TimeInSeconds } from "common/constants/timeInSeconds";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
@@ -52,8 +51,6 @@ export default function EditGenAiTask({ queryParams }: ReactQueryParamsProps<Que
         }
 
         dispatch(editGenAiTaskActions.getIsDocumentExpirationEnabled(databaseName));
-
-        dispatch(connectionStringsActions.viewContextSet("aiTask"));
 
         return () => {
             dispatch(editGenAiTaskActions.reset());

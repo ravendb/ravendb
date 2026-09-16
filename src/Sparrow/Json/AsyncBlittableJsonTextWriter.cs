@@ -15,6 +15,7 @@ namespace Sparrow.Json
         // PERF: Cache the RecyclableMemoryStream reference to avoid repeated casting
         private readonly RecyclableMemoryStream _innerStream;
         private readonly bool _continueOnCapturedContext;
+        private bool _wroteToOutputStream;
 
         internal static readonly AsyncLocal<bool> CaptureContextOnAwait = new();
 
@@ -67,6 +68,7 @@ namespace Sparrow.Json
             if (bytesCount == 0)
                 return new ValueTask<long>(0);
 
+            _wroteToOutputStream = true;
             _innerStream.Position = 0;
             // bufferSize is required by the netstandard2.0 overload but is unused by RecyclableMemoryStream.CopyToAsync, which writes each internal block directly.
             var copyTask = _innerStream.CopyToAsync(_outputStream, bufferSize: 4096, token);
@@ -93,47 +95,57 @@ namespace Sparrow.Json
         {
             DisposeInternal();
 
-            // PERF: Check if flush completed synchronously to avoid async state machine
-            var flushTask = FlushAsync(_cancellationToken);
-            if (flushTask.IsCompletedSuccessfully)
+            try
             {
+                // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = FlushAsync(_cancellationToken);
+                if (flushTask.IsCompletedSuccessfully == false)
+                    return DisposeAsyncSlow(flushTask);
+
                 // Fast synchronous path
-                var bytesWritten = flushTask.Result;
-                if (bytesWritten > 0)
+                flushTask.GetAwaiter().GetResult();
+                if (_wroteToOutputStream)
                 {
                     var outputFlushTask = _outputStream.FlushAsync(_cancellationToken);
-                    if (outputFlushTask.IsCompleted)
-                    {
-                        outputFlushTask.GetAwaiter().GetResult();
-                        return DisposeStreamAsync();
-                    }
-                    else
-                    {
+                    if (outputFlushTask.IsCompleted == false)
                         return DisposeAsyncSlow(outputFlushTask);
-                    }
-                }
-                else
-                {
-                    return DisposeStreamAsync();
+
+                    outputFlushTask.GetAwaiter().GetResult();
                 }
             }
-            
-            return DisposeAsyncSlow(flushTask);
+            catch
+            {
+                _stream.Dispose();
+                throw;
+            }
+
+            return DisposeStreamAsync();
         }
 
         private async ValueTask DisposeAsyncSlow(ValueTask<long> flushTask)
         {
-            var bytesWritten = await flushTask.ConfigureAwait(_continueOnCapturedContext);
-            if (bytesWritten > 0)
-                await _outputStream.FlushAsync(_cancellationToken).ConfigureAwait(_continueOnCapturedContext);
-
-            await DisposeStreamAsync().ConfigureAwait(_continueOnCapturedContext);
+            try
+            {
+                await flushTask.ConfigureAwait(_continueOnCapturedContext);
+                if (_wroteToOutputStream)
+                    await _outputStream.FlushAsync(_cancellationToken).ConfigureAwait(_continueOnCapturedContext);
+            }
+            finally
+            {
+                await DisposeStreamAsync().ConfigureAwait(_continueOnCapturedContext);
+            }
         }
 
         private async ValueTask DisposeAsyncSlow(Task outputFlushTask)
         {
-            await outputFlushTask.ConfigureAwait(_continueOnCapturedContext);
-            await DisposeStreamAsync().ConfigureAwait(_continueOnCapturedContext);
+            try
+            {
+                await outputFlushTask.ConfigureAwait(_continueOnCapturedContext);
+            }
+            finally
+            {
+                await DisposeStreamAsync().ConfigureAwait(_continueOnCapturedContext);
+            }
         }
 
         private ValueTask DisposeStreamAsync()

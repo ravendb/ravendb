@@ -78,6 +78,7 @@ namespace Voron.Impl
         private readonly WriteAheadJournal _journal;
         public ImmutableDictionary<long, PageFromScratchBuffer> ModifiedPagesInTransaction;
         private ImmutableDictionary<long, PageFromScratchBuffer> _scratchBuffersSnapshotToRollbackTo;
+        private bool _rollbackWouldRestoreFreedScratchPages;
         internal sealed class WriteTransactionPool
         {
 #if DEBUG
@@ -117,13 +118,15 @@ namespace Voron.Impl
 
         public Size TransactionSize => new Size(NumberOfModifiedPages * Constants.Storage.PageSize, SizeUnit.Bytes) + AdditionalMemoryUsageSize;
 
+        public long TotalAllocatedInBytes => _allocator._totalAllocated;
+
+        public long TotalEncryptionBufferInBytes => PagerTransactionState.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
+
         public Size AdditionalMemoryUsageSize
         {
             get
             {
-                var additionalMemoryUsageSize = PagerTransactionState.AdditionalMemoryUsageSize;
-                additionalMemoryUsageSize.Add(DecompressedBufferBytes, SizeUnit.Bytes);
-                return additionalMemoryUsageSize;
+                return new Size(DecompressedBufferBytes + TotalEncryptionBufferInBytes, SizeUnit.Bytes);
             }
         }
         public event Action<LowLevelTransaction> OnDispose;
@@ -610,6 +613,14 @@ namespace Voron.Impl
             return page;
         }
 
+        // once the page is freed the same memory can be handed out to a different page, and the pointer
+        // stops representing the modification of this one
+        internal bool DirtyPageStillBelongsTo(byte* dirtyPagePointer, long pageNumber)
+        {
+            return _scratchPagesInUse.TryGetValue(pageNumber, out var scratchPage) &&
+                   scratchPage.ReadWritableRawPagePointer(ref PagerTransactionState) == dirtyPagePointer;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private T GetPageHeaderFromDataFile<T>(long pageNumber) where T : unmanaged
         {
@@ -776,6 +787,11 @@ namespace Voron.Impl
             if (_scratchPagesInUse.TryGetValue(pageNumber, out PageFromScratchBuffer value) == false)
                 throw new InvalidOperationException($"The page {pageNumber} was not previous allocated in this transaction");
 
+            // shrinking a page of a committed transaction would mutate its scratch memory in place (readers may
+            // be looking at it) and would put a foreign page into _transactionPages, which both the journal write
+            // and Rollback() treat as this transaction's own allocations
+            Debug.Assert(value.AllocatedInTransaction == Id, $"ShrinkOverflowPage({pageNumber}) on a page allocated in tx {value.AllocatedInTransaction}, current tx is {Id}");
+
             var page = value.ReadWritable(this);
             if (page.IsOverflow == false || page.OverflowSize < newSize)
                 throw new InvalidOperationException($"The page {pageNumber} was is not an overflow page greater than {newSize}");
@@ -918,6 +934,11 @@ namespace Voron.Impl
                 }
             }
 
+            // The locator caches the page's scratch translation. The discard makes that entry
+            // stale. A re-allocation of the same page number would not overwrite it, because
+            // SetWritable skips entries that are already writable.
+            _pageLocator.Reset(pageNumber);
+
             _dirtyPages.Remove(pageNumber);
 
             UntrackDirtyPage(pageNumber);
@@ -1034,12 +1055,30 @@ namespace Voron.Impl
                 {
                     Environment.LastWorkTime = DateTime.UtcNow;
                 }
-                
+
                 CommitStage2_WriteToJournal();
             }
 
-            BeforeCommitFinalization?.Invoke(this);
+            InvokeBeforeCommitFinalization();
             CommitStage3_DisposeTransactionResources();
+        }
+
+        /// Once the journal holds the transaction, recovery will replay it no matter what the
+        /// in-memory state decides afterwards. A subscriber failing past that point means the
+        /// application observed a rollback the store will not honor. The environment must come
+        /// down for recovery instead of serving the divergent state.
+        private void InvokeBeforeCommitFinalization()
+        {
+            try
+            {
+                BeforeCommitFinalization?.Invoke(this);
+            }
+            catch (Exception e) when (WrittenToJournalNumber >= 0)
+            {
+                _txStatus |= TxStatus.Errored;
+                _env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
+                throw;
+            }
         }
 
         internal Task<bool> AsyncCommit;
@@ -1163,7 +1202,7 @@ namespace Voron.Impl
                     Environment.LastWorkTime = DateTime.UtcNow;
             }
 
-            BeforeCommitFinalization?.Invoke(this);
+            InvokeBeforeCommitFinalization();
             CommitStage3_DisposeTransactionResources();
         }
 
@@ -1335,19 +1374,34 @@ namespace Voron.Impl
 
             ValidateReadOnlyPages();
 
-            var rollbackPages = _env.WriteTransactionPool.ScratchPagesInUse;
-
             // we need to roll back all the changes we made here
             _env.WriteTransactionPool.ScratchPagesInUse = _scratchPagesInUse = _scratchBuffersSnapshotToRollbackTo.ToBuilder();
-            foreach (var (k, maybeRollBack) in rollbackPages)
-            {
-                if (maybeRollBack.AllocatedInTransaction != Id)
-                    continue; // from a committed transaction, can keep
 
-                _env.ScratchBufferPool.FreeImmediately(this, maybeRollBack.File.Number, maybeRollBack.PositionInScratchBuffer);
+            // We need to free pages allocated by this transaction in a scratch buffer.
+            // During tx, we did partial cleanup via `DiscardScratchModificationOn`
+            // So only pages currently allocated by this transaction need to be freed.
+            var forTestingPurposes = _forTestingPurposes;
+            foreach (var scratchPage in _transactionPages)
+            {
+                if (forTestingPurposes != null)
+                    forTestingPurposes.ScratchPagesExaminedDuringRollback++;
+
+                Debug.Assert(scratchPage.AllocatedInTransaction == Id,
+                    $"Scratch page {scratchPage.PositionInScratchBuffer} in the pages of transaction {Id} was allocated in transaction {scratchPage.AllocatedInTransaction}");
+
+                _env.ScratchBufferPool.FreeImmediately(this, scratchPage.File.Number, scratchPage.PositionInScratchBuffer);
             }
 
             RolledBack = true;
+
+            if (_rollbackWouldRestoreFreedScratchPages)
+            {
+                Debug.Assert(AppliedJournalStateAfterFlush, "Scratch pages of older transactions are freed only by the journal flush-state update");
+
+                // the restored scratch state cannot be trusted - force an environment unload and a clean recovery
+                _env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(
+                    new InvalidOperationException("Rollback of a transaction that applied the journal flush-state update has restored mappings to already freed scratch pages. The in-memory scratch state cannot be trusted, the environment must be reloaded to recover a consistent state.")));
+            }
         }
 
         public void RetrieveCommitStats(out CommitStats stats)
@@ -1563,6 +1617,7 @@ namespace Voron.Impl
             private readonly LowLevelTransaction _tx;
             internal bool SimulateThrowingOnCommitStage2 = false;
 
+            internal long ScratchPagesExaminedDuringRollback;
             internal Action ActionToCallDuringEnsurePagerStateReference;
             internal Action ActionToCallJustBeforeWritingToJournal;
             internal Action ActionToCallDuringBeginAsyncCommitAndStartNewTransaction;
@@ -1639,6 +1694,9 @@ namespace Voron.Impl
 
         public void ForgetAboutScratchPage(PageFromScratchBuffer value)
         {
+            if (_rollbackWouldRestoreFreedScratchPages == false) // once set, no need to keep checking
+                _rollbackWouldRestoreFreedScratchPages = RollbackWouldRestoreFreedScratchPage(value);
+
             if (_scratchPagesInUse.TryGetValue(value.PageNumberInDataFile, out var existing) == false)
             {
                 // page may have been freed, that is expected
@@ -1650,6 +1708,15 @@ namespace Voron.Impl
                 return; // transaction scratch page is different
 
             _scratchPagesInUse.Remove(value.PageNumberInDataFile);
+        }
+
+        private bool RollbackWouldRestoreFreedScratchPage(PageFromScratchBuffer value)
+        {
+            // checking if Rollback()'s snapshot restore would really bring back a mapping onto a freed scratch position (via _scratchBuffersSnapshotToRollbackTo)
+
+            return value.AllocatedInTransaction != Id && // the free is done on behalf of an older committed transaction - only a piggybacked journal flush-state update does that
+                _scratchBuffersSnapshotToRollbackTo.TryGetValue(value.PageNumberInDataFile, out var mappedScratchPageAtTxStart) &&
+                mappedScratchPageAtTxStart.AllocatedInTransaction == value.AllocatedInTransaction; // not a newer version that superseded it before this tx started
         }
 
         public void RecordSparseRangeCandidate(long sectionPageNumber)

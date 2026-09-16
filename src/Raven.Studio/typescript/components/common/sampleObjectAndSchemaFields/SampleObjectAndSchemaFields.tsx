@@ -1,6 +1,6 @@
 import "./SampleObjectAndSchemaFields.scss";
 import { Icon } from "components/common/Icon";
-import AceEditor from "../ace/AceEditor";
+import AceEditor, { AceEditorProps } from "../ace/AceEditor";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import { FormAceEditor, FormErrorIcon, useErrorMessage } from "../Form";
 import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
@@ -14,6 +14,7 @@ import Tab from "react-bootstrap/Tab";
 import useUniqueId from "components/hooks/useUniqueId";
 import classNames from "classnames";
 import messagePublisher from "common/messagePublisher";
+import { AceEditorSamplesPanelConfig } from "../ace/AceEditorSamplesPanel";
 
 interface SampleObjectAndSchemaFieldsProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> {
     control: Control<TFieldValues>;
@@ -21,13 +22,15 @@ interface SampleObjectAndSchemaFieldsProps<TFieldValues extends FieldValues, TNa
     sampleObjectName: TName;
     sampleObjectLabel?: ReactNode;
     sampleObject: string;
-    sampleObjectSyntaxHelp: React.ReactNode;
+    sampleObjectSyntaxHelp?: React.ReactNode;
+    sampleObjectSamplesPanel?: AceEditorSamplesPanelConfig;
     sampleObjectTooltip?: ReactNode;
     sampleObjectPlaceholder?: string;
     jsonSchemaName: TName;
     jsonSchemaLabel?: ReactNode;
     jsonSchema: string;
-    jsonSchemaSyntaxHelp: React.ReactNode;
+    jsonSchemaSyntaxHelp?: React.ReactNode;
+    jsonSchemaSamplesPanel?: AceEditorSamplesPanelConfig;
     jsonSchemaTooltip?: ReactNode;
     schemaType?: Raven.Server.Web.Studio.StudioTasksHandler.SchemaType;
     helpActionTooltipTitle?: string;
@@ -44,12 +47,14 @@ export default function SampleObjectAndSchemaFields<
     sampleObjectLabel = "Sample response object",
     sampleObject,
     sampleObjectSyntaxHelp,
+    sampleObjectSamplesPanel,
     sampleObjectTooltip = <DefaultSampleObjectTooltip />,
     sampleObjectPlaceholder,
     jsonSchemaName,
     jsonSchemaLabel = "JSON schema",
     jsonSchema,
     jsonSchemaSyntaxHelp,
+    jsonSchemaSamplesPanel,
     jsonSchemaTooltip = <DefaultJsonSchemaTooltip />,
     schemaType,
     helpActionTooltipTitle,
@@ -93,6 +98,19 @@ export default function SampleObjectAndSchemaFields<
 
     const defaultActiveTab = jsonSchema ? "json-schema" : "sample-object";
 
+    const sampleObjectActions = buildEditorActions({
+        onLoadFile: (value) => setValue(sampleObjectName, value as TFieldValues[TName], { shouldValidate: true }),
+        syntaxHelp: sampleObjectSyntaxHelp,
+        samplesPanel: sampleObjectSamplesPanel,
+        helpTooltipTitle: helpActionTooltipTitle,
+    });
+
+    const jsonSchemaActions = buildEditorActions({
+        onLoadFile: (value) => setValue(jsonSchemaName, value as TFieldValues[TName], { shouldValidate: true }),
+        syntaxHelp: jsonSchemaSyntaxHelp,
+        samplesPanel: jsonSchemaSamplesPanel,
+    });
+
     return (
         <div className="sample-object-and-schema-tabs">
             <Tabs defaultActiveKey={defaultActiveTab} id={tabsId}>
@@ -117,30 +135,8 @@ export default function SampleObjectAndSchemaFields<
                             name={sampleObjectName}
                             mode="json"
                             placeholder={sampleObjectPlaceholder}
-                            actions={[
-                                { component: <AceEditor.FullScreenAction /> },
-                                { component: <AceEditor.FormatAction /> },
-                                {
-                                    component: (
-                                        <AceEditor.LoadFileAction
-                                            onLoad={(value) =>
-                                                setValue(sampleObjectName, value as TFieldValues[TName], {
-                                                    shouldValidate: true,
-                                                })
-                                            }
-                                        />
-                                    ),
-                                },
-                                {
-                                    component: (
-                                        <AceEditor.HelpAction
-                                            message={sampleObjectSyntaxHelp}
-                                            tooltipTitle={helpActionTooltipTitle}
-                                        />
-                                    ),
-                                    position: "bottom",
-                                },
-                            ]}
+                            actions={sampleObjectActions}
+                            samplesPanel={sampleObjectSamplesPanel}
                             isFullScreenLabelHidden
                         />
                         {!!sampleObject && !jsonSchema && (
@@ -172,25 +168,8 @@ export default function SampleObjectAndSchemaFields<
                                 control={control}
                                 name={jsonSchemaName}
                                 mode="json"
-                                actions={[
-                                    { component: <AceEditor.FullScreenAction /> },
-                                    { component: <AceEditor.FormatAction /> },
-                                    {
-                                        component: (
-                                            <AceEditor.LoadFileAction
-                                                onLoad={(value) =>
-                                                    setValue(jsonSchemaName, value as TFieldValues[TName], {
-                                                        shouldValidate: true,
-                                                    })
-                                                }
-                                            />
-                                        ),
-                                    },
-                                    {
-                                        component: <AceEditor.HelpAction message={jsonSchemaSyntaxHelp} />,
-                                        position: "bottom",
-                                    },
-                                ]}
+                                actions={jsonSchemaActions}
+                                samplesPanel={jsonSchemaSamplesPanel}
                                 isFullScreenLabelHidden
                             />
                             {!!sampleObject && !jsonSchema && (
@@ -232,6 +211,34 @@ export default function SampleObjectAndSchemaFields<
             </Tabs>
         </div>
     );
+}
+
+interface BuildEditorActionsArgs {
+    onLoadFile: (value: string) => void;
+    syntaxHelp?: ReactNode;
+    samplesPanel?: AceEditorSamplesPanelConfig;
+    helpTooltipTitle?: string;
+}
+
+function buildEditorActions({
+    onLoadFile,
+    syntaxHelp,
+    samplesPanel,
+    helpTooltipTitle,
+}: BuildEditorActionsArgs): AceEditorProps["actions"] {
+    return [
+        { component: <AceEditor.FullScreenAction /> },
+        { component: <AceEditor.FormatAction /> },
+        { component: <AceEditor.LoadFileAction onLoad={onLoadFile} /> },
+        ...(!samplesPanel && syntaxHelp
+            ? [
+                  {
+                      component: <AceEditor.HelpAction message={syntaxHelp} tooltipTitle={helpTooltipTitle} />,
+                      position: "bottom" as const,
+                  },
+              ]
+            : []),
+    ];
 }
 
 function DefaultSampleObjectTooltip() {

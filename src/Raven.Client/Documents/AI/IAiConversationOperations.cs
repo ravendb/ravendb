@@ -84,6 +84,27 @@ public interface IAiConversationOperations
         where TArgs : class;
 
     /// <summary>
+    /// Registers an asynchronous handler for a no-args action tool.
+    /// </summary>
+    void Handle<TResult>(string actionName, Func<Task<TResult>> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel)
+        where TResult : class;
+
+    /// <summary>
+    /// Registers a synchronous handler for a no-args action tool.
+    /// </summary>
+    void Handle(string actionName, Func<object> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel);
+
+    /// <summary>
+    /// Registers an asynchronous receiver for a no-args action tool.
+    /// </summary>
+    void Receive(string actionName, Func<AiAgentActionRequest, Task> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel);
+
+    /// <summary>
+    /// Registers a synchronous receiver for a no-args action tool.
+    /// </summary>
+    void Receive(string actionName, Action<AiAgentActionRequest> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel);
+
+    /// <summary>
     /// Asynchronously executes one “turn” of the conversation:  
     /// sends the current prompt, processes any required actions,  
     /// and awaits the agent’s reply.
@@ -155,6 +176,152 @@ public interface IAiConversationOperations
     /// </list>
     /// </returns>
     AiAnswer<TAnswer> Run<TAnswer>();
+
+    /// <summary>
+    /// Asynchronously executes one "turn" of the conversation with output format options,
+    /// allowing the caller to override the agent's default output schema or disable structured output.
+    /// </summary>
+    /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
+    /// <param name="outputOptions">Options controlling the output format for this turn.</param>
+    /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
+    Task<AiAnswer<TAnswer>> RunWithSchemaAsync<TAnswer>(AiOutputOptions outputOptions, CancellationToken token = default);
+
+    /// <summary>
+    /// Asynchronously executes one "turn" of the conversation with streaming and output format options.
+    /// </summary>
+    /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
+    /// <param name="streamPropertyPath">The property of the response to stream. Not used when <see cref="AiOutputOptions.NoSchema"/> is true.</param>
+    /// <param name="streamedChunksCallback">A callback function invoked with streamed chunks.</param>
+    /// <param name="outputOptions">Options controlling the output format for this turn.</param>
+    /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
+    Task<AiAnswer<TAnswer>> StreamWithSchemaAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, AiOutputOptions outputOptions, CancellationToken token = default);
+
+    /// <summary>
+    /// Asynchronously executes one "turn" of the conversation with streaming and output format options.
+    /// </summary>
+    /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
+    /// <param name="streamPropertyPath">The property of the response to stream. Not used when <see cref="AiOutputOptions.NoSchema"/> is true.</param>
+    /// <param name="streamedChunksCallback">A callback function invoked with streamed chunks.</param>
+    /// <param name="outputOptions">Options controlling the output format for this turn.</param>
+    /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
+    Task<AiAnswer<TAnswer>> StreamWithSchemaAsync<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Func<string, Task> streamedChunksCallback, AiOutputOptions outputOptions, CancellationToken token = default);
+
+    /// <summary>
+    /// Asynchronously executes one "turn" of the conversation with streaming, using a sample object to derive the output schema.
+    /// </summary>
+    /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
+    /// <param name="streamPropertyPath">The property of the response to stream.</param>
+    /// <param name="streamedChunksCallback">A callback function invoked with streamed chunks.</param>
+    /// <param name="sampleObject">A sample object used to derive the output schema for this turn.</param>
+    /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
+    Task<AiAnswer<TAnswer>> StreamWithSchemaAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, TAnswer sampleObject, CancellationToken token = default);
+
+    /// <summary>
+    /// Asynchronously executes one "turn" of the conversation with streaming, using a sample object to derive the output schema.
+    /// </summary>
+    /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
+    /// <param name="streamPropertyPath">The property of the response to stream.</param>
+    /// <param name="streamedChunksCallback">A callback function invoked with streamed chunks.</param>
+    /// <param name="sampleObject">A sample object used to derive the output schema for this turn.</param>
+    /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
+    Task<AiAnswer<TAnswer>> StreamWithSchemaAsync<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Func<string, Task> streamedChunksCallback, TAnswer sampleObject, CancellationToken token = default);
+
+    /// <summary>
+    /// Asynchronously streams the full response as raw text without structured output.
+    /// </summary>
+    /// <param name="streamedChunksCallback">A callback function invoked with streamed text chunks.</param>
+    /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
+    Task<AiAnswer<string>> StreamAsync(Func<string, Task> streamedChunksCallback, CancellationToken token = default);
+
+    /// <summary>
+    /// Synchronously executes one "turn" of the conversation, streaming the specified property's value for immediate feedback.
+    /// </summary>
+    /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
+    /// <param name="streamPropertyPath">The property of the response to stream.</param>
+    /// <param name="streamedChunksCallback">A callback invoked synchronously with each streamed chunk.</param>
+    AiAnswer<TAnswer> Stream<TAnswer>(string streamPropertyPath, Action<string> streamedChunksCallback);
+
+    /// <summary>
+    /// Synchronously executes one "turn" of the conversation, streaming the specified property's value for immediate feedback.
+    /// </summary>
+    /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
+    /// <param name="streamPropertyPath">A strongly-typed expression selecting the property of the response to stream.</param>
+    /// <param name="streamedChunksCallback">A callback invoked synchronously with each streamed chunk.</param>
+    AiAnswer<TAnswer> Stream<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Action<string> streamedChunksCallback);
+
+    /// <summary>
+    /// Synchronously executes one "turn" of the conversation with streaming and output format options.
+    /// </summary>
+    /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
+    /// <param name="streamPropertyPath">The property of the response to stream. Not used when <see cref="AiOutputOptions.NoSchema"/> is true.</param>
+    /// <param name="streamedChunksCallback">A callback invoked synchronously with each streamed chunk.</param>
+    /// <param name="outputOptions">Options controlling the output format for this turn.</param>
+    AiAnswer<TAnswer> StreamWithSchema<TAnswer>(string streamPropertyPath, Action<string> streamedChunksCallback, AiOutputOptions outputOptions);
+
+    /// <summary>
+    /// Synchronously executes one "turn" of the conversation with streaming and output format options.
+    /// </summary>
+    /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
+    /// <param name="streamPropertyPath">A strongly-typed expression selecting the property of the response to stream. Not used when <see cref="AiOutputOptions.NoSchema"/> is true.</param>
+    /// <param name="streamedChunksCallback">A callback invoked synchronously with each streamed chunk.</param>
+    /// <param name="outputOptions">Options controlling the output format for this turn.</param>
+    AiAnswer<TAnswer> StreamWithSchema<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Action<string> streamedChunksCallback, AiOutputOptions outputOptions);
+
+    /// <summary>
+    /// Synchronously streams the full response as raw text without structured output.
+    /// </summary>
+    /// <param name="streamedChunksCallback">A callback invoked synchronously with each streamed text chunk.</param>
+    AiAnswer<string> Stream(Action<string> streamedChunksCallback);
+
+    /// <summary>
+    /// Asynchronously executes one turn of the conversation without structured output, returning raw text.
+    /// </summary>
+    /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
+    Task<AiAnswer<string>> RunAsync(CancellationToken token = default);
+
+    /// <summary>
+    /// Synchronously executes one turn of the conversation without structured output, returning raw text.
+    /// </summary>
+    AiAnswer<string> Run();
+
+    /// <summary>
+    /// Synchronously executes one turn of the conversation with output format options.
+    /// </summary>
+    /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
+    /// <param name="outputOptions">Options controlling the output format for this turn.</param>
+    AiAnswer<TAnswer> RunWithSchema<TAnswer>(AiOutputOptions outputOptions);
+
+    /// <summary>
+    /// Asynchronously executes one "turn" of the conversation, deriving the output schema from
+    /// <paramref name="sampleObject"/> for this turn only.
+    /// </summary>
+    /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
+    /// <param name="sampleObject">A sample instance used to generate the JSON schema sent to the LLM.</param>
+    /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
+    Task<AiAnswer<TAnswer>> RunWithSchemaAsync<TAnswer>(TAnswer sampleObject, CancellationToken token = default);
+
+    /// <summary>
+    /// Asynchronously executes one "turn" of the conversation with an explicit JSON schema override for this turn only.
+    /// </summary>
+    /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
+    /// <param name="schema">An explicit JSON schema string to send to the LLM for this turn.</param>
+    /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
+    Task<AiAnswer<TAnswer>> RunWithSchemaAsync<TAnswer>(string schema, CancellationToken token = default);
+
+    /// <summary>
+    /// Synchronously executes one "turn" of the conversation, deriving the output schema from
+    /// <paramref name="sampleObject"/> for this turn only.
+    /// </summary>
+    /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
+    /// <param name="sampleObject">A sample instance used to generate the JSON schema sent to the LLM.</param>
+    AiAnswer<TAnswer> RunWithSchema<TAnswer>(TAnswer sampleObject);
+
+    /// <summary>
+    /// Synchronously executes one "turn" of the conversation with an explicit JSON schema override for this turn only.
+    /// </summary>
+    /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
+    /// <param name="schema">An explicit JSON schema string to send to the LLM for this turn.</param>
+    AiAnswer<TAnswer> RunWithSchema<TAnswer>(string schema);
 
     /// <summary>
     /// The identifier of this conversation.

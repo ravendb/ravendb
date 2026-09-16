@@ -20,6 +20,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Server.Utils;
 
 #pragma warning disable SKEXP0001
+using Raven.Server.Documents.TasksErrors;
 
 namespace Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 

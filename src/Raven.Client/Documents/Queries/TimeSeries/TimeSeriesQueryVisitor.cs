@@ -139,7 +139,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                     }
 
                     var typedLambda = Expression.Lambda<Action<ITimePeriodBuilder>>(methodCall, lambda.TailCall, lambda.Parameters);
-                    var compiledAction = typedLambda.Compile();
+                    var compiledAction = typedLambda.Compile(preferInterpretation: true);
                     timePeriod = GetGroupByArgsFromAction(compiledAction, out with, out groupByTag);
                     break;
                 }
