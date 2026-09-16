@@ -942,11 +942,8 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     {
         _treeStructureVersion++;
         
-        if (_internalCursor._pos == 0) // need to create a root page
-        {
-            // We are going to be creating a root page with our first trained dictionary. 
-            CreateRootPage(ref currentCauseForSplit, valueForSplit);
-        }
+        if (_internalCursor._pos == 0 || ShouldPromoteLeaf())
+            WrapPageInBranch(ref currentCauseForSplit, valueForSplit);
 
         // We create the new dictionary 
         ref var state = ref _internalCursor._stk[_internalCursor._pos];
@@ -1165,13 +1162,24 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         }
     }
 
-    private void CreateRootPage(ref TLookupKey k, long v)
+    private bool ShouldPromoteLeaf()
+    {
+        if (_internalCursor._stk[_internalCursor._pos].Header->IsBranch)
+            return false;
+
+        // a leaf splitting next to a branch sibling would add leaf pointers next to branch pointers
+        ref var parent = ref _internalCursor._stk[_internalCursor._pos - 1];
+        var sibling = GetValue(ref parent, parent.LastSearchPosition == 0 ? 1 : 0);
+        return ((LookupPageHeader*)_llt.GetPage(sibling).Pointer)->IsBranch;
+    }
+
+    private void WrapPageInBranch(ref TLookupKey k, long v)
     {
         _state.BranchPages++;
 
         ref var state = ref _internalCursor._stk[_internalCursor._pos];
 
-        // we'll copy the current page and reuse it, to avoid changing the root page number
+        // we'll copy the current page and reuse it, to avoid changing the page number the parent points to
         var page = _llt.AllocatePage(1);
 
         long cpy = page.PageNumber;
@@ -1306,6 +1314,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             }
         }
     }
+
     private void FindPageFor(ref TLookupKey key, ref IteratorCursorState cstate)
     {
         cstate._pos = -1;
