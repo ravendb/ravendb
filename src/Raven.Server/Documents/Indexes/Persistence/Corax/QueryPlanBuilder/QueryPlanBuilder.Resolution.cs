@@ -671,7 +671,7 @@ internal static partial class QueryPlanBuilder
             }
             if (ctx.OrderByFields[0].MayHaveMissingEntries)
             {
-                rejectReason = "some documents have no value for the sort field (a direct scan can't place them in order)";
+                rejectReason = "some documents have no value of the sort field's type (a direct scan can't place them in order)";
                 return false;
             }
             if (ctx.OrderByFields[0].FieldType is not (MatchCompareFieldType.Sequence or MatchCompareFieldType.Integer or MatchCompareFieldType.Floating))
