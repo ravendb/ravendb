@@ -1,7 +1,7 @@
 import React from "react";
 import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "./stories/ImportDatabaseFromFile.stories";
-import { act, rtlRender, waitFor } from "test/rtlTestUtils";
+import { act, fireEvent, rtlRender, waitFor } from "test/rtlTestUtils";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 import { defaultTransformScript } from "./useImportFromFileForm";
@@ -551,15 +551,18 @@ describe("ImportDatabaseFromFile", () => {
             expect(operateOnTypesOf(dto)).toEqual(adminDefaultOperateOnTypes);
         });
 
-        it("sends the hand-typed collection list when collections are customized", async () => {
+        it("sends the customized collection list when collections are customized", async () => {
             const rendered = rtlRender(<Default hasAllLicenseFeatures />);
-            const { screen, fireClick, fillInput } = rendered;
+            const { screen, fireClick } = rendered;
             await selectFile(rendered);
 
             await fireClick(screen.getByRole("button", { name: /Customize imported collections/ }));
-            await fillInput(screen.getByPlaceholderText("Type a collection name from the imported file"), "Orders");
-            await fireClick(screen.getByRole("button", { name: /Add/ }));
-            await waitFor(() => expect(screen.getByRole("checkbox", { name: "Orders" })).toBeChecked());
+
+            // free-text mode is a plain text input: type a name and press Enter to add it
+            const collectionInput = screen.getByPlaceholderText("Enter collection name");
+            fireEvent.change(collectionInput, { target: { value: "Orders" } });
+            fireEvent.keyDown(collectionInput, { key: "Enter", code: "Enter" });
+            await waitFor(() => expect(screen.getByText("Orders")).toBeInTheDocument());
 
             const dto = await importAndGetDto(rendered);
             expect(dto.Collections).toEqual(["Orders"]);

@@ -119,9 +119,9 @@ export default function ConfigurationToImportSection() {
     return (
         <ImportSection id="configuration-to-import" title="Configuration to import">
             <div className="d-flex justify-content-between align-items-center mb-2">
-                <div id="database-entities" className="small-label">
+                <h4 id="database-entities" className="m-0">
                     Select database entities
-                </div>
+                </h4>
                 <Button variant="link" size="sm" onClick={() => setAllEntities(!areAllEntitiesSelected)}>
                     {areAllEntitiesSelected ? "Deselect all" : "Select all"}
                 </Button>
@@ -168,7 +168,7 @@ export default function ConfigurationToImportSection() {
                     <div>
                         <div className="row mt-3">
                             <div className="col-md-6">
-                                <div className="import-list-header mb-2">
+                                <div className="import-list-header mb-1">
                                     <span className="flex-grow-1 fw-semibold">Ongoing tasks</span>
                                     <div className="d-flex align-items-center gap-2">
                                         <span>Select all</span>
@@ -184,26 +184,27 @@ export default function ConfigurationToImportSection() {
                                         />
                                     </div>
                                 </div>
-                                <div className="d-flex flex-column gap-1">
+                                <div>
                                     {ongoingTaskKeys.map((key) => (
-                                        <RestrictedSwitch
-                                            key={key}
-                                            control={control}
-                                            name={`configuration.ongoingTasks.${key}`}
-                                            restriction={ongoingTaskRestrictions[key]}
-                                            warning={
-                                                tasksMissingConnectionStrings.includes(key)
-                                                    ? missingConnectionStringWarning
-                                                    : undefined
-                                            }
-                                        >
-                                            {ongoingTaskLabels[key]}
-                                        </RestrictedSwitch>
+                                        <div key={key} className="import-list-item">
+                                            <RestrictedSwitch
+                                                control={control}
+                                                name={`configuration.ongoingTasks.${key}`}
+                                                restriction={ongoingTaskRestrictions[key]}
+                                                warning={
+                                                    tasksMissingConnectionStrings.includes(key)
+                                                        ? missingConnectionStringWarning
+                                                        : undefined
+                                                }
+                                            >
+                                                {ongoingTaskLabels[key]}
+                                            </RestrictedSwitch>
+                                        </div>
                                     ))}
                                 </div>
                             </div>
                             <div className="col-md-6">
-                                <div className="import-list-header mb-2">
+                                <div className="import-list-header mb-1">
                                     <span className="flex-grow-1 fw-semibold">Connection strings</span>
                                     <div className="d-flex align-items-center gap-2">
                                         <span>Select all</span>
@@ -219,16 +220,17 @@ export default function ConfigurationToImportSection() {
                                         />
                                     </div>
                                 </div>
-                                <div className="d-flex flex-column gap-1">
+                                <div>
                                     {connectionStringKeys.map((key) => (
-                                        <RestrictedSwitch
-                                            key={key}
-                                            control={control}
-                                            name={`configuration.connectionStrings.${key}`}
-                                            restriction={connectionStringRestrictions[key]}
-                                        >
-                                            {connectionStringLabels[key]}
-                                        </RestrictedSwitch>
+                                        <div key={key} className="import-list-item">
+                                            <RestrictedSwitch
+                                                control={control}
+                                                name={`configuration.connectionStrings.${key}`}
+                                                restriction={connectionStringRestrictions[key]}
+                                            >
+                                                {connectionStringLabels[key]}
+                                            </RestrictedSwitch>
+                                        </div>
                                     ))}
                                 </div>
                             </div>
@@ -237,14 +239,14 @@ export default function ConfigurationToImportSection() {
                 </Collapse>
                 {isIncludeTasks && (
                     <Alert variant="info" className="mt-3 mb-0">
-                        <Icon icon="info" /> Imported ongoing tasks will be disabled by default.
+                        <Icon icon="info" color="info" /> Imported ongoing tasks will be disabled by default.
                     </Alert>
                 )}
             </div>
 
-            <div id="database-settings" className="small-label mb-2">
+            <h4 id="database-settings" className="mb-2">
                 Select database settings
-            </div>
+            </h4>
             <Card className="p-4">
                 <div className="d-flex gap-2">
                     <button
@@ -266,7 +268,7 @@ export default function ConfigurationToImportSection() {
                 </div>
                 {!isImportAllSettings && (
                     <div className="mt-4">
-                        <div className="import-list-header mb-2">
+                        <div className="import-list-header mb-1">
                             <span className="flex-grow-1 fw-semibold">Setting name</span>
                             <div className="d-flex align-items-center gap-2">
                                 <span>Select all</span>
@@ -281,17 +283,18 @@ export default function ConfigurationToImportSection() {
                                 />
                             </div>
                         </div>
-                        <div className="d-flex flex-column gap-1">
+                        <div>
                             {databaseSettingKeys.map((key) => (
-                                <RestrictedSwitch
-                                    key={key}
-                                    control={control}
-                                    name={`configuration.databaseSettings.${key}`}
-                                    restriction={settingRestrictions[key]}
-                                    warning={settingLimitWarnings[key]}
-                                >
-                                    {databaseSettingLabels[key]}
-                                </RestrictedSwitch>
+                                <div key={key} className="import-list-item">
+                                    <RestrictedSwitch
+                                        control={control}
+                                        name={`configuration.databaseSettings.${key}`}
+                                        restriction={settingRestrictions[key]}
+                                        warning={settingLimitWarnings[key]}
+                                    >
+                                        {databaseSettingLabels[key]}
+                                    </RestrictedSwitch>
+                                </div>
                             ))}
                         </div>
                     </div>
