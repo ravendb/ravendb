@@ -1,4 +1,6 @@
 import React, { JSX, UIEvent, useEffect, useRef } from "react";
+import classNames from "classnames";
+import "./ImportResultModal.scss";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Collapse from "react-bootstrap/Collapse";
@@ -58,25 +60,25 @@ export default function ImportResultModal({ progress, status, startTime, endTime
 
     return (
         <Modal size="lg" show onHide={onClose} className="modal-border bulge-primary">
-            <Modal.Header closeButton onCloseClick={onClose}>
-                <h4 className="mb-0">
-                    <Icon icon="import-database" /> Database import
-                </h4>
+            <Modal.Header closeButton onCloseClick={onClose} className="pb-0">
+                <h3 className="mb-0">
+                    <Icon icon="import-database" color="primary" /> Database import
+                </h3>
             </Modal.Header>
             <Modal.Body>
                 <div className="import-result-row">
-                    <span>Date</span>
+                    <span className="text-muted">Date</span>
                     <span>{moment(startTime).format("YYYY MMMM Do, h:mm A")}</span>
                 </div>
                 <div className="import-result-row">
-                    <span>Duration</span>
+                    <span className="text-muted">Duration</span>
                     <span>{duration}</span>
                 </div>
                 <div className="import-result-row">
-                    <span>Status</span>
+                    <span className="text-muted">Status</span>
                     <OperationStatusBadge status={status} />
                 </div>
-                <Table className="mt-3 mb-0">
+                <Table className="import-result-table mt-3 mb-0">
                     <thead>
                         <tr>
                             <th></th>
@@ -104,11 +106,11 @@ export default function ImportResultModal({ progress, status, startTime, endTime
                 </Collapse>
             </Modal.Body>
             <Modal.Footer>
+                <Button onClick={onClose} variant="link" className="link-muted">
+                    Close
+                </Button>
                 <Button variant="secondary" onClick={toggleDetails}>
                     <Icon icon="preview" /> {isDetailsVisible ? "Hide details" : "Show details"}
-                </Button>
-                <Button onClick={onClose} variant="secondary">
-                    <Icon icon="close" /> Close
                 </Button>
             </Modal.Footer>
         </Modal>
@@ -134,7 +136,8 @@ function OperationStatusBadge({ status }: { status: OperationStatus }) {
         case "InProgress":
             return (
                 <Badge bg="info" className="d-inline-flex align-items-center">
-                    <Spinner size="sm" className="me-2" /> In progress
+                    <Spinner className="me-1" style={{ width: "0.85em", height: "0.85em", borderWidth: "0.15em" }} /> In
+                    progress
                 </Badge>
             );
         default:
@@ -145,13 +148,15 @@ function OperationStatusBadge({ status }: { status: OperationStatus }) {
 function ImportResultTableRow({ row, operationStatus }: { row: ImportResultRow; operationStatus: OperationStatus }) {
     const rowStatus = getRowStatus(row, operationStatus);
     return (
-        <tr>
-            <td className={row.isNested ? "ps-4" : "fw-bold"}>
-                {row.isNested && <Icon icon="arrow-right" margin="me-1" />}
+        <tr className={classNames({ "import-result-nested": row.isNested })}>
+            <td className={classNames("import-result-name", { "ps-4": row.isNested })}>
+                {row.isNested && <Icon icon="arrow-corner-down-right" color="secondary" margin="me-1" />}
                 {row.name}
             </td>
             <td>
-                {rowStatus.icon} {rowStatus.label}
+                <span className={rowStatus.color && `text-${rowStatus.color}`}>
+                    {rowStatus.icon} {rowStatus.label}
+                </span>
             </td>
             <td>{row.counts.ReadCount.toLocaleString()}</td>
             <td>{getSkippedCount(row.counts)}</td>
@@ -190,17 +195,19 @@ function buildRows(progress: SmugglerResult): ImportResultRow[] {
     ].filter((row) => row.counts != null);
 }
 
+type RowStatusColor = "success" | "warning" | "danger";
+
 function getRowStatus(
     { counts, parent }: ImportResultRow,
     operationStatus: OperationStatus
-): { label: string; icon: JSX.Element } {
+): { label: string; icon: JSX.Element; color?: RowStatusColor } {
     if (counts.Skipped) {
-        return { label: "Skipped", icon: <Icon icon="skip" color="warning" /> };
+        return { label: "Skipped", icon: <Icon icon="skip" color="warning" />, color: "warning" };
     }
     if (counts.Processed) {
         return counts.ErroredCount > 0
-            ? { label: "Processed with errors", icon: <Icon icon="warning" color="warning" /> }
-            : { label: "Processed", icon: <Icon icon="check" color="success" /> };
+            ? { label: "Processed with errors", icon: <Icon icon="warning" color="warning" />, color: "warning" }
+            : { label: "Processed", icon: <Icon icon="check" color="success" />, color: "success" };
     }
     if (operationStatus === "InProgress") {
         const isStarted = !!(counts.StartTime ?? parent?.StartTime);
@@ -208,7 +215,7 @@ function getRowStatus(
             ? { label: "Processing", icon: <Spinner size="sm" className="me-2" /> }
             : { label: "Pending", icon: <Icon icon="waiting" /> };
     }
-    return { label: "Not processed", icon: <Icon icon="cancel" color="danger" /> };
+    return { label: "Not processed", icon: <Icon icon="cancel" color="danger" />, color: "danger" };
 }
 
 function getSkippedCount(counts: Counts): string {
