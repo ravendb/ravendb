@@ -29,22 +29,22 @@ function createConfiguration(azureSettings: RemoteAttachmentsAzureSettings): Rem
 }
 
 describe("remoteAttachmentsUtils azure credentials", () => {
-    it("maps account key from DTO into the form", () => {
+    it("selects account key authentication when DTO has an account key", () => {
         const form = remoteAttachmentsUtils.mapFromDto(
             createConfiguration({ ...azureSettingsBase, AccountKey: "key" })
         );
 
+        expect(form.destinations[0].azure.authType).toBe("accountKey");
         expect(form.destinations[0].azure.accountKey).toBe("key");
-        expect(form.destinations[0].azure.sasToken).toBeNull();
     });
 
-    it("maps SAS token from DTO into the form", () => {
+    it("selects SAS token authentication when DTO has a SAS token", () => {
         const form = remoteAttachmentsUtils.mapFromDto(
             createConfiguration({ ...azureSettingsBase, SasToken: sasToken })
         );
 
+        expect(form.destinations[0].azure.authType).toBe("sasToken");
         expect(form.destinations[0].azure.sasToken).toBe(sasToken);
-        expect(form.destinations[0].azure.accountKey).toBeNull();
     });
 
     it("keeps SAS token when a destination round-trips through the form", () => {
@@ -54,5 +54,18 @@ describe("remoteAttachmentsUtils azure credentials", () => {
 
         expect(roundTripped.Destinations[destinationIdentifier].AzureSettings.SasToken).toBe(sasToken);
         expect(roundTripped.Destinations[destinationIdentifier].AzureSettings.AccountKey).toBeNull();
+    });
+
+    it("sends only the selected credential to the server", () => {
+        const form = remoteAttachmentsUtils.mapFromDto(
+            createConfiguration({ ...azureSettingsBase, AccountKey: "key" })
+        );
+        form.destinations[0].azure.authType = "sasToken";
+        form.destinations[0].azure.sasToken = sasToken;
+
+        const azureSettings = remoteAttachmentsUtils.mapToDto(form).Destinations[destinationIdentifier].AzureSettings;
+
+        expect(azureSettings.SasToken).toBe(sasToken);
+        expect(azureSettings.AccountKey).toBeNull();
     });
 });

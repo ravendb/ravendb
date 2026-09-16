@@ -1,6 +1,7 @@
 import { yupObjectSchema } from "components/utils/yupUtils";
 import {
     AmazonDestination,
+    AzureAuthType,
     AzureDestination,
     BackupConfigurationScript,
     FormDestinationDataBase,
@@ -133,10 +134,16 @@ export const s3Schema = yupObjectSchema<WithoutAmazonAndBase<S3Destination>>({
     .concat(destinationBaseSchema)
     .concat(amazonSchema);
 
-export const azureCredentialsMessages = {
-    required: "Account key or SAS token is required",
-    exclusive: "Account key and SAS token cannot be used simultaneously",
-};
+function yupRequiredStringForAzureAuthType(authType: AzureAuthType) {
+    return yup
+        .string()
+        .nullable()
+        .when(["isEnabled", "config", "authType"], {
+            is: (isEnabled: boolean, config: BackupConfigurationScript, selectedAuthType: AzureAuthType) =>
+                isEnabled && !config.isOverrideConfig && selectedAuthType === authType,
+            then: (schema) => schema.required(),
+        });
+}
 
 export const azureSchema = yupObjectSchema<WithoutBase<AzureDestination>>({
     storageContainer: yup
@@ -160,30 +167,9 @@ export const azureSchema = yupObjectSchema<WithoutBase<AzureDestination>>({
         }),
     remoteFolderName: yup.string().nullable(),
     accountName: yupRequiredStringForEnabled,
-    accountKey: yup
-        .string()
-        .nullable()
-        .when(["isEnabled", "config"], {
-            is: (isEnabled: boolean, config: BackupConfigurationScript) => isEnabled && !config.isOverrideConfig,
-            then: (schema) =>
-                schema.test(
-                    "account-key-or-sas-token",
-                    azureCredentialsMessages.required,
-                    (value, ctx) => !!value || !!ctx.parent.sasToken
-                ),
-        }),
-    sasToken: yup
-        .string()
-        .nullable()
-        .when(["isEnabled", "config"], {
-            is: (isEnabled: boolean, config: BackupConfigurationScript) => isEnabled && !config.isOverrideConfig,
-            then: (schema) =>
-                schema.test(
-                    "account-key-and-sas-token-exclusive",
-                    azureCredentialsMessages.exclusive,
-                    (value, ctx) => !value || !ctx.parent.accountKey
-                ),
-        }),
+    authType: yup.string<AzureAuthType>(),
+    accountKey: yupRequiredStringForAzureAuthType("accountKey"),
+    sasToken: yupRequiredStringForAzureAuthType("sasToken"),
 }).concat(destinationBaseSchema);
 
 const googleCloudSchema = yupObjectSchema<WithoutBase<GoogleCloudDestination>>({
