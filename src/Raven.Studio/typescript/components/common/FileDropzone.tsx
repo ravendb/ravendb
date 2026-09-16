@@ -12,6 +12,7 @@ interface FileDropzoneProps {
     validExtensions?: string[];
     initialFiles?: File[];
     className?: string;
+    showSelectedFiles?: boolean;
 }
 
 export default function FileDropzone({
@@ -20,7 +21,8 @@ export default function FileDropzone({
     maxFiles = Infinity,
     initialFiles = [],
     className,
-}: FileDropzoneProps & { [key: string]: any }) {
+    showSelectedFiles = true,
+}: FileDropzoneProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const { value: isDragging, toggle: toggleIsDragging } = useBoolean(false);
@@ -94,7 +96,7 @@ export default function FileDropzone({
                     })}
                 />
 
-                <DropzoneBody files={files} error={error} />
+                <DropzoneBody files={showSelectedFiles ? files : []} error={error} maxFiles={maxFiles} />
             </div>
             <ValidExtensionsList validExtensions={validExtensions || []} />
         </div>
@@ -104,9 +106,10 @@ export default function FileDropzone({
 interface DropzoneBodyProps {
     files: File[];
     error: string;
+    maxFiles: number;
 }
 
-function DropzoneBody({ files, error }: DropzoneBodyProps) {
+function DropzoneBody({ files, error, maxFiles }: DropzoneBodyProps) {
     if (error) {
         return (
             <div className="d-flex gap-3 flex-vertical">
@@ -124,7 +127,7 @@ function DropzoneBody({ files, error }: DropzoneBodyProps) {
             <div className="d-flex gap-3 flex-vertical">
                 <Icon icon="file-import" className="fs-2" margin="m-0" />
                 <span className="text-muted">
-                    Drop a file here or <span className="link">click to browse</span>
+                    Drop {maxFiles === 1 ? "a file" : "files"} here or <span className="link">click to browse</span>
                 </span>
             </div>
         );

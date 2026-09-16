@@ -1,0 +1,25 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.file-upload-list {
+    .file-upload-list-items.expanded {
+        max-height: 240px;
+        overflow-y: auto;
+    }
+
+    .file-upload-item {
+        display: flex;
+        align-items: center;
+        gap: sizes.$gutter-xs;
+        padding: sizes.$gutter-xs 0;
+    }
+
+    .file-upload-list-items > :not(:last-child) .file-upload-item {
+        border-bottom: 1px solid colors.$border-color-light-var;
+    }
+
+    .file-upload-item-details {
+        flex: 1;
+        min-width: 0;
+    }
+}
