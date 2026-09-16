@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
@@ -68,6 +70,87 @@ namespace FastTests.Issues
             Assert.True(failures.Count == 0,
                 "Stored documents grew after a patch that set one boolean, because the write-back embedded the property names of the other documents in the batch:" +
                 Environment.NewLine + string.Join(Environment.NewLine, failures));
+        }
+
+        /// <summary>
+        /// Rebuilding a document through ManualBlittableJsonDocumentBuilder (the patch write-back path) registers
+        /// every new property name in the context's CachedProperties. Every object close that followed a new name
+        /// then renumbered the global sort order of *all* names the context had seen, so the cost of writing one
+        /// document grew with the number of names accumulated from the documents written before it in the same
+        /// context: ~10 ms for the first document, ~130 ms by the tenth, seconds later on. The same bytes shaped
+        /// as arrays of objects with a Key field are not affected.
+        /// </summary>
+        [RavenFact(RavenTestCategory.Core)]
+        public void RebuildingDocumentsWithIdKeyedMapsMustNotGetSlowerAsTheContextSeesMorePropertyNames()
+        {
+            const int documents = 30;
+
+            // each source document lives in its own context so that parsing them does not accumulate names
+            var sourceContexts = new List<JsonOperationContext>();
+            var sources = new List<BlittableJsonReaderObject>();
+            try
+            {
+                for (int i = 0; i < documents; i++)
+                {
+                    var ctx = JsonOperationContext.ShortTermSingleUse();
+                    sourceContexts.Add(ctx);
+                    sources.Add(ctx.ReadObject(CreateMapShapedDocument(i, withMetadata: false), "events/" + i));
+                }
+
+                using (var warmup = JsonOperationContext.ShortTermSingleUse())
+                {
+                    for (int i = 0; i < 3; i++)
+                        Rebuild(warmup, sources[0]).Dispose();
+                }
+
+                // one context for all documents, like the merger's context across the commands of a merged transaction
+                var timings = new double[documents];
+                using (var writeContext = JsonOperationContext.ShortTermSingleUse())
+                {
+                    for (int i = 0; i < documents; i++)
+                    {
+                        var sw = Stopwatch.StartNew();
+                        Rebuild(writeContext, sources[i]).Dispose();
+                        timings[i] = sw.Elapsed.TotalMilliseconds;
+                    }
+                }
+
+                var first = Median(timings.Take(5));
+                var last = Median(timings.Skip(documents - 5));
+                var ratio = last / first;
+                Output.WriteLine($"first documents {first:F2} ms, last documents {last:F2} ms, ratio {ratio:F1}x");
+
+                // before the fix the last documents were ~10x slower than the first ones on the same hardware
+                Assert.True(ratio < 4, $"Writing the same-sized document became {ratio:F1}x slower ({first:F2} ms -> {last:F2} ms) as the context accumulated distinct property names.");
+            }
+            finally
+            {
+                foreach (var ctx in sourceContexts)
+                    ctx.Dispose();
+            }
+        }
+
+        // same path as the untouched parts of a patched document in JsBlittableBridge.WriteBlittableInstance:
+        // ManualBlittableJsonDocumentBuilder.WriteValue(StartObject) -> BlittableJsonReaderObject.AddItemsToStream
+        private static BlittableJsonReaderObject Rebuild(JsonOperationContext context, BlittableJsonReaderObject source)
+        {
+            using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+            {
+                context.CachedProperties.NewDocument();
+                builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
+                builder.StartWriteObjectDocument();
+                builder.StartWriteObject();
+                source.AddItemsToStream(builder);
+                builder.WriteObjectEnd();
+                builder.FinalizeDocument();
+                return builder.CreateReader();
+            }
+        }
+
+        private static double Median(IEnumerable<double> values)
+        {
+            var sorted = values.OrderBy(x => x).ToList();
+            return sorted[sorted.Count / 2];
         }
 
         private static Dictionary<string, int> GetStoredSizes(DocumentDatabase database)
