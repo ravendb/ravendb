@@ -657,6 +657,20 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexDefinitionBaseServerSide Definition { get; private set; }
 
+        private Corax.Querying.IndexSearcher.SearchQueryOptions? _coraxSearchQueryOptions;
+
+        public Corax.Querying.IndexSearcher.SearchQueryOptions CoraxSearchQueryOptions =>
+            _coraxSearchQueryOptions ??= ComputeCoraxSearchQueryOptions(Definition.Version);
+
+        private static Corax.Querying.IndexSearcher.SearchQueryOptions ComputeCoraxSearchQueryOptions(long indexVersion)
+        {
+            if (IndexDefinitionBaseServerSide.IndexVersion.IsCoraxSearchWildcardAdjustmentSupported(indexVersion))
+                return Corax.Querying.IndexSearcher.SearchQueryOptions.PhraseQueryWithWildcardAdjustments;
+            if (indexVersion >= IndexDefinitionBaseServerSide.IndexVersion.PhraseQuerySupportInCoraxIndexes)
+                return Corax.Querying.IndexSearcher.SearchQueryOptions.PhraseQuery;
+            return Corax.Querying.IndexSearcher.SearchQueryOptions.Legacy;
+        }
+
         public string Name => Definition?.Name;
 
         public int MaxNumberOfOutputsPerDocument { get; private set; }
@@ -934,9 +948,17 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public bool HasCompoundField(Slice first, Slice second, out int bindingId)
+        public bool HasCompoundFields => _compoundFields != null && _compoundFields.Count > 0;
+
+        public bool HasCompoundField(ByteStringContext allocator, string first, string second)
         {
-            bindingId = 0;
+            using (Slice.From(allocator, first, out var s1))
+            using (Slice.From(allocator, second, out var s2))
+                return HasCompoundField(s1, s2);
+        }
+        
+        public bool HasCompoundField(Slice first, Slice second)
+        {
             if (_compoundFields == null)
                 return false;
             var span = CollectionsMarshal.AsSpan(_compoundFields);
@@ -946,7 +968,6 @@ namespace Raven.Server.Documents.Indexes
                 if (cur.First.AsSpan().SequenceEqual(first.AsSpan()) &&
                     cur.Second.AsSpan().SequenceEqual(second.AsSpan()))
                 {
-                    bindingId = 1 + Definition.IndexFields.Count - span.Length + i; // 1 is ID()/hash(key) field.
                     return true;
                 }
             }

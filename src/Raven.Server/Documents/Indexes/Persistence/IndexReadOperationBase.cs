@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         public abstract long EntriesCount();
 
-        internal virtual void AssertCanOrderByScoreAutomaticallyWhenBoostingOrVectorSearchIsInvolved()
+        internal virtual void AssertCanOrderByScoreAutomaticallyWhenBoostingOrVectorSearchIsInvolved(bool hasVectorSearch)
         {
         }
 

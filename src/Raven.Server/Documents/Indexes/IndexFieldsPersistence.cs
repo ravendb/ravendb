@@ -53,12 +53,12 @@ namespace Raven.Server.Documents.Indexes
                 {
                     var dimensionsToWrite = indexField.Vector.DestinationEmbeddingType switch
                     {
-                        // In case of VectorEmbeddingType.Single the embedding length is multiplied by 4 (for every float we have 4 bytes), so to match this behavior we 
-                        // have to multiply the length here
+                        // Single: 4 bytes per float.
                         VectorEmbeddingType.Single => fieldDimensions.Value * sizeof(float),
+                        // Int8: one byte per dim + a 4-byte scale.
                         VectorEmbeddingType.Int8 => fieldDimensions.Value + sizeof(float),
-                        // We don't restore original number of binary vector dimensions, so this value is not relevant 
-                        VectorEmbeddingType.Binary => fieldDimensions.Value,
+                        // Binary (int1) is bit-packed: ceil(dims / 8) bytes.
+                        VectorEmbeddingType.Binary => (fieldDimensions.Value + 7) / 8,
                         _ => throw new InvalidDataException($"Unexpected embedding type - {indexField.Vector.DestinationEmbeddingType}.")
                     };
 

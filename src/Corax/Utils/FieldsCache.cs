@@ -32,8 +32,7 @@ public struct FieldsCache
         if (fieldRootPage != -1)
             return fieldRootPage;
 
-        var lookup = tree.CompactTreeFor(name);
-        fieldRootPage = lookup.RootPage;
+        fieldRootPage = tree.TryGetCompactTreeFor(name, out var lookup) ? lookup.RootPage : -1;
         return fieldRootPage;
     }
 

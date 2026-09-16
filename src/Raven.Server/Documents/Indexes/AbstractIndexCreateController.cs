@@ -14,6 +14,9 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Logging;
+using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -91,8 +94,10 @@ public abstract class AbstractIndexCreateController
 
         definition.RemoveDefaultValues();
         ValidateAnalyzers(definition);
-        
+
         ValidateConfiguration(definition);
+
+        ValidateCompoundFieldsForCorax(definition);
         
         if (definition.SourceType != IndexSourceType.Documents)
         {
@@ -227,6 +232,84 @@ public abstract class AbstractIndexCreateController
             }
         }
     }
+
+    private static readonly string IgnoreInvalidTokenizedCompoundFieldsConfigKey =
+        RavenConfiguration.GetKey(x => x.Indexing.CoraxIgnoreInvalidTokenizedCompoundFields);
+
+    private void ValidateCompoundFieldsForCorax(IndexDefinition definition)
+    {
+        if (definition.CompoundFields is not { Count: > 0 })
+            return;
+
+        // Version gate: a brand-new index is created at CurrentVersion (>= the gate) and is validated, but an
+        // update of an index that predates this validation keeps its older stored version, so we leave it alone
+        // rather than start rejecting a definition that was previously accepted.
+        IndexInformationHolder existing = GetIndex(definition.Name);
+        if (existing != null && existing.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.CoraxCompoundFieldFirstFieldValidation)
+            return;
+
+        RavenConfiguration databaseConfiguration = GetDatabaseConfiguration();
+
+        bool ignoreInvalid = databaseConfiguration.Indexing.CoraxIgnoreInvalidTokenizedCompoundFields;
+        // Per-index override (Configuration dictionary) wins over database/server defaults when present.
+        if (definition.Configuration != null &&
+            definition.Configuration.TryGetValue(IgnoreInvalidTokenizedCompoundFieldsConfigKey, out string overrideValue) &&
+            bool.TryParse(overrideValue, out bool parsedOverride))
+        {
+            ignoreInvalid = parsedOverride;
+        }
+
+        IndexFieldOptions allFieldsOptions = null;
+        definition.Fields?.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out allFieldsOptions);
+
+        foreach (string[] compoundField in definition.CompoundFields)
+        {
+            if (compoundField is not { Length: >= 1 })
+                continue;
+
+            string firstField = compoundField[0];
+            if (string.IsNullOrEmpty(firstField))
+                continue;
+
+            string rejectionReason = TryGetCompoundFirstFieldRejectionReason(definition, allFieldsOptions, firstField);
+            if (rejectionReason == null)
+                continue;
+
+            string message =
+                $"Cannot create index '{definition.Name}' because the first source field '{firstField}' of compound field " +
+                $"'compound({string.Join(",", compoundField)})' {rejectionReason}. " +
+                $"Compound fields require the first source field to use 'FieldIndexing.{FieldIndexing.Default}' " +
+                $"(LowerCaseKeyword analyzer) or 'FieldIndexing.{FieldIndexing.Exact}' (Keyword analyzer) " +
+                $"with no custom analyzer. " +
+                $"Either change the indexing option for '{firstField}', remove the compound field, " +
+                $"or set the '{IgnoreInvalidTokenizedCompoundFieldsConfigKey}' configuration option to 'true' " +
+                $"to suppress this validation and log a warning instead.";
+
+            if (ignoreInvalid == false)
+            {
+                throw new IndexInvalidException(message);
+            }
+
+            if (CompoundFieldValidationLogger.IsWarnEnabled)
+                CompoundFieldValidationLogger.Warn(message);
+        }
+    }
+
+    private static string TryGetCompoundFirstFieldRejectionReason(IndexDefinition definition, IndexFieldOptions allFieldsOptions, string fieldName)
+    {
+        IndexFieldOptions options = null;
+        definition.Fields?.TryGetValue(fieldName, out options);
+
+        return IndexField.ResolveIndexing(options, allFieldsOptions) switch
+        {
+            FieldIndexing.Search => $"resolves to a tokenizing analyzer (either '{nameof(FieldIndexing)}.{FieldIndexing.Search}' or a custom analyzer specified without an explicit '{nameof(FieldIndexing)}') that is not compatible with compound fields",
+            FieldIndexing.No => $"is configured with '{nameof(FieldIndexing)}.{FieldIndexing.No}' so its value is not indexed and cannot participate in a compound field",
+            _ => null
+        };
+    }
+
+    private static readonly RavenLogger CompoundFieldValidationLogger =
+        RavenLogManager.Instance.GetLoggerForServer<AbstractIndexCreateController>();
     
     private static void ValidateConfiguration(IndexDefinition definition)
     {

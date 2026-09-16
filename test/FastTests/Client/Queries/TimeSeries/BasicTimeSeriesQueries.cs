@@ -169,7 +169,6 @@ namespace FastTests.Client.Queries.TimeSeries
                     var results = session.Query<TsMapIndexResult>("MyTsIndex")
                         .Statistics(out var stats)
                         .ToList();
-WaitForUserToContinueTheTest(store);
                     Assert.False(stats.IsStale);
                     Assert.Equal(1, results.Count);
                     Assert.Contains(7, results.Select(x => x.HeartBeat));

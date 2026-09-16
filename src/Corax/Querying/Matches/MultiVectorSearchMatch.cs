@@ -5,23 +5,27 @@ using System.Globalization;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
 using Corax.Utils;
-using Sparrow.Server.Collections;
+using Voron.Data.RoaringBitmaps;
 using Sparrow.Server.Utils;
 using Voron.Data.Graphs;
 using Voron.Util;
 
 namespace Corax.Querying.Matches;
 
-public struct MultiVectorSearchMatch : IQueryMatch
+public struct MultiVectorSearchMatch : IPostFilterMatch
 {
     private const int ScanningThreshold = 1024;
+
+    /// <summary>Set by <c>QueryPlanBuilder.ApplyPostFilters</c> when this vector match was lifted to a top-level
+    /// post-filter. Left false when it is an ordinary leaf inside an OR branch.</summary>
+    public bool IsPostFilter { get; set; }
 
     private readonly IndexSearcher _indexSearcher;
     private readonly FieldMetadata _metadata;
     private readonly float _minimumMatch;
     private readonly int _numberOfCandidates;
     private readonly bool _isExact;
-    private VectorValue[] _vectorsToSearch;
+    private readonly VectorValue[] _vectorsToSearch;
 
 
     // Number of documents to be directly scanned instead of ANN / Exact on HNSW.
@@ -46,18 +50,19 @@ public struct MultiVectorSearchMatch : IQueryMatch
 
 
     /// <summary>
-    /// When VectorSearch is the only condition in the WHERE statement,
-    /// do not sort to fulfill the Fill guarantees.
-    /// Otherwise, sorting is necessary as it may produce incorrect results in the upper AST statements.
+    /// When true, results are returned in score order (sorted by distance, nearest-first) — the streaming Fill
+    /// fast path. Only safe when this vector search is the sole WHERE condition; otherwise the matches must be
+    /// entry-id sorted, as the upper AST statements (AND/OR merges, set-difference) rely on that ordering.
     /// </summary>
-    private readonly bool _singleVectorSearchDoNotSort;
+    private readonly bool _sortByScore;
 
-    private GrowableBitArray? _filterResults;
+    private RoaringBitmap _filterResults;
+    private bool _hasFilterResults;
+    private bool _ownsFilterResults;
     private IQueryMatch _filterQuery;
-    private long _filterMatchesCount;
 
     public MultiVectorSearchMatch(IndexSearcher searcher, in FieldMetadata metadata, in VectorValue[] vectorsToSearch, in float minimumMatch, in int numberOfCandidates,
-        in bool isExact, in bool singleVectorSearchDoNotSortByIds, IQueryMatch filterQuery, int scanningThreshold = ScanningThreshold, Random random = null)
+        in bool isExact, in bool sortByScore, IQueryMatch filterQuery, int scanningThreshold = ScanningThreshold, Random random = null)
     {
         _indexSearcher = searcher;
         _metadata = metadata;
@@ -69,7 +74,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
         _scanningThreshold = scanningThreshold;
         _random = random;
         IsBoosting = true;
-        _singleVectorSearchDoNotSort = singleVectorSearchDoNotSortByIds;
+        _sortByScore = sortByScore;
         _isEmpty = false;
     }
 
@@ -80,26 +85,30 @@ public struct MultiVectorSearchMatch : IQueryMatch
 
         if (_filterQuery != null)
         {
-            _filterResults = IndexSearcher.VectorSearchUtils.LoadFilterMatches(_indexSearcher, ref _filterQuery);
-            _filterMatchesCount = _filterResults!.Value.Count;
-            
+            // When filterQuery is IBitmapQueryMatch (e.g. CompiledQueryMatch), LoadFilterMatches
+            // borrows the bitmap directly without re-materialization. No separate fast-path
+            // needed here — the optimization lives in VectorSearchUtils.LoadFilterMatches.
+            _filterResults = IndexSearcher.VectorSearchUtils.LoadFilterMatches(_indexSearcher, ref _filterQuery, out _ownsFilterResults);
+            _hasFilterResults = true;
+
             // Shortcut for empty filter
-            if (_filterMatchesCount == 0)
+            if (_filterResults.ComputeCount() == 0)
             {
                 _isEmpty = true;
                 return;
             }
         }
 
-        _scanningQuery = IndexSearcher.VectorSearchUtils.ShouldScan(_indexSearcher, _filterMatchesCount, _isExact, _filterQuery, _scanningThreshold, _numberOfCandidates);
+        _scanningQuery = IndexSearcher.VectorSearchUtils.ShouldScan(_indexSearcher, _filterResults.ComputeCount(), _isExact, _filterQuery, _scanningThreshold, _numberOfCandidates);
         if (_scanningQuery)
         {
-            var hasNodes = IndexSearcher.VectorSearchUtils.TryConvertDocumentsIdsToNodesIds(_indexSearcher, _metadata, _filterResults!.Value, out _nodesIdsToScan);
+            var hasNodes = IndexSearcher.VectorSearchUtils.TryConvertDocumentsIdsToNodesIds(_indexSearcher, _metadata, ref _filterResults, out _nodesIdsToScan);
             if (hasNodes == false)
             {
                 _isEmpty = true;
                 _nodesIdsToScan.Dispose();
-                _filterResults?.Dispose();
+                if (_hasFilterResults && _ownsFilterResults)
+                    _filterResults.Dispose();
                 foreach (var vector in _vectorsToSearch)
                     vector.Dispose();
                 return;
@@ -110,20 +119,20 @@ public struct MultiVectorSearchMatch : IQueryMatch
         // so loaded node data (edges, vectors) is shared across them.
         var sharedSearchState = _indexSearcher.GetOrCreateVectorSearchState(_metadata.FieldName);
 
-        _isEmpty = sharedSearchState.IsEmpty || (_filterQuery != null && _filterResults!.Value.Count == 0);
+        _isEmpty = sharedSearchState.IsEmpty || (_hasFilterResults && _filterResults.ComputeCount() == 0);
     }
 
     public int Fill(Span<long> matches)
     {
         if (_vectorRetrieverInitialized == false)
             InitializeVectorSearch();
-        
+
         if (_resultsPersisted == false)
             FillAndPersistResults();
-        
+
         if (_isEmpty)
             return 0;
-        
+
         var resultsLeft = _matches.Count - _positionOnPersistedValues;
 
         if (resultsLeft == 0)
@@ -161,7 +170,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
             {
                 _ when _scanningQuery => Hnsw.ExactNearest(sharedSearchState, _numberOfCandidates, vector, _minimumMatch, false, _nodesIdsToScan),
                 true => Hnsw.ExactNearest(sharedSearchState, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null, null),
-                false when _filterQuery != null => Hnsw.ApproximateFilteredNearest(sharedSearchState, _numberOfCandidates, vector, _minimumMatch, new IndexSearcher.VectorSearchUtils.RandomNodesFromFilterEnumerator(_indexSearcher, _metadata, _filterResults!.Value, _random)),
+                false when _filterQuery != null => Hnsw.ApproximateFilteredNearest(sharedSearchState, _numberOfCandidates, vector, _minimumMatch, new IndexSearcher.VectorSearchUtils.RandomNodesFromFilterEnumerator(_indexSearcher, _metadata, _filterResults, _random)),
                 false => Hnsw.ApproximateNearest(sharedSearchState, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null),
             };
 
@@ -175,7 +184,10 @@ public struct MultiVectorSearchMatch : IQueryMatch
                 var distanceBuffer = _distances.GetSpace();
                 Debug.Assert(matchBuffer.Length == distanceBuffer.Length, "matchBuffer.Length == distanceBuffer.Length");
 
-                currentRead = vectorSearcher.Fill(matchBuffer, distanceBuffer, _filterResults);
+                currentRead = _hasFilterResults
+                    ? vectorSearcher.Fill(matchBuffer, distanceBuffer, ref _filterResults)
+                    : vectorSearcher.Fill(matchBuffer, distanceBuffer);
+
 
                 _matches.AddUsage(currentRead);
                 _distances.AddUsage(currentRead);
@@ -194,11 +206,13 @@ public struct MultiVectorSearchMatch : IQueryMatch
         _matches.Truncate(uniqueCount);
         _distances.Truncate(uniqueCount);
 
-        // Streaming query, we need to return already sorted
-        if (_singleVectorSearchDoNotSort) 
+        // Score order requested: re-sort into distance order (nearest-first) so Fill hands back best matches first.
+        // distances is the sort key; matches is permuted to follow.
+        if (_sortByScore)
             _distances.Results.Sort(_matches.Results);
         
-        _filterResults?.Dispose();
+        if (_hasFilterResults && _ownsFilterResults)
+            _filterResults.Dispose();
     }
 
     public int AndWith(Span<long> buffer, int matches)
@@ -212,19 +226,23 @@ public struct MultiVectorSearchMatch : IQueryMatch
         if (_isEmpty)
             return 0;
 
-        return MergeHelper.And(buffer, buffer[..matches], _matches.Results);
+        var results = _matches.Results;
+        return MergeHelper.And(buffer[..matches], buffer[..matches], results);
     }
+
+    // Vector match results are not entry-id ordered, so there is no sorted fast path; behaves exactly like Score.
+    public void ScoreSorted(Span<long> matches, Span<float> scores, float boostFactor) => Score(matches, scores, boostFactor);
 
     public void Score(Span<long> matches, Span<float> scores, float boostFactor)
     {
         if (_isEmpty || _resultsPersisted == false)
         {
-            // BinaryMatch may skip the method call if the other node of the AND clause 
-            // is empty, the evaluation of this primitive is pointless. In these cases, the call is ignored.
+            // The caller may invoke Score even when this match was not evaluated (e.g. the other
+            // side of an AND was empty). In these cases, the call is ignored.
             return;
         }
-        
-        if (_singleVectorSearchDoNotSort == false)
+
+        if (_sortByScore == false)
         {
             if (_filterQuery != null)
             {
@@ -257,15 +275,6 @@ public struct MultiVectorSearchMatch : IQueryMatch
 
     public long Count { get; private set; }
 
-    public SkipSortingResult AttemptToSkipSorting()
-    {
-        return _singleVectorSearchDoNotSort
-            ? SkipSortingResult.ResultsNativelySorted
-            : SkipSortingResult.SortingIsRequired;
-    }
-
-    public QueryCountConfidence Confidence => QueryCountConfidence.Low;
-
     public bool IsBoosting { get; }
 
     public QueryInspectionNode Inspect()
@@ -277,13 +286,18 @@ public struct MultiVectorSearchMatch : IQueryMatch
                 { nameof(Hnsw.SimilarityMethod), _firstRetriever.SimilarityMethod?.ToString() ?? "Query not initialized." },
                 { "IsExact", _isExact.ToString() },
                 { "IsScanning", _scanningQuery.ToString() },
-                { "Minimum match", _minimumMatch.ToString(CultureInfo.InvariantCulture) },
-                { "Number of candidates", _numberOfCandidates.ToString() },
-            });
+                { "MinimumMatch", _minimumMatch.ToString(CultureInfo.InvariantCulture) },
+                { "NumberOfCandidates", _numberOfCandidates.ToString() },
+            })
+        {
+            // Reflects the lifting decision recorded on this match, not the type: a vector leaf inside an OR is
+            // a pipeline leaf, not a post-filter (see IPostFilterMatch).
+            IsPostFilter = this.IsPostFilter
+        };
 
         if (_filterQuery is not null)
         {
-            return new QueryInspectionNode($"{nameof(BinaryMatch)} [And]",
+            return new QueryInspectionNode($"{nameof(MultiVectorSearchMatch)} [And]",
                 children: new List<QueryInspectionNode> { mvsInspect, _filterQuery.Inspect() },
                 parameters: new Dictionary<string, string>()
                 {
@@ -293,6 +307,4 @@ public struct MultiVectorSearchMatch : IQueryMatch
         
         return mvsInspect;
     }
-
-    public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;
 }

@@ -4,7 +4,7 @@ using Sparrow;
 
 namespace Corax.Querying.Matches.SortingMatches;
 
-public unsafe partial struct SortingMultiMatch<TInner>
+public unsafe sealed partial class SortingMultiMatch<TInner>
 {
 //This is used as second degree comparer for alphanumerical
     private readonly struct IndirectComparer2<TComparer2, TComparer3> : IComparer<int>
@@ -16,7 +16,7 @@ public unsafe partial struct SortingMultiMatch<TInner>
         private readonly IEntryComparer[] _nextComparers;
         private readonly int _maxDegreeOfInnerComparer;
 
-        public IndirectComparer2(ref SortingMultiMatch<TInner> match, TComparer2 cmp2, TComparer3 cmp3)
+        public IndirectComparer2(SortingMultiMatch<TInner> match, TComparer2 cmp2, TComparer3 cmp3)
         {
             _cmp2 = cmp2;
             _cmp3 = cmp3;
@@ -56,7 +56,7 @@ public unsafe partial struct SortingMultiMatch<TInner>
         private readonly IEntryComparer[] _nextComparers;
         private readonly int _maxDegreeOfInnerComparer;
 
-        public IndirectComparer(ref SortingMultiMatch<TInner> match, UnmanagedSpan* terms, TComparer1 entryComparer, TComparer2 cmp2, TComparer3 cmp3)
+        public IndirectComparer(SortingMultiMatch<TInner> match, UnmanagedSpan* terms, TComparer1 entryComparer, TComparer2 cmp2, TComparer3 cmp3)
         {
             _terms = terms;
             _cmp1 = entryComparer;

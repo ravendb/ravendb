@@ -13,15 +13,15 @@ public unsafe partial class IndexSearcher
     public SortingMatch OrderBy<TInner>(in TInner set, OrderMetadata metadata, NullsSortMode defaultNullsSortMode, int take = Constants.IndexSearcher.TakeAll, in CancellationToken token = default)
         where TInner : IQueryMatch
     {
-        return SortingMatch.Create(new SortingMatch<TInner>(this,  set, metadata, token, defaultNullsSortMode, take));
+        return new SortingMatch<TInner>(this, set, metadata, token, defaultNullsSortMode, take);
     }
-
-
+    
+        
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public SortingMultiMatch OrderBy<TInner>(in TInner set, OrderMetadata[] metadata, NullsSortMode defaultNullsSortMode,
         int take = Constants.IndexSearcher.TakeAll, in CancellationToken token = default)
         where TInner : IQueryMatch
     {
-        return SortingMultiMatch.Create(new SortingMultiMatch<TInner>(this,  set, metadata, defaultNullsSortMode, take, token: token));
+        return new SortingMultiMatch<TInner>(this, set, metadata, defaultNullsSortMode, take, token: token);
     }
 }

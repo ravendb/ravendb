@@ -58,7 +58,6 @@ public class RavenDB_23792 : RavenTestBase
                         x =>x.ForDocument("items/1-A"))
                     .Take(3)
                     .ToList();
-WaitForUserToContinueTheTest(store);
                 var appleIdx = q1.FindIndex(x=>x.Name == "Apple Juice");
                 var orangeIdx = q1.FindIndex(x=>x.Name == "Orange Cake");
 

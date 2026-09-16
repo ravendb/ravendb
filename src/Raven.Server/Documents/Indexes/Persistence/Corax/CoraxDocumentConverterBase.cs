@@ -42,9 +42,6 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     private readonly bool _canContainSourceDocumentId;
     private readonly bool _legacyHandlingOfComplexFields;
 
-    // RavenDB-26831: XOR mask applied to raw signed longs before writing them big-endian into a compound field,
-    // so byte order matches numeric order. long.MinValue flips the sign bit (order-preserving) for fixed indexes;
-    // 0 keeps the legacy (non-order-preserving) encoding for indexes created before the milestone.
     private readonly long _compoundFieldNumericXorMask;
     private static ReadOnlySpan<byte> TrueLiteral => "true"u8;
     private static ReadOnlySpan<byte> FalseLiteral => "false"u8;
@@ -94,9 +91,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     {
         _canContainSourceDocumentId = canContainSourceDocumentId;
         _legacyHandlingOfComplexFields = _index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.CoraxComplexFieldIndexingBehavior;
-        _compoundFieldNumericXorMask = _index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.CoraxOrderPreservingCompoundNumericEncoding
-            ? long.MinValue
-            : 0L;
+        _compoundFieldNumericXorMask = _index.Definition.CompoundFieldNumericXorMask;
 
         Allocator = new ByteStringContext(SharedMultipleUseFlag.None);
         
@@ -757,11 +752,12 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             return analyzedTerm.Length;
         }
 
-        // Raw signed long (numeric field values and DateTime/DateOnly/etc. ticks). The XOR mask makes the
-        // big-endian bytes order-preserving for negatives on fixed indexes; it is 0 on legacy indexes.
+        // Raw signed long (numeric / date ticks): apply the order-preserving XOR mask (RavenDB-26831) so negatives
+        // sort below positives under big-endian byte order on fixed indexes; legacy indexes use a 0 mask (no-op).
         void AppendLong(long l) => AppendSortableLong(l ^ _compoundFieldNumericXorMask);
 
-        // Value already order-preserving as a long (e.g. Bits.DoubleToSortableLong output); written as-is.
+        // Writes an already order-preserving long (e.g. Bits.DoubleToSortableLong output) as big-endian bytes. No
+        // XOR mask — the value is expected to already be in sortable form.
         void AppendSortableLong(long sortable)
         {
             EnsureHasSpace(sizeof(long));

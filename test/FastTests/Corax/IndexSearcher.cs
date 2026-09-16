@@ -11,16 +11,23 @@ using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
+using Corax.Querying.Planning;
 using Corax.Querying.Matches.SortingMatches;
 using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using FastTests.Voron;
+using Raven.Server.Documents.Indexes.Persistence.Corax;
+using Raven.Server.Documents.Indexes.Persistence.Corax.QueryPlanBuilder;
+using Raven.Server.Documents.Queries;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Tests.Infrastructure;
 using Voron;
+using Corax.Querying.Primitives;
+using Voron.Data.RoaringBitmaps;
 using Xunit;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using IndexWriter = Corax.Indexing.IndexWriter;
@@ -63,8 +70,8 @@ namespace FastTests.Corax
             using (var indexSearcher = new IndexSearcher(Env, knownFields))
             {
                 Assert.True(knownFields.TryGetByFieldId(ContentIndex, out var binding));
-                var query = indexSearcher.BetweenQuery(binding.Metadata, double.MinValue, double.MaxValue, UnaryMatchOperation.GreaterThanOrEqual,
-                    UnaryMatchOperation.LessThanOrEqual);
+                var query = indexSearcher.BetweenQuery(binding.Metadata, double.MinValue, double.MaxValue, ComparisonOperator.GreaterThanOrEqual,
+                    ComparisonOperator.LessThanOrEqual);
                 Span<long> ids = stackalloc long[64];
 
                 Assert.Equal(0, query.Fill(ids));
@@ -202,10 +209,8 @@ namespace FastTests.Corax
             }
         }
 
-        [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(BitmapAndFillMode.Off)]
-        [InlineData(BitmapAndFillMode.Force)]
-        public void EmptyAnd(BitmapAndFillMode bitmapAndFillMode)
+        [RavenFact(RavenTestCategory.Corax)]
+        public void EmptyAnd()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
             var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
@@ -214,20 +219,13 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
-                var match1 = searcher.TermQuery("Id", "entry/1");
-                var match2 = searcher.TermQuery("Content", "mountain");
-                var andMatch = searcher.And(in match1, in match2);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(0, andMatch.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Id = 'entry/1' AND Content = 'mountain'");
+                Assert.Equal(0, results.Count);
             }
         }
 
-        [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(BitmapAndFillMode.Off)]
-        [InlineData(BitmapAndFillMode.Force)]
-        public void SingleAndNoDuplication(BitmapAndFillMode bitmapAndFillMode)
+        [RavenFact(RavenTestCategory.Corax)]
+        public void SingleAndNoDuplication()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
             var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
@@ -237,21 +235,14 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
-                var match1 = searcher.InQuery("Content", new List<string>() {"road", "lake"});
-                var match2 = searcher.ExistsQuery(searcher.FieldMetadataBuilder("Content"));
-                var andMatch = searcher.And(in match1, in match2);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(2, andMatch.Fill(ids));
-                Assert.Equal(0, andMatch.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content IN ('road', 'lake')");
+                Assert.Equal(2, results.Count);
+                AssertIds(ResolveDocumentIds(results), "entry/1", "entry/2");
             }
         }
 
-        [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(BitmapAndFillMode.Off)]
-        [InlineData(BitmapAndFillMode.Force)]
-        public void SingleAnd(BitmapAndFillMode bitmapAndFillMode)
+        [RavenFact(RavenTestCategory.Corax)]
+        public void SingleAnd()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
             var entry2 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "mountain"},};
@@ -260,21 +251,15 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
-                var match1 = searcher.TermQuery("Id", "entry/1");
-                var match2 = searcher.TermQuery("Content", "mountain");
-                var andMatch = searcher.And(in match1, in match2);
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Id = 'entry/1' AND Content = 'mountain'");
 
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(1, andMatch.Fill(ids));
-                Assert.Equal(0, andMatch.Fill(ids));
+                Assert.Equal(1, results.Count);
+                AssertIds(ResolveDocumentIds(results), "entry/1");
             }
         }
 
-        [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(BitmapAndFillMode.Off)]
-        [InlineData(BitmapAndFillMode.Force)]
-        public void AllAnd(BitmapAndFillMode bitmapAndFillMode)
+        [RavenFact(RavenTestCategory.Corax)]
+        public void AllAnd()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake", "mountain"},};
             var entry2 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "mountain"},};
@@ -283,21 +268,16 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
-                var match1 = searcher.TermQuery("Id", "entry/1");
-                var match2 = searcher.TermQuery("Content", "mountain");
-                var andMatch = searcher.And(in match1, in match2);
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Id = 'entry/1' AND Content = 'mountain'");
 
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(2, andMatch.Fill(ids));
-                Assert.Equal(0, andMatch.Fill(ids));
+                Assert.Equal(2, results.Count);
+                Assert.NotEqual(results[0], results[1]); // two distinct index entries, not the same entry twice
+                AssertIds(ResolveDocumentIds(results), "entry/1", "entry/1");
             }
         }
 
-        [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(BitmapAndFillMode.Off)]
-        [InlineData(BitmapAndFillMode.Force)]
-        public void AllAndWithEmpty(BitmapAndFillMode bitmapAndFillMode)
+        [RavenFact(RavenTestCategory.Corax)]
+        public void AllAndWithEmpty()
         {
             var entries = Enumerable.Range(1, 10_000).Select(i => new IndexEntry {Id = $"entry/{i}", Content = new string[] {"road", "lake", "mountain"}}).ToArray();
 
@@ -306,20 +286,13 @@ namespace FastTests.Corax
             IndexEntries(bsc, entries, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
-                var match1 = searcher.AllEntries();
-                var match2 = searcher.TermQuery("Id", "Maciej");
-                var andMatch = searcher.And(in match1, in match2);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(0, andMatch.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Id = 'Maciej'");
+                Assert.Equal(0, results.Count);
             }
         }
 
-        [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(BitmapAndFillMode.Off)]
-        [InlineData(BitmapAndFillMode.Force)]
-        public void AllAndMemoized(BitmapAndFillMode bitmapAndFillMode)
+        [RavenFact(RavenTestCategory.Corax)]
+        public void AllAndMemoized()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake", "mountain"},};
             var entry2 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "mountain"},};
@@ -328,27 +301,15 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
-
-                var match1 = searcher.Memoize(searcher.TermQuery("Id", "entry/1"));
-                var match2 = searcher.Memoize(searcher.TermQuery("Content", "mountain"));
-                var andMatch = searcher.Memoize(searcher.And(match1.Replay(), match2.Replay()));
-
-                var replay1 = andMatch.Replay();
-                var replay2 = andMatch.Replay();
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(2, replay1.Fill(ids));
-                Assert.Equal(0, replay1.Fill(ids));
-                Assert.Equal(2, replay2.Fill(ids));
-                Assert.Equal(0, replay2.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Id = 'entry/1' AND Content = 'mountain'");
+                Assert.Equal(2, results.Count);
+                Assert.NotEqual(results[0], results[1]); // two distinct index entries, not the same entry twice
+                AssertIds(ResolveDocumentIds(results), "entry/1", "entry/1");
             }
         }
 
-        [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(BitmapAndFillMode.Off)]
-        [InlineData(BitmapAndFillMode.Force)]
-        public void EmptyOr(BitmapAndFillMode bitmapAndFillMode)
+        [RavenFact(RavenTestCategory.Corax)]
+        public void EmptyOr()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
             var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
@@ -357,21 +318,13 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
-                var match1 = searcher.TermQuery("Id", "entry/3");
-                var match2 = searcher.TermQuery("Content", "highway");
-                var orMatch = searcher.Or(in match1, in match2);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(0, orMatch.Fill(ids));
-                Assert.Equal(0, orMatch.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Id = 'entry/3' OR Content = 'highway'");
+                Assert.Equal(0, results.Count);
             }
         }
 
-        [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(BitmapAndFillMode.Off)]
-        [InlineData(BitmapAndFillMode.Force)]
-        public void SingleOr(BitmapAndFillMode bitmapAndFillMode)
+        [RavenFact(RavenTestCategory.Corax)]
+        public void SingleOr()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
             var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
@@ -380,29 +333,18 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                Span<long> ids = stackalloc long[16];
+                var results1 = ExecuteRQLQuery("FROM TestIndex WHERE Id = 'entry/1' OR Content = 'highway'");
+                Assert.Equal(1, results1.Count);
+                AssertIds(ResolveDocumentIds(results1), "entry/1");
 
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
-                var match1 = searcher.TermQuery("Id", "entry/1");
-                var match2 = searcher.TermQuery("Content", "highway");
-                var orMatch = searcher.Or(in match1, in match2);
-
-                Assert.Equal(1, orMatch.Fill(ids));
-                Assert.Equal(0, orMatch.Fill(ids));
-
-                match1 = searcher.TermQuery("Id", "entry/3");
-                match2 = searcher.TermQuery("Content", "mountain");
-                orMatch = searcher.Or(in match1, in match2);
-
-                Assert.Equal(1, orMatch.Fill(ids));
-                Assert.Equal(0, orMatch.Fill(ids));
+                var results2 = ExecuteRQLQuery("FROM TestIndex WHERE Id = 'entry/3' OR Content = 'mountain'");
+                Assert.Equal(1, results2.Count);
+                AssertIds(ResolveDocumentIds(results2), "entry/2");
             }
         }
 
-        [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(BitmapAndFillMode.Off)]
-        [InlineData(BitmapAndFillMode.Force)]
-        public void AllOr(BitmapAndFillMode bitmapAndFillMode)
+        [RavenFact(RavenTestCategory.Corax)]
+        public void AllOr()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
             var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
@@ -411,22 +353,14 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
-                var match1 = searcher.TermQuery("Id", "entry/1");
-                var match2 = searcher.TermQuery("Content", "mountain");
-                var orMatch = searcher.Or(in match1, in match2);
-
-                Span<long> ids = stackalloc long[16];
-
-                Assert.Equal(2, orMatch.Fill(ids));
-                Assert.Equal(0, orMatch.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Id = 'entry/1' OR Content = 'mountain'");
+                Assert.Equal(2, results.Count);
+                AssertIds(ResolveDocumentIds(results), "entry/1", "entry/2");
             }
         }
 
-        [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(BitmapAndFillMode.Off)]
-        [InlineData(BitmapAndFillMode.Force)]
-        public void AllOrInBatches(BitmapAndFillMode bitmapAndFillMode)
+        [RavenFact(RavenTestCategory.Corax)]
+        public void AllOrInBatches()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
             var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
@@ -436,22 +370,14 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
-                var match1 = searcher.TermQuery("Id", "entry/1");
-                var match2 = searcher.TermQuery("Content", "mountain");
-                var orMatch = searcher.Or(in match1, in match2);
-
-                Span<long> ids = stackalloc long[2];
-                Assert.Equal(2, orMatch.Fill(ids));
-                Assert.Equal(1, orMatch.Fill(ids));
-                Assert.Equal(0, orMatch.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Id = 'entry/1' OR Content = 'mountain'");
+                Assert.Equal(3, results.Count);
+                AssertIds(ResolveDocumentIds(results), "entry/1", "entry/2", "entry/3");
             }
         }
 
-        [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(BitmapAndFillMode.Off)]
-        [InlineData(BitmapAndFillMode.Force)]
-        public void SimpleAndOr(BitmapAndFillMode bitmapAndFillMode)
+        [RavenFact(RavenTestCategory.Corax)]
+        public void SimpleAndOr()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake", "mountain"},};
             var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
@@ -461,46 +387,26 @@ namespace FastTests.Corax
             IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
-                var match1 = searcher.TermQuery("Id", "entry/1");
-                var match2 = searcher.TermQuery("Content", "mountain");
-                var andMatch = searcher.And(in match1, in match2);
-                var match3 = searcher.TermQuery("Id", "entry/3");
-                var orMatch = searcher.Or(in andMatch, in match3);
-
-
-                Span<long> ids = stackalloc long[8];
-                Assert.Equal(2, orMatch.Fill(ids));
-                Assert.Equal(0, orMatch.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE (Id = 'entry/1' AND Content = 'mountain') OR Id = 'entry/3'");
+                Assert.Equal(2, results.Count);
+                AssertIds(ResolveDocumentIds(results), "entry/1", "entry/3");
             }
 
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
-                var match1 = searcher.TermQuery("Id", "entry/1");
-                var match2 = searcher.TermQuery("Content", "mountain");
-                var andMatch = searcher.And(in match1, in match2);
-                var match3 = searcher.TermQuery("Id", "entry/3");
-                var orMatch = searcher.Or(in match3, in andMatch);
-
-                Span<long> ids = stackalloc long[8];
-                Assert.Equal(2, orMatch.Fill(ids));
-                Assert.Equal(0, orMatch.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Id = 'entry/3' OR (Id = 'entry/1' AND Content = 'mountain')");
+                Assert.Equal(2, results.Count);
+                AssertIds(ResolveDocumentIds(results), "entry/1", "entry/3");
             }
         }
 
 
         [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(10, 3, BitmapAndFillMode.Off)]
-        [InlineData(8000, 18, BitmapAndFillMode.Off)]
-        [InlineData(1000, 8, BitmapAndFillMode.Off)]
-        [InlineData(1020, 7, BitmapAndFillMode.Off)]
-        [InlineData(201, 128, BitmapAndFillMode.Off)]
-        [InlineData(10, 3, BitmapAndFillMode.Force)]
-        [InlineData(8000, 18, BitmapAndFillMode.Force)]
-        [InlineData(1000, 8, BitmapAndFillMode.Force)]
-        [InlineData(1020, 7, BitmapAndFillMode.Force)]
-        [InlineData(201, 128, BitmapAndFillMode.Force)]
-        public void SimpleAndOrForBiggerSet(int setSize, int stackSize, BitmapAndFillMode bitmapAndFillMode)
+        [InlineData(new object[] {10, 3})]
+        [InlineData(new object[] {8000, 18})]
+        [InlineData(new object[] {1000, 8})]
+        [InlineData(new object[] {1020, 7})]
+        [InlineData(new object[] {201, 128})]
+        public void SimpleAndOrForBiggerSet(int setSize, int stackSize)
         {
             setSize = setSize - (setSize % 3);
             var matches = new List<IndexEntry>();
@@ -534,38 +440,16 @@ namespace FastTests.Corax
             var matchesId = matches.Select(x => x.IndexEntryId).ToList();
             matchesId.Sort();
             {
-                using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
-                var match1 = searcher.TermQuery("Content", "lake");
-                var match2 = searcher.TermQuery("Content", "mountain");
-                var andMatch = searcher.And(in match1, in match2);
-                var match3 = searcher.TermQuery("Content", "space");
-                var orMatch = searcher.Or(in andMatch, in match3);
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE (Content = 'lake' AND Content = 'mountain') OR Content = 'space'");
+                var sortedResults = results.ToArray();
+                Array.Sort(sortedResults);
 
-                var actual = new List<long>();
-                Span<long> ids = stackalloc long[stackSize];
-                int read;
-                int count = 0;
-                do
-                {
-                    read = orMatch.Fill(ids);
-                    count += read;
-                    actual.AddRange(ids[..read].ToArray());
-                } while (read != 0);
+                Assert.Equal(matchesId.Count, results.Count);
 
-                // Because there is no guarantee that multiple Fill operations would return sequential non redundant document ids,
-                // we need to sort and remove duplicates before actually testing the final condition. 
-                var sortedActual = actual.ToArray();
-                var uniqueIdsCount = Sorting.SortAndRemoveDuplicates(sortedActual.AsSpan());
-                var uniqueIds = sortedActual.AsSpan().Slice(0, uniqueIdsCount);
-                
-                Assert.Equal(matchesId.Count, uniqueIdsCount);
-                
-                for (int i = 0; i < uniqueIdsCount; i++)
+                for (int i = 0; i < results.Count; i++)
                 {
-                    Assert.Equal(matchesId[i], uniqueIds[i]);
+                    Assert.Equal(matchesId[i], sortedResults[i]);
                 }
-
-                Assert.Equal((setSize / 3) * 2, count);
             }
         }
 
@@ -579,49 +463,30 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             {
-                var match = searcher.InQuery("Content", new() {"road", "space"});
-
-                Span<long> ids = stackalloc long[2];
-                Assert.Equal(2, match.Fill(ids));
-                Assert.Equal(1, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content IN ('road', 'space')");
+                Assert.Equal(3, results.Count);
+                AssertIds(ResolveDocumentIds(results), "entry/1", "entry/2", "entry/3");
             }
 
             {
-                var match = searcher.InQuery("Content", new() {"road", "space"});
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(3, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content IN ('sky', 'space')");
+                Assert.Equal(1, results.Count);
+                AssertIds(ResolveDocumentIds(results), "entry/3");
             }
 
             {
-                var match = searcher.InQuery("Content", new() {"sky", "space"});
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(1, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
-            }
-
-            {
-                var match = searcher.InQuery("Content", new() {"road", "mountain", "space"});
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(3, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content IN ('road', 'mountain', 'space')");
+                Assert.Equal(3, results.Count);
+                AssertIds(ResolveDocumentIds(results), "entry/1", "entry/2", "entry/3");
             }
         }
 
         [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(1000, 8, BitmapAndFillMode.Off)]
-        [InlineData(300, 128, BitmapAndFillMode.Off)]
-        [InlineData(10000, 128, BitmapAndFillMode.Off)]
-        [InlineData(1000, 8, BitmapAndFillMode.Force)]
-        [InlineData(300, 128, BitmapAndFillMode.Force)]
-        [InlineData(10000, 128, BitmapAndFillMode.Force)]
-        public void AndInStatement(int setSize, int stackSize, BitmapAndFillMode bitmapAndFillMode)
+        [InlineData(new object[] {1000, 8})]
+        [InlineData(new object[] {300, 128})]
+        [InlineData(new object[] {10000, 128})]
+        public void AndInStatement(int setSize, int stackSize)
         {
             setSize = setSize - (setSize % 3);
 
@@ -652,58 +517,32 @@ namespace FastTests.Corax
             IndexEntries(bsc, entriesToIndex, CreateKnownFields(bsc));
 
             var matchIds = matches.Select(x => x.IndexEntryId).ToArray();
+            Array.Sort(matchIds);
 
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
             {
-                var match1 = searcher.InQuery("Content", new() {"lake", "mountain"});
-                var match2 = searcher.TermQuery("Content", "sky");
-                var andMatch = searcher.And(in match1, in match2);
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE (Content IN ('lake', 'mountain')) AND Content = 'sky'");
+                var resultsSorted = results.ToArray();
+                Array.Sort(resultsSorted);
 
-                var actual = new List<long>();
-                Span<long> ids = stackalloc long[stackSize];
-                int read;
-                do
+                Assert.Equal((setSize / 3), results.Count);
+
+                for (int i = 0; i < results.Count; i++)
                 {
-                    read = andMatch.Fill(ids);
-                    actual.AddRange(ids[..read].ToArray());
-                } while (read != 0);
-
-                var actualSorted = actual.ToArray();
-                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
-
-                for (int i = 0; i < actualSize; i++)
-                {
-                    Assert.Equal(matchIds[i], actualSorted[i]);
+                    Assert.Equal(matchIds[i], resultsSorted[i]);
                 }
-
-                Assert.Equal((setSize / 3), actualSize);
             }
 
             {
-                var match1 = searcher.TermQuery("Content", "sky");
-                var match2 = searcher.InQuery("Content", new() {"lake", "mountain"});
-                var andMatch = searcher.And(in match1, in match2);
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content = 'sky' AND (Content IN ('lake', 'mountain'))");
+                var resultsSorted = results.ToArray();
+                Array.Sort(resultsSorted);
 
-                var actual = new List<long>();
-                Span<long> ids = stackalloc long[stackSize];
-                int read;
-                int count = 0;
-                do
+                Assert.Equal((setSize / 3), results.Count);
+
+                for (int i = 0; i < results.Count; i++)
                 {
-                    read = andMatch.Fill(ids);
-                    actual.AddRange(ids[..read].ToArray());
-                    count += read;
-                } while (read != 0);
-
-                var actualSorted = actual.ToArray();
-                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
-
-                for (int i = 0; i < actualSize; i++)
-                {
-                    Assert.Equal(matchIds[i], actualSorted[i]);
+                    Assert.Equal(matchIds[i], resultsSorted[i]);
                 }
-
-                Assert.Equal((setSize / 3), actualSize);
             }
         }
 
@@ -812,97 +651,99 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, entries, CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-            var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
-
             {
-                var match = searcher.AllInQuery(contentMetadata, new HashSet<(string Term, bool Exact)>() {("quo", false), ("in", false)});
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(2, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content = 'quo' AND Content = 'in'");
+                Assert.Equal(2, results.Count);
+                AssertIds(ResolveDocumentIds(results), "entry/0", "entry/6");
             }
 
             {
-                var match = searcher.AllInQuery(contentMetadata, new HashSet<string>()
-                {
-                    "dolorem",
-                    "ipsa",
-                    "in",
-                    "omnis",
-                    "ullamco",
-                    "ab",
-                    "esse",
-                    "aut",
-                    "rem",
-                    "eu",
-                    "iure",
-                    "ad",
-                    "consequuntur",
-                    "est",
-                    "adipisci",
-                    "velit",
-                    "inventore",
-                    "nesciunt.",
-                    "ad",
-                    "vitae",
-                    "laborum.",
-                    "esse",
-                    "voluptate",
-                    "et",
-                    "fugiat",
-                    "fugiat",
-                    "voluptas",
-                    "quae",
-                    "dolor",
-                    "qui"
-                }.Select(x => (x, false)).ToHashSet());
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(1, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
+                // ALL IN requires every listed term to be present — only entry9 has all 27.
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content ALL IN ('dolorem', 'ipsa', 'in', 'omnis', 'ullamco', 'ab', 'esse', 'aut', 'rem', 'eu', 'iure', 'ad', 'consequuntur', 'est', 'adipisci', 'velit', 'inventore', 'nesciunt.', 'vitae', 'laborum.', 'voluptate', 'et', 'fugiat', 'voluptas', 'quae', 'dolor', 'qui')");
+                Assert.Equal(1, results.Count);
+                AssertIds(ResolveDocumentIds(results), "entry/9");
             }
 
             {
-                var match = searcher.AllInQuery(contentMetadata, new HashSet<string>()
-                {
-                    "dolorem",
-                    "ipsa",
-                    "in",
-                    "omnis",
-                    "ullamco",
-                    "ab",
-                    "esse",
-                    "aut",
-                    "rem",
-                    "eu",
-                    "iure",
-                    "ad",
-                    "consequuntur",
-                    "est",
-                    "adipisci",
-                    "velit",
-                    "inventore",
-                    "nesciunt.",
-                    "ad",
-                    "vitae",
-                    "laborum.",
-                    "esse",
-                    "voluptate",
-                    "et",
-                    "fugiat",
-                    "fugiat",
-                    "voluptas",
-                    "quae",
-                    "dolor",
-                    "THIS_IS_SUPER_UNIQUE_VALUE"
-                }.Select(x => (x, false)).ToHashSet());
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(0, match.Fill(ids));
+                // One term replaced with a unique value no entry has → 0 results.
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content ALL IN ('dolorem', 'ipsa', 'in', 'omnis', 'ullamco', 'ab', 'esse', 'aut', 'rem', 'eu', 'iure', 'ad', 'consequuntur', 'est', 'adipisci', 'velit', 'inventore', 'nesciunt.', 'vitae', 'laborum.', 'voluptate', 'et', 'fugiat', 'voluptas', 'quae', 'dolor', 'THIS_IS_SUPER_UNIQUE_VALUE')");
+                Assert.Equal(0, results.Count);
             }
         }
 
+
+        // RavenDB-25281: a backward StartsWith whose prefix has no finite successor (here {0xFF}) must seek to the
+        // END of the tree and walk down, since the prefix block is the tail. Reset() positions the backward
+        // iterator at the tree end. Terms are raw bytes (no analyzer) to build an all-0xFF prefix UTF-8 cannot produce.
+        [RavenFact(RavenTestCategory.Corax)]
+        public void BackwardStartsWith_PrefixWithNoFiniteSuccessor_WalksFromTreeEnd()
+        {
+            // Tree (ascending byte order): {0x10}, {0x20}, {0xFF,0x01}, {0xFF,0x02}, {0xFF,0xFF}.
+            // The {0xFF} prefix matches the last three; the first two must be excluded.
+            var entries = new (string Id, byte[] Term)[]
+            {
+                ("e/low1",  new byte[] { 0x10 }),
+                ("e/low2",  new byte[] { 0x20 }),
+                ("e/ff1",   new byte[] { 0xFF, 0x01 }),
+                ("e/ff2",   new byte[] { 0xFF, 0x02 }),
+                ("e/ffmax", new byte[] { 0xFF, 0xFF }),
+            };
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            var idToTerm = new Dictionary<long, byte[]>();
+            using (var indexWriter = new IndexWriter(Env, CreateKnownFields(bsc), SupportedFeatures.All))
+            {
+                foreach (var (id, term) in entries)
+                {
+                    using var builder = indexWriter.Index(id);
+                    builder.Write(IdIndex, PrepareString(id));
+                    builder.Write(ContentIndex, term);
+                    idToTerm[(long)builder.EntryId] = term;
+                    builder.EndWriting();
+                }
+
+                indexWriter.Commit();
+            }
+
+            static int Compare(byte[] a, byte[] b) => a.AsSpan().SequenceCompareTo(b);
+
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+            var contentMeta = searcher.FieldMetadataBuilder("Content", ContentIndex);
+            Slice.From(Allocator, new byte[] { 0xFF }, out var prefix);
+
+            // Backward provider, wrapped in SortedDrivingMatch (as the planner does) so it yields in term order:
+            // exactly the three 0xFF-prefixed entries, in DESCENDING order, having walked from the tree end.
+            {
+                var match = searcher.StartWithQuery(contentMeta, prefix, forward: false);
+                var tpm = Assert.IsType<TermsProviderMatch>(match);
+                using var sorted = new SortedDrivingMatch(tpm.Provider, tpm.Llt, Allocator);
+
+                Span<long> ids = stackalloc long[16];
+                int n = sorted.Fill(ids);
+                Assert.Equal(3, n);
+                var got = ids[..n].ToArray().Select(id => idToTerm[id]).ToList();
+                Assert.All(got, t => Assert.Equal(0xFF, t[0])); // the {0x10}/{0x20} entries must not leak in
+                for (int i = 1; i < got.Count; i++)
+                    Assert.True(Compare(got[i - 1], got[i]) > 0, "Backward StartsWith must yield terms in descending order");
+                Assert.Equal(0, sorted.Fill(ids));
+            }
+
+            // Forward provider over the same prefix: the seek-limit change must leave the forward path intact —
+            // same three entries, ASCENDING.
+            {
+                var match = searcher.StartWithQuery(contentMeta, prefix, forward: true);
+                var tpm = Assert.IsType<TermsProviderMatch>(match);
+                using var sorted = new SortedDrivingMatch(tpm.Provider, tpm.Llt, Allocator);
+
+                Span<long> ids = stackalloc long[16];
+                int n = sorted.Fill(ids);
+                Assert.Equal(3, n);
+                var got = ids[..n].ToArray().Select(id => idToTerm[id]).ToList();
+                Assert.All(got, t => Assert.Equal(0xFF, t[0]));
+                for (int i = 1; i < got.Count; i++)
+                    Assert.True(Compare(got[i - 1], got[i]) < 0, "Forward StartsWith must yield terms in ascending order");
+            }
+        }
 
         [RavenFact(RavenTestCategory.Corax)]
         public void SimpleStartWithStatement()
@@ -968,7 +809,7 @@ namespace FastTests.Corax
 
             using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
-            OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence, fieldHasNoTerms: false);
+            OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence);
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
                 var match = searcher.OrderBy(match1, orderMetadata, take: 16, defaultNullsSortMode: NullsSortMode.NullsSmallest);
@@ -993,7 +834,7 @@ namespace FastTests.Corax
 
             using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
-            OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence, fieldHasNoTerms: false);
+            OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence);
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
                 var match = searcher.OrderBy(match1, orderMetadata, defaultNullsSortMode: NullsSortMode.NullsSmallest);
@@ -1058,7 +899,7 @@ namespace FastTests.Corax
 
             using var searcher = new IndexSearcher(Env, CreateKnownFields(bsc));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
-            OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence, fieldHasNoTerms: false);
+            OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence);
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
                 var match = searcher.OrderBy(match1, orderMetadata, defaultNullsSortMode: NullsSortMode.NullsSmallest);
@@ -1105,19 +946,10 @@ namespace FastTests.Corax
             IndexEntriesDouble(list);
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-            Span<long> ids = stackalloc long[1024];
-            var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
-            {
-                var match1 = searcher.AllEntries();
-                var match2 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(contentMetadata, 25D, UnaryMatchOperation.LessThan)]);
 
-                int read = 0;
-                while ((read = match2.Fill(ids)) != 0)
-                while (--read >= 0)
-                {
-                    long id = ids[read];
-                    qids.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
-                }
+            {
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content < 25");
+                qids = results.Select(id => searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id)).ToList();
 
                 foreach (IndexSingleEntryDouble indexSingleEntryDouble in list)
                 {
@@ -1131,14 +963,8 @@ namespace FastTests.Corax
 
             qids.Clear();
             {
-                var matchBetween = searcher.CreateMultiUnaryMatch(searcher.AllEntries(),
-                    [new(contentMetadata, 100L, 200L, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual)]);
-                var read = matchBetween.Fill(ids);
-                while (--read >= 0)
-                {
-                    long id = ids[read];
-                    qids.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
-                }
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content >= 100 AND Content <= 200");
+                qids = results.Select(id => searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id)).ToList();
 
                 foreach (IndexSingleEntryDouble indexSingleEntryDouble in list)
                 {
@@ -1162,48 +988,27 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-
-            Slice.From(bsc, "1", out var one);
-            var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
             {
-                //   var match1 = searcher.StartWithQuery("Id", "e");
-                var match1 = searcher.AllEntries();
-                var match = searcher.CreateMultiUnaryMatch(match1,
-                    [new MultiUnaryItem(searcher, contentMetadata, "1", UnaryMatchOperation.GreaterThan)]);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(2, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content > '1'");
+                Assert.Equal(2, results.Count);
+                AssertIds(ResolveDocumentIds(results), "entry/1", "entry/2");
             }
 
             {
-                var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.CreateMultiUnaryMatch(match1,
-                    [new MultiUnaryItem(searcher, contentMetadata, "1", UnaryMatchOperation.GreaterThanOrEqual)]);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(3, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content >= '1'");
+                Assert.Equal(3, results.Count);
+                AssertIds(ResolveDocumentIds(results), "entry/1", "entry/2", "entry/3");
             }
 
             {
-                var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.CreateMultiUnaryMatch(match1,
-                    [new MultiUnaryItem(searcher, contentMetadata, "1", UnaryMatchOperation.LessThan)]);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(0, match.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content < '1'");
+                Assert.Equal(0, results.Count);
             }
 
             {
-                var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.CreateMultiUnaryMatch(match1,
-                    [new MultiUnaryItem(searcher, contentMetadata, "1", UnaryMatchOperation.LessThanOrEqual)]);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(1, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content <= '1'");
+                Assert.Equal(1, results.Count);
+                AssertIds(ResolveDocumentIds(results), "entry/3");
             }
         }
 
@@ -1218,128 +1023,33 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-            var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
-
-            Slice.From(bsc, "1", out var one);
-            Slice.From(bsc, "4", out var four);
-
             {
-                var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.CreateMultiUnaryMatch(match1,
-                    [new MultiUnaryItem(searcher, contentMetadata, "1", UnaryMatchOperation.Equals)]);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(2, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content = '1'");
+                Assert.Equal(2, results.Count);
+                AssertIds(ResolveDocumentIds(results), "entry/1", "entry/3");
             }
 
             {
-                var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.CreateMultiUnaryMatch(match1,
-                    [new MultiUnaryItem(searcher, contentMetadata, "1", UnaryMatchOperation.NotEquals)]);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(1, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content != '1'");
+                Assert.Equal(1, results.Count);
+                AssertIds(ResolveDocumentIds(results), "entry/2");
             }
 
             {
-                var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.CreateMultiUnaryMatch(match1,
-                    [new MultiUnaryItem(searcher, contentMetadata, "4", UnaryMatchOperation.Equals)]);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(0, match.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content = '4'");
+                Assert.Equal(0, results.Count);
             }
 
             {
-                var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.CreateMultiUnaryMatch(match1,
-                    [new MultiUnaryItem(searcher, contentMetadata, "4", UnaryMatchOperation.NotEquals)]);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(3, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content != '4'");
+                Assert.Equal(3, results.Count);
+                AssertIds(ResolveDocumentIds(results), "entry/1", "entry/2", "entry/3");
             }
         }
 
-        [RavenFact(RavenTestCategory.Corax)]
-        public void SimpleWildcardStatement()
-        {
-            var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "Testing"};
-            var entry2 = new IndexSingleEntry {Id = "entry/2", Content = "Running"};
-            var entry3 = new IndexSingleEntry {Id = "entry/3", Content = "Runner"};
-
-            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
-
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-            var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
-            using var _ = Slice.From(bsc, "ing", out var ingSlice);
-
-            Slice.From(bsc, "1", out var one);
-            Slice.From(bsc, "4", out var four);
-
-            {
-                var match = searcher.ContainsQuery(contentMetadata, ingSlice);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(2, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
-            }
-
-            {
-                var match = searcher.ContainsQuery(contentMetadata, "er");
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(1, match.Fill(ids));
-                long id = ids[0];
-                Assert.Equal("entry/3", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
-            }
-
-            {
-                var match = searcher.EndsWithQuery(contentMetadata, "ing");
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(2, match.Fill(ids));
-                long id = ids[0];
-                long id1 = ids[1];
-                var results = new[] {searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id), searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id1)};
-                Array.Sort(results);
-                Assert.Equal("entry/1", results[0]);
-                Assert.Equal("entry/2", results[1]);
-            }
-
-            {
-                var match = searcher.ContainsQuery(contentMetadata, "Run");
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(2, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
-            }
-
-            {
-                var match = searcher.ContainsQuery(contentMetadata, "nn");
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(2, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
-            }
-
-            {
-                var match = searcher.ContainsQuery(contentMetadata, "run");
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(0, match.Fill(ids));
-            }
-
-            {
-                var match = searcher.EndsWithQuery(contentMetadata, "ing");
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(2, match.Fill(ids));
-            }
-        }
-
+        // RavenDB-27286: glob matching over a field's terms. Forward and backward iteration must return exactly
+        // the same set - the backward provider is bounded by the successor of the pattern's literal prefix, so a
+        // mistake there shows up as a direction-dependent count.
         [RavenFact(RavenTestCategory.Corax)]
         public void WildcardQueryStatement()
         {
@@ -1382,17 +1092,13 @@ namespace FastTests.Corax
                 ("*?\u00e9*", 1),
             };
 
-            //The backward iterator seeks to the end of the pattern's prefix range when streaming is enabled and
-            //scans the whole field otherwise. Both have to return exactly the same terms as the forward one.
-            (bool Forward, bool Streaming)[] directions = [(true, false), (false, true), (false, false)];
-
             Span<long> ids = stackalloc long[16];
             foreach (var (pattern, expected) in cases)
             {
                 using var _ = Slice.From(bsc, pattern, out var patternSlice);
-                foreach (var (forward, streaming) in directions)
+                foreach (var forward in new[] { true, false })
                 {
-                    var match = searcher.PatternQuery(contentMetadata, patternSlice, forward: forward, streamingEnabled: streaming);
+                    var match = searcher.PatternQuery(contentMetadata, patternSlice, forward: forward);
 
                     Assert.Equal(expected, match.Fill(ids));
                     if (expected > 0)
@@ -1404,6 +1110,9 @@ namespace FastTests.Corax
                 Assert.Throws<InvalidOperationException>(() => { searcher.PatternQuery(contentMetadata, termWithoutPattern); });
         }
 
+        // The v8.0 original called IQueryMatch.AndWith twice; Corax 2.0 has no generic AndWith (only the
+        // spatial/vector post-filter one), so the same property is asserted against the bitmap pipeline:
+        // intersecting the same pattern leaf twice must yield the same set, which is what preserveLeaf buys.
         [RavenFact(RavenTestCategory.Corax)]
         public void PatternQueryCanBeAndedMoreThanOnce()
         {
@@ -1422,17 +1131,117 @@ namespace FastTests.Corax
             using var _ = Slice.From(bsc, "ab*cd", out var patternSlice);
 
             var match = searcher.PatternQuery(contentMetadata, patternSlice);
-            var allEntries = searcher.AllEntries();
 
-            Span<long> ids = stackalloc long[16];
-            Span<long> incoming = stackalloc long[16];
-            var total = allEntries.Fill(incoming);
+            for (int i = 0; i < 2; i++)
+            {
+                var bitmap = new BitmapMatch(searcher.Allocator);
+                RoaringBitmap tempData = new(searcher.Allocator);
+                try
+                {
+                    QueryPrimitives.OrWithMatch(searcher.AllEntries(), ref bitmap.BitmapState);
+                    QueryPrimitives.AndWithMatch(match, ref bitmap.BitmapState, ref tempData, preserveLeaf: true);
+                    Assert.Equal(2, bitmap.BitmapState.ComputeCount());
+                }
+                finally
+                {
+                    tempData.Dispose();
+                    bitmap.Dispose();
+                }
+            }
+        }
 
-            incoming[..total].CopyTo(ids);
-            Assert.Equal(2, match.AndWith(ids, total));
+        [RavenFact(RavenTestCategory.Corax)]
+        public void SimpleWildcardStatement()
+        {
+            var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "Testing"};
+            var entry2 = new IndexSingleEntry {Id = "entry/2", Content = "Running"};
+            var entry3 = new IndexSingleEntry {Id = "entry/3", Content = "Runner"};
 
-            incoming[..total].CopyTo(ids);
-            Assert.Equal(2, match.AndWith(ids, total));
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] {entry1, entry2, entry3}, CreateKnownFields(bsc));
+
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+            var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
+            using var _ = Slice.From(bsc, "ing", out var ingSlice);
+
+            Slice.From(bsc, "1", out var one);
+            Slice.From(bsc, "4", out var four);
+
+            {
+                var match = searcher.ContainsQuery(contentMetadata, ingSlice);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(2, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match = searcher.ContainsQuery(contentMetadata, "er");
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(1, match.Fill(ids));
+                long id = ids[0];
+                Assert.Equal("entry/3", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
+            }
+
+            {
+                var match = searcher.StartWithQuery(contentMetadata, "Run", true);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(1, match.Fill(ids));
+                long id = ids[0];
+                Assert.Equal("entry/1", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
+            }
+
+            {
+                var match = searcher.EndsWithQuery(contentMetadata, "ing", false);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(2, match.Fill(ids));
+                long id = ids[0];
+                long id1 = ids[1];
+                var results = new[] {searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id), searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id1)};
+                Array.Sort(results);
+                Assert.Equal("entry/1", results[0]);
+                Assert.Equal("entry/2", results[1]);
+            }
+
+            {
+                var match = searcher.EndsWithQuery(contentMetadata, "ing", true);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(1, match.Fill(ids));
+                long id = ids[0];
+                Assert.Equal("entry/3", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
+            }
+
+            {
+                var match = searcher.ContainsQuery(contentMetadata, "Run");
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(2, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match = searcher.ContainsQuery(contentMetadata, "nn");
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(2, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match = searcher.ContainsQuery(contentMetadata, "run");
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match = searcher.EndsWithQuery(contentMetadata, "ing");
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(2, match.Fill(ids));
+            }
         }
 
         [RavenFact(RavenTestCategory.Corax)]
@@ -1446,45 +1255,27 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, new[] {entry1, entry2, entry3, entry4}, CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-            var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
             {
-                var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.CreateMultiUnaryMatch(match1,
-                    [new MultiUnaryItem(searcher, contentMetadata, "1", "2", UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual)]);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(2, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content >= '1' AND Content <= '2'");
+                Assert.Equal(2, results.Count);
+                AssertIds(ResolveDocumentIds(results), "entry/2", "entry/3");
             }
 
             {
-                var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.CreateMultiUnaryMatch(match1,
-                    [new MultiUnaryItem(searcher, contentMetadata, "0", "3", UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual)]);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(3, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content >= '0' AND Content <= '3'");
+                Assert.Equal(3, results.Count);
+                AssertIds(ResolveDocumentIds(results), "entry/1", "entry/2", "entry/3");
             }
 
             {
-                var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.CreateMultiUnaryMatch(match1,
-                    [new MultiUnaryItem(searcher, contentMetadata, "0", "0", UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual)]);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(0, match.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content >= '0' AND Content <= '0'");
+                Assert.Equal(0, results.Count);
             }
 
             {
-                var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.CreateMultiUnaryMatch(match1,
-                    [new MultiUnaryItem(searcher, contentMetadata, "1", "1", UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual)]);
-
-                Span<long> ids = stackalloc long[16];
-                Assert.Equal(1, match.Fill(ids));
-                Assert.Equal(0, match.Fill(ids));
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content >= '1' AND Content <= '1'");
+                Assert.Equal(1, results.Count);
+                AssertIds(ResolveDocumentIds(results), "entry/3");
             }
         }
 
@@ -1493,70 +1284,40 @@ namespace FastTests.Corax
         {
             var entries = Enumerable.Range(0, 100).Select(i => new IndexSingleEntryDouble() {Id = $"entry{i}", Content = Convert.ToDouble(i)}).ToList();
             IndexEntriesDouble(entries);
-            int? read;
             using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-            var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
 
             {
-                Span<long> ids = stackalloc long[128];
-                var match = searcher.CreateMultiUnaryMatch(searcher.AllEntries(),
-                    [new MultiUnaryItem(contentMetadata, 20L, 30L, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual)]);
-
-                Assert.Equal(entries.Count(i => i.Content is >= 20 and <= 30), read = match.Fill(ids));
-                for (int i = 0; i < read; ++i)
-                    Check(ids[i], 20, 30, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual);
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content >= 20 AND Content <= 30");
+                var expected = entries.Where(i => i.Content is >= 20 and <= 30).Select(e => e.Id).ToArray();
+                Assert.Equal(expected.Length, results.Count);
+                AssertIds(ResolveDocumentIds(results), expected);
             }
 
             {
-                Span<long> ids = stackalloc long[128];
-                var match = searcher.CreateMultiUnaryMatch(searcher.AllEntries(),
-                    [new MultiUnaryItem(contentMetadata, 20L, 30L, UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual)]);
-                Assert.Equal(entries.Count(i => i.Content is > 20 and <= 30), read = match.Fill(ids));
-                for (int i = 0; i < read; ++i)
-                    Check(ids[i], 20, 30, UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual);
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content > 20 AND Content <= 30");
+                var expected = entries.Where(i => i.Content is > 20 and <= 30).Select(e => e.Id).ToArray();
+                Assert.Equal(expected.Length, results.Count);
+                AssertIds(ResolveDocumentIds(results), expected);
             }
 
             {
-                Span<long> ids = stackalloc long[128];
-                var match = searcher.CreateMultiUnaryMatch(searcher.AllEntries(),
-                    [new MultiUnaryItem(contentMetadata, 20L, 30L, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan)]);
-                Assert.Equal(entries.Count(i => i.Content is >= 20 and < 30), read = match.Fill(ids));
-                for (int i = 0; i < read; ++i)
-                    Check(ids[i], 20, 30, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan);
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content >= 20 AND Content < 30");
+                var expected = entries.Where(i => i.Content is >= 20 and < 30).Select(e => e.Id).ToArray();
+                Assert.Equal(expected.Length, results.Count);
+                AssertIds(ResolveDocumentIds(results), expected);
             }
 
             {
-                Span<long> ids = stackalloc long[128];
-                var match = searcher.CreateMultiUnaryMatch(searcher.AllEntries(),
-                    [new MultiUnaryItem(contentMetadata, 20L, 30L, UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan)]);
-                Assert.Equal(entries.Count(i => i.Content is > 20 and < 30), read = match.Fill(ids));
-                for (int i = 0; i < read; ++i)
-                    Check(ids[i], 20, 30, UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan);
-            }
-
-            void Check(long id, long left, long right, UnaryMatchOperation leftComparer, UnaryMatchOperation rightComparer)
-            {
-                var entry = searcher.TermsReaderFor("Content").GetTermFor(id);
-                var number = long.Parse(entry);
-                Assert.True(PerformUnaryMatch(number));
-
-
-                bool PerformUnaryMatch(long value) =>
-                    (leftComparer, rightComparer) switch
-                    {
-                        (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual) => value >= left && right >= value,
-                        (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual) => value > left && right >= value,
-                        (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan) => value >= left && right > value,
-                        (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan) => value > left && right > value,
-                        _ => throw new NotSupportedException()
-                    };
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content > 20 AND Content < 30");
+                var expected = entries.Where(i => i.Content is > 20 and < 30).Select(e => e.Id).ToArray();
+                Assert.Equal(expected.Length, results.Count);
+                AssertIds(ResolveDocumentIds(results), expected);
             }
         }
         
         [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(1000, 8, BitmapAndFillMode.Off)]
-        [InlineData(1000, 8, BitmapAndFillMode.Force)]
-        public void AndInStatementWithLowercaseAnalyzer(int setSize, int stackSize, BitmapAndFillMode bitmapAndFillMode)
+        [InlineData(new object[] {1000, 8})]
+        public void AndInStatementWithLowercaseAnalyzer(int setSize, int stackSize)
         {
             setSize = setSize - (setSize % 3);
             var entries = new List<IndexEntry>();
@@ -1587,54 +1348,20 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, entriesToIndex, CreateKnownFields(bsc, analyzer));
 
-
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
             {
-                var match1 = searcher.InQuery("Content", new() {"lake", "mountain"});
-                var match2 = searcher.TermQuery("Content", "sky");
-                var andMatch = searcher.And(in match1, in match2);
-
-                var actual = new List<long>();
-                Span<long> ids = stackalloc long[stackSize];
-                int read;
-                do
-                {
-                    read = andMatch.Fill(ids);
-                    actual.AddRange(ids[..read].ToArray());
-                } while (read != 0);
-
-                var actualSorted = actual.ToArray();
-                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
-
-                Assert.Equal((setSize / 3), actualSize);
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content IN ('lake', 'mountain') AND Content = 'sky'");
+                Assert.Equal((setSize / 3), results.Count);
             }
 
             {
-                var match1 = searcher.TermQuery("Content", "sky");
-                var match2 = searcher.InQuery("Content", new() {"lake", "mountain"});
-                var andMatch = searcher.And(in match1, in match2);
-
-
-                var actual = new List<long>();
-                Span<long> ids = stackalloc long[stackSize];
-                int read;
-                do
-                {
-                    read = andMatch.Fill(ids);
-                    actual.AddRange(ids[..read].ToArray());
-                } while (read != 0);
-
-                var actualSorted = actual.ToArray();
-                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
-
-                Assert.Equal((setSize / 3), actualSize);
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content = 'sky' AND Content IN ('lake', 'mountain')");
+                Assert.Equal((setSize / 3), results.Count);
             }
         }
 
         [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(1000, 8, BitmapAndFillMode.Off)]
-        [InlineData(1000, 8, BitmapAndFillMode.Force)]
-        public void AndInStatementAndWhitespaceTokenizer(int setSize, int stackSize, BitmapAndFillMode bitmapAndFillMode)
+        [InlineData(new object[] {1000, 8})]
+        public void AndInStatementAndWhitespaceTokenizer(int setSize, int stackSize)
         {
             setSize = setSize - (setSize % 3);
 
@@ -1668,45 +1395,14 @@ namespace FastTests.Corax
 
             IndexEntries(ctx, entriesToIndex, mapping);
 
-            using var searcher = new IndexSearcher(Env, mapping) { BitmapAndFillMode = bitmapAndFillMode };
             {
-                var match1 = searcher.InQuery("Content", new() {"lake", "mountain"});
-                var match2 = searcher.TermQuery("Content", "sky");
-                var andMatch = searcher.And(in match1, in match2);
-
-                var actual = new List<long>();
-                Span<long> ids = stackalloc long[stackSize];
-                int read;
-                do
-                {
-                    read = andMatch.Fill(ids);
-                    actual.AddRange(ids[..read].ToArray());
-                } while (read != 0);
-
-                var actualSorted = actual.ToArray();
-                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
-
-                Assert.Equal((setSize / 3), actualSize);
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content IN ('lake', 'mountain') AND Content = 'sky'");
+                Assert.Equal((setSize / 3), results.Count);
             }
 
             {
-                var match1 = searcher.TermQuery("Content", "sky");
-                var match2 = searcher.InQuery("Content", new() {"lake", "mountain"});
-                var andMatch = searcher.And(in match1, in match2);
-
-                var actual = new List<long>();
-                Span<long> ids = stackalloc long[stackSize];
-                int read;
-                do
-                {
-                    read = andMatch.Fill(ids);
-                    actual.AddRange(ids[..read].ToArray());
-                } while (read != 0);
-
-                var actualSorted = actual.ToArray();
-                var actualSize = Sorting.SortAndRemoveDuplicates(actualSorted.AsSpan());
-
-                Assert.Equal((setSize / 3), actualSize);
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content = 'sky' AND Content IN ('lake', 'mountain')");
+                Assert.Equal((setSize / 3), results.Count);
             }
         }
 
@@ -1735,31 +1431,277 @@ namespace FastTests.Corax
             }
         }
 
-        [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(BitmapAndFillMode.Off)]
-        [InlineData(BitmapAndFillMode.Force)]
-        public void NotInTest(BitmapAndFillMode bitmapAndFillMode)
+        [RavenFact(RavenTestCategory.Corax)]
+        public void NotInTest()
         {
             var listToIndex = Enumerable.Range(000000, 1000).Select(i => new IndexSingleEntry {Id = $"entry/{i}", Content = i.ToString("000000")}).ToList();
             var listForNotIn = listToIndex.Where(p => p.Content.EndsWith("1")).ToList();
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, listToIndex, CreateKnownFields(bsc));
-            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
-            Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
             {
-                Span<long> ids = stackalloc long[1024];
-                var match = searcher.AndNot(searcher.AllEntries(), searcher.InQuery(searcher.FieldMetadataBuilder("Content", ContentIndex), listForNotIn.Select(l => l.Content).ToList()));
-                Assert.Equal(1000 - listForNotIn.Count(), match.Fill(ids));
+                var inList = string.Join("', '", listForNotIn.Select(l => l.Content));
+                // RQL requires "true AND NOT" to express negation at the top level.
+                // "true AND NOT Content IN (...)" is the valid form for NOT IN.
+                var results = ExecuteRQLQuery($"FROM TestIndex WHERE true AND NOT Content IN ('{inList}')");
+                Assert.Equal(1000 - listForNotIn.Count(), results.Count);
             }
         }
 
-        [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(BitmapAndFillMode.Off)]
-        [InlineData(BitmapAndFillMode.Force)]
-        public void SimpleAndNot(BitmapAndFillMode bitmapAndFillMode)
+        [RavenFact(RavenTestCategory.Corax)]
+        public void EmptyInDoesNotPoisonCacheForNonEmptyExecution()
+        {
+            // Regression test: an empty IN parameter ($p=[]) in an AND chain must not
+            // cache a plan that subsequent non-empty executions ($p=['x']) would reuse,
+            // producing zero results instead of the correct matches.
+            var list = new[]
+            {
+                new IndexSingleEntry { Id = "entry/1", Content = "Alpha" },
+                new IndexSingleEntry { Id = "entry/2", Content = "Beta" },
+                new IndexSingleEntry { Id = "entry/3", Content = "Gamma" },
+            };
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, list, CreateKnownFields(bsc));
+
+            const string rql = "FROM TestIndex WHERE Content IN ($p0)";
+
+            using var fields = CreateKnownFields(Allocator);
+            using var searcher = new IndexSearcher(Env, fields);
+            using var ctx = global::Sparrow.Json.JsonOperationContext.ShortTermSingleUse();
+
+            // Execution 1: $p0 = [] (empty array) → should return 0 results
+            {
+                var emptyParams = ctx.ReadObject(new global::Sparrow.Json.Parsing.DynamicJsonValue { ["p0"] = new global::Sparrow.Json.Parsing.DynamicJsonArray() }, "params");
+                var queryMetadata = new QueryMetadata(rql, emptyParams, 0);
+                var planParams = new PlanParameters
+                {
+                    IndexSearcher = searcher, Metadata = queryMetadata,
+                    QueryParameters = emptyParams, Allocator = Allocator
+                };
+                var match = QueryPlanBuilder.BuildFilterMatch(planParams, new QueryBuilderParameters(searcher, Allocator, queryMetadata, emptyParams, fields), null, false, default);
+                Span<long> buf = stackalloc long[64];
+                Assert.Equal(0, match.Fill(buf));
+            }
+
+            // Execution 2: $p0 = ['Alpha'] → should return 1 result (not 0)
+            {
+                var realParams = ctx.ReadObject(new global::Sparrow.Json.Parsing.DynamicJsonValue { ["p0"] = new global::Sparrow.Json.Parsing.DynamicJsonArray { "Alpha" } }, "params");
+                var queryMetadata = new QueryMetadata(rql, realParams, 0);
+                var planParams = new PlanParameters
+                {
+                    IndexSearcher = searcher, Metadata = queryMetadata,
+                    QueryParameters = realParams, Allocator = Allocator
+                };
+                var match = QueryPlanBuilder.BuildFilterMatch(planParams, new QueryBuilderParameters(searcher, Allocator, queryMetadata, realParams, fields), null, false, default);
+                Span<long> buf = stackalloc long[64];
+                Assert.Equal(1, match.Fill(buf));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Corax)]
+        public void EmptyInDoesNotPoisonCacheInOrChain()
+        {
+            // Regression: an empty IN parameter ($p=[]) in an OR chain must not cache a plan that subsequent
+            // non-empty executions ($p=['x']) would reuse with the IN clause compacted out. The cache key does
+            // not encode IN-array size, so the runtime must handle empty-IN via InRangeCounts[i]=0.
+            var list = new[]
+            {
+                new IndexSingleEntry { Id = "entry/1", Content = "Alpha" },
+                new IndexSingleEntry { Id = "entry/2", Content = "Beta" },
+                new IndexSingleEntry { Id = "entry/3", Content = "Gamma" },
+            };
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, list, CreateKnownFields(bsc));
+
+            const string rql = "FROM TestIndex WHERE Content IN ($p0) OR Id = 'entry/1'";
+
+            using var fields = CreateKnownFields(Allocator);
+            using var searcher = new IndexSearcher(Env, fields);
+            using var ctx = global::Sparrow.Json.JsonOperationContext.ShortTermSingleUse();
+
+            // Execution 1: $p0 = [] (empty array) → IN side contributes nothing, OR with Id='entry/1' → 1 result
+            {
+                var emptyParams = ctx.ReadObject(new global::Sparrow.Json.Parsing.DynamicJsonValue { ["p0"] = new global::Sparrow.Json.Parsing.DynamicJsonArray() }, "params");
+                var queryMetadata = new QueryMetadata(rql, emptyParams, 0);
+                var planParams = new PlanParameters
+                {
+                    IndexSearcher = searcher, Metadata = queryMetadata,
+                    QueryParameters = emptyParams, Allocator = Allocator
+                };
+                var match = QueryPlanBuilder.BuildFilterMatch(planParams, new QueryBuilderParameters(searcher, Allocator, queryMetadata, emptyParams, fields), null, false, default);
+                Span<long> buf = stackalloc long[64];
+                Assert.Equal(1, match.Fill(buf));
+            }
+
+            // Execution 2: $p0 = ['Beta'] → IN matches entry/2, OR Id='entry/1' → 2 results.
+            // Would return 1 if the cached plan from execution 1 dropped the IN clause.
+            {
+                var realParams = ctx.ReadObject(new global::Sparrow.Json.Parsing.DynamicJsonValue { ["p0"] = new global::Sparrow.Json.Parsing.DynamicJsonArray { "Beta" } }, "params");
+                var queryMetadata = new QueryMetadata(rql, realParams, 0);
+                var planParams = new PlanParameters
+                {
+                    IndexSearcher = searcher, Metadata = queryMetadata,
+                    QueryParameters = realParams, Allocator = Allocator
+                };
+                var match = QueryPlanBuilder.BuildFilterMatch(planParams, new QueryBuilderParameters(searcher, Allocator, queryMetadata, realParams, fields), null, false, default);
+                Span<long> buf = stackalloc long[64];
+                Assert.Equal(2, match.Fill(buf));
+            }
+        }
+
+        // Compile (and cache) a plan for an RQL filter against the given searcher. Returns the QueryMetadata used,
+        // so a caller can reuse the same instance across builds to exercise the QueryMetadata plan memo.
+        private QueryMetadata BuildPlanForCacheTest(IndexSearcher searcher, IndexFieldsMapping fields, JsonOperationContext ctx,
+            string rql, global::Sparrow.Json.Parsing.DynamicJsonValue paramsJson, QueryMetadata metadata = null)
+        {
+            var queryParams = ctx.ReadObject(paramsJson, "params");
+            metadata ??= new QueryMetadata(rql, queryParams, 0);
+            var planParams = new PlanParameters
+            {
+                IndexSearcher = searcher, Metadata = metadata,
+                QueryParameters = queryParams, Allocator = Allocator
+            };
+            var match = QueryPlanBuilder.BuildFilterMatch(planParams,
+                new QueryBuilderParameters(searcher, Allocator, metadata, queryParams, fields), null, false, default);
+            Span<long> buf = stackalloc long[64];
+            match.Fill(buf); // drive execution; result count is irrelevant to plan-cache identity
+            return metadata;
+        }
+
+        private static IndexSingleEntry[] PlanCacheSeed() =>
+        [
+            new IndexSingleEntry { Id = "entry/1", Content = "Alpha" },
+            new IndexSingleEntry { Id = "entry/2", Content = "Beta" },
+        ];
+
+        // Plan-cache bucketing: the per-query bucket is keyed by a structural key (SHA256 of the query text),
+        // not a string. Two executions of the SAME query text (values are never part of the key) resolve to ONE
+        // bucket holding ONE compiled plan variant.
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+        public void PlanCache_SameQueryText_SharesSingleBucketAndPlan()
+        {
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, PlanCacheSeed(), CreateKnownFields(bsc));
+
+            using var fields = CreateKnownFields(Allocator);
+            using var searcher = new IndexSearcher(Env, fields);
+            using var ctx = JsonOperationContext.ShortTermSingleUse();
+
+            const string rql = "FROM TestIndex WHERE Content = $p0";
+
+            // Fresh QueryMetadata each time so the memo doesn't short-circuit — this exercises the GetBucket path.
+            BuildPlanForCacheTest(searcher, fields, ctx, rql, new() { ["p0"] = "Alpha" });
+            BuildPlanForCacheTest(searcher, fields, ctx, rql, new() { ["p0"] = "Beta" });
+
+            var snapshot = searcher.PlanCache.Snapshot();
+            Assert.Single(snapshot);
+            Assert.Equal(rql, snapshot[0].QueryText);
+            Assert.Single(snapshot[0].Plans); // same param type → one inner variant
+        }
+
+        // Same query text, but the bound parameter's RUNTIME TYPE differs (string vs long). The structural key is
+        // identical (one bucket) while the inner 256-bit key encodes the per-parameter type, so the two type
+        // variants live as TWO compiled plans inside the SAME bucket.
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+        public void PlanCache_SameText_DifferentParamType_SplitsWithinOneBucket()
+        {
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, PlanCacheSeed(), CreateKnownFields(bsc));
+
+            using var fields = CreateKnownFields(Allocator);
+            using var searcher = new IndexSearcher(Env, fields);
+            using var ctx = JsonOperationContext.ShortTermSingleUse();
+
+            const string rql = "FROM TestIndex WHERE Content = $p0";
+
+            BuildPlanForCacheTest(searcher, fields, ctx, rql, new() { ["p0"] = "Alpha" }); // string
+            BuildPlanForCacheTest(searcher, fields, ctx, rql, new() { ["p0"] = 5L });      // long
+
+            var snapshot = searcher.PlanCache.Snapshot();
+            Assert.Single(snapshot); // one bucket (one structural key)
+            Assert.Equal(2, snapshot[0].Plans.Length); // two inner type variants
+        }
+
+        // Different query texts hash to different structural keys → distinct buckets.
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+        public void PlanCache_DifferentQueryText_DistinctBuckets()
+        {
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, PlanCacheSeed(), CreateKnownFields(bsc));
+
+            using var fields = CreateKnownFields(Allocator);
+            using var searcher = new IndexSearcher(Env, fields);
+            using var ctx = JsonOperationContext.ShortTermSingleUse();
+
+            BuildPlanForCacheTest(searcher, fields, ctx, "FROM TestIndex WHERE Content = $p0", new() { ["p0"] = "Alpha" });
+            BuildPlanForCacheTest(searcher, fields, ctx, "FROM TestIndex WHERE Id = $p0", new() { ["p0"] = "entry/1" });
+
+            var snapshot = searcher.PlanCache.Snapshot();
+            Assert.Equal(2, snapshot.Count);
+        }
+
+        // The QueryMetadata plan memo lets the hot path skip the dictionary entirely. After the first build it is
+        // stamped with the live cache's Generation and weakly holds the resolved bucket; a second build that reuses
+        // the SAME QueryMetadata takes the fast path and never reallocates the memo (object identity preserved).
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+        public void PlanCache_Memo_ReusedAcrossBuilds_AndStampedWithCacheId()
+        {
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, PlanCacheSeed(), CreateKnownFields(bsc));
+
+            using var fields = CreateKnownFields(Allocator);
+            using var searcher = new IndexSearcher(Env, fields);
+            using var ctx = JsonOperationContext.ShortTermSingleUse();
+
+            const string rql = "FROM TestIndex WHERE Content = $p0";
+
+            var metadata = BuildPlanForCacheTest(searcher, fields, ctx, rql, new() { ["p0"] = "Alpha" });
+            var memo = metadata.CachedPlanMemo;
+            Assert.NotNull(memo);
+            Assert.Equal(searcher.PlanCache.GenerationIdx, memo.PlanCacheGeneration);
+            Assert.True(memo.Bucket.TryGetTarget(out _));
+
+            // Reuse the same QueryMetadata: the memo fast path is taken, so the memo object is not replaced.
+            BuildPlanForCacheTest(searcher, fields, ctx, rql, new() { ["p0"] = "Beta" }, metadata);
+            Assert.Same(memo, metadata.CachedPlanMemo);
+        }
+
+        // An index swap replaces the IndexSearcher (and its PlanCache, which carries a fresh Generation). A
+        // QueryMetadata memo stamped against the OLD cache must be rejected by the generation compare and re-resolved
+        // against the new cache, re-stamping the memo with the new generation — otherwise a stale bucket from a
+        // replaced index would be used.
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+        public void PlanCache_IndexSwap_InvalidatesMemo_AndRebuilds()
+        {
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, PlanCacheSeed(), CreateKnownFields(bsc));
+
+            using var fields = CreateKnownFields(Allocator);
+            using var ctx = JsonOperationContext.ShortTermSingleUse();
+
+            const string rql = "FROM TestIndex WHERE Content = $p0";
+            QueryMetadata metadata;
+            long oldCacheId;
+
+            using (var searcherA = new IndexSearcher(Env, fields))
+            {
+                metadata = BuildPlanForCacheTest(searcherA, fields, ctx, rql, new() { ["p0"] = "Alpha" });
+                oldCacheId = searcherA.PlanCache.GenerationIdx;
+                Assert.Equal(oldCacheId, metadata.CachedPlanMemo.PlanCacheGeneration);
+            }
+
+            // Simulate the index swap: a new searcher with its own PlanCache (distinct Generation), reusing the metadata.
+            using var searcherB = new IndexSearcher(Env, fields);
+            Assert.NotEqual(oldCacheId, searcherB.PlanCache.GenerationIdx);
+
+            BuildPlanForCacheTest(searcherB, fields, ctx, rql, new() { ["p0"] = "Beta" }, metadata);
+
+            Assert.Equal(searcherB.PlanCache.GenerationIdx, metadata.CachedPlanMemo.PlanCacheGeneration); // re-stamped against the new cache
+            Assert.Single(searcherB.PlanCache.Snapshot()); // the new cache compiled its own bucket
+        }
+
+        [RavenFact(RavenTestCategory.Corax)]
+        public void SimpleAndNot()
         {
             var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "Testing"};
             var entry2 = new IndexSingleEntry {Id = "entry/2", Content = "Running"};
@@ -1769,47 +1711,33 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, list, CreateKnownFields(bsc));
 
-
-            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
-            Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
-
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
 
             {
-                var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.StartWithQuery("Content", "Run"));
-
-                Span<long> ids = stackalloc long[256];
-                Assert.Equal(1, andNotMatch.Fill(ids));
-                var item = searcher.TermsReaderFor("Id").GetTermFor(ids[0]);
+                // true AND NOT ... anchors the top-level NOT (NOT alone is parsed as a method call).
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE true AND NOT startsWith(Content, 'Run')");
+                Assert.Equal(1, results.Count);
+                var item = searcher.TermsReaderFor("Id").GetTermFor(results[0]);
                 Assert.Equal("entry/1", item);
             }
 
             {
-                var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.AllEntries());
-
-                Span<long> ids = stackalloc long[256];
-                Assert.Equal(0, andNotMatch.Fill(ids));
+                // Empty result case: exclude all 3 known IDs → 0 results
+                var notAllResults = ExecuteRQLQuery("FROM TestIndex WHERE Id != 'entry/1' AND Id != 'entry/2' AND Id != 'entry/3'");
+                Assert.Equal(0, notAllResults.Count);
             }
 
             {
-                var andNotMatch = searcher.AndNot(searcher.AllEntries(), searcher.StartWithQuery("Content", "J"));
-
-                Span<long> ids = stackalloc long[256];
-                Assert.Equal(3, andNotMatch.Fill(ids));
-                var uniqueList = new List<long>();
-                for (int i = 0; i < 3; ++i)
-                {
-                    Assert.False(uniqueList.Contains(ids[i]));
-                    uniqueList.Add(ids[i]);
-                }
+                // No entries start with 'J', so true AND NOT startsWith(Content, 'J') keeps all.
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE true AND NOT startsWith(Content, 'J')");
+                Assert.Equal(3, results.Count);
+                var uniqueIds = new HashSet<long>(results);
+                Assert.Equal(3, uniqueIds.Count);
             }
         }
 
-        [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(BitmapAndFillMode.Off)]
-        [InlineData(BitmapAndFillMode.Force)]
-        public void NotEqualWithList(BitmapAndFillMode bitmapAndFillMode)
+        [RavenFact(RavenTestCategory.Corax)]
+        public void NotEqualWithList()
         {
             var entries = new List<IndexEntry>();
             var entriesToIndex = new IndexEntry[7];
@@ -1834,83 +1762,52 @@ namespace FastTests.Corax
                 entriesToIndex[i] = entry;
             }
 
-            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
-            Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
-
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            //":{"p0":"8 9 10"}}
             IndexEntries(bsc, entriesToIndex, CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
-            var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
+            var allIds = entries.Select(e => e.Id).ToArray();
+
             {
-                var match0 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "8", UnaryMatchOperation.NotEquals)]);
-                var match1 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "9", UnaryMatchOperation.NotEquals)]);
-                var match2 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "10", UnaryMatchOperation.NotEquals)]);
-                var firstOr = searcher.Or(match0, match1);
-                var finalOr = searcher.And(searcher.StartWithQuery("Id", "e"), searcher.Or(firstOr, match2));
-
-
-                Span<long> ids = stackalloc long[256];
-                Assert.Equal(7, finalOr.Fill(ids));
+                // Test: (Content != '8') OR (Content != '9') OR (Content != '10') = all entries
+                // (no entry has 8, 9, or 10, so each != matches all 7)
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content != '8' OR Content != '9' OR Content != '10'");
+                Assert.Equal(7, results.Count);
+                AssertIds(ResolveDocumentIds(results), allIds);
             }
 
             {
-                var m0 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "1", UnaryMatchOperation.NotEquals)]);
-                var m1 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "2", UnaryMatchOperation.NotEquals)]);
-                var m2 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "3", UnaryMatchOperation.NotEquals)]);
-                var m3 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "5", UnaryMatchOperation.NotEquals)]);
-                var m4 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "7", UnaryMatchOperation.NotEquals)]);
-
-                Span<long> ids = stackalloc long[256];
-                var orResult = searcher.Or(m4, searcher.Or(m3, searcher.Or(m2, searcher.Or(m1, m0))));
-                Assert.Equal(7, orResult.Fill(ids));
-                Assert.True(ids.Slice(0, 7).ToArray().ToList().Select(x => searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(x)).OrderBy(a => a)
-                    .SequenceEqual(entries.OrderBy(z => z.Id).Select(e => e.Id)));
+                // Test: NOT (1 IN doc OR 2 IN doc OR ... OR 7 IN doc) means
+                // NOT (1 IN doc) OR NOT (2 IN doc) ... — at least one value absent from the set.
+                // No entry has ALL of {1,2,3,5,7}, so OR of NOT-in gives all 7 entries.
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content != '1' OR Content != '2' OR Content != '3' OR Content != '5' OR Content != '7'");
+                Assert.Equal(entries.Count, results.Count);
+                AssertIds(ResolveDocumentIds(results), allIds);
             }
 
             {
-                Span<long> ids = stackalloc long[256];
-                var startsWith = searcher.StartWithQuery("Id", "e");
-                Assert.Equal(7, startsWith.Fill(ids));
-
-                Assert.True(ids.Slice(0, 7).ToArray().ToList().Select(x => searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(x)).OrderBy(a => a)
-                    .SequenceEqual(entries.OrderBy(z => z.Id).Select(e => e.Id)));
+                // Test: All entries have an Id starting with 'entry/'
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE startsWith(Id, 'entry/')");
+                Assert.Equal(7, results.Count);
+                AssertIds(ResolveDocumentIds(results), allIds);
             }
 
             {
-                var m0 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "1", UnaryMatchOperation.NotEquals)]);
-                var m1 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "2", UnaryMatchOperation.NotEquals)]);
-                var m2 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "3", UnaryMatchOperation.NotEquals)]);
-                var m3 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "5", UnaryMatchOperation.NotEquals)]);
-                var m4 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), [new MultiUnaryItem(searcher, contentMetadata, "7", UnaryMatchOperation.NotEquals)]);
-                
-                var result = searcher.And(searcher.StartWithQuery("Id", "e"), searcher.Or(m4, searcher.Or(m3, searcher.Or(m2, searcher.Or(m1, m0)))));
-
-                Span<long> ids = stackalloc long[256];
-                var amount = result.Fill(ids.Slice(14));
-                var idsOfResult = ids.Slice(14, amount).ToArray().Select(x => searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(x)).ToList();
-                Assert.Equal(idsOfResult.Count, idsOfResult.Distinct().Count());
-                Assert.Equal(7, amount);
-                Assert.True(idsOfResult.SequenceEqual(entries.OrderBy(z => z.Id).Select(e => e.Id)));
+                // Test: startsWith(Id, 'entry/') AND NOT Content IN ('8', '9', '10') = all 7
+                // None of the entries have content values 8, 9, or 10.
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE startsWith(Id, 'entry/') AND NOT Content IN ('8', '9', '10')");
+                Assert.Equal(7, results.Count);
+                AssertIds(ResolveDocumentIds(results), allIds);
             }
         }
 
         [RavenTheory(RavenTestCategory.Corax)]
-        [InlineData(100, 16, BitmapAndFillMode.Off)]
-        [InlineData(1000, 128, BitmapAndFillMode.Off)]
-        [InlineData(10_000, 128, BitmapAndFillMode.Off)]
-        [InlineData(10_000, 256, BitmapAndFillMode.Off)]
-        [InlineData(10_000, 512, BitmapAndFillMode.Off)]
-        [InlineData(10_000, 1028, BitmapAndFillMode.Off)]
-        [InlineData(100, 16, BitmapAndFillMode.Force)]
-        [InlineData(1000, 128, BitmapAndFillMode.Force)]
-        [InlineData(10_000, 128, BitmapAndFillMode.Force)]
-        [InlineData(10_000, 256, BitmapAndFillMode.Force)]
-        [InlineData(10_000, 512, BitmapAndFillMode.Force)]
-        [InlineData(10_000, 1028, BitmapAndFillMode.Force)]
-        public void MultiTermMatchWithBinaryOperations(int setSize, int stackSize, BitmapAndFillMode bitmapAndFillMode)
+        [InlineData(100, 16)]
+        [InlineData(1000, 128)]
+        [InlineData(10_000, 128)]
+        [InlineData(10_000, 256)]
+        [InlineData(10_000, 512)]
+        [InlineData(10_000, 1028)]
+        public void MultiTermMatchWithBinaryOperations(int setSize, int stackSize)
         {
             var words = new[]
             {
@@ -1927,43 +1824,17 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, entries.ToArray(), CreateKnownFields(bsc));
 
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
             {
                 //MultiTermMatch And TermMatch
-                var match0 = searcher.InQuery("Content", new List<string>() {"maciej", "poland"});
-                var match1 = searcher.TermQuery("Content", "this");
-                var and = searcher.And(match0, match1);
-                var result = Act(and);
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content IN ('maciej', 'poland') AND Content = 'this'");
                 var resultByLinq = entries.Where(x => (x.Content.Contains("maciej") || x.Content.Contains("poland")) && x.Content.Contains("this")).ToList();
-                Assert.Equal(result.Count, result.Distinct().Count());
-                Assert.Equal(resultByLinq.Count, result.Count);
+                AssertIds(ResolveDocumentIds(results), resultByLinq.Select(e => e.Id).ToArray());
             }
 
             {
-                var match0 = searcher.StartWithQuery("Content", "ma");
-                var match1 = searcher.TermQuery("Content", "torun");
-
-                var matchOr = searcher.Or(match0, match1);
-                var result = Act(matchOr);
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE startsWith(Content, 'ma') OR Content = 'torun'");
                 var linqResult = entries.Where(x => x.Content.Any(z => z.StartsWith("ma") || z.Contains("torun"))).ToList();
-                Assert.Equal(linqResult.Count, result.Count);
-            }
-
-            List<string> Act(IQueryMatch query)
-            {
-                List<string> stringIds = new();
-                int read;
-                Span<long> ids = stackalloc long[stackSize];
-                while ((read = query.Fill(ids)) != 0)
-                {
-                    for (int i = 0; i < read; ++i)
-                    {
-                        long id = ids[i];
-                        stringIds.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
-                    }
-                }
-
-                return stringIds.Distinct().ToList();
+                AssertIds(ResolveDocumentIds(results), linqResult.Select(e => e.Id).ToArray());
             }
 
             string[] GetContent()
@@ -2001,41 +1872,107 @@ namespace FastTests.Corax
 
             IndexEntries(Allocator, entries.ToArray(), CreateKnownFields(Allocator));
 
-            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-            var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
             {
-                var notOne = searcher.CreateMultiUnaryMatch(searcher.AllEntries(),
-                    new []{new MultiUnaryItem(searcher, contentMetadata, "1", UnaryMatchOperation.NotEquals)});
-                Span<long> ids = stackalloc long[32];
-                var expected = entries.Count(x => x.Content.Contains("1") == false);
-                var result = notOne.Fill(ids);
-                List<string> xd = new();
-                foreach (var id in ids.Slice(0, result))
-                {
-                    xd.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
-                }
-
-                Assert.Equal(3, result);
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content != '1'");
+                Assert.Equal(3, results.Count);
             }
             {
-                var notTwo = searcher.CreateMultiUnaryMatch(searcher.AllEntries(),
-                    new []{new MultiUnaryItem(searcher, contentMetadata, "2", UnaryMatchOperation.NotEquals)});
-                Span<long> ids = stackalloc long[32];
+                var results = ExecuteRQLQuery("FROM TestIndex WHERE Content != '2'");
                 var expected = entries.Count(x => x.Content.Contains("2") == false);
-                var result = notTwo.Fill(ids);
-                List<string> xd = new();
-                foreach (var id in ids.Slice(0, result))
-                {
-                    xd.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
-                }
-
-
-                Assert.Equal(expected, result);
+                Assert.Equal(expected, results.Count);
             }
         }
-        
-        
+
+        [RavenFact(RavenTestCategory.Corax)]
+        public void NoWhereClauseIsNotAlwaysEmpty()
+        {
+            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" } };
+            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "muddy", "road" } };
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2 }, CreateKnownFields(bsc));
+
+            // A no-WHERE query returns all entries.
+            var results = ExecuteRQLQuery("FROM TestIndex");
+            Assert.Equal(2, results.Count);
+        }
+
+        [RavenFact(RavenTestCategory.Corax)]
+        public void WhenFalseEliminatesAllClausesReturnAllEntries()
+        {
+            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" } };
+            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "muddy", "road" } };
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2 }, CreateKnownFields(bsc));
+
+            // when($p = true, Content = 'road') with $p = false → clause eliminated.
+            // With all clauses removed, the query reduces to match-all (matches Lucene's
+            // LuceneWhenQuery → MatchAllDocsQuery() at top level).
+            using var fields = CreateKnownFields(Allocator);
+            using var searcher = new IndexSearcher(Env, fields);
+            var rql = "FROM TestIndex WHERE when($p = true, Content = 'road')";
+            var queryMetadata = new QueryMetadata(rql, null, 0);
+
+            using var ctx = global::Sparrow.Json.JsonOperationContext.ShortTermSingleUse();
+            var paramsJson = ctx.ReadObject(new global::Sparrow.Json.Parsing.DynamicJsonValue { ["p"] = false }, "params");
+
+            var planParams = new PlanParameters
+            {
+                IndexSearcher = searcher,
+                Metadata = queryMetadata,
+                QueryParameters = paramsJson,
+                Allocator = Allocator
+            };
+
+            var match = QueryPlanBuilder.BuildFilterMatch(planParams, new QueryBuilderParameters(searcher, Allocator, queryMetadata, paramsJson, fields), null, false, default);
+            Span<long> buffer = stackalloc long[256];
+            int count = match.Fill(buffer);
+            Assert.Equal(2, count);
+        }
+
+        /// <summary>
+        /// Executes an RQL query through QueryPlanBuilder (RQL → AST → IL compilation → execution) and returns matching entry IDs.
+        /// </summary>
+        private List<long> ExecuteRQLQuery(string rqlQuery)
+        {
+            using var fields = CreateKnownFields(Allocator);
+            using var searcher = new IndexSearcher(Env, fields);
+            return CoraxRqlTestHelper.ExecuteRQLQuery(searcher, Allocator, fields, rqlQuery);
+        }
+
+        /// <summary>
+        /// Resolves a list of Corax entry IDs to their document ID strings (preserving duplicates).
+        /// </summary>
+        private List<string> ResolveDocumentIds(List<long> entryIds)
+        {
+            // Verify the engine didn't return the same internal entry ID twice — distinct entries
+            // may legitimately share the same document Id field value (e.g. "entry/1" twice), but
+            // the underlying long entry IDs must be unique.
+            var seen = new HashSet<long>(entryIds.Count);
+            foreach (long id in entryIds)
+                Assert.True(seen.Add(id), $"Engine returned the same entry ID twice: {id}");
+
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+            var result = new List<string>(entryIds.Count);
+            foreach (long id in entryIds)
+                result.Add(searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
+            result.Sort(StringComparer.Ordinal);
+            return result;
+        }
+
+        /// <summary>
+        /// Asserts that the resolved document IDs match the expected set exactly (order-independent).
+        /// </summary>
+        private static void AssertIds(List<string> actual, params string[] expected)
+        {
+            var sorted = (string[])expected.Clone();
+            Array.Sort(sorted, StringComparer.Ordinal);
+            Assert.Equal(sorted.Length, actual.Count);
+            for (int i = 0; i < sorted.Length; i++)
+                Assert.Equal(sorted[i], actual[i]);
+        }
+
         private class IndexEntry
         {
             public long IndexEntryId;
@@ -2170,6 +2107,117 @@ namespace FastTests.Corax
         {
             public string Id;
             public double Content;
+        }
+
+        [RavenFact(RavenTestCategory.Corax)]
+        public void RandomOrderOnBitmapMatchProducesActualRandomOrder()
+        {
+            // Regression: the bitmap path for ORDER BY random() sorted by term name (SortInMemory<EntryComparerByTerm>)
+            // instead of shuffling via SampleRandomOrder. Uses BitmapMatch directly to stay independent of QueryILEmitter.
+
+            const int N = 32;
+            var entries = Enumerable.Range(1, N)
+                .Select(i => new IndexSingleEntry { Id = $"entry/{i:D3}", Content = i.ToString() })
+                .ToList();
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, entries, CreateKnownFields(bsc));
+
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+
+            // Collect all entry IDs from a plain TermQuery that matches all docs.
+            // We use ExistsQuery to get all entry IDs, then build a BitmapMatch from them.
+            var allEntryIds = new List<long>();
+            {
+                Span<long> buf = stackalloc long[256];
+                var exists = searcher.ExistsQuery(searcher.FieldMetadataBuilder("Content", ContentIndex));
+                int r;
+                while ((r = exists.Fill(buf)) > 0)
+                    for (int i = 0; i < r; i++)
+                        allEntryIds.Add(buf[i]);
+            }
+
+            Assert.Equal(N, allEntryIds.Count);
+            var allEntryIdsSorted = allEntryIds.OrderBy(x => x).ToList();
+
+            static List<long> RunOrder(IndexSearcher searcher, List<long> allEntryIds, ByteStringContext allocator, int seed)
+            {
+                // Build a BitmapMatch from the known entry IDs — this implements IBitmapQueryMatch,
+                // which triggers the bitmap-specific code path in SortingMatch.
+                var bitmapMatch = new BitmapMatch(allocator);
+                foreach (long id in allEntryIds)
+                    bitmapMatch.BitmapState.Add(id);
+
+                var orderMeta = new OrderMetadata(seed);
+                var sortMatch = searcher.OrderBy(bitmapMatch, orderMeta, defaultNullsSortMode: NullsSortMode.NullsLargest);
+                var results = new List<long>();
+                Span<long> buf = stackalloc long[256];
+                int r;
+                while ((r = sortMatch.Fill(buf)) > 0)
+                    for (int i = 0; i < r; i++)
+                        results.Add(buf[i]);
+                return results;
+            }
+
+            // Same seed → identical order both times.
+            var run1 = RunOrder(searcher, allEntryIds, Allocator, seed: 42);
+            var run2 = RunOrder(searcher, allEntryIds, Allocator, seed: 42);
+            Assert.Equal(run1, run2);
+
+            // Different seed → different order (with 32 entries this is virtually certain).
+            var run3 = RunOrder(searcher, allEntryIds, Allocator, seed: 99);
+            Assert.NotEqual(run1, run3);
+
+            // Must be a permutation — nothing lost, nothing duplicated.
+            Assert.Equal(allEntryIdsSorted, run1.OrderBy(x => x).ToList());
+
+            // Must NOT be in ascending entry-ID order — that was the bug (term sort behaviour).
+            Assert.NotEqual(allEntryIdsSorted, run1);
+        }
+
+        [RavenFact(RavenTestCategory.Corax)]
+        public void RandomOrderOnBitmapMatchWithTakeSelectsCorrectSubset()
+        {
+            // Verify LIMIT is respected: reservoir sampling must return exactly _take
+            // distinct entries, all from the original set.
+            const int N = 32;
+            const int Take = 7;
+
+            var entries = Enumerable.Range(1, N)
+                .Select(i => new IndexSingleEntry { Id = $"entry/{i:D3}", Content = i.ToString() })
+                .ToList();
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, entries, CreateKnownFields(bsc));
+
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+
+            var allEntryIds = new HashSet<long>();
+            {
+                Span<long> buf = stackalloc long[256];
+                var exists = searcher.ExistsQuery(searcher.FieldMetadataBuilder("Content", ContentIndex));
+                int r;
+                while ((r = exists.Fill(buf)) > 0)
+                    for (int i = 0; i < r; i++)
+                        allEntryIds.Add(buf[i]);
+            }
+
+            var bitmapMatch = new BitmapMatch(Allocator);
+            foreach (long id in allEntryIds)
+                bitmapMatch.BitmapState.Add(id);
+
+            var orderMeta = new OrderMetadata(7);
+            var sortMatch = searcher.OrderBy(bitmapMatch, orderMeta, defaultNullsSortMode: NullsSortMode.NullsLargest, take: Take);
+            var results = new List<long>();
+            Span<long> buf2 = stackalloc long[256];
+            int read;
+            while ((read = sortMatch.Fill(buf2)) > 0)
+                for (int i = 0; i < read; i++)
+                    results.Add(buf2[i]);
+
+            Assert.Equal(Take, results.Count);
+            Assert.All(results, id => Assert.Contains(id, allEntryIds));
+            Assert.Equal(Take, results.Distinct().Count());
         }
     }
 }

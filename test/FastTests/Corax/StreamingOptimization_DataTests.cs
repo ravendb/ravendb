@@ -37,7 +37,7 @@ public class StreamingOptimization_DataTests : RavenTestBase
 
     public static IEnumerable<object[]> UnboundedRange()
     {
-        foreach (var unaryOperation in new UnaryMatchOperation[] {UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual})
+        foreach (var unaryOperation in new ComparisonOperator[] {ComparisonOperator.GreaterThan, ComparisonOperator.LessThan, ComparisonOperator.GreaterThanOrEqual, ComparisonOperator.LessThanOrEqual})
         foreach (var fieldType in new OrderingType[] {OrderingType.String, OrderingType.Long, OrderingType.Double})
         foreach (var isAscending in new bool[]{true, false})
         {
@@ -55,7 +55,7 @@ public class StreamingOptimization_DataTests : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [MemberData(nameof(UnboundedRange))]
-    public void UnboundedRangeQueries(UnaryMatchOperation unaryMatchOperation, OrderingType fieldType, bool ascending, object value)
+    public void UnboundedRangeQueries(ComparisonOperator unaryMatchOperation, OrderingType fieldType, bool ascending, object value)
     {
         using var store = CreateDatabase(out List<Dto> actualDocuments);
         using var session = store.OpenSession();
@@ -79,21 +79,21 @@ public class StreamingOptimization_DataTests : RavenTestBase
 
         query = unaryMatchOperation switch
         {
-            UnaryMatchOperation.LessThan when queriedValue is long l => query.WhereLessThan(fieldName, l),
-            UnaryMatchOperation.LessThan when queriedValue is double d => query.WhereLessThan(fieldName, d),
-            UnaryMatchOperation.LessThan when queriedValue is string s => query.WhereLessThan(fieldName, s),
+            ComparisonOperator.LessThan when queriedValue is long l => query.WhereLessThan(fieldName, l),
+            ComparisonOperator.LessThan when queriedValue is double d => query.WhereLessThan(fieldName, d),
+            ComparisonOperator.LessThan when queriedValue is string s => query.WhereLessThan(fieldName, s),
 
-            UnaryMatchOperation.LessThanOrEqual when queriedValue is long l => query.WhereLessThanOrEqual(fieldName, l),
-            UnaryMatchOperation.LessThanOrEqual when queriedValue is double d => query.WhereLessThanOrEqual(fieldName, d),
-            UnaryMatchOperation.LessThanOrEqual when queriedValue is string s => query.WhereLessThanOrEqual(fieldName, s),
+            ComparisonOperator.LessThanOrEqual when queriedValue is long l => query.WhereLessThanOrEqual(fieldName, l),
+            ComparisonOperator.LessThanOrEqual when queriedValue is double d => query.WhereLessThanOrEqual(fieldName, d),
+            ComparisonOperator.LessThanOrEqual when queriedValue is string s => query.WhereLessThanOrEqual(fieldName, s),
 
-            UnaryMatchOperation.GreaterThan when queriedValue is long l => query.WhereGreaterThan(fieldName, l),
-            UnaryMatchOperation.GreaterThan when queriedValue is double d => query.WhereGreaterThan(fieldName, d),
-            UnaryMatchOperation.GreaterThan when queriedValue is string s => query.WhereGreaterThan(fieldName, s),
+            ComparisonOperator.GreaterThan when queriedValue is long l => query.WhereGreaterThan(fieldName, l),
+            ComparisonOperator.GreaterThan when queriedValue is double d => query.WhereGreaterThan(fieldName, d),
+            ComparisonOperator.GreaterThan when queriedValue is string s => query.WhereGreaterThan(fieldName, s),
 
-            UnaryMatchOperation.GreaterThanOrEqual when queriedValue is long l => query.WhereGreaterThanOrEqual(fieldName, l),
-            UnaryMatchOperation.GreaterThanOrEqual when queriedValue is double d => query.WhereGreaterThanOrEqual(fieldName, d),
-            UnaryMatchOperation.GreaterThanOrEqual when queriedValue is string s => query.WhereGreaterThanOrEqual(fieldName, s),
+            ComparisonOperator.GreaterThanOrEqual when queriedValue is long l => query.WhereGreaterThanOrEqual(fieldName, l),
+            ComparisonOperator.GreaterThanOrEqual when queriedValue is double d => query.WhereGreaterThanOrEqual(fieldName, d),
+            ComparisonOperator.GreaterThanOrEqual when queriedValue is string s => query.WhereGreaterThanOrEqual(fieldName, s),
 
             _ => throw new InvalidDataException(unaryMatchOperation.ToString())
         };
@@ -106,21 +106,21 @@ public class StreamingOptimization_DataTests : RavenTestBase
 
         Func<Dto, bool> filter = unaryMatchOperation switch
         {
-            UnaryMatchOperation.LessThan when queriedValue is long l => dto => dto.LongValue < l,
-            UnaryMatchOperation.LessThan when queriedValue is double d => dto => dto.DoubleValue < d,
-            UnaryMatchOperation.LessThan when queriedValue is string s => dto => dto.Name.AsSpan().SequenceCompareTo(s) < 0,
+            ComparisonOperator.LessThan when queriedValue is long l => dto => dto.LongValue < l,
+            ComparisonOperator.LessThan when queriedValue is double d => dto => dto.DoubleValue < d,
+            ComparisonOperator.LessThan when queriedValue is string s => dto => dto.Name.AsSpan().SequenceCompareTo(s) < 0,
 
-            UnaryMatchOperation.LessThanOrEqual when queriedValue is long l => dto => dto.LongValue <= l,
-            UnaryMatchOperation.LessThanOrEqual when queriedValue is double d => dto => dto.DoubleValue <= d,
-            UnaryMatchOperation.LessThanOrEqual when queriedValue is string s => dto => dto.Name.AsSpan().SequenceCompareTo(s) <= 0,
+            ComparisonOperator.LessThanOrEqual when queriedValue is long l => dto => dto.LongValue <= l,
+            ComparisonOperator.LessThanOrEqual when queriedValue is double d => dto => dto.DoubleValue <= d,
+            ComparisonOperator.LessThanOrEqual when queriedValue is string s => dto => dto.Name.AsSpan().SequenceCompareTo(s) <= 0,
 
-            UnaryMatchOperation.GreaterThan when queriedValue is long l => dto => dto.LongValue > l,
-            UnaryMatchOperation.GreaterThan when queriedValue is double d => dto => dto.DoubleValue > d,
-            UnaryMatchOperation.GreaterThan when queriedValue is string s => dto => dto.Name.AsSpan().SequenceCompareTo(s) > 0,
+            ComparisonOperator.GreaterThan when queriedValue is long l => dto => dto.LongValue > l,
+            ComparisonOperator.GreaterThan when queriedValue is double d => dto => dto.DoubleValue > d,
+            ComparisonOperator.GreaterThan when queriedValue is string s => dto => dto.Name.AsSpan().SequenceCompareTo(s) > 0,
 
-            UnaryMatchOperation.GreaterThanOrEqual when queriedValue is long l => dto => dto.LongValue >= l,
-            UnaryMatchOperation.GreaterThanOrEqual when queriedValue is double d => dto => dto.DoubleValue >= d,
-            UnaryMatchOperation.GreaterThanOrEqual when queriedValue is string s => dto => dto.Name.AsSpan().SequenceCompareTo(s) >= 0,
+            ComparisonOperator.GreaterThanOrEqual when queriedValue is long l => dto => dto.LongValue >= l,
+            ComparisonOperator.GreaterThanOrEqual when queriedValue is double d => dto => dto.DoubleValue >= d,
+            ComparisonOperator.GreaterThanOrEqual when queriedValue is string s => dto => dto.Name.AsSpan().SequenceCompareTo(s) >= 0,
 
             _ => throw new InvalidDataException(unaryMatchOperation.ToString())
         };

@@ -14,10 +14,14 @@ using BenchmarkDotNet.Validators;
 using Corax;
 using Corax.Querying;
 using Corax.Mappings;
+using Corax.Querying.Matches;
+using Corax.Querying.Matches.Meta;
 using Corax.Querying.Matches.SortingMatches.Meta;
+using Corax.Querying.Primitives;
 using Corax.Utils;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Voron.Data.RoaringBitmaps;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using IndexWriter = Corax.Indexing.IndexWriter;
 
@@ -237,16 +241,36 @@ namespace Voron.Benchmark.Corax
 
         [Benchmark]
         public void OrderByRuntimeQuery()
-        {            
-            var typeTerm = _indexSearcher.TermQuery(_typeSlice, _dogSlice);
+        {
+            var typeField = FieldMetadata.Build(_typeSlice, default, 3, default, default);
+            var typeTerm = _indexSearcher.TermQuery(typeField, _dogSlice);
+
             var ageField = FieldMetadata.Build(_ageSlice, default, 2, default, default);
             var ageTerm = _indexSearcher.StartWithQuery(ageField, _ageValueSlice);
-            var andQuery = _indexSearcher.And(typeTerm, ageTerm);
-            var query = _indexSearcher.OrderBy(andQuery, new OrderMetadata(ageField, true, MatchCompareFieldType.Sequence, fieldHasNoTerms: false), defaultNullsSortMode: NullsSortMode.NullsSmallest, take: TakeSize);           
+
+            var filtered = And(_indexSearcher, typeTerm, ageTerm);
+            var query = _indexSearcher.OrderBy(filtered, new OrderMetadata(ageField, true, MatchCompareFieldType.Sequence), defaultNullsSortMode: NullsSortMode.NullsSmallest, take: TakeSize);
 
             Span<long> ids = _ids;
             while (query.Fill(ids) != 0)
                 ;
-        }       
+        }
+
+        // IndexSearcher has no And primitive — build the equivalent via bitmap primitives.
+        private static BitmapMatch And(IndexSearcher searcher, IQueryMatch left, IQueryMatch right)
+        {
+            var bitmap = new BitmapMatch(searcher.Allocator);
+            RoaringBitmap tempData = new(searcher.Allocator);
+            try
+            {
+                QueryPrimitives.OrWithMatch(left, ref bitmap.BitmapState);
+                QueryPrimitives.AndWithMatch(right, ref bitmap.BitmapState, ref tempData);
+            }
+            finally
+            {
+                tempData.Dispose();
+            }
+            return bitmap;
+        }
     }
 }

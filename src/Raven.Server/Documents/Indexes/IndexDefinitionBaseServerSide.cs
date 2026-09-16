@@ -31,6 +31,13 @@ namespace Raven.Server.Documents.Indexes
 
         public abstract long Version { get; }
 
+        private long? _compoundFieldNumericXorMask;
+
+        // RavenDB-26831: order-preserving XOR mask for raw signed-long compound-field members. long.MinValue
+        // flips the sign bit so signed longs sort in unsigned byte order (negatives below positives); 0 keeps
+        // the legacy (non-order-preserving) encoding for indexes built before the fix. 
+        public long CompoundFieldNumericXorMask => _compoundFieldNumericXorMask ??= Version >= IndexVersion.CoraxOrderPreservingCompoundNumericEncoding ? long.MinValue : 0L;
+
         public HashSet<string> Collections { get; protected set; }
 
         public IndexLockMode LockMode { get; set; }
@@ -214,10 +221,16 @@ namespace Raven.Server.Documents.Indexes
             public const long CoraxNumericTreesWithoutFrequencies_72 = 72_002; // RavenDB-27171
             public const long LuceneExactDatesUseTimeTicks_72 = 72_003; // RavenDB-27052
 
+            // RavenDB-25281: Corax rejects a compound field whose first source field is tokenized/non-keyword
+            // (it cannot produce the order-preserving prefix a compound field needs). Gated by version so indexes
+            // created before this validation existed keep working after an upgrade; only indexes at this version
+            // or higher are validated.
+            public const long CoraxCompoundFieldFirstFieldValidation = 72_004; // RavenDB-25281
+
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = LuceneExactDatesUseTimeTicks_72;
+            public const long CurrentVersion = CoraxCompoundFieldFirstFieldValidation;
 
             public static bool IsLowerCasedReferencesSupported(long indexVersion)
             {

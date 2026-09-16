@@ -37,6 +37,7 @@ using Circle = Raven.Server.Documents.Indexes.Spatial.Circle;
 using System.Diagnostics.CodeAnalysis;
 using Acornima;
 using Acornima.Ast;
+using Corax.Querying.Planning;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Documents.Indexes;
 using Enum = System.Enum;
@@ -47,9 +48,29 @@ namespace Raven.Server.Documents.Queries
     {
         internal static string SelectOutput = "__selectOutput";
 
-        private readonly Dictionary<string, QueryFieldName> _aliasToName = new Dictionary<string, QueryFieldName>();
+        private readonly Dictionary<string, QueryFieldName> _aliasToName = [];
 
-        public readonly Dictionary<StringSegment, (string PropertyPath, bool Array, bool Parameter, bool Quoted, string LoadFromAlias)> RootAliasPaths = new Dictionary<StringSegment, (string, bool, bool, bool, string)>();
+        public readonly Dictionary<StringSegment, (string PropertyPath, bool Array, bool Parameter, bool Quoted, string LoadFromAlias)> RootAliasPaths = [];
+
+
+        /// <summary>
+        /// Cached Corax plan memory - for _really_ hot paths :-) 
+        /// </summary>
+        public PlanMemo CachedPlanMemo { get; set; }
+
+        /// <summary>
+        /// Cached the bindings between each query clause and its relevant parameters (saved lookup time)
+        /// </summary>
+        public ParameterBinding[] CachedSlotBindings { get; set; }
+
+        public sealed class PlanMemo(long planCacheGeneration, PlanCache.PerQueryPlans bucket)
+        {
+            /// <summary>
+            /// Generations change when the index is reset, or a field HasMultipleTermsInField() is changed, etc. 
+            /// </summary>
+            public readonly long PlanCacheGeneration = planCacheGeneration;
+            public readonly WeakReference<PlanCache.PerQueryPlans> Bucket = new(bucket);
+        }
 
         public QueryMetadata(string query, BlittableJsonReaderObject parameters, ulong cacheKey, bool addSpatialProperties = false, QueryType queryType = QueryType.Select)
             : this(ParseQuery(query, queryType), parameters, cacheKey, addSpatialProperties)
@@ -431,7 +452,7 @@ function execute(doc, args){
                     }
                     else if (order.Expression is FieldExpression fe)
                     {
-                        OrderBy[i] = new OrderByField(GetIndexFieldName(fe, parameters), order.FieldType, order.Ascending, nullsOrdering: order.NullsOrdering);
+                        OrderBy[i] = new OrderByField(GetIndexFieldName(fe, parameters), order.FieldType, order.Ascending, NullsOrdering: order.NullsOrdering);
                     }
                     else
                     {
@@ -1140,7 +1161,7 @@ function execute(doc, args){
                 {
                     case OrderByFieldType.AlphaNumeric:
                     case OrderByFieldType.String:
-                        return new OrderByField(new QueryFieldName(Constants.Documents.Indexing.Fields.DocumentIdFieldName, false), orderingType, asc, MethodType.Id, nullsOrdering: nullsOrdering);
+                        return new OrderByField(new QueryFieldName(Constants.Documents.Indexing.Fields.DocumentIdFieldName, false), orderingType, asc, MethodType.Id, NullsOrdering: nullsOrdering);
 
                     default:
                         throw new InvalidQueryException("Invalid ORDER BY 'id()' call, this field can only be sorted as a string or alphanumeric value, but got " + orderingType, QueryText, parameters);
@@ -1177,7 +1198,7 @@ function execute(doc, args){
                 HasOrderByRandom = true;
 
                 if (me.Arguments == null || me.Arguments.Count == 0)
-                    return new OrderByField(null, OrderByFieldType.Random, asc, nullsOrdering: nullsOrdering);
+                    return new OrderByField(null, OrderByFieldType.Random, asc, NullsOrdering: nullsOrdering);
 
                 if (me.Arguments.Count > 1)
                     throw new InvalidQueryException("Invalid ORDER BY 'random()' call, expected zero to one arguments, got " + me.Arguments.Count,
@@ -1195,7 +1216,7 @@ function execute(doc, args){
                     null,
                     new[]
                     {
-                        new OrderByField.Argument(token.Token.Value, ValueTokenType.String)
+                        new OrderByField.Argument(token.Token.Value, token.Value)
                     },
                     nullsOrdering);
             }
@@ -1203,7 +1224,7 @@ function execute(doc, args){
             if (me.Name.Equals("score", StringComparison.OrdinalIgnoreCase))
             {
                 if (me.Arguments == null || me.Arguments.Count == 0)
-                    return new OrderByField(null, OrderByFieldType.Score, asc, nullsOrdering: nullsOrdering);
+                    return new OrderByField(null, OrderByFieldType.Score, asc, NullsOrdering: nullsOrdering);
 
                 throw new InvalidQueryException("Invalid ORDER BY 'score()' call, expected zero arguments, got " + me.Arguments.Count, QueryText,
                     parameters);
@@ -1300,7 +1321,7 @@ function execute(doc, args){
                 if (me.Name.Equals("count", StringComparison.OrdinalIgnoreCase))
                 {
                     if (me.Arguments == null || me.Arguments.Count == 0)
-                        return new OrderByField(QueryFieldName.Count, OrderByFieldType.Long, asc, nullsOrdering: nullsOrdering)
+                        return new OrderByField(QueryFieldName.Count, OrderByFieldType.Long, asc, NullsOrdering: nullsOrdering)
                         {
                             AggregationOperation = AggregationOperation.Count
                         };
@@ -1326,7 +1347,7 @@ function execute(doc, args){
                         orderingType = OrderByFieldType.Double;
                     }
 
-                    return new OrderByField(new QueryFieldName(sumFieldToken.FieldValue, sumFieldToken.IsQuoted), orderingType, asc, nullsOrdering: nullsOrdering)
+                    return new OrderByField(new QueryFieldName(sumFieldToken.FieldValue, sumFieldToken.IsQuoted), orderingType, asc, NullsOrdering: nullsOrdering)
                     {
                         AggregationOperation = AggregationOperation.Sum
                     };
@@ -2322,6 +2343,26 @@ function execute(doc, args){
 
                         if (QueryBuilderHelper.AreValueTokenTypesValid(previousValue.Value, value.Value) == false)
                             ThrowIncompatibleTypesOfVariables(fieldName, QueryText, parameters, values.ToArray());
+                    }
+
+                    // validates IN args has the same type, rejecting: $p = [1L, "Shalom"]. 
+                    if (value.Value == ValueTokenType.Parameter
+                        && parameters != null
+                        && parameters.TryGetMember(value.Token, out var paramValue)
+                        && paramValue is BlittableJsonReaderArray arr)
+                    {
+                        foreach (var item in arr)
+                        {
+                            var elemType = QueryBuilderHelper.GetValueTokenType(item, QueryText, parameters);
+                            if (previousType != ValueTokenType.Null
+                                && QueryBuilderHelper.AreValueTokenTypesValid(previousType, elemType) == false)
+                            {
+                                QueryBuilderHelper.ThrowInvalidParameterType(previousType, (item, elemType), QueryText, parameters);
+                            }
+                            if (elemType != ValueTokenType.Null)
+                                previousType = elemType;
+                        }
+                        continue;
                     }
 
                     var valueType = GetValueTokenType(parameters, value, unwrapArrays: true);

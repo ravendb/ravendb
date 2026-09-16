@@ -2,33 +2,13 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
-using Corax.Querying.Matches.SortingMatches.Meta;
 using Sparrow;
 
 namespace Corax.Querying.Matches
 {
-    public struct BoostingComparer : IMatchComparer
-    {
-        public MatchCompareFieldType FieldType => MatchCompareFieldType.Score;
-
-        public FieldMetadata Field => throw new NotSupportedException($"{nameof(Field)} is not supported for {nameof(BoostingComparer)}");
-
-        public int CompareNumerical<T>(T sx, T sy) where T : unmanaged, INumber<T>
-        {
-            return sy.CompareTo(sx);
-        }
-
-        public int CompareSequence(ReadOnlySpan<byte> sx, ReadOnlySpan<byte> sy)
-        {
-            throw new NotSupportedException($"{nameof(CompareSequence)} is not supported for {nameof(BoostingComparer)}");
-        }
-    }
-
-
     //We should set inner type via generic but since we don't do that in QueryBuilder (we use interfaces all the time) let's skip that. 
     //This should be fixed when we introduce something similar to IL ( RavenDB-19568)
     [DebuggerDisplay("{DebugView,nq}")]
@@ -45,17 +25,8 @@ namespace Corax.Querying.Matches
         }
 
         public long Count => _inner.Count;
-        
-        public DuplicatesOccurrence DuplicatesOccurrenceStatus => _inner.DuplicatesOccurrenceStatus;
-
-        public SkipSortingResult AttemptToSkipSorting() => _inner.AttemptToSkipSorting();
-
-        public QueryCountConfidence Confidence => _inner.Confidence;
 
         public bool IsBoosting => true;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int AndWith(Span<long> buffer, int matches) => _inner.AndWith(buffer, matches);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> matches) => _inner.Fill(matches);
@@ -63,17 +34,23 @@ namespace Corax.Querying.Matches
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Score(Span<long> matches, Span<float> scores, float boostFactor) => _inner.Score(matches, scores, boostFactor * BoostFactor);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void ScoreSorted(Span<long> matches, Span<float> scores, float boostFactor) => _inner.ScoreSorted(matches, scores, boostFactor * BoostFactor);
+
         public QueryInspectionNode Inspect()
         {
+            var inner = _inner.Inspect();
             return new QueryInspectionNode($"{nameof(BoostingMatch)}",
-                children: new List<QueryInspectionNode> { _inner.Inspect() },
+                children: new List<QueryInspectionNode> { inner },
                 parameters: new Dictionary<string, string>()
                 {
                     { Constants.QueryInspectionNode.IsBoosting, IsBoosting.ToString() },
                     { Constants.QueryInspectionNode.Count, Count.ToString()},
-                    { Constants.QueryInspectionNode.CountConfidence, Confidence.ToString() },
                     { Constants.QueryInspectionNode.BoostFactor, BoostFactor.ToString(CultureInfo.InvariantCulture) }
-                });
+                })
+            {
+                IsPostFilter = inner.IsPostFilter
+            };
         }
     }
 }

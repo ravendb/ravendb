@@ -431,6 +431,188 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         return true;
     }
 
+    /// <summary>
+    /// Exact count of entries with a key in <c>[low, high]</c> (inclusive), walking in-range terms via a
+    /// forward iterator (O(#in-range)). The small/medium-range answer and the oracle the sampling estimator
+    /// (<see cref="GetNumberOfEntriesInRangeEstimate"/>) is validated against. An inverted range returns 0.
+    /// </summary>
+    public long GetNumberOfEntriesInRange(TLookupKey low, TLookupKey high)
+    {
+        if (_state.NumberOfEntries == 0)
+            return 0;
+
+        var it = Iterate<ForwardIterator>();
+        it.Seek(low); // forward seek lands on the first key >= low (inclusive low bound)
+
+        long count = 0;
+        while (it.MoveNext<TLookupKey>(out var key, out _, out _))
+        {
+            // Compare via the (parent, keyData) overload, not key.CompareTo(high): the iterator materializes
+            // keys with no decoded payload (CompactKeyLookup.Key is null), so a key-to-key compare would NRE
+            // for string trees. The parent overload lazily resolves the stored key for every TLookupKey.
+            if (high.CompareTo(this, key.ToLong()) < 0)
+                break;
+            count++;
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// When a contiguous run of fully-enclosed sibling subtrees is no larger than this, we estimate each one
+    /// individually instead of sampling a single representative and multiplying by the sibling count. This caps
+    /// the "one sample stands in for all" error for the small groups that show up along the two edge paths.
+    /// </summary>
+    private const int ExactChildSampleThreshold = 8;
+
+    /// <summary>
+    /// Sub-linear estimate of how many entries have a key in <c>[low, high]</c> (both bounds inclusive). Where
+    /// <see cref="GetNumberOfEntriesInRange"/> walks every in-range term (O(#in-range)), this descends to both
+    /// bounds, finds the lowest common ancestor branch (LCA) where the two paths diverge into child indices
+    /// <c>a &lt; b</c>, and counts the band directly — never the whole tree:
+    /// <list type="bullet">
+    /// <item>the fully-enclosed children strictly between <c>a</c> and <c>b</c> at the LCA;</item>
+    /// <item>the low edge — within child <c>a</c>, the right-siblings along the low path plus the exact leaf tail;</item>
+    /// <item>the high edge — within child <c>b</c>, the left-siblings along the high path plus the exact leaf head.</item>
+    /// </list>
+    /// Fully-enclosed sibling groups are estimated by sampling one representative subtree
+    /// (<see cref="EstimateSubtreeEntries"/>) times the sibling count; groups up to
+    /// <see cref="ExactChildSampleThreshold"/> are sampled per-child. Counting the band directly (rather than
+    /// <c>rank(high) − rank(low)</c>) makes the error scale with the answer, not the tree size, so small ranges
+    /// stay accurate. The leaf-fill assumption adds a systematic bias the caller's EWMA corrects. Cost is
+    /// O(height²) page reads; an inverted range returns 0.
+    /// </summary>
+    public long GetNumberOfEntriesInRangeEstimate(TLookupKey low, bool lowToStart, TLookupKey high, bool highToEnd)
+    {
+        if (_state.NumberOfEntries == 0)
+            return 0;
+
+        var lowCursor = new IteratorCursorState { _stk = new CursorState[8], _pos = -1, _len = 0 };
+        var highCursor = new IteratorCursorState { _stk = new CursorState[8], _pos = -1, _len = 0 };
+        if (lowToStart)
+            DescendToLeftmostLeaf(ref lowCursor);
+        else
+            FindPageFor(ref low, ref lowCursor);
+        
+        if (highToEnd)
+            DescendToRightmostLeaf(ref highCursor);
+        else
+            FindPageFor(ref high, ref highCursor);
+
+        int lowDepth = lowCursor._pos;
+        int highDepth = highCursor._pos;
+
+        int lowestCommonAncestor = -1;
+        int sharedLevels = Math.Min(lowDepth, highDepth);
+        for (int i = 0; i < sharedLevels; i++)
+        {
+            if (lowCursor._stk[i].LastSearchPosition != highCursor._stk[i].LastSearchPosition)
+            {
+                lowestCommonAncestor = i;
+                break;
+            }
+        }
+
+        if (lowestCommonAncestor == -1) // both on the same leaf page
+        { 
+            ref var leaf = ref lowCursor._stk[lowDepth];
+            int loStart = LowerBoundIndex(ref leaf);
+            int hiEnd = UpperBoundIndex(ref highCursor._stk[lowDepth]);
+            return Math.Max(0, hiEnd - loStart);
+        }
+
+        int a = lowCursor._stk[lowestCommonAncestor].LastSearchPosition;
+        int b = highCursor._stk[lowestCommonAncestor].LastSearchPosition;
+        if (a > b)
+            return 0; // inverted range (low > high)
+
+        long total = 0;
+
+        // Middle: children strictly between a and b at the LCA are wholly inside [low, high].
+        if (b - 1 >= a + 1)
+            total += EstimateChildrenRange(ref lowCursor._stk[lowestCommonAncestor], a + 1, b - 1);
+
+        total += SumLowEdge(ref lowCursor, lowDepth);
+        total += SumHighEdge(ref highCursor, highDepth);
+
+        // The structural sampling can overshoot a sparse tree; never claim more than actually exists.
+        return Math.Min(total, _state.NumberOfEntries);
+
+        long SumHighEdge(ref IteratorCursorState cursor, int depth)
+        {
+            long sum = 0;
+            for (int i = lowestCommonAncestor + 1; i < depth; i++)
+            {
+                ref var s = ref cursor._stk[i];
+                int p = s.LastSearchPosition;
+                // left siblings of the high path
+                sum += EstimateChildrenRange(ref s, 0, p - 1); 
+            }
+
+            ref var leaf = ref cursor._stk[depth];
+            // exact head of the high leaf (keys <= high)
+            return sum + UpperBoundIndex(ref leaf);
+        }
+        
+        long SumLowEdge(ref IteratorCursorState cursor, int depth)
+        {
+            long sum = 0;
+            for (int i = lowestCommonAncestor + 1; i < depth; i++)
+            {
+                ref var s = ref cursor._stk[i];
+                int p = s.LastSearchPosition;
+                // right siblings of the low path
+                sum += EstimateChildrenRange(ref s, p + 1, s.Header->NumberOfEntries - 1); 
+            }
+
+            ref var leaf = ref cursor._stk[depth];
+            // exact tail of the low leaf (keys >= low)
+            return sum + leaf.Header->NumberOfEntries - LowerBoundIndex(ref leaf); 
+        }
+    }
+
+    private static int LowerBoundIndex(ref CursorState leaf)
+        => leaf.LastMatch == 0 ? leaf.LastSearchPosition : ~leaf.LastSearchPosition;
+
+    private static int UpperBoundIndex(ref CursorState leaf)
+        => leaf.LastMatch == 0 ? leaf.LastSearchPosition + 1 : ~leaf.LastSearchPosition;
+
+    private long EstimateChildrenRange(ref CursorState branch, int from, int to)
+    {
+        int n = to - from + 1;
+        if (n <= 0)
+            return 0;
+
+        if (n <= ExactChildSampleThreshold) // small group, let's check in full
+        {
+            long sum = 0;
+            for (int i = from; i <= to; i++)
+            {
+                sum += EstimateSubtreeEntries(GetValue(ref branch, i));
+            }
+
+            return sum;
+        }
+
+        long sample = EstimateSubtreeEntries(GetValue(ref branch, from + n / 2));
+        return sample * n;
+    }
+
+    private long EstimateSubtreeEntries(long pageNumber)
+    {
+        var state = new CursorState { Page = _llt.GetPage(pageNumber) };
+        long factor = 1;
+        while (state.Header->IsBranch)
+        {
+            int n = state.Header->NumberOfEntries;
+            factor *= n;
+            long child = GetValue(ref state, n / 2);
+            state = new CursorState { Page = _llt.GetPage(child) };
+        }
+
+        return factor * state.Header->NumberOfEntries;
+    }
+
     public bool TryRemove(TLookupKey key) => TryRemove(ref key);
 
     public bool TryRemove(ref TLookupKey key)
@@ -1304,6 +1486,47 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         FindPageFor(ref cstate, ref state, ref key);
     }
 
+    private void DescendToRightmostLeaf(ref IteratorCursorState cstate)
+    {
+        cstate._pos = -1;
+        cstate._len = 0;
+        PushPage(_state.RootPage, ref cstate);
+
+        ref var state = ref cstate._stk[cstate._pos];
+        while (state.Header->IsBranch)
+        {
+            int last = state.Header->NumberOfEntries - 1;
+            state.LastSearchPosition = last;
+            var nextPage = GetValue(ref state, last);
+            PushPage(nextPage, ref cstate);
+            state = ref cstate._stk[cstate._pos];
+        }
+
+        // LastMatch == 0 + position on the last slot makes UpperBoundIndex return NumberOfEntries (the full leaf).
+        state.LastSearchPosition = state.Header->NumberOfEntries - 1;
+        state.LastMatch = 0;
+    }
+
+    private void DescendToLeftmostLeaf(ref IteratorCursorState cstate)
+    {
+        cstate._pos = -1;
+        cstate._len = 0;
+        PushPage(_state.RootPage, ref cstate);
+
+        ref var state = ref cstate._stk[cstate._pos];
+        while (state.Header->IsBranch)
+        {
+            state.LastSearchPosition = 0;
+            var nextPage = GetValue(ref state, 0);
+            PushPage(nextPage, ref cstate);
+            state = ref cstate._stk[cstate._pos];
+        }
+
+        // LastMatch == 0 + position on the first slot makes LowerBoundIndex return 0 (start of the leaf).
+        state.LastSearchPosition = 0;
+        state.LastMatch = 0;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void FindPageFor(ref IteratorCursorState cstate, ref CursorState state, ref TLookupKey key)
     {
@@ -1397,8 +1620,72 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         state.LastMatch = match > 0 ? 1 : -1;
         // Negation gives information we didn't find the key in the page
         // In this case, if last compared value is smaller than seeked key, we may suspect it will be the next element of the tree.
-        // It points to the smallest element that is bigger than seeked key. 
+        // It points to the smallest element that is bigger than seeked key.
         state.LastSearchPosition = ~(bot + (match > 0).ToInt32());
+    }
+
+    /// <summary>
+    /// Locate <paramref name="key"/> within [<paramref name="from"/>, NumberOfEntries) using an exponential
+    /// gallop from the cursor instead of a binary search over the whole tail. Produces the exact same
+    /// <see cref="CursorState.LastMatch"/> / <see cref="CursorState.LastSearchPosition"/> contract as
+    /// <see cref="SearchInCurrentPage(ref TLookupKey, ref CursorState, int, int)"/>, so callers are unchanged.
+    ///
+    /// Used by the batched <see cref="GetFor"/> path where keys are sorted ascending and successive lookups
+    /// land at or just after the previous position. Probing entry[from] first makes the common dense case
+    /// (the next key sits at/near the cursor) cost ~1 decode; the gallop then brackets a sparse jump in
+    /// O(log delta) and hands the small bracket to the binary search, versus O(log NumberOfEntries) per key.
+    /// </summary>
+    private void SearchInCurrentPageWithGallop(ref TLookupKey key, ref CursorState state, int from)
+    {
+        var header = state.Header;
+        int n = header->NumberOfEntries;
+        if (n - from <= 0)
+        {
+            // Cursor is at/after the page end: mirror SearchInCurrentPage's empty-range result so the
+            // GetFor loop sees the key as belonging after this page and walks to the next one.
+            state.LastMatch = -1;
+            state.LastSearchPosition = ~from;
+            return;
+        }
+
+        ushort* @base = state.EntriesOffsetsPtr;
+        byte* pagePtr = state.Page.Pointer;
+
+        // Dense fast path: entry[from] is already >= key, so `from` is the answer (no advance, 1 decode).
+        long curKey = GetKeyData(header, pagePtr + @base[from]);
+        int match = key.CompareTo(this, curKey);
+        if (match <= 0)
+        {
+            state.LastMatch = match == 0 ? 0 : -1;
+            state.LastSearchPosition = match == 0 ? from : ~from;
+            return;
+        }
+
+        // entry[from] < key: gallop forward (step 1, 2, 4, ...) until we bracket the key, then binary-search
+        // the (lo, hi] window. `lo` always points at an entry strictly less than key.
+        int lo = from;
+        int step = 1;
+        while (true)
+        {
+            int probe = from + step;
+            if (probe >= n) // overshot the page, resolve the remainder
+            {
+                SearchInCurrentPage(ref key, ref state, lo + 1, n - lo - 1);
+                return; 
+            }
+
+            curKey = GetKeyData(header, pagePtr + @base[probe]);
+            match = key.CompareTo(this, curKey);
+            if (match <= 0)
+            {
+                // entry[probe] >= key -> first match is within (lo, probe]: search [lo+1, probe].
+                SearchInCurrentPage(ref key, ref state, lo + 1, probe - lo);
+                return;
+            }
+
+            lo = probe;
+            step <<= 1;
+        }
     }
 
     [Conditional("DEBUG")]
@@ -1425,21 +1712,21 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         for (int i = 0; i < keys.Length; i++)
         {
             lookupKey = TLookupKey.FromLong<TLookupKey>(keys[i]);
-            SearchInCurrentPage(ref lookupKey, ref state);
+            int from = state.LastSearchPosition >= 0 ? state.LastSearchPosition : ~state.LastSearchPosition;
+            // Gallop forward from that position instead of rescanning the whole page: dense runs cost ~1 decode / key
+            SearchInCurrentPageWithGallop(ref lookupKey, ref state, from);
             if (state.LastMatch == 0) // found the value
             {
-                terms[i] = GetValue(ref state,
-                    // limit the search on the _next_ call on this page
-                    state.LastSearchPosition);
-                
+                terms[i] = GetValue(ref state, state.LastSearchPosition);
+                // next gallop probe find next entry for dense runs, reduces probing
+                state.LastSearchPosition++;
                 continue;
             }
 
-            // didn't find the value, need to check if this is on this page by
-            // checking if this is meant to go *after* the last value in the page
+            // check if the value belongs to the _next_ page or this one
             if (~state.LastSearchPosition < state.Header->NumberOfEntries)
             {
-                // it *should be* on this page, but isn't, we have a missing value
+                // it *should be* on this page, but isn't, so we have a missing value
                 terms[i] = missingValue;
                 continue;
             }

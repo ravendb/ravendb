@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -131,16 +132,45 @@ public class CompoundFieldsOnIndex : RavenTestBase
     
     private async Task CanOptimizeToSkipSorting<TIndex>()  where TIndex : AbstractIndexCreationTask, new()
     {
-        await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>, TIndex>(s => s.Advanced.AsyncDocumentQuery<User, TIndex>()
+        await TestQueryBuilder<CompiledQueryMatch, TIndex>(s => s.Advanced.AsyncDocumentQuery<User, TIndex>()
             .WhereEquals(x => x.Location, "Hadera")
             .OrderBy(x => x.Name)
             .GetIndexQuery()
         );
-        await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>, TIndex>(s => s.Advanced.AsyncDocumentQuery<User, TIndex>()
+        await TestQueryBuilder<CompiledQueryMatch, TIndex>(s => s.Advanced.AsyncDocumentQuery<User, TIndex>()
             .WhereEquals(x => x.Name, "Corax")
             .OrderBy(x => x.Birthday)
             .GetIndexQuery()
         );
+    }
+
+    [RavenFact(RavenTestCategory.Querying)]
+    public void CompoundExactMustApplyResidualClause()
+    {
+        // (Location, Name) is a compound field. A query with THREE equals clauses
+        // (Location, Name, Birthday) is a CompoundExact candidate: the (Location, Name) pair
+        // forms the compound. The third clause (Birthday) is a residual that the compound
+        // TermQuery does not encode, so it must still be applied — otherwise rows that match
+        // the compound but not the residual leak into the result.
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        new Users_Idx().Execute(store);
+        using (var s = store.OpenSession())
+        {
+            s.Store(new User("A", "IL", new DateTime(2014, 4, 1)));
+            s.Store(new User("A", "IL", new DateTime(2009, 4, 1)));
+            s.SaveChanges();
+        }
+
+        Indexes.WaitForIndexing(store);
+        using (var s = store.OpenSession())
+        {
+            var users = s.Query<User, Users_Idx>()
+                .Where(x => x.Location == "IL" && x.Name == "A" && x.Birthday == new DateTime(2014, 4, 1))
+                .ToList();
+
+            Assert.Equal(1, users.Count);
+            Assert.Equal(2014, users[0].Birthday.Year);
+        }
     }
 
     [RavenFact(RavenTestCategory.Querying)]
@@ -182,6 +212,70 @@ public class CompoundFieldsOnIndex : RavenTestBase
     private Task TestQueryBuilder<TExpected, TIndex>(Func<IAsyncDocumentSession, IndexQuery> query)  where TIndex : AbstractIndexCreationTask, new()
     {
         return StreamingOptimization_QueryBuilder.TestQueryBuilder<TExpected,TIndex>(this, false, query);
+    }
+
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Corax)]
+    public void CompoundFieldRejectsFirstFieldTokenizedByCustomAnalyzerWithoutExplicitIndexing()
+    {
+        // A custom analyzer with no explicit Indexing is promoted to FieldIndexing.Search (tokenized) by
+        // IndexField.Create. The first source field of a compound field must stay an order-preserving keyword,
+        // so this must be rejected - even though options.Indexing is itself null.
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+
+        var definition = CompoundDefinition(new IndexFieldOptions { Analyzer = "StandardAnalyzer" });
+
+        var ex = Assert.ThrowsAny<RavenException>(() => store.Maintenance.Send(new PutIndexesOperation(definition)));
+        Assert.Contains("not compatible with compound fields", ex.Message);
+    }
+
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Corax)]
+    public void CompoundFieldRejectsFirstFieldWithCustomAnalyzerEvenWhenIndexingIsDefault()
+    {
+        // FieldIndexing.Default is normalized to null on the client before the definition is sent, so
+        // 'Default + custom analyzer' reaches the server as 'no indexing + analyzer' and IndexField.Create then
+        // promotes the field to Search (tokenized). Setting Default therefore does NOT make the analyzer safe -
+        // the compound field must still be rejected.
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+
+        var definition = CompoundDefinition(new IndexFieldOptions { Indexing = FieldIndexing.Default, Analyzer = "StandardAnalyzer" });
+
+        var ex = Assert.ThrowsAny<RavenException>(() => store.Maintenance.Send(new PutIndexesOperation(definition)));
+        Assert.Contains("not compatible with compound fields", ex.Message);
+    }
+
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Corax)]
+    public void CompoundFieldAllowsFirstFieldWithExactIndexing()
+    {
+        // Exact survives client normalization and binds the order-preserving Keyword analyzer, so it is a valid
+        // compound first field - guards against over-rejecting the safe case.
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+
+        var definition = CompoundDefinition(new IndexFieldOptions { Indexing = FieldIndexing.Exact });
+
+        store.Maintenance.Send(new PutIndexesOperation(definition));
+        Assert.NotNull(store.Maintenance.Send(new GetIndexOperation(definition.Name)));
+    }
+
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Corax)]
+    public void CompoundFieldRejectsFirstFieldExplicitlyConfiguredAsSearch()
+    {
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+
+        var definition = CompoundDefinition(new IndexFieldOptions { Indexing = FieldIndexing.Search });
+
+        var ex = Assert.ThrowsAny<RavenException>(() => store.Maintenance.Send(new PutIndexesOperation(definition)));
+        Assert.Contains("not compatible with compound fields", ex.Message);
+    }
+
+    private static IndexDefinition CompoundDefinition(IndexFieldOptions firstFieldOptions)
+    {
+        return new IndexDefinition
+        {
+            Name = "Users/ByNameLocation",
+            Maps = { "from u in docs.Users select new { u.Name, u.Location, u.Birthday }" },
+            Fields = new Dictionary<string, IndexFieldOptions> { ["Name"] = firstFieldOptions },
+            CompoundFields = new List<string[]> { new[] { "Name", "Birthday" } }
+        };
     }
 
 

@@ -58,6 +58,10 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
     private ShardedQueryResultDocument AddOrderByFields(Document queryResult, IndexQueryServerSide query, ref EntryTermsReader reader, OrderMetadata[] orderByFields)
     {
         var result = ShardedQueryResultDocument.From(queryResult);
+
+        if (query.Metadata.OrderBy is null || orderByFields is null)
+            return result;
+
         var currentCoraxOrderIndex = 0;
 
         // Number of order by fields in Corax index can be smaller than in query metadata
@@ -189,6 +193,11 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
 
         return result;
     }
-    
-    internal override void AssertCanOrderByScoreAutomaticallyWhenBoostingOrVectorSearchIsInvolved() => throw new NotSupportedInShardingException($"Ordering by score is not supported in sharding. You received this exception because your index has boosting, and we attempted to sort the results since the configuration `{RavenConfiguration.GetKey(i => i.Indexing.OrderByScoreAutomaticallyWhenBoostingIsInvolved)}` is enabled or, when you used `vector.search` method in the query when having `{RavenConfiguration.GetKey(i => i.Indexing.CoraxVectorSearchOrderByScoreAutomatically)}` enabled.");
+
+    internal override void AssertCanOrderByScoreAutomaticallyWhenBoostingOrVectorSearchIsInvolved(bool hasVectorSearch)
+    {
+        if(hasVectorSearch) return;
+        throw new NotSupportedInShardingException(
+            $"Ordering by score is not supported in sharding. You received this exception because your index has boosting, and we attempted to sort the results since the configuration `{RavenConfiguration.GetKey(i => i.Indexing.OrderByScoreAutomaticallyWhenBoostingIsInvolved)}` is enabled or, when you used `vector.search` method in the query when having `{RavenConfiguration.GetKey(i => i.Indexing.CoraxVectorSearchOrderByScoreAutomatically)}` enabled.");
+    }
 }

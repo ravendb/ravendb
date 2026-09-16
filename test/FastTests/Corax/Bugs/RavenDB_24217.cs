@@ -75,7 +75,7 @@ public class RavenDB_24217(ITestOutputHelper output) : StorageTest(output)
 
             foreach (var entry in entries)
             {
-                searcher.GetEntryTermsReader(entry.EntryId, ref p, out var entryTermsReader);
+                var entryTermsReader = searcher.GetEntryTermsReader(entry.EntryId, ref p);
                 entryTermsReader.Reset();
 
                 while (entryTermsReader.MoveNext())
@@ -157,7 +157,7 @@ public class RavenDB_24217(ITestOutputHelper output) : StorageTest(output)
             var rootPages = searcher.GetIndexedFieldNamesByRootPage();
             Page p = default;
 
-            searcher.GetEntryTermsReader(doc0Id, ref p, out var entryTermsReader);
+            var entryTermsReader = searcher.GetEntryTermsReader(doc0Id, ref p);
             entryTermsReader.Reset();
             while (entryTermsReader.MoveNext())
             {
@@ -176,7 +176,7 @@ public class RavenDB_24217(ITestOutputHelper output) : StorageTest(output)
                 }
             }
 
-            searcher.GetEntryTermsReader(doc1Id, ref p, out entryTermsReader);
+            entryTermsReader = searcher.GetEntryTermsReader(doc1Id, ref p);
             entryTermsReader.Reset();
             while (entryTermsReader.MoveNext())
             {
@@ -277,7 +277,7 @@ public class RavenDB_24217(ITestOutputHelper output) : StorageTest(output)
 
             foreach (var entry in entries)
             {
-                searcher.GetEntryTermsReader(entry.EntryId, ref p, out var entryTermsReader);
+                var entryTermsReader = searcher.GetEntryTermsReader(entry.EntryId, ref p);
                 entryTermsReader.Reset();
 
                 while (entryTermsReader.MoveNext())

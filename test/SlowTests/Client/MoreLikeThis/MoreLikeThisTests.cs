@@ -355,7 +355,6 @@ namespace SlowTests.Client.MoreLikeThis
                             Fields = new[] { "Body" }
                         }))
                         .ToList();
-
                     Indexes.WaitForIndexing(store);
 
                     Assert.Empty(list);

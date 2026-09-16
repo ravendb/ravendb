@@ -105,7 +105,7 @@ public unsafe struct TermsReader : IDisposable
         
         _rawTermsContainer.ResetAndEnsureCapacity(ids.Length);
         _rawTermsContainer.Count = ids.Length;
-        Container.GetAll(_llt, _termsLocation.ToSpan(), _rawTermsContainer.ToSpan(), -1L, _llt.PageLocator);
+        Container.GetAll(_llt, _termsLocation.ToSpan(), _rawTermsContainer.ToSpan(), _llt.PageLocator);
         termsSet = _rawTermsContainer.ToSpan();
         return maxToProcess;
     }

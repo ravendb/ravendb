@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Sharding.Queries
                     if (Query.Metadata.OrderBy != null && Query.Metadata.OrderByFieldNames.Contains(groupByField))
                         continue;
 
-                    _groupByFields.Add(new OrderByField(new QueryFieldName(groupByField, isQuoted: false), OrderByFieldType.Implicit, ascending: true));
+                    _groupByFields.Add(new OrderByField(new QueryFieldName(groupByField, isQuoted: false), OrderByFieldType.Implicit, Ascending: true));
                 }
             }
 
