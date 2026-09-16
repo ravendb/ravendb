@@ -103,14 +103,15 @@ function ImportDatabaseFromFileContent() {
         <FormProvider {...form}>
             <div className="import-page">
                 <AboutViewHeading
-                    title="Import data from a .ravendbdump file into the current database"
+                    title="Import data from a .ravendbdump file"
                     icon="import-database"
                     backUrl={importOptionsUrl}
                     marginBottom={2}
                 />
                 {hasExistingData && (
                     <Alert variant="warning" className="w-50">
-                        <Icon icon="warning" /> Note: Importing will overwrite any existing documents and indexes.
+                        <Icon icon="warning" color="warning" /> Note: Importing will overwrite any existing documents
+                        and indexes.
                     </Alert>
                 )}
                 <div className="my-4 d-flex align-items-center gap-3">

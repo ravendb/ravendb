@@ -11,7 +11,7 @@ import { getItemsToWarnAbout } from "../importFromFileUtils";
 import { getLicenseLimitWarning } from "../importLicenseLimits";
 import { useImportRestrictions } from "../useImportRestrictions";
 import RestrictedSwitch from "./RestrictedSwitch";
-import CollectionsToImportPicker from "./CollectionsToImportPicker";
+import FormCollectionsSelect from "components/common/FormCollectionsSelect";
 import Card from "react-bootstrap/Card";
 import classNames from "classnames";
 import { useAppSelector } from "components/store";
@@ -25,6 +25,7 @@ export default function DataToImportSection() {
     const subscriptionsLimitWarning = getLicenseLimitWarning(licenseStatus, "subscriptions");
 
     const isImportAll = useWatch({ control, name: "collections.isImportAllCollections" });
+    const includedCollections = useWatch({ control, name: "collections.includedCollections" }) ?? [];
 
     const itemsToWarnAbout = getItemsToWarnAbout({ documents });
 
@@ -44,9 +45,9 @@ export default function DataToImportSection() {
 
     return (
         <ImportSection id="data-to-import" title="Data to import">
-            <div id="collections-to-import" className="small-label mb-2">
+            <h4 id="collections-to-import" className="mb-2">
                 Choose collections to import
-            </div>
+            </h4>
             <Card className="mb-4 p-4">
                 <div className="d-flex gap-2">
                     <button
@@ -66,13 +67,27 @@ export default function DataToImportSection() {
                         Customize imported collections
                     </button>
                 </div>
-                {!isImportAll && <CollectionsToImportPicker />}
+                {!isImportAll && (
+                    <div className="mt-4">
+                        <FormCollectionsSelect
+                            control={control}
+                            allCollectionNames={[]}
+                            isAllCollectionsFormName="collections.isImportAllCollections"
+                            isAllCollections={isImportAll}
+                            collectionsFormName="collections.includedCollections"
+                            collections={includedCollections}
+                            setValue={setValue}
+                            hideAllToggle
+                            isFreeTextEntry
+                        />
+                    </div>
+                )}
             </Card>
 
             <div className="d-flex justify-content-between align-items-center mb-2">
-                <div id="documents-and-extensions" className="small-label">
+                <h4 id="documents-and-extensions" className="m-0">
                     Select documents and extensions
-                </div>
+                </h4>
                 <Button variant="link" size="sm" onClick={() => setAllDocuments(!areAllDocumentsSelected)}>
                     {areAllDocumentsSelected ? "Deselect all" : "Select all"}
                 </Button>
@@ -148,9 +163,9 @@ export default function DataToImportSection() {
 
                 {itemsToWarnAbout.length > 0 && (
                     <Alert variant="warning" className="mt-3 mb-0">
-                        <Icon icon="warning" /> You are importing {itemsToWarnAbout.join(", ")} data without including
-                        the Documents. The documents will be needed when importing this exported file to another
-                        database.
+                        <Icon icon="warning" color="warning" /> You are importing {itemsToWarnAbout.join(", ")} data
+                        without including the Documents. The documents will be needed when importing this exported file
+                        to another database.
                     </Alert>
                 )}
             </Card>

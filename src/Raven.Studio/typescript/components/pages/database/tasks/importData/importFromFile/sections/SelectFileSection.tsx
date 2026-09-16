@@ -33,7 +33,6 @@ export default function SelectFileSection() {
     return (
         <ImportSection id="select-file" title="Select file to import" errorPaths={["file"]}>
             <div className="card p-4">
-                <div className="small-label mb-1">Select file</div>
                 <FileDropzone
                     onChange={(files) =>
                         setValue("file", files[0] ?? null, { shouldValidate: true, shouldDirty: true })

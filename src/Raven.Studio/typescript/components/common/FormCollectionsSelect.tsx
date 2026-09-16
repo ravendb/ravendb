@@ -1,5 +1,7 @@
-import React, { ComponentProps } from "react";
+import React, { ComponentProps, useState } from "react";
 import Collapse from "react-bootstrap/Collapse";
+import Form from "react-bootstrap/Form";
+import InputGroup from "react-bootstrap/InputGroup";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import { EmptySet } from "./EmptySet";
@@ -23,6 +25,13 @@ interface FormCollectionsSelectProps<TFieldValues extends FieldValues, TName ext
     customOptions?: SelectOption<string>[];
     isReadOnly?: boolean;
     isCreatable?: boolean;
+    // Hide the built-in "Selected / All collections" toggle when the parent already provides that
+    // choice (e.g. the import view's "Import all collections / Customize" scope buttons).
+    hideAllToggle?: boolean;
+    // Free-text-only mode: when the available collections can't be enumerated up front (e.g. importing
+    // from a .ravendbdump file), the user can only type collection names. Drops the dropdown chevron
+    // and the "Add all" button, and uses an "Enter collection name" placeholder.
+    isFreeTextEntry?: boolean;
 }
 
 export default function FormCollectionsSelect<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
@@ -38,9 +47,24 @@ export default function FormCollectionsSelect<TFieldValues extends FieldValues, 
         setValue,
         customOptions,
         isReadOnly,
+        hideAllToggle,
+        isFreeTextEntry,
     } = props;
 
     const isCreatable = props.isCreatable ?? true;
+
+    // In free-text mode the select has no menu, so we track the typed value ourselves and commit it
+    // on Enter or via the "Add" button.
+    const [typedCollection, setTypedCollection] = useState("");
+
+    const addTypedCollection = () => {
+        const name = typedCollection.trim();
+        if (!name || collections.includes(name)) {
+            return;
+        }
+        setValue(collectionsFormName, [...collections, name], { shouldDirty: true });
+        setTypedCollection("");
+    };
 
     const removeCollection = (name: string) => {
         setValue(
@@ -78,7 +102,7 @@ export default function FormCollectionsSelect<TFieldValues extends FieldValues, 
 
     return (
         <div className="vstack gap-2">
-            {!isReadOnly && (
+            {!isReadOnly && !hideAllToggle && (
                 <div className="w-fit-content mx-auto">
                     <FormRadioToggleWithIcon
                         control={control}
@@ -91,28 +115,59 @@ export default function FormCollectionsSelect<TFieldValues extends FieldValues, 
             )}
             <Collapse in={!isAllCollections}>
                 <div>
-                    {!isReadOnly && (
-                        <Row className="mb-4">
-                            <Col>
-                                {isCreatable ? (
-                                    <FormSelectCreatable {...formSelectProps} customOptions={customOptions} />
-                                ) : (
-                                    <FormSelect {...formSelectProps} />
-                                )}
-                            </Col>
-                            <Col sm="auto" className="d-flex">
+                    {!isReadOnly &&
+                        (isFreeTextEntry ? (
+                            // The available collections can't be enumerated (e.g. a .ravendbdump file), so
+                            // this is a plain text input, not a select. InputGroup pairs it with the Add
+                            // button at a matching height (the app's standard "input + button" pattern).
+                            <InputGroup className="mb-3">
+                                <Form.Control
+                                    type="text"
+                                    placeholder="Enter collection name"
+                                    value={typedCollection}
+                                    onChange={(e) => setTypedCollection(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" && typedCollection.trim()) {
+                                            e.preventDefault();
+                                            addTypedCollection();
+                                        }
+                                    }}
+                                />
                                 <Button
-                                    variant="info"
-                                    onClick={addAllCollections}
-                                    disabled={isAddAllCollectionsDisabled}
+                                    variant="secondary"
+                                    className="text-nowrap"
+                                    onClick={addTypedCollection}
+                                    disabled={!typedCollection.trim()}
                                 >
-                                    <Icon icon="documents" addon="plus" /> Add all
+                                    <Icon icon="plus" /> Add
                                 </Button>
-                            </Col>
-                        </Row>
-                    )}
-                    <div className="d-flex flex-wrap mb-1 align-items-center">
-                        <h4 className="m-0">Selected collections</h4>
+                            </InputGroup>
+                        ) : (
+                            <Row className="mb-4">
+                                <Col>
+                                    {isCreatable ? (
+                                        <FormSelectCreatable {...formSelectProps} customOptions={customOptions} />
+                                    ) : (
+                                        <FormSelect {...formSelectProps} />
+                                    )}
+                                </Col>
+                                <Col sm="auto" className="d-flex">
+                                    <Button
+                                        variant="info"
+                                        onClick={addAllCollections}
+                                        disabled={isAddAllCollectionsDisabled}
+                                    >
+                                        <Icon icon="documents" addon="plus" /> Add all
+                                    </Button>
+                                </Col>
+                            </Row>
+                        ))}
+                    <div className="d-flex flex-wrap align-items-center mb-1">
+                        {isFreeTextEntry ? (
+                            <div className="m-0">Selected collections</div>
+                        ) : (
+                            <h4 className="m-0">Selected collections</h4>
+                        )}
                         <FlexGrow />
                         {collections.length > 0 && !isReadOnly && (
                             <Button variant="link" size="xs" onClick={removeAllCollections} className="p-0">

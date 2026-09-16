@@ -22,7 +22,7 @@ export default function ImportProcessingSection() {
             title="Import processing & security"
             errorPaths={["processing.transformScript", "processing.maxReadOpsPerSecond", "processing.encryptionKey"]}
         >
-            <div className="small-label mb-2">Data transformation and integrity</div>
+            <h4 className="mb-2">Data transformation and integrity</h4>
             <div className="card p-4 mb-4">
                 <FormSwitch control={control} name="processing.isUseTransformScript">
                     Use transform script{" "}
@@ -46,7 +46,7 @@ export default function ImportProcessingSection() {
                 </Collapse>
             </div>
 
-            <div className="small-label mb-2">Import optimization &amp; security</div>
+            <h4 className="mb-2">Import optimization &amp; security</h4>
             <Card className="p-4">
                 <FormGroup marginClass="mb-0">
                     <FormSwitch control={control} name="processing.isSetMaxReadOpsPerSecond">
