@@ -1,9 +1,11 @@
 using System;
 using System.Linq;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session;
+using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -95,6 +97,44 @@ public class RavenDB_27536 : RavenTestBase
         }
     }
 
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void MoreLikeThisReportsTheScoreItRanksBy(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        store.ExecuteIndex(new Widgets_WithScore());
+
+        var target = new Widget { Key = Guid.NewGuid(), Category = "common", Name = "Alpha Bravo Charlie" };
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(target);
+
+            // only half the fillers share a term, so the shared terms keep a non-zero idf
+            for (int i = 0; i < 5; i++)
+                session.Store(new Widget { Key = Guid.NewGuid(), Category = target.Category, Name = $"Alpha filler-{i}" });
+
+            for (int i = 0; i < 5; i++)
+                session.Store(new Widget { Key = Guid.NewGuid(), Category = "rare", Name = $"Delta filler-{i}" });
+
+            session.SaveChanges();
+        }
+
+        Indexes.WaitForIndexing(store);
+
+        using var s = store.OpenSession();
+
+        var page = Similar<Widgets_WithScore>(s, target, boost: false, take: 5);
+
+        Assert.NotEmpty(page);
+
+        foreach (var metadata in page.Select(x => s.Advanced.GetMetadataFor(x)))
+            Assert.NotNull(metadata[Constants.Documents.Metadata.IndexScore]);
+
+        Assert.True((double)s.Advanced.GetMetadataFor(page[0])[Constants.Documents.Metadata.IndexScore] > 0);
+    }
+
     private static Widget[] Similar<TIndex>(IDocumentSession session, Widget target, bool boost, int take)
         where TIndex : AbstractIndexCreationTask, new()
     {
@@ -136,6 +176,21 @@ public class RavenDB_27536 : RavenTestBase
             Store(w => w.Key, FieldStorage.Yes);
             Store(w => w.Category, FieldStorage.Yes);
             Store(w => w.Name, FieldStorage.Yes);
+        }
+    }
+
+    private sealed class Widgets_WithScore : AbstractIndexCreationTask<Widget>
+    {
+        public Widgets_WithScore()
+        {
+            Map = widgets => from w in widgets select new { w.Key, w.Category, w.Name };
+
+            Store(w => w.Key, FieldStorage.Yes);
+            Store(w => w.Category, FieldStorage.Yes);
+            Store(w => w.Name, FieldStorage.Yes);
+
+            // Corax hides score metadata behind this opt-in, Lucene reports it either way
+            Configuration = new IndexConfiguration { [RavenConfiguration.GetKey(x => x.Indexing.CoraxIncludeDocumentScore)] = "true" };
         }
     }
 

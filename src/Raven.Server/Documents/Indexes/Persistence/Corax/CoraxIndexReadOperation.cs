@@ -1170,7 +1170,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
 
             // SortingMatch memoizes and dedupes its input, so no DeduplicationMatch is needed
-            mltQuery = IndexSearcher.OrderBy(mltQuery, new OrderMetadata(hasBoost: true, MatchCompareFieldType.Score), (int)take, token);
+            var sortedQuery = IndexSearcher.OrderBy(mltQuery, new OrderMetadata(hasBoost: true, MatchCompareFieldType.Score), (int)take, token);
 
             var ravenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             if (baseDocId.HasValue)
@@ -1182,6 +1182,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
 
             long[] ids = QueryPool.Rent(pageSize);
+
+            SortingDataTransfer sortingData = default;
+            if (_index.Configuration.CoraxIncludeDocumentScore)
+            {
+                // sized to the span Fill gets, so the score of ids[i] is always at ScoresBuffer[i]
+                sortingData = new SortingDataTransfer { ScoresBuffer = ScorePool.Rent(ids.Length) };
+                sortedQuery.SetScoreAndDistanceBuffer(sortingData);
+            }
+
+            mltQuery = sortedQuery;
+
             var read = 0;
             long returnedDocs = 0;
             long skippedDocs = 0;
@@ -1210,7 +1221,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     }
                     
                     var termsReader = IndexSearcher.GetEntryTermsReader(hit, ref page);
-                    var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, termsReader, id, _index.IndexFieldsPersistence.HasTimeValues);
+                    var documentScore = sortingData.IncludeScores ? sortingData.ScoresBuffer[i] : (float?)null;
+                    var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, termsReader, id, _index.IndexFieldsPersistence.HasTimeValues, documentScore);
                     var result = retriever.Get(ref retrieverInput, token);
                     
                     if (result.Document != null)
@@ -1230,6 +1242,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
 
             QueryPool.Return(ids);
+            if (sortingData.ScoresBuffer != null)
+                ScorePool.Return(sortingData.ScoresBuffer);
         }
 
         public override IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<long> totalResults,
