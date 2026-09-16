@@ -13,7 +13,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
-using Sparrow.Platform;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -997,7 +996,8 @@ namespace SlowTests.Issues
 
             using (var session = store.OpenAsyncSession())
             {
-                session.Advanced.MaxNumberOfRequestsPerSession = PlatformDetails.Is32Bits == false ? 50 : 200;
+                // one request per indexing batch, and the number of batches depends on the platform and on the memory pressure during the run
+                session.Advanced.MaxNumberOfRequestsPerSession = int.MaxValue;
 
                 (int itemsCount1, int itemsCount2) = await getItemsCount(session);
                 Assert.Equal(_employeesCount, itemsCount1);
