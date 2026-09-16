@@ -227,6 +227,17 @@ interface confirmDialogResult {
     can: boolean;
 }
 
+type attachmentUploadStatus = "uploading" | "uploaded" | "failed" | "skipped" | "cancelled";
+
+interface attachmentUploadProgress {
+    position: number;
+    count: number;
+    fileName: string;
+    status: attachmentUploadStatus;
+    loaded: number;
+    total: number;
+}
+
 interface disableDatabaseResult {
     Name: string;
     Success: boolean;

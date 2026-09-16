@@ -260,6 +260,14 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         );
     }
 
+    withGetRemoteAttachmentsDestinations(dto?: MockedValue<RemoteAttachmentsStudioConfiguration>) {
+        return this.mockResolvedValue(
+            this.mocks.getRemoteAttachmentsDestinations,
+            dto,
+            DatabasesStubs.remoteAttachmentsStudioConfiguration()
+        );
+    }
+
     withSchemaValidations(dto?: MockedValue<any>) {
         return this.mockResolvedValue(this.mocks.getSchemaValidation, dto, DatabasesStubs.schemaValidators());
     }

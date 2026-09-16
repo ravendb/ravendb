@@ -1,0 +1,148 @@
+import React from "react";
+import { act, rtlRender, RtlScreen, waitFor, within } from "test/rtlTestUtils";
+import { mockServices } from "test/mocks/services/MockServices";
+import { DatabasesStubs } from "test/stubs/DatabasesStubs";
+import document from "models/database/documents/document";
+import editDocumentUploader = require("viewmodels/database/documents/editDocumentUploader");
+import AddAttachmentWithRemoteParametersModal from "./AddAttachmentWithRemoteParametersModal";
+
+type ProgressCallback = (progress: attachmentUploadProgress) => void;
+type User = ReturnType<typeof rtlRender>["user"];
+
+function progress(fileName: string, status: attachmentUploadStatus, loaded: number, total: number) {
+    return { position: 2, count: 2, fileName, status, loaded, total };
+}
+
+function neverEndingUpload(events: attachmentUploadProgress[]) {
+    return (_files: File[], _dto: unknown, onProgress: ProgressCallback) => {
+        events.forEach(onProgress);
+        return new Promise<void>(() => undefined);
+    };
+}
+
+function rowOf(screen: RtlScreen, fileName: string) {
+    return within(screen.getByText(fileName).closest(".file-upload-item") as HTMLElement);
+}
+
+describe("AddAttachmentWithRemoteParametersModal", () => {
+    const db = DatabasesStubs.nonShardedSingleNodeDatabase();
+    const doc = ko.observable(new document({ "@metadata": { "@id": "users/1" } } as documentDto));
+    const fileA = new File(["aaaa"], "a.txt");
+    const fileB = new File(["bb"], "b.txt");
+    let uploadFiles: jest.SpyInstance;
+
+    beforeEach(() => {
+        mockServices.databasesService.withGetRemoteAttachmentsDestinations();
+        uploadFiles = jest.spyOn(editDocumentUploader.prototype, "uploadFiles").mockResolvedValue();
+    });
+
+    afterEach(() => {
+        uploadFiles.mockRestore();
+    });
+
+    function renderModal(onClose = jest.fn()) {
+        return rtlRender(
+            <AddAttachmentWithRemoteParametersModal document={doc} db={db} onUploaded={jest.fn()} onClose={onClose} />
+        );
+    }
+
+    async function selectFiles(screen: RtlScreen, user: User, files: File[]) {
+        const fileInput = await screen.findByTestId("file-input");
+        await act(() => user.upload(fileInput, files));
+    }
+
+    async function clickSave(screen: RtlScreen, user: User) {
+        const saveButton = await screen.findByRole("button", { name: /Save attachment/ });
+        await waitFor(() => expect(saveButton).toBeEnabled());
+        await act(() => user.click(saveButton));
+    }
+
+    it("uploads every selected file with the chosen remote parameters", async () => {
+        const onClose = jest.fn();
+        const { screen, user } = renderModal(onClose);
+
+        await selectFiles(screen, user, [fileA, fileB]);
+        await clickSave(screen, user);
+
+        await waitFor(() => expect(uploadFiles).toHaveBeenCalledTimes(1));
+        const [uploadedFiles, remoteParameters] = uploadFiles.mock.calls[0];
+        expect(uploadedFiles).toEqual([fileA, fileB]);
+        expect(remoteParameters).toEqual({ At: expect.any(String), Identifier: "s3-main" });
+        expect(onClose).toHaveBeenCalled();
+    });
+
+    it("lists selected files with their sizes", async () => {
+        const { screen, user } = renderModal();
+
+        await selectFiles(screen, user, [fileA, fileB]);
+
+        expect(rowOf(screen, "a.txt").getByText("4 Bytes")).toBeInTheDocument();
+        expect(rowOf(screen, "b.txt").getByText("2 Bytes")).toBeInTheDocument();
+    });
+
+    it("adds files from consecutive selections", async () => {
+        const { screen, user } = renderModal();
+
+        await selectFiles(screen, user, [fileA]);
+        await selectFiles(screen, user, [fileB]);
+
+        expect(screen.getByText("a.txt")).toBeInTheDocument();
+        expect(screen.getByText("b.txt")).toBeInTheDocument();
+    });
+
+    it("removes a file from the selection before upload", async () => {
+        const { screen, user } = renderModal();
+        await selectFiles(screen, user, [fileA, fileB]);
+
+        await act(() => user.click(screen.getByRole("button", { name: "Remove a.txt" })));
+
+        await waitFor(() => expect(screen.queryByText("a.txt")).not.toBeInTheDocument());
+        await clickSave(screen, user);
+        expect(uploadFiles.mock.calls[0][0]).toEqual([fileB]);
+    });
+
+    it("collapses long lists and expands them on demand", async () => {
+        const { screen, user } = renderModal();
+        const files = [1, 2, 3, 4, 5].map((i) => new File(["x"], `file${i}.txt`));
+
+        await selectFiles(screen, user, files);
+
+        expect(screen.getByText("file3.txt")).toBeInTheDocument();
+        expect(screen.queryByText("file4.txt")).not.toBeInTheDocument();
+
+        await act(() => user.click(screen.getByRole("button", { name: /Show all 5 files/ })));
+
+        expect(screen.getByText("file4.txt")).toBeInTheDocument();
+        expect(screen.getByText("file5.txt")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /Show less/ })).toBeInTheDocument();
+    });
+
+    it("shows per-file status while files are being uploaded", async () => {
+        uploadFiles.mockImplementation(
+            neverEndingUpload([progress("a.txt", "uploaded", 4, 4), progress("b.txt", "uploading", 512, 1024)])
+        );
+        const { screen, user } = renderModal();
+        await selectFiles(screen, user, [fileA, fileB]);
+
+        await clickSave(screen, user);
+
+        expect(await rowOf(screen, "a.txt").findByText(/Uploaded/)).toBeInTheDocument();
+        expect(rowOf(screen, "b.txt").getByText(/Uploading... 512 Bytes of 1 KB/)).toBeInTheDocument();
+        expect(rowOf(screen, "b.txt").getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
+        expect(screen.getByRole("button", { name: /Uploading 2\/2/ })).toBeInTheDocument();
+    });
+
+    it("cancels the file being uploaded", async () => {
+        const abortCurrent = jest.spyOn(editDocumentUploader.prototype, "abortCurrent").mockImplementation();
+        uploadFiles.mockImplementation(neverEndingUpload([progress("a.txt", "uploading", 1, 4)]));
+        const { screen, user } = renderModal();
+        await selectFiles(screen, user, [fileA]);
+        await clickSave(screen, user);
+
+        const cancelButton = await screen.findByRole("button", { name: "Cancel upload of a.txt" });
+        await act(() => user.click(cancelButton));
+
+        expect(abortCurrent).toHaveBeenCalledTimes(1);
+        abortCurrent.mockRestore();
+    });
+});
