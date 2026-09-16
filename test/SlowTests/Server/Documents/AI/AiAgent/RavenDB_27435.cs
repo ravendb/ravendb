@@ -118,6 +118,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 Assert.Null(payloads[2]["tool_choice"]);
 
                 Assert.Contains("Chai costs 18.0", r.Response.ToString());
+                Assert.Equal(2, r.ToolsIterations);
             }
         }
 
@@ -229,6 +230,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 Assert.Null(payloads[1]["tools"]);
                 Assert.NotNull(payloads[1]["response_format"]);
                 Assert.Contains("how can I help", r.Response.ToString());
+                Assert.Equal(1, r.ToolsIterations);
             }
         }
 

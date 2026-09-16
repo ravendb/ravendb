@@ -438,7 +438,8 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
                 var trace = debugTraces.CreateTrace();
 
-                using var request = talker.CreateCompletionRequest(attachments, trace, finalStructuredTurn: pendingFinalTurn);
+                var isFinalStructuredTurn = pendingFinalTurn;
+                using var request = talker.CreateCompletionRequest(attachments, trace, finalStructuredTurn: isFinalStructuredTurn);
                 pendingFinalTurn = false;
                 r = await talker.RunAsync(database.DocumentsStorage.ContextPool, request, trace, token);
 
@@ -471,7 +472,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                     }
                 }
 
-                toolsIterations++;
+                if (isFinalStructuredTurn == false)
+                    toolsIterations++;
+                
                 if (r.Type is AiResponseType.Result)
                 {
                     if (talker.RequiresStructuredFollowUp)
