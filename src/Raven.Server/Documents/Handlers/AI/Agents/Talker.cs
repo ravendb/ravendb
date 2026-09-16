@@ -22,7 +22,7 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
     public ConversationDocument Document => document;
     public bool RequiresStructuredFollowUp { get; private set; }
 
-    private bool SplitToolsAndSchema => schema != null && Client.SupportsToolsWithStructuredOutput == false;
+    private bool SplitToolsAndSchema => schema != null && _tools.Count > 0 && Client.SupportsToolsWithStructuredOutput == false;
 
     public void Init()
     {

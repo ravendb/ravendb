@@ -235,6 +235,56 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenFact(RavenTestCategory.Ai)]
+        public async Task SplitMode_AgentWithoutTools_SendsSingleStructuredRequest()
+        {
+            using var store = GetDocumentStore();
+            var database = await CreateDatabaseWithOrderAsync(store);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var payloads = new List<JObject>();
+                var handler = new MockLlmConversationHandler(Server.ServerStore, database,
+                    onRequest: payload =>
+                    {
+                        payloads.Add(payload);
+                        return Ok(MockLlm.CreateAnswerResponse("\"Hello, how can I help?\""));
+                    },
+                    clientSettings: CreateOllamaSettings())
+                {
+                    Authentication = null
+                };
+
+                var agent = CreateAgent();
+                agent.Queries = [];
+
+                handler.Initialize(agent, "Dummy", new RequestBody
+                {
+                    Parameters = context.ReadObject(new DynamicJsonValue(), "params"),
+                    CreationOptions = new AiConversationCreationOptions(),
+                    UserPrompt = "hi"
+                }, changeVector: null);
+
+                var r = await handler.HandleRequestAsync(context, CancellationToken.None);
+
+                var payload = Assert.Single(payloads);
+                Assert.Null(payload["tools"]);
+                Assert.NotNull(payload["response_format"]);
+                Assert.Contains("how can I help", r.Response.ToString());
+                Assert.Equal(1, r.ToolsIterations);
+            }
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var conversation = database.DocumentsStorage.Get(context, "Dummy");
+                Assert.NotNull(conversation);
+                Assert.True(conversation.Data.TryGet(nameof(ConversationDocument.Messages), out BlittableJsonReaderArray messages));
+                foreach (BlittableJsonReaderObject message in messages)
+                    Assert.False(message.TryGet(ConversationDocument.OutputSchemaProperty, out string _));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Ai)]
         public async Task OpenAiSettings_SinglePhase_Unchanged()
         {
             using var store = GetDocumentStore();
