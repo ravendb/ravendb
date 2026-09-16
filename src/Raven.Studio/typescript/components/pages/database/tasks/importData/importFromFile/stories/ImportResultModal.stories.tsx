@@ -7,7 +7,9 @@ type SmugglerResult = Raven.Client.Documents.Smuggler.SmugglerResult;
 type Counts = Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts;
 type OperationStatus = Raven.Client.Documents.Operations.OperationStatus;
 
-const counts = (overrides: Partial<Counts> = {}): Counts => ({
+// returns `any` so a single Counts-shaped fixture can stand in for every SmugglerResult field
+// (DatabaseRecordProgress, CountsWithLastEtag, …) without spelling out each richer subtype
+const counts = (overrides: Partial<Counts> = {}): any => ({
     Processed: false,
     Skipped: false,
     ReadCount: 0,
