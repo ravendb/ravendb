@@ -39,9 +39,7 @@ export function CellWithCopy({
 
     return (
         <>
-            <div ref={setValuePopover} className="table-font">
-                {children}
-            </div>
+            <div ref={setValuePopover}>{children}</div>
             <PopoverWithHover
                 target={valuePopover}
                 placement="bottom-start"
