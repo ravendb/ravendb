@@ -47,12 +47,13 @@ namespace SlowTests.Core.Querying
                         .ToList();
 
                     Assert.Equal(3, list.Count);
+
+                    // posts/2 matches both terms, so it ranks first on either engine
                     Assert.Equal("doduck", list[0].Title);
                     Assert.Equal("prototype your idea", list[0].Desc);
-                    Assert.Equal("doduck", list[1].Title);
-                    Assert.Equal("love programming", list[1].Desc);
-                    Assert.Equal("We do", list[2].Title);
-                    Assert.Equal("prototype", list[2].Desc);
+
+                    // the other two tie, so their order is engine-specific
+                    Assert.Equal(new[] { "love programming", "prototype" }, list.Skip(1).Select(x => x.Desc).OrderBy(x => x).ToArray());
                 }
             }
         }
