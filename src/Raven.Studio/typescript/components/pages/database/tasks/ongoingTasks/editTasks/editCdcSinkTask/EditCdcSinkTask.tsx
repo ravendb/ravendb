@@ -109,7 +109,7 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
                         <AboutViewHeading
                             title={isEditMode ? "Edit CDC Sink task" : "New CDC Sink task"}
                             licenseBadgeText={hasCdcSink ? null : "Enterprise"}
-                            icon="sql-etl"
+                            icon="cdc-sink"
                             marginBottom={4}
                             className="me-auto"
                         />
