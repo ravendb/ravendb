@@ -152,7 +152,7 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
         <>
             In step{" "}
             <strong>
-                {encryptionStepIndex + 1} {activeSteps[encryptionStepIndex].label}
+                {activeSteps[encryptionStepIndex].label}
             </strong>{" "}
             you need to check <strong>&quot;I have saved the encryption key&quot;</strong>
         </>
