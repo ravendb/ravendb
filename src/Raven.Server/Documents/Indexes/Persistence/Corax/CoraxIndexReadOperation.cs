@@ -1154,7 +1154,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 mltQuery = IndexSearcher.And(mltQuery, moreLikeThisQuery.FilterQuery);
             }
 
-            // take counts entries, the loop below counts documents: +1 for the base document, times fanout
+            // take counts entries, the loop counts documents: +1 for the base document, times fanout
             long take = CoraxConstants.IndexSearcher.TakeAll;
             if (query.Limit.HasValue)
             {
@@ -1169,81 +1169,86 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     take = CoraxConstants.IndexSearcher.TakeAll;
             }
 
-            // SortingMatch memoizes and dedupes its input, so no DeduplicationMatch is needed
             var sortedQuery = IndexSearcher.OrderBy(mltQuery, new OrderMetadata(hasBoost: true, MatchCompareFieldType.Score), (int)take, token);
 
             var ravenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             if (baseDocId.HasValue)
             {
-                // by id, not by entry: on a fanout index the base document has several entries
+                // by id, not by entry: a fanout index gives the base document several entries
                 var baseDocumentId = _documentIdReader.GetTermFor(baseDocId.Value);
                 if (baseDocumentId != null)
                     ravenIds.Add(baseDocumentId);
             }
 
             long[] ids = QueryPool.Rent(pageSize);
-
             SortingDataTransfer sortingData = default;
-            if (_index.Configuration.CoraxIncludeDocumentScore)
-            {
-                // sized to the span Fill gets, so the score of ids[i] is always at ScoresBuffer[i]
-                sortingData = new SortingDataTransfer { ScoresBuffer = ScorePool.Rent(ids.Length) };
-                sortedQuery.SetScoreAndDistanceBuffer(sortingData);
-            }
 
-            mltQuery = sortedQuery;
-
-            var read = 0;
-            long returnedDocs = 0;
-            long skippedDocs = 0;
-            Page page = default;
-            while ((read = mltQuery.Fill(ids.AsSpan())) != 0)
+            // an iterator skips anything after the loop when it exits early
+            try
             {
-                for (int i = 0; i < read; i++)
+                if (_index.Configuration.CoraxIncludeDocumentScore)
                 {
-                    if (returnedDocs >= query.Limit)
-                        yield break;
-                    
-                    var hit = ids[i];
-                    token.ThrowIfCancellationRequested();
+                    // sized to the span Fill gets, so ids[i] and ScoresBuffer[i] line up
+                    sortingData = new SortingDataTransfer { ScoresBuffer = ScorePool.Rent(ids.Length) };
+                    sortedQuery.SetScoreAndDistanceBuffer(sortingData);
+                }
 
-                    var id = _documentIdReader.GetTermFor(hit);
-                    if (id == null)
-                        continue;
+                mltQuery = sortedQuery;
 
-                    if (ravenIds.Add(id) == false)
-                        continue;
+                var read = 0;
+                long returnedDocs = 0;
+                long skippedDocs = 0;
+                Page page = default;
+                while ((read = mltQuery.Fill(ids.AsSpan())) != 0)
+                {
+                    for (int i = 0; i < read; i++)
+                    {
+                        if (returnedDocs >= query.Limit)
+                            yield break;
 
-                    if (skippedDocs < query.Start)
-                    {
-                        skippedDocs++;
-                        continue;
-                    }
-                    
-                    var termsReader = IndexSearcher.GetEntryTermsReader(hit, ref page);
-                    var documentScore = sortingData.IncludeScores ? sortingData.ScoresBuffer[i] : (float?)null;
-                    var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, termsReader, id, _index.IndexFieldsPersistence.HasTimeValues, documentScore);
-                    var result = retriever.Get(ref retrieverInput, token);
-                    
-                    if (result.Document != null)
-                    {
-                        returnedDocs++;
-                        yield return new QueryResult { Result = result.Document };
-                    }
-                    else if (result.List != null)
-                    {
-                        foreach (Document item in result.List)
+                        var hit = ids[i];
+                        token.ThrowIfCancellationRequested();
+
+                        var id = _documentIdReader.GetTermFor(hit);
+                        if (id == null)
+                            continue;
+
+                        if (ravenIds.Add(id) == false)
+                            continue;
+
+                        if (skippedDocs < query.Start)
+                        {
+                            skippedDocs++;
+                            continue;
+                        }
+
+                        var termsReader = IndexSearcher.GetEntryTermsReader(hit, ref page);
+                        var documentScore = sortingData.IncludeScores ? sortingData.ScoresBuffer[i] : (float?)null;
+                        var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, termsReader, id, _index.IndexFieldsPersistence.HasTimeValues, documentScore);
+                        var result = retriever.Get(ref retrieverInput, token);
+
+                        if (result.Document != null)
                         {
                             returnedDocs++;
-                            yield return new QueryResult { Result = item };
+                            yield return new QueryResult { Result = result.Document };
+                        }
+                        else if (result.List != null)
+                        {
+                            foreach (Document item in result.List)
+                            {
+                                returnedDocs++;
+                                yield return new QueryResult { Result = item };
+                            }
                         }
                     }
                 }
             }
-
-            QueryPool.Return(ids);
-            if (sortingData.ScoresBuffer != null)
-                ScorePool.Return(sortingData.ScoresBuffer);
+            finally
+            {
+                QueryPool.Return(ids);
+                if (sortingData.ScoresBuffer != null)
+                    ScorePool.Return(sortingData.ScoresBuffer);
+            }
         }
 
         public override IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<long> totalResults,

@@ -45,7 +45,7 @@ public class RavenDB_27536 : RavenTestBase
 
         using var s = store.OpenSession();
 
-        // before the fix the duplicate came back last, outside a page of 100 out of 151 matches
+        // the duplicate is stored last, so entry order alone would leave it outside a page of 100
         var page = Similar<Widgets_ByCategoryAndName>(s, target, boost: false, take: 100);
 
         Assert.Equal(duplicate.Key, page[0].Key);
