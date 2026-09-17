@@ -42,6 +42,47 @@ class bucketReportItem {
     hasChildren(): boolean {
         return (this.internalChildren && this.internalChildren.length > 0) || (this.lazyLoadChildren === true);
     }
+
+    private static columnValue(item: bucketReportItem, column: bucketReportSortColumn): number {
+        switch (column) {
+            case "range":
+                return item.fromRange;
+            case "buckets":
+                return item.numberOfBuckets;
+            case "documents":
+                return item.documentsCount;
+            case "size":
+                return item.size;
+        }
+    }
+
+    private static defaultDirection(column: bucketReportSortColumn): bucketReportSortDirection {
+        return column === "range" ? "asc" : "desc";
+    }
+
+    static nextSort(current: bucketReportSort, column: bucketReportSortColumn): bucketReportSort {
+        const defaultDirection = bucketReportItem.defaultDirection(column);
+
+        if (!current || current.column !== column) {
+            return { column, direction: defaultDirection };
+        }
+
+        if (current.direction === defaultDirection) {
+            return { column, direction: defaultDirection === "asc" ? "desc" : "asc" };
+        }
+
+        return null;
+    }
+
+    static sortComparator(column: bucketReportSortColumn, direction: bucketReportSortDirection) {
+        const multiplier = direction === "asc" ? 1 : -1;
+
+        return (a: bucketReportItem, b: bucketReportItem) => {
+            const difference = bucketReportItem.columnValue(a, column) - bucketReportItem.columnValue(b, column);
+
+            return difference ? difference * multiplier : a.fromRange - b.fromRange;
+        };
+    }
 }
 
 export = bucketReportItem;

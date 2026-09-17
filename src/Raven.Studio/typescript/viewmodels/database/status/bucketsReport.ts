@@ -31,6 +31,9 @@ class bucketsReport extends shardViewModelBase {
 
     private currentPath: KnockoutComputed<Array<bucketReportItem>>;
 
+    sort = ko.observable<bucketReportSort>(null);
+    sortedChildren: KnockoutComputed<Array<bucketReportItem>>;
+
     private x: d3.scale.Linear<number, number>;
     private y: d3.scale.Linear<number, number>;
     private root: bucketReportItem;
@@ -54,7 +57,7 @@ class bucketsReport extends shardViewModelBase {
         super(db, location);
         
         this.shardNumbers(db.isSharded() ? db.shards().map(x => x.shardNumber) : []);
-        this.bindToCurrentInstance("onClick", "moveToDifferentShard");
+        this.bindToCurrentInstance("onClick", "moveToDifferentShard", "sortBy", "sortIcon");
     }
 
     activate(args: any) {
@@ -117,6 +120,35 @@ class bucketsReport extends shardViewModelBase {
 
             return items;
         });
+
+        this.sortedChildren = ko.pureComputed(() => {
+            const node = this.node();
+            const children = node ? node.internalChildren : null;
+
+            if (!children) {
+                return [];
+            }
+
+            const sort = this.sort();
+
+            return sort
+                ? children.slice().sort(bucketReportItem.sortComparator(sort.column, sort.direction))
+                : children.slice();
+        });
+    }
+
+    sortBy(column: bucketReportSortColumn) {
+        this.sort(bucketReportItem.nextSort(this.sort(), column));
+    }
+
+    sortIcon(column: bucketReportSortColumn): string {
+        const sort = this.sort();
+
+        if (!sort || sort.column !== column) {
+            return "icon-sortby";
+        }
+
+        return sort.direction === "asc" ? "icon-arrow-filled-up" : "icon-arrow-filled-down";
     }
 
     private processData(data: Raven.Server.Web.Studio.Processors.BucketsResults) {

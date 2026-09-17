@@ -1035,6 +1035,15 @@ type databaseLocationSpecifier = {
     nodeTag: string;
 }
 
+type bucketReportSortColumn = "range" | "buckets" | "documents" | "size";
+
+type bucketReportSortDirection = "asc" | "desc";
+
+type bucketReportSort = {
+    column: bucketReportSortColumn;
+    direction: bucketReportSortDirection;
+}
+
 interface PopoverUtilsOptions extends PopoverOptions {
     rounded?: boolean;
 }
