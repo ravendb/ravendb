@@ -4096,12 +4096,38 @@ namespace Raven.Server.Documents.Indexes
         {
             throw new IndexCompactionInProgressException($"Index '{Name}' is currently being compacted.");
         }
-
+        
         private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(QueryMetadata metadata)
         {
             foreach (var field in metadata.IndexFieldNames)
             {
-                AssertKnownField(field, metadata);
+                AssertField(field);
+            }
+
+            if (metadata.HasFacet)
+            {
+                // The fields of a facet come from the select clause, not from IndexFieldNames. Only the terms
+                // question is asked of them - a facet on a field the index does not have at all is rejected further
+                // down, with its own exception type.
+                foreach (var selectField in metadata.SelectFields)
+                {
+                    // facets over all results and those taken from a setup document carry no fields here
+                    if (selectField is not FacetField { FacetSetupDocumentId: null } facet)
+                        continue;
+
+                    if (facet.Name?.Value is not null)
+                        QueryBuilderHelper.AssertFieldIsIndexed(facet.Name.Value, this);
+
+                    // sum/min/max/avg read the terms of the field they aggregate, not of the one grouped by
+                    foreach (var aggregation in facet.Aggregations)
+                    {
+                        foreach (var aggregationField in aggregation.Value)
+                        {
+                            if (aggregationField.Name is not null)
+                                QueryBuilderHelper.AssertFieldIsIndexed(aggregationField.Name, this);
+                        }
+                    }
+                }
             }
 
             if (metadata.OrderBy != null)
@@ -4121,8 +4147,14 @@ namespace Raven.Server.Documents.Indexes
                         continue;
 #endif
 
-                    AssertKnownField(f, metadata);
+                    AssertField(f);
                 }
+            }
+
+            void AssertField(QueryFieldName field)
+            {
+                AssertKnownField(field, metadata);                           // is there such a field at all?
+                QueryBuilderHelper.AssertFieldIsIndexed(field.Value, this);  // ...and does it carry terms?
             }
         }
 
