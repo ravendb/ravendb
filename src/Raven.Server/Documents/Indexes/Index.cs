@@ -291,8 +291,6 @@ namespace Raven.Server.Documents.Indexes
             Definition = definition;
             Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
 
-            _lastQueriedTimeTracker = new LastQueriedTimeTracker(DateTime.UtcNow, elapsedSinceQueried: 0);
-
             if (Collections.Contains(Constants.Documents.Collections.AllDocumentsCollection))
             {
                 HandleAllDocs = true;
@@ -3284,9 +3282,21 @@ namespace Raven.Server.Documents.Indexes
             return stats;
         }
 
-        public DateTime? GetLastQueryingTime() => _lastQueriedTimeTracker.LastQueryDate;
+        public DateTime? GetLastQueryingTime()
+        {
+            if (_initialized == false)
+                return null;
 
-        public TimeSpan GetElapsedTimeFromLastQuery() => _lastQueriedTimeTracker.ElapsedSinceQueried;
+            return _lastQueriedTimeTracker.LastQueryDate;
+        }
+
+        public TimeSpan? GetElapsedTimeFromLastQuery()
+        {
+            if (_initialized == false)
+                return null;
+
+            return _lastQueriedTimeTracker.ElapsedSinceQueried;
+        }
 
         public bool NoQueryRecently()
         {
