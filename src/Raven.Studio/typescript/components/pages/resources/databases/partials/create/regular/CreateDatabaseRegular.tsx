@@ -40,6 +40,7 @@ import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useCreateDatabaseShortcuts } from "../shared/useCreateDatabaseShortcuts";
 import Button from "react-bootstrap/Button";
 import Modal from "components/common/Modal";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 interface CreateDatabaseRegularProps {
     closeModal: () => void;
@@ -143,11 +144,25 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
         await handleSubmit(onFinish)();
     }, [activeSteps, asyncDatabaseNameValidation, currentStep, handleSubmit, onFinish]);
 
+    const isEncryptionKeyConfirmed = !formValues.basicInfoStep.isEncrypted || formValues.encryptionStep.isKeySaved;
+    const isNextDisabled = activeSteps[currentStep].id === "encryptionStep" && !isEncryptionKeyConfirmed;
+
+    const encryptionStepIndex = activeSteps.findIndex((x) => x.id === "encryptionStep");
+    const quickCreateDisabledReason = isEncryptionKeyConfirmed ? null : (
+        <>
+            In step{" "}
+            <strong>
+                {encryptionStepIndex + 1} {activeSteps[encryptionStepIndex].label}
+            </strong>{" "}
+            you need to check <strong>&quot;I have saved the encryption key&quot;</strong>
+        </>
+    );
+
     useCreateDatabaseShortcuts({
         submit: handleQuickCreate,
         handleGoNext,
         isLastStep,
-        canQuickCreate: true,
+        canQuickCreate: isEncryptionKeyConfirmed,
     });
 
     return (
@@ -184,6 +199,7 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
                         <QuickCreateButton
                             formValues={formValues}
                             isSubmitting={formState.isSubmitting}
+                            disabledReason={quickCreateDisabledReason}
                             handleQuickCreate={handleQuickCreate}
                         />
                     )}
@@ -198,9 +214,23 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
                             Finish
                         </ButtonWithSpinner>
                     ) : (
-                        <Button type="button" variant="primary" className="rounded-pill" onClick={handleGoNext}>
-                            Next <Icon icon="arrow-thin-right" margin="ms-1" />
-                        </Button>
+                        <ConditionalPopover
+                            conditions={{
+                                isActive: isNextDisabled,
+                                message: createDatabaseUtils.encryptionKeyNotSavedMessage,
+                            }}
+                            popoverPlacement="top"
+                        >
+                            <Button
+                                type="button"
+                                variant="primary"
+                                className="rounded-pill"
+                                onClick={handleGoNext}
+                                disabled={isNextDisabled}
+                            >
+                                Next <Icon icon="arrow-thin-right" margin="ms-1" />
+                            </Button>
+                        </ConditionalPopover>
                     )}
                 </Modal.Footer>
             </Form>
