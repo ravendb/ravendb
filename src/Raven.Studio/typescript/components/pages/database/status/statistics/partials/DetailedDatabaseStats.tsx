@@ -61,7 +61,7 @@ export function DetailedDatabaseStats() {
         <section className="mt-6">
             <h2 className="on-base-background">Detailed Database Stats</h2>
             <Card className="panel mt-4">
-                <Table responsive bordered striped>
+                <Table responsive bordered striped className="mb-0">
                     <thead>
                         <tr>
                             <th>&nbsp;</th>
@@ -274,6 +274,15 @@ export function DetailedDatabaseStats() {
                                 <span>Compare Exchange</span>
                             </td>
                             <DetailsBlock>{(data) => <>{data.CountOfCompareExchange.toLocaleString()}</>}</DetailsBlock>
+                        </tr>
+                        <tr>
+                            <td>
+                                <Icon icon="cmp-xchg" />
+                                <span>Compare Exchange Tombstones</span>
+                            </td>
+                            <DetailsBlock>
+                                {(data) => <>{data.CountOfCompareExchangeTombstones.toLocaleString()}</>}
+                            </DetailsBlock>
                         </tr>
                         <tr>
                             <td>

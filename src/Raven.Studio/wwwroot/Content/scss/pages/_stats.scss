@@ -34,6 +34,8 @@
             }
 
             .name {
+                display: flex;
+                align-items: center;
                 flex-grow: 1;
                 font-size: 13px;
             }
