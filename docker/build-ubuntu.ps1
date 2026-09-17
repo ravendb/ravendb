@@ -35,6 +35,20 @@ function GetUbuntuVersionFromDockerfile($DockerfileDir, $DockerfileName) {
     return $ubuntuVersion.Matches.Groups[2].Value
 }
 
+function FindDebPackage ($searchDir, $namePattern) {
+    $candidates = @(
+        Get-ChildItem $searchDir -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -like $namePattern } |
+            Sort-Object LastWriteTime -Descending
+    )
+
+    if ($candidates.Count -gt 1) {
+        Write-Host "Found $($candidates.Count) .deb files matching '$namePattern' in '$searchDir'; using the most recent: $($candidates[0].Name)"
+    }
+
+    return $candidates | Select-Object -First 1
+}
+
 function SetupDebBuildEnvironment($arch, $ubuntuVersion){
     switch ($arch) {
         "x64" {
@@ -62,8 +76,14 @@ function SetupDebBuildEnvironment($arch, $ubuntuVersion){
         "jammy" {
             . "..\scripts\linux\pkg\deb\set-ubuntu-jammy.ps1"
         }
+        "noble" {
+            . "..\scripts\linux\pkg\deb\set-ubuntu-noble.ps1"
+        }
+        "resolute" {
+            . "..\scripts\linux\pkg\deb\set-ubuntu-resolute.ps1"
+        }
         Default {
-            throw "ERROR: Unsupported Ubuntu version $($ubuntuVersion). Supported version: bionic, focal, jammy."
+            throw "ERROR: Unsupported Ubuntu version $($ubuntuVersion). Supported version: bionic, focal, jammy, noble, resolute."
             exit 1
         }
     }
@@ -102,7 +122,7 @@ function BuildUbuntuDockerImage ($version, $arch) {
         
 
         if (!$NoCache) {
-            $matchingDebFile = Get-ChildItem $DockerfileDir | Where-Object { $_.Name -like "ravendb*$archNameToMatch*.deb" }
+            $matchingDebFile = FindDebPackage (Join-Path $DockerfileDir $env:DISTRO_VERSION) "ravendb*$version*$archNameToMatch*.deb"
         }
 
         if(!$matchingDebFile) {
@@ -118,16 +138,16 @@ function BuildUbuntuDockerImage ($version, $arch) {
             Pop-Location
             CheckLastExitCode
 
-            $matchingDebFile = Get-ChildItem $DockerfileDir | Where-Object { $_.Name -like "ravendb*$version*$archNameToMatch*.deb" }
+            $matchingDebFile = FindDebPackage (Join-Path $DockerfileDir $env:DISTRO_VERSION) "ravendb*$version*$archNameToMatch*.deb"
             if ($matchingDebFile) {
-                $pathToDeb = $matchingDebFile.Name
+                $pathToDeb = "$($env:DISTRO_VERSION)/$($matchingDebFile.Name)"
             } else {
-                Write-Host "FATAL: No ravendb .deb file for '$($arch)' architecture found after running script building .deb package." 
+                Write-Host "FATAL: No ravendb .deb file for '$($arch)' architecture found after running script building .deb package."
                 exit 1
             }
         }
         else {
-            $pathToDeb = $matchingDebFile.Name
+            $pathToDeb = "$($env:DISTRO_VERSION)/$($matchingDebFile.Name)"
         }
     }
     else {
