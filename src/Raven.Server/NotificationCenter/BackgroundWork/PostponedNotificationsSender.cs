@@ -6,6 +6,7 @@ using Raven.Client.Util;
 using Raven.Server.Background;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Collections;
+using Sparrow.Json;
 using Sparrow.Server;
 
 namespace Raven.Server.NotificationCenter.BackgroundWork
@@ -61,24 +62,22 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
                 var next = notifications.Dequeue();
 
-                using (_notificationsStorage.Read(next.Id, out NotificationTableValue notification))
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                using (_notificationsStorage.Read(next.Id, out NotificationTableValue notification, context))
                 {
-                    using (notification)
-                    {
-                        if (notification == null) // could be deleted meanwhile
-                            continue;
+                    if (notification == null) // could be deleted meanwhile
+                        continue;
 
-                        try
+                    try
+                    {
+                        foreach (var watcher in _watchers)
                         {
-                            foreach (var watcher in _watchers)
-                            {
-                                await watcher.Writer.WriteToWebSocket(notification.Json);
-                            }
+                            await watcher.Writer.WriteToWebSocket(notification.Json);
                         }
-                        finally
-                        {
-                            _notificationsStorage.ChangePostponeDate(next.Id, null);
-                        }
+                    }
+                    finally
+                    {
+                        _notificationsStorage.ChangePostponeDate(next.Id, null);
                     }
                 }
             }
