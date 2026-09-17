@@ -266,9 +266,47 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
             color: $text-muted-var;
 
             i {
+                display: inline-block;
                 font-size: 10px;
                 margin-right: $gutter-xxxs;
                 flex-shrink: 0;
+                transition: transform 0.15s ease-out;
+
+                @media (prefers-reduced-motion: reduce) {
+                    transition: none;
+                }
+            }
+
+            &.expanded i {
+                transform: rotate(90deg);
+            }
+        }
+        .system-collection-items-wrapper {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.2s ease-out;
+
+            .system-collection-items-inner {
+                min-height: 0;
+                overflow: hidden;
+                visibility: hidden;
+                transition: visibility 0.2s;
+            }
+
+            &.expanded {
+                grid-template-rows: 1fr;
+
+                .system-collection-items-inner {
+                    visibility: visible;
+                }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                transition: none;
+
+                .system-collection-items-inner {
+                    transition: none;
+                }
             }
         }
         .system-collection-items {
