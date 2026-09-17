@@ -5,7 +5,7 @@ using LogLevel = Sparrow.Logging.LogLevel;
 
 namespace Sparrow.Server.Logging;
 
-public sealed class RavenLogger : IRavenLogger
+public class RavenLogger : IRavenLogger
 {
     private readonly Logger _logger;
 
