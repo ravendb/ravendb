@@ -85,7 +85,7 @@ builder.Services.AddOpenApi(options =>
 
 // NLog backs RavenLogManager, the way Raven.Server does it in its own Program.Main. The configuration
 // itself is applied after the host is built, once ApplianceOptions.Logs can be read.
-RavenLogManager.Set(RavenNLogLogManager.Instance);
+RavenLogManager.Set(QuillNLogLogManager.Instance);
 
 // Nothing bridges ILogger to NLog - everything Quill logs goes through QuillLogger - so the framework's
 // own Microsoft.* and System.* output has nowhere to go. Clearing the providers is what stops the default
