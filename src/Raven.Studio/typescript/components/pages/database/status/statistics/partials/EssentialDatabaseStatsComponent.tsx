@@ -178,6 +178,7 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                                 </>
                             }
                             placement="right"
+                            wrapperClassName="flex-shrink-0"
                         >
                             <Icon icon="info" color="info" margin="ms-1" />
                         </PopoverWithHoverWrapper>
