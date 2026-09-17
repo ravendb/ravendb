@@ -1827,7 +1827,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             _insideWhereOrSearchCounter++;
             VisitExpression(target);
             _insideWhereOrSearchCounter--;
-            
+
             var subclauseToOpen = expressions.Count > 1;
 
             foreach (var expression in Enumerable.Reverse(expressions))
@@ -1863,7 +1863,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                 if (subclauseToOpen)
                 {
-                    DocumentQuery.OpenSubclause();
+                    ((IAbstractDocumentQueryAccessor)DocumentQuery).OpenSearchSubclause();
                     subclauseToOpen = false;
                 }
 
@@ -1884,11 +1884,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 }
 
                 DocumentQuery.Boost(boost);
-
-                if (options.HasFlag(SearchOptions.And))
-                {
-                    _chainedWhere = true;
-                }
             }
 
             if (expressions.Count > 1)
@@ -1896,19 +1891,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 DocumentQuery.CloseSubclause();
             }
 
-            if (LinqPathProvider.GetValueFromExpressionWithoutConversion(searchExpression.Arguments[4], out value) == false)
-            {
-                throw new InvalidOperationException("Could not extract value from " + searchExpression);
-            }
+            // whatever the flags said about the previous clause, the next one joins this statement with AND
+            _chainedWhere = true;
 
-            if (((SearchOptions)value).HasFlag(SearchOptions.Guess))
-                _chainedWhere = true;
-            
             return;
 
             void WhereExistsAndNegatedSearch(ExpressionInfo expressionInfo, string searchTerms, SearchOperator @operator)
             {
-                DocumentQuery.OpenSubclause();
+                ((IAbstractDocumentQueryAccessor)DocumentQuery).OpenSearchSubclause();
                 DocumentQuery.WhereExists(expressionInfo.Path);
                 DocumentQuery.AndAlso();
                 DocumentQuery.NegateNext();
