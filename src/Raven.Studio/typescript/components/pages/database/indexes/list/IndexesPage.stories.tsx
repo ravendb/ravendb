@@ -1,7 +1,7 @@
 import { IndexesPage } from "./IndexesPage";
 import { Meta, StoryFn } from "@storybook/react-webpack5";
 import React from "react";
-import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
+import { DatabaseType, withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { mockServices } from "test/mocks/services/MockServices";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { IndexesStubs } from "test/stubs/IndexesStubs";
@@ -18,8 +18,6 @@ export default {
         },
     },
 } satisfies Meta;
-
-type DatabaseType = "singleNode" | "cluster" | "sharded";
 
 function commonInit(databaseType: DatabaseType) {
     const { accessManager, license } = mockStore;
