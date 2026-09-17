@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -35,13 +34,11 @@ internal abstract class AbstractDatabaseNotificationCenterHandlerProcessorForWat
 
         using (var writer = new NotificationCenterWebSocketWriter<TOperationContext>(webSocket, notificationCenter, ContextPool, token.Token))
         {
-            using (notificationCenter.GetStored(out IEnumerable<NotificationTableValue> storedNotifications, postponed: false))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext notificationsContext))
+            using (notificationCenter.GetStored(out var storedNotifications, postponed: false, notificationsContext))
             {
                 foreach (var alert in storedNotifications)
-                {
-                    using (alert)
-                        await writer.WriteToWebSocket(alert.Json);
-                }
+                    await writer.WriteToWebSocket(alert.Json);
             }
 
             foreach (var operation in operations.GetActive().OrderBy(x => x.Description.StartTime))
