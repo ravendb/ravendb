@@ -571,6 +571,29 @@
             min-width: 200px;
         }
 
+        .sort-header {
+            display: inline-flex;
+            align-items: center;
+            color: inherit;
+
+            i {
+                margin-left: 4px;
+                font-size: 14px;
+
+                &.icon-sortby {
+                    opacity: .3;
+                }
+            }
+
+            &:hover {
+                color: @brand-primary;
+
+                i.icon-sortby {
+                    opacity: 1;
+                }
+            }
+        }
+
         .table-items {
             position: absolute;
             display: flex;
