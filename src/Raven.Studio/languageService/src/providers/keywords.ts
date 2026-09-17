@@ -80,25 +80,6 @@ const specialWhereFunctions: Pick<autoCompleteWordList, "value" | "caption">[] =
     }
 ];
 
-const alreadyHandledTokenTypes: number[] = [
-    RqlParser.MATH,
-    RqlParser.BETWEEN,
-    RqlParser.IN, 
-    RqlParser.ALL,
-    RqlParser.EQUAL,
-    RqlParser.METADATA,
-    RqlParser.AS,
-    RqlParser.ALL_DOCS,
-    RqlParser.OR,
-    RqlParser.AND,
-    RqlParser.INDEX,
-    RqlParser.DISTINCT,
-    RqlParser.UPDATE,
-    RqlParser.JS_SELECT,
-    RqlParser.JS_FUNCTION_DECLARATION,
-    ...rootKeywords
-] 
-
 export class AutocompleteKeywords extends BaseAutocompleteProvider implements AutocompleteProvider {
     
     constructor(metadataProvider: queryCompleterProviders, private ignoredTokens: number[]) {
@@ -445,23 +426,6 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
         
         completions.push(...AutocompleteKeywords.handleRootKeywords(ctx));
 
-        AutocompleteKeywords.debugRemainingTokens(candidates, parser, writtenText); //TODO: comment out!
-       
         return completions;
     }
-    
-    static debugRemainingTokens(candidates: CandidatesCollection, parser: RqlParser, writtenText: string) {
-        const tokens: string[] = [];
-        candidates.tokens.forEach((_, k) => {
-            const displayName = parser.vocabulary.getDisplayName(k);
-            if (displayName && alreadyHandledTokenTypes.indexOf(k) === -1) {
-                tokens.push(displayName.toLowerCase());
-            }
-        }); 
-
-        if (tokens.length) {
-            console.log("REMAINING TOKENS = ", tokens);
-        }
-    }
-    
 }
