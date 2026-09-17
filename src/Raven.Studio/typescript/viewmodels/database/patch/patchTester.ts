@@ -134,6 +134,11 @@ class patchTester extends viewModelBase {
         this.documentId.subscribe(() => documentIdDebounced());
     }
 
+    detached() {
+        super.detached();
+        this.testMode(false);
+    }
+
     closeTestMode() {
         this.testMode(false);
     }
