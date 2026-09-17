@@ -16,16 +16,36 @@
         <table class="table table-condensed table-striped on-base-background margin-top margin-top-sm" data-bind="if: node() && node().internalChildren">
             <thead>
                 <tr>
-                    <th class="column-min-width">Range</th>
-                    <th>Non-empty buckets count</th>
-                    <th>Documents count</th>
+                    <th class="column-min-width">
+                        <a href="#" class="sort-header" data-bind="click: _.partial($root.sortBy, 'range')">
+                            <span>Range</span>
+                            <i data-bind="css: $root.sortIcon('range')"></i>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="#" class="sort-header" data-bind="click: _.partial($root.sortBy, 'buckets')">
+                            <span>Non-empty buckets count</span>
+                            <i data-bind="css: $root.sortIcon('buckets')"></i>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="#" class="sort-header" data-bind="click: _.partial($root.sortBy, 'documents')">
+                            <span>Documents count</span>
+                            <i data-bind="css: $root.sortIcon('documents')"></i>
+                        </a>
+                    </th>
                     <th>Shards</th>
-                    <th>Size (&sum; <span data-bind="text: node().formatSize()"></span>)</th>
+                    <th>
+                        <a href="#" class="sort-header" data-bind="click: _.partial($root.sortBy, 'size')">
+                            <span>Size (&sum; <span data-bind="text: node().formatSize()"></span>)</span>
+                            <i data-bind="css: $root.sortIcon('size')"></i>
+                        </a>
+                    </th>
                     <th>% Total</th>
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody data-bind="foreach: node().internalChildren">
+            <tbody data-bind="foreach: sortedChildren">
                 <tr>
                     <td class="position-relative">
                         <div class="table-items">
