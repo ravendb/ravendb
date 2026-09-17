@@ -381,7 +381,8 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
 
                 var embeddingsGenerationStats2 = (EmbeddingsGenerationPerformanceOperation)loadDetails2.Operations.First(x => x.Name == EmbeddingsGenerationOperations.GenerateInAiService);
                 // but there was no need to generate embeddings
-                Assert.Equal(embeddingsGenerationStats2.NumberOfGeneratedEmbeddings, embeddingsGenerationStats2.NumberOfEmbeddingsInCache);
+                Assert.Equal(0, embeddingsGenerationStats2.NumberOfGeneratedEmbeddings);
+                Assert.Equal(1, embeddingsGenerationStats2.NumberOfEmbeddingsInCache);
             }
         }
     }

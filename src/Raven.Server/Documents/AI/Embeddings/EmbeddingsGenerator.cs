@@ -141,6 +141,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
              string sourceDocumentId, string sourceCollectionName,
              HashSet<Task> tasks,
              Reference<int> cachedEmbeddings,
+             Reference<int> generatedEmbeddings,
              Dictionary<string, List<(string,ChunkingOptions)>> props)
          {
              Dictionary<string, HashSet<GenerateEmbeddings>> embeddingsByName = new();
@@ -172,7 +173,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                              pending.Add(chunkedValue);
                          }
                      }
-                     var generateEmbeddings = RegisterPendingEmbeddings(pending, cachedEmbeddingsBuffers, value, cacheDuration, cachedTexts);
+                     var generateEmbeddings = RegisterPendingEmbeddings(pending, cachedEmbeddingsBuffers, value, cacheDuration, cachedTexts, generatedEmbeddings);
                      tasks.Add(generateEmbeddings.TaskCompletionSource.Task);
                      hashes.Add(generateEmbeddings);
                  }
@@ -235,8 +236,8 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                 return new ReadOnlyMemory<ReadOnlyMemory<byte>>(generateEmbeddings.Embeddings.ToArray());
             }
         }
-        
-        GenerateEmbeddings RegisterPendingEmbeddings(List<string> pending, List<ReadOnlyMemory<byte>> cachedEmbeddings, string value, TimeSpan cacheDuration, List<string> cachedValues = null)
+
+        private GenerateEmbeddings RegisterPendingEmbeddings(List<string> pending, List<ReadOnlyMemory<byte>> cachedEmbeddings, string value, TimeSpan cacheDuration, List<string> cachedValues = null, Reference<int> generatedEmbeddings = null)
         {
             var newGen = new GenerateEmbeddings(_connectionStringIdentifier, cacheDuration, pending,  cachedEmbeddings,value, this) { CachedValues = cachedValues };
             if (pending.Count == 0) // all from the cache
@@ -248,7 +249,11 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             var inCacheGen = _inFlightCache.GetOrAdd(value, newGen);
             if (newGen == inCacheGen)
             {
-                if (_work.TryEnqueue(newGen) == false)
+                if (_work.TryEnqueue(newGen))
+                {
+                    generatedEmbeddings?.Value += pending.Count;
+                }
+                else
                 {
                     RemoveFromCache(value);
                     newGen.TaskCompletionSource.TrySetCanceled(_cancellationToken);
@@ -882,8 +887,10 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         public readonly TaskCompletionSource DocumentEmbeddingsStorageTcs = new();
         private readonly List<PutDocumentEmbeddings> _results = [];
         private readonly Reference<int> _cachedEmbeddings = new();
+        private readonly Reference<int> _generatedEmbeddings = new();
         private readonly List<string> _toDelete = [];
         public int CachedEmbeddings => _cachedEmbeddings.Value;
+        public int GeneratedEmbeddings => _generatedEmbeddings.Value;
 
         public void StartGenerateEmbeddingFor(
             DocumentsOperationContext documentsContext,
@@ -891,7 +898,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             Dictionary<string, List<(string,ChunkingOptions)>> props)
         {
             var putDocumentEmbeddings =
-                _worker.GenerateEmbeddingAsync(documentsContext, sourceDocumentId, sourceCollectionName, _tasks, _cachedEmbeddings, props);
+                _worker.GenerateEmbeddingAsync(documentsContext, sourceDocumentId, sourceCollectionName, _tasks, _cachedEmbeddings, _generatedEmbeddings, props);
             _results.Add(putDocumentEmbeddings);
         }
 
