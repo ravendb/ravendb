@@ -5,7 +5,6 @@ import React from "react";
 import { DatabasesPage } from "./DatabasesPage";
 import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
-import { DatabaseSharedInfo } from "components/models/databases";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 export default {
@@ -30,20 +29,12 @@ function commonInit(localNodeTag = "A", nodeTags = ["A", "B", "C"]) {
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => localNodeTag);
 }
 
-function getDatabaseNamesForNode(nodeTag: string, dto: DatabaseSharedInfo): string[] {
-    if (dto.isSharded) {
-        return dto.shards.map((x) => (x.nodes.some((n) => n.tag === nodeTag) ? x.name : null)).filter((x) => x);
-    }
-
-    return dto.nodes.some((x) => x.tag === nodeTag) ? [dto.name] : [];
-}
-
 export const Sharded: StoryFn<typeof DatabasesPage> = () => {
     commonInit();
 
     const value = mockStore.databases.with_Sharded();
 
-    mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value));
+    mockServices.databasesService.withGetDatabasesStateForDatabase(value);
 
     return <DatabasesPage />;
 };
@@ -53,7 +44,7 @@ export const Cluster: StoryFn<typeof DatabasesPage> = () => {
 
     const value = mockStore.databases.with_Cluster();
 
-    mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value));
+    mockServices.databasesService.withGetDatabasesStateForDatabase(value);
 
     return <DatabasesPage />;
 };
@@ -65,7 +56,7 @@ export const ClusterViewedFromUnrelatedNode: StoryFn<typeof DatabasesPage> = () 
         db.currentNode.isRelevant = false;
     });
 
-    mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value));
+    mockServices.databasesService.withGetDatabasesStateForDatabase(value);
 
     return <DatabasesPage />;
 };
@@ -105,7 +96,7 @@ export const WithLoadErrorOnSingleNode: StoryFn<typeof DatabasesPage> = () => {
 
     const value = mockStore.databases.with_Cluster();
 
-    mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value), {
+    mockServices.databasesService.withGetDatabasesStateForDatabase(value, {
         loadError: ["B"],
     });
 
@@ -117,7 +108,7 @@ export const WithLoadErrorOnAllNodes: StoryFn<typeof DatabasesPage> = () => {
 
     const value = mockStore.databases.with_Cluster();
 
-    mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value), {
+    mockServices.databasesService.withGetDatabasesStateForDatabase(value, {
         loadError: ["A", "B", "C"],
     });
 
@@ -131,7 +122,7 @@ export const WithDeletion: StoryFn<typeof DatabasesPage> = () => {
         x.deletionInProgress = ["Z"];
     });
 
-    mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value));
+    mockServices.databasesService.withGetDatabasesStateForDatabase(value);
 
     return <DatabasesPage />;
 };
@@ -141,7 +132,7 @@ export const Single: StoryFn<typeof DatabasesPage> = () => {
 
     const value = mockStore.databases.with_Single();
 
-    mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value));
+    mockServices.databasesService.withGetDatabasesStateForDatabase(value);
 
     return <DatabasesPage />;
 };
@@ -151,7 +142,7 @@ export const CompactDatabaseAuto: StoryFn<typeof DatabasesPage> = () => {
 
     const value = mockStore.databases.with_Single();
 
-    mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value));
+    mockServices.databasesService.withGetDatabasesStateForDatabase(value);
 
     return <DatabasesPage queryParams={{ compact: value.name }} />;
 };
@@ -194,7 +185,7 @@ export const WithOfflineNodes: StoryObj<{ offlineNodes: string[] }> = {
 
         const value = mockStore.databases.with_Cluster();
 
-        mockServices.databasesService.withGetDatabasesState((tag) => getDatabaseNamesForNode(tag, value), {
+        mockServices.databasesService.withGetDatabasesStateForDatabase(value, {
             offlineNodes: offlineNodes,
         });
 

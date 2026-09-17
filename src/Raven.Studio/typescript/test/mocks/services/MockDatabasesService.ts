@@ -13,15 +13,28 @@ import DataArchival = Raven.Client.Documents.Operations.DataArchival.DataArchiva
 import document from "models/database/documents/document";
 import { RevisionsPreviewResultItem } from "commands/database/documents/getRevisionsPreviewCommand";
 import CompareExchangeListItem = Raven.Server.Web.System.Processors.CompareExchange.CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem;
+import { DatabaseSharedInfo } from "components/models/databases";
 
 interface WithGetDatabasesStateOptions {
     loadError?: string[];
     offlineNodes?: string[];
 }
 
+function getDatabaseNamesForNode(nodeTag: string, db: DatabaseSharedInfo): string[] {
+    if (db.isSharded) {
+        return db.shards.map((x) => (x.nodes.some((n) => n.tag === nodeTag) ? x.name : null)).filter((x) => x);
+    }
+
+    return db.nodes.some((x) => x.tag === nodeTag) ? [db.name] : [];
+}
+
 export default class MockDatabasesService extends AutoMockService<DatabasesService> {
     constructor() {
         super(new DatabasesService());
+    }
+
+    withGetDatabasesStateForDatabase(db: DatabaseSharedInfo, options: WithGetDatabasesStateOptions = {}) {
+        return this.withGetDatabasesState((nodeTag) => getDatabaseNamesForNode(nodeTag, db), options);
     }
 
     withGetDatabasesState(

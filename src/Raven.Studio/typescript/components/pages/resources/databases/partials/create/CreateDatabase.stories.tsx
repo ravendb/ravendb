@@ -25,10 +25,37 @@ interface DefaultCreateDatabaseProps {
     singleNode: boolean;
 }
 
+function CreateDatabaseWithOpenButtons() {
+    const [createDatabaseMode, setCreateDatabaseMode] = useState<CreateDatabaseMode>(null);
+
+    return (
+        <>
+            <div className="vstack gap-4">
+                <Button
+                    data-testid="open-create-database-modal-regular"
+                    variant="primary"
+                    onClick={() => setCreateDatabaseMode("regular")}
+                >
+                    Open Create Database Modal Regular
+                </Button>
+                <Button
+                    data-testid="open-create-database-modal-from-backup"
+                    variant="primary"
+                    onClick={() => setCreateDatabaseMode("fromBackup")}
+                >
+                    Open Create Database Modal From Backup
+                </Button>
+            </div>
+            {createDatabaseMode && (
+                <CreateDatabase closeModal={() => setCreateDatabaseMode(null)} initialMode={createDatabaseMode} />
+            )}
+        </>
+    );
+}
+
 export const DefaultCreateDatabase: StoryObj<DefaultCreateDatabaseProps> = {
     name: "Create Database",
     render: (props: DefaultCreateDatabaseProps) => {
-        const [createDatabaseMode, setCreateDatabaseMode] = useState<CreateDatabaseMode>(null);
         const { license, accessManager, cluster } = mockStore;
         const { resourcesService, databasesService } = mockServices;
 
@@ -54,29 +81,7 @@ export const DefaultCreateDatabase: StoryObj<DefaultCreateDatabaseProps> = {
             cluster.with_Cluster();
         }
 
-        return (
-            <>
-                <div className="vstack gap-4">
-                    <Button
-                        data-testid="open-create-database-modal-regular"
-                        variant="primary"
-                        onClick={() => setCreateDatabaseMode("regular")}
-                    >
-                        Open Create Database Modal Regular
-                    </Button>
-                    <Button
-                        data-testid="open-create-database-modal-from-backup"
-                        variant="primary"
-                        onClick={() => setCreateDatabaseMode("fromBackup")}
-                    >
-                        Open Create Database Modal From Backup
-                    </Button>
-                </div>
-                {createDatabaseMode && (
-                    <CreateDatabase closeModal={() => setCreateDatabaseMode(null)} initialMode={createDatabaseMode} />
-                )}
-            </>
-        );
+        return <CreateDatabaseWithOpenButtons />;
     },
     args: {
         isSecureServer: true,
