@@ -76,6 +76,45 @@ describe("CreateDatabase", () => {
             )[0];
             expect(replicationFactorInputAfterShardingEnabled).toHaveValue(2);
         });
+
+        it("can disable quick create when encryption is on and the key is not confirmed", async () => {
+            const { screen, user } = rtlRender(<DefaultCreateDatabase />);
+
+            const openRegularModalBtn = screen.getByTestId("open-create-database-modal-regular");
+            await user.click(openRegularModalBtn);
+            expect(await screen.findByTestId("create-database-modal")).toBeInTheDocument();
+
+            expect(screen.getByRole("button", { name: /Quick Create/ })).toBeEnabled();
+
+            await user.click(screen.getByLabelText(/Encrypt at Rest/));
+
+            const quickCreateBtn = screen.getByRole("button", { name: /Quick Create/ });
+            expect(quickCreateBtn).toBeDisabled();
+
+            await user.hover(quickCreateBtn);
+            expect(await screen.findByText(/you need to check/)).toBeInTheDocument();
+            expect(screen.getByText("2 Encryption")).toBeInTheDocument();
+        });
+
+        it("can disable next and quick create until the encryption key is confirmed", async () => {
+            const { screen, user, fillInput, fireClick } = rtlRender(<DefaultCreateDatabase />);
+
+            const openRegularModalBtn = screen.getByTestId("open-create-database-modal-regular");
+            await user.click(openRegularModalBtn);
+            expect(await screen.findByTestId("create-database-modal")).toBeInTheDocument();
+
+            await user.click(screen.getByLabelText(/Encrypt at Rest/));
+            await goNextFromBasicInfoStep(screen, fillInput, fireClick);
+
+            const keySavedCheckbox = await screen.findByLabelText(/I have saved the encryption key/);
+            expect(screen.getByRole("button", { name: /Next/ })).toBeDisabled();
+            expect(screen.getByRole("button", { name: /Quick Create/ })).toBeDisabled();
+
+            await fireClick(keySavedCheckbox);
+
+            expect(screen.getByRole("button", { name: /Next/ })).toBeEnabled();
+            expect(screen.getByRole("button", { name: /Quick Create/ })).toBeEnabled();
+        });
     });
 
     describe("From backup", () => {
