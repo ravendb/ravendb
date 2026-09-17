@@ -42,7 +42,7 @@ namespace SlowTests.Issues
                     docQuery = q.ToDocumentQuery();
 
                     Assert.Equal(q.ToString(), docQuery.ToString());
-                    Assert.Equal("from 'Users' where (Name = $p0) and search(Age, $p1) or Age > $p2", docQuery.ToString());
+                    Assert.Equal("from 'Users' where (Name = $p0) and search(Age, $p1) and Age > $p2", docQuery.ToString());
                 }
 
                 using (var asyncSession = store.OpenAsyncSession())
@@ -67,7 +67,7 @@ namespace SlowTests.Issues
                     docQuery = q.ToAsyncDocumentQuery();
 
                     Assert.Equal(q.ToString(), docQuery.ToString());
-                    Assert.Equal("from 'Users' where (Name = $p0) and search(Age, $p1) or Age > $p2", docQuery.ToString());
+                    Assert.Equal("from 'Users' where (Name = $p0) and search(Age, $p1) and Age > $p2", docQuery.ToString());
                 }
             }
         }
