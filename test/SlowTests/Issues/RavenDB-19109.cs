@@ -120,6 +120,7 @@ public class RavenDB_19109 : RavenTestBase
         // sanity: a healthy index survives idle operations
         database.IndexStore.RunIdleOperations(DatabaseCleanupMode.Regular);
         database.IndexStore.RunIdleOperations(DatabaseCleanupMode.Deep);
+        Assert.NotNull(database.IndexStore.GetIndex(index.IndexName).GetLastQueryingTime());
 
         var disableMarkerPath = Path.Combine(databasePath, "Indexes", index.IndexName, "disable.marker");
         try
@@ -134,6 +135,9 @@ public class RavenDB_19109 : RavenTestBase
             // the faulty placeholder must not break the database-wide idle operations
             database.IndexStore.RunIdleOperations(DatabaseCleanupMode.Regular);
             database.IndexStore.RunIdleOperations(DatabaseCleanupMode.Deep);
+
+            // it was never initialized, so it has no last-query time to report
+            Assert.Null(database.IndexStore.GetIndex(index.IndexName).GetLastQueryingTime());
         }
         finally
         {
@@ -158,6 +162,7 @@ public class RavenDB_19109 : RavenTestBase
         DatabaseStatusReport.ObservedIndexStatus status = FillIndexInfo(database, index.IndexName);
         Assert.Equal(IndexState.Normal, status.State);
         Assert.False(status.IsStale);
+        Assert.NotNull(status.LastQueried);
 
         var disableMarkerPath = Path.Combine(databasePath, "Indexes", index.IndexName, "disable.marker");
         try
@@ -174,6 +179,7 @@ public class RavenDB_19109 : RavenTestBase
             Assert.Equal(IndexState.Error, status.State);
             Assert.True(status.IsStale);
             Assert.Equal((long)Raven.Server.Documents.Indexes.Index.IndexProgressStatus.Faulty, status.LastIndexedEtag);
+            Assert.Null(status.LastQueried); // the cluster observer skips indexes without a last-query value
         }
         finally
         {

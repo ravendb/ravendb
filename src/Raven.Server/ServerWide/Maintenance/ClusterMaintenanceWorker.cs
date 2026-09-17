@@ -376,7 +376,7 @@ namespace Raven.Server.ServerWide.Maintenance
             };
         }
 
-        private static TimeSpan GetLastQueryInfo(Index index)
+        private static TimeSpan? GetLastQueryInfo(Index index)
         {
             return index.GetElapsedTimeFromLastQuery();
         }
