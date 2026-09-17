@@ -263,7 +263,9 @@ public static class CoraxQueryBuilder
             }
             // We sort on known field types, we'll optimize based on the first one to get the rest
             // Non-existing posting list isn't aware of dynamic fields, so we can't use this optimization for them
-            else if (sortMetadata is [{ FieldType: MatchCompareFieldType.Floating or MatchCompareFieldType.Integer or MatchCompareFieldType.Sequence, Field.FieldId: not CoraxConstants.IndexWriter.DynamicField } sortBy, ..])
+            // The scan replaces the source with one value tree of the sort field, so it needs that tree to cover every entry
+            else if (sortMetadata is [{ FieldType: MatchCompareFieldType.Floating or MatchCompareFieldType.Integer or MatchCompareFieldType.Sequence, Field.FieldId: not CoraxConstants.IndexWriter.DynamicField } sortBy, ..]
+                     && indexSearcher.SortFieldTreeCoversAllEntries(sortBy.Field, sortBy.FieldType))
             {
                 // The cap counts terms, so it may only be applied while every scanned term yields a returned document.
                 // It does not when a document holds several terms (RavenDB-27514) or several entries, and not when
