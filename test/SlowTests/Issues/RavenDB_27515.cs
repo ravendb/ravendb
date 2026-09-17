@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -11,6 +11,8 @@ using Newtonsoft.Json.Linq;
 using Raven.Server;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
+using Sparrow.Json.Parsing;
+using Sparrow.Server.Collections;
 using Tests.Infrastructure;
 using Voron.Impl;
 using Xunit;
@@ -38,6 +40,55 @@ public class RavenDB_27515 : RavenTestBase
         AddAlerts(alert => server.ServerStore.NotificationCenter.Add(alert), database: null);
 
         await AssertStoredNotificationsReplayAsync(server, $"{server.WebUrl.Replace("http", "ws")}/server/notification-center/watch");
+    }
+
+    [RavenFact(RavenTestCategory.Core | RavenTestCategory.Voron)]
+    public async Task Postponed_Notifications_Sender_Must_Not_Hold_A_Read_Transaction_While_Writing_To_A_Stalled_Client()
+    {
+        using var server = GetNewServer();
+
+        var notificationCenter = server.ServerStore.NotificationCenter;
+
+        // the sender is started by the first connected watcher and reads the postponed notifications
+        // on start up, so the notification has to be stored before that
+        notificationCenter.Add(AlertRaised.Create(
+                database: null,
+                title: AlertTitle,
+                msg: "postponed",
+                type: 0, // use any type
+                severity: NotificationSeverity.Info,
+                key: $"{AlertTitle}/postponed"),
+            postponeUntil: DateTime.UtcNow.AddSeconds(3));
+
+        // a watcher that never completes its write, just like a client that stopped draining its socket
+        var stalledWatcher = new StalledWebSocketWriter();
+        var trackActions = notificationCenter.TrackActions(new AsyncQueue<DynamicJsonValue>(), stalledWatcher);
+
+        try
+        {
+            var writeStarted = await Task.WhenAny(stalledWatcher.WriteStarted, Task.Delay(TimeSpan.FromMinutes(1)));
+
+            Assert.True(writeStarted == stalledWatcher.WriteStarted, "the postponed notification was never sent to the watcher");
+
+            // the send is parked now and nothing on the server bounds that wait, so the only thing that can
+            // release the read transaction is not holding it across the write in the first place
+            await Task.Delay(TimeSpan.FromSeconds(1));
+
+            var openTransactions = GetOpenReadTransactions(server, nameof(NotificationsStorage.Read));
+
+            Assert.True(openTransactions.Count == 0,
+                $"Expected no '{nameof(NotificationsStorage.Read)}' read transaction to be open on the System store " +
+                $"while a stalled watcher is being written to, but found {openTransactions.Count}: " +
+                string.Join(", ", openTransactions.Select(tx => $"tx {tx.Id} open for {DateTime.UtcNow - tx.TxStartTime}")));
+        }
+        finally
+        {
+            // the write has to be released before the background worker is stopped, stopping it waits for
+            // the current work to complete
+            stalledWatcher.Release();
+
+            trackActions.Dispose();
+        }
     }
 
     [RavenFact(RavenTestCategory.Core | RavenTestCategory.Voron)]
@@ -113,7 +164,7 @@ public class RavenDB_27515 : RavenTestBase
         // transaction is not holding it across the network write in the first place
         await Task.Delay(TimeSpan.FromSeconds(5), cts.Token);
 
-        var openTransactions = GetStoredNotificationsReadTransactions(server);
+        var openTransactions = GetOpenReadTransactions(server, nameof(NotificationsStorage.ReadActionsOrderedByCreationDate));
 
         Assert.True(openTransactions.Count == 0,
             $"Expected no '{nameof(NotificationsStorage.ReadActionsOrderedByCreationDate)}' read transaction to be open on the System store " +
@@ -136,11 +187,29 @@ public class RavenDB_27515 : RavenTestBase
         }
     }
 
-    private static List<LowLevelTransaction> GetStoredNotificationsReadTransactions(RavenServer server)
+    private static List<LowLevelTransaction> GetOpenReadTransactions(RavenServer server, string callerName)
     {
         return server.ServerStore._env.ActiveTransactions.AllTransactionsInstances
-            .Where(tx => tx.CallerName == nameof(NotificationsStorage.ReadActionsOrderedByCreationDate))
+            .Where(tx => tx.CallerName == callerName)
             .ToList();
+    }
+
+    private sealed class StalledWebSocketWriter : IWebsocketWriter
+    {
+        private readonly TaskCompletionSource<object> _writeStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        private readonly TaskCompletionSource<object> _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task WriteStarted => _writeStarted.Task;
+
+        public void Release() => _release.TrySetResult(null);
+
+        public Task WriteToWebSocket<TNotification>(TNotification notification)
+        {
+            _writeStarted.TrySetResult(null);
+
+            return _release.Task;
+        }
     }
 
     private static async Task<string> ReceiveMessageAsync(ClientWebSocket client, CancellationToken token)
