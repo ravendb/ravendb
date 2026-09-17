@@ -4,6 +4,7 @@ import { Icon } from "components/common/Icon";
 import React, { useState, useRef, DragEvent, ChangeEvent } from "react";
 import useBoolean from "components/hooks/useBoolean";
 import genUtils from "common/generalUtils";
+import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import Button from "react-bootstrap/Button";
 
 interface FileDropzoneProps {
@@ -127,7 +128,8 @@ function DropzoneBody({ files, error, maxFiles }: DropzoneBodyProps) {
             <div className="d-flex gap-3 flex-vertical">
                 <Icon icon="file-import" className="fs-2" margin="m-0" />
                 <span className="text-muted">
-                    Drop {maxFiles === 1 ? "a file" : "files"} here or <span className="link">click to browse</span>
+                    Drop {pluralizeHelpers.pluralize(maxFiles, "a file", "files", true)} here or{" "}
+                    <span className="link">click to browse</span>
                 </span>
             </div>
         );
