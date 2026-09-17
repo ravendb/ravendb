@@ -35,7 +35,11 @@ const listenerMiddleware = createListenerMiddleware({
     extra: () => services,
 });
 
-export function createStoreConfiguration() {
+interface StoreConfigurationOptions {
+    devChecksWarnAfterMs?: number;
+}
+
+export function createStoreConfiguration({ devChecksWarnAfterMs }: StoreConfigurationOptions = {}) {
     return configureStore({
         reducer: {
             statistics: statisticsViewSlice.reducer,
@@ -66,6 +70,8 @@ export function createStoreConfiguration() {
                 thunk: {
                     extraArgument: () => services,
                 },
+                immutableCheck: { warnAfter: devChecksWarnAfterMs },
+                serializableCheck: { warnAfter: devChecksWarnAfterMs },
             })
                 .prepend(listenerMiddleware.middleware)
                 .prepend(connectionStringsUpdateUrlMiddleware.middleware)

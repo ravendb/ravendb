@@ -1,4 +1,4 @@
-import { rtlRender, waitFor } from "test/rtlTestUtils";
+import { rtlRender_WithWaitForLoad, waitFor } from "test/rtlTestUtils";
 import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "./IndexErrors.stories";
 import { within } from "@testing-library/dom";
@@ -31,7 +31,7 @@ const totalErrorCount = IndexesStubs.getIndexesErrorCount().Results.reduce(
 
 describe("IndexErrors", function () {
     it("renders a single non-sharded node without errors", async () => {
-        const { screen } = rtlRender(
+        const { screen } = await rtlRender_WithWaitForLoad(
             <IndexErrorsStory hasErrors={false} databaseAccess="DatabaseAdmin" isSharded={false} />
         );
 
@@ -41,14 +41,18 @@ describe("IndexErrors", function () {
     });
 
     it("renders sharded nodes without errors", async () => {
-        const { screen } = rtlRender(<IndexErrorsStory hasErrors={false} databaseAccess="DatabaseAdmin" isSharded />);
+        const { screen } = await rtlRender_WithWaitForLoad(
+            <IndexErrorsStory hasErrors={false} databaseAccess="DatabaseAdmin" isSharded />
+        );
 
         expect(await screen.findByRole("heading", { name: textSelectors.title })).toBeInTheDocument();
         expect(await screen.findAllByClassName(classSelectors.nodePanel)).toHaveLength(6);
     });
 
     it("renders a single non-sharded node with errors and displays total count", async () => {
-        const { screen } = rtlRender(<IndexErrorsStory hasErrors databaseAccess="DatabaseAdmin" isSharded={false} />);
+        const { screen } = await rtlRender_WithWaitForLoad(
+            <IndexErrorsStory hasErrors databaseAccess="DatabaseAdmin" isSharded={false} />
+        );
 
         expect(await screen.findByRole("heading", { name: textSelectors.title })).toBeInTheDocument();
         expect(await screen.findByText(textSelectors.erroredNodePanelItemStatusBadge)).toBeInTheDocument();
@@ -61,20 +65,26 @@ describe("IndexErrors", function () {
     });
 
     it("does not show 'Delete errors' button for users with 'DatabaseRead' access", async () => {
-        const { screen } = rtlRender(<IndexErrorsStory hasErrors databaseAccess="DatabaseRead" isSharded={false} />);
+        const { screen } = await rtlRender_WithWaitForLoad(
+            <IndexErrorsStory hasErrors databaseAccess="DatabaseRead" isSharded={false} />
+        );
 
         expect(await screen.findByRole("heading", { name: textSelectors.title })).toBeInTheDocument();
         expect(screen.queryByRole("button", { name: textSelectors.clearErrorsButtonLabel })).not.toBeInTheDocument();
     });
 
     it("renders a shard icon with isSharded is true", async () => {
-        const { screen } = rtlRender(<IndexErrorsStory hasErrors databaseAccess="DatabaseRead" isSharded />);
+        const { screen } = await rtlRender_WithWaitForLoad(
+            <IndexErrorsStory hasErrors databaseAccess="DatabaseRead" isSharded />
+        );
 
         expect((await screen.findAllByClassName("icon-shard"))[0]).toBeInTheDocument();
     });
 
     it("does not render shard icon with isSharded is false", async () => {
-        const { screen } = rtlRender(<IndexErrorsStory hasErrors databaseAccess="DatabaseRead" isSharded={false} />);
+        const { screen } = await rtlRender_WithWaitForLoad(
+            <IndexErrorsStory hasErrors databaseAccess="DatabaseRead" isSharded={false} />
+        );
 
         expect(screen.queryByClassName("icon-shard")).not.toBeInTheDocument();
     });
@@ -86,7 +96,7 @@ describe("IndexErrors", function () {
         });
 
         it("keeps Delete disabled until DELETE is typed, then clears index errors", async () => {
-            const { screen, fireClick, fillInput } = rtlRender(
+            const { screen, fireClick, fillInput } = await rtlRender_WithWaitForLoad(
                 <IndexErrorsStory hasErrors databaseAccess="DatabaseAdmin" isSharded={false} />
             );
 
@@ -112,7 +122,7 @@ describe("IndexErrors", function () {
         });
 
         it("allows deleting without typing when typed confirmation is switched off", async () => {
-            const { screen, fireClick } = rtlRender(
+            const { screen, fireClick } = await rtlRender_WithWaitForLoad(
                 <IndexErrorsStory hasErrors databaseAccess="DatabaseAdmin" isSharded={false} />
             );
 
