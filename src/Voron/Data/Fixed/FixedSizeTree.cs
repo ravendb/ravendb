@@ -1674,23 +1674,28 @@ namespace Voron.Data.Fixed
             return Name.ToString();
         }
 
-        public long GetNumberOfEntriesAfter(TVal value, out long totalCount, Stopwatch overallDuration, EstimationAccuracy accuracy)
+        public NumberOfEntriesAfterResult GetNumberOfEntriesAfter(TVal value, Stopwatch overallDuration, EstimationAccuracy accuracy)
         {
-            totalCount = NumberOfEntries;
-            if (totalCount == 0)
-                return 0;
+            var result = new NumberOfEntriesAfterResult
+            {
+                Total = NumberOfEntries
+            };
+
+            if (result.Total == 0)
+                return result;
 
             if (Type.HasValue == false)
-                return 0;
+                return result;
 
             if (Type.Value == RootObjectType.EmbeddedFixedSizeTree)
             {
                 using (var it = (EmbeddedIterator)Iterate())
                 {
                     if (it.Seek(value) == false)
-                        return 0;
+                        return result;
 
-                    return it.NumberOfEntriesLeft;
+                    result.Count = it.NumberOfEntriesLeft;
+                    return result;
                 }
             }
 
@@ -1717,10 +1722,14 @@ namespace Voron.Data.Fixed
             if (state.EstimatedAmount && count > NumberOfEntries)
             {
                 // this can happen if the estimated amount is wildly off the actual amount 
-                return NumberOfEntries - state.NonEstimatedAmount;
+                result.Count = NumberOfEntries - state.NonEstimatedAmount;
+                result.Estimated = true;
+                return result;
             }
 
-            return count;
+            result.Count = count;
+            result.Estimated = state.EstimatedAmount;
+            return result;
         }
 
         private struct RemainingNumberOfEntriesState
@@ -1864,6 +1873,13 @@ namespace Voron.Data.Fixed
 
             _newPageAllocator = newPageAllocator;
         }
+    }
+
+    public struct NumberOfEntriesAfterResult
+    {
+        public long Count;
+        public long Total;
+        public bool Estimated;
     }
 
     public enum EstimationAccuracy

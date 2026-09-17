@@ -415,7 +415,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                         IndexProgress progress;
                         using (context.OpenReadTransaction())
                         {
-                            progress = index.GetProgress(queryContext, Stopwatch.StartNew());
+                            progress = index.GetProgress(queryContext, Stopwatch.StartNew(), exact: false);
                         }
 
                         Assert.Equal(0, progress.Collections["Users"].LastProcessedItemEtag);
@@ -431,7 +431,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            progress = index.GetProgress(queryContext, Stopwatch.StartNew());
+                            progress = index.GetProgress(queryContext, Stopwatch.StartNew(), exact: false);
                         }
 
                         Assert.Equal(2, progress.Collections["Users"].LastProcessedItemEtag);
@@ -474,7 +474,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            progress = index.GetProgress(queryContext, Stopwatch.StartNew());
+                            progress = index.GetProgress(queryContext, Stopwatch.StartNew(), exact: false);
                         }
 
                         Assert.Equal(2, progress.Collections["Users"].LastProcessedItemEtag);
@@ -490,7 +490,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                         using (context.OpenReadTransaction())
                         {
-                            progress = index.GetProgress(queryContext, Stopwatch.StartNew());
+                            progress = index.GetProgress(queryContext, Stopwatch.StartNew(), exact: false);
                         }
 
                         Assert.Equal(5, progress.Collections["Users"].LastProcessedItemEtag);
