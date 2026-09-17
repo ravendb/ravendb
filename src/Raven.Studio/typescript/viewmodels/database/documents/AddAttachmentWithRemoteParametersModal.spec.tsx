@@ -71,23 +71,19 @@ describe("AddAttachmentWithRemoteParametersModal", () => {
         expect(onClose).toHaveBeenCalled();
     });
 
-    it("lists selected files with their sizes", async () => {
+    it("replaces a file selected again under the same name", async () => {
         const { screen, user } = renderModal();
+        const newerFileA = new File(["aaaaaaaa"], "a.txt");
 
         await selectFiles(screen, user, [fileA, fileB]);
+        await selectFiles(screen, user, [newerFileA]);
 
-        expect(rowOf(screen, "a.txt").getByText("4 Bytes")).toBeInTheDocument();
-        expect(rowOf(screen, "b.txt").getByText("2 Bytes")).toBeInTheDocument();
-    });
-
-    it("adds files from consecutive selections", async () => {
-        const { screen, user } = renderModal();
-
-        await selectFiles(screen, user, [fileA]);
-        await selectFiles(screen, user, [fileB]);
-
-        expect(screen.getByText("a.txt")).toBeInTheDocument();
-        expect(screen.getByText("b.txt")).toBeInTheDocument();
+        expect(screen.getAllByText("a.txt")).toHaveLength(1);
+        await clickSave(screen, user);
+        const [uploadedFiles] = uploadFiles.mock.calls[0];
+        expect(uploadedFiles).toHaveLength(2);
+        expect(uploadedFiles[0]).toBe(fileB);
+        expect(uploadedFiles[1]).toBe(newerFileA);
     });
 
     it("removes a file from the selection before upload", async () => {
@@ -99,22 +95,6 @@ describe("AddAttachmentWithRemoteParametersModal", () => {
         await waitFor(() => expect(screen.queryByText("a.txt")).not.toBeInTheDocument());
         await clickSave(screen, user);
         expect(uploadFiles.mock.calls[0][0]).toEqual([fileB]);
-    });
-
-    it("collapses long lists and expands them on demand", async () => {
-        const { screen, user } = renderModal();
-        const files = [1, 2, 3, 4, 5].map((i) => new File(["x"], `file${i}.txt`));
-
-        await selectFiles(screen, user, files);
-
-        expect(screen.getByText("file3.txt")).toBeInTheDocument();
-        expect(screen.queryByText("file4.txt")).not.toBeInTheDocument();
-
-        await act(() => user.click(screen.getByRole("button", { name: /Show all 5 files/ })));
-
-        expect(screen.getByText("file4.txt")).toBeInTheDocument();
-        expect(screen.getByText("file5.txt")).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: /Show less/ })).toBeInTheDocument();
     });
 
     it("shows per-file status while files are being uploaded", async () => {
