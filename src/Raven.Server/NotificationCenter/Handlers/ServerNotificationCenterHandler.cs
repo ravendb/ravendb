@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net;
@@ -57,36 +56,20 @@ namespace Raven.Server.NotificationCenter.Handlers
                 {
                     using (var writer = new NotificationCenterWebSocketWriter<TransactionOperationContext>(webSocket, ServerStore.NotificationCenter, ServerStore.ContextPool, token.Token))
                     {
+                        var shouldInclude = isValidFor == null
+                            ? null
+                            : (Func<BlittableJsonReaderObject, bool>)(json =>
+                                json.TryGet("Database", out string db) && isValidFor(db, false));
+
                         using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext notificationsContext))
+                        using (ServerStore.NotificationCenter.GetStored(out var storedNotifications, postponed: false, notificationsContext, shouldInclude))
                         {
-                            var toSend = new List<BlittableJsonReaderObject>();
-                            using (ServerStore.NotificationCenter.GetStored(out IEnumerable<NotificationTableValue> storedNotifications, postponed: false))
+                            foreach (var action in storedNotifications)
                             {
-                                foreach (var action in storedNotifications)
-                                {
-                                    using (action)
-                                    {
-                                        if (isValidFor != null)
-                                        {
-                                            if (action.Json.TryGet("Database", out string db) == false ||
-                                                isValidFor(db, false) == false)
-                                                continue; // not valid for this, skipping
-                                        }
+                                if (TrafficWatchManager.HasRegisteredClients)
+                                    AddStringToHttpContext(action.Json.ToString(), TrafficWatchChangeType.Notifications);
 
-                                        toSend.Add(action.Json.Clone(notificationsContext));
-                                    }
-                                }
-                            }
-
-                            foreach (var json in toSend)
-                            {
-                                using (json)
-                                {
-                                    if (TrafficWatchManager.HasRegisteredClients)
-                                        AddStringToHttpContext(json.ToString(), TrafficWatchChangeType.Notifications);
-
-                                    await writer.WriteToWebSocket(json);
-                                }
+                                await writer.WriteToWebSocket(action.Json);
                             }
                         }
 
