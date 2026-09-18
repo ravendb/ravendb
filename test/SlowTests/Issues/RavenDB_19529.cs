@@ -230,8 +230,10 @@ public class RavenDB_19529 : ReplicationTestBase
         }
     }
 
+    // a transaction holds one Table instance per table (RavenDB-27563), opened with the schema in effect at that time,
+    // so a compression configuration change made in the middle of a transaction applies from the next transaction on
     [RavenFact(RavenTestCategory.Compression | RavenTestCategory.Voron)]
-    public async Task CanHandleChangingCompressionConfigurationInTheMiddleOfTransaction()
+    public async Task CompressionConfigurationChangedInTheMiddleOfTransaction_TakesEffectFromTheNextTransaction()
     {
         const string specificSizeAndContentDocumentId = "users/1-A";
         const string documentToDeleteId = "users/2-A";
@@ -256,8 +258,11 @@ public class RavenDB_19529 : ReplicationTestBase
             var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             database.DocumentsStorage.ForTestingPurposesOnly().OnBeforeOpenTableWhenPutDocumentWithSpecificId = id =>
             {
-                if (id == specificSizeAndContentDocumentId)
-                    store.Maintenance.Send(new UpdateDocumentsCompressionConfigurationOperation(new DocumentsCompressionConfiguration { CompressAllCollections = false }));
+                if (id != specificSizeAndContentDocumentId)
+                    return;
+
+                store.Maintenance.Send(new UpdateDocumentsCompressionConfigurationOperation(new DocumentsCompressionConfiguration { CompressAllCollections = false }));
+                Assert.False(database.GetDocsSchemaForCollection(new CollectionName("Users")).Compressed);
             };
 
             using (var operationSession = store.OpenSession())
@@ -276,11 +281,101 @@ public class RavenDB_19529 : ReplicationTestBase
             Assert.True(WaitForDocument<User>(store, specificSizeAndContentDocumentId, user => user.Name.Last() == CharToAppend),
                 $"The document '{specificSizeAndContentDocumentId}' wasn't updated as expected");
 
+            // the DELETE opened the table with the compressed schema, the PUT in the same transaction used that instance
+            using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+            using (context.OpenReadTransaction())
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, specificSizeAndContentDocumentId, out Slice lowerDocumentId))
+            {
+                Assert.True(database.DocumentsStorage.ForTestingPurposesOnly().IsDocumentCompressed(context, lowerDocumentId, out var isLargeValue));
+                Assert.True(isLargeValue);
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var specificSizeAndContentUser = session.Load<User>(specificSizeAndContentDocumentId);
+                specificSizeAndContentUser.Name += CharToAppend;
+
+                session.SaveChanges();
+            }
+
+            Assert.True(WaitForDocument<User>(store, specificSizeAndContentDocumentId, user => user.Name.EndsWith($"{CharToAppend}{CharToAppend}")),
+                $"The document '{specificSizeAndContentDocumentId}' wasn't updated as expected");
+
             using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
             using (context.OpenReadTransaction())
             using (DocumentIdWorker.GetLoweredIdSliceFromId(context, specificSizeAndContentDocumentId, out Slice lowerDocumentId))
             {
                 Assert.False(database.DocumentsStorage.ForTestingPurposesOnly().IsDocumentCompressed(context, lowerDocumentId, out var isLargeValue));
+                Assert.True(isLargeValue);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Compression | RavenTestCategory.Voron)]
+    public async Task CompressionEnabledInTheMiddleOfTransaction_TakesEffectFromTheNextTransaction()
+    {
+        const string specificSizeAndContentDocumentId = "users/1-A";
+        const string documentToDeleteId = "users/2-A";
+
+        using (var store = GetDocumentStore(new Options { RunInMemory = false }))
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = SpecificContentWithSpecificSize }, specificSizeAndContentDocumentId);
+                await session.StoreAsync(new User { Name = "Document To Delete" }, documentToDeleteId);
+
+                await session.SaveChangesAsync();
+            }
+
+            var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            database.DocumentsStorage.ForTestingPurposesOnly().OnBeforeOpenTableWhenPutDocumentWithSpecificId = id =>
+            {
+                if (id != specificSizeAndContentDocumentId)
+                    return;
+
+                store.Maintenance.Send(new UpdateDocumentsCompressionConfigurationOperation(new DocumentsCompressionConfiguration { CompressAllCollections = true }));
+                Assert.True(database.GetDocsSchemaForCollection(new CollectionName("Users")).Compressed);
+            };
+
+            using (var operationSession = store.OpenSession())
+            {
+                var userToDelete = operationSession.Load<User>(documentToDeleteId);
+                operationSession.Delete(userToDelete);
+
+                var specificSizeAndContentUser = operationSession.Load<User>(specificSizeAndContentDocumentId);
+                specificSizeAndContentUser.Name += CharToAppend;
+
+                operationSession.SaveChanges();
+            }
+
+            Assert.True(WaitForDocument<User>(store, specificSizeAndContentDocumentId, user => user.Name.Last() == CharToAppend),
+                $"The document '{specificSizeAndContentDocumentId}' wasn't updated as expected");
+
+            // the DELETE opened the table with the plain schema, the PUT in the same transaction used that instance
+            using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+            using (context.OpenReadTransaction())
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, specificSizeAndContentDocumentId, out Slice lowerDocumentId))
+            {
+                Assert.False(database.DocumentsStorage.ForTestingPurposesOnly().IsDocumentCompressed(context, lowerDocumentId, out var isLargeValue));
+                Assert.True(isLargeValue);
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var specificSizeAndContentUser = session.Load<User>(specificSizeAndContentDocumentId);
+                specificSizeAndContentUser.Name += CharToAppend;
+
+                session.SaveChanges();
+            }
+
+            Assert.True(WaitForDocument<User>(store, specificSizeAndContentDocumentId, user => user.Name.EndsWith($"{CharToAppend}{CharToAppend}")),
+                $"The document '{specificSizeAndContentDocumentId}' wasn't updated as expected");
+
+            using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+            using (context.OpenReadTransaction())
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, specificSizeAndContentDocumentId, out Slice lowerDocumentId))
+            {
+                Assert.True(database.DocumentsStorage.ForTestingPurposesOnly().IsDocumentCompressed(context, lowerDocumentId, out var isLargeValue));
                 Assert.True(isLargeValue);
             }
         }

@@ -151,6 +151,30 @@ namespace SlowTests.Voron.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.Voron)]
+        public void A_transaction_holds_one_table_per_name_whatever_the_schema()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                CreateSchemas(tx, out _, out var plain);
+                plain.Create(tx, "Items", 16);
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                CreateSchemas(tx, out var compressed, out var plain);
+                var table = tx.OpenTable(plain, "Items");
+                Assert.Same(table, tx.OpenTable(compressed, "Items"));
+
+                Insert(tx, table, "item", 100, new Random(27563), new Dictionary<string, byte[]>());
+                Assert.Equal(1, tx.OpenTable(compressed, "Items").NumberOfEntries);
+
+                tx.DeleteTable("Items");
+                Assert.Null(tx.OpenTable(plain, "Items"));
+            }
+        }
+
         private static long Insert(Transaction tx, Table table, string key, int valueSize, Random random, Dictionary<string, byte[]> expected)
         {
             var value = new byte[valueSize];
