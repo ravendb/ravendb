@@ -5,10 +5,12 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Http;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Web.Studio.Processors;
 
 namespace Raven.Server.Web.Studio.Sharding.Processors
@@ -26,7 +28,29 @@ namespace Raven.Server.Web.Studio.Sharding.Processors
                 return await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new GetBucketsCommand(fromBucket, toBucket, range), shardNumber.Value, token);
 
             var shardedGetBucketsOperation = new ShardedGetBucketsOperation(RequestHandler.HttpContext.Request, fromBucket, toBucket, range);
-            return await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(shardedGetBucketsOperation, token);
+            var results = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(shardedGetBucketsOperation, token);
+            MarkOwnerShards(results);
+            return results;
+        }
+
+        private void MarkOwnerShards(BucketsResults results)
+        {
+            var configuration = RequestHandler.DatabaseContext.DatabaseRecord.Sharding;
+            foreach (var bucketRange in results.BucketRanges.Values)
+            {
+                if (bucketRange.ShardNumbers.Count > 1 && bucketRange.FromBucket == bucketRange.ToBucket)
+                    bucketRange.OwnerShardNumber = GetOwnerShard(configuration, (int)bucketRange.FromBucket);
+            }
+        }
+
+        private static int GetOwnerShard(ShardingConfiguration configuration, int bucket)
+        {
+            if (configuration.BucketMigrations != null &&
+                configuration.BucketMigrations.TryGetValue(bucket, out var migration) &&
+                migration.Status != MigrationStatus.OwnershipTransferred)
+                return migration.DestinationShard;
+
+            return ShardHelper.GetShardNumberFor(configuration, bucket);
         }
     }
 
