@@ -150,7 +150,7 @@ export default function EditCdcSinkTaskInfoHub() {
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "CDC Sink task",
-        featureIcon: "sql-etl",
+        featureIcon: "cdc-sink",
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },
