@@ -47,7 +47,6 @@ namespace SlowTests.Voron.Issues
                 {
                     // keep every queued command in the transaction the merger already started
                     record.Settings[RavenConfiguration.GetKey(x => x.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTx)] = int.MaxValue.ToString();
-                    record.Settings[RavenConfiguration.GetKey(x => x.TransactionMergerConfiguration.MaxTxSize)] = "1024";
                 }
             });
 

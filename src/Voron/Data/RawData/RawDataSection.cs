@@ -189,14 +189,13 @@ namespace Voron.Data.RawData
             if (_llt.Flags == TransactionFlags.Read)
                 ThrowReadOnlyTransaction(id);
 
-            if (GetRawDataEntrySizeFor(_llt, id)->AllocatedSize < size)
+            if (GetRawDataEntrySizeFor(_llt, id, out var pageHeader, out var posInPage)->AllocatedSize < size)
             {
                 writePos = (byte*)0;
                 return false; // can't write here
             }
 
-            var posInPage = (int)(id % Constants.Storage.PageSize);
-            var pageHeader = ModifyPage(PageHeaderFor(_llt, (id - posInPage) / Constants.Storage.PageSize));
+            pageHeader = ModifyPage(pageHeader);
             writePos = ((byte*)pageHeader + posInPage + sizeof(short) /*allocated*/+ sizeof(short) /*used*/);
             var entry = ((RawDataEntrySizes*)((byte*)pageHeader + posInPage));
             entry->UsedSize_Buffer = (short)size;
@@ -221,9 +220,14 @@ namespace Voron.Data.RawData
 
         public static RawDataEntrySizes* GetRawDataEntrySizeFor(LowLevelTransaction tx, long id)
         {
-            var posInPage = (int)(id % Constants.Storage.PageSize);
+            return GetRawDataEntrySizeFor(tx, id, out _, out _);
+        }
+
+        private static RawDataEntrySizes* GetRawDataEntrySizeFor(LowLevelTransaction tx, long id, out RawDataSmallPageHeader* pageHeader, out int posInPage)
+        {
+            posInPage = (int)(id % Constants.Storage.PageSize);
             var pageNumberInSection = (id - posInPage) / Constants.Storage.PageSize;
-            var pageHeader = PageHeaderFor(tx, pageNumberInSection);
+            pageHeader = PageHeaderFor(tx, pageNumberInSection);
 
             if (posInPage >= pageHeader->NextAllocation)
             {
