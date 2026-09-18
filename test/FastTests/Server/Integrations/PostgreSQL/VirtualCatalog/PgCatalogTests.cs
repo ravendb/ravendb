@@ -55,6 +55,31 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
         }
 
         [RavenFact(RavenTestCategory.PostgreSql)]
+        public async Task Oid_survives_collections_being_added_and_removed_between_catalog_queries()
+        {
+            using var store = GetDocumentStore();
+            StoreThreeCollections(store);
+
+            var ctx = await CtxFor(store);
+            var ordersOid = OidOf(ctx, "Orders");
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                $"select attname from pg_attribute where attrelid = {ordersOid} order by attnum", ctx, out var before));
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Aaa(), "aaa/1");
+                session.Delete("companies/1");
+                session.SaveChanges();
+            }
+
+            Assert.Equal(ordersOid, OidOf(ctx, "Orders"));
+            Assert.True(PgVirtualInterpreter.TryExecute(
+                $"select attname from pg_attribute where attrelid = {ordersOid} order by attnum", ctx, out var after));
+            Assert.Equal(ColumnValues(before, column: 0), ColumnValues(after, column: 0));
+            Assert.Contains("Freight", ColumnValues(after, column: 0));
+        }
+
+        [RavenFact(RavenTestCategory.PostgreSql)]
         public async Task SqlAlchemy_get_table_names_shape_lists_the_collections()
         {
             using var store = GetDocumentStore();
@@ -884,6 +909,11 @@ namespace FastTests.Server.Integrations.PostgreSQL.VirtualCatalog
         }
 
         private sealed class Employee
+        {
+            public string Id { get; set; }
+        }
+
+        private sealed class Aaa
         {
             public string Id { get; set; }
         }
