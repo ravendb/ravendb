@@ -1,6 +1,8 @@
-﻿using System.Security.Cryptography;
+﻿using System.Collections.Concurrent;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
+using SessionOptions = Raven.Client.Documents.Session.SessionOptions;
 using Raven.Client.Documents;
 using Raven.Quill.Hosting;
 using Raven.Quill.Logging;
@@ -18,78 +20,129 @@ public sealed class ApiKeyStore(
     IOptions<ApplianceOptions> options,
     QuillLogger<ApiKeyStore> logger) : IApiKeyStore
 {
+    private const string PrimaryKeyId = "primary";
+
     private const int SaltBytes = 16;
+    private const int MaxKeyIdLength = 64;
     private const int MinRecommendedApiKeyLength = 16;
 
+    private static readonly Record Decoy = new(RandomNumberGenerator.GetBytes(SaltBytes), RandomNumberGenerator.GetBytes(32));
+
     private readonly SemaphoreSlim _seedLock = new(1, 1);
-    private volatile Record[]? _keys;
+    private readonly ConcurrentDictionary<string, CacheEntry> _cache = new(StringComparer.Ordinal);
+    private volatile bool _seeded;
 
     public async Task<bool> ValidateAsync(string? presentedKey, CancellationToken ct)
     {
+        if (TryParse(presentedKey, out var keyId, out var secret) == false)
+            return false;
+
+        if (_seeded == false)
+            await SeedPrimaryAsync(ct);
+
+        var record = await LoadAsync(keyId, ct);
+        var target = record ?? Decoy;
+        var hash = HashSecret(target.Salt, secret);
+        var equal = CryptographicOperations.FixedTimeEquals(hash, target.Hash);
+        return equal && record is not null;
+    }
+
+    private static bool TryParse(string? presentedKey, out string keyId, out string secret)
+    {
+        keyId = PrimaryKeyId;
+        secret = "";
         if (string.IsNullOrEmpty(presentedKey))
             return false;
 
-        var secret = StripKeyIdPrefix(presentedKey);
-        if (secret.Length == 0)
-            return false;
-
-        var keys = _keys ?? await EnsureSeededAsync(ct);
-        var presented = Encoding.UTF8.GetBytes(secret);
-
-        var match = false;
-        // no early return on match: keep timing uniform
-        foreach (var key in keys)
+        var separator = presentedKey.IndexOf('/');
+        if (separator >= 0)
         {
-            var hash = SHA256.HashData(Combine(key.Salt, presented));
-            if (CryptographicOperations.FixedTimeEquals(hash, key.Hash))
-                match = true;
+            keyId = presentedKey[..separator];
+            secret = presentedKey[(separator + 1)..];
+        }
+        else
+        {
+            secret = presentedKey;
         }
 
-        return match;
+        return secret.Length > 0 && IsValidKeyId(keyId);
     }
 
-    private async Task<Record[]> EnsureSeededAsync(CancellationToken ct)
+    private static bool IsValidKeyId(string keyId)
     {
-        var current = _keys;
-        if (current is not null)
-            return current;
+        if (keyId.Length is 0 or > MaxKeyIdLength)
+            return false;
 
+        foreach (var c in keyId)
+        {
+            if (char.IsAsciiLetterOrDigit(c) == false && c != '-' && c != '_')
+                return false;
+        }
+
+        return true;
+    }
+
+    private async Task<Record?> LoadAsync(string keyId, CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        if (_cache.TryGetValue(keyId, out var cached) && cached.ExpiresAt > now)
+            return cached.Record;
+
+        ApiKey? doc;
+        try
+        {
+            using var session = store.OpenAsyncSession(new SessionOptions { NoTracking = true });
+            doc = await session.LoadAsync<ApiKey>(ApiKey.IdPrefix + keyId, ct);
+        }
+        catch (Exception ex)
+        {
+            if (logger.IsWarnEnabled)
+                logger.Warn(ex, $"Failed to load API key '{keyId}' from the config database.");
+            return null;
+        }
+
+        if (doc is null)
+        {
+            _cache.TryRemove(keyId, out _);
+            return null;
+        }
+
+        var record = doc.Revoked ? null : new Record(Convert.FromBase64String(doc.Salt), Convert.FromBase64String(doc.Hash));
+        _cache[keyId] = new CacheEntry(record, now + options.Value.ApiKeyCacheDuration);
+        return record;
+    }
+
+    private async Task SeedPrimaryAsync(CancellationToken ct)
+    {
         await _seedLock.WaitAsync(ct);
         try
         {
-            if (_keys is not null)
-                return _keys;
+            if (_seeded)
+                return;
 
             var envKey = options.Value.ApiKey is { } configured ? StripKeyIdPrefix(configured) : null;
-            Record[] records;
             if (string.IsNullOrWhiteSpace(envKey))
             {
                 if (logger.IsWarnEnabled)
                     logger.Warn(
-                        "QUILL_API_KEY is not set; appliance admin authentication is disabled (fail-closed). " +
+                        "QUILL_API_KEY is not set; the primary appliance API key is disabled (fail-closed). " +
                         "Set QUILL_API_KEY to enable the dashboard and API.");
                 if (logger.AuditEnabled)
                     logger.Audit("AUTH",
-                        "QUILL_API_KEY is not configured; admin authentication is disabled (fail-closed)",
+                        "QUILL_API_KEY is not configured; the primary API key is disabled (fail-closed)",
                         context: null);
-                records = [];
-            }
-            else
-            {
-                if (envKey.Length < MinRecommendedApiKeyLength)
-                    if (logger.IsWarnEnabled)
-                        logger.Warn(
-                            $"QUILL_API_KEY is shorter than {MinRecommendedApiKeyLength} characters; " +
-                            "use a high-entropy key in production.");
-
-                var salt = RandomNumberGenerator.GetBytes(SaltBytes);
-                var hash = SHA256.HashData(Combine(salt, Encoding.UTF8.GetBytes(envKey)));
-                records = [new Record(salt, hash)];
-                await PersistPrimaryAsync(salt, hash, ct);
+                _seeded = await RevokePrimaryAsync(ct);
+                return;
             }
 
-            _keys = records;
-            return records;
+            if (envKey.Length < MinRecommendedApiKeyLength && logger.IsWarnEnabled)
+                logger.Warn(
+                    $"QUILL_API_KEY is shorter than {MinRecommendedApiKeyLength} characters; " +
+                    "use a high-entropy key in production.");
+
+            var salt = RandomNumberGenerator.GetBytes(SaltBytes);
+            var hash = HashSecret(salt, envKey);
+            _seeded = await PersistPrimaryAsync(salt, hash, ct);
         }
         finally
         {
@@ -97,7 +150,7 @@ public sealed class ApiKeyStore(
         }
     }
 
-    private async Task PersistPrimaryAsync(byte[] salt, byte[] hash, CancellationToken ct)
+    private async Task<bool> PersistPrimaryAsync(byte[] salt, byte[] hash, CancellationToken ct)
     {
         try
         {
@@ -112,15 +165,43 @@ public sealed class ApiKeyStore(
             };
             await session.StoreAsync(doc, ApiKey.PrimaryId, ct);
             await session.SaveChangesAsync(ct);
+            _cache.TryRemove(PrimaryKeyId, out _);
+            return true;
         }
         catch (Exception ex)
         {
             if (logger.IsWarnEnabled)
-                logger.Warn(ex, "Failed to persist the API key hash to the config database.");
+                logger.Warn(ex, "Failed to persist the primary API key hash to the config database.");
+            return false;
         }
     }
 
-    // keys may be minted as "<key-id>/<secret>" (e.g. "primary/..."); only the secret part is compared
+    private async Task<bool> RevokePrimaryAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var session = store.OpenAsyncSession();
+            var doc = await session.LoadAsync<ApiKey>(ApiKey.PrimaryId, ct);
+            if (doc is not null && doc.Revoked == false)
+            {
+                doc.Revoked = true;
+                await session.SaveChangesAsync(ct);
+            }
+
+            _cache.TryRemove(PrimaryKeyId, out _);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            if (logger.IsWarnEnabled)
+                logger.Warn(ex, "Failed to revoke the primary API key in the config database.");
+            return false;
+        }
+    }
+
+    public static byte[] HashSecret(byte[] salt, string secret) =>
+        SHA256.HashData(Combine(salt, Encoding.UTF8.GetBytes(secret)));
+
     private static string StripKeyIdPrefix(string key)
     {
         var separator = key.IndexOf('/');
@@ -136,4 +217,6 @@ public sealed class ApiKeyStore(
     }
 
     private sealed record Record(byte[] Salt, byte[] Hash);
+
+    private sealed record CacheEntry(Record? Record, DateTime ExpiresAt);
 }
