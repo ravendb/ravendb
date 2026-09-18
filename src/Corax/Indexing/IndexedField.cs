@@ -48,6 +48,7 @@ internal sealed class IndexedField
     public readonly SupportedFeatures SupportedFeatures;
     public readonly bool IsVirtual;
     public bool HasMultipleTermsPerField;
+    private DocumentEntryId _lastEntryIdWithTerm = DocumentEntryId.Invalid;
     public long FieldRootPage;
     public long TermsVectorFieldRootPage;
     public bool FieldSupportsPhraseQuery => SupportedFeatures.PhraseQuery && FieldIndexingMode is FieldIndexingMode.Search;
@@ -89,6 +90,7 @@ internal sealed class IndexedField
         SupportedFeatures = source.SupportedFeatures;
         IsVirtual = source.IsVirtual;
         HasMultipleTermsPerField = source.HasMultipleTermsPerField;
+        _lastEntryIdWithTerm = source._lastEntryIdWithTerm;
         FieldRootPage = source.FieldRootPage;
         TermsVectorFieldRootPage = source.TermsVectorFieldRootPage;
         _isCreatedByField = false;
@@ -178,6 +180,19 @@ internal sealed class IndexedField
             SupportedFeatures, dynamicField.FieldNameForStatistics, FieldRootPage, TermsVectorFieldRootPage, Storage, Textual, Longs, Doubles, this, isCreatedByDelete);
     }
 
+    /// <summary>One term written for this field in this entry. A second one for the same entry means the field holds
+    /// several terms per entry. The state sits on the root, so a dynamic write through a virtual field counts together
+    /// with the declared field whose dictionaries it shares (RavenDB-27565).</summary>
+    public void RecordTermForEntry(DocumentEntryId entryId)
+    {
+        var root = _parent ?? this;
+
+        if (root._lastEntryIdWithTerm == entryId)
+            root.HasMultipleTermsPerField = true;
+        else
+            root._lastEntryIdWithTerm = entryId;
+    }
+
     public void Clear()
     {
         Suggestions?.Clear();
@@ -186,6 +201,7 @@ internal sealed class IndexedField
         Longs?.Clear();
         Textual?.Clear();
         EntryToTerms = default;
+        _lastEntryIdWithTerm = DocumentEntryId.Invalid;
     }
 
     [Conditional("DEBUG")]
@@ -196,7 +212,8 @@ internal sealed class IndexedField
             nameof(_parent), nameof(Spatial), nameof(Storage), nameof(Textual), nameof(_entryToTerms), nameof(Longs), nameof(Doubles), nameof(Suggestions),
             nameof(Analyzer), nameof(NameForStatistics), nameof(Name), nameof(NameLong), nameof(NameDouble), nameof(NameTotalLengthOfTerms), nameof(Id),
             nameof(FieldIndexingMode), nameof(ShouldIndex), nameof(HasSuggestions), nameof(ShouldStore), nameof(SupportedFeatures), nameof(IsVirtual),
-            nameof(HasMultipleTermsPerField), nameof(FieldRootPage), nameof(TermsVectorFieldRootPage), nameof(FieldSupportsPhraseQuery), nameof(IsCreatedByDelete), nameof(_isCreatedByField)
+            nameof(HasMultipleTermsPerField), nameof(_lastEntryIdWithTerm), nameof(FieldRootPage), nameof(TermsVectorFieldRootPage), nameof(FieldSupportsPhraseQuery), nameof(IsCreatedByDelete),
+            nameof(_isCreatedByField)
         ];
 
         var fields = this.GetType().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
