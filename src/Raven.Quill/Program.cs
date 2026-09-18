@@ -163,6 +163,7 @@ builder.Services.AddOptions<ApplianceOptions>()
     .Validate(o => o.Discord.GatewayHandshakeTimeout > TimeSpan.Zero,
         "Discord GatewayHandshakeTimeout must be positive")
     .Validate(o => o.Discord.GatewayRestartDelay > TimeSpan.Zero, "Discord GatewayRestartDelay must be positive")
+    .Validate(o => o.ApiKeyCacheDuration >= TimeSpan.Zero, "ApiKeyCacheDuration must not be negative")
     .Validate(o => o.Discord.MaxGatewayFrameBytes > 0, "Discord MaxGatewayFrameBytes must be positive")
     .ValidateOnStart();
 
