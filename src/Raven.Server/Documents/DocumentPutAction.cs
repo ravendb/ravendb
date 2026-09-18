@@ -135,7 +135,7 @@ namespace Raven.Server.Documents
                 ValidateIdAndCollection(id, collectionName.Name, newFlags, nonPersistentFlags);
                 _documentsStorage._forTestingPurposes?.OnBeforeOpenTableWhenPutDocumentWithSpecificId?.Invoke(id);
                 
-                var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.GetDocsSchemaForCollection(collectionName, newFlags), collectionName.GetTableName(CollectionTableType.Documents));
+                var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.GetDocsSchemaForCollection(collectionName), collectionName.GetTableName(CollectionTableType.Documents));
 
                 var oldValue = default(TableValueReader);
                 if (knownNewId == false)
@@ -281,6 +281,9 @@ namespace Raven.Server.Documents
                     tvb.Add(modifiedTicks);
                     tvb.Add((int)newFlags);
                     tvb.Add(context.GetTransactionMarker());
+
+                    if (newFlags.Contain(DocumentFlags.Archived))
+                        tvb.TryCompression(table, _documentsStorage.CompressedDocsSchema);
 
                     if (oldValue.Pointer == null)
                     {

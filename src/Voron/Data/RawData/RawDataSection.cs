@@ -189,33 +189,14 @@ namespace Voron.Data.RawData
             if (_llt.Flags == TransactionFlags.Read)
                 ThrowReadOnlyTransaction(id);
 
-            var posInPage = (int)(id % Constants.Storage.PageSize);
-            var pageNumberInSection = (id - posInPage) / Constants.Storage.PageSize;
-            var pageHeader = PageHeaderFor(_llt, pageNumberInSection);
-
-            if (posInPage >= pageHeader->NextAllocation)
-                VoronUnrecoverableErrorException.Raise(_llt, $"Asked to load a past the allocated values: {id} from page {pageHeader->PageNumber}");
-
-            var sizes = (RawDataEntrySizes*)((byte*)pageHeader + posInPage);
-            if (sizes->IsFreed)
-                VoronUnrecoverableErrorException.Raise(_llt, $"Asked to load a value that was already freed: {id} from page {pageHeader->PageNumber}");
-
-            if (sizes->AllocatedSize < sizes->UsedSize)
-                VoronUnrecoverableErrorException.Raise(_llt,
-                    "Asked to load a value that where the allocated size is smaller than the used size: " + id +
-                    " from page " +
-                    pageHeader->PageNumber);
-
-            if (sizes->AllocatedSize < size)
+            if (GetRawDataEntrySizeFor(_llt, id, out var pageHeader, out var posInPage)->AllocatedSize < size)
             {
                 writePos = (byte*)0;
                 return false; // can't write here
             }
 
-
             pageHeader = ModifyPage(pageHeader);
             writePos = ((byte*)pageHeader + posInPage + sizeof(short) /*allocated*/+ sizeof(short) /*used*/);
-            // note that we have to do this calc again, pageHeader might have changed
             var entry = ((RawDataEntrySizes*)((byte*)pageHeader + posInPage));
             entry->UsedSize_Buffer = (short)size;
             entry->IsCompressed = compressed;
@@ -239,9 +220,14 @@ namespace Voron.Data.RawData
 
         public static RawDataEntrySizes* GetRawDataEntrySizeFor(LowLevelTransaction tx, long id)
         {
-            var posInPage = (int)(id % Constants.Storage.PageSize);
+            return GetRawDataEntrySizeFor(tx, id, out _, out _);
+        }
+
+        private static RawDataEntrySizes* GetRawDataEntrySizeFor(LowLevelTransaction tx, long id, out RawDataSmallPageHeader* pageHeader, out int posInPage)
+        {
+            posInPage = (int)(id % Constants.Storage.PageSize);
             var pageNumberInSection = (id - posInPage) / Constants.Storage.PageSize;
-            var pageHeader = PageHeaderFor(tx, pageNumberInSection);
+            pageHeader = PageHeaderFor(tx, pageNumberInSection);
 
             if (posInPage >= pageHeader->NextAllocation)
             {
@@ -261,6 +247,10 @@ namespace Voron.Data.RawData
             if (sizes->AllocatedSize < sizes->UsedSize)
                 VoronUnrecoverableErrorException.Raise(tx,
                     $"Asked to load a value that where the allocated size is smaller than the used size: {id} from page {pageHeader->PageNumber}");
+
+            if (posInPage + sizeof(RawDataEntrySizes) + sizes->AllocatedSize > Constants.Storage.PageSize)
+                VoronUnrecoverableErrorException.Raise(tx,
+                    $"Asked to load a value that runs past the end of the page: {id} from page {pageHeader->PageNumber}");
 
             return sizes;
         }
