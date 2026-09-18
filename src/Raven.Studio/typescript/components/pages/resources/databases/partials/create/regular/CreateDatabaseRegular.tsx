@@ -150,11 +150,8 @@ export default function CreateDatabaseRegular({ closeModal, changeCreateModeToBa
     const encryptionStepIndex = activeSteps.findIndex((x) => x.id === "encryptionStep");
     const quickCreateDisabledReason = isEncryptionKeyConfirmed ? null : (
         <>
-            In step{" "}
-            <strong>
-                {activeSteps[encryptionStepIndex].label}
-            </strong>{" "}
-            you need to check <strong>&quot;I have saved the encryption key&quot;</strong>
+            In step <strong>{activeSteps[encryptionStepIndex].label}</strong> you need to check{" "}
+            <strong>&quot;I have saved the encryption key&quot;</strong>
         </>
     );
 
