@@ -75,11 +75,15 @@ namespace Voron.Data.RawData
                 var pageHeader = PageHeaderFor(_llt, _sectionHeader->PageNumber + i + 1);
                 pageHeader = DefragPage(pageHeader);
 
+                EnsureHeaderModified();
+                AvailableSpace[i] = (ushort)(Constants.Storage.PageSize - pageHeader->NextAllocation);
+                if (AvailableSpace[i] < size)
+                    continue;
+
                 id = (pageHeader->PageNumber) * Constants.Storage.PageSize + pageHeader->NextAllocation;
                 ((short*)((byte*)pageHeader + pageHeader->NextAllocation))[0] = allocatedSize;
                 pageHeader->NextAllocation += (ushort)size;
                 pageHeader->NumberOfEntries++;
-                EnsureHeaderModified();
                 _sectionHeader->NumberOfEntries++;
                 _sectionHeader->LastUsedPage = i;
                 _sectionHeader->AllocatedSize += size;
@@ -123,6 +127,9 @@ namespace Voron.Data.RawData
 
         private RawDataSmallPageHeader* DefragPage(RawDataSmallPageHeader* pageHeader)
         {
+            if (pageHeader->NextAllocation > Constants.Storage.PageSize)
+                VoronUnrecoverableErrorException.Raise(_llt, $"Page {pageHeader->PageNumber} allocated up to {pageHeader->NextAllocation}, past the end of the page");
+
             pageHeader = ModifyPage(pageHeader);
 
             if (pageHeader->NumberOfEntries == 0)
