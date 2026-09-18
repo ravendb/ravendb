@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private readonly object _item;
         private readonly Func<object, object> _func;
-        private readonly HashSet<object> _results = new HashSet<object>();
+        private readonly HashSet<object> _results = new HashSet<object>(VisitedItemComparer.Instance);
         private readonly Queue<object> _queue = new Queue<object>();
 
         public RecursiveFunction(object item, Func<object, object> func)
@@ -82,6 +82,31 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 yield return enumerator.Current;
             } while (enumerator.MoveNext());
+        }
+
+        private sealed class VisitedItemComparer : IEqualityComparer<object>
+        {
+            public static readonly VisitedItemComparer Instance = new VisitedItemComparer();
+
+            private VisitedItemComparer()
+            {
+            }
+
+            bool IEqualityComparer<object>.Equals(object x, object y)
+            {
+                if (x is DynamicBlittableJson { BlittableJson: { } bx } && y is DynamicBlittableJson { BlittableJson: { } by })
+                    return bx.Location == by.Location;
+
+                return Equals(x, y);
+            }
+
+            int IEqualityComparer<object>.GetHashCode(object obj)
+            {
+                if (obj is DynamicBlittableJson { BlittableJson: { } b })
+                    return b.Location.GetHashCode();
+
+                return obj.GetHashCode();
+            }
         }
     }
 }
