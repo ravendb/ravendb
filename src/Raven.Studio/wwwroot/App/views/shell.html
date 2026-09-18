@@ -284,7 +284,7 @@
                     </button>
                     <ul class="dropdown-menu dropup" data-bind="foreach: $root.clusterManager.topology().nodes">
                         <li>
-                            <a target="_blank" title="Go to another cluster node" data-bind="attr: { href: $root.createUrlWithHashComputed(serverUrl) }">
+                            <a target="_blank" title="Go to another cluster node" data-bind="attr: { href: $root.createUrlWithHashComputed($parent.nodeServerUrl($data)) }">
                                 <i data-bind="attr: { class: cssIcon() }"></i>
                                 <span data-bind="text: 'Node ' + tag()"></span>
                             </a>
