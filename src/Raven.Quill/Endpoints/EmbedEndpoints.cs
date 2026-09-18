@@ -3,6 +3,7 @@ using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -65,6 +66,12 @@ public static class EmbedEndpoints
         // Only the appearance is overridable this way - it picks between palettes the operator already chose.
         if (TryParseAppearance(ctx.Request.Query["appearance"], out var appearanceOverride))
             theme = theme with { Appearance = appearanceOverride };
+
+        if (IsExhausted(link))
+        {
+            await WriteNoticeAsync(ctx, theme, StatusCodes.Status410Gone, WidgetNotice.Notice.Exhausted(), ct);
+            return;
+        }
 
         if (assets.IsAvailable == false)
         {
@@ -145,7 +152,6 @@ public static class EmbedEndpoints
     private static async Task StreamEmbedChatAsync(
         string slug,
         string token,
-        EmbedChatRequest body,
         IDocumentStore store,
         IAgentRouter router,
         QuillLogger<EmbedLogger> logger,
@@ -153,10 +159,20 @@ public static class EmbedEndpoints
     {
         var ct = ctx.RequestAborted;
 
-        if (body is null || string.IsNullOrWhiteSpace(body.Prompt))
+        var body = await ReadChatRequestAsync(ctx, ct);
+        if (body is null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(body.Prompt))
         {
-            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("prompt is required"), ct);
+            await WriteErrorAsync(ctx, StatusCodes.Status400BadRequest, "prompt is required", ct);
+            return;
+        }
+
+        if (body.Prompt.Length > ChatLimits.MaxPromptLength)
+        {
+            await WriteErrorAsync(ctx, StatusCodes.Status413PayloadTooLarge,
+                $"prompt exceeds the {ChatLimits.MaxPromptLength:N0} character limit", ct, "prompt_too_large");
             return;
         }
 
@@ -228,8 +244,9 @@ public static class EmbedEndpoints
         }
         catch (Exception e)
         {
+            var failure = ProviderFailures.Classify(e);
             if (logger.IsErrorEnabled)
-                logger.Error(e, $"embed chat failed for tokenPrefix={EmbedLink.RedactToken(token)}");
+                logger.Error(e, $"embed chat failed for tokenPrefix={EmbedLink.RedactToken(token)}: {failure.OperatorMessage}");
 
             // refund the reserved invocation only if nothing streamed (mid-stream abort stays consumed)
             if (streamedAny == false)
@@ -237,18 +254,68 @@ public static class EmbedEndpoints
 
             try
             {
-                await NdjsonStream.WriteLineAsync(ctx, new
-                {
-                    type = "error",
-                    message = e is InvalidParameterValueException invalid
-                        ? invalid.PublicMessage
-                        : "Chat failed. See server logs for details.",
-                });
+                await NdjsonStream.WriteLineAsync(ctx, e is InvalidParameterValueException invalid
+                    ? new { type = "error", message = invalid.PublicMessage, code = ProviderFailure.FailedCode, retryable = false }
+                    : new { type = "error", message = failure.VisitorMessage, code = failure.Code, retryable = failure.Retryable });
             }
             catch
             {
             }
         }
+    }
+
+    private static async Task<EmbedChatRequest?> ReadChatRequestAsync(HttpContext ctx, CancellationToken ct)
+    {
+        if (ctx.Request.HasJsonContentType() == false)
+        {
+            await WriteErrorAsync(ctx, StatusCodes.Status415UnsupportedMediaType, "request body must be application/json", ct);
+            return null;
+        }
+
+        if (ctx.Request.ContentLength > ChatLimits.MaxBodyBytes)
+        {
+            await WriteBodyTooLargeAsync(ctx, ct);
+            return null;
+        }
+
+        var sizeFeature = ctx.Features.Get<IHttpMaxRequestBodySizeFeature>();
+        if (sizeFeature is { IsReadOnly: false })
+            sizeFeature.MaxRequestBodySize = ChatLimits.MaxBodyBytes;
+
+        try
+        {
+            var body = await ctx.Request.ReadFromJsonAsync<EmbedChatRequest>(ct);
+            if (body is not null)
+                return body;
+        }
+        catch (BadHttpRequestException bad) when (bad.StatusCode == StatusCodes.Status413PayloadTooLarge)
+        {
+            await WriteBodyTooLargeAsync(ctx, ct);
+            return null;
+        }
+        catch (BadHttpRequestException)
+        {
+            await WriteErrorAsync(ctx, StatusCodes.Status400BadRequest, "request body could not be read", ct);
+            return null;
+        }
+        catch (JsonException)
+        {
+            await WriteErrorAsync(ctx, StatusCodes.Status400BadRequest, "request body is not valid JSON", ct);
+            return null;
+        }
+
+        await WriteErrorAsync(ctx, StatusCodes.Status400BadRequest, "prompt is required", ct);
+        return null;
+    }
+
+    private static Task WriteBodyTooLargeAsync(HttpContext ctx, CancellationToken ct) =>
+        WriteErrorAsync(ctx, StatusCodes.Status413PayloadTooLarge, "request body is too large", ct, "prompt_too_large");
+
+    private static async Task WriteErrorAsync(
+        HttpContext ctx, int statusCode, string message, CancellationToken ct, string? code = null)
+    {
+        ctx.Response.StatusCode = statusCode;
+        await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse(message, Code: code), ct);
     }
 
     private enum GateStatus { Ok, Exhausted, Gone }
@@ -274,7 +341,7 @@ public static class EmbedEndpoints
             if (link is null || link.Revoked || link.ExpiresAt <= DateTime.UtcNow)
                 return InvocationGate.Gone;
 
-            if (link.InvocationCount >= link.MaxInvocations)
+            if (IsExhausted(link))
                 return InvocationGate.Exhausted;
 
             if (string.IsNullOrEmpty(link.ConversationId))
@@ -370,6 +437,8 @@ public static class EmbedEndpoints
             ? (LinkStatus.Gone, resolved)
             : (LinkStatus.Ok, resolved);
     }
+
+    private static bool IsExhausted(EmbedLink link) => link.InvocationCount >= link.MaxInvocations;
 
     private static async Task<(App app, EmbedLink link, Channel channel, WidgetTheme theme)?> ResolveAsync(
         IDocumentStore store, string slug, string token, bool resolveTheme, CancellationToken ct)

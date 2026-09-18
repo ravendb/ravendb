@@ -164,7 +164,8 @@ public static class AgentsEndpoints
             if (logger.IsWarnEnabled)
                 logger.Warn(ex,
                     $"Agent edit rejected by RavenDB for app slug={app.Slug} agentId={body.Identifier}");
-            return Results.BadRequest(new ApiErrorResponse("agent configuration rejected; see server logs for details"));
+            return Results.BadRequest(new ApiErrorResponse(
+                $"agent configuration rejected: {RavenErrorText.Reason(ex)}"));
         }
     }
 
