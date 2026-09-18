@@ -56,6 +56,7 @@ import retryBatchEtlCommand from "commands/database/tasks/retryBatchEtlCommand";
 import testCdcSinkCommand from "commands/database/tasks/testCdcSinkCommand";
 import saveCdcSinkTaskCommand from "commands/database/tasks/saveCdcSinkTaskCommand";
 import getCdcSinkTaskSchemaCommand from "commands/database/tasks/getCdcSinkTaskSchemaCommand";
+import verifyCdcSinkCommand from "commands/database/tasks/verifyCdcSinkCommand";
 import assertUnreachable from "components/utils/assertUnreachable";
 
 export default class TasksService {
@@ -354,5 +355,9 @@ export default class TasksService {
 
     async getCdcSinkTaskSchema(...args: ConstructorParameters<typeof getCdcSinkTaskSchemaCommand>) {
         return new getCdcSinkTaskSchemaCommand(...args).execute();
+    }
+
+    async verifyCdcSink(...args: ConstructorParameters<typeof verifyCdcSinkCommand>) {
+        return new verifyCdcSinkCommand(...args).execute();
     }
 }
