@@ -22,7 +22,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     if (it.Seek(Slices.BeforeAllKeys) == false)
                         return true;
 
-                    var stats = new TableSchemaStatsReference();
+                    var state = new TableStateReference();
 
                     do
                     {
@@ -36,7 +36,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                             var writtenSchemaData = tableTree.DirectRead(TableSchema.SchemasSlice);
                             var writtenSchemaDataSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
                             var schema = TableSchema.ReadFrom(tx.Allocator, writtenSchemaData, writtenSchemaDataSize);
-                            new Table(schema, it.CurrentKey, tx, tableTree, stats, schema.TableType).AssertValidFixedSizeTrees();
+                            new Table(schema, it.CurrentKey, tx, tableTree, state, schema.TableType).AssertValidFixedSizeTrees();
                         }
                     } while (it.MoveNext());
                 }
