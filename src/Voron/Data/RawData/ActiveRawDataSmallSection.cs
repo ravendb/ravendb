@@ -128,6 +128,9 @@ namespace Voron.Data.RawData
 
         private RawDataSmallPageHeader* DefragPage(RawDataSmallPageHeader* pageHeader)
         {
+            if (pageHeader->NextAllocation > Constants.Storage.PageSize)
+                VoronUnrecoverableErrorException.Raise(_llt, $"Page {pageHeader->PageNumber} allocated up to {pageHeader->NextAllocation}, past the end of the page");
+
             pageHeader = ModifyPage(pageHeader);
 
             if (pageHeader->NumberOfEntries == 0)
