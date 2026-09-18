@@ -271,10 +271,6 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
                 margin-right: $gutter-xxxs;
                 flex-shrink: 0;
                 transition: transform 0.15s ease-out;
-
-                @media (prefers-reduced-motion: reduce) {
-                    transition: none;
-                }
             }
 
             &.expanded i {
@@ -298,14 +294,6 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
 
                 .system-collection-items-inner {
                     visibility: visible;
-                }
-            }
-
-            @media (prefers-reduced-motion: reduce) {
-                transition: none;
-
-                .system-collection-items-inner {
-                    transition: none;
                 }
             }
         }
