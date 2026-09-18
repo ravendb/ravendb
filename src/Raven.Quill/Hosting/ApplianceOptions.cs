@@ -24,6 +24,8 @@ public sealed class ApplianceOptions
 
     public string? ApiKey { get; set; }
 
+    public TimeSpan ApiKeyCacheDuration { get; set; } = TimeSpan.FromSeconds(30);
+
     public string? RavenDbS6Service { get; set; }
 
     /// <summary>

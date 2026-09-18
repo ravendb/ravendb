@@ -392,3 +392,7 @@ This is the local-run posture. For a real deployment:
 
 - **Use a high-entropy `QUILL_API_KEY`** (not a weak demo value). The server logs a startup warning if the
   key is short; treat it as a hard requirement in production.
+- **Rotate keys through the config database.** `QUILL_API_KEY` seeds the `api-keys/primary` document at
+  startup. A presented key `<id>/<secret>` is checked against `api-keys/<id>` only (a bare key means
+  `primary`), so add a document with a fresh salt and salted SHA-256 hash to mint a key, or set `Revoked`
+  to disable one; both take effect within 30 seconds, no restart needed.
