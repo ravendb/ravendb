@@ -24,7 +24,8 @@ internal class MockLlmConversationHandler(
     DocumentDatabase database,
     Func<JObject, HttpResponseMessage> onRequest = null,
     Func<JObject, string, HttpResponseMessage> onToolResult = null,
-    AbstractChatCompletionClientSettings clientSettings = null)
+    AbstractChatCompletionClientSettings clientSettings = null,
+    Func<JObject, HttpResponseMessage> onStreamingRequest = null)
     : ConversationHandler(server, database)
 {
     private readonly DocumentDatabase _database = database;
@@ -32,7 +33,7 @@ internal class MockLlmConversationHandler(
     protected internal override ChatCompletionClient CreateClient()
     {
         var settings = clientSettings ?? new OpenAiChatCompletionClientSettings(new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o"));
-        return new MockLlm(_database.DocumentsStorage.ContextPool, settings, onRequest, onToolResult, ChatCompletionClient.ConventionsToUse);
+        return new MockLlm(_database.DocumentsStorage.ContextPool, settings, onRequest, onToolResult, ChatCompletionClient.ConventionsToUse, onStreamingRequest);
     }
 }
 
@@ -50,17 +51,32 @@ internal class MockLlm : ChatCompletionClient
 {
     private readonly Func<JObject, HttpResponseMessage> _onRequest;
     private readonly Func<JObject, string, HttpResponseMessage> _onToolResult;
+    private readonly Func<JObject, HttpResponseMessage> _onStreamingRequest;
 
     internal MockLlm(
         IMemoryContextPool contextPool,
         AbstractChatCompletionClientSettings settings,
         Func<JObject, HttpResponseMessage> onRequest = null,
         Func<JObject, string, HttpResponseMessage> onToolResult = null,
-        DocumentConventions conventions = null)
+        DocumentConventions conventions = null,
+        Func<JObject, HttpResponseMessage> onStreamingRequest = null)
         : base(contextPool, settings, conventions)
     {
         _onRequest = onRequest;
         _onToolResult = onToolResult;
+        _onStreamingRequest = onStreamingRequest;
+    }
+
+    protected override async Task<HttpResponseMessage> SendStreamingRequestAsync(HttpRequestMessage request, CancellationToken token)
+    {
+        var body = await request.Content!.ReadAsStringAsync(token);
+        var payload = JObject.Parse(body);
+
+        var response = _onStreamingRequest?.Invoke(payload);
+        if (response == null)
+            throw new InvalidOperationException("Streaming request reached MockLlm without an onStreamingRequest handler. Payload: " + body);
+
+        return response;
     }
 
     protected override async Task<HttpResponseMessage> SendRequestAsync(HttpRequestMessage request, CancellationToken token)
@@ -191,6 +207,62 @@ internal class MockLlm : ChatCompletionClient
                 "system_fingerprint": "fp_mock"
             }
             """;
+    }
+
+    public static string CreateProseAnswerResponse(string content, int promptTokens = 100)
+    {
+        var escapedContent = content.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        return $$"""
+            {
+                "id": "chatcmpl-mock",
+                "object": "chat.completion",
+                "created": 1754549498,
+                "model": "test-model",
+                "choices": [{
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": "{{escapedContent}}",
+                        "refusal": null,
+                        "annotations": []
+                    },
+                    "logprobs": null,
+                    "finish_reason": "stop"
+                }],
+                {{UsageJson(promptTokens)}},
+                "service_tier": "default",
+                "system_fingerprint": "fp_mock"
+            }
+            """;
+    }
+
+    public static HttpResponseMessage CreateSseAnswerResponse(string content, int promptTokens = 100)
+    {
+        var sse = new StringBuilder();
+        var half = content.Length / 2;
+        foreach (var chunk in new[] { content[..half], content[half..] })
+        {
+            if (chunk.Length == 0)
+                continue;
+
+            var payload = new JObject
+            {
+                ["choices"] = new JArray(new JObject
+                {
+                    ["index"] = 0,
+                    ["delta"] = new JObject { ["content"] = chunk }
+                })
+            };
+            sse.Append("data: ").Append(payload.ToString(Newtonsoft.Json.Formatting.None)).Append("\n\n");
+        }
+
+        sse.Append("data: {\"choices\":[],").Append(UsageJson(promptTokens).Replace('\n', ' ').Replace('\r', ' ')).Append('}').Append("\n\n");
+        sse.Append("data: [DONE]\n\n");
+
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(sse.ToString(), Encoding.UTF8, "text/event-stream")
+        };
     }
 
     /// <summary>

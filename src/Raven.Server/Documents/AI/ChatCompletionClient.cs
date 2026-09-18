@@ -49,6 +49,8 @@ public class ChatCompletionClient : IDisposable
     private readonly HttpClient _client;
     private readonly IMemoryContextPool _contextPool;
 
+    internal bool SupportsToolsWithStructuredOutput => _settings.SupportsToolsWithStructuredOutput;
+
     public static readonly DocumentConventions ConventionsToUse = new DocumentConventions
     {
         SendApplicationIdentifier = DocumentConventions.DefaultForServer.SendApplicationIdentifier,
