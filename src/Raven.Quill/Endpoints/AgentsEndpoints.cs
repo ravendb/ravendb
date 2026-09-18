@@ -1,10 +1,11 @@
-﻿using Raven.Client.Documents;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Exceptions;
 using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
+using Raven.Quill.Hosting;
 using Raven.Quill.Logging;
 using Raven.Quill.Metrics;
 using Raven.Quill.Raven;

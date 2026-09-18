@@ -230,7 +230,7 @@ public static class ChannelsEndpoints
             },
         };
 
-        var (reserved, owner, _) = await TryReserveBotAsync(store, bot.Id, app.Database, channel.Id!, ct);
+        var (reserved, owner, reservationCv) = await TryReserveBotAsync(store, bot.Id, app.Database, channel.Id!, ct);
         if (reserved == false)
             return Results.BadRequest(new ApiErrorResponse(AlreadyConnected(bot.Username, owner)));
 
@@ -245,6 +245,24 @@ public static class ChannelsEndpoints
         {
             await TryReleaseBotAsync(store, bot.Id, app.Database, channel.Id!);
             throw;
+        }
+
+        if (await ConfirmTelegramReservationAsync(store, bot.Id, app.Database, channel.Id!, reservationCv!, ct) == false)
+        {
+            try
+            {
+                using var session = store.OpenAsyncSession(app.Database);
+                session.Delete(channel.Id!);
+                await session.SaveChangesAsync(ct);
+            }
+            catch (Exception e)
+            {
+                if (logger.IsWarnEnabled)
+                    logger.Warn($"Telegram channel {channelId} was not rolled back after losing the bot reservation: {e.Message}");
+            }
+
+            await TryReleaseBotAsync(store, bot.Id, app.Database, channel.Id!);
+            return Results.BadRequest(new ApiErrorResponse(AlreadyConnected(bot.Username, null)));
         }
 
         if (logger.IsInfoEnabled)
@@ -595,6 +613,8 @@ public static class ChannelsEndpoints
         var tokenRotated = false;
         TelegramUser? rotatedBot = null;
         var previousBotId = 0L;
+        string? previousBotToken = null;
+        string? previousBotUsername = null;
         if (string.IsNullOrWhiteSpace(body.Telegram?.BotToken) == false)
         {
             var botToken = body.Telegram.BotToken.Trim();
@@ -606,6 +626,8 @@ public static class ChannelsEndpoints
             {
                 rotatedBot = bot;
                 previousBotId = channel.Telegram?.BotId ?? 0;
+                previousBotToken = channel.Telegram?.BotToken;
+                previousBotUsername = channel.Telegram?.BotUsername;
             }
 
             channel.Telegram ??= new TelegramSettings();
@@ -640,11 +662,13 @@ public static class ChannelsEndpoints
         if (body.Enabled is not null)
             channel.Enabled = body.Enabled.Value;
 
+        string? rotationCv = null;
         if (rotatedBot is not null)
         {
-            var (reserved, owner, _) = await TryReserveBotAsync(store, rotatedBot.Id, app.Database, channel.Id!, ct);
+            var (reserved, owner, cv) = await TryReserveBotAsync(store, rotatedBot.Id, app.Database, channel.Id!, ct);
             if (reserved == false)
                 return Results.BadRequest(new ApiErrorResponse(AlreadyConnected(rotatedBot.Username, owner)));
+            rotationCv = cv;
         }
 
         try
@@ -656,6 +680,27 @@ public static class ChannelsEndpoints
             if (rotatedBot is not null)
                 await TryReleaseBotAsync(store, rotatedBot.Id, app.Database, channel.Id!);
             throw;
+        }
+
+        if (rotatedBot is not null &&
+            await ConfirmTelegramReservationAsync(store, rotatedBot.Id, app.Database, channel.Id!, rotationCv!, ct) == false)
+        {
+            try
+            {
+                channel.Telegram!.BotToken = previousBotToken ?? "";
+                channel.Telegram.BotId = previousBotId;
+                channel.Telegram.BotUsername = previousBotUsername ?? "";
+                await session.SaveChangesAsync(ct);
+            }
+            catch (Exception e)
+            {
+                if (logger.IsWarnEnabled)
+                    logger.Warn($"Telegram channel {channelId} was not rolled back after losing the bot reservation: {e.Message}");
+            }
+
+            await TryReleaseBotAsync(store, rotatedBot.Id, app.Database, channel.Id!);
+            telegramManager.Wake();
+            return Results.BadRequest(new ApiErrorResponse(AlreadyConnected(rotatedBot.Username, null)));
         }
 
         // the old token stays reserved until the rotate is durable
@@ -968,6 +1013,14 @@ public static class ChannelsEndpoints
         ChannelBotReservations.TryClaimAsync<TelegramBotReservation>(
             store, TelegramBotReservation.IdFor(botId), database, channelId,
             channel => channel?.Telegram?.BotId == botId, storeCompanions: null, ct);
+
+    private static Task<bool> ConfirmTelegramReservationAsync(
+        IDocumentStore store, long botId, string database, string channelId, string changeVector,
+        CancellationToken ct) =>
+        ChannelBotReservations.TryConfirmAsync(
+            store, TelegramBotReservation.IdFor(botId),
+            new TelegramBotReservation { Database = database, ChannelId = channelId },
+            changeVector, ct);
 
     private static Task TryReleaseBotAsync(
         IDocumentStore store, long botId, string database, string channelId) =>
