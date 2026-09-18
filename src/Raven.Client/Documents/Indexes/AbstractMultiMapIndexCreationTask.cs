@@ -108,11 +108,7 @@ namespace Raven.Client.Documents.Indexes
 
             var indexDefinition = builder.ToIndexDefinition(Conventions, validateMap: false);
 
-            foreach (var map in _maps.Select(generateMap => generateMap()))
-            {
-                string formattedMap = map;
-                indexDefinition.Maps.Add(formattedMap);
-            }
+            IndexDefinitionHelper.AddMaps(indexDefinition.Maps, _maps, IndexName);
 
             return indexDefinition;
         }
