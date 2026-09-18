@@ -1,4 +1,4 @@
-import { RtlScreen, rtlRender } from "test/rtlTestUtils";
+﻿import { RtlScreen, rtlRender } from "test/rtlTestUtils";
 import * as Stories from "./CreateDatabase.stories";
 import { composeStories } from "@storybook/react-webpack5";
 
@@ -92,8 +92,9 @@ describe("CreateDatabase", () => {
             expect(quickCreateBtn).toBeDisabled();
 
             await user.hover(quickCreateBtn);
-            expect(await screen.findByText(/you need to check/)).toBeInTheDocument();
-            expect(screen.getByText("2 Encryption")).toBeInTheDocument();
+            expect(await screen.findByRole("tooltip")).toHaveTextContent(
+                'In step Encryption you need to check "I have saved the encryption key"'
+            );
         });
 
         it("can disable next and quick create until the encryption key is confirmed", async () => {
