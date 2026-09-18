@@ -8,7 +8,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Lambda2Js;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
@@ -1242,10 +1241,8 @@ namespace Raven.Client.Util
                 if (context.Node is not MemberExpression memberExpression)
                     return;
 
-                var jsonPropertyAttribute = memberExpression.Member.GetCustomAttributes()
-                                                                    .OfType<JsonPropertyAttribute>()
-                                                                    .FirstOrDefault();
-                if (jsonPropertyAttribute == null)
+                string propertyName = Raven.Client.Json.JsonPropertyNameResolver.GetJsonPropertyName(memberExpression.Member);
+                if (propertyName == null)
                     return;
 
                 context.PreventDefault();
@@ -1255,7 +1252,7 @@ namespace Raven.Client.Util
                 {
                     context.Visitor.Visit(memberExpression.Expression);
                     writer.Write(".");
-                    writer.Write(jsonPropertyAttribute.PropertyName ?? memberExpression.Member.Name);
+                    writer.Write(propertyName);
                 }
             }
         }
