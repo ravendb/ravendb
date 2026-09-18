@@ -265,12 +265,18 @@ public static class CoraxQueryBuilder
             // Non-existing posting list isn't aware of dynamic fields, so we can't use this optimization for them
             else if (sortMetadata is [{ FieldType: MatchCompareFieldType.Floating or MatchCompareFieldType.Integer or MatchCompareFieldType.Sequence, Field.FieldId: not CoraxConstants.IndexWriter.DynamicField } sortBy, ..])
             {
+                // The cap counts terms, so it may only be applied while every scanned term yields a returned document.
+                // It does not when a document holds several terms (RavenDB-27514) or several entries, and not when
+                // something rejects documents after the scan, because there is no way to scan more (RavenDB-27564).
+                var everyTermYieldsAReturnedDocument = indexSearcher.HasMultipleTermsInField(sortBy.Field) == false
+                                                       && indexSearcher.EntryIdPaginationSupportStatus == EntryIdPaginationSupportStatus.Supported
+                                                       && metadata.FilterScript is null;
+
                 var maxTermToScan = builderParameters.Take switch
                 {
                     < 0 => int.MaxValue, // meaning, take all
-                    // We cannot apply this optimization when we are returning statistics (RavenDB-21525),
-                    // nor when a document holds several terms in the sort field, because the cap counts terms, not documents.
-                    var take when builderParameters.Query.SkipStatistics && indexSearcher.HasMultipleTermsInField(sortBy.Field) == false => (long)take + 1, 
+                    // We cannot apply this optimization when we are returning statistics (RavenDB-21525).
+                    var take when builderParameters.Query.SkipStatistics && everyTermYieldsAReturnedDocument => (long)take + 1,
                     int.MaxValue => (long)int.MaxValue + 1, // avoid overflow
                     _ => int.MaxValue
                 };
