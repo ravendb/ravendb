@@ -37,7 +37,7 @@ namespace SlowTests.Voron.Issues
                 var table = tx.OpenTable(plain, "Items");
                 sectionPage = table.ActiveDataSmallSection.PageNumber;
 
-                // four 1900 byte entries per page: 64 + 4 * (1900 + 4) = 7680, leaving 512 bytes on every page of the section
+                // four 1900 byte entries per page, no page has room for a fifth
                 for (var i = 0; i < 4 * table.ActiveDataSmallSection.NumberOfPages; i++)
                     Insert(tx, table, $"filler/{i:D4}", 1900, random, expected);
 
@@ -47,14 +47,18 @@ namespace SlowTests.Voron.Issues
 
             using (var tx = Env.WriteTransaction())
             {
-                var section = (RawDataSmallSectionPageHeader*)tx.LowLevelTransaction.ModifyPage(sectionPage).Pointer;
-                var availableSpace = (ushort*)((byte*)section + 96 /* RawDataSection.ReservedHeaderSpace */);
-                availableSpace[0] = 4000; // the first page is full, but the ledger says otherwise
+                tx.LowLevelTransaction.ModifyPage(sectionPage);
+                var section = new RawDataSection(tx.LowLevelTransaction, sectionPage);
+                var firstPage = (RawDataSmallPageHeader*)tx.LowLevelTransaction.GetPage(sectionPage + 1).Pointer;
+                Assert.Equal(Constants.Storage.PageSize - firstPage->NextAllocation, section.AvailableSpace[0]);
+                Assert.True(section.AvailableSpace[0] < 3000);
+                section.AvailableSpace[0] = 4000; // the first page is full, but the ledger says otherwise
                 tx.Commit();
             }
 
             using (var tx = Env.WriteTransaction())
             {
+                Assert.Equal(4000, new RawDataSection(tx.LowLevelTransaction, sectionPage).AvailableSpace[0]);
                 CreateSchemas(tx, out _, out var plain);
                 Insert(tx, tx.OpenTable(plain, "Items"), "big", 3000, random, expected);
                 tx.Commit();
@@ -132,13 +136,13 @@ namespace SlowTests.Voron.Issues
             using (var tx = Env.WriteTransaction())
             {
                 // the state a pre-fix overflow leaves behind: NextAllocation past the page, ledger wrapped to ~64K free
-                var section = (RawDataSmallSectionPageHeader*)tx.LowLevelTransaction.ModifyPage(sectionPage).Pointer;
-                var availableSpace = (ushort*)((byte*)section + 96 /* RawDataSection.ReservedHeaderSpace */);
+                tx.LowLevelTransaction.ModifyPage(sectionPage);
+                var section = new RawDataSection(tx.LowLevelTransaction, sectionPage);
                 var page = (RawDataSmallPageHeader*)tx.LowLevelTransaction.ModifyPage(sectionPage + 1).Pointer;
                 page->NextAllocation = Constants.Storage.PageSize + 2943;
-                availableSpace[0] = (ushort)(Constants.Storage.PageSize - page->NextAllocation);
-                for (var i = 1; i < section->NumberOfPages; i++)
-                    availableSpace[i] = 0; // force the defrag loop, where the wrapped ledger makes the corrupt page look free
+                section.AvailableSpace[0] = (ushort)(Constants.Storage.PageSize - page->NextAllocation);
+                for (var i = 1; i < section.NumberOfPages; i++)
+                    section.AvailableSpace[i] = 0; // force the defrag loop, where the wrapped ledger makes the corrupt page look free
                 tx.Commit();
             }
 
@@ -147,7 +151,9 @@ namespace SlowTests.Voron.Issues
                 CreateSchemas(tx, out _, out var plain);
                 var table = tx.OpenTable(plain, "Items");
                 var e = Assert.Throws<VoronUnrecoverableErrorException>(() => Insert(tx, table, "item/2", 100, new Random(27558), new Dictionary<string, byte[]>()));
+                // the old DefragPage threw too, after modifying the page and running off its copy of it
                 Assert.Contains("past the end of the page", e.Message);
+                Assert.False(tx.LowLevelTransaction.IsDirty(sectionPage + 1));
             }
         }
 
@@ -178,7 +184,7 @@ namespace SlowTests.Voron.Issues
         private static long Insert(Transaction tx, Table table, string key, int valueSize, Random random, Dictionary<string, byte[]> expected)
         {
             var value = new byte[valueSize];
-            random.NextBytes(value); // incompressible, so the compressed schema stores it as is
+            random.NextBytes(value);
             expected[key] = value;
 
             using (table.Allocate(out var builder))

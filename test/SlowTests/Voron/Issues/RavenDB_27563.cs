@@ -142,6 +142,17 @@ public class RavenDB_27563 : RavenTestBase
             using (var doc = database.DocumentsStorage.Get(context, id))
                 Assert.False(doc.Flags.Contain(DocumentFlags.Archived));
 
+            // new archived documents take the Insert path, a large one ends up on overflow pages
+            Put(context, "orders/2", DocumentFlags.Archived, body);
+            Assert.True(IsCompressed(context, table, "orders/2"));
+
+            Put(context, "orders/3", DocumentFlags.Archived, RandomBody(64 * 1024));
+            using (var doc = database.DocumentsStorage.Get(context, "orders/3"))
+            {
+                Assert.Equal(0, doc.StorageId % VoronConstants.Storage.PageSize);
+                Assert.True(table.GetInfoFor(doc.StorageId).IsCompressed);
+            }
+
             tx.Commit();
         }
 
