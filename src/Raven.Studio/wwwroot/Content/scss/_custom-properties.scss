@@ -45,6 +45,9 @@ $prefix: "bs-";
     --#{$prefix}dropdown-item-border-radius: #{$border-radius};
     --#{$prefix}border-radius-md: #{$border-radius-md}; //fix missing size in bootstrap 5.3
 
+    --table-font: "Figtree";
+    --monospace-font: Menlo;
+
     @each $key, $value in $theme-colors {
         --faded-#{$key}: #{color.mix($panel-bg-1, $value, 80%)};
     }
