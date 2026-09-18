@@ -2,6 +2,7 @@ using System.Text.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Documents.Session;
 using Raven.Quill.Metrics;
 
 using Raven.Quill.Logging;
@@ -14,9 +15,10 @@ public sealed record AgentRequest(
     string ConversationId,
     string Prompt,
     string ChannelId,
-    IReadOnlyDictionary<string, JsonElement> Parameters);
+    IReadOnlyDictionary<string, JsonElement> Parameters,
+    ConversationLifetime? Lifetime = null);
 
-public sealed record AgentRunResult(object Answer, string ConversationId);
+public sealed record AgentRunResult(object Answer, string ConversationId, bool StartedFresh = false);
 
 public interface IAgentRouter
 {
@@ -46,6 +48,9 @@ internal sealed class AgentRouter(
         var conversationId = NormalizeConversationId(request.ConversationId);
 
         var creationOptions = new AiConversationCreationOptions();
+        if (request.Lifetime?.TranscriptIdleWindow is { } idleWindow)
+            creationOptions.ExpirationInSec = (int)idleWindow.TotalSeconds;
+
         foreach (var (key, value) in ConvertParameters(request, config))
             creationOptions.AddParameter(key, value);
 
@@ -64,6 +69,7 @@ internal sealed class AgentRouter(
             replyField,
             async chunk => await onChunk(chunk),
             ct);
+        var tokensThisTurn = result.Usage?.TotalTokens ?? 0;
 
         using var session = store.OpenAsyncSession(request.Database);
         var lazyBindings = session.Advanced.Lazily.LoadAsync<AgentActionBindings>(AgentActionBindings.IdFor(config.Identifier), ct);
@@ -77,13 +83,14 @@ internal sealed class AgentRouter(
                 replyField,
                 async chunk => await onChunk(chunk),
                 ct);
+            tokensThisTurn += result.Usage?.TotalTokens ?? 0;
         }
 
         var reply = AgentOutputShape.ExtractReplyText(result.Answer, replyField);
 
-        await UpsertPreviewAsync(store, request, config.Identifier, conversation.Id, reply, DateTime.UtcNow, ct);
+        var rolled = await RecordTurnAsync(store, request, config.Identifier, conversation.Id, reply, tokensThisTurn, DateTime.UtcNow, ct);
 
-        return new AgentRunResult(new { reply }, conversation.Id);
+        return new AgentRunResult(new { reply }, conversation.Id, rolled);
     }
 
     private static Dictionary<string, object?> ConvertParameters(AgentRequest request, AiAgentConfiguration config)
@@ -135,30 +142,54 @@ internal sealed class AgentRouter(
         return Task.FromResult($"action failed: no binding configured for '{action.Name}'");
     }
 
-    internal static async Task UpsertPreviewAsync(
+    internal static async Task<bool> RecordTurnAsync(
         IDocumentStore store, AgentRequest request, string agent, string conversationId, string reply,
-        DateTime nowUtc, CancellationToken ct)
+        long tokens, DateTime nowUtc, CancellationToken ct)
     {
         using var session = store.OpenAsyncSession(request.Database);
+        var (isNewConversation, rolled) = await UpsertPreviewAsync(session, request, agent, conversationId, reply, nowUtc, ct);
+        await UsageMetrics.IncrementAsync(session, agent, request.ChannelId, nowUtc,
+            conversations: isNewConversation ? 1 : 0, messages: 1, tokens, ct);
+        await session.SaveChangesAsync(ct);
+        return rolled;
+    }
+
+    internal static async Task<(bool IsNewConversation, bool Rolled)> UpsertPreviewAsync(
+        IAsyncDocumentSession session, AgentRequest request, string agent, string conversationId, string reply,
+        DateTime nowUtc, CancellationToken ct)
+    {
         var id = ConversationPreview.IdFor(conversationId);
-        var preview = await session.LoadAsync<ConversationPreview>(id, ct) ?? new ConversationPreview
+        var preview = await session.LoadAsync<ConversationPreview>(id, ct);
+
+        var rolled = preview is not null &&
+            request.Lifetime?.TranscriptIdleWindow is { } idleWindow && nowUtc - preview.LastMessageAt > idleWindow;
+        var isNewConversation = preview is null || rolled;
+
+        preview ??= new ConversationPreview
         {
             ConversationId = conversationId,
             Agent = agent,
             ChannelId = request.ChannelId,
-            Parameters = request.Parameters.ToDictionary(
-                parameter => parameter.Key,
-                parameter => AgentParameterValue.ToDisplayText(parameter.Value)),
-            CreatedAt = nowUtc
         };
+
+        if (isNewConversation)
+        {
+            preview.CreatedAt = nowUtc;
+            preview.Parameters = request.Parameters.ToDictionary(
+                parameter => parameter.Key,
+                parameter => AgentParameterValue.ToDisplayText(parameter.Value));
+        }
 
         preview.LastMessageAt = nowUtc;
         preview.LastUserPrompt = request.Prompt;
         preview.LastAgentReply = reply;
 
         await session.StoreAsync(preview, id, ct);
-        await session.SaveChangesAsync(ct);
-        return;
+        if (request.Lifetime?.PreviewRetention is { } retention)
+            session.Advanced.GetMetadataFor(preview)[Client.Constants.Documents.Metadata.Expires] =
+                nowUtc.Add(retention);
+
+        return (isNewConversation, rolled);
     }
 
     internal static string NormalizeConversationId(string? conversationId)
