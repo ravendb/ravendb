@@ -134,6 +134,12 @@ window.HTMLElement.prototype.getBoundingClientRect = () => ({
 });
 global.structuredClone = (val) => JSON.parse(JSON.stringify(val))
 
+if (!URL.createObjectURL) {
+    let objectUrlCounter = 0;
+    URL.createObjectURL = jest.fn(() => `blob:jest/${++objectUrlCounter}`);
+    URL.revokeObjectURL = jest.fn();
+}
+
 window.HTMLElement.prototype.getBoundingClientRect = () => ({
     width: 500,
     height: 500,
