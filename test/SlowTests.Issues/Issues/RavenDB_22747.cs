@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -85,6 +86,131 @@ namespace SlowTests.Issues
             }
         }
 
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Recurse_Handles_Missing_And_Null_Nested_Values(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var index = new Posts_ByNoteContent();
+                index.Execute(store);
+
+                StorePostsWithMissingAndNullNotes(store);
+
+                Indexes.WaitForIndexing(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                AssertMissingAndNullNotes(store, index.IndexName);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Recurse_Handles_Missing_And_Null_Nested_Values_JavaScript(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var index = new Posts_ByNoteContent_JavaScript();
+                index.Execute(store);
+
+                StorePostsWithMissingAndNullNotes(store);
+
+                Indexes.WaitForIndexing(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                AssertMissingAndNullNotes(store, index.IndexName);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Recurse_Skips_Nonexistent_Loaded_Documents(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var index = new Nodes_ByReachable();
+                index.Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Node { Name = "n1", Children = new[] { "nodes/2", "nodes/missing" } }, "nodes/1");
+                    session.Store(new Node { Name = "n2", Children = new[] { "nodes/missing", null } }, "nodes/2");
+                    session.Store(new Node { Name = "n3", Children = null }, "nodes/3");
+                    var withoutChildren = new NodeWithoutChildren { Name = "n4" };
+                    session.Store(withoutChildren, "nodes/4");
+                    session.Advanced.GetMetadataFor(withoutChildren)[Constants.Documents.Metadata.Collection] = "Nodes";
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<Nodes_ByReachable.Result, Nodes_ByReachable>()
+                        .ProjectInto<Nodes_ByReachable.Result>()
+                        .ToDictionary(x => x.Name, x => x.Count);
+
+                    Assert.Equal(4, results.Count);
+                    Assert.Equal(2, results["n1"]);
+                    Assert.Equal(1, results["n2"]);
+                    Assert.Equal(1, results["n3"]);
+                    Assert.Equal(1, results["n4"]);
+                }
+            }
+        }
+
+        private static void StorePostsWithMissingAndNullNotes(IDocumentStore store)
+        {
+            using (var session = store.OpenSession())
+            {
+                var withoutNotes = new PostWithoutNotes { Content = "missing" };
+                session.Store(withoutNotes, "posts/missing");
+                session.Advanced.GetMetadataFor(withoutNotes)[Constants.Documents.Metadata.Collection] = "Posts";
+                session.Store(new Post { Content = "null", Notes = null }, "posts/null");
+                session.Store(new Post { Content = "empty", Notes = new List<Note>() }, "posts/empty");
+                session.Store(new Post
+                {
+                    Content = "with-nulls",
+                    Notes = new List<Note>
+                    {
+                        new Note { Content = "first" },
+                        null,
+                        new Note { Content = "second", Notes = new List<Note> { null, new Note { Content = "third" } } },
+                        null
+                    }
+                }, "posts/with-nulls");
+
+                session.SaveChanges();
+            }
+        }
+
+        private static void AssertMissingAndNullNotes(IDocumentStore store, string indexName)
+        {
+            var expected = new Dictionary<string, string>
+            {
+                ["missing"] = "posts/missing",
+                ["null"] = "posts/null",
+                ["empty"] = "posts/empty",
+                ["with-nulls"] = "posts/with-nulls",
+                ["first"] = "posts/with-nulls",
+                ["second"] = "posts/with-nulls",
+                ["third"] = "posts/with-nulls"
+            };
+
+            using (var session = store.OpenSession())
+            {
+                foreach (var (content, id) in expected)
+                {
+                    var post = session.Advanced.DocumentQuery<Post>(indexName)
+                        .WhereEquals("Content", content)
+                        .Single();
+
+                    Assert.Equal(id, session.Advanced.GetDocumentId(post));
+                }
+            }
+        }
+
         private static void StorePostWithDuplicateNotes(IDocumentStore store)
         {
             using (var session = store.OpenSession())
@@ -110,15 +236,26 @@ namespace SlowTests.Issues
             public List<Note> Notes { get; set; }
         }
 
+        private class PostWithoutNotes
+        {
+            public string Content { get; set; }
+        }
+
         private class Note
         {
             public string Content { get; set; }
+            public List<Note> Notes { get; set; }
         }
 
         private class Node
         {
             public string Name { get; set; }
             public string[] Children { get; set; }
+        }
+
+        private class NodeWithoutChildren
+        {
+            public string Name { get; set; }
         }
 
         private class Posts_ByNoteContent : AbstractIndexCreationTask<Post>
