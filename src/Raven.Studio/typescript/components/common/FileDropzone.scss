@@ -14,11 +14,24 @@
     border-radius: sizes.$border-radius-md;
     color: colors.$text-muted-var;
     cursor: pointer;
-    transition: none;
+    transition:
+        border-color 0.15s ease,
+        background-color 0.15s ease,
+        box-shadow 0.15s ease;
 
     &.isDragging {
-        border-color: colors.$border-color-var;
-        background-color: colors.$panel-bg-1-var;
+        border-color: colors.$primary-var;
+        background-color: var(--faded-primary);
+        box-shadow: 0 0 0 3px rgba(var(--bs-primary-rgb), 0.12);
+    }
+
+    &.isDropped {
+        animation: file-dropzone-impact 0.32s ease-out;
+    }
+
+    &.disabled {
+        opacity: 0.4;
+        cursor: default;
     }
 
     .drop-area {
@@ -28,8 +41,36 @@
         z-index: 9999;
     }
 
-    &:hover {
+    &:hover:not(.disabled) {
         filter: colors.$hover-filter-var;
         transition: bs5variables.$transition-base;
+    }
+
+    .file-dropzone__constraints {
+        position: absolute;
+        bottom: sizes.$gutter-xxs;
+        right: sizes.$gutter-xxs;
+        font-weight: normal;
+    }
+}
+
+@keyframes file-dropzone-impact {
+    0% {
+        transform: scale(1);
+        border-color: colors.$primary-var;
+    }
+    35% {
+        transform: scale(1.015);
+        border-color: colors.$primary-var;
+    }
+    100% {
+        transform: scale(1);
+        border-color: colors.$border-color-light-var;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .file-dropzone.isDropped {
+        animation: none;
     }
 }

@@ -1,10 +1,13 @@
 import "./FileDropzone.scss";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
-import React, { useState, useRef, DragEvent, ChangeEvent } from "react";
-import useBoolean from "components/hooks/useBoolean";
+import React, { useState, useRef, useEffect, DragEvent, ChangeEvent } from "react";
 import genUtils from "common/generalUtils";
+import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import Button from "react-bootstrap/Button";
+import Badge from "react-bootstrap/Badge";
+
+const dropPulseMs = 320;
 
 interface FileDropzoneProps {
     onChange: (files: File[]) => void;
@@ -12,6 +15,8 @@ interface FileDropzoneProps {
     validExtensions?: string[];
     initialFiles?: File[];
     className?: string;
+    showSelectedFiles?: boolean;
+    disabled?: boolean;
 }
 
 export default function FileDropzone({
@@ -20,18 +25,50 @@ export default function FileDropzone({
     maxFiles = Infinity,
     initialFiles = [],
     className,
-}: FileDropzoneProps & { [key: string]: any }) {
+    showSelectedFiles = true,
+    disabled = false,
+}: FileDropzoneProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const { value: isDragging, toggle: toggleIsDragging } = useBoolean(false);
+    const [isDragging, setIsDragging] = useState(false);
+    const [isDropped, setIsDropped] = useState(false);
+    const dragDepthRef = useRef(0);
+    const dropPulseTimerRef = useRef<number | undefined>(undefined);
 
     const [files, setFiles] = useState<File[]>(initialFiles);
     const [error, setError] = useState<string>();
 
+    useEffect(() => () => window.clearTimeout(dropPulseTimerRef.current), []);
+
+    const endDragging = () => {
+        dragDepthRef.current = 0;
+        setIsDragging(false);
+    };
+
+    const handleDragEnter = () => {
+        dragDepthRef.current += 1;
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = () => {
+        dragDepthRef.current = Math.max(dragDepthRef.current - 1, 0);
+
+        if (dragDepthRef.current === 0) {
+            setIsDragging(false);
+        }
+    };
+
     const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-        toggleIsDragging();
+        endDragging();
 
         const files = Array.from(e.dataTransfer.files || []);
+
+        if (files.length > 0) {
+            setIsDropped(true);
+            window.clearTimeout(dropPulseTimerRef.current);
+            dropPulseTimerRef.current = window.setTimeout(() => setIsDropped(false), dropPulseMs);
+        }
+
         handleFilesChange(files);
     };
 
@@ -52,7 +89,7 @@ export default function FileDropzone({
             files.some((file) => !validExtensions.includes(genUtils.getFileExtension(file.name)));
 
         if (hasUnsupportedFile) {
-            setError(`File type is not supported`);
+            setError(`Only ${formatExtensions(validExtensions)} files are supported`);
             handleSetFiles([]);
             return;
         }
@@ -72,7 +109,7 @@ export default function FileDropzone({
 
     return (
         <div className={className}>
-            <div className={classNames("file-dropzone", { isDragging })}>
+            <div className={classNames("file-dropzone", { isDragging, isDropped, disabled })}>
                 <input
                     data-testid="file-input"
                     type="file"
@@ -83,20 +120,27 @@ export default function FileDropzone({
                     style={{ display: "none" }}
                 />
 
-                <div
-                    className="drop-area"
-                    onDragEnter={withPrevent(toggleIsDragging)}
-                    onDragLeave={withPrevent(toggleIsDragging)}
-                    onDrop={withPrevent(handleDrop)}
-                    onClick={openFileDialog}
-                    onDragOver={withPrevent(() => {
-                        // empty by design (prevents opening file in a new tab)
-                    })}
-                />
+                {!disabled && (
+                    <div
+                        className="drop-area"
+                        onDragEnter={withPrevent(handleDragEnter)}
+                        onDragLeave={withPrevent(handleDragLeave)}
+                        onDrop={withPrevent(handleDrop)}
+                        onClick={openFileDialog}
+                        onDragOver={withPrevent(() => {
+                            // empty by design (prevents opening file in a new tab)
+                        })}
+                    />
+                )}
 
-                <DropzoneBody files={files} error={error} />
+                <DropzoneBody
+                    files={showSelectedFiles ? files : []}
+                    error={error}
+                    maxFiles={maxFiles}
+                    isDragging={isDragging}
+                />
+                <ValidExtensionsList validExtensions={validExtensions} />
             </div>
-            <ValidExtensionsList validExtensions={validExtensions || []} />
         </div>
     );
 }
@@ -104,9 +148,22 @@ export default function FileDropzone({
 interface DropzoneBodyProps {
     files: File[];
     error: string;
+    maxFiles: number;
+    isDragging: boolean;
 }
 
-function DropzoneBody({ files, error }: DropzoneBodyProps) {
+function DropzoneBody({ files, error, maxFiles, isDragging }: DropzoneBodyProps) {
+    if (isDragging) {
+        return (
+            <div className="d-flex gap-3 flex-vertical">
+                <Icon icon="file-import" className="fs-2" margin="m-0" />
+                <span className="text-emphasis">
+                    Drop {pluralizeHelpers.pluralize(maxFiles, "a file", "files", true)} here
+                </span>
+            </div>
+        );
+    }
+
     if (error) {
         return (
             <div className="d-flex gap-3 flex-vertical">
@@ -123,9 +180,12 @@ function DropzoneBody({ files, error }: DropzoneBodyProps) {
         return (
             <div className="d-flex gap-3 flex-vertical">
                 <Icon icon="file-import" className="fs-2" margin="m-0" />
-                <span className="text-muted">
-                    Drop a file here or <span className="link">click to browse</span>
-                </span>
+                <div>
+                    <span className="text-muted">
+                        Drop {pluralizeHelpers.pluralize(maxFiles, "a file", "files", true)} here or{" "}
+                        <span className="link">click to browse</span>
+                    </span>
+                </div>
             </div>
         );
     }
@@ -165,13 +225,14 @@ function ValidExtensionsList({ validExtensions }: ValidExtensionsListProps) {
     }
 
     return (
-        <div className="d-flex mt-1 justify-content-end">
-            <small className="text-muted">
-                Supported file {validExtensions.length === 1 ? "type" : "types"}:{" "}
-                {validExtensions.map((ext) => `.${ext}`).join(", ")}
-            </small>
-        </div>
+        <Badge bg="secondary" className="file-dropzone__constraints">
+            {formatExtensions(validExtensions)}
+        </Badge>
     );
+}
+
+function formatExtensions(validExtensions: string[]): string {
+    return validExtensions.map((ext) => `.${ext}`).join(", ");
 }
 
 function withPrevent(fn: (...args: any[]) => void): React.DragEventHandler<HTMLDivElement> {

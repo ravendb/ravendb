@@ -109,7 +109,6 @@ export function SetupWizardSelfSignedCertificateStep() {
                             validExtensions={["pfx"]}
                             maxFiles={1}
                             initialFiles={getInitialFiles}
-                            {...field}
                             onChange={async (files: File[]) => {
                                 const file = files[0];
                                 if (!file.name.trim()) {

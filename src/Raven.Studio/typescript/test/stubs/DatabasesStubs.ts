@@ -1281,6 +1281,15 @@ return docs[0];`,
         return destinations;
     }
 
+    static remoteAttachmentsStudioConfiguration(): RemoteAttachmentsStudioConfiguration {
+        return {
+            Disabled: false,
+            Destinations: {
+                "s3-main": { Disabled: false },
+            },
+        };
+    }
+
     static remoteAttachmentsConfiguration(): Raven.Client.Documents.Attachments.RemoteAttachmentsConfiguration {
         return {
             Disabled: false,
