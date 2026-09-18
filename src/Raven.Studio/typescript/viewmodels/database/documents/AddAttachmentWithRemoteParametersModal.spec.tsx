@@ -107,7 +107,7 @@ describe("AddAttachmentWithRemoteParametersModal", () => {
         await clickSave(screen, user);
 
         expect(await rowOf(screen, "a.txt").findByText(/Uploaded/)).toBeInTheDocument();
-        expect(rowOf(screen, "b.txt").getByText(/Uploading... 512 Bytes of 1 KB/)).toBeInTheDocument();
+        expect(rowOf(screen, "b.txt").getByText(/512 Bytes of 1 KB/)).toBeInTheDocument();
         expect(rowOf(screen, "b.txt").getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
         expect(screen.getByRole("button", { name: /Uploading 2\/2/ })).toBeInTheDocument();
     });

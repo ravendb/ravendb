@@ -11,14 +11,82 @@ function items(count: number, uploadingName?: string): FileUploadItem[] {
     });
 }
 
+function shownNames(container: HTMLElement) {
+    return Array.from(container.querySelectorAll(".file-upload-list__row:not(.hidden)")).map(
+        (row) => row.querySelector("[title]")?.textContent
+    );
+}
+
 describe("FileUploadList", () => {
-    it("shows the uploading file at the top of the collapsed list", () => {
-        const { screen } = rtlRender(
+    it("caps the list, peeks one extra row under the fade, and reveals the rest via Show all", async () => {
+        const { screen, container, fireClick } = rtlRender(
+            <FileUploadList items={items(6)} onRemove={jest.fn()} onCancel={jest.fn()} />
+        );
+
+        expect(shownNames(container)).toEqual(["file1.txt", "file2.txt", "file3.txt", "file4.txt"]);
+
+        await fireClick(screen.getByRole("button", { name: /Show all 6 files/ }));
+
+        expect(shownNames(container)).toHaveLength(6);
+        expect(screen.getByRole("button", { name: /Show less/ })).toBeInTheDocument();
+    });
+
+    it("always starts the collapsed window at the first file, so the fade only ever hides rows below", () => {
+        const { container } = rtlRender(
             <FileUploadList items={items(6, "file4.txt")} onRemove={jest.fn()} onCancel={jest.fn()} />
         );
 
-        const names = screen.getAllByTitle(/^file\d\.txt$/).map((x) => x.textContent);
-        expect(names).toEqual(["file4.txt", "file5.txt", "file6.txt"]);
-        expect(screen.getByRole("button", { name: /Show all 6 files/ })).toBeInTheDocument();
+        expect(shownNames(container)).toEqual(["file1.txt", "file2.txt", "file3.txt", "file4.txt"]);
+    });
+
+    it("shows a single over-cap file rather than collapsing to hide just that one row", () => {
+        const { screen, container } = rtlRender(
+            <FileUploadList items={items(4)} onRemove={jest.fn()} onCancel={jest.fn()} />
+        );
+
+        expect(shownNames(container)).toHaveLength(4);
+        expect(screen.queryByRole("button", { name: /Show all/ })).not.toBeInTheDocument();
+    });
+
+    it("does not show the toggle when every file fits", () => {
+        const { screen, container } = rtlRender(
+            <FileUploadList items={items(3)} onRemove={jest.fn()} onCancel={jest.fn()} />
+        );
+
+        expect(screen.queryByRole("button", { name: /Show all/ })).not.toBeInTheDocument();
+        expect(shownNames(container)).toHaveLength(3);
+    });
+
+    it("shows the uploaded check once, on the badge rather than twice", () => {
+        const uploaded: FileUploadItem[] = [{ file: new File(["x"], "clip.mp4"), status: "uploaded" }];
+
+        const { container, screen } = rtlRender(
+            <FileUploadList items={uploaded} onRemove={jest.fn()} onCancel={jest.fn()} />
+        );
+
+        expect(screen.getByText(/Uploaded/)).toBeInTheDocument();
+        expect(container.querySelectorAll(".icon-check")).toHaveLength(1);
+    });
+
+    it("keeps the status icon for outcomes whose badge is not a check", () => {
+        const failed: FileUploadItem[] = [{ file: new File(["x"], "clip.mp4"), status: "failed" }];
+
+        const { container } = rtlRender(<FileUploadList items={failed} onRemove={jest.fn()} onCancel={jest.fn()} />);
+
+        expect(container.querySelectorAll(".icon-danger")).toHaveLength(1);
+    });
+
+    it("labels each row with its file type", () => {
+        const files: FileUploadItem[] = [
+            { file: new File(["x"], "clip.mp4"), status: "selected" },
+            { file: new File(["x"], "notes.md"), status: "selected" },
+            { file: new File(["x"], "noextension"), status: "selected" },
+        ];
+
+        const { screen } = rtlRender(<FileUploadList items={files} onRemove={jest.fn()} onCancel={jest.fn()} />);
+
+        expect(screen.getByText("MP4")).toBeInTheDocument();
+        expect(screen.getByText("MD")).toBeInTheDocument();
+        expect(screen.getByText("?")).toBeInTheDocument();
     });
 });

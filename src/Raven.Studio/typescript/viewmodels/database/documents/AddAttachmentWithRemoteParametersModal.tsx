@@ -4,8 +4,8 @@ import * as yup from "yup";
 import { Icon } from "components/common/Icon";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { FormDatePicker, FormGroup, FormLabel, FormSelectAutocomplete } from "components/common/Form";
-import FileDropzone from "components/common/FileDropzone";
-import FileUploadList, { FileUploadItem } from "components/common/FileUploadList";
+import FileUploadPanel from "components/common/FileUploadPanel";
+import { FileUploadItem } from "components/common/FileUploadList";
 import messagePublisher from "common/messagePublisher";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import React, { useState } from "react";
@@ -61,6 +61,7 @@ export default function AddAttachmentWithRemoteParametersModal({
     });
 
     const selectedFiles = useWatch({ control, name: "files" }) as File[];
+    const selectedUploadDate = useWatch({ control, name: "uploadDate" }) as Date;
 
     const onProgress = (progress: attachmentUploadProgress) => {
         setBatchProgress(progress);
@@ -99,6 +100,10 @@ export default function AddAttachmentWithRemoteParametersModal({
         );
     };
 
+    const clearFiles = () => {
+        form.setValue("files", [], { shouldValidate: true, shouldDirty: true });
+    };
+
     const uploadItems: FileUploadItem[] = (selectedFiles ?? []).map((file) => ({
         file,
         status: "selected",
@@ -122,17 +127,15 @@ export default function AddAttachmentWithRemoteParametersModal({
                             <Controller
                                 name="files"
                                 render={({ field }) => (
-                                    <FileDropzone
-                                        showSelectedFiles={false}
+                                    <FileUploadPanel
+                                        items={uploadItems}
                                         onChange={(files) => onFileDropzoneChange(files, field)}
+                                        onRemove={removeFile}
+                                        onCancel={() => uploader.abortCurrent()}
+                                        onClearAll={clearFiles}
                                     />
                                 )}
                             ></Controller>
-                            <FileUploadList
-                                items={uploadItems}
-                                onRemove={removeFile}
-                                onCancel={() => uploader.abortCurrent()}
-                            />
                         </FormGroup>
                         <FormGroup>
                             <FormLabel>Remote destination identifier</FormLabel>
@@ -157,7 +160,7 @@ export default function AddAttachmentWithRemoteParametersModal({
                                 placeholderText="e.g. 11/21/2025 10:57 AM"
                                 showTimeSelect
                                 minDate={new Date()}
-                                minTime={moment().subtract(29, "minutes").toDate()}
+                                minTime={getMinUploadTime(selectedUploadDate)}
                                 maxTime={moment().endOf("day").toDate()}
                                 name="uploadDate"
                                 control={control}
@@ -211,6 +214,11 @@ function RemoteAttachmentWarning({ config, selectedDestination }: RemoteAttachme
     }
 
     return null;
+}
+
+function getMinUploadTime(selectedDate: Date): Date {
+    const isToday = !selectedDate || moment(selectedDate).isSame(moment(), "day");
+    return isToday ? moment().subtract(29, "minutes").toDate() : moment().startOf("day").toDate();
 }
 
 const schema = yup.object({
