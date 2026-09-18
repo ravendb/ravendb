@@ -108,6 +108,42 @@ namespace SlowTests.Voron.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.Voron)]
+        public void Page_already_allocated_past_its_end_is_reported_as_corruption_instead_of_being_defragged()
+        {
+            long sectionPage;
+            using (var tx = Env.WriteTransaction())
+            {
+                CreateSchemas(tx, out _, out var plain);
+                plain.Create(tx, "Items", 16);
+                var table = tx.OpenTable(plain, "Items");
+                Insert(tx, table, "item", 100, new Random(27558), new Dictionary<string, byte[]>());
+                sectionPage = table.ActiveDataSmallSection.PageNumber;
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                // the state a pre-fix overflow leaves behind: NextAllocation past the page, ledger wrapped to ~64K free
+                var section = (RawDataSmallSectionPageHeader*)tx.LowLevelTransaction.ModifyPage(sectionPage).Pointer;
+                var availableSpace = (ushort*)((byte*)section + 96 /* RawDataSection.ReservedHeaderSpace */);
+                var page = (RawDataSmallPageHeader*)tx.LowLevelTransaction.ModifyPage(sectionPage + 1).Pointer;
+                page->NextAllocation = Constants.Storage.PageSize + 2943;
+                availableSpace[0] = (ushort)(Constants.Storage.PageSize - page->NextAllocation);
+                for (var i = 1; i < section->NumberOfPages; i++)
+                    availableSpace[i] = 0; // force the defrag loop, where the wrapped ledger makes the corrupt page look free
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                CreateSchemas(tx, out _, out var plain);
+                var table = tx.OpenTable(plain, "Items");
+                var e = Assert.Throws<VoronUnrecoverableErrorException>(() => Insert(tx, table, "item/2", 100, new Random(27558), new Dictionary<string, byte[]>()));
+                Assert.Contains("past the end of the page", e.Message);
+            }
+        }
+
         private static long Insert(Transaction tx, Table table, string key, int valueSize, Random random, Dictionary<string, byte[]> expected)
         {
             var value = new byte[valueSize];
