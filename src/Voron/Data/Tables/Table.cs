@@ -34,7 +34,6 @@ namespace Voron.Data.Tables
         private readonly Tree _tableTree;
         private readonly bool _prefetch;
 
-        private ActiveRawDataSmallSection _activeDataSmallSection;
         private FixedSizeTree _inactiveSections;
         private FixedSizeTree _activeCandidateSection;
 
@@ -45,9 +44,9 @@ namespace Voron.Data.Tables
         private readonly byte _tableType;
         private int? _currentCompressionDictionaryId;
 
-        public long NumberOfEntries => _stats.NumberOfEntries;
+        public long NumberOfEntries => _state.NumberOfEntries;
 
-        private readonly TableSchemaStatsReference _stats;
+        private readonly TableStateReference _state;
         private NewPageAllocator _tablePageAllocator;
         private NewPageAllocator _globalPageAllocator;
 
@@ -92,17 +91,17 @@ namespace Voron.Data.Tables
         {
             get
             {
-                if (_activeDataSmallSection == null)
+                if (_state.ActiveDataSmallSection == null)
                 {
                     if (_tableTree.TryRead(TableSchema.ActiveSectionSlice, out var reader) == false)
                         throw new VoronErrorException($"Could not find active sections for {Name}");
 
                     long pageNumber = reader.ReadLittleEndianInt64();
 
-                    _activeDataSmallSection = new ActiveRawDataSmallSection(_tx, pageNumber);
-                    _activeDataSmallSection.DataMoved += OnDataMoved;
+                    _state.ActiveDataSmallSection = new ActiveRawDataSmallSection(_tx, pageNumber);
+                    _state.ActiveDataSmallSection.DataMoved += OnDataMoved;
                 }
-                return _activeDataSmallSection;
+                return _state.ActiveDataSmallSection;
             }
         }
 
@@ -132,14 +131,14 @@ namespace Voron.Data.Tables
         /// Using this constructor WILL NOT register the Table for commit in
         /// the Transaction, and hence changes WILL NOT be committed.
         /// </summary>
-        public Table(TableSchema schema, Slice name, Transaction tx, Tree tableTree, TableSchemaStatsReference stats, byte tableType, bool doSchemaValidation = false, bool prefetch = false)
+        public Table(TableSchema schema, Slice name, Transaction tx, Tree tableTree, TableStateReference state, byte tableType, bool doSchemaValidation = false, bool prefetch = false)
         {
             Name = name;
 
             _schema = schema;
             _tx = tx;
             _tableType = tableType;
-            _stats = stats;
+            _state = state;
             _prefetch = prefetch;
 
             _tableTree = tableTree;
@@ -548,7 +547,7 @@ namespace Voron.Data.Tables
             {
                 var page = _tx.LowLevelTransaction.GetPage(id / Constants.Storage.PageSize);
                 var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
-                _stats.OverflowPageCount -= numberOfPages;
+                _state.OverflowPageCount -= numberOfPages;
 
                 for (var i = 0; i < numberOfPages; i++)
                 {
@@ -556,14 +555,14 @@ namespace Voron.Data.Tables
                 }
             }
 
-            _stats.NumberOfEntries--;
+            _state.NumberOfEntries--;
 
             using (_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats), out byte* updatePtr))
             {
                 var stats = (TableSchemaStats*)updatePtr;
 
-                stats->NumberOfEntries = _stats.NumberOfEntries;
-                stats->OverflowPageCount = _stats.OverflowPageCount;
+                stats->NumberOfEntries = _state.NumberOfEntries;
+                stats->OverflowPageCount = _state.OverflowPageCount;
             }
 
             if (largeValue)
@@ -750,14 +749,14 @@ namespace Voron.Data.Tables
             var tvr = builder.CreateReader(pos);
             InsertIndexValuesFor(id, ref tvr);
 
-            _stats.NumberOfEntries++;
+            _state.NumberOfEntries++;
 
             using (_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats), out byte* ptr))
             {
                 var stats = (TableSchemaStats*)ptr;
 
-                stats->NumberOfEntries = _stats.NumberOfEntries;
-                stats->OverflowPageCount = _stats.OverflowPageCount;
+                stats->NumberOfEntries = _state.NumberOfEntries;
+                stats->OverflowPageCount = _state.OverflowPageCount;
             }
 
             return id;
@@ -767,7 +766,7 @@ namespace Voron.Data.Tables
         {
             var numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(size);
             var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
-            _stats.OverflowPageCount += numberOfOverflowPages;
+            _state.OverflowPageCount += numberOfOverflowPages;
 
             page.Flags = PageFlags.Overflow | PageFlags.RawData;
             if (compressed)
@@ -782,7 +781,7 @@ namespace Voron.Data.Tables
 
         private long AllocateFromAnotherSection(int itemSize)
         {
-            InactiveSections.Add(_activeDataSmallSection.PageNumber);
+            InactiveSections.Add(_state.ActiveDataSmallSection.PageNumber);
 
             if (TryFindMatchFromCandidateSections(itemSize, out long id))
                 return id;
@@ -1057,7 +1056,7 @@ namespace Voron.Data.Tables
             {
                 var numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(dataSize);
                 var page = _tx.LowLevelTransaction.AllocatePage(numberOfOverflowPages);
-                _stats.OverflowPageCount += numberOfOverflowPages;
+                _state.OverflowPageCount += numberOfOverflowPages;
 
                 page.Flags = PageFlags.Overflow | PageFlags.RawData;
                 page.OverflowSize = dataSize;
@@ -1077,14 +1076,14 @@ namespace Voron.Data.Tables
 
             InsertIndexValuesFor(id, ref reader);
 
-            _stats.NumberOfEntries++;
+            _state.NumberOfEntries++;
 
             using (_tableTree.DirectAdd(TableSchema.StatsSlice, sizeof(TableSchemaStats), out byte* ptr))
             {
                 var stats = (TableSchemaStats*)ptr;
 
-                stats->NumberOfEntries = _stats.NumberOfEntries;
-                stats->OverflowPageCount = _stats.OverflowPageCount;
+                stats->NumberOfEntries = _state.NumberOfEntries;
+                stats->OverflowPageCount = _state.OverflowPageCount;
             }
 
             return id;
@@ -1189,9 +1188,9 @@ namespace Voron.Data.Tables
             var newNumberOfPages = Math.Min(maxSectionSizeInPages,
                 (ushort)(ActiveDataSmallSection.NumberOfPages * 2));
 
-            _activeDataSmallSection = ActiveRawDataSmallSection.Create(_tx, Name, _tableType, newNumberOfPages);
-            _activeDataSmallSection.DataMoved += OnDataMoved;
-            var val = _activeDataSmallSection.PageNumber;
+            _state.ActiveDataSmallSection = ActiveRawDataSmallSection.Create(_tx, Name, _tableType, newNumberOfPages);
+            _state.ActiveDataSmallSection.DataMoved += OnDataMoved;
+            var val = _state.ActiveDataSmallSection.PageNumber;
             using (Slice.External(_tx.Allocator, (byte*)&val, sizeof(long), out Slice pageNumber))
             {
                 _tableTree.Add(TableSchema.ActiveSectionSlice, pageNumber);
@@ -1208,12 +1207,12 @@ namespace Voron.Data.Tables
                     {
                         var sectionPageNumber = it.CurrentKey;
 
-                        _activeDataSmallSection = new ActiveRawDataSmallSection(_tx, sectionPageNumber);
+                        _state.ActiveDataSmallSection = new ActiveRawDataSmallSection(_tx, sectionPageNumber);
 
-                        _activeDataSmallSection.DataMoved += OnDataMoved;
-                        if (_activeDataSmallSection.TryAllocate(size, out id))
+                        _state.ActiveDataSmallSection.DataMoved += OnDataMoved;
+                        if (_state.ActiveDataSmallSection.TryAllocate(size, out id))
                         {
-                            var candidatePage = _activeDataSmallSection.PageNumber;
+                            var candidatePage = _state.ActiveDataSmallSection.PageNumber;
                             using (Slice.External(_tx.Allocator, (byte*)&candidatePage, sizeof(long), out Slice pageNumber))
                             {
                                 _tableTree.Add(TableSchema.ActiveSectionSlice, pageNumber);
@@ -2496,7 +2495,7 @@ namespace Voron.Data.Tables
         {
             generatorInstance ??= new StorageReportGenerator(_tx.LowLevelTransaction);
 
-            var overflowSize = _stats.OverflowPageCount * Constants.Storage.PageSize;
+            var overflowSize = _state.OverflowPageCount * Constants.Storage.PageSize;
             var report = new TableReport(overflowSize, overflowSize, includeDetails, generatorInstance)
             {
                 Name = Name.ToString(),

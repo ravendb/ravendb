@@ -38,7 +38,7 @@ namespace Voron.Impl
         private Dictionary<Slice, PostingList> _postingLists;
         
         private Dictionary<TableKey, Table> _tables;
-        private Dictionary<Slice, TableSchemaStatsReference> _tableSchemaStats;
+        private Dictionary<Slice, TableStateReference> _tableStates;
 
         private Dictionary<Slice, Tree> _trees;
 
@@ -268,22 +268,22 @@ namespace Voron.Impl
             if (tableTree == null)
                 return null;
 
-            _tableSchemaStats ??= new Dictionary<Slice, TableSchemaStatsReference>(SliceComparer.Instance);
+            _tableStates ??= new Dictionary<Slice, TableStateReference>(SliceComparer.Instance);
 
-            if (_tableSchemaStats.TryGetValue(clonedName, out var tableStatsRef) == false)
+            if (_tableStates.TryGetValue(clonedName, out var tableState) == false)
             {
                 var stats = (TableSchemaStats*)tableTree.DirectRead(TableSchema.StatsSlice);
                 if (stats == null)
                     throw new InvalidDataException($"Cannot find stats value for table {name}");
 
-                _tableSchemaStats[clonedName] = tableStatsRef = new TableSchemaStatsReference()
+                _tableStates[clonedName] = tableState = new TableStateReference()
                 {
                     NumberOfEntries = stats->NumberOfEntries,
                     OverflowPageCount = stats->OverflowPageCount
                 };
             }
 
-            value = new Table(schema, clonedName, this, tableTree, tableStatsRef, schema.TableType, prefetch: prefetch);
+            value = new Table(schema, clonedName, this, tableTree, tableState, schema.TableType, prefetch: prefetch);
             _tables[key] = value;
             return value;
         }

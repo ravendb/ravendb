@@ -39,12 +39,12 @@ namespace Voron.Data.RawData
                 throw new ArgumentException($"Cannot allocate an item of {size} bytes in a small data section. Maximum is: {MaxItemSize}");
 
             //  start reading from the last used page, to skip full pages
-            for (var i = SectionHeader->LastUsedPage; i < SectionHeader->NumberOfPages; i++)
+            for (var i = _sectionHeader->LastUsedPage; i < _sectionHeader->NumberOfPages; i++)
             {
                 if (AvailableSpace[i] < size)
                     continue;
 
-                var pageHeader = PageHeaderFor(_llt, SectionHeader->PageNumber + i + 1);
+                var pageHeader = PageHeaderFor(_llt, _sectionHeader->PageNumber + i + 1);
                 if (pageHeader->NextAllocation + size > Constants.Storage.PageSize)
                     continue;
 
@@ -58,21 +58,21 @@ namespace Voron.Data.RawData
                 pageHeader->NumberOfEntries++;
                 EnsureHeaderModified();
                 AvailableSpace[i] -= (ushort)size;
-                SectionHeader->NumberOfEntries++;
-                SectionHeader->LastUsedPage = i;
-                SectionHeader->AllocatedSize += size;
+                _sectionHeader->NumberOfEntries++;
+                _sectionHeader->LastUsedPage = i;
+                _sectionHeader->AllocatedSize += size;
                 return true;
             }
 
             // we don't have any pages that are free enough, we need to check if we 
             // need to fragment, so we will scan from the start, see if we have anything
             // worth doing, and defrag if needed
-            for (ushort i = 0; i < SectionHeader->NumberOfPages; i++)
+            for (ushort i = 0; i < _sectionHeader->NumberOfPages; i++)
             {
                 if (AvailableSpace[i] < size)
                     continue;
                 // we have space, but we need to defrag
-                var pageHeader = PageHeaderFor(_llt, SectionHeader->PageNumber + i + 1);
+                var pageHeader = PageHeaderFor(_llt, _sectionHeader->PageNumber + i + 1);
                 pageHeader = DefragPage(pageHeader);
 
                 // the page is the truth, not the ledger
@@ -85,9 +85,9 @@ namespace Voron.Data.RawData
                 ((short*)((byte*)pageHeader + pageHeader->NextAllocation))[0] = allocatedSize;
                 pageHeader->NextAllocation += (ushort)size;
                 pageHeader->NumberOfEntries++;
-                SectionHeader->NumberOfEntries++;
-                SectionHeader->LastUsedPage = i;
-                SectionHeader->AllocatedSize += size;
+                _sectionHeader->NumberOfEntries++;
+                _sectionHeader->LastUsedPage = i;
+                _sectionHeader->AllocatedSize += size;
                 AvailableSpace[i] = (ushort)(Constants.Storage.PageSize - pageHeader->NextAllocation);
 
                 return true;
@@ -280,15 +280,15 @@ namespace Voron.Data.RawData
             var pageNumberInSection = (id - posInPage) / Constants.Storage.PageSize;
 
             // same section, obviously owned
-            if (pageNumberInSection > SectionHeader->PageNumber &&
-                pageNumberInSection <= SectionHeader->PageNumber + SectionHeader->NumberOfPages)
+            if (pageNumberInSection > _sectionHeader->PageNumber &&
+                pageNumberInSection <= _sectionHeader->PageNumber + _sectionHeader->NumberOfPages)
                 return true;
 
             var pageHeader = PageHeaderFor(_llt, pageNumberInSection);
             var sectionPageNumber = pageHeader->PageNumber - pageHeader->PageNumberInSection - 1;
             var idSectionHeader = (RawDataSmallSectionPageHeader*)_llt.GetPage(sectionPageNumber).Pointer;
 
-            return idSectionHeader->SectionOwnerHash == SectionHeader->SectionOwnerHash;
+            return idSectionHeader->SectionOwnerHash == _sectionHeader->SectionOwnerHash;
         }
     }
 }
