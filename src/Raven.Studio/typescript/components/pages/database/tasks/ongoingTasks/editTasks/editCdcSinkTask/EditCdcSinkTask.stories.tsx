@@ -23,6 +23,7 @@ function prepareMocks(hasCdcSink = true) {
     tasksService.withConnectionStrings();
     tasksService.withTestCdcSink();
     tasksService.withGetCdcSinkTaskSchema();
+    tasksService.withVerifyCdcSink();
 }
 
 export const NewTask: StoryObj = {
@@ -75,6 +76,26 @@ export const TableWarnings: StoryObj = {
         prepareMocks();
         mockServices.tasksService.withGetCdcSinkTaskInfo();
         mockServices.tasksService.withGetCdcSinkTaskSchema(getSchemaWithTableWarning());
+
+        return <EditCdcSinkTask queryParams={{ taskId: String(TasksStubs.getCdcSink().TaskId) }} />;
+    },
+};
+
+export const VerificationFailed: StoryObj = {
+    render: () => {
+        prepareMocks();
+        mockServices.tasksService.withGetCdcSinkTaskInfo();
+        mockServices.tasksService.withVerifyCdcSink(TasksStubs.verifyCdcSinkFailed());
+
+        return <EditCdcSinkTask queryParams={{ taskId: String(TasksStubs.getCdcSink().TaskId) }} />;
+    },
+};
+
+export const VerificationPassedWithWarnings: StoryObj = {
+    render: () => {
+        prepareMocks();
+        mockServices.tasksService.withGetCdcSinkTaskInfo();
+        mockServices.tasksService.withVerifyCdcSink(TasksStubs.verifyCdcSinkWarning());
 
         return <EditCdcSinkTask queryParams={{ taskId: String(TasksStubs.getCdcSink().TaskId) }} />;
     },
