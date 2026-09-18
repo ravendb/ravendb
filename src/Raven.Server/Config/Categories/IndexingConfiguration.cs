@@ -624,8 +624,9 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Corax.VectorSearch.DefaultMinimumSimilarity", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public float CoraxVectorSearchDefaultMinimumSimilarity { get; protected set; }
         
-        [Description("The default number of edges created for a vector during vector indexing.")]
+        [Description("The default number of edges created for a vector during vector indexing. Cannot be less than 2.")]
         [DefaultValue(12)]
+        [MinValue(2)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.Corax.VectorSearch.DefaultNumberOfEdges", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int CoraxVectorDefaultNumberOfEdges { get; protected set; }
