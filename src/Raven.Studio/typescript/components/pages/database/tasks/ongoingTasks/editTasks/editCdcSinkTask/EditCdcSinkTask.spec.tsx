@@ -33,9 +33,30 @@ const selectors = {
     addMissingRootTableButton: /^Add root table$/,
     addSelectedMissingRootTablesButton: /^Add 1 root table$/,
     addRootTablesModalTitle: "Add root tables",
+    verifyTablesButton: /^Verify tables$/,
+    tablesVerifiedButton: /^Tables verified$/,
+    verificationFailedButton: /^Verification failed$/,
+    verificationFailedTitle: "Data source verification failed for the configured tables.",
+    verificationErrorMessage:
+        "The database user must have the REPLICATION role attribute to create a replication slot.",
+    verificationPassedWithWarningsTitle: "Data source verification passed with warnings.",
+    verificationErrorDetails: "EnsureReplicationSlotAsync",
+    verificationWarning: "Source cleanup failed: publication rvn_cdc_p_8f3a was left in place.",
+    showDetailsButton: /^Show details$/,
+    saveAnywayTitle: "Save the task configuration anyway?",
+    saveAnywayButton: /^Save anyway$/,
+    cancelButton: /^Cancel$/,
+    rawConfigSwitch: "Raw config",
+    tableActions: "Table actions",
+    disableTableAction: /^Disable$/,
 };
 
 describe("Edit CDC Sink task", () => {
+    beforeEach(() => {
+        jest.mocked(mockServices.tasksService.mock.verifyCdcSink).mockClear();
+        jest.mocked(mockServices.tasksService.mock.saveCdcSinkTask).mockClear();
+    });
+
     it("can render new task view", async () => {
         const Story = composeStory(stories.NewTask, stories.default);
 
@@ -211,6 +232,185 @@ describe("Edit CDC Sink task", () => {
         await user.hover(warningIcon.closest("div"));
 
         expect(await screen.findByText(selectors.tableWarningMessage)).toBeInTheDocument();
+    });
+
+    it("verifies the configured tables against the dry run endpoint with the inline connection", async () => {
+        const Story = composeStory(stories.EditTask, stories.default);
+
+        const { screen, fireClick } = rtlRender(<Story />);
+
+        await screen.findByText(selectors.editTaskTitle);
+        await screen.findByText(selectors.ordersTable);
+
+        await fireClick(getButtonByText(screen, selectors.verifyTablesButton));
+
+        expect(await screen.findByText(selectors.tablesVerifiedButton)).toBeInTheDocument();
+
+        const verifyMock = jest.mocked(mockServices.tasksService.mock.verifyCdcSink);
+        expect(verifyMock).toHaveBeenCalledTimes(1);
+
+        const [verifiedDatabaseName, request] = verifyMock.mock.calls[0];
+        expect(verifiedDatabaseName).toBe(selectors.databaseName);
+        expect(request.Connection).toEqual({
+            Type: "Sql",
+            Name: selectors.connectionStringValue,
+            FactoryName: expect.any(String),
+            ConnectionString: expect.any(String),
+        });
+        expect(request.Configuration.ConnectionStringName).toBe(selectors.connectionStringValue);
+        expect(request.Configuration.Tables[0].SourceTableName).toBe("orders");
+        expect(mockServices.tasksService.mock.saveCdcSinkTask).not.toHaveBeenCalled();
+
+        await fireClick(getButtonByText(screen, selectors.tablesVerifiedButton));
+
+        await waitFor(() => expect(verifyMock).toHaveBeenCalledTimes(2));
+    });
+
+    it("shows the dry run failure with its details and warnings", async () => {
+        const Story = composeStory(stories.VerificationFailed, stories.default);
+
+        const { screen, fireClick } = rtlRender(<Story />);
+
+        await screen.findByText(selectors.editTaskTitle);
+        await screen.findByText(selectors.ordersTable);
+
+        await fireClick(getButtonByText(screen, selectors.verifyTablesButton));
+
+        expect(await screen.findByText(selectors.verificationFailedTitle)).toBeInTheDocument();
+        expect(screen.getByText(selectors.verificationErrorMessage)).toBeInTheDocument();
+        expect(screen.getByText(selectors.verificationWarning)).toBeInTheDocument();
+        expect(screen.queryByText(selectors.verificationErrorDetails, { exact: false })).not.toBeInTheDocument();
+
+        await fireClick(getButtonByText(screen, selectors.showDetailsButton));
+        expect(screen.getByText(selectors.verificationErrorDetails, { exact: false })).toBeInTheDocument();
+
+        expect(getButtonByText(screen, selectors.verificationFailedButton)).toBeEnabled();
+    });
+
+    it("keeps the dry run warnings visible after a passing run", async () => {
+        const Story = composeStory(stories.VerificationPassedWithWarnings, stories.default);
+
+        const { screen, fireClick } = rtlRender(<Story />);
+
+        await screen.findByText(selectors.editTaskTitle);
+        await screen.findByText(selectors.ordersTable);
+
+        await fireClick(getButtonByText(screen, selectors.verifyTablesButton));
+
+        expect(await screen.findByText(selectors.verificationPassedWithWarningsTitle)).toBeInTheDocument();
+        expect(screen.getByText(selectors.verificationWarning)).toBeInTheDocument();
+        expect(screen.queryByText(selectors.verificationFailedTitle)).not.toBeInTheDocument();
+    });
+
+    it("resets the verification result when the verified inputs change", async () => {
+        const Story = composeStory(stories.EditTask, stories.default);
+
+        const { screen, user, fillInput, fireClick } = rtlRender(<Story />);
+
+        await screen.findByText(selectors.editTaskTitle);
+        await screen.findByText(selectors.ordersTable);
+
+        await fireClick(getButtonByText(screen, selectors.verifyTablesButton));
+        expect(await screen.findByText(selectors.tablesVerifiedButton)).toBeInTheDocument();
+
+        await fillInput(screen.getByLabelText(selectors.taskName), "Renamed task");
+        expect(getButtonByText(screen, selectors.tablesVerifiedButton)).toBeInTheDocument();
+
+        await fireClick((await screen.findByText("orders")).closest("button"));
+        await user.click(screen.getByTitle(selectors.tableActions));
+        await user.click(await screen.findByText(selectors.disableTableAction));
+
+        expect(await screen.findByText(selectors.verifyTablesButton)).toBeInTheDocument();
+    });
+
+    it("runs the dry run before saving and saves when it passes", async () => {
+        const Story = composeStory(stories.EditTask, stories.default);
+
+        const { screen, fillInput, fireClick } = rtlRender(<Story />);
+
+        await screen.findByText(selectors.editTaskTitle);
+        await screen.findByText(selectors.ordersTable);
+
+        await fillInput(screen.getByLabelText(selectors.taskName), "Renamed task");
+        await fireClick(getButtonByText(screen, selectors.saveTaskButton));
+
+        await waitFor(() => expect(mockServices.tasksService.mock.saveCdcSinkTask).toHaveBeenCalled());
+
+        const verifyMock = mockServices.tasksService.mock.verifyCdcSink;
+        expect(verifyMock).toHaveBeenCalledTimes(1);
+        expect(verifyMock).toHaveBeenCalledBefore(jest.mocked(mockServices.tasksService.mock.saveCdcSinkTask));
+        expect(screen.queryByText(selectors.saveAnywayTitle)).not.toBeInTheDocument();
+    });
+
+    it("reuses the current verification result when saving", async () => {
+        const Story = composeStory(stories.EditTask, stories.default);
+
+        const { screen, fillInput, fireClick } = rtlRender(<Story />);
+
+        await screen.findByText(selectors.editTaskTitle);
+        await screen.findByText(selectors.ordersTable);
+
+        await fireClick(getButtonByText(screen, selectors.verifyTablesButton));
+        expect(await screen.findByText(selectors.tablesVerifiedButton)).toBeInTheDocument();
+
+        await fillInput(screen.getByLabelText(selectors.taskName), "Renamed task");
+        await fireClick(getButtonByText(screen, selectors.saveTaskButton));
+
+        await waitFor(() => expect(mockServices.tasksService.mock.saveCdcSinkTask).toHaveBeenCalled());
+        expect(mockServices.tasksService.mock.verifyCdcSink).toHaveBeenCalledTimes(1);
+    });
+
+    it("asks for confirmation before saving when the dry run fails", async () => {
+        const Story = composeStory(stories.VerificationFailed, stories.default);
+
+        const { screen, fillInput, fireClick } = rtlRender(<Story />);
+
+        await screen.findByText(selectors.editTaskTitle);
+        await screen.findByText(selectors.ordersTable);
+
+        await fillInput(screen.getByLabelText(selectors.taskName), "Renamed task");
+        await fireClick(getButtonByText(screen, selectors.saveTaskButton));
+
+        const dialog = await screen.findByRole("dialog");
+        expect(within(dialog).getByText(selectors.saveAnywayTitle)).toBeInTheDocument();
+        expect(within(dialog).getByText(selectors.verificationFailedTitle)).toBeInTheDocument();
+        expect(within(dialog).getByText(selectors.verificationErrorMessage)).toBeInTheDocument();
+        expect(within(dialog).getByText(selectors.verificationWarning)).toBeInTheDocument();
+
+        await fireClick(within(dialog).getByRole("button", { name: selectors.cancelButton }));
+
+        await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+        expect(mockServices.tasksService.mock.saveCdcSinkTask).not.toHaveBeenCalled();
+        expect(getButtonByText(screen, selectors.verificationFailedButton)).toBeInTheDocument();
+
+        await fireClick(getButtonByText(screen, selectors.saveTaskButton));
+        await fireClick(
+            within(await screen.findByRole("dialog")).getByRole("button", { name: selectors.saveAnywayButton })
+        );
+
+        await waitFor(() => expect(mockServices.tasksService.mock.saveCdcSinkTask).toHaveBeenCalled());
+        expect(mockServices.tasksService.mock.verifyCdcSink).toHaveBeenCalledTimes(1);
+    });
+
+    it("asks for confirmation before saving when the dry run passes with warnings", async () => {
+        const Story = composeStory(stories.VerificationPassedWithWarnings, stories.default);
+
+        const { screen, fillInput, fireClick } = rtlRender(<Story />);
+
+        await screen.findByText(selectors.editTaskTitle);
+        await screen.findByText(selectors.ordersTable);
+
+        await fillInput(screen.getByLabelText(selectors.taskName), "Renamed task");
+        await fireClick(getButtonByText(screen, selectors.saveTaskButton));
+
+        const dialog = await screen.findByRole("dialog");
+        expect(within(dialog).getByText(selectors.saveAnywayTitle)).toBeInTheDocument();
+        expect(within(dialog).getByText(selectors.verificationPassedWithWarningsTitle)).toBeInTheDocument();
+        expect(within(dialog).getByText(selectors.verificationWarning)).toBeInTheDocument();
+
+        await fireClick(within(dialog).getByRole("button", { name: selectors.saveAnywayButton }));
+
+        await waitFor(() => expect(mockServices.tasksService.mock.saveCdcSinkTask).toHaveBeenCalled());
     });
 
     it("closes the test panel without crashing when its table is removed", async () => {
