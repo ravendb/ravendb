@@ -1,4 +1,5 @@
 ﻿using System;
+using Voron.Data;
 
 namespace Voron.Data.Lookups
 {
@@ -7,6 +8,7 @@ namespace Voron.Data.Lookups
     {
         None = 0,
         Branch = 1,
-        Leaf = 2
+        Leaf = 2,
+        Reserved = PageCollapsedLevels.Mask, // not available here, PageCollapsedLevels keeps the count in them
     }
 }
