@@ -1217,6 +1217,7 @@ export interface components {
         AppUsageMetrics: {
             conversations: components["schemas"]["MetricCard"];
             tokens: components["schemas"]["MetricCard"];
+            buckets: string[];
         };
         AppUsageResponse: {
             metrics: components["schemas"]["AppUsageMetrics"];
@@ -1941,6 +1942,7 @@ export interface components {
         UsageResponse: {
             points: components["schemas"]["UsagePoint"][];
             writesByApp: components["schemas"]["AppWrites"][];
+            isWritesUnavailable: boolean;
         };
         VerifyCdcRequest: {
             tables: components["schemas"]["VerifyCdcTableRequest"][];
@@ -3951,6 +3953,15 @@ export interface operations {
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };

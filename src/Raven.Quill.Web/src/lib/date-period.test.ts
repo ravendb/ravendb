@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
     clampPeriod,
     drillInto,
+    formatBucketLabel,
+    formatBucketTooltip,
     isSameDatePeriod,
     parseStartDate,
     stepDay,
@@ -87,9 +89,12 @@ describe("stepping at the lower bound", () => {
     });
 });
 
+// Bucket timestamps come in the server's UTC shapes: "yyyy-MM", "yyyy-MM-dd",
+// "yyyy-MM-ddTHH:00:00Z" for series labels and a full UTC instant for sparklines.
+// They must land on the same UTC calendar slot whatever zone the browser runs in.
 describe("drillInto", () => {
     it("clamps a pre-setup bucket to the setup day", () => {
-        expect(drillInto({ year: 2026, month: 6, day: null }, "2026-06-02T00:00:00", SETUP_START)).toEqual({
+        expect(drillInto({ year: 2026, month: 6, day: null }, "2026-06-02", SETUP_START)).toEqual({
             year: 2026,
             month: 6,
             day: 14,
@@ -97,15 +102,46 @@ describe("drillInto", () => {
     });
 
     it("drills a year into the clicked month", () => {
-        expect(drillInto({ year: 2026, month: null, day: null }, "2026-07-01T00:00:00", SETUP_START)).toEqual({
+        expect(drillInto({ year: 2026, month: null, day: null }, "2026-07", SETUP_START)).toEqual({
             year: 2026,
             month: 7,
             day: null,
         });
     });
 
+    it("drills a month into the clicked UTC day", () => {
+        expect(drillInto({ year: 2026, month: 7, day: null }, "2026-07-01T00:00:00Z", SETUP_START)).toEqual({
+            year: 2026,
+            month: 7,
+            day: 1,
+        });
+    });
+
     it("ignores a bucket that is not a date", () => {
         expect(drillInto({ year: 2026, month: 6, day: null }, "not-a-date")).toBeNull();
+    });
+});
+
+describe("formatBucketLabel", () => {
+    it("labels a month bucket by its UTC month", () => {
+        expect(formatBucketLabel("2026-01", { year: 2026, month: null, day: null })).toBe("Jan");
+    });
+
+    it("labels a day bucket by its UTC day", () => {
+        expect(formatBucketLabel("2026-09-01", { year: 2026, month: 9, day: null })).toBe("Sep 1");
+        expect(formatBucketLabel("2026-09-01T00:00:00Z", { year: 2026, month: 9, day: null })).toBe("Sep 1");
+    });
+
+    it("labels an hour bucket by its UTC hour", () => {
+        expect(formatBucketLabel("2026-09-04T00:00:00Z", { year: 2026, month: 9, day: 4 })).toBe("12 AM");
+    });
+});
+
+describe("formatBucketTooltip", () => {
+    it("carries the UTC date at every granularity", () => {
+        expect(formatBucketTooltip("2026-01", { year: 2026, month: null, day: null })).toBe("January 2026");
+        expect(formatBucketTooltip("2026-09-01", { year: 2026, month: 9, day: null })).toBe("Sep 1, 2026");
+        expect(formatBucketTooltip("2026-09-04T23:00:00Z", { year: 2026, month: 9, day: 4 })).toBe("Sep 4, 11 PM");
     });
 });
 

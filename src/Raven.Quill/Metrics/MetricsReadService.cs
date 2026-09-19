@@ -14,6 +14,7 @@ using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Licensing;
+using Raven.Quill.Logging;
 using Raven.Quill.Raven;
 using Raven.Quill.Wizard;
 
@@ -24,6 +25,10 @@ internal static class MetricsReadService
     private const string ConversationIdPrefix = "chats/";
 
     private const string UnknownModel = "unknown";
+
+    internal sealed class MetricsLogger;
+
+    private static readonly QuillLogger<MetricsLogger> Logger = new();
 
     public static async Task<UsageResponse> GetUsageAsync(
         ILicenseStatsProvider provider,
@@ -43,8 +48,9 @@ internal static class MetricsReadService
         var tokens = new long[buckets.Count];
         var writes = new long[buckets.Count];
 
-        var stats = await provider.GetUsageAsync(year, month, day, ct);
-        var statsPerApp = stats.PerApplication.GroupBy(p => p.TopologyId)
+        var writeUsage = await TryGetWriteUsageAsync(provider, year, month, day, ct);
+        var isWritesUnavailable = writeUsage is null;
+        var statsPerApp = (writeUsage ?? []).GroupBy(p => p.TopologyId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
         var writesByApp = new List<AppWrites>(results.Length);
@@ -77,7 +83,24 @@ internal static class MetricsReadService
         var points = new List<UsagePoint>(buckets.Count);
         for (var i = 0; i < buckets.Count; i++)
             points.Add(new UsagePoint(buckets[i], conversations[i], messages[i], tokens[i], writes[i]));
-        return new UsageResponse(points, writesByApp);
+        return new UsageResponse(points, writesByApp, isWritesUnavailable);
+    }
+
+    // Conversations, messages and tokens come from the app databases; only the writes column depends on the
+    // license server, so an outage there is reported as unavailable writes instead of failing the whole dashboard.
+    private static async Task<List<QuillApplicationUsage>?> TryGetWriteUsageAsync(
+        ILicenseStatsProvider provider, int year, int? month, int? day, CancellationToken ct)
+    {
+        try
+        {
+            return (await provider.GetUsageAsync(year, month, day, ct)).PerApplication;
+        }
+        catch (LicenseUsageUnavailableException ex)
+        {
+            if (Logger.IsWarnEnabled)
+                Logger.Warn(ex, "write usage unavailable from the license server; reporting writes as unavailable");
+            return null;
+        }
     }
 
     private static async Task<(long[] Conversations, long[] Messages, long[] Tokens)> GetAppUsageAsync(IDocumentStore store, App app, UsagePeriod period, CancellationToken ct)
@@ -159,7 +182,8 @@ internal static class MetricsReadService
 
         var metrics = new AppUsageMetrics(
             Conversations: new MetricCard(convNow, Delta(convNow, convPrev), ToDoubles(convByBucket)),
-            Tokens: new MetricCard(tokNow, Delta(tokNow, tokPrev), ToDoubles(tokByBucket)));
+            Tokens: new MetricCard(tokNow, Delta(tokNow, tokPrev), ToDoubles(tokByBucket)),
+            Buckets: buckets.ToArray());
 
         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database), ct);
         
@@ -668,12 +692,7 @@ internal static class MetricsReadService
         return await configSession.LoadAllStartingWithAsync<App>(AppLookup.IdPrefix, ct);
     }
 
-    private static DateTime Utc(DateTime d) => d.Kind switch
-    {
-        DateTimeKind.Utc => d,
-        DateTimeKind.Local => d.ToUniversalTime(),
-        _ => DateTime.SpecifyKind(d, DateTimeKind.Utc),
-    };
+    private static DateTime Utc(DateTime d) => UsagePeriod.ToUtc(d);
 
     // isolate per-app failures: one bad tenant DB can't 500 a global fan-out
 

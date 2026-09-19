@@ -45,7 +45,7 @@ export function createConversationColumns(slug: string): ColumnDef<ConversationD
             cell: ({ row }) => (
                 <span className="flex items-center gap-2">
                     <ConversationStateDot state={row.original.state} />
-                    <Timestamp value={row.original.lastActivityAt} />
+                    <Timestamp value={row.original.lastActivityAt} timeZone="utc" />
                 </span>
             ),
         },
