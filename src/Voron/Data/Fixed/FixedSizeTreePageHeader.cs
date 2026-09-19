@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+using System;
+using System.Runtime.InteropServices;
 
 namespace Voron.Data.Fixed
 {
@@ -25,5 +26,13 @@ namespace Voron.Data.Fixed
 
         [FieldOffset(14)]
         public ushort ValueSize;
+
+        public int CollapsedLevels
+        {
+            get => PageCollapsedLevels.Get(TreeFlags);
+            set => TreeFlags = PageCollapsedLevels.Set(TreeFlags, value);
+        }
+
+        public FixedSizeTreePageFlags PageType => PageCollapsedLevels.PageType(TreeFlags);
     }
 }

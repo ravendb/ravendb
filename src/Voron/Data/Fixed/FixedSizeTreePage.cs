@@ -74,6 +74,18 @@ namespace Voron.Data.Fixed
             get { return (Header->TreeFlags & FixedSizeTreePageFlags.Branch) == FixedSizeTreePageFlags.Branch; }
         }
 
+        public FixedSizeTreePageFlags PageType
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Header->PageType;
+        }
+
+        public int CollapsedLevels
+        {
+            get => Header->CollapsedLevels;
+            set => Header->CollapsedLevels = value;
+        }
+
         public int PageMaxSpace
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
