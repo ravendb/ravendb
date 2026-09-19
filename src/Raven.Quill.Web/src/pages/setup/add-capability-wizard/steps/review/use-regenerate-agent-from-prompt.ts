@@ -3,7 +3,7 @@ import { useFormContext } from "react-hook-form";
 import { useParams } from "react-router";
 import { toast } from "sonner";
 import type { AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
-import { suggestionToAgentConfiguration } from "@/pages/setup/add-capability-wizard/agent-config-form";
+import { seedAgentConfiguration } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { generateAgentFromPrompt } from "@/pages/setup/add-capability-wizard/agent-from-prompt";
 import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
 
@@ -18,7 +18,7 @@ export function useRegenerateAgentFromPromptMutation() {
         mutationFn: (prompt: string) => generateAgentFromPrompt(slug, prompt),
         onSuccess: (config, prompt) => {
             setPromptResult({ prompt, config });
-            setValue("review", suggestionToAgentConfiguration(config), { shouldValidate: true });
+            seedAgentConfiguration(setValue, config);
         },
         onError: (error) => {
             // Backend rejections can carry a full stack trace; show only the first line.
