@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+using System;
+using System.Runtime.InteropServices;
 
 namespace Voron.Data.BTrees
 {
@@ -24,5 +25,13 @@ namespace Voron.Data.BTrees
 
         [FieldOffset(16)]
         public ushort Upper;
+
+        public int CollapsedLevels
+        {
+            get => PageCollapsedLevels.Get(TreeFlags);
+            set => TreeFlags = PageCollapsedLevels.Set(TreeFlags, value);
+        }
+
+        public TreePageFlags PageType => PageCollapsedLevels.PageType(TreeFlags);
     }
 }

@@ -124,7 +124,7 @@ namespace Voron.Data.BTrees
                 var sibling = SetupMoveOrMerge(page, parentPage);
                 Debug.Assert(sibling.PageNumber != page.PageNumber);
 
-                if (page.TreeFlags != sibling.TreeFlags)
+                if (page.PageType != sibling.PageType)
                     return null;
 
                 if (sibling.IsCompressed)
@@ -183,6 +183,10 @@ namespace Voron.Data.BTrees
 
             nodeHeader->PageNumber = pageRefNumber;
 
+            // subtree is now one level shallower than its siblings, record that for the next time
+            var promotedChild = _tree.ModifyPage(pageRefNumber);
+            promotedChild.CollapsedLevels++;
+
             _tree.FreePage(page);
         }
 
@@ -217,6 +221,8 @@ namespace Voron.Data.BTrees
 
                 Memory.Copy(left.Base, mergedPage.Base, left.PageSize);
             }
+
+            left.CollapsedLevels = Math.Max(left.CollapsedLevels, right.CollapsedLevels);
 
             if (parentPage.GetNode(parentPage.LastSearchPositionOrLastEntry)->PageNumber != right.PageNumber)
                 VoronUnrecoverableErrorException.Raise(_tx,
