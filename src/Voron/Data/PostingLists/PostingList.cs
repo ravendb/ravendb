@@ -79,7 +79,7 @@ namespace Voron.Data.PostingLists
             {
                 var self = new PostingList(tx, Slices.Empty, state);
                 self.FindPageFor(0);
-                self.CreateRootPage();
+                self.WrapPageInBranch();
                 self.AddNewPageForTheExtras(encoder);
                 state = self._state;
             }
@@ -326,7 +326,7 @@ namespace Voron.Data.PostingLists
 
                             parent.PushPage(pageNum);
 
-                            if (header->PostingListFlags == ExtendedPageType.PostingListBranch)
+                            if (header->PageType == ExtendedPageType.PostingListBranch)
                             {
                                 // we'll increment on the next
                                 parent._stk[parent._pos].LastSearchPosition = -1;
@@ -363,7 +363,7 @@ namespace Voron.Data.PostingLists
             {
                 result.Add(p.PageNumber);
                 var state = new PostingListCursorState { Page = p, };
-                if (state.BranchHeader->SetFlags != ExtendedPageType.PostingListBranch)
+                if (state.BranchHeader->PageType != ExtendedPageType.PostingListBranch)
                     return;
                 
                 var branch = new PostingListBranchPage(state.Page);
@@ -446,7 +446,7 @@ namespace Voron.Data.PostingLists
 
                     var siblingPage = _llt.ModifyPage(siblingPageNum);
                     var siblingHeader = (PostingListLeafPageHeader*)siblingPage.Pointer;
-                    if (siblingHeader->PostingListFlags != ExtendedPageType.PostingListLeaf)
+                    if (siblingHeader->PageType != ExtendedPageType.PostingListLeaf)
                         continue;
 
                     var sibling = new PostingListLeafPage(siblingPage);
@@ -487,12 +487,12 @@ namespace Voron.Data.PostingLists
             state.Page = _llt.ModifyPage(state.Page.PageNumber);
             
             var current = new PostingListBranchPage(state.Page);
-            Debug.Assert(current.Header->SetFlags == ExtendedPageType.PostingListBranch);
+            Debug.Assert(current.Header->PageType == ExtendedPageType.PostingListBranch);
             var (siblingKey, siblingPageNum) = current.GetByIndex(GetSiblingIndex(in state));
             var (leafKey, leafPageNum) = current.GetByIndex(state.LastSearchPosition);
 
             var siblingPageHeader = (PostingListLeafPageHeader*)_llt.GetPage(siblingPageNum).Pointer;
-            if (siblingPageHeader->PostingListFlags == ExtendedPageType.PostingListBranch)
+            if (siblingPageHeader->PageType == ExtendedPageType.PostingListBranch)
                 _state.BranchPages--;
             else
                 _state.LeafPages--;
@@ -511,7 +511,15 @@ namespace Voron.Data.PostingLists
                 state.Page.PageNumber = cpy;
 
                 if (_pos == 0)
+                {
                     _state.Depth--; // replaced the root page
+                }
+                else
+                {
+                    // PostingListLeafPageHeader & PostingListBranchPageHeader both have CollapsedLevels at the same offset
+                    var survivor = (PostingListLeafPageHeader*)state.Page.Pointer;
+                    survivor->CollapsedLevels++;
+                }
 
                 _state.BranchPages--;
                 _llt.FreePage(leafPageNum);
@@ -538,7 +546,7 @@ namespace Voron.Data.PostingLists
             (_, siblingPageNum) = gp.GetByIndex(siblingIdx);
             var siblingPage = _llt.GetPage(siblingPageNum);
             var siblingHeader = (PostingListLeafPageHeader*)siblingPage.Pointer;
-            if (siblingHeader->PostingListFlags != ExtendedPageType.PostingListBranch)
+            if (siblingHeader->PageType != ExtendedPageType.PostingListBranch)
                 return;// cannot merge leaf & branch
             
             var sibling = new PostingListBranchPage(siblingPage);
@@ -587,11 +595,11 @@ namespace Voron.Data.PostingLists
         
         private void AddToParentPage(long separator, long newPage)
         {
-            if (_pos == 0) // need to create a root page
+            if (_pos == 0 || ShouldPromotePage()) // need to create a root page or restore a collapsed level
             {
-                var root = CreateRootPage();
-                if(root.TryAdd(_llt, separator, newPage) == false)
-                    throw new InvalidOperationException("Failed to add to a newly created ROOT page? Should never happen");
+                var branch = WrapPageInBranch();
+                if(branch.TryAdd(_llt, separator, newPage) == false)
+                    throw new InvalidOperationException("Failed to add to a newly created branch page? Should never happen");
                 return;
             }
 
@@ -611,6 +619,9 @@ namespace Voron.Data.PostingLists
 
         private void SplitBranchPage(long key, long value)
         {
+            if (ShouldPromotePage())
+                WrapPageInBranch();
+
             ref var state = ref _stk[_pos];
 
             // Create a new branch page to split the existing page
@@ -666,27 +677,74 @@ namespace Voron.Data.PostingLists
             _pos++;
         }
 
-        private PostingListBranchPage CreateRootPage()
+        private bool ShouldPromotePage()
         {
-            _state.Depth++;
+            ref var state = ref _stk[_pos];
+            // both page headers keep the counter at the same offset, so this works for a branch too
+            if (state.LeafHeader->CollapsedLevels > 0)
+                return true;
+
+            // Before RavenDB-27533 - we didn't have CollapsedLevels, so we need heuristics
+            if (_pos == 0)
+                return false; // the root has no siblings
+
+            if (state.IsLeaf == false)
+                return false; // we cannot tell from a branch without the counter
+
+            ref var parent = ref _stk[_pos - 1];
+            var parentBranch = new PostingListBranchPage(parent.Page);
+            int position = parent.LastSearchPosition;
+
+            // heuristics - we probe the left & right siblings
+            int count = parentBranch.Header->NumberOfEntries;
+            return IsBranchPage((position - 1 + count) % count) || IsBranchPage((position + 1) % count);
+
+            bool IsBranchPage(int pos)
+            {
+                (_, long pageNumber) = parentBranch.GetByIndex(pos);
+                return ((PostingListBranchPageHeader*)_llt.GetPage(pageNumber).Pointer)->PageType == ExtendedPageType.PostingListBranch;
+            }
+        }
+
+        private PostingListBranchPage WrapPageInBranch()
+        {
+            // the wrapper takes the place of the page it wraps, covering the same 
+            long separator = long.MinValue;
+            if (_pos == 0)
+            {
+                _state.Depth++;
+            }
+            else
+            {
+                ref var parentState = ref _stk[_pos - 1];
+                (separator, _) = new PostingListBranchPage(parentState.Page).GetByIndex(parentState.LastSearchPosition);
+            }
+
             _state.BranchPages++;
-            // we'll copy the current page and reuse it, to avoid changing the root page number
+            // we'll copy the current page and reuse it, to avoid changing the page number the parent points to
             var page = _llt.AllocatePage(1);
             long cpy = page.PageNumber;
             ref var state = ref _stk[_pos];
             Debug.Assert(_llt.IsDirty(page.PageNumber));
             Memory.Copy(page.Pointer, state.Page.Pointer, Constants.Storage.PageSize);
             page.PageNumber = cpy;
+
+            var copyHeader = (PostingListLeafPageHeader*)page.Pointer;
+            var collapsedLevels = copyHeader->CollapsedLevels;
+            copyHeader->CollapsedLevels = 0;
+
             Debug.Assert(_llt.IsDirty(state.Page.PageNumber));
             Memory.Set(state.Page.DataPointer, 0, Constants.Storage.PageSize - PageHeader.SizeOf);
-            var rootPage = new PostingListBranchPage(state.Page);
-            rootPage.Init();
-            rootPage.TryAdd(_llt, long.MinValue, cpy);
+            var branchPage = new PostingListBranchPage(state.Page);
+            branchPage.Init();
+            // the wrap restored a single level, the wrapper still owes the rest
+            branchPage.Header->CollapsedLevels = collapsedLevels - 1;
+            branchPage.TryAdd(_llt, separator, cpy);
 
             InsertToStack(state with { Page = page });
             state.LastMatch = -1;
             state.LastSearchPosition = 0;
-            return rootPage;
+            return branchPage;
         }
 
         public static long Update(LowLevelTransaction transactionLowLevelTransaction, ref PostingListState postingListState,
