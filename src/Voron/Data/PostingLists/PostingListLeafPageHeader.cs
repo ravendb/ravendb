@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+using System;
+using System.Runtime.InteropServices;
 
 namespace Voron.Data.PostingLists
 {
@@ -19,5 +20,13 @@ namespace Voron.Data.PostingLists
 
         [FieldOffset(14)]
         public ushort SizeUsed;
+
+        public int CollapsedLevels
+        {
+            get => PageCollapsedLevels.Get(PostingListFlags);
+            set => PostingListFlags = PageCollapsedLevels.Set(PostingListFlags, value);
+        }
+
+        public ExtendedPageType PageType => PageCollapsedLevels.PageType(PostingListFlags);
     }
 }
