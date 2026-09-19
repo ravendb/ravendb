@@ -262,7 +262,9 @@ public readonly unsafe struct PostingListLeafPage
         var scope = allocator.Allocate(Constants.Storage.PageSize, out ByteString tmp);
         var tmpPtr = tmp.Ptr;
         var newHeader = (PostingListLeafPageHeader*)tmpPtr;
-        newHeader->PageNumber = dest->PageNumber;
+        // the whole temp page is copied over dest at the end, and the allocator does not hand out zeroed
+        // memory, so we have to start from the real header and not just the fields that InitLeaf sets
+        Memory.Copy(tmpPtr, dest, PageHeader.SizeOf);
         InitLeaf(newHeader);
 
         // using +256 here to ensure that we always have at least 256 available in the buffer
