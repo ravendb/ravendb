@@ -497,6 +497,55 @@ namespace Voron.Data.Fixed
             return newPage;
         }
 
+        private bool ShouldPromotePage(FixedSizeTreePage<TVal> page, FixedSizeTreePage<TVal> parentPage)
+        {
+            if (page.CollapsedLevels > 0)
+                return true;
+
+            // Before RavenDB-27533 - we didn't have CollapsedLevels, so we need heuristics
+
+            if (page.IsBranch)
+                return false; // we cannot tell from a branch without the counter
+
+            // heuristics - we probe the left & right siblings, a leaf splitting next to a branch sibling
+            // would add leaf pointers next to branch pointers
+            int count = parentPage.NumberOfEntries;
+            int position = parentPage.LastSearchPosition;
+            return IsBranchPage((position - 1 + count) % count) || IsBranchPage((position + 1) % count);
+
+            bool IsBranchPage(int pos)
+            {
+                var sibling = GetReadOnlyPage(parentPage.GetEntry(pos)->PageNumber);
+                return sibling.PageNumber != page.PageNumber && sibling.IsBranch;
+            }
+        }
+
+        private FixedSizeTreePage<TVal> WrapPageInBranch(FixedSizeTreePage<TVal> page, FixedSizeTreePage<TVal> parentPage)
+        {
+            var wrapper = NewPage(FixedSizeTreePageFlags.Branch, page.PageNumber);
+            wrapper.NumberOfEntries = 1;
+            wrapper.StartPosition = (ushort)Constants.FixedSizeTree.PageHeaderSize;
+            wrapper.ValueSize = _valSize;
+            wrapper.LastSearchPosition = 0;
+
+            // the wrapper takes the place of the page it wraps, covering the same range
+            var parentEntry = parentPage.GetEntry(parentPage.LastSearchPosition);
+            var wrapperEntry = wrapper.GetEntry(0);
+            wrapperEntry->SetKey(parentEntry->GetKey<TVal>());
+            wrapperEntry->PageNumber = page.PageNumber;
+
+            parentEntry->PageNumber = wrapper.PageNumber;
+            wrapper.CollapsedLevels = page.CollapsedLevels - 1;
+            page.CollapsedLevels = 0;
+
+            using (ModifyLargeHeader(out var largePtr))
+            {
+                largePtr->PageCount++;
+            }
+
+            return wrapper;
+        }
+
         private FixedSizeTreePage<TVal> PageSplit(FixedSizeTreePage<TVal>page, TVal key)
         {
             FixedSizeTreePage<TVal> parentPage = _cursor.Count > 0 ? _cursor.Pop() : null;
@@ -520,6 +569,10 @@ namespace Voron.Data.Fixed
             }
 
             parentPage = ModifyPage(parentPage);
+
+            if (ShouldPromotePage(page, parentPage))
+                parentPage = WrapPageInBranch(page, parentPage);
+
             if (page.IsLeaf) // simple case of splitting a leaf pageNum
             {
                 var newPage = NewPage(FixedSizeTreePageFlags.Leaf, page.PageNumber);
@@ -1252,6 +1305,9 @@ namespace Voron.Data.Fixed
                 // and its child
                 entry->PageNumber = page.GetEntry(0)->PageNumber;
 
+                var promotedChild = ModifyPage(GetReadOnlyPage(entry->PageNumber));
+                promotedChild.CollapsedLevels++; // next split of that page should wrap it in a branch
+
                 // then delete the page
                 FreePage(page.PageNumber);
                 
@@ -1275,7 +1331,7 @@ namespace Voron.Data.Fixed
                 // from the one on the right
                 var siblingNum = parentPage.GetEntry(1)->PageNumber;
                 var siblingPage = GetReadOnlyPage(siblingNum);
-                if (siblingPage.FixedTreeFlags != page.FixedTreeFlags)
+                if (siblingPage.PageType != page.PageType)
                     return null; // we cannot steal from a leaf sibling if we are branch, or vice versa
 
                 siblingPage = ModifyPage(siblingPage);
@@ -1343,7 +1399,7 @@ namespace Voron.Data.Fixed
                 var siblingNum = parentPage.GetEntry(parentPage.LastSearchPosition - 1)->PageNumber;
                 var siblingPage = GetReadOnlyPage(siblingNum);
                 siblingPage = ModifyPage(siblingPage);
-                if (siblingPage.FixedTreeFlags != page.FixedTreeFlags)
+                if (siblingPage.PageType != page.PageType)
                     return null; // we cannot steal from a leaf sibling if we are branch, or vice versa
 
                 if (siblingPage.NumberOfEntries <= minNumberOfEntriesBeforeRebalance * 2)
@@ -1780,7 +1836,7 @@ namespace Voron.Data.Fixed
 
                 var firstEntry = page.GetEntry(page.LastSearchPosition);
                 var firstPage = GetPageHeader(firstEntry->PageNumber);
-                if (firstPage.TreeFlags == FixedSizeTreePageFlags.Leaf)
+                if (firstPage.PageType == FixedSizeTreePageFlags.Leaf)
                 {
                     // assuming that all entries are leafs
                     // apply this estimate to all previous leafs
