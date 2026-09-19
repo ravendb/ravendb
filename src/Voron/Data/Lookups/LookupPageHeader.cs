@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 
 namespace Voron.Data.Lookups
 {
@@ -43,5 +44,13 @@ namespace Voron.Data.Lookups
         public bool IsBranch => (((byte)PageFlags) & (byte)LookupPageFlags.Branch) != 0;
 
         public bool IsLeaf => (((byte)PageFlags) & (byte)LookupPageFlags.Leaf) != 0;
+
+        public LookupPageFlags PageType => PageCollapsedLevels.PageType(PageFlags);
+
+        public int CollapsedLevels
+        {
+            get => PageCollapsedLevels.Get(PageFlags);
+            set => PageFlags = PageCollapsedLevels.Set(PageFlags, value);
+        }
     }
 }

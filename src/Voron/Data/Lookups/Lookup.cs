@@ -556,7 +556,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             Page = _llt.ModifyPage(siblingPage)
         };
 
-        if (sourceState.Header->PageFlags != destinationState.Header->PageFlags)
+        if (sourceState.Header->IsBranch != destinationState.Header->IsBranch)
             return false; // cannot merge leaf & branch pages
 
         int combinedFreeSpace = sourceState.Header->FreeSpace + destinationState.Header->FreeSpace;
@@ -580,6 +580,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         // now copy from the temp buffer to the actual page
         Debug.Assert(_llt.IsDirty(destinationState.Page.PageNumber));
         Memory.Copy(destinationState.Page.Pointer, temp.Ptr, Constants.Storage.PageSize);
+        destinationState.Header->CollapsedLevels = Math.Max(destinationState.Header->CollapsedLevels, sourceState.Header->CollapsedLevels);
         // We update the entries offsets on the source page, now that we have moved the entries.
         parent.LastSearchPosition++;
         FreePageFor(ref destinationState, ref sourceState, ref parent);
@@ -730,6 +731,11 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             overridenPage.PageNumber = parentPageNumber; // we overwrote it...
             parent.Page = overridenPage;
             
+            if (_internalCursor._pos > 1) // not the root, so we record the collapse
+            {
+                // subtree is now one level shallower than its siblings, next split here should grow down
+                parent.Header->CollapsedLevels++;
+            }
             
             _llt.FreePage(stateToDelete.Page.PageNumber);
             _llt.FreePage(stateToKeep.Page.PageNumber);
@@ -942,7 +948,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     {
         _treeStructureVersion++;
         
-        if (_internalCursor._pos == 0 || ShouldPromoteLeaf())
+        if (_internalCursor._pos == 0 || ShouldPromotePage())
             WrapPageInBranch(ref currentCauseForSplit, valueForSplit);
 
         // We create the new dictionary 
@@ -950,7 +956,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
         var page = _llt.AllocatePage(1);
         var header = (LookupPageHeader*)page.Pointer;
-        header->PageFlags = state.Header->PageFlags;
+        header->PageFlags = state.Header->PageType;
         header->Lower = PageHeader.SizeOf;
         header->Upper = Constants.Storage.PageSize;
         header->FreeSpace = Constants.Storage.PageSize - PageHeader.SizeOf;
@@ -973,7 +979,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
         AddToPage(ref splitKey, page.PageNumber);
         
-        if (_internalCursor._stk[_internalCursor._pos].Header->PageFlags == LookupPageFlags.Leaf)
+        if (_internalCursor._stk[_internalCursor._pos].Header->IsLeaf)
         {
             // we change the structure of the tree, so we can't reuse the state
             // but we can only do that as the _last_ part of the operation, otherwise
@@ -1162,15 +1168,33 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         }
     }
 
-    private bool ShouldPromoteLeaf()
+    private bool ShouldPromotePage()
     {
-        if (_internalCursor._stk[_internalCursor._pos].Header->IsBranch)
-            return false;
+        Debug.Assert(_internalCursor._pos > 0);
 
-        // a leaf splitting next to a branch sibling would add leaf pointers next to branch pointers
+        ref var state = ref _internalCursor._stk[_internalCursor._pos];
+        if (state.Header->CollapsedLevels > 0)
+            return true;
+
+        // Before RavenDB-27533 - we didn't have CollapsedLevels, so we need heuristics
+
+        if (state.Header->IsBranch)
+            return false; // we cannot tell from a branch without the flag
+
         ref var parent = ref _internalCursor._stk[_internalCursor._pos - 1];
-        var sibling = GetValue(ref parent, parent.LastSearchPosition == 0 ? 1 : 0);
-        return ((LookupPageHeader*)_llt.GetPage(sibling).Pointer)->IsBranch;
+        int position = parent.LastSearchPosition;
+
+        // heuristics - we probe the left & right siblings
+        int count = parent.Header->NumberOfEntries;
+        int prevPosition = (position - 1 + count) % count;
+        int nextPosition = (position + 1) % count;
+        return IsBranch(ref parent, prevPosition) || IsBranch(ref parent, nextPosition);
+
+        bool IsBranch(ref CursorState p, int pos)
+        {
+            var pageNumber = GetValue(ref p, pos);
+            return ((LookupPageHeader*)_llt.GetPage(pageNumber).Pointer)->IsBranch;
+        }
     }
 
     private void WrapPageInBranch(ref TLookupKey k, long v)
@@ -1187,9 +1211,14 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         Memory.Copy(page.Pointer, state.Page.Pointer, Constants.Storage.PageSize);
         page.PageNumber = cpy;
 
+        var copyHeader = (LookupPageHeader*)page.Pointer;
+        int collapsedLevels = copyHeader->CollapsedLevels; // the collapsed level belongs on the parent after wrapping
+        copyHeader->CollapsedLevels = 0;
+
         Debug.Assert(_llt.IsDirty(state.Page.PageNumber));
         Memory.Set(state.Page.DataPointer, 0, Constants.Storage.PageSize - PageHeader.SizeOf);
         state.Header->PageFlags = LookupPageFlags.Branch;
+        state.Header->CollapsedLevels = collapsedLevels - 1; // restore one level
         state.Header->Lower = PageHeader.SizeOf + sizeof(ushort);
         state.Header->FreeSpace = Constants.Storage.PageSize - (PageHeader.SizeOf);
         state.Header->KeysBase = k.ToLong();
@@ -1704,7 +1733,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     public bool TryGetNextValue(ref TLookupKey key, out long value)
     {
         ref var state = ref _internalCursor._stk[_internalCursor._pos];
-        if (state.Header->PageFlags == LookupPageFlags.Branch)
+        if (state.Header->IsBranch)
         {
             FindPageFor(ref _internalCursor, ref state, ref key);
             state = ref _internalCursor._stk[_internalCursor._pos];
@@ -1718,7 +1747,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             // to be at the key location *or before it*, so we can now start scanning *up*
         }
 
-        Debug.Assert(state.Header->PageFlags == LookupPageFlags.Leaf, $"Got {state.Header->PageFlags} flag instead of {nameof(LookupPageFlags.Leaf)}");
+        Debug.Assert(state.Header->IsLeaf, $"Got {state.Header->PageFlags} flag instead of {nameof(LookupPageFlags.Leaf)}");
 
         SearchInCurrentPage(ref key, ref state);
         if (state.LastSearchPosition >= 0) // found it, yeah!
