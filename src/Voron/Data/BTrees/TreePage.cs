@@ -243,6 +243,20 @@ namespace Voron.Data.BTrees
             get { return (Header->TreeFlags & TreePageFlags.Branch) == TreePageFlags.Branch; }
         }
 
+        public TreePageFlags PageType
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Header->PageType;
+        }
+
+        public int CollapsedLevels
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Header->CollapsedLevels;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set => Header->CollapsedLevels = value;
+        }
+
         public bool IsOverflow
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
