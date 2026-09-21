@@ -1,9 +1,13 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using BenchmarkDotNet.Attributes;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit.Abstractions;
 
@@ -13,42 +17,32 @@ namespace RangeQueryShapes.Benchmark;
 /// Compares the three ways a lower and an upper bound on one field reach the server: nested the way the .NET LINQ
 /// provider emits it, flat, and as an explicit 'between'. The server folds any 'and' chain holding such a pair into a
 /// single between query, so all three are expected to run the same; a gap between them means the fold stopped working.
+/// One database is seeded once for the whole run and indexed by both engines, each through its own index.
 /// </summary>
 public class RangeQueryShapesBench
 {
-    // ConsoleTestOutputHelper marks the RavenTestBase instance as running outside of xUnit
-    private static readonly ConsoleTestOutputHelper TestOutputHelper = new ConsoleTestOutputHelper();
-
     private Harness _harness;
 
     [Params(RavenSearchEngineMode.Corax, RavenSearchEngineMode.Lucene)]
     public RavenSearchEngineMode Engine { get; set; }
 
-    [Params(1_000_000)]
+    [Params(100_000_000)]
     public int Documents { get; set; }
 
     [GlobalSetup]
     public void Setup()
     {
-        _harness = new Harness(TestOutputHelper);
-        _harness.Initialize(Engine, Documents);
+        _harness = Harness.Shared(Documents);
     }
 
     [Benchmark(Baseline = true)]
-    public int FlatPair() => _harness.Query(Harness.FlatWhere);
+    public int FlatPair() => _harness.Query(Engine, Harness.FlatWhere);
 
     [Benchmark]
-    public int NestedPair() => _harness.Query(Harness.NestedWhere);
+    public int NestedPair() => _harness.Query(Engine, Harness.NestedWhere);
 
     [Benchmark]
-    public int ExplicitBetween() => _harness.Query(Harness.BetweenWhere);
-
-    [GlobalCleanup]
-    public void Cleanup()
-    {
-        _harness?.Dispose();
-        _harness = null;
-    }
+    public int ExplicitBetween() => _harness.Query(Engine, Harness.BetweenWhere);
 }
 
 public class Harness : RavenTestBase
@@ -66,21 +60,61 @@ public class Harness : RavenTestBase
     private static readonly string[] CustomerIds = Enumerable.Range(0, 5).Select(i => $"customers/{i}").ToArray();
     private static readonly string[] EntityTypes = { "Deposit" };
 
-    private IDocumentStore _store;
-    private int _expectedCount;
+    private const int ProgressEvery = 5_000_000;
+    private static readonly TimeSpan IndexingTimeout = TimeSpan.FromHours(12);
 
-    public Harness(ITestOutputHelper output) : base(output)
+    // ConsoleTestOutputHelper marks the RavenTestBase instance as running outside of xUnit
+    private static readonly ConsoleTestOutputHelper TestOutputHelper = new ConsoleTestOutputHelper();
+    private static readonly object SharedLock = new object();
+    private static Harness _shared;
+
+    private IDocumentStore _store;
+
+    private Harness(ITestOutputHelper output) : base(output)
     {
     }
 
-    public void Initialize(RavenSearchEngineMode engine, int documents)
+    // BenchmarkDotNet runs GlobalSetup once per benchmark method and parameter set; seeding is shared across all of them
+    public static Harness Shared(int documents)
     {
-        _store = GetDocumentStore(Options.ForSearchEngine(engine));
+        lock (SharedLock)
+        {
+            if (_shared == null)
+            {
+                var harness = new Harness(TestOutputHelper);
+                harness.Initialize(documents);
+                _shared = harness;
+            }
 
-        new CoinIndex().Execute(_store);
+            return _shared;
+        }
+    }
+
+    public static void DisposeShared()
+    {
+        lock (SharedLock)
+        {
+            _shared?.Dispose();
+            _shared = null;
+        }
+    }
+
+    private void Initialize(int documents)
+    {
+        var total = Stopwatch.StartNew();
+
+        // persist to disk, a data set of this size does not fit the in-memory pager
+        var options = new Options { RunInMemory = false };
+        _store = GetDocumentStore(options);
+
+        new CoinIndex(RavenSearchEngineMode.Corax).Execute(_store);
+        new CoinIndex(RavenSearchEngineMode.Lucene).Execute(_store);
+
+        Console.WriteLine($"[SETUP] seeding {documents:N0} documents into '{_store.Database}' at {DateTime.Now:HH:mm:ss}");
 
         // one document per minute, so CreatedAt has as many distinct terms as there are documents
         var entityTypes = new[] { "Deposit", "Withdrawal", "Transfer" };
+        var seeding = Stopwatch.StartNew();
         using (var bulk = _store.BulkInsert())
         {
             for (var i = 0; i < documents; i++)
@@ -93,31 +127,60 @@ public class Harness : RavenTestBase
                     CreatedAt = Base.AddMinutes(i),
                     Amount = i % 100
                 });
+
+                if ((i + 1) % ProgressEvery == 0)
+                    Console.WriteLine($"[SETUP] stored {i + 1:N0} documents, {seeding.Elapsed:hh\\:mm\\:ss} elapsed, {(i + 1) / seeding.Elapsed.TotalSeconds:N0} docs/s");
             }
         }
 
-        Indexes.WaitForIndexing(_store, timeout: TimeSpan.FromMinutes(10));
+        Console.WriteLine($"[SETUP] seeding done in {seeding.Elapsed:hh\\:mm\\:ss}, waiting for both indexes");
 
-        _expectedCount = Query(FlatWhere);
-        if (_expectedCount == 0)
-            throw new InvalidOperationException("The benchmark query matched nothing, the data or the window is wrong.");
+        WaitForIndexesWithProgress();
 
-        foreach (var where in new[] { NestedWhere, BetweenWhere })
+        foreach (var engine in new[] { RavenSearchEngineMode.Corax, RavenSearchEngineMode.Lucene })
         {
-            var count = Query(where);
-            if (count != _expectedCount)
-                throw new InvalidOperationException($"'{where}' returned {count} documents, expected {_expectedCount}.");
+            var expected = Query(engine, FlatWhere);
+            if (expected == 0)
+                throw new InvalidOperationException($"{engine}: the benchmark query matched nothing, the data or the window is wrong.");
+
+            foreach (var where in new[] { NestedWhere, BetweenWhere })
+            {
+                var count = Query(engine, where);
+                if (count != expected)
+                    throw new InvalidOperationException($"{engine}: '{where}' returned {count} documents, expected {expected}.");
+            }
+
+            Console.WriteLine($"[SETUP] engine={engine} documents={documents:N0} matching={expected}");
         }
 
-        Console.WriteLine($"[SETUP] engine={engine} documents={documents} matching={_expectedCount}");
+        Console.WriteLine($"[SETUP] ready in {total.Elapsed:hh\\:mm\\:ss}");
     }
 
-    public int Query(string where)
+    private void WaitForIndexesWithProgress()
+    {
+        var indexing = Stopwatch.StartNew();
+        while (true)
+        {
+            var stats = _store.Maintenance.Send(new GetIndexesStatisticsOperation());
+            var report = string.Join(", ", stats.Select(s => $"{s.Name}: {s.EntriesCount:N0} entries{(s.IsStale ? ", stale" : string.Empty)}"));
+            Console.WriteLine($"[SETUP] indexing {indexing.Elapsed:hh\\:mm\\:ss}: {report}");
+
+            if (stats.All(s => s.IsStale == false))
+                return;
+
+            if (indexing.Elapsed > IndexingTimeout)
+                throw new TimeoutException($"Indexing did not finish within {IndexingTimeout}: {report}");
+
+            Thread.Sleep(TimeSpan.FromSeconds(60));
+        }
+    }
+
+    public int Query(RavenSearchEngineMode engine, string where)
     {
         using (var session = _store.OpenSession())
         {
             return session.Advanced
-                .RawQuery<Coin>($"from index 'CoinIndex' where {where}")
+                .RawQuery<Coin>($"from index '{CoinIndex.NameFor(engine)}' where {where}")
                 .AddParameter("p0", CustomerIds)
                 .AddParameter("p1", From)
                 .AddParameter("p2", To)
@@ -144,10 +207,19 @@ public class Harness : RavenTestBase
         public decimal Amount { get; set; }
     }
 
+    // the same map, once per engine, so a single seeded database serves both
     private class CoinIndex : AbstractIndexCreationTask<Coin>
     {
-        public CoinIndex()
+        private readonly RavenSearchEngineMode _engine;
+
+        public static string NameFor(RavenSearchEngineMode engine) => $"CoinIndex/{engine}";
+
+        public override string IndexName => NameFor(_engine);
+
+        public CoinIndex(RavenSearchEngineMode engine)
         {
+            _engine = engine;
+
             Map = coins => from coin in coins
                            select new
                            {
@@ -156,6 +228,8 @@ public class Harness : RavenTestBase
                                coin.CreatedAt,
                                coin.Amount
                            };
+
+            Configuration[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = engine.ToString();
         }
     }
 }
