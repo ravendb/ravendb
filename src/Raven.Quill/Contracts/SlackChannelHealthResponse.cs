@@ -8,7 +8,9 @@ public sealed record SlackChannelHealthResponse(
     bool Enabled,
     bool? TokenValid,
     string? TokenError,
+    bool SocketConnected,
+    DateTime? LastConnectedAt,
+    string? LastSocketError,
     DateTime? LastInboundAt,
-    DateTime? LastSignatureFailureAt,
     DateTime? LastSendErrorAt,
     string? LastSendError);

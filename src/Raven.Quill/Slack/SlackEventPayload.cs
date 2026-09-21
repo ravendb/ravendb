@@ -1,14 +1,34 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Raven.Quill.Slack;
+
+internal sealed class SlackSocketFrame
+{
+    internal const string HelloType = "hello";
+    internal const string DisconnectType = "disconnect";
+    internal const string EventsApiType = "events_api";
+
+    [JsonPropertyName("type")]
+    public string? Type { get; set; }
+
+    [JsonPropertyName("envelope_id")]
+    public string? EnvelopeId { get; set; }
+
+    [JsonPropertyName("reason")]
+    public string? Reason { get; set; }
+
+    [JsonPropertyName("retry_attempt")]
+    public int? RetryAttempt { get; set; }
+
+    [JsonPropertyName("payload")]
+    public JsonElement? Payload { get; set; }
+}
 
 internal sealed class SlackEventPayload
 {
     [JsonPropertyName("type")]
     public string? Type { get; set; }
-
-    [JsonPropertyName("challenge")]
-    public string? Challenge { get; set; }
 
     [JsonPropertyName("team_id")]
     public string? TeamId { get; set; }

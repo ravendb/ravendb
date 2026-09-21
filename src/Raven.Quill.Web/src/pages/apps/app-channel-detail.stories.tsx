@@ -71,14 +71,12 @@ export const SlackTokenRejected: Story = {
         msw: {
             handlers: {
                 slack: [
-                    slackMocks.webhookInfo(),
                     slackMocks.health([
                         {
                             ...sampleSlackHealth[0],
                             tokenValid: false,
                             tokenError: "slack rejected the bot token",
                             lastInboundAt: null,
-                            lastSignatureFailureAt: new Date().toISOString(),
                         },
                     ]),
                 ],
@@ -96,12 +94,34 @@ export const SlackSendError: Story = {
         msw: {
             handlers: {
                 slack: [
-                    slackMocks.webhookInfo(),
                     slackMocks.health([
                         {
                             ...sampleSlackHealth[0],
                             lastSendErrorAt: new Date().toISOString(),
                             lastSendError: "channel_not_found",
+                        },
+                    ]),
+                ],
+            },
+        },
+    },
+};
+
+export const SlackSocketDisconnected: Story = {
+    parameters: {
+        router: {
+            initialPath: `/apps/demo/channels/${SAMPLE_SLACK_CHANNEL_ID}`,
+            path: "/apps/:slug/channels/:channelId",
+        },
+        msw: {
+            handlers: {
+                slack: [
+                    slackMocks.health([
+                        {
+                            ...sampleSlackHealth[0],
+                            socketConnected: false,
+                            lastSocketError:
+                                "slack rejected the app-level token; regenerate it on the app's Basic Information page and rotate it on this channel",
                         },
                     ]),
                 ],

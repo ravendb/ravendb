@@ -13,6 +13,11 @@ export const SLACK_BOT_TOKEN_FORMAT: TokenFormat = {
     message: "The bot token starts with xoxb- (not a user or app-level token)",
 };
 
+export const SLACK_APP_TOKEN_FORMAT: TokenFormat = {
+    isValid: (token) => token.startsWith("xapp-"),
+    message: "The app-level token starts with xapp- (Basic Information > App-Level Tokens)",
+};
+
 export const DISCORD_BOT_TOKEN_FORMAT: TokenFormat = {
     isValid: (token) => /^\S+$/.test(token),
     message: "A bot token contains no spaces",

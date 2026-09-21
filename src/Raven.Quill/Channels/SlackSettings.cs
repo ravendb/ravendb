@@ -10,9 +10,7 @@ internal sealed class SlackSettings
 
     public string BotToken { get; set; } = "";
 
-    public string SigningSecret { get; set; } = "";
-
-    public string WebhookToken { get; set; } = "";
+    public string AppToken { get; set; } = "";
 
     public DateTime ConnectedAt { get; set; }
 

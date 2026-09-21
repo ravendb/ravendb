@@ -40,6 +40,20 @@ internal sealed class SlackApiClient(HttpClient http) : ISlackClient
         }
     }
 
+    public async Task<string> OpenSocketAsync(string appToken, CancellationToken ct)
+    {
+        var request = NewRequest("apps.connections.open", appToken);
+        var payload = await SendAsync<ConnectionsOpenResponse>(request, "apps.connections.open", ct);
+
+        if (string.IsNullOrEmpty(payload.Url) ||
+            Uri.TryCreate(payload.Url, UriKind.Absolute, out var url) == false ||
+            url.Scheme is not ("wss" or "ws"))
+            throw new SlackApiException(
+                "slack returned an apps.connections.open payload without a websocket url", slackResponded: true);
+
+        return payload.Url;
+    }
+
     public async Task<string> PostMessageAsync(
         string botToken, string channel, string text, CancellationToken ct)
     {
@@ -171,6 +185,12 @@ internal sealed class SlackApiClient(HttpClient http) : ISlackClient
             [JsonPropertyName("email")]
             public string? Email { get; set; }
         }
+    }
+
+    private sealed class ConnectionsOpenResponse : ApiResponse
+    {
+        [JsonPropertyName("url")]
+        public string? Url { get; set; }
     }
 
     private sealed class AuthTestResponse : ApiResponse
