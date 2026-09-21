@@ -414,15 +414,17 @@ namespace Raven.Server.Documents
                 {
                     return type switch
                     {
+                        // GetNumberOfTombstonesToProcess counts the tombstones with etag > afterEtag,
+                        // so the last processed etag is passed as is
                         ITombstoneAware.TombstoneType.Documents => collection.IsNullOrEmpty()
-                            ? documentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(context, tombstoneInfo.Etag + 1, stopwatch, exact)
-                            : documentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(context, collection, tombstoneInfo.Etag + 1, stopwatch, exact),
+                            ? documentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(context, tombstoneInfo.Etag, stopwatch, exact)
+                            : documentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(context, collection, tombstoneInfo.Etag, stopwatch, exact),
                         ITombstoneAware.TombstoneType.Counters => collection.IsNullOrEmpty()
-                            ? documentDatabase.DocumentsStorage.CountersStorage.GetNumberOfTombstonesToProcess(context, tombstoneInfo.Etag + 1, stopwatch, exact)
-                            : documentDatabase.DocumentsStorage.CountersStorage.GetNumberOfTombstonesToProcess(context, collection, tombstoneInfo.Etag + 1, stopwatch, exact),
+                            ? documentDatabase.DocumentsStorage.CountersStorage.GetNumberOfTombstonesToProcess(context, tombstoneInfo.Etag, stopwatch, exact)
+                            : documentDatabase.DocumentsStorage.CountersStorage.GetNumberOfTombstonesToProcess(context, collection, tombstoneInfo.Etag, stopwatch, exact),
                         ITombstoneAware.TombstoneType.TimeSeries => collection.IsNullOrEmpty()
-                            ? documentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTombstonesToProcess(context, tombstoneInfo.Etag + 1, stopwatch, exact)
-                            : documentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTombstonesToProcess(context, collection, tombstoneInfo.Etag + 1, stopwatch, exact), 
+                            ? documentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTombstonesToProcess(context, tombstoneInfo.Etag, stopwatch, exact)
+                            : documentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTombstonesToProcess(context, collection, tombstoneInfo.Etag, stopwatch, exact),
                         _ => throw new ArgumentOutOfRangeException(nameof(type), $"Unsupported tombstone type: {type}"),
                     };
                 }
