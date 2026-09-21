@@ -3,6 +3,7 @@ import type {
     AgentSummaryResponse,
     AiAgentConfiguration,
     ProvisionAgentResponse,
+    TestQueryResponse,
     WebhookBinding,
 } from "@/api/generated/server-api";
 import { apiHttp } from "./api-http";
@@ -15,6 +16,26 @@ export const agentsMocks = {
     edit: (result: ProvisionAgentResponse = { agentId: "agents/sales" }) =>
         apiHttp.post("/api/apps/{slug}/agent", ({ response }) => response(200).json(result)),
     delete: () => apiHttp.delete("/api/apps/{slug}/agent/{agentId}", ({ response }) => response(204).empty()),
+    testQuery: (result: TestQueryResponse = sampleTestQueryResponse) =>
+        apiHttp.post("/api/apps/{slug}/agent/test-query", ({ response }) => response(200).json(result)),
+};
+
+export const sampleTestQueryResponse: TestQueryResponse = {
+    results: [
+        {
+            Name: "Chai",
+            UnitPrice: 18,
+            "@metadata": { "@collection": "Products", "@id": "products/1-A" },
+        },
+        {
+            Name: "Chang",
+            UnitPrice: 19,
+            "@metadata": { "@collection": "Products", "@id": "products/2-A" },
+        },
+    ],
+    totalResults: 2,
+    isTruncated: false,
+    durationMs: 12,
 };
 
 export const sampleAgents: AgentSummaryResponse[] = [

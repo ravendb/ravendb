@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
@@ -188,6 +188,9 @@ public sealed class QuillHost : IAsyncDisposable
 
     public Task<ProvisionAgentResponse> EditAgentAsync(string slug, EditAgentRequest body) =>
         QuillHttp.PostAsync<ProvisionAgentResponse>(Client, QuillRoutes.EditAgent(slug), body);
+
+    public Task<TestQueryResponse> TestQueryAsync(string slug, TestQueryRequest body) =>
+        QuillHttp.PostAsync<TestQueryResponse>(Client, QuillRoutes.TestQuery(slug), body);
 
     public Task DeleteAgentAsync(string slug, string agentId) =>
         QuillHttp.DeleteAsync(Client, QuillRoutes.Agent(slug, agentId));
