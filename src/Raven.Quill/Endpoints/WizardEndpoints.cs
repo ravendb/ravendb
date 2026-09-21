@@ -19,7 +19,9 @@ namespace Raven.Quill.Endpoints;
 public static class WizardEndpoints
 {
     // the source connection string's name on the app DB once provisioned (used when the map didn't set one)
-    private const string SourceConnectionStringName = "wizard-source";
+    private const string SourceConnectionStringName = "quill-cdc-connection";
+    private const string DefaultCdcTaskName = "quill-cdc";
+    private const string CdcDryRunTaskName = "quill-cdc-dry-run";
 
     private const string DefaultIntentPrompt =
         "Propose a sensible RavenDB CDC document model from the discovered relational schema: " +
@@ -265,7 +267,7 @@ public static class WizardEndpoints
 
         var configuration = new CdcSinkConfiguration
         {
-            Name = "wizard-cdc-dry-run",
+            Name = CdcDryRunTaskName,
             ConnectionStringName = SourceConnectionStringName,
         };
 
@@ -357,7 +359,7 @@ public static class WizardEndpoints
         var cdcConfig = body.ToClientConfiguration();
 
         if (string.IsNullOrWhiteSpace(cdcConfig.Name))
-            cdcConfig.Name = "wizard-cdc";
+            cdcConfig.Name = DefaultCdcTaskName;
         if (string.IsNullOrWhiteSpace(cdcConfig.ConnectionStringName))
             cdcConfig.ConnectionStringName = SourceConnectionStringName;
 
