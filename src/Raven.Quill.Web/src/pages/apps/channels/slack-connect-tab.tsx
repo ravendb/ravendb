@@ -26,7 +26,7 @@ export function SlackConnectTab({ slug, channel }: { slug: string; channel: Chan
                 isRaised
             >
                 <div className="mt-4">
-                    <SlackSetupSteps slug={slug} channelId={channel.channelId} />
+                    <SlackSetupSteps />
                 </div>
             </SectionCard>
         </div>
