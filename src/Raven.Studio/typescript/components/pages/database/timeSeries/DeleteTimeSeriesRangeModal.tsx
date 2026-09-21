@@ -9,7 +9,7 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import RichAlert from "components/common/RichAlert";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import TimeSeriesRangePicker, { TimeSeriesRangeState } from "./TimeSeriesRangePicker";
-import { FilterTimezone, wallOf, zoneLabel, FULL_FORMAT } from "./timeSeriesRange.utils";
+import { FilterTimezone, wallOf, zoneLabel, FULL_FORMAT } from "./timeSeriesRangeUtils";
 
 const COUNT_DEBOUNCE_MS = 300;
 

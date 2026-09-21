@@ -7,7 +7,7 @@ export function useClickOutside(ref: RefObject<HTMLElement>, enabled: boolean, o
             return;
         }
         const handle = (e: MouseEvent) => {
-            if (ref.current && !ref.current.contains(e.target as Node)) {
+            if (!ref.current?.contains(e.target as Node)) {
                 onOutside();
             }
         };

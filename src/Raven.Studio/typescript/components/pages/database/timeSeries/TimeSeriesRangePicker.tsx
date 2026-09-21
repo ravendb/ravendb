@@ -9,10 +9,10 @@ import { MultiRadioToggle } from "components/common/toggles/MultiRadioToggle";
 import { InputItem } from "components/models/common";
 import TimePicker, { TIME_FORMAT, TIME_PARSE_FORMATS } from "./TimePicker";
 import RangeDatePickerHeader from "./RangeDatePickerHeader";
-import { FilterTimezone, wallOf, zoneLabel, FULL_FORMAT } from "./timeSeriesRange.utils";
+import { FilterTimezone, wallOf, zoneLabel, FULL_FORMAT } from "./timeSeriesRangeUtils";
 import "./TimeSeriesRangePicker.scss";
 
-export type { FilterTimezone } from "./timeSeriesRange.utils";
+export type { FilterTimezone } from "./timeSeriesRangeUtils";
 
 type FilterMode = "between" | "before" | "after";
 
@@ -271,11 +271,13 @@ export default function TimeSeriesRangePicker({
         setTouched((prev) => ({ ...prev, end: true }));
     };
 
-    const usesStart = mode === "between" || mode === "after";
-    const usesEnd = mode === "between" || mode === "before";
+    const isBetween = mode === "between";
+    const isAfter = mode === "after";
+    const usesStart = isBetween || isAfter;
+    const usesEnd = isBetween || mode === "before";
 
     const rangeInvalid =
-        mode === "between" && !!startBuild.value && !!endBuild.value && endBuild.value.isBefore(startBuild.value);
+        isBetween && !!startBuild.value && !!endBuild.value && endBuild.value.isBefore(startBuild.value);
 
     const shownInvalid = (usesStart && startBuild.invalid) || (usesEnd && endBuild.invalid);
     // A slot the current mode uses must actually carry a date; a cleared field (null) would
@@ -341,7 +343,7 @@ export default function TimeSeriesRangePicker({
                     className="ts-range-picker__mode"
                     inputItems={modeItems}
                     selectedItem={mode}
-                    setSelectedItem={(x) => changeMode(x)}
+                    setSelectedItem={changeMode}
                 />
 
                 {/* Both slots are always rendered; the unused one is hidden but kept in the layout
@@ -375,28 +377,33 @@ export default function TimeSeriesRangePicker({
                     <div className="text-danger small">End date must be greater than (or equal to) start date.</div>
                 )}
 
-                {(() => {
-                    const summary = rangeSummary(mode, startBuild.value, endBuild.value, tz);
-                    if (!summary) {
-                        return null;
-                    }
-                    return (
-                        <div className="ts-range-picker__summary-slot">
-                            <div className="ts-range-picker__summary hstack gap-2 align-items-center">
-                                <Icon icon="info" color="info" margin="m-0" />
-                                <span>
-                                    {summary.map((seg, i) =>
-                                        seg.strong ? (
-                                            <strong key={i}>{seg.text}</strong>
-                                        ) : (
-                                            <span key={i}>{seg.text}</span>
-                                        )
-                                    )}
-                                </span>
-                            </div>
-                        </div>
-                    );
-                })()}
+                <RangeSummary mode={mode} startValue={startBuild.value} endValue={endBuild.value} timezone={tz} />
+            </div>
+        </div>
+    );
+}
+
+interface RangeSummaryProps {
+    mode: FilterMode;
+    startValue: moment.Moment | null;
+    endValue: moment.Moment | null;
+    timezone: FilterTimezone;
+}
+
+function RangeSummary({ mode, startValue, endValue, timezone }: RangeSummaryProps) {
+    const summary = rangeSummary(mode, startValue, endValue, timezone);
+    if (!summary) {
+        return null;
+    }
+    return (
+        <div className="ts-range-picker__summary-slot">
+            <div className="ts-range-picker__summary hstack gap-2 align-items-center">
+                <Icon icon="info" color="info" margin="m-0" />
+                <span>
+                    {summary.map((seg, i) =>
+                        seg.strong ? <strong key={i}>{seg.text}</strong> : <span key={i}>{seg.text}</span>
+                    )}
+                </span>
             </div>
         </div>
     );

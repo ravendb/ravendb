@@ -1,6 +1,6 @@
 import React from "react";
 import moment from "moment";
-import { FilterTimezone, wallOf, zoneLabel } from "./timeSeriesRange.utils";
+import { FilterTimezone, wallOf, zoneLabel } from "./timeSeriesRangeUtils";
 import "./TimeSeriesFilterBadge.scss";
 
 // Deliberately compact (no seconds/ms) for a glanceable chip, but same ISO family as the grid.
