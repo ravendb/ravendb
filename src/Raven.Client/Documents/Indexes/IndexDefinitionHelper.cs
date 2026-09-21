@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
@@ -57,19 +56,6 @@ namespace Raven.Client.Documents.Indexes
             var linqQuery = ExpressionStringBuilder.ExpressionToString(conventions, translateIdentityProperty, typeof(TQueryRoot), queryRootName, expression, isReduce);
 
             return FormatLinqQuery(expr, querySource, linqQuery);
-        }
-
-        internal static void AddMaps(ISet<string> maps, IEnumerable<Func<string>> generateMaps, string indexName)
-        {
-            try
-            {
-                foreach (var generateMap in generateMaps)
-                    maps.Add(generateMap());
-            }
-            catch (Exception e)
-            {
-                throw new IndexCompilationException("Failed to create index " + indexName, e);
-            }
         }
 
         private static string FormatLinqQuery(LambdaExpression expr, string querySource, string linqQuery)
