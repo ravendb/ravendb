@@ -413,6 +413,9 @@ public static class QueryPrimitives
     [SkipLocalsInit]
     public static void AndWithMatch(IQueryMatch match, ref RoaringBitmap bitmap, ref RoaringBitmap tempBitmap, CancellationToken token = default, bool preserveLeaf = false)
     {
+        if (match is Matches.AllEntriesMatch)
+            return;
+
         if (match is IBitmapQueryMatch bm)
         {
             ref RoaringBitmap srcData = ref bm.BitmapState;
