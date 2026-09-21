@@ -11,6 +11,7 @@ import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
 import useBoolean from "components/hooks/useBoolean";
 import genUtils from "common/generalUtils";
+import { ThemeColor } from "components/models/common";
 import moment from "moment";
 
 type SmugglerResult = Raven.Client.Documents.Smuggler.SmugglerResult;
@@ -195,12 +196,10 @@ function buildRows(progress: SmugglerResult): ImportResultRow[] {
     ].filter((row) => row.counts != null);
 }
 
-type RowStatusColor = "success" | "warning" | "danger";
-
 function getRowStatus(
     { counts, parent }: ImportResultRow,
     operationStatus: OperationStatus
-): { label: string; icon: JSX.Element; color?: RowStatusColor } {
+): { label: string; icon: JSX.Element; color?: ThemeColor } {
     if (counts.Skipped) {
         return { label: "Skipped", icon: <Icon icon="skip" color="warning" />, color: "warning" };
     }
