@@ -191,7 +191,7 @@ namespace Raven.Server.Documents
                 _documentDatabase.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.BlockingTombstones, nameof(AlertType.BlockingTombstones)));
         }
 
-        internal TombstonesState GetState(bool addInfoForDebug = false, bool exact = false)
+        internal TombstonesState GetState(bool addInfoForDebug = false, bool exact = false, Stopwatch overallDuration = null)
         {
             var result = new TombstonesState();
 
@@ -215,7 +215,8 @@ namespace Raven.Server.Documents
 
             _subscriptionsLocker.Wait();
 
-            var overallDuration = Stopwatch.StartNew();
+            // the time budget for the exact calculation of the remaining tombstones, tests can provide their own
+            overallDuration ??= Stopwatch.StartNew();
 
             try
             {

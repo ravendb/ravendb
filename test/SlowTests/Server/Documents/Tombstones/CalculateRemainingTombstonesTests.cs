@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide.Context;
@@ -254,8 +255,9 @@ namespace SlowTests.Server.Documents.Tombstones
                 {
                     var sw = Stopwatch.StartNew();
                     var result = database.DocumentsStorage.CountersStorage.GetNumberOfTombstonesToProcess(context, "Users", 0, sw, exact: false);
-                    // In estimated mode the count should be >= 1 (it may be exact for small datasets)
-                    Assert.True(result.Count >= 1);
+                    // small trees are always counted exactly, even when an estimate is allowed
+                    Assert.Equal(1, result.Count);
+                    Assert.False(result.Estimated);
                 }
             }
         }
@@ -655,6 +657,58 @@ namespace SlowTests.Server.Documents.Tombstones
 
                     AssertRemainingTombstones(state, etl, expected: 2);
                     AssertRemainingTombstones(state, upToDate, expected: 0);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Core)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task DocumentTombstones_EstimatedCount_WhenTheTimeBudgetIsExceeded(Options options)
+        {
+            const int numberOfTombstones = 5_000;
+
+            using (var store = GetDocumentStore(options))
+            {
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    for (var i = 0; i < numberOfTombstones; i++)
+                        bulkInsert.Store(new User { Name = $"user-{i}" }, $"users/{i}");
+                }
+
+                var operation = await store.Operations.SendAsync(new DeleteByQueryOperation("from Users"));
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                var database = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "users/1");
+
+                // the calculation switches to an estimate once the overall duration exceeds the time budget (one second)
+                // while traversing a branch page, so the stopwatch is started ahead of time
+                var exceededTimeBudget = Stopwatch.StartNew();
+                await Task.Delay(TimeSpan.FromMilliseconds(1_100));
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var estimatedResult = database.DocumentsStorage.GetNumberOfTombstonesToProcess(context, "Users", 0, exceededTimeBudget, exact: false);
+                    Assert.True(estimatedResult.Estimated);
+                    Assert.True(estimatedResult.Count > 0);
+                    Assert.Equal(numberOfTombstones, estimatedResult.Total);
+
+                    var exactResult = database.DocumentsStorage.GetNumberOfTombstonesToProcess(context, "Users", 0, exceededTimeBudget, exact: true);
+                    Assert.False(exactResult.Estimated);
+                    Assert.Equal(numberOfTombstones, exactResult.Count);
+                    Assert.Equal(numberOfTombstones, exactResult.Total);
+                }
+
+                using (var subscription = new TestTombstoneAwareSubscription("not-started", ITombstoneAware.TombstoneType.Documents, "Users", 0).Subscribe(database))
+                {
+                    var estimatedState = database.TombstoneCleaner.GetState(addInfoForDebug: true, exact: false, overallDuration: exceededTimeBudget);
+                    Assert.True(estimatedState.PerSubscriptionInfoExtended.TryGetValue(subscription.StateKey, out var info), $"Missing state for {subscription.StateKey}");
+                    Assert.True(info.Estimated);
+                    Assert.True(info.NumberOfTombstoneLeft > 0);
+                    Assert.Equal(info.NumberOfTombstoneLeft, info.Types.Documents);
+
+                    var exactState = database.TombstoneCleaner.GetState(addInfoForDebug: true, exact: true, overallDuration: exceededTimeBudget);
+                    AssertRemainingTombstones(exactState, subscription, expected: numberOfTombstones);
                 }
             }
         }
