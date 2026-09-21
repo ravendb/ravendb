@@ -59,6 +59,8 @@ public sealed class MockSlackApi : IAsyncDisposable
 
     public string? SocketOpenError { get; set; }
 
+    public TimeSpan? SocketOpenRetryAfter { get; set; }
+
     public bool StallBeforeHello { get; set; }
 
     public bool CloseOnConnect { get; set; }
@@ -155,6 +157,7 @@ public sealed class MockSlackApi : IAsyncDisposable
         NextUpdateRateLimit429 = false;
         UsersReadScopeGranted = true;
         SocketOpenError = null;
+        SocketOpenRetryAfter = null;
         StallBeforeHello = false;
         CloseOnConnect = false;
     }
@@ -314,7 +317,11 @@ public sealed class MockSlackApi : IAsyncDisposable
         }
 
         if (SocketOpenError is { } error)
+        {
+            if (SocketOpenRetryAfter is { } retryAfter)
+                ctx.Response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString(CultureInfo.InvariantCulture);
             return SlackError(error);
+        }
 
         if (known == false)
             return SlackError("invalid_auth");
