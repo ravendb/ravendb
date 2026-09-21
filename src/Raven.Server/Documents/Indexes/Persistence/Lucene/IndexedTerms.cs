@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Lucene.Net.Util;
@@ -57,6 +58,34 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 info.Done = true;
 
                 return info.Results;
+            }
+        }
+
+        /// <summary>
+        /// The terms of <paramref name="field"/> held by each document of the reader, built once from the cached postings
+        /// and kept next to them. Returns null when the cached postings do not fit the reader, in which case callers fall
+        /// back to intersecting postings.
+        /// </summary>
+        public static DocumentTermsIndex GetDocumentTermsFor(IndexReader reader, int docBase, string field, string indexName, IState state)
+        {
+            var termsCachePerField = CacheInstance.TermsCachePerReader.GetValue(reader, x => new CachedIndexedTerms());
+            var info = termsCachePerField.Results.GetOrAdd(field, new FieldCacheInfo());
+
+            var documentTerms = Volatile.Read(ref info.DocumentTerms);
+            if (documentTerms != null)
+                return documentTerms;
+
+            var termsToDocuments = GetTermsAndDocumentsFor(reader, docBase, field, indexName, state);
+
+            lock (info)
+            {
+                documentTerms = info.DocumentTerms;
+                if (documentTerms != null)
+                    return documentTerms;
+
+                documentTerms = DocumentTermsIndex.Build(termsToDocuments, docBase, reader.MaxDoc);
+                Volatile.Write(ref info.DocumentTerms, documentTerms);
+                return documentTerms;
             }
         }
 
@@ -236,6 +265,71 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             public Dictionary<string, int[]> Results;
             public bool Done;
+            public DocumentTermsIndex DocumentTerms;
+        }
+
+        /// <summary>
+        /// The inverse of <see cref="FieldCacheInfo.Results"/>: for every document of a reader, the ordinals of the terms
+        /// it holds in one field, laid out as offsets into a single array so a document's terms are a slice. Lets a facet
+        /// walk a handful of matches instead of intersecting every distinct term's postings with them.
+        /// </summary>
+        public sealed class DocumentTermsIndex
+        {
+            public readonly string[] Terms;
+            private readonly int[] _offsets;
+            private readonly int[] _termOrdinals;
+
+            private DocumentTermsIndex(string[] terms, int[] offsets, int[] termOrdinals)
+            {
+                Terms = terms;
+                _offsets = offsets;
+                _termOrdinals = termOrdinals;
+            }
+
+            public ReadOnlySpan<int> GetTermOrdinals(int localDoc)
+            {
+                var start = _offsets[localDoc];
+                return new ReadOnlySpan<int>(_termOrdinals, start, _offsets[localDoc + 1] - start);
+            }
+
+            public static DocumentTermsIndex Build(Dictionary<string, int[]> termsToDocuments, int docBase, int maxDoc)
+            {
+                // the cached postings hold global ids, the layout is over reader-local ids
+                var offsets = new int[maxDoc + 1];
+                var total = 0;
+                foreach (var documents in termsToDocuments.Values)
+                {
+                    foreach (var document in documents)
+                    {
+                        var localDoc = document - docBase;
+                        if ((uint)localDoc >= (uint)maxDoc)
+                            return null;
+
+                        offsets[localDoc + 1]++;
+                        total++;
+                    }
+                }
+
+                for (var i = 1; i <= maxDoc; i++)
+                    offsets[i] += offsets[i - 1];
+
+                var terms = new string[termsToDocuments.Count];
+                var termOrdinals = new int[total];
+                var cursors = new int[maxDoc];
+                Array.Copy(offsets, cursors, maxDoc);
+
+                var ordinal = 0;
+                foreach (var (term, documents) in termsToDocuments)
+                {
+                    terms[ordinal] = term;
+                    foreach (var document in documents)
+                        termOrdinals[cursors[document - docBase]++] = ordinal;
+
+                    ordinal++;
+                }
+
+                return new DocumentTermsIndex(terms, offsets, termOrdinals);
+            }
         }
     }
 }
