@@ -15,6 +15,7 @@ internal sealed class SlackSocketRuntime
     private static readonly TimeSpan MinBackoff = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan KeepAliveInterval = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan KeepAliveTimeout = TimeSpan.FromSeconds(20);
 
     private static readonly JsonSerializerOptions JsonOptions = new();
 
@@ -177,6 +178,7 @@ internal sealed class SlackSocketRuntime
 
         using var socket = new ClientWebSocket();
         socket.Options.KeepAliveInterval = KeepAliveInterval;
+        socket.Options.KeepAliveTimeout = KeepAliveTimeout;
         _frameBuffer.SetLength(0);
 
         var hello = await HandshakeAsync(socket, url);
