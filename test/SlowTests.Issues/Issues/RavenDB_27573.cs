@@ -8,9 +8,9 @@ using Xunit;
 
 namespace SlowTests.Issues;
 
-public class RavenDB_AllInScore : RavenTestBase
+public class RavenDB_27573 : RavenTestBase
 {
-    public RavenDB_AllInScore(ITestOutputHelper output) : base(output)
+    public RavenDB_27573(ITestOutputHelper output) : base(output)
     {
     }
 
