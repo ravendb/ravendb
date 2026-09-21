@@ -2197,21 +2197,6 @@ namespace Raven.Server.Documents
             Debug.Assert(counterName != null);
         }
 
-        private static void ExtractDocIdFromCounterTombstoneKey(JsonOperationContext context, ref TableValueReader tvr, out LazyStringValue docId)
-        {
-            var p = tvr.Read((int)CounterTombstonesTable.CounterTombstoneKey, out var size);
-            int sizeOfDocId = 0;
-
-            for (; sizeOfDocId < size; sizeOfDocId++)
-            {
-                if (p[sizeOfDocId] == SpecialChars.RecordSeparator)
-                    break;
-            }
-
-            docId = context.AllocateStringValue(null, p, sizeOfDocId);
-            Debug.Assert(docId != null);
-        }
-
         public string UpdateDocumentCounters(DocumentsOperationContext context, Document document, string docId,
             SortedSet<string> countersToAdd, HashSet<string> countersToRemove, NonPersistentDocumentFlags nonPersistentDocumentFlags)
         {
@@ -2853,10 +2838,5 @@ namespace Raven.Server.Documents
             ChangeVector?.Dispose();
             Name?.Dispose();
         }
-    }
-    public class CounterTombstoneDetailWithCollection(CounterTombstoneDetail counterTombstoneDetail, string collection)
-        : CounterTombstoneDetail(counterTombstoneDetail.DocumentId, counterTombstoneDetail.ChangeVector, counterTombstoneDetail.Name, counterTombstoneDetail.Etag)
-    {
-        public string Collection { get; private set; } = collection ?? throw new ArgumentNullException(nameof(collection));
     }
 }
