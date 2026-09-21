@@ -455,7 +455,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
 
         var token = NewBotToken();
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Telegram, agentId, null, Telegram: new(token)));
+            ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(token)));
         var channelId = created.ChannelId;
 
         var manager = host.Services.GetRequiredService<TelegramChannelManager>();
@@ -510,7 +510,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
 
         var token = NewBotToken();
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Telegram, agentId, null, Telegram: new(token)));
+            ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(token)));
 
         await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(token) >= 1, "the healthy channel's poller");
 
@@ -778,7 +778,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
 
         var token = NewBotToken();
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Telegram, agentId, null, Telegram: new(token, bindings)));
+            ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(token, bindings)));
 
         return (app, created.ChannelId, token);
     }

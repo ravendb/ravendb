@@ -34,7 +34,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
 
         var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.ProvisionChannelAsync(new ProvisionChannelRequest(
-                ChannelType.Telegram, "no-such-agent", null, Telegram: new(NewBotToken()))));
+                ChannelType.Telegram, "no-such-agent", null, DisplayName: "Support bot", Telegram: new(NewBotToken()))));
 
         Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
         Assert.Contains("unknown agentId 'no-such-agent'", e.Body);
@@ -49,7 +49,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
 
         var token = NewBotToken();
         var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
-            app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(token))));
+            app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(token))));
 
         Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
         Assert.Contains("telegram rejected the bot token", e.Body);
@@ -64,12 +64,12 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
 
         var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.ProvisionChannelAsync(new ProvisionChannelRequest(
-                ChannelType.Telegram, agentId, null, Telegram: new("not-a-valid-token"))));
+                ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new("not-a-valid-token"))));
         Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
         Assert.Contains("invalid bot token format", e.Body);
 
         var created = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(NewBotToken())));
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(NewBotToken())));
         var rotate = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null, new("12noSecretPart"))));
         Assert.Equal(HttpStatusCode.BadRequest, rotate.StatusCode);
@@ -79,18 +79,18 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Provision_defaults_display_name_to_bot_username_and_projects_it()
+    public async Task Provision_stores_the_given_display_name_and_projects_bot_username()
     {
         await using var app = await NewAppAsync();
         var agentId = await SeedAgentAsync(app);
 
         var created = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(NewBotToken())));
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(NewBotToken())));
 
         var channels = await app.GetChannelsAsync();
         var summary = Assert.Single(channels, c => c.ChannelId == created.ChannelId);
         Assert.Equal(ChannelType.Telegram, summary.Type);
-        Assert.Equal("@quill_test_bot", summary.DisplayName);
+        Assert.Equal("Support bot", summary.DisplayName);
         Assert.Equal("quill_test_bot", summary.Telegram?.BotUsername);
         Assert.True(summary.Enabled);
 
@@ -105,10 +105,10 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var token = NewBotToken();
 
         var first = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(token)));
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(token)));
 
         var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
-            app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(token))));
+            app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(token))));
 
         Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
         Assert.Contains("already connected", e.Body);
@@ -126,14 +126,14 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
 
         var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.ProvisionChannelAsync(new ProvisionChannelRequest(
-                ChannelType.Telegram, agentId, null, Telegram: new(NewBotToken()))));
+                ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(NewBotToken()))));
         Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
         Assert.Contains("missing parameter binding(s) for agent parameter(s): customerId, senderId", e.Body);
 
         var partial = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.ProvisionChannelAsync(new ProvisionChannelRequest(
                 ChannelType.Telegram, agentId, null,
-                Telegram: new(NewBotToken(), new Dictionary<string, ChannelParameterBinding>
+                DisplayName: "Support bot", Telegram: new(NewBotToken(), new Dictionary<string, ChannelParameterBinding>
                 {
                     ["customerId"] = new() { Source = ChannelParameterSource.Constant, Value = "customers/1" },
                 }))));
@@ -142,7 +142,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Telegram, agentId, null,
-            Telegram: new(NewBotToken(), new Dictionary<string, ChannelParameterBinding>
+            DisplayName: "Support bot", Telegram: new(NewBotToken(), new Dictionary<string, ChannelParameterBinding>
             {
                 ["customerId"] = new() { Source = ChannelParameterSource.Constant, Value = "customers/1" },
                 ["senderId"] = new() { Source = ChannelParameterSource.UserId },
@@ -162,7 +162,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var undeclared = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.ProvisionChannelAsync(new ProvisionChannelRequest(
                 ChannelType.Telegram, agentId, null,
-                Telegram: new(NewBotToken(), new Dictionary<string, ChannelParameterBinding>
+                DisplayName: "Support bot", Telegram: new(NewBotToken(), new Dictionary<string, ChannelParameterBinding>
                 {
                     ["customerId"] = new() { Source = ChannelParameterSource.Constant, Value = "customers/1" },
                     ["region"] = new() { Source = ChannelParameterSource.Constant, Value = "eu" },
@@ -173,7 +173,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var emptyConstant = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.ProvisionChannelAsync(new ProvisionChannelRequest(
                 ChannelType.Telegram, agentId, null,
-                Telegram: new(NewBotToken(), new Dictionary<string, ChannelParameterBinding>
+                DisplayName: "Support bot", Telegram: new(NewBotToken(), new Dictionary<string, ChannelParameterBinding>
                 {
                     ["customerId"] = new() { Source = ChannelParameterSource.Constant },
                 }))));
@@ -183,7 +183,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var valueOnWellKnown = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.ProvisionChannelAsync(new ProvisionChannelRequest(
                 ChannelType.Telegram, agentId, null,
-                Telegram: new(NewBotToken(), new Dictionary<string, ChannelParameterBinding>
+                DisplayName: "Support bot", Telegram: new(NewBotToken(), new Dictionary<string, ChannelParameterBinding>
                 {
                     ["customerId"] = new() { Source = ChannelParameterSource.Username, Value = "alice" },
                 }))));
@@ -201,11 +201,11 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var token = NewBotToken();
 
         var created = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(token)));
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(token)));
 
         var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
             other.ProvisionChannelAsync(new ProvisionChannelRequest(
-                ChannelType.Telegram, otherAgentId, null, Telegram: new(token))));
+                ChannelType.Telegram, otherAgentId, null, DisplayName: "Support bot", Telegram: new(token))));
         Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
         Assert.Contains("already connected in app", e.Body);
         Assert.Contains(app.Slug, e.Body);
@@ -221,7 +221,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var token = NewBotToken();
 
         var first = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(token)));
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(token)));
 
         // deleting the channel doc out of band leaves the reservation orphaned
         using (var session = app.Store.OpenAsyncSession(app.Slug))
@@ -231,7 +231,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         }
 
         var second = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(token)));
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(token)));
         Assert.NotEqual(first.ChannelId, second.ChannelId);
 
         await app.DeleteChannelAsync(second.ChannelId);
@@ -306,7 +306,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var orphanToken = NewBotToken();
 
         var doomed = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(orphanToken)));
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(orphanToken)));
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
             session.Delete(Channel.IdPrefix + doomed.ChannelId);
@@ -314,7 +314,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         }
 
         var kept = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(NewBotToken())));
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(NewBotToken())));
         var summary = await app.UpdateChannelAsync(kept.ChannelId,
             new UpdateChannelRequest(null, null, null, new(orphanToken)));
         Assert.Equal("quill_test_bot", summary.Telegram?.BotUsername);
@@ -331,7 +331,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Telegram, agentId, null,
-            Telegram: new(NewBotToken(), new Dictionary<string, ChannelParameterBinding>
+            DisplayName: "Support bot", Telegram: new(NewBotToken(), new Dictionary<string, ChannelParameterBinding>
             {
                 ["customerId"] = new() { Source = ChannelParameterSource.Constant, Value = "customers/1" },
             })));
@@ -379,7 +379,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var agentId = await SeedAgentAsync(app);
 
         var created = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(NewBotToken())));
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(NewBotToken())));
 
         await app.EditAgentAsync(new AiAgentConfiguration
         {
@@ -413,7 +413,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var agentId = await SeedAgentAsync(app);
 
         var created = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(NewBotToken())));
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(NewBotToken())));
 
         await app.EditAgentAsync(new AiAgentConfiguration
         {
@@ -456,7 +456,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var agentId = await SeedAgentAsync(app);
 
         var created = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(NewBotToken())));
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(NewBotToken())));
 
         await app.EditAgentAsync(new AiAgentConfiguration
         {
@@ -508,7 +508,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var agentId = await SeedAgentAsync(app);
 
         var created = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(NewBotToken())));
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(NewBotToken())));
 
         await app.EditAgentAsync(new AiAgentConfiguration
         {
@@ -550,7 +550,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var agentId = await SeedAgentAsync(app);
 
         var created = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(NewBotToken())));
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(NewBotToken())));
 
         var summary = await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
             new(Messages: new TelegramChannelMessages { Greeting = "  Cześć!  ", UsernameMissing = "   " })));
@@ -609,7 +609,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var token = NewBotToken();
 
         var resp = await Host.Client.PostAsJsonAsync(QuillRoutes.SetupChannel(app.Slug),
-            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(token)), QuillHttp.Json);
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(token)), QuillHttp.Json);
         var provisionBody = await resp.Content.ReadAsStringAsync();
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         Assert.DoesNotContain(TokenSecret(token), provisionBody);
@@ -629,12 +629,12 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
 
         var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.ProvisionChannelAsync(new ProvisionChannelRequest(
-                ChannelType.Telegram, agentId, new[] { "http://localhost" }, Telegram: new(NewBotToken()))));
+                ChannelType.Telegram, agentId, new[] { "http://localhost" }, DisplayName: "Support bot", Telegram: new(NewBotToken()))));
         Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
         Assert.Contains("allowedOrigins does not apply", e.Body);
 
         var created = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(NewBotToken())));
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(NewBotToken())));
         var update = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, ["http://localhost"], null)));
         Assert.Equal(HttpStatusCode.BadRequest, update.StatusCode);
@@ -655,7 +655,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var original = NewBotToken();
 
         var created = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Telegram: new(original)));
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(original)));
         await Mock.WaitUntilAsync(() => Mock.GetUpdatesCallCount(original) >= 1, "a poll with the original token");
 
         var rotated = NewBotToken();

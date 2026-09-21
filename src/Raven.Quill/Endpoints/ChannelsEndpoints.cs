@@ -203,6 +203,9 @@ public static class ChannelsEndpoints
         if (body.AllowedOrigins is { Length: > 0 })
             return Results.BadRequest(new ApiErrorResponse("allowedOrigins does not apply to Telegram channels"));
 
+        if (string.IsNullOrWhiteSpace(body.DisplayName))
+            return Results.BadRequest(new ApiErrorResponse("displayName is required for a Telegram channel"));
+
         if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
             return Results.BadRequest(new ApiErrorResponse(nameError!));
 
@@ -219,7 +222,7 @@ public static class ChannelsEndpoints
         {
             Id = Channel.IdPrefix + channelId,
             Type = ChannelType.Telegram,
-            DisplayName = body.DisplayName ?? (string.IsNullOrEmpty(bot.Username) ? "Telegram" : "@" + bot.Username),
+            DisplayName = body.DisplayName,
             AgentId = config.Identifier,
             AllowedOrigins = [],
             Enabled = true,
