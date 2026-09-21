@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Replication;
+using Voron.Data.Fixed;
 
 namespace Raven.Server.Documents.Replication.Stats
 {
@@ -68,5 +69,54 @@ namespace Raven.Server.Documents.Replication.Stats
         public long NumberOfTimeSeriesDeletedRangesToProcess { get; set; }
 
         public long TotalNumberOfTimeSeriesDeletedRanges { get; set; }
+
+        public void AddDocuments(in NumberOfEntriesAfterResult result)
+        {
+            NumberOfDocumentsToProcess += result.Count;
+            TotalNumberOfDocuments += result.Total;
+            Estimated |= result.Estimated;
+        }
+
+        public void AddDocumentTombstones(in NumberOfEntriesAfterResult result)
+        {
+            NumberOfDocumentTombstonesToProcess += result.Count;
+            TotalNumberOfDocumentTombstones += result.Total;
+            Estimated |= result.Estimated;
+        }
+
+        public void AddRevisions(in NumberOfEntriesAfterResult result)
+        {
+            NumberOfRevisionsToProcess += result.Count;
+            TotalNumberOfRevisions += result.Total;
+            Estimated |= result.Estimated;
+        }
+
+        public void AddAttachments(in NumberOfEntriesAfterResult result)
+        {
+            NumberOfAttachmentsToProcess += result.Count;
+            TotalNumberOfAttachments += result.Total;
+            Estimated |= result.Estimated;
+        }
+
+        public void AddCounterGroups(in NumberOfEntriesAfterResult result)
+        {
+            NumberOfCounterGroupsToProcess += result.Count;
+            TotalNumberOfCounterGroups += result.Total;
+            Estimated |= result.Estimated;
+        }
+
+        public void AddTimeSeriesSegments(in NumberOfEntriesAfterResult result)
+        {
+            NumberOfTimeSeriesSegmentsToProcess += result.Count;
+            TotalNumberOfTimeSeriesSegments += result.Total;
+            Estimated |= result.Estimated;
+        }
+
+        public void AddTimeSeriesDeletedRanges(in NumberOfEntriesAfterResult result)
+        {
+            NumberOfTimeSeriesDeletedRangesToProcess += result.Count;
+            TotalNumberOfTimeSeriesDeletedRanges += result.Total;
+            Estimated |= result.Estimated;
+        }
     }
 }

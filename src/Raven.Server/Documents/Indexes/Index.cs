@@ -3093,9 +3093,7 @@ namespace Raven.Server.Documents.Indexes
                 : DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(
                     queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, overallDuration, exact);
 
-            progressStats.NumberOfItemsToProcess += entriesAfter.Count;
-            progressStats.TotalNumberOfItems += entriesAfter.Total;
-            progressStats.Estimated |= entriesAfter.Estimated;
+            progressStats.AddItems(entriesAfter);
 
             entriesAfter = collectionName == Constants.Documents.Collections.AllDocumentsCollection
                 ? DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(
@@ -3103,9 +3101,7 @@ namespace Raven.Server.Documents.Indexes
                 : DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(
                     queryContext.Documents, collectionName, progressStats.LastProcessedTombstoneEtag, overallDuration, exact);
 
-            progressStats.NumberOfTombstonesToProcess += entriesAfter.Count;
-            progressStats.TotalNumberOfTombstones += entriesAfter.Total;
-            progressStats.Estimated |= entriesAfter.Estimated;
+            progressStats.AddTombstones(entriesAfter);
         }
 
         private IEnumerable<string> GetCollections(QueryOperationContext queryContext, out bool isAllDocs)

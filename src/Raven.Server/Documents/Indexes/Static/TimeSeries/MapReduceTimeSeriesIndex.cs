@@ -165,16 +165,12 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             var entriesAfter = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(
                 queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, overallDuration, exact);
 
-            progressStats.NumberOfItemsToProcess += entriesAfter.Count;
-            progressStats.TotalNumberOfItems += entriesAfter.Total;
-            progressStats.Estimated |= entriesAfter.Estimated;
+            progressStats.AddItems(entriesAfter);
 
             entriesAfter = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(queryContext.Documents, collectionName,
                 progressStats.LastProcessedTimeSeriesDeletedRangeEtag, overallDuration, exact);
 
-            progressStats.NumberOfTimeSeriesDeletedRangesToProcess += entriesAfter.Count;
-            progressStats.TotalNumberOfTimeSeriesDeletedRanges += entriesAfter.Total;
-            progressStats.Estimated |= entriesAfter.Estimated;
+            progressStats.AddTimeSeriesDeletedRanges(entriesAfter);
         }
 
         internal void HandleTimeSeriesDelete(TombstoneIndexItem tombstone, TransactionOperationContext indexContext)

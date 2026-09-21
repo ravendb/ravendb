@@ -137,9 +137,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             var entriesAfter = DocumentDatabase.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(
                 queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, overallDuration, exact);
             
-            progressStats.NumberOfItemsToProcess += entriesAfter.Count;
-            progressStats.TotalNumberOfItems += entriesAfter.Total;
-            progressStats.Estimated |= entriesAfter.Estimated;
+            progressStats.AddItems(entriesAfter);
         }
 
         public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType, Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo = null)
