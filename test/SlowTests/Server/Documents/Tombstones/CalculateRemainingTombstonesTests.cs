@@ -326,13 +326,13 @@ namespace SlowTests.Server.Documents.Tombstones
                 {
                     var sw = Stopwatch.StartNew();
 
-                    var usersResult = database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTombstonesToProcess(context, "Users", 0, sw, exact: true);
+                    var usersResult = database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(context, "Users", 0, sw, exact: true);
                     Assert.True(usersResult.Count >= 1);
 
-                    var ordersResult = database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTombstonesToProcess(context, "Orders", 0, sw, exact: true);
+                    var ordersResult = database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(context, "Orders", 0, sw, exact: true);
                     Assert.True(ordersResult.Count >= 1);
 
-                    var nonExistentResult = database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTombstonesToProcess(context, "NonExistent", 0, sw, exact: true);
+                    var nonExistentResult = database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(context, "NonExistent", 0, sw, exact: true);
                     Assert.Equal(0, nonExistentResult.Count);
                 }
             }
@@ -366,7 +366,7 @@ namespace SlowTests.Server.Documents.Tombstones
                     var tsGlobal = database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTombstonesToProcess(context, 0, sw, exact: true);
                     Assert.Equal(0, tsGlobal.Count);
 
-                    var tsCollection = database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTombstonesToProcess(context, "Users", 0, sw, exact: true);
+                    var tsCollection = database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(context, "Users", 0, sw, exact: true);
                     Assert.Equal(0, tsCollection.Count);
                 }
             }

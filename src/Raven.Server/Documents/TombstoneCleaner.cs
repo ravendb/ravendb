@@ -424,7 +424,7 @@ namespace Raven.Server.Documents
                             : documentDatabase.DocumentsStorage.CountersStorage.GetNumberOfTombstonesToProcess(context, collection, tombstoneInfo.Etag, stopwatch, exact),
                         ITombstoneAware.TombstoneType.TimeSeries => collection.IsNullOrEmpty()
                             ? documentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTombstonesToProcess(context, tombstoneInfo.Etag, stopwatch, exact)
-                            : documentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTombstonesToProcess(context, collection, tombstoneInfo.Etag, stopwatch, exact),
+                            : documentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(context, collection, tombstoneInfo.Etag, stopwatch, exact),
                         _ => throw new ArgumentOutOfRangeException(nameof(type), $"Unsupported tombstone type: {type}"),
                     };
                 }

@@ -2478,20 +2478,6 @@ namespace Raven.Server.Documents.TimeSeries
             return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration, exact);
         }
 
-        public NumberOfEntriesAfterResult GetNumberOfTombstonesToProcess(DocumentsOperationContext context, string collection, long afterEtag, Stopwatch overallDuration, bool exact)
-        {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
-            if (collectionName == null)
-                return new NumberOfEntriesAfterResult();
-
-            var table = GetOrCreateDeleteRangesTable(context.Transaction.InnerTransaction, collectionName);
-            if (table == null)
-                return new NumberOfEntriesAfterResult();
-
-            TableSchema.FixedSizeKeyIndexDef indexDef = DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice];
-            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration, exact);
-        }
-
         public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesForDoc(DocumentsOperationContext context, string docId)
         {
             var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
