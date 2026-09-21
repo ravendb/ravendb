@@ -214,32 +214,13 @@ namespace Raven.Server.Documents.Queries
                         }
                     case OperatorType.And:
                         {
-                            // translate ((Foo >= $p1) and (Foo <= $p2)) to a more efficient between query
-                            if (@where.Left is BinaryExpression lbe && lbe.IsRangeOperation &&
-                               @where.Right is BinaryExpression rbe && rbe.IsRangeOperation && lbe.Left.Equals(rbe.Left) &&
-                               lbe.Right is ValueExpression leftVal && rbe.Right is ValueExpression rightVal)
+                            // translate 'Foo >= $p1 and ... and Foo <= $p2' into a single, more efficient between query,
+                            // regardless of how the 'and' chain is nested or parenthesized
+                            if (QueryBuilderHelper.TryFoldRangePairsInAndChain(where, out var foldedExpression))
                             {
-                                BetweenExpression bq = null;
-                                if (lbe.IsGreaterThan && rbe.IsLessThan)
-                                {
-                                    bq = new BetweenExpression(lbe.Left, leftVal, rightVal)
-                                    {
-                                        MinInclusive = lbe.Operator == OperatorType.GreaterThanEqual,
-                                        MaxInclusive = rbe.Operator == OperatorType.LessThanEqual,
-                                    };
-                                }
-
-                                if (lbe.IsLessThan && rbe.IsGreaterThan)
-                                {
-                                    bq = new BetweenExpression(lbe.Left, rightVal, leftVal)
-                                    {
-                                        MinInclusive = rbe.Operator == OperatorType.GreaterThanEqual,
-                                        MaxInclusive = lbe.Operator == OperatorType.LessThanEqual
-                                    };
-                                }
-
-                                if (bq != null)
-                                    return TranslateBetweenQuery(query, metadata, index, parameters, exact, bq, secondary);
+                                buildSteps?.Add($"Folded range pairs in AND chain: {expression} -> {foldedExpression}");
+                                return ToLuceneQuery(serverContext, documentsContext, query, foldedExpression, metadata, index, parameters, analyzer,
+                                    factories, exact, secondary: secondary, buildSteps: buildSteps);
                             }
 
                             var left = ToLuceneQuery(serverContext, documentsContext, query, @where.Left, metadata, index, parameters, analyzer,
