@@ -30,7 +30,6 @@ internal sealed class SlackSocketRuntime
     private readonly QuillLogger<SlackChannelManager> _logger;
 
     private readonly CancellationTokenSource _cts = new();
-    private readonly SemaphoreSlim _sendLock = new(1, 1);
     private readonly byte[] _receiveBuffer = new byte[8 * 1024];
     private readonly MemoryStream _frameBuffer = new();
 
@@ -101,7 +100,6 @@ internal sealed class SlackSocketRuntime
         }
 
         _cts.Dispose();
-        _sendLock.Dispose();
         _frameBuffer.Dispose();
     }
 
@@ -357,19 +355,12 @@ internal sealed class SlackSocketRuntime
         return await slack.OpenSocketAsync(_settings.AppToken, _cts.Token);
     }
 
-    private async Task SendAsync(ClientWebSocket socket, object payload, CancellationToken ct)
+    private static async Task SendAsync(ClientWebSocket socket, object payload, CancellationToken ct)
     {
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(payload, JsonOptions);
+        if (socket.State != WebSocketState.Open)
+            return;
 
-        await _sendLock.WaitAsync(ct);
-        try
-        {
-            if (socket.State == WebSocketState.Open)
-                await socket.SendAsync(bytes, WebSocketMessageType.Text, true, ct);
-        }
-        finally
-        {
-            _sendLock.Release();
-        }
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(payload, JsonOptions);
+        await socket.SendAsync(bytes, WebSocketMessageType.Text, true, ct);
     }
 }
