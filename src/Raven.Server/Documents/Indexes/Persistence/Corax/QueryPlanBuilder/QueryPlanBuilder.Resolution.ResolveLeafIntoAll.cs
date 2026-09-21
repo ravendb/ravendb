@@ -80,7 +80,7 @@ internal static partial class QueryPlanBuilder
                     LeafResolveInfo ret = clauseExec.HasNullTerm is false
                         ? new LeafResolveInfo // we don't have a null here, but there is a slot for it, mark it as noop
                         {
-                            Kind = clauseExec.ClauseType == ClauseType.AllIn 
+                            Kind = clauseExec.ClauseType == ClauseType.AllIn && clauseExec.InTermCount > 0
                                 ? LeafResolveKind.AllPosting     // ALL IN → AND → identity is "everything"
                                 : LeafResolveKind.EmptyPosting   // IN     → OR  → identity is "nothing"
                         }
