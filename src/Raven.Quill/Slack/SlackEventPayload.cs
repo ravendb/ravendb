@@ -18,9 +18,6 @@ internal sealed class SlackSocketFrame
     [JsonPropertyName("reason")]
     public string? Reason { get; set; }
 
-    [JsonPropertyName("retry_attempt")]
-    public int? RetryAttempt { get; set; }
-
     [JsonPropertyName("payload")]
     public JsonElement? Payload { get; set; }
 }
