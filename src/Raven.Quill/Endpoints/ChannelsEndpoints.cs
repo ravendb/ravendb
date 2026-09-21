@@ -147,9 +147,6 @@ public static class ChannelsEndpoints
         if (TryNormalizeOrigins(origins, out var originError) == false)
             return Results.BadRequest(new ApiErrorResponse(originError!));
 
-        if (string.IsNullOrWhiteSpace(body.DisplayName))
-            return Results.BadRequest(new ApiErrorResponse("displayName is required for a web widget channel"));
-
         if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
             return Results.BadRequest(new ApiErrorResponse(nameError!));
 
@@ -161,7 +158,7 @@ public static class ChannelsEndpoints
         {
             Id = Channel.IdPrefix + channelId,
             Type = ChannelType.IFrame,
-            DisplayName = body.DisplayName,
+            DisplayName = body.DisplayName!,
             AgentId = config.Identifier,
             AllowedOrigins = origins,
             Enabled = true,
@@ -203,9 +200,6 @@ public static class ChannelsEndpoints
         if (body.AllowedOrigins is { Length: > 0 })
             return Results.BadRequest(new ApiErrorResponse("allowedOrigins does not apply to Telegram channels"));
 
-        if (string.IsNullOrWhiteSpace(body.DisplayName))
-            return Results.BadRequest(new ApiErrorResponse("displayName is required for a Telegram channel"));
-
         if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
             return Results.BadRequest(new ApiErrorResponse(nameError!));
 
@@ -222,7 +216,7 @@ public static class ChannelsEndpoints
         {
             Id = Channel.IdPrefix + channelId,
             Type = ChannelType.Telegram,
-            DisplayName = body.DisplayName,
+            DisplayName = body.DisplayName!,
             AgentId = config.Identifier,
             AllowedOrigins = [],
             Enabled = true,
@@ -313,9 +307,6 @@ public static class ChannelsEndpoints
         if (string.IsNullOrEmpty(signingSecret))
             return Results.BadRequest(new ApiErrorResponse("slack.signingSecret is required for a Slack channel"));
 
-        if (string.IsNullOrWhiteSpace(body.DisplayName))
-            return Results.BadRequest(new ApiErrorResponse("displayName is required for a Slack channel"));
-
         if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
             return Results.BadRequest(new ApiErrorResponse(nameError!));
 
@@ -331,7 +322,7 @@ public static class ChannelsEndpoints
         {
             Id = Channel.IdPrefix + channelId,
             Type = ChannelType.Slack,
-            DisplayName = body.DisplayName,
+            DisplayName = body.DisplayName!,
             AgentId = config.Identifier,
             AllowedOrigins = [],
             Enabled = true,
@@ -414,9 +405,6 @@ public static class ChannelsEndpoints
         if (string.IsNullOrEmpty(botToken))
             return Results.BadRequest(new ApiErrorResponse("discord.botToken is required for a Discord channel"));
 
-        if (string.IsNullOrWhiteSpace(body.DisplayName))
-            return Results.BadRequest(new ApiErrorResponse("displayName is required for a Discord channel"));
-
         if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
             return Results.BadRequest(new ApiErrorResponse(nameError!));
 
@@ -432,7 +420,7 @@ public static class ChannelsEndpoints
         {
             Id = Channel.IdPrefix + channelId,
             Type = ChannelType.Discord,
-            DisplayName = body.DisplayName,
+            DisplayName = body.DisplayName!,
             AgentId = config.Identifier,
             AllowedOrigins = [],
             Enabled = true,
@@ -1160,8 +1148,11 @@ public static class ChannelsEndpoints
     private static bool TryValidateDisplayName(string? displayName, out string? error)
     {
         error = null;
-        if (displayName is null)
-            return true;
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            error = "displayName is required";
+            return false;
+        }
 
         if (displayName.Length > MaxDisplayNameLength)
         {

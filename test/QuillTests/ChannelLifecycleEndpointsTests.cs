@@ -37,16 +37,26 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
         Assert.False(item.TryGetProperty("bindingId", out _));
     }
 
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task Provisioning_an_iframe_channel_requires_a_display_name()
+    [RavenTheory(RavenTestCategory.Quill)]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Provisioning_any_channel_type_requires_a_display_name(string? name)
     {
         await using var app = await NewAppAsync();
         await SeedDemoAgentAsync(app);
 
-        foreach (var name in new string?[] { null, "", "   " })
+        var requests = new[]
         {
-            var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
-                new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", Array.Empty<string>(), name)));
+            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", Array.Empty<string>(), name),
+            new ProvisionChannelRequest(ChannelType.Telegram, "demo-agent", null, name, Telegram: new("123:token")),
+            new ProvisionChannelRequest(ChannelType.Slack, "demo-agent", null, name, Slack: new("xoxb-token", "secret")),
+            new ProvisionChannelRequest(ChannelType.Discord, "demo-agent", null, name, Discord: new("token")),
+        };
+
+        foreach (var request in requests)
+        {
+            var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(request));
             Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
             Assert.Contains("displayName is required", ex.Body);
         }
