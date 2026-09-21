@@ -32,7 +32,8 @@ internal static partial class QueryPlanBuilder
         var planCache = planParams.IndexSearcher.PlanCache;
         var metadata = planParams.Metadata;
 
-        var generation = planCache.GenerationIdx;
+        // As of reader open, not now: a memo stamped newer than the snapshots its plan came from never expires.
+        var generation = planParams.IndexSearcher.PlanCacheGenerationAtOpen;
 
         if (metadata.CachedPlanMemo is { } memo
             && memo.PlanCacheGeneration == generation

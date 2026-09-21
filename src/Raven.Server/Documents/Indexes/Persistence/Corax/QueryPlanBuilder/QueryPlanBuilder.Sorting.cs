@@ -186,7 +186,9 @@ internal static partial class QueryPlanBuilder
                     }
                 }
 
-                if (pinned && indexSearcher.HasMultipleTermsInField(name) is false)
+                // `Num = 1` matches the long term that 1.1 / 1.5 / 1.8 share - an equality pins only the representation
+                // it matched, and the type here is unknown because the template is cached before parameters are bound.
+                if (pinned && indexSearcher.HasMultipleTermsInField(name) is false && indexSearcher.HasNumericTermsInField(name) is false)
                     elide = true;
             }
 

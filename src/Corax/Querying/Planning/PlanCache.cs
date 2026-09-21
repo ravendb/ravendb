@@ -31,7 +31,8 @@ public class PlanCache
 
     private long _generationIdx = Interlocked.Increment(ref GlobalGenerationIndex);
 
-    public long GenerationIdx => _generationIdx;
+    // Acquire: readers take this before the index-state snapshots it pairs with, and that order is the invariant.
+    public long GenerationIdx => Volatile.Read(ref _generationIdx);
 
     public void TouchGeneration()
     {

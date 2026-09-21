@@ -112,16 +112,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 PlanCache = (index.IndexPersistence as CoraxIndexPersistence)?.SharedPlanCache ?? new PlanCache(),
             };
 
-            // Attach the per-field HNSW node caches from this transaction's client state and the current
-            // fields-with-multiple-terms snapshot to the searcher. The searcher uses the node caches for vector
-            // lookups instead of reading through Voron, and the fields snapshot to drive plan selection.
+            // Attach the per-field HNSW node caches from this transaction's client state and the current fields
+            // snapshots to the searcher. The searcher uses the node caches for vector lookups instead of reading
+            // through Voron, and the fields snapshots to drive plan selection.
             var vectorCaches = readTransaction.LowLevelTransaction.TryGetClientState(out IndexStateRecord stateRecord)
                                && stateRecord.CoraxVectorState is { Caches: { Count: > 0 } caches }
                 ? caches
                 : null;
-            var fieldsWithMultipleTerms = (index.IndexPersistence as CoraxIndexPersistence)?.FieldsWithMultipleTerms;
-            if (vectorCaches != null || fieldsWithMultipleTerms != null)
-                IndexSearcher.AttachTransactionCache(vectorCaches, fieldsWithMultipleTerms);
+            // Generation FIRST, snapshots after. A commit publishes in the opposite order, and that pairing is
+            // what keeps the snapshots no older than the generation these plans get memoized under.
+            var coraxPersistence = index.IndexPersistence as CoraxIndexPersistence;
+            var planCacheGeneration = IndexSearcher.PlanCache.GenerationIdx;
+            var fieldsWithMultipleTerms = coraxPersistence?.FieldsWithMultipleTerms;
+            var fieldsWithNumericTerms = coraxPersistence?.FieldsWithNumericTerms;
+            IndexSearcher.AttachTransactionCache(vectorCaches, fieldsWithMultipleTerms, fieldsWithNumericTerms, planCacheGeneration);
 
             if (index is { _forTestingPurposes: { CoraxConfiguration: not null } })
                 IndexSearcher.SetTestingConfiguration(index._forTestingPurposes.CoraxConfiguration);

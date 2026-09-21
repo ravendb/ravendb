@@ -18,7 +18,9 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Voron;
+using Voron.Data;
 using Voron.Data.CompactTrees;
+using Voron.Data.Lookups;
 using Voron.Data.Graphs;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
@@ -44,6 +46,14 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
     // so a Volatile read/write of the latest snapshot is enough - a reader that sees a slightly newer snapshot
     // just picks a more conservative plan, which is always correct.
     private HashSet<string> _fieldsWithMultipleTerms;
+
+    // Read by the sort elision. Two properties make it safe to read stale: it is published before the plan cache
+    // generation is touched, and it only ever grows. So a reader taking the generation first and this second can
+    // never see fewer numeric fields than its own transaction holds, and over-reporting only costs an elision.
+    // Never null once an index is open - a null sends the searcher back to probing its transaction.
+    private HashSet<string> _fieldsWithNumericTerms;
+
+    private long _fieldsWithNumericTermsSignature;
 
     internal IndexWriter ActiveWriter;
     internal Dictionary<Slice, HashSet<long>> PendingDirtyVectorSets;
@@ -243,9 +253,97 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
             SharedPlanCache.TouchGeneration();
         }
 
+        // Sort elision (RavenDB-27192). The warm plan memo is served without recomputing the structural key, so
+        // the generation is the only thing that can invalidate it. The signature is the allocation-free detector;
+        // a fresh index has no fields tree and folds to 0, the initial value, hence the null test.
+        var numericSignature = ReadNumericTermsSignature(tx);
+        var publishedNumericTerms = Volatile.Read(ref _fieldsWithNumericTerms);
+        if (numericSignature != Volatile.Read(ref _fieldsWithNumericTermsSignature) || publishedNumericTerms is null)
+        {
+            // Sticky: a -L/-D lookup empties when its last posting list does, and a shrunk set would elide for
+            // a reader whose transaction still holds those numbers.
+            var fieldsWithNumericTerms = ReadFieldsWithNumericTerms(tx);
+            if (publishedNumericTerms != null)
+                fieldsWithNumericTerms.UnionWith(publishedNumericTerms);
+
+            Volatile.Write(ref _fieldsWithNumericTermsSignature, numericSignature);
+
+            // The signature tracks the raw tree, so it also moves on a shrink the union absorbs. Equal counts
+            // mean equal content here, and re-planning every query for that is waste. Set first, generation second.
+            if (publishedNumericTerms is null || fieldsWithNumericTerms.Count != publishedNumericTerms.Count)
+            {
+                Volatile.Write(ref _fieldsWithNumericTerms, fieldsWithNumericTerms);
+                SharedPlanCache.TouchGeneration();
+            }
+        }
+
         var caches = Volatile.Read(ref _hnswCaches);
         return rec with { CoraxVectorState = caches is null ? CoraxVectorState.Empty : new CoraxVectorState(caches) };
     }
+
+    // Walks the fields tree, not the index definition: a dynamic field is absent from the definition, and the -L/-D
+    // lookups are created empty on a field's first write, so nothing but their own entry count moves at the first number.
+    private static long ReadNumericTermsSignature(Transaction tx)
+    {
+        var fieldsTree = tx.ReadTree(global::Corax.Constants.IndexWriter.FieldsSlice);
+        if (fieldsTree == null)
+            return 0;
+
+        // Seeded 1 so the key count enters the value: under a 0 seed this is a base-31 numeral and keys sorting
+        // ahead of every numeric one are free leading zeros, so adding one while the bits shift reproduces the
+        // old value. Still a 64-bit hash - a same-length cancellation is not defended against.
+        long signature = 1;
+        using var it = fieldsTree.Iterate(prefetch: false);
+        if (it.Seek(Slices.BeforeAllKeys) == false)
+            return signature;
+
+        do
+        {
+            signature = signature * 31 + (HasNumericTerms(it) ? 1 : 0);
+        } while (it.MoveNext());
+
+        return signature;
+    }
+
+    // Base field names, so the searcher can match directly.
+    private static HashSet<string> ReadFieldsWithNumericTerms(Transaction tx)
+    {
+        var fieldsTree = tx.ReadTree(global::Corax.Constants.IndexWriter.FieldsSlice);
+        if (fieldsTree == null)
+            return [];
+
+        var set = new HashSet<string>(StringComparer.Ordinal);
+        using var it = fieldsTree.Iterate(prefetch: false);
+        if (it.Seek(Slices.BeforeAllKeys) == false)
+            return set;
+
+        do
+        {
+            if (HasNumericTerms(it) == false)
+                continue;
+
+            // -L and -D are the same length.
+            var name = it.CurrentKey.ToString();
+            set.Add(name[..^global::Corax.Constants.IndexWriter.LongTreeSuffix.Length]);
+        } while (it.MoveNext());
+
+        return set;
+    }
+
+    // The entry count is already in the root header under the cursor; opening the lookup would allocate per numeric
+    // field per commit. RootObjectType is not optional: a field named Vitamin-D stores a CompactTree under that key.
+    private static unsafe bool HasNumericTerms(IIterator it)
+    {
+        var key = it.CurrentKey;
+        if (key.EndsWith(global::Corax.Constants.IndexWriter.LongTreeSuffix) == false &&
+            key.EndsWith(global::Corax.Constants.IndexWriter.DoubleTreeSuffix) == false)
+            return false;
+
+        var state = (LookupState*)it.CreateReaderForCurrent().Base;
+        return state->RootObjectType == RootObjectType.Lookup && state->NumberOfEntries > 0;
+    }
+
+    internal HashSet<string> FieldsWithNumericTerms => Volatile.Read(ref _fieldsWithNumericTerms);
 
     // Snapshot of the caller's current fields-with-multiple-terms; read by CoraxIndexReadOperation at reader open.
     internal HashSet<string> FieldsWithMultipleTerms => Volatile.Read(ref _fieldsWithMultipleTerms);
