@@ -434,7 +434,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
                 ConnectionStringName = app.Host.ConnectionStringName,
             });
             var channel = await app.ProvisionChannelAsync(
-                new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", origins ?? Array.Empty<string>()));
+                new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", origins ?? Array.Empty<string>(), "Storefront widget"));
             channelId = channel.ChannelId;
         }
 
@@ -475,7 +475,7 @@ public class EmbedLinksTests(ITestOutputHelper output) : QuillTestBase(output)
         });
 
         var channel = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, "param-agent", Array.Empty<string>()));
+            new ProvisionChannelRequest(ChannelType.IFrame, "param-agent", Array.Empty<string>(), "Storefront widget"));
         return channel.ChannelId;
     }
 

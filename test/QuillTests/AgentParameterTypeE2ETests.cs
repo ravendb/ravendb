@@ -190,7 +190,7 @@ public class AgentParameterTypeE2ETests(ITestOutputHelper output, QuillCollectio
         });
 
         var channel = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, AgentId, ["http://localhost"]));
+            new ProvisionChannelRequest(ChannelType.IFrame, AgentId, ["http://localhost"], "Storefront widget"));
 
         return (app, channel.ChannelId);
     }

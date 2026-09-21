@@ -172,7 +172,7 @@ public class AgentActionE2ETests(ITestOutputHelper output, QuillCollectionHost c
             new Dictionary<string, WebhookBinding> { [bindingKey] = binding }));
 
         var channel = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, agentId, ["http://localhost"]));
+            new ProvisionChannelRequest(ChannelType.IFrame, agentId, ["http://localhost"], "Storefront widget"));
 
         var minted = await app.MintEmbedLinkAsync(new MintEmbedLinkRequest(
             channel.ChannelId,

@@ -371,7 +371,7 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
         var agentId = await SeedAgentAsync(app);
 
         var iframe = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.IFrame, agentId, new[] { "https://a.example" }));
+            ChannelType.IFrame, agentId, new[] { "https://a.example" }, "Storefront widget"));
 
         var onIFrame = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync(iframe.ChannelId,
             new UpdateChannelRequest(null, null, null, Slack: new(SigningSecret: "rotated"))));
@@ -444,7 +444,7 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
         Assert.Equal(32, info.RequestUrl[(info.RequestUrl.LastIndexOf('/') + 1)..].Length);
 
         var widget = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.IFrame, agentId, Array.Empty<string>()));
+            ChannelType.IFrame, agentId, Array.Empty<string>(), "Storefront widget"));
         var e = await Assert.ThrowsAsync<QuillHttpException>(() => QuillHttp.GetAsync<SlackWebhookInfoResponse>(
             Host.Client, QuillRoutes.SlackWebhookInfo(app.Slug, widget.ChannelId)));
         Assert.Equal(HttpStatusCode.NotFound, e.StatusCode);

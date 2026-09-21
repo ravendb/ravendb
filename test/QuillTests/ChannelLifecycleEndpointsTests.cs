@@ -38,6 +38,23 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Provisioning_an_iframe_channel_requires_a_display_name()
+    {
+        await using var app = await NewAppAsync();
+        await SeedDemoAgentAsync(app);
+
+        foreach (var name in new string?[] { null, "", "   " })
+        {
+            var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
+                new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", Array.Empty<string>(), name)));
+            Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
+            Assert.Contains("displayName is required", ex.Body);
+        }
+
+        Assert.Empty(await app.GetChannelsAsync());
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Channels_list_is_empty_for_app_with_no_channels()
     {
         await using var app = await NewAppAsync();
@@ -107,7 +124,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
             Assert.Null(await session.LoadAsync<Channel>($"channels/{channelId}"));
         }
 
-        var reChannel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://localhost" }));
+        var reChannel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://localhost" }, "Storefront widget"));
         Assert.False(string.IsNullOrEmpty(reChannel.ChannelId));
     }
 
@@ -137,7 +154,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
 
         await SeedDemoAgentAsync(appB);
         var openChannel = await appB.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", Array.Empty<string>()));
+            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", Array.Empty<string>(), "Storefront widget"));
         var openToken = await MintLinkAsync(appB, openChannel.ChannelId);
 
         var open = await Host.Client.GetAsync(QuillRoutes.EmbedPage(appB.Slug, openToken));
@@ -232,7 +249,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
 
         await app.DeleteChannelAsync(channelId);
 
-        var reChannel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://localhost" }));
+        var reChannel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://localhost" }, "Storefront widget"));
         Assert.NotEqual(channelId, reChannel.ChannelId);
     }
 
@@ -328,7 +345,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
     private static async Task<string> ProvisionIFrameChannelAsync(QuillApp app, string agentId = "demo-agent")
     {
         await SeedDemoAgentAsync(app, agentId);
-        var channel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, agentId, new[] { "http://localhost" }));
+        var channel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, agentId, new[] { "http://localhost" }, "Storefront widget"));
         return channel.ChannelId;
     }
 
