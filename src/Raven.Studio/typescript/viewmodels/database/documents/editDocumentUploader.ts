@@ -13,23 +13,9 @@ type progressCallback = (progress: attachmentUploadProgress) => void;
 
 class editDocumentUploader {
 
-    static readonly filePickerSelector = "#uploadAttachmentFilePicker";
-
     currentUpload = ko.observable<attachmentUpload>();
     private batchPosition = ko.observable<number>(0);
     private batchSize = ko.observable<number>(0);
-
-    uploadButtonText = ko.pureComputed(() => {
-        const upload = this.currentUpload();
-        if (upload) {
-            return `Uploading ${this.batchPosition()}/${this.batchSize()} (${upload.textualProgress()})`;
-        }
-        return "Add Attachment";
-    });
-
-    spinners = {
-        upload: ko.observable<boolean>(false)
-    };
 
     constructor(private document: KnockoutObservable<document>, private db: database, private afterUpload: () => void) {}
 
@@ -45,15 +31,11 @@ class editDocumentUploader {
             return;
         }
 
-        this.spinners.upload(true);
-
         for (let i = 0; i < filesToUpload.length; i++) {
             this.batchPosition(i + 1);
             await this.uploadSingle(filesToUpload[i], remoteParameters, onProgress);
         }
 
-        $(editDocumentUploader.filePickerSelector).val("");
-        this.spinners.upload(false);
         this.afterUpload();
     }
 

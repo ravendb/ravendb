@@ -48,6 +48,7 @@ export default function FileUploadPanel({
                         items={items}
                         onRemove={onRemove}
                         onCancel={onCancel}
+                        isUploading={isUploading}
                         collapsedCount={collapsedCount}
                     />
                 </>

@@ -5,10 +5,10 @@ import { Icon } from "components/common/Icon";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { FormDatePicker, FormGroup, FormLabel, FormSelectAutocomplete } from "components/common/Form";
 import FileUploadPanel from "components/common/FileUploadPanel";
-import { FileUploadItem } from "components/common/FileUploadList";
+import useAttachmentUpload from "components/hooks/useAttachmentUpload";
 import messagePublisher from "common/messagePublisher";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import React, { useState } from "react";
+import React from "react";
 import document from "models/database/documents/document";
 import database from "models/resources/database";
 import Button from "react-bootstrap/Button";
@@ -18,7 +18,6 @@ import moment from "moment";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import RichAlert from "components/common/RichAlert";
 import { components, GroupBase, OptionProps } from "react-select";
-import editDocumentUploader = require("viewmodels/database/documents/editDocumentUploader");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import RemoteAttachmentParameters = Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters;
 
@@ -28,8 +27,6 @@ type AddAttachmentWithRemoteParametersModalProps = {
     onUploaded: () => void;
     onClose: () => void;
 };
-
-type FileUploadState = Omit<FileUploadItem, "file">;
 
 export default function AddAttachmentWithRemoteParametersModal({
     document,
@@ -51,9 +48,7 @@ export default function AddAttachmentWithRemoteParametersModal({
     });
 
     const { control, formState } = form;
-    const [uploader] = useState(() => new editDocumentUploader(document, db, onUploaded));
-    const [batchProgress, setBatchProgress] = useState<attachmentUploadProgress>(null);
-    const [uploadStates, setUploadStates] = useState<Record<string, FileUploadState>>({});
+    const { uploadItems, batchProgress, upload, abortCurrent } = useAttachmentUpload(document, db, onUploaded);
 
     const selectedDestination = useWatch({
         control,
@@ -61,23 +56,12 @@ export default function AddAttachmentWithRemoteParametersModal({
     });
 
     const selectedFiles = useWatch({ control, name: "files" }) as File[];
-    const selectedUploadDate = useWatch({ control, name: "uploadDate" }) as Date;
-
-    const onProgress = (progress: attachmentUploadProgress) => {
-        setBatchProgress(progress);
-        setUploadStates((states) => ({
-            ...states,
-            [progress.fileName]: { status: progress.status, loaded: progress.loaded, total: progress.total },
-        }));
-    };
+    const selectedUploadDate = useWatch({ control, name: "uploadDate" });
 
     const handleSubmit = async (formData: AttachmentWithRemoteParametersFormData) => {
-        try {
-            await uploader.uploadFiles(formData.files as File[], mapToDto(formData), onProgress);
-        } finally {
-            setBatchProgress(null);
+        if (await upload(formData.files as File[], mapToDto(formData))) {
+            onClose();
         }
-        onClose();
     };
 
     const onFileDropzoneChange = (files: File[], field: ControllerRenderProps<FieldValues, "files">) => {
@@ -104,12 +88,6 @@ export default function AddAttachmentWithRemoteParametersModal({
         form.setValue("files", [], { shouldValidate: true, shouldDirty: true });
     };
 
-    const uploadItems: FileUploadItem[] = (selectedFiles ?? []).map((file) => ({
-        file,
-        status: "selected",
-        ...uploadStates[file.name],
-    }));
-
     const attachmentsLabel = pluralizeHelpers.pluralize(selectedFiles?.length || 1, "attachment", "attachments", true);
 
     return (
@@ -128,10 +106,10 @@ export default function AddAttachmentWithRemoteParametersModal({
                                 name="files"
                                 render={({ field }) => (
                                     <FileUploadPanel
-                                        items={uploadItems}
+                                        items={uploadItems(selectedFiles ?? [])}
                                         onChange={(files) => onFileDropzoneChange(files, field)}
                                         onRemove={removeFile}
-                                        onCancel={() => uploader.abortCurrent()}
+                                        onCancel={abortCurrent}
                                         onClearAll={clearFiles}
                                     />
                                 )}

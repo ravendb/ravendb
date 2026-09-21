@@ -560,40 +560,39 @@
 </div>
 
 <script type="text/html" id="uploader-template">
-    <div class="padding padding-xs margin-top margin-top-sm" data-bind="with: uploader">
-        <div class=" file-input">
-            <input type="file" id="uploadAttachmentFilePicker" multiple
-                   data-bind="event: { change: () => $data.uploadFiles(Array.from($element.files)) }" tabindex="-1">
-            <div class="btn-group w-100 d-flex">
-                <label for="uploadAttachmentFilePicker" class="btn btn-sm btn-primary flex-grow"
-                       data-bind="css: { 'btn-spinner': spinners.upload }, disable: spinners.upload">
-                    <i class="icon-attachment"></i> <span data-bind="text: uploadButtonText"></span>
-                </label>
+    <div class="padding padding-xs margin-top margin-top-sm">
+        <div class="btn-group w-100 d-flex">
+            <button type="button" class="btn btn-sm btn-primary flex-grow"
+                    data-bind="click: () => $root.connectedDocuments.isAddAttachmentModalVisible(true)">
+                <i class="icon-attachment"></i> <span>Add Attachment</span>
+            </button>
 
-                <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-toggle="dropdown"
-                        aria-haspopup="true"
-                        data-bind="disable: spinners.upload"
-                        aria-expanded="false"
-                >
-                    <span class="caret"></span>
-                    <span class="sr-only">Toggle Dropdown</span>
-                </button>
+            <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-toggle="dropdown"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+            >
+                <span class="caret"></span>
+                <span class="sr-only">Toggle Dropdown</span>
+            </button>
 
-                <ul class="dropdown-menu uploader-template">
-                    <li class="add-remote-attachment">
+            <ul class="dropdown-menu uploader-template">
+                <li class="add-remote-attachment">
                     <a href="#" data-bind="click: () => $root.connectedDocuments.isAddAttachmentWithRemoteParametersModalVisible(!$root.remoteAttachmentDisabledReason()), css: { 'disabled': $root.remoteAttachmentDisabledReason() }">
-                            <i class="icon-remote-attachment"></i>
-                            <span>Add attachment to remote storage</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
+                        <i class="icon-remote-attachment"></i>
+                        <span>Add attachment to remote storage</span>
+                    </a>
+                </li>
+            </ul>
         </div>
     </div>
 </script>
 
 <div class="tooltip json-preview document-items-tooltip" style="opacity: 0">
     <pre><code></code></pre>
+</div>
+
+<div data-bind="if: connectedDocuments.isAddAttachmentModalVisible()">
+    <div data-bind="react: $root.connectedDocuments.addAttachmentModalView"></div>
 </div>
 
 <div data-bind="if: connectedDocuments.isAddAttachmentWithRemoteParametersModalVisible()">

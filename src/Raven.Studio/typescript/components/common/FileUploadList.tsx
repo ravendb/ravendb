@@ -9,7 +9,7 @@ import { ThemeColor } from "components/models/common";
 import IconName from "typings/server/icons";
 import genUtils from "common/generalUtils";
 import useBoolean from "components/hooks/useBoolean";
-import useFilePreviews from "components/hooks/useFilePreviews";
+import useFilePreviews, { getFilePreviewKey } from "components/hooks/useFilePreviews";
 import { getFileBadgeLabel, getFileTypeColor } from "components/common/fileTypeBadge";
 
 const rowDurationSeconds = 0.18;
@@ -27,10 +27,17 @@ interface FileUploadListProps {
     items: FileUploadItem[];
     onRemove: (file: File) => void;
     onCancel: (file: File) => void;
+    isUploading?: boolean;
     collapsedCount?: number;
 }
 
-export default function FileUploadList({ items, onRemove, onCancel, collapsedCount = 3 }: FileUploadListProps) {
+export default function FileUploadList({
+    items,
+    onRemove,
+    onCancel,
+    isUploading,
+    collapsedCount = 3,
+}: FileUploadListProps) {
     const { value: isExpanded, toggle } = useBoolean(false);
     const previews = useFilePreviews(items.map((x) => x.file));
     const prefersReducedMotion = useReducedMotion();
@@ -57,10 +64,10 @@ export default function FileUploadList({ items, onRemove, onCancel, collapsedCou
         return null;
     }
 
-    const isCollapsible = items.length > collapsedCount + 1;
+    const isCollapsible = items.length > collapsedCount;
     const isCapped = isCollapsible && !isExpanded;
 
-    const isHidden = (index: number) => isCapped && index > collapsedCount;
+    const isHidden = (index: number) => isCapped && index >= collapsedCount;
 
     const rowTransition = prefersReducedMotion
         ? { duration: 0 }
@@ -86,9 +93,10 @@ export default function FileUploadList({ items, onRemove, onCancel, collapsedCou
                             >
                                 <FileUploadRow
                                     item={item}
-                                    preview={previews[item.file.name]}
+                                    preview={previews[getFilePreviewKey(item.file)]}
                                     onRemove={onRemove}
                                     onCancel={onCancel}
+                                    isUploading={isUploading}
                                 />
                             </motion.div>
                         ))}
@@ -124,9 +132,10 @@ interface FileUploadRowProps {
     preview?: string;
     onRemove: (file: File) => void;
     onCancel: (file: File) => void;
+    isUploading?: boolean;
 }
 
-function FileUploadRow({ item, preview, onRemove, onCancel }: FileUploadRowProps) {
+function FileUploadRow({ item, preview, onRemove, onCancel, isUploading }: FileUploadRowProps) {
     const { file, status, loaded, total } = item;
     const percentage = status === "uploading" && total ? Math.floor((loaded * 100) / total) : null;
 
@@ -139,7 +148,7 @@ function FileUploadRow({ item, preview, onRemove, onCancel }: FileUploadRowProps
                 </div>
                 <FileUploadStatus item={item} />
             </div>
-            {status === "selected" && (
+            {status === "selected" && !isUploading && (
                 <Button
                     variant="link"
                     size="sm"

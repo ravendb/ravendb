@@ -13,6 +13,11 @@ function progress(fileName: string, status: attachmentUploadStatus, loaded: numb
     return { position: 2, count: 2, fileName, status, loaded, total };
 }
 
+function uploadAll(files: File[], _dto: unknown, onProgress: ProgressCallback) {
+    files.forEach((file) => onProgress(progress(file.name, "uploaded", file.size, file.size)));
+    return Promise.resolve();
+}
+
 function neverEndingUpload(events: attachmentUploadProgress[]) {
     return (_files: File[], _dto: unknown, onProgress: ProgressCallback) => {
         events.forEach(onProgress);
@@ -33,7 +38,7 @@ describe("AddAttachmentWithRemoteParametersModal", () => {
 
     beforeEach(() => {
         mockServices.databasesService.withGetRemoteAttachmentsDestinations();
-        uploadFiles = jest.spyOn(editDocumentUploader.prototype, "uploadFiles").mockResolvedValue();
+        uploadFiles = jest.spyOn(editDocumentUploader.prototype, "uploadFiles").mockImplementation(uploadAll);
     });
 
     afterEach(() => {
@@ -110,6 +115,39 @@ describe("AddAttachmentWithRemoteParametersModal", () => {
         expect(rowOf(screen, "b.txt").getByText(/512 Bytes of 1 KB/)).toBeInTheDocument();
         expect(rowOf(screen, "b.txt").getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
         expect(screen.getByRole("button", { name: /Uploading 2\/2/ })).toBeInTheDocument();
+    });
+
+    it("stays open when a file does not make it, so the outcome is still on screen", async () => {
+        const onClose = jest.fn();
+        uploadFiles.mockImplementation((_files: File[], _dto: unknown, onProgress: ProgressCallback) => {
+            onProgress(progress("a.txt", "uploaded", 4, 4));
+            onProgress(progress("b.txt", "failed", 0, 2));
+            return Promise.resolve();
+        });
+        const { screen, user } = renderModal(onClose);
+        await selectFiles(screen, user, [fileA, fileB]);
+
+        await clickSave(screen, user);
+
+        expect(onClose).not.toHaveBeenCalled();
+        expect(await rowOf(screen, "b.txt").findByText(/Failed/)).toBeInTheDocument();
+    });
+
+    it("drops the previous outcomes when the upload is retried", async () => {
+        uploadFiles.mockImplementation((_files: File[], _dto: unknown, onProgress: ProgressCallback) => {
+            onProgress(progress("a.txt", "uploaded", 4, 4));
+            onProgress(progress("b.txt", "failed", 0, 2));
+            return Promise.resolve();
+        });
+        const { screen, user } = renderModal();
+        await selectFiles(screen, user, [fileA, fileB]);
+        await clickSave(screen, user);
+        expect(await rowOf(screen, "b.txt").findByText(/Failed/)).toBeInTheDocument();
+
+        uploadFiles.mockImplementation(neverEndingUpload([progress("a.txt", "uploading", 1, 4)]));
+        await clickSave(screen, user);
+
+        await waitFor(() => expect(rowOf(screen, "b.txt").queryByText(/Failed/)).not.toBeInTheDocument());
     });
 
     it("cancels the file being uploaded", async () => {
