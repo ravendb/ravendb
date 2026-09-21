@@ -420,7 +420,7 @@ public class SlackWebhookTests(ITestOutputHelper output, QuillSlackFixture fixtu
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Slack, agentId, null,
-            Slack: new(botToken, signingSecret, ParameterBindings: bindings)));
+            DisplayName: "Support bot", Slack: new(botToken, signingSecret, ParameterBindings: bindings)));
 
         var info = await QuillHttp.GetAsync<SlackWebhookInfoResponse>(
             Host.Client, QuillRoutes.SlackWebhookInfo(app.Slug, created.ChannelId));

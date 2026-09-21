@@ -313,6 +313,9 @@ public static class ChannelsEndpoints
         if (string.IsNullOrEmpty(signingSecret))
             return Results.BadRequest(new ApiErrorResponse("slack.signingSecret is required for a Slack channel"));
 
+        if (string.IsNullOrWhiteSpace(body.DisplayName))
+            return Results.BadRequest(new ApiErrorResponse("displayName is required for a Slack channel"));
+
         if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
             return Results.BadRequest(new ApiErrorResponse(nameError!));
 
@@ -328,8 +331,7 @@ public static class ChannelsEndpoints
         {
             Id = Channel.IdPrefix + channelId,
             Type = ChannelType.Slack,
-            DisplayName = body.DisplayName
-                          ?? (string.IsNullOrEmpty(auth.BotName) ? auth.TeamName : auth.BotName),
+            DisplayName = body.DisplayName,
             AgentId = config.Identifier,
             AllowedOrigins = [],
             Enabled = true,
