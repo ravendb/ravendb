@@ -16,6 +16,9 @@ oauth_config:
       - users:read
       - users:read.email
 settings:
+  event_subscriptions:
+    bot_events:
+      - message.im
   interactivity:
     is_enabled: false
   org_deploy_enabled: false
