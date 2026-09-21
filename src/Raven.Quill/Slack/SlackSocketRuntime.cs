@@ -119,6 +119,7 @@ internal sealed class SlackSocketRuntime
         {
             string? fatal;
             var reconnectRequested = false;
+            TimeSpan? retryAfter = null;
             try
             {
                 (fatal, reconnectRequested) = await ConnectAndPumpAsync();
@@ -142,6 +143,7 @@ internal sealed class SlackSocketRuntime
             catch (Exception e)
             {
                 fatal = null;
+                retryAfter = (e as SlackApiException)?.RetryAfter;
                 _health.RecordSocketDisconnected(_database, _shortChannelId, e.Message);
                 if (_logger.IsWarnEnabled)
                     _logger.Warn($"Slack socket attempt failed for channel {_shortChannelId}: {e.Message}");
@@ -155,17 +157,21 @@ internal sealed class SlackSocketRuntime
                 return;
             }
 
-            if (reconnectRequested)
-                continue;
+            var delay = reconnectRequested
+                ? TimeSpan.FromMilliseconds(Random.Shared.Next(250, 1000))
+                : retryAfter > _backoff ? retryAfter.Value : _backoff;
 
             try
             {
-                await Task.Delay(_backoff, _cts.Token);
+                await Task.Delay(delay, _cts.Token);
             }
             catch (OperationCanceledException)
             {
                 return;
             }
+
+            if (reconnectRequested)
+                continue;
 
             var doubled = _backoff * 2 + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 250));
             _backoff = doubled < _options.SocketBackoffMax ? doubled : _options.SocketBackoffMax;

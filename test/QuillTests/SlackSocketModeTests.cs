@@ -445,6 +445,27 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_rate_limited_open_waits_out_retry_after_before_trying_again()
+    {
+        await using var app = await NewAppAsync();
+        await NewChannelAsync(app);
+        await Slack.WaitUntilConnectedAsync();
+
+        Slack.SocketOpenError = "ratelimited";
+        Slack.SocketOpenRetryAfter = TimeSpan.FromSeconds(2);
+        var opensBefore = Slack.SocketOpenCalls.Count;
+        await Slack.CloseCurrentAsync();
+
+        await Slack.WaitUntilAsync(() => Slack.SocketOpenCalls.Count == opensBefore + 1, "the first rate-limited open");
+        await Task.Delay(1000);
+        Assert.Equal(opensBefore + 1, Slack.SocketOpenCalls.Count);
+
+        Slack.SocketOpenError = null;
+        Slack.SocketOpenRetryAfter = null;
+        await Slack.WaitUntilConnectedAsync();
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Channels_without_an_app_token_stay_offline_and_health_says_why()
     {
         await using var app = await NewAppAsync();
