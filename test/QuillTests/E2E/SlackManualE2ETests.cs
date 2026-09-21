@@ -11,17 +11,17 @@ namespace QuillTests.E2E;
 public class SlackManualE2ETests(ITestOutputHelper output) : QuillTestBase(output)
 {
     private const string BotTokenVariable = "QUILL_SLACK_E2E_BOT_TOKEN";
-    private const string SigningSecretVariable = "QUILL_SLACK_E2E_SIGNING_SECRET";
+    private const string AppTokenVariable = "QUILL_SLACK_E2E_APP_TOKEN";
     private const string ChannelVariable = "QUILL_SLACK_E2E_CHANNEL";
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Real_slack_validates_the_token_and_posts_then_edits_a_message()
     {
         var botToken = Environment.GetEnvironmentVariable(BotTokenVariable);
-        var signingSecret = Environment.GetEnvironmentVariable(SigningSecretVariable);
+        var appToken = Environment.GetEnvironmentVariable(AppTokenVariable);
         var channel = Environment.GetEnvironmentVariable(ChannelVariable);
-        if (string.IsNullOrEmpty(botToken) || string.IsNullOrEmpty(signingSecret) || string.IsNullOrEmpty(channel))
-            Assert.Skip($"Set {BotTokenVariable}, {SigningSecretVariable} and {ChannelVariable} " +
+        if (string.IsNullOrEmpty(botToken) || string.IsNullOrEmpty(appToken) || string.IsNullOrEmpty(channel))
+            Assert.Skip($"Set {BotTokenVariable}, {AppTokenVariable} and {ChannelVariable} " +
                         "to run the live Slack E2E.");
 
         await using var host = await NewHostAsync();
@@ -38,7 +38,7 @@ public class SlackManualE2ETests(ITestOutputHelper output) : QuillTestBase(outpu
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Slack, agentId, null,
-            DisplayName: "Support bot", Slack: new(botToken, signingSecret)));
+            DisplayName: "Support bot", Slack: new(botToken, appToken)));
 
         var channels = await app.GetChannelsAsync();
         var summary = Assert.Single(channels, c => c.ChannelId == created.ChannelId);

@@ -54,10 +54,10 @@ export const CreateSlack: Story = {
         await userEvent.click(await body.findByRole("option", { name: /faq bot/i }));
         await userEvent.type(sheet.getByLabelText(/bot token/i), "xoxb-111-222-secret");
         await userEvent.type(sheet.getByLabelText(/channel name/i), "Support Slack");
-        await userEvent.type(sheet.getByLabelText(/signing secret/i), "8f742231b10e8888abcd99yyyzzz85a5");
+        await userEvent.type(sheet.getByLabelText(/app-level token/i), "xapp-1-A0111-222-secret");
         await userEvent.click(sheet.getByRole("button", { name: /connect bot/i }));
 
-        await waitFor(() => expect(sheet.getByText(/webhooks\/slack\//i)).toBeInTheDocument());
+        await waitFor(() => expect(sheet.getByText(/turn on socket mode/i)).toBeInTheDocument());
     },
 };
 

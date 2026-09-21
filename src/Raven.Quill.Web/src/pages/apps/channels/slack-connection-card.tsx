@@ -1,15 +1,31 @@
 import { useQuery } from "@tanstack/react-query";
+import { ExternalLink } from "lucide-react";
 import { api } from "@/api/api";
-import type { SlackSummaryResponse } from "@/api/generated/server-api";
+import type { SlackChannelHealthResponse, SlackSummaryResponse } from "@/api/generated/server-api";
+import { ApiState } from "@/components/data/api-state";
+import { NumberedSteps, type NumberedStep } from "@/components/data/numbered-steps";
 import { Alert, AlertDescription } from "@/components/shadcn/ui/alert";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Text } from "@/components/typography";
-import { Timestamp } from "@/components/data/timestamp";
+import { Timestamp, TimestampTooltip } from "@/components/data/timestamp";
 import { SlackIcon } from "@/pages/apps/channels/channel-brand-icons";
 
-// The connection identity + live health for a Slack channel: which workspace and bot it is wired to,
-// whether the token still works, when the last message arrived, and any recent delivery failure. Shown
-// on the Connect tab and again on the create sheet's success step so both confirm the same thing.
+const SLACK_APPS_URL = "https://api.slack.com/apps";
+
+function useSlackHealth(slug: string, channelId: string) {
+    const healthQuery = useQuery(api.queries.slack.health(slug));
+    return { healthQuery, health: healthQuery.data?.find((row) => row.channelId === channelId) };
+}
+
+export function SlackStatusPanel({ slug, channelId }: { slug: string; channelId: string }) {
+    return (
+        <div className="space-y-4">
+            <SlackConnectionCard slug={slug} channelId={channelId} />
+            <SlackSetupSteps slug={slug} channelId={channelId} />
+        </div>
+    );
+}
+
 export function SlackConnectionCard({
     slug,
     channelId,
@@ -19,18 +35,16 @@ export function SlackConnectionCard({
     channelId: string;
     slack?: SlackSummaryResponse | null;
 }) {
-    const healthQuery = useQuery(api.queries.slack.health(slug));
-    const health = healthQuery.data?.find((row) => row.channelId === channelId);
+    const { health } = useSlackHealth(slug, channelId);
 
-    // The channel record carries workspace/bot identity synchronously; the health poll is the fallback
-    // right after creation, before the channel list has refetched.
     const teamName = slack?.teamName ?? health?.teamName ?? null;
     const botUserId = slack?.botUserId ?? health?.botUserId ?? null;
 
-    const hasRecentSignatureFailure =
-        health?.lastSignatureFailureAt != null &&
+    const hasRecentSendError =
+        health?.lastSendError != null &&
+        health.lastSendErrorAt != null &&
         (health.lastInboundAt == null ||
-            new Date(health.lastSignatureFailureAt).getTime() > new Date(health.lastInboundAt).getTime());
+            new Date(health.lastSendErrorAt).getTime() > new Date(health.lastInboundAt).getTime());
 
     return (
         <div className="space-y-3">
@@ -46,8 +60,11 @@ export function SlackConnectionCard({
                         </Text>
                     </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <SlackTokenBadge tokenValid={health?.tokenValid} tokenError={health?.tokenError} />
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                        <SlackTokenBadge tokenValid={health?.tokenValid} tokenError={health?.tokenError} />
+                        {health && <SlackSocketBadge health={health} />}
+                    </div>
                     {health?.lastInboundAt ? (
                         <Text as="span" variant="caption">
                             Last message <Timestamp value={health.lastInboundAt} textVariant="inherit" />
@@ -60,32 +77,133 @@ export function SlackConnectionCard({
                 </div>
             </div>
 
-            {hasRecentSignatureFailure && health?.lastSignatureFailureAt && (
-                <Alert variant="destructive">
-                    <AlertDescription>
-                        A delivery failed signature verification at{" "}
-                        <Timestamp value={health.lastSignatureFailureAt} textVariant="inherit" /> — the signing secret
-                        configured here likely differs from the Slack app&apos;s. Rotate the signing secret on this
-                        channel to match.
-                    </AlertDescription>
-                </Alert>
+            {health && !health.socketConnected && health.lastSocketError && (
+                <Alert variant="destructive">{health.lastSocketError}</Alert>
             )}
 
-            {health?.lastSendError && (
+            {hasRecentSendError && (
                 <Alert variant="destructive">
                     <AlertDescription>
                         The bot couldn&apos;t deliver a reply
-                        {health.lastSendErrorAt ? (
+                        {health?.lastSendErrorAt ? (
                             <>
                                 {" at "}
                                 <Timestamp value={health.lastSendErrorAt} textVariant="inherit" />
                             </>
                         ) : null}
-                        : {health.lastSendError}
+                        : {health?.lastSendError}
+                    </AlertDescription>
+                </Alert>
+            )}
+
+            {health?.tokenValid === false && (
+                <Alert variant="destructive">
+                    <AlertDescription>
+                        Slack rejected this bot token. Copy the xoxb- token from the app&apos;s OAuth &amp; Permissions
+                        page, then open <span className="font-medium">Edit &rarr; Rotate credentials</span> to paste the
+                        new one.
                     </AlertDescription>
                 </Alert>
             )}
         </div>
+    );
+}
+
+export function SlackSetupSteps({ slug, channelId }: { slug: string; channelId: string }) {
+    const { healthQuery, health } = useSlackHealth(slug, channelId);
+
+    return (
+        <ApiState
+            isLoading={healthQuery.isPending}
+            isError={healthQuery.isError}
+            errorTitle="Could not load the Slack setup steps"
+            onRetry={() => void healthQuery.refetch()}
+            loadingLabel="Loading setup steps..."
+        >
+            {health && <SlackSetupStepsBody />}
+        </ApiState>
+    );
+}
+
+function SlackSetupStepsBody() {
+    const steps: NumberedStep[] = [
+        {
+            title: "Turn on Socket Mode",
+            content: (
+                <Text variant="muted">
+                    In your{" "}
+                    <a
+                        href={SLACK_APPS_URL}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-0.5 underline underline-offset-2 hover:text-foreground"
+                    >
+                        Slack app settings
+                        <ExternalLink className="size-3" aria-hidden="true" />
+                    </a>
+                    , open <span className="font-medium">Socket Mode</span> and enable it. Apps created from the Quill
+                    manifest already have it on.
+                </Text>
+            ),
+        },
+        {
+            title: "Subscribe to bot events",
+            content: (
+                <Text variant="muted">
+                    Under <span className="font-medium">Event Subscriptions</span>, turn events on and add{" "}
+                    <span className="font-medium">message.im</span> to the bot events, then save. Socket Mode needs no
+                    request URL.
+                </Text>
+            ),
+        },
+        {
+            title: "Test it",
+            content: <Text variant="muted">Open a DM with the bot in Slack and send it a message.</Text>,
+        },
+    ];
+
+    return (
+        <div className="space-y-4">
+            <NumberedSteps steps={steps} />
+            <Text variant="caption">
+                The appliance connects out to Slack over a WebSocket, so it needs no public URL. An app created before
+                users:read and users:read.email were added to the manifest must be reinstalled to the workspace before a
+                parameter can bind to the sender&apos;s email.
+            </Text>
+        </div>
+    );
+}
+
+function SlackSocketBadge({ health }: { health: SlackChannelHealthResponse }) {
+    if (health.tokenValid === false) {
+        return null;
+    }
+
+    if (health.socketConnected) {
+        const badge = <Badge variant="success">Socket connected</Badge>;
+        if (!health.lastConnectedAt) {
+            return badge;
+        }
+
+        return (
+            <TimestampTooltip value={health.lastConnectedAt} prefix="Connected on">
+                {badge}
+            </TimestampTooltip>
+        );
+    }
+
+    if (!health.enabled) {
+        return <Badge variant="secondary">Paused</Badge>;
+    }
+
+    if (!health.lastSocketError) {
+        return <Badge variant="secondary">Connecting...</Badge>;
+    }
+
+    return (
+        <Badge variant="destructive" title={health.lastSocketError}>
+            Socket disconnected
+        </Badge>
     );
 }
 

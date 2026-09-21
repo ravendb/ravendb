@@ -13,6 +13,7 @@ import { FormInput } from "@/components/form/form-input";
 import { FormStringList } from "@/components/form/form-string-list";
 import {
     DISCORD_BOT_TOKEN_FORMAT,
+    SLACK_APP_TOKEN_FORMAT,
     SLACK_BOT_TOKEN_FORMAT,
     rotatedTokenField,
 } from "@/pages/apps/channels/channel-token-fields";
@@ -26,7 +27,7 @@ const editChannelSchema = z.object({
     allowedOrigins: z.array(z.object({ value: z.string().trim() })),
     botToken: z.string().trim(),
     slackBotToken: rotatedTokenField(SLACK_BOT_TOKEN_FORMAT),
-    slackSigningSecret: z.string().trim(),
+    slackAppToken: rotatedTokenField(SLACK_APP_TOKEN_FORMAT),
     discordBotToken: rotatedTokenField(DISCORD_BOT_TOKEN_FORMAT),
 });
 
@@ -71,7 +72,7 @@ export function ChannelConfigForm({
             allowedOrigins: (channel.allowedOrigins ?? []).map((value) => ({ value })),
             botToken: "",
             slackBotToken: "",
-            slackSigningSecret: "",
+            slackAppToken: "",
             discordBotToken: "",
         },
     });
@@ -84,7 +85,7 @@ export function ChannelConfigForm({
         if (!checked) {
             form.resetField("botToken");
             form.resetField("slackBotToken");
-            form.resetField("slackSigningSecret");
+            form.resetField("slackAppToken");
             form.resetField("discordBotToken");
         }
     };
@@ -103,7 +104,7 @@ export function ChannelConfigForm({
                 slack: isSlack
                     ? {
                           botToken: values.slackBotToken.trim() || null,
-                          signingSecret: values.slackSigningSecret.trim() || null,
+                          appToken: values.slackAppToken.trim() || null,
                       }
                     : null,
                 discord: isDiscord ? { botToken: values.discordBotToken.trim() || null } : null,
@@ -159,7 +160,7 @@ export function ChannelConfigForm({
                                 <Switch id={rotateTokenId} checked={isRotatingToken} onCheckedChange={onRotateToggle} />
                             </div>
                             <FieldDescription>
-                                Turn on to replace the Slack app’s bot token, signing secret, or both. Leave a field
+                                Turn on to replace the Slack app’s bot token, app-level token, or both. Leave a field
                                 empty to keep the current value; neither is ever shown.
                             </FieldDescription>
                         </div>
@@ -175,11 +176,11 @@ export function ChannelConfigForm({
                                 />
                                 <FormInput
                                     control={form.control}
-                                    name="slackSigningSecret"
+                                    name="slackAppToken"
                                     type="password"
-                                    label="New signing secret"
-                                    placeholder="From Basic Information > App Credentials"
-                                    description="Must match the Slack app’s signing secret or event deliveries stop verifying."
+                                    label="New app-level token"
+                                    placeholder="xapp-..."
+                                    description="Needs the connections:write scope; the Socket Mode connection reopens with it."
                                 />
                             </>
                         )}
