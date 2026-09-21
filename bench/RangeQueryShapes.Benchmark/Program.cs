@@ -1,3 +1,4 @@
+using System;
 using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Jobs;
@@ -21,11 +22,21 @@ public class Program
             .AddLogger(ConsoleLogger.Default)
             .AddColumnProvider(DefaultColumnProviders.Instance)
             .AddJob(Job.Default
-                .WithToolchain(InProcessEmitToolchain.Instance)
+                // the default in-process timeout is five minutes and covers GlobalSetup, which seeds and indexes
+                // the whole data set; at 100M documents that alone takes over an hour
+                .WithToolchain(new InProcessEmitToolchain(TimeSpan.FromHours(6), logOutput: true))
                 .WithWarmupCount(3)
                 .WithIterationCount(10)
                 .AsDefault());
 
-        BenchmarkRunner.Run(typeof(Program).Assembly, config, args);
+        try
+        {
+            BenchmarkRunner.Run(typeof(Program).Assembly, config, args);
+        }
+        finally
+        {
+            // the seeded database is shared by every benchmark in the run, so it is torn down once, here
+            Harness.DisposeShared();
+        }
     }
 }
