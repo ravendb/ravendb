@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { ExternalLink } from "lucide-react";
 import { api } from "@/api/api";
 import type { SlackChannelHealthResponse, SlackSummaryResponse } from "@/api/generated/server-api";
-import { ApiState } from "@/components/data/api-state";
 import { NumberedSteps, type NumberedStep } from "@/components/data/numbered-steps";
 import { Alert, AlertDescription } from "@/components/shadcn/ui/alert";
 import { Badge } from "@/components/shadcn/ui/badge";
@@ -13,15 +12,14 @@ import { SlackIcon } from "@/pages/apps/channels/channel-brand-icons";
 const SLACK_APPS_URL = "https://api.slack.com/apps";
 
 function useSlackHealth(slug: string, channelId: string) {
-    const healthQuery = useQuery(api.queries.slack.health(slug));
-    return { healthQuery, health: healthQuery.data?.find((row) => row.channelId === channelId) };
+    return useQuery(api.queries.slack.health(slug)).data?.find((row) => row.channelId === channelId);
 }
 
 export function SlackStatusPanel({ slug, channelId }: { slug: string; channelId: string }) {
     return (
         <div className="space-y-4">
             <SlackConnectionCard slug={slug} channelId={channelId} />
-            <SlackSetupSteps slug={slug} channelId={channelId} />
+            <SlackSetupSteps />
         </div>
     );
 }
@@ -35,7 +33,7 @@ export function SlackConnectionCard({
     channelId: string;
     slack?: SlackSummaryResponse | null;
 }) {
-    const { health } = useSlackHealth(slug, channelId);
+    const health = useSlackHealth(slug, channelId);
 
     const teamName = slack?.teamName ?? health?.teamName ?? null;
     const botUserId = slack?.botUserId ?? health?.botUserId ?? null;
@@ -109,23 +107,7 @@ export function SlackConnectionCard({
     );
 }
 
-export function SlackSetupSteps({ slug, channelId }: { slug: string; channelId: string }) {
-    const { healthQuery, health } = useSlackHealth(slug, channelId);
-
-    return (
-        <ApiState
-            isLoading={healthQuery.isPending}
-            isError={healthQuery.isError}
-            errorTitle="Could not load the Slack setup steps"
-            onRetry={() => void healthQuery.refetch()}
-            loadingLabel="Loading setup steps..."
-        >
-            {health && <SlackSetupStepsBody />}
-        </ApiState>
-    );
-}
-
-function SlackSetupStepsBody() {
+export function SlackSetupSteps() {
     const steps: NumberedStep[] = [
         {
             title: "Turn on Socket Mode",
@@ -151,8 +133,8 @@ function SlackSetupStepsBody() {
             content: (
                 <Text variant="muted">
                     Under <span className="font-medium">Event Subscriptions</span>, turn events on and add{" "}
-                    <span className="font-medium">message.im</span> to the bot events, then save. Socket Mode needs no
-                    request URL.
+                    <span className="font-medium">message.im</span> to the bot events, then save. Apps created from the
+                    Quill manifest already subscribe to it. Socket Mode needs no request URL.
                 </Text>
             ),
         },
