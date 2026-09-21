@@ -281,7 +281,7 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
         var agentId = await SeedAgentAsync(app);
 
         var iframe = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, agentId, []));
+            new ProvisionChannelRequest(ChannelType.IFrame, agentId, [], "Storefront widget"));
 
         var e = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync(
             iframe.ChannelId, new UpdateChannelRequest(null, null, null, Discord: new(BotToken: "rotated"))));

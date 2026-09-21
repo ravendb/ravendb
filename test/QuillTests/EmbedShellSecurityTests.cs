@@ -26,7 +26,7 @@ public class EmbedShellSecurityTests(ITestOutputHelper output) : QuillTestBase(o
             ConnectionStringName = app.Host.ConnectionStringName,
         });
         var channel = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, "demo", origins));
+            new ProvisionChannelRequest(ChannelType.IFrame, "demo", origins, "Storefront widget"));
 
         return (await app.MintEmbedLinkAsync(new MintEmbedLinkRequest(channel.ChannelId))).Token;
     }

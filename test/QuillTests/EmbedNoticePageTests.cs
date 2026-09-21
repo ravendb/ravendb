@@ -75,7 +75,7 @@ public class EmbedNoticePageTests(ITestOutputHelper output) : QuillTestBase(outp
         });
 
         var channel = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, "demo", origins));
+            new ProvisionChannelRequest(ChannelType.IFrame, "demo", origins, "Storefront widget"));
 
         return channel.ChannelId;
     }

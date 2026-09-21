@@ -140,7 +140,7 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : QuillTestBas
         {
             Identifier = "demo", Name = "Demo", SystemPrompt = "You help.", ConnectionStringName = Host.ConnectionStringName,
         });
-        var channel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo", Array.Empty<string>()));
+        var channel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo", Array.Empty<string>(), "Storefront widget"));
 
         var nonConversation = await Assert.ThrowsAsync<QuillHttpException>(() => app.GetConversationAsync($"channels/{channel.ChannelId}"));
         Assert.Equal(HttpStatusCode.NotFound, nonConversation.StatusCode);

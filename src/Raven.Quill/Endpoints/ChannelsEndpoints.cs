@@ -147,6 +147,9 @@ public static class ChannelsEndpoints
         if (TryNormalizeOrigins(origins, out var originError) == false)
             return Results.BadRequest(new ApiErrorResponse(originError!));
 
+        if (string.IsNullOrWhiteSpace(body.DisplayName))
+            return Results.BadRequest(new ApiErrorResponse("displayName is required for a web widget channel"));
+
         if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
             return Results.BadRequest(new ApiErrorResponse(nameError!));
 
@@ -158,7 +161,7 @@ public static class ChannelsEndpoints
         {
             Id = Channel.IdPrefix + channelId,
             Type = ChannelType.IFrame,
-            DisplayName = body.DisplayName ?? ChannelType.IFrame.ToString(),
+            DisplayName = body.DisplayName,
             AgentId = config.Identifier,
             AllowedOrigins = origins,
             Enabled = true,

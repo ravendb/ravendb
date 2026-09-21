@@ -590,7 +590,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
         var agentId = await SeedAgentAsync(app);
 
         var created = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, agentId, []));
+            new ProvisionChannelRequest(ChannelType.IFrame, agentId, [], "Storefront widget"));
 
         var e = await Assert.ThrowsAsync<QuillHttpException>(() =>
             app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
