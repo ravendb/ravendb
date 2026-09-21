@@ -95,6 +95,10 @@ internal sealed class SlackSocketRuntime
                 _logger.Warn($"Slack socket for channel {_shortChannelId} did not stop within {StopTimeout}");
             return;
         }
+        finally
+        {
+            _health.RecordSocketStopped(_database, _shortChannelId);
+        }
 
         _cts.Dispose();
         _sendLock.Dispose();
