@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -598,6 +599,67 @@ namespace SlowTests.Server.Documents.Tombstones
                 }
             }
         }
+
+        [RavenTheory(RavenTestCategory.Attachments)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task AttachmentTombstones_PseudoCollectionCount(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                using (var stream1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                using (var stream2 = new MemoryStream(new byte[] { 4, 5, 6 }))
+                using (var stream3 = new MemoryStream(new byte[] { 7, 8, 9 }))
+                {
+                    session.Store(new User { Name = "A" }, "users/1");
+                    session.Advanced.Attachments.Store("users/1", "file1", stream1);
+                    session.Advanced.Attachments.Store("users/1", "file2", stream2);
+                    session.Advanced.Attachments.Store("users/1", "file3", stream3);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Attachments.Delete("users/1", "file1");
+                    session.Advanced.Attachments.Delete("users/1", "file2");
+                    session.Advanced.Attachments.Delete("users/1", "file3");
+                    session.SaveChanges();
+                }
+
+                var database = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "users/1");
+
+                List<long> tombstoneEtags;
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    tombstoneEtags = database.DocumentsStorage.GetTombstonesFrom(context, AttachmentsTombstones, 0, 0, long.MaxValue).Select(x => x.Etag).ToList();
+                    Assert.Equal(3, tombstoneEtags.Count);
+
+                    var sw = Stopwatch.StartNew();
+
+                    var allResult = database.DocumentsStorage.GetNumberOfTombstonesToProcess(context, AttachmentsTombstones, 0, sw, exact: true);
+                    Assert.Equal(3, allResult.Count);
+                    Assert.False(allResult.Estimated);
+
+                    var afterResult = database.DocumentsStorage.GetNumberOfTombstonesToProcess(context, AttachmentsTombstones, tombstoneEtags[0], sw, exact: true);
+                    Assert.Equal(2, afterResult.Count);
+                }
+
+                // a Raven ETL task with an empty script registers the attachment tombstones pseudo collection (see EtlLoader.MarkDocumentTombstonesForDeletion)
+                var lastProcessedEtag = tombstoneEtags[1] - 1;
+
+                using (var etl = new TestTombstoneAwareSubscription("etl", ITombstoneAware.TombstoneType.Documents, AttachmentsTombstones, lastProcessedEtag).Subscribe(database))
+                using (var upToDate = new TestTombstoneAwareSubscription("up-to-date", ITombstoneAware.TombstoneType.Documents, AttachmentsTombstones, tombstoneEtags[2]).Subscribe(database))
+                {
+                    var state = database.TombstoneCleaner.GetState(addInfoForDebug: true, exact: true);
+
+                    AssertRemainingTombstones(state, etl, expected: 2);
+                    AssertRemainingTombstones(state, upToDate, expected: 0);
+                }
+            }
+        }
+
+        private static string AttachmentsTombstones => Raven.Server.Documents.Schemas.Attachments.AttachmentsTombstones;
 
         private static void AssertRemainingTombstones(TombstoneCleaner.TombstonesState state, TestTombstoneAwareSubscription subscription, long expected, bool estimated = false)
         {

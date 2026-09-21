@@ -2461,21 +2461,36 @@ namespace Raven.Server.Documents
 
         private NumberOfEntriesAfterResult GetNumberOfItemsToProcess(DocumentsOperationContext context, string collection, long afterEtag, bool tombstones, Stopwatch overallDuration, bool exact)
         {
-            var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
-            if (collectionName == null)
-                return new NumberOfEntriesAfterResult();
-
             Table table;
             TableSchema.FixedSizeKeyIndexDef indexDef;
             if (tombstones)
             {
-                table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
-                    collectionName.GetTableName(CollectionTableType.Tombstones));
+                string tableName;
 
+                if (collection == Schemas.Attachments.AttachmentsTombstones ||
+                    collection == Schemas.Revisions.RevisionsTombstones)
+                {
+                    // pseudo collections that are tracked by the tombstone cleaner subscriptions (see GetTombstonesFrom)
+                    tableName = collection;
+                }
+                else
+                {
+                    var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+                    if (collectionName == null)
+                        return new NumberOfEntriesAfterResult();
+
+                    tableName = collectionName.GetTableName(CollectionTableType.Tombstones);
+                }
+
+                table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, tableName);
                 indexDef = TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice];
             }
             else
             {
+                var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+                if (collectionName == null)
+                    return new NumberOfEntriesAfterResult();
+
                 table = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName),
                     collectionName.GetTableName(CollectionTableType.Documents));
                 indexDef = DocsSchema.FixedSizeIndexes[CollectionEtagsSlice];
