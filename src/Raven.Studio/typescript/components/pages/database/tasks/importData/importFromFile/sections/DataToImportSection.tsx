@@ -11,7 +11,7 @@ import { getItemsToWarnAbout } from "../importFromFileUtils";
 import { getLicenseLimitWarning } from "../importLicenseLimits";
 import { useImportRestrictions } from "../useImportRestrictions";
 import RestrictedSwitch from "./RestrictedSwitch";
-import FormCollectionsSelect from "components/common/FormCollectionsSelect";
+import CollectionsToImportPicker from "./CollectionsToImportPicker";
 import Card from "react-bootstrap/Card";
 import classNames from "classnames";
 import { useAppSelector } from "components/store";
@@ -25,7 +25,6 @@ export default function DataToImportSection() {
     const subscriptionsLimitWarning = getLicenseLimitWarning(licenseStatus, "subscriptions");
 
     const isImportAll = useWatch({ control, name: "collections.isImportAllCollections" });
-    const includedCollections = useWatch({ control, name: "collections.includedCollections" }) ?? [];
 
     const itemsToWarnAbout = getItemsToWarnAbout({ documents });
 
@@ -67,21 +66,7 @@ export default function DataToImportSection() {
                         Customize imported collections
                     </button>
                 </div>
-                {!isImportAll && (
-                    <div className="mt-4">
-                        <FormCollectionsSelect
-                            control={control}
-                            allCollectionNames={[]}
-                            isAllCollectionsFormName="collections.isImportAllCollections"
-                            isAllCollections={isImportAll}
-                            collectionsFormName="collections.includedCollections"
-                            collections={includedCollections}
-                            setValue={setValue}
-                            hideAllToggle
-                            isFreeTextEntry
-                        />
-                    </div>
-                )}
+                {!isImportAll && <CollectionsToImportPicker />}
             </Card>
 
             <div className="d-flex justify-content-between align-items-center mb-2">
