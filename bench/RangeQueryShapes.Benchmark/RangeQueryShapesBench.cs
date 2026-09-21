@@ -26,7 +26,7 @@ public class RangeQueryShapesBench
     [Params(RavenSearchEngineMode.Corax, RavenSearchEngineMode.Lucene)]
     public RavenSearchEngineMode Engine { get; set; }
 
-    [Params(100_000_000)]
+    [Params(1_000_000)]
     public int Documents { get; set; }
 
     [GlobalSetup]
@@ -60,7 +60,7 @@ public class Harness : RavenTestBase
     private static readonly string[] CustomerIds = Enumerable.Range(0, 5).Select(i => $"customers/{i}").ToArray();
     private static readonly string[] EntityTypes = { "Deposit" };
 
-    private const int ProgressEvery = 5_000_000;
+    private const int ProgressEvery = 1_000_000;
     private static readonly TimeSpan IndexingTimeout = TimeSpan.FromHours(12);
 
     // ConsoleTestOutputHelper marks the RavenTestBase instance as running outside of xUnit
