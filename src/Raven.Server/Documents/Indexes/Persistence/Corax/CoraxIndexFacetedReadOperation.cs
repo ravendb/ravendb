@@ -105,6 +105,21 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                     return ScanningFacetedQuery(results, facetQuery, queryTimings, context, getSpatialField, token);
                 }
             }
+
+            // Every term facet below costs one term query per distinct term of its field, however few documents
+            // matched. When the matches are fewer than the terms, the norm for high cardinality fields such as ids,
+            // reading the terms of the matched documents is far cheaper.
+            foreach (var result in results)
+            {
+                if (result.Value.Ranges != null && result.Value.Ranges.Count > 0)
+                    continue;
+
+                if (baseQueryMatchingIds.Count < _indexSearcher.GetTermAmountInField(GetFieldMetadata(result.Value.AggregateBy)))
+                {
+                    CoraxIndexReadOperation.QueryPool.Return(ids);
+                    return ScanningFacetedQuery(results, facetQuery, queryTimings, context, getSpatialField, token);
+                }
+            }
         }
 
         foreach (var result in results)
