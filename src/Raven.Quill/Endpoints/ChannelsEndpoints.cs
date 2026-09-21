@@ -396,6 +396,9 @@ public static class ChannelsEndpoints
         if (string.IsNullOrEmpty(botToken))
             return Results.BadRequest(new ApiErrorResponse("discord.botToken is required for a Discord channel"));
 
+        if (string.IsNullOrWhiteSpace(body.DisplayName))
+            return Results.BadRequest(new ApiErrorResponse("displayName is required for a Discord channel"));
+
         if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
             return Results.BadRequest(new ApiErrorResponse(nameError!));
 
@@ -411,7 +414,7 @@ public static class ChannelsEndpoints
         {
             Id = Channel.IdPrefix + channelId,
             Type = ChannelType.Discord,
-            DisplayName = body.DisplayName ?? identity.BotUsername,
+            DisplayName = body.DisplayName,
             AgentId = config.Identifier,
             AllowedOrigins = [],
             Enabled = true,

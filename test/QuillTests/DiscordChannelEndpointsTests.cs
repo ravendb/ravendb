@@ -24,7 +24,7 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
         Discord.AddBot(botToken, applicationId, botUserId, "acme-helper");
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Discord, agentId, null, Discord: new(botToken)));
+            ChannelType.Discord, agentId, null, DisplayName: "Support bot", Discord: new(botToken)));
 
         var channels = await app.GetChannelsAsync();
         var summary = Assert.Single(channels, c => c.ChannelId == created.ChannelId);
@@ -33,7 +33,7 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
         Assert.Equal(applicationId, summary.Discord!.ApplicationId);
         Assert.Equal(botUserId, summary.Discord.BotUserId);
         Assert.Equal("acme-helper", summary.Discord.BotUsername);
-        Assert.Equal("acme-helper", summary.DisplayName);
+        Assert.Equal("Support bot", summary.DisplayName);
         Assert.Contains(botToken, Discord.IdentityCalls);
 
         var raw = await (await Host.Client.GetAsync(QuillRoutes.Channels(app.Slug))).EnsureSuccessAsync();
@@ -49,7 +49,7 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
         Discord.AddBot(botToken, NewApplicationId(), NewBotUserId());
 
         await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Discord, agentId, null, Discord: new(botToken)));
+            ChannelType.Discord, agentId, null, DisplayName: "Support bot", Discord: new(botToken)));
 
         var listResponse = await (await Host.Client.GetAsync(QuillRoutes.Channels(app.Slug))).EnsureSuccessAsync();
         Assert.DoesNotContain(botToken, await listResponse.Content.ReadAsStringAsync());
@@ -65,12 +65,12 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
         var agentId = await SeedAgentAsync(app);
 
         var missing = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Discord, agentId, null, Discord: new(BotToken: null))));
+            new ProvisionChannelRequest(ChannelType.Discord, agentId, null, DisplayName: "Support bot", Discord: new(BotToken: null))));
         Assert.Equal(HttpStatusCode.BadRequest, missing.StatusCode);
         Assert.Contains("discord.botToken is required", missing.Body);
 
         var blank = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Discord, agentId, null, Discord: new(BotToken: "   "))));
+            new ProvisionChannelRequest(ChannelType.Discord, agentId, null, DisplayName: "Support bot", Discord: new(BotToken: "   "))));
         Assert.Equal(HttpStatusCode.BadRequest, blank.StatusCode);
     }
 
@@ -82,7 +82,7 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
         Discord.AddBot(botToken, NewApplicationId(), NewBotUserId());
 
         var e = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Discord, "nope", null, Discord: new(botToken))));
+            new ProvisionChannelRequest(ChannelType.Discord, "nope", null, DisplayName: "Support bot", Discord: new(botToken))));
 
         Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
         Assert.Contains("unknown agentId", e.Body);
@@ -96,7 +96,7 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
         var botToken = NewBotToken();
 
         var e = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Discord, agentId, null, Discord: new(botToken))));
+            new ProvisionChannelRequest(ChannelType.Discord, agentId, null, DisplayName: "Support bot", Discord: new(botToken))));
 
         Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
         Assert.Contains("rejected the bot token", e.Body);
@@ -113,7 +113,7 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
         Discord.Down = true;
 
         var e = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Discord, agentId, null, Discord: new(botToken))));
+            new ProvisionChannelRequest(ChannelType.Discord, agentId, null, DisplayName: "Support bot", Discord: new(botToken))));
 
         Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
         Assert.Contains("unavailable", e.Body);
@@ -128,12 +128,12 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
         Discord.AddBot(botToken, NewApplicationId(), NewBotUserId());
 
         var missing = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Discord, agentId, null, Discord: new(botToken))));
+            new ProvisionChannelRequest(ChannelType.Discord, agentId, null, DisplayName: "Support bot", Discord: new(botToken))));
         Assert.Contains("missing parameter binding", missing.Body);
 
         var unsupported = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.Discord, agentId, null,
-                Discord: new(botToken, new Dictionary<string, ChannelParameterBinding>
+                DisplayName: "Support bot", Discord: new(botToken, new Dictionary<string, ChannelParameterBinding>
                 {
                     ["customerId"] = new() { Source = ChannelParameterSource.Email },
                 }))));
@@ -141,7 +141,7 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Discord, agentId, null,
-            Discord: new(botToken, new Dictionary<string, ChannelParameterBinding>
+            DisplayName: "Support bot", Discord: new(botToken, new Dictionary<string, ChannelParameterBinding>
             {
                 ["customerId"] = new() { Source = ChannelParameterSource.Username },
             })));
@@ -158,7 +158,7 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
 
         var telegram = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.Discord, agentId, null,
-                Telegram: new("123:tok"), Discord: new(botToken))));
+                DisplayName: "Support bot", Telegram: new("123:tok"), Discord: new(botToken))));
         Assert.Contains("telegram settings apply to Telegram channels only", telegram.Body);
 
         var origins = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
@@ -167,7 +167,7 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
         Assert.Contains("allowedOrigins does not apply to Discord channels", origins.Body);
 
         var crossType = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, Discord: new(botToken))));
+            new ProvisionChannelRequest(ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Discord: new(botToken))));
         Assert.Contains("discord settings apply to Discord channels only", crossType.Body);
     }
 
@@ -182,10 +182,10 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
         Discord.AddBot(botToken, NewApplicationId(), NewBotUserId());
 
         await first.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Discord, firstAgent, null, Discord: new(botToken)));
+            ChannelType.Discord, firstAgent, null, DisplayName: "Support bot", Discord: new(botToken)));
 
         var e = await Assert.ThrowsAsync<QuillHttpException>(() => second.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Discord, secondAgent, null, Discord: new(botToken))));
+            new ProvisionChannelRequest(ChannelType.Discord, secondAgent, null, DisplayName: "Support bot", Discord: new(botToken))));
 
         Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
         Assert.Contains("already connected", e.Body);
@@ -200,7 +200,7 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
         Discord.AddBot(botToken, NewApplicationId(), NewBotUserId());
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Discord, agentId, null, Discord: new(botToken)));
+            ChannelType.Discord, agentId, null, DisplayName: "Support bot", Discord: new(botToken)));
 
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
@@ -209,7 +209,7 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
         }
 
         var reclaimed = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Discord, agentId, null, Discord: new(botToken)));
+            ChannelType.Discord, agentId, null, DisplayName: "Support bot", Discord: new(botToken)));
         Assert.NotEmpty(reclaimed.ChannelId);
     }
 
@@ -224,7 +224,7 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
         Discord.AddBot(botToken, applicationId, botUserId, "same-bot");
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Discord, agentId, null, Discord: new(botToken)));
+            ChannelType.Discord, agentId, null, DisplayName: "Support bot", Discord: new(botToken)));
 
         var rejected = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync(
             created.ChannelId, new UpdateChannelRequest(null, null, null, Discord: new(BotToken: NewBotToken()))));
@@ -255,7 +255,7 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Discord, agentId, null,
-            Discord: new(botToken, new Dictionary<string, ChannelParameterBinding>
+            DisplayName: "Support bot", Discord: new(botToken, new Dictionary<string, ChannelParameterBinding>
             {
                 ["customerId"] = new() { Source = ChannelParameterSource.UserId },
             })));
@@ -300,7 +300,7 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
         Discord.AddBot(botToken, NewApplicationId(), botUserId);
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Discord, agentId, null, Discord: new(botToken)));
+            ChannelType.Discord, agentId, null, DisplayName: "Support bot", Discord: new(botToken)));
         await app.DeleteChannelAsync(created.ChannelId);
 
         using (var session = app.Store.OpenAsyncSession())
@@ -309,7 +309,7 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
         }
 
         var reused = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Discord, agentId, null, Discord: new(botToken)));
+            ChannelType.Discord, agentId, null, DisplayName: "Support bot", Discord: new(botToken)));
         Assert.NotEmpty(reused.ChannelId);
     }
 
@@ -324,7 +324,7 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
         Discord.AddBot(botToken, applicationId, botUserId);
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Discord, agentId, null, Discord: new(botToken)));
+            ChannelType.Discord, agentId, null, DisplayName: "Support bot", Discord: new(botToken)));
 
         var rows = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
             Host.Client, QuillRoutes.DiscordHealth(app.Slug));
