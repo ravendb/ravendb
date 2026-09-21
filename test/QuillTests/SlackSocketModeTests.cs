@@ -404,6 +404,30 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_socket_closed_before_hello_surfaces_in_health_and_the_runtime_retries()
+    {
+        await using var app = await NewAppAsync();
+        Slack.CloseOnConnect = true;
+        var channel = await NewChannelAsync(app);
+
+        await Slack.WaitUntilAsync(
+            async () =>
+            {
+                var rows = await QuillHttp.GetAsync<SlackChannelHealthResponse[]>(
+                    Host.Client, QuillRoutes.SlackHealth(app.Slug));
+                return rows.Single(r => r.ChannelId == channel.ChannelId).LastSocketError is not null;
+            },
+            "the recorded pre-hello close");
+
+        var health = await QuillHttp.GetAsync<SlackChannelHealthResponse[]>(
+            Host.Client, QuillRoutes.SlackHealth(app.Slug));
+        Assert.Contains("before sending a hello frame", health.Single(r => r.ChannelId == channel.ChannelId).LastSocketError);
+
+        Slack.CloseOnConnect = false;
+        await Slack.WaitUntilConnectedAsync();
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task A_transient_open_failure_retries_until_slack_recovers()
     {
         await using var app = await NewAppAsync();

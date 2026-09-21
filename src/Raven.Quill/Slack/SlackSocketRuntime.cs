@@ -181,9 +181,8 @@ internal sealed class SlackSocketRuntime
         socket.Options.KeepAliveTimeout = KeepAliveTimeout;
         _frameBuffer.SetLength(0);
 
-        var hello = await HandshakeAsync(socket, url);
-        if (hello is null)
-            return (null, false);
+        var hello = await HandshakeAsync(socket, url) ??
+                    throw new InvalidOperationException("slack closed the socket before sending a hello frame");
 
         if (hello.Type != SlackSocketFrame.HelloType)
             throw new InvalidOperationException(
