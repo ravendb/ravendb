@@ -132,9 +132,10 @@ export function SlackSetupSteps() {
             title: "Subscribe to bot events",
             content: (
                 <Text variant="muted">
-                    Under <span className="font-medium">Event Subscriptions</span>, turn events on and add{" "}
-                    <span className="font-medium">message.im</span> to the bot events, then save. Apps created from the
-                    Quill manifest already subscribe to it. Socket Mode needs no request URL.
+                    Under <span className="font-medium">Event Subscriptions</span>, switch{" "}
+                    <span className="font-medium">Enable Events</span> on, add{" "}
+                    <span className="font-medium">message.im</span> under bot events and save. Apps created from the
+                    Quill manifest start with this in place.
                 </Text>
             ),
         },
