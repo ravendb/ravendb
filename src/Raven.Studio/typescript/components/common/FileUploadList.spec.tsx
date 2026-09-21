@@ -18,12 +18,12 @@ function shownNames(container: HTMLElement) {
 }
 
 describe("FileUploadList", () => {
-    it("caps the list, peeks one extra row under the fade, and reveals the rest via Show all", async () => {
+    it("caps the list at collapsedCount rows and reveals the rest via Show all", async () => {
         const { screen, container, fireClick } = rtlRender(
             <FileUploadList items={items(6)} onRemove={jest.fn()} onCancel={jest.fn()} />
         );
 
-        expect(shownNames(container)).toEqual(["file1.txt", "file2.txt", "file3.txt", "file4.txt"]);
+        expect(shownNames(container)).toEqual(["file1.txt", "file2.txt", "file3.txt"]);
 
         await fireClick(screen.getByRole("button", { name: /Show all 6 files/ }));
 
@@ -36,16 +36,16 @@ describe("FileUploadList", () => {
             <FileUploadList items={items(6, "file4.txt")} onRemove={jest.fn()} onCancel={jest.fn()} />
         );
 
-        expect(shownNames(container)).toEqual(["file1.txt", "file2.txt", "file3.txt", "file4.txt"]);
+        expect(shownNames(container)).toEqual(["file1.txt", "file2.txt", "file3.txt"]);
     });
 
-    it("shows a single over-cap file rather than collapsing to hide just that one row", () => {
+    it("collapses as soon as a single file goes over the cap", () => {
         const { screen, container } = rtlRender(
             <FileUploadList items={items(4)} onRemove={jest.fn()} onCancel={jest.fn()} />
         );
 
-        expect(shownNames(container)).toHaveLength(4);
-        expect(screen.queryByRole("button", { name: /Show all/ })).not.toBeInTheDocument();
+        expect(shownNames(container)).toHaveLength(3);
+        expect(screen.getByRole("button", { name: /Show all 4 files/ })).toBeInTheDocument();
     });
 
     it("does not show the toggle when every file fits", () => {
@@ -74,6 +74,21 @@ describe("FileUploadList", () => {
         const { container } = rtlRender(<FileUploadList items={failed} onRemove={jest.fn()} onCancel={jest.fn()} />);
 
         expect(container.querySelectorAll(".icon-danger")).toHaveLength(1);
+    });
+
+    it("keeps remove out of reach while the batch is uploading", () => {
+        const uploading: FileUploadItem[] = [
+            { file: new File(["x"], "done.txt"), status: "uploaded" },
+            { file: new File(["x"], "busy.txt"), status: "uploading", loaded: 0, total: 1 },
+            { file: new File(["x"], "queued.txt"), status: "selected" },
+        ];
+
+        const { screen } = rtlRender(
+            <FileUploadList items={uploading} onRemove={jest.fn()} onCancel={jest.fn()} isUploading />
+        );
+
+        expect(screen.queryByRole("button", { name: /Remove queued.txt/ })).not.toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /Cancel upload of busy.txt/ })).toBeInTheDocument();
     });
 
     it("labels each row with its file type", () => {

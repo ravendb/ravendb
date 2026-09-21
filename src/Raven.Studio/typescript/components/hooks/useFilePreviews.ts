@@ -7,27 +7,32 @@ function isPreviewable(file: File): boolean {
     return isImageFile(file.name) && file.size <= maxPreviewSizeInBytes;
 }
 
+export function getFilePreviewKey(file: File): string {
+    return `${file.name}|${file.size}|${file.lastModified}`;
+}
+
 export default function useFilePreviews(files: File[]): Record<string, string> {
     const [previews, setPreviews] = useState<Record<string, string>>({});
-    const urlsByNameRef = useRef<Record<string, string>>({});
+    const urlsByKeyRef = useRef<Record<string, string>>({});
 
-    const signature = files.map((file) => file.name).join("|");
+    const signature = files.map(getFilePreviewKey).join("~");
 
     useEffect(() => {
-        const current = urlsByNameRef.current;
+        const current = urlsByKeyRef.current;
         const wanted = files.filter(isPreviewable);
-        const wantedNames = new Set(wanted.map((file) => file.name));
+        const wantedKeys = new Set(wanted.map(getFilePreviewKey));
 
-        for (const name of Object.keys(current)) {
-            if (!wantedNames.has(name)) {
-                URL.revokeObjectURL(current[name]);
-                delete current[name];
+        for (const key of Object.keys(current)) {
+            if (!wantedKeys.has(key)) {
+                URL.revokeObjectURL(current[key]);
+                delete current[key];
             }
         }
 
         for (const file of wanted) {
-            if (!current[file.name]) {
-                current[file.name] = URL.createObjectURL(file);
+            const key = getFilePreviewKey(file);
+            if (!current[key]) {
+                current[key] = URL.createObjectURL(file);
             }
         }
 
@@ -36,7 +41,7 @@ export default function useFilePreviews(files: File[]): Record<string, string> {
     }, [signature]);
 
     useEffect(() => {
-        const current = urlsByNameRef.current;
+        const current = urlsByKeyRef.current;
 
         return () => {
             Object.values(current).forEach(URL.revokeObjectURL);
