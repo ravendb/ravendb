@@ -34,7 +34,7 @@ public class DiscordManualE2ETests(ITestOutputHelper output) : QuillTestBase(out
         });
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Discord, agentId, null, Discord: new(botToken)));
+            ChannelType.Discord, agentId, null, DisplayName: "Support bot", Discord: new(botToken)));
 
         var channels = await app.GetChannelsAsync();
         var summary = Assert.Single(channels, c => c.ChannelId == created.ChannelId);
