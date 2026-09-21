@@ -25,6 +25,10 @@ function neverEndingUpload(events: attachmentUploadProgress[]) {
     };
 }
 
+function destinationControl() {
+    return window.document.querySelector(".react-select__control");
+}
+
 function rowOf(screen: RtlScreen, fileName: string) {
     return within(screen.getByText(fileName).closest(".file-upload-item") as HTMLElement);
 }
@@ -148,6 +152,17 @@ describe("AddAttachmentWithRemoteParametersModal", () => {
         await clickSave(screen, user);
 
         await waitFor(() => expect(rowOf(screen, "b.txt").queryByText(/Failed/)).not.toBeInTheDocument());
+    });
+
+    it("locks the remote parameters while the batch is in flight", async () => {
+        uploadFiles.mockImplementation(neverEndingUpload([progress("a.txt", "uploading", 1, 4)]));
+        const { screen, user } = renderModal();
+        await selectFiles(screen, user, [fileA]);
+
+        await clickSave(screen, user);
+
+        expect(destinationControl()).toHaveAttribute("aria-disabled", "true");
+        expect(screen.getByPlaceholderText("e.g. 11/21/2025 10:57 AM")).toBeDisabled();
     });
 
     it("cancels the file being uploaded", async () => {
