@@ -336,7 +336,7 @@ export function FormSelectCreatable<
                     value={selectedOptions}
                     onChange={onSelectChange}
                     onCreateOption={onCreateOption}
-                    disabled={formState.isSubmitting}
+                    isDisabled={formState.isSubmitting}
                     getOptionValue={getOptionValue}
                     {...selectRest}
                 />
