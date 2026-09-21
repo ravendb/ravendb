@@ -306,6 +306,24 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Pausing_a_channel_clears_its_stale_socket_error()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        await Slack.WaitUntilConnectedAsync();
+
+        await Slack.SendDisconnectAsync("link_disabled");
+        await Slack.WaitUntilAsync(async () => (await HealthRowAsync(app, channel)).LastSocketError is not null,
+            "the recorded socket error");
+
+        await app.UpdateChannelAsync(channel.ChannelId, new UpdateChannelRequest(null, null, Enabled: false));
+
+        await Slack.WaitUntilAsync(async () => (await HealthRowAsync(app, channel)).LastSocketError is null,
+            "the socket error to clear");
+        Assert.False((await HealthRowAsync(app, channel)).SocketConnected);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task A_disconnect_frame_reconnects_through_a_fresh_socket_url()
     {
         await using var app = await NewAppAsync();
@@ -486,6 +504,13 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
         var row = Assert.Single(rows, r => r.ChannelId == channel.ChannelId);
         Assert.False(row.SocketConnected);
         Assert.Contains("predates Socket Mode", row.LastSocketError);
+    }
+
+    private async Task<SlackChannelHealthResponse> HealthRowAsync(QuillApp app, ProvisionedChannel channel)
+    {
+        var rows = await QuillHttp.GetAsync<SlackChannelHealthResponse[]>(
+            Host.Client, QuillRoutes.SlackHealth(app.Slug));
+        return rows.Single(r => r.ChannelId == channel.ChannelId);
     }
 
     private sealed record ProvisionedChannel(

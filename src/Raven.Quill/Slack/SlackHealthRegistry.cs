@@ -56,6 +56,13 @@ internal sealed class SlackHealthRegistry
         }
     }
 
+    public void RecordSocketStopped(string database, string channelId) =>
+        TryUpdate(database, channelId, entry =>
+        {
+            entry.SocketConnected = false;
+            entry.LastSocketError = null;
+        });
+
     public void RecordInbound(string database, string channelId)
     {
         var entry = EntryFor(database, channelId);
