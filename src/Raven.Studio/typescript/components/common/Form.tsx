@@ -364,12 +364,15 @@ export function FormSelectAutocomplete<
 ) {
     const {
         field: { onChange, value },
+        formState,
     } = useController({
         name: props.name,
         control: props.control,
     });
 
     const { value: isInitialOpen, setValue: setIsInitialOpen } = useBoolean(false);
+
+    const isDisabled = props.isDisabled || formState.isSubmitting;
 
     const valueAccessor = props.getOptionValue ?? ((option: any) => option.value);
     const labelAccessor = props.getOptionLabel ?? ((option: any) => option.label);
@@ -405,7 +408,7 @@ export function FormSelectAutocomplete<
         setIsInitialOpen(true);
     };
 
-    const inputValue = props.isDisabled ? "" : (value ?? "");
+    const inputValue = isDisabled ? "" : (value ?? "");
     const components = props.components ? { ...props.components, Input: InputNotHidden } : { Input: InputNotHidden };
 
     return (
@@ -413,11 +416,12 @@ export function FormSelectAutocomplete<
             inputValue={inputValue}
             onInputChange={handleInputChange}
             tabSelectsValue
-            controlShouldRenderValue={!!props.isDisabled}
+            controlShouldRenderValue={isDisabled}
             filterOption={handleFilterOption}
             onFocus={handleFocus}
             blurInputOnSelect
             {...props}
+            isDisabled={isDisabled}
             components={components} // Override to ensure Input is not hidden
         />
     );

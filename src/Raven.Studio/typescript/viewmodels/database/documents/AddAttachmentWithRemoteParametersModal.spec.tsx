@@ -29,6 +29,10 @@ function destinationControl() {
     return window.document.querySelector(".react-select__control");
 }
 
+function destinationValue() {
+    return window.document.querySelector(".react-select__single-value");
+}
+
 function rowOf(screen: RtlScreen, fileName: string) {
     return within(screen.getByText(fileName).closest(".file-upload-item") as HTMLElement);
 }
@@ -163,6 +167,16 @@ describe("AddAttachmentWithRemoteParametersModal", () => {
 
         expect(destinationControl()).toHaveAttribute("aria-disabled", "true");
         expect(screen.getByPlaceholderText("e.g. 11/21/2025 10:57 AM")).toBeDisabled();
+    });
+
+    it("keeps the chosen destination readable once the select is disabled", async () => {
+        uploadFiles.mockImplementation(neverEndingUpload([progress("a.txt", "uploading", 1, 4)]));
+        const { screen, user } = renderModal();
+        await selectFiles(screen, user, [fileA]);
+
+        await clickSave(screen, user);
+
+        expect(destinationValue()).toHaveTextContent("s3-main");
     });
 
     it("cancels the file being uploaded", async () => {
