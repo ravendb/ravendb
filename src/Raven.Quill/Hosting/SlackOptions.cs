@@ -8,13 +8,19 @@ public sealed class SlackOptions
 
     public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(15);
 
-    public int MaxWebhookBodyBytes { get; set; } = 256 * 1024;
-
     public int MessageLimit { get; set; } = 4000;
 
     public TimeSpan EditDebounce { get; set; } = TimeSpan.FromSeconds(2);
 
     public int SenderQueueCapacity { get; set; } = 8;
 
-    public TimeSpan SignatureTolerance { get; set; } = TimeSpan.FromMinutes(5);
+    public TimeSpan ApplyChangesInterval { get; set; } = TimeSpan.FromSeconds(30);
+
+    public TimeSpan SocketBackoffMax { get; set; } = TimeSpan.FromMinutes(1);
+
+    public TimeSpan SocketHandshakeTimeout { get; set; } = TimeSpan.FromSeconds(15);
+
+    public TimeSpan SocketRestartDelay { get; set; } = TimeSpan.FromMinutes(5);
+
+    public int MaxSocketFrameBytes { get; set; } = 1024 * 1024;
 }

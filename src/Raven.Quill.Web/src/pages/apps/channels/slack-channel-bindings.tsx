@@ -28,7 +28,7 @@ export function SlackChannelBindings({
                 displayName: null,
                 allowedOrigins: null,
                 enabled: null,
-                slack: { botToken: null, signingSecret: null, parameterBindings },
+                slack: { botToken: null, appToken: null, parameterBindings },
             })}
         />
     );

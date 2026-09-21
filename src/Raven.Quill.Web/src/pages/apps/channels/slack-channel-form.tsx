@@ -20,7 +20,11 @@ import { NumberedSteps } from "@/components/data/numbered-steps";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { ParameterBindingFields } from "@/pages/apps/channels/parameter-binding-fields";
-import { SLACK_BOT_TOKEN_FORMAT, newTokenField } from "@/pages/apps/channels/channel-token-fields";
+import {
+    SLACK_APP_TOKEN_FORMAT,
+    SLACK_BOT_TOKEN_FORMAT,
+    newTokenField,
+} from "@/pages/apps/channels/channel-token-fields";
 import {
     hasSameParameterNames,
     seedParameterRows,
@@ -35,8 +39,7 @@ import {
     SLACK_SOURCE_VALUES,
     slackParameterSourceHint,
 } from "@/pages/apps/channels/slack-parameter-sources";
-import { SlackConnectionCard } from "@/pages/apps/channels/slack-connection-card";
-import { SlackWebhookPanel } from "@/pages/apps/channels/slack-webhook-panel";
+import { SlackStatusPanel } from "@/pages/apps/channels/slack-connection-card";
 import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
 
 const parameterBindingSchema = z
@@ -55,7 +58,7 @@ const slackChannelSchema = z.object({
     agentId: z.string().min(1, "Select an agent to route conversations to"),
     displayName: z.string().trim().min(1, "Channel name is required"),
     botToken: newTokenField(SLACK_BOT_TOKEN_FORMAT, "Paste the bot token from the Slack app's OAuth page"),
-    signingSecret: z.string().trim().min(1, "Paste the signing secret (Basic Information > App Credentials)"),
+    appToken: newTokenField(SLACK_APP_TOKEN_FORMAT, "Paste the app-level token (Basic Information > App-Level Tokens)"),
     parameters: z.array(parameterBindingSchema),
 });
 
@@ -106,7 +109,7 @@ function LoadedSlackChannelForm({
             agentId: agent?.agentId ?? "",
             displayName: "",
             botToken: "",
-            signingSecret: "",
+            appToken: "",
             parameters: seedParameterRows(agents, agent?.agentId ?? ""),
         },
     });
@@ -136,7 +139,7 @@ function LoadedSlackChannelForm({
                 displayName: values.displayName.trim(),
                 slack: {
                     botToken: values.botToken.trim(),
-                    signingSecret: values.signingSecret.trim(),
+                    appToken: values.appToken.trim(),
                     parameterBindings: values.parameters.length > 0 ? toParameterBindings(values.parameters) : null,
                 },
             }),
@@ -156,10 +159,12 @@ function LoadedSlackChannelForm({
                         <Heading as="h3" variant="subsection">
                             Bot connected
                         </Heading>
-                        <Text variant="muted">Now finish the event subscription so Slack delivers messages to it.</Text>
+                        <Text variant="muted">
+                            The appliance is opening its Socket Mode connection. Finish the Slack-side setup below so
+                            direct messages start flowing.
+                        </Text>
                     </div>
-                    <SlackConnectionCard slug={slug} channelId={createdChannelId} />
-                    <SlackWebhookPanel slug={slug} channelId={createdChannelId} />
+                    <SlackStatusPanel slug={slug} channelId={createdChannelId} />
                 </div>
                 <SheetFooter className="flex-row justify-end border-t">
                     <Button type="button" onClick={onDone}>
@@ -248,8 +253,9 @@ function LoadedSlackChannelForm({
                                             content: (
                                                 <Text variant="caption">
                                                     <span className="font-medium">Install to Workspace</span>. The bot
-                                                    token is on the OAuth &amp; Permissions page, the signing secret
-                                                    under Basic Information.
+                                                    token is on the OAuth &amp; Permissions page. Under Basic
+                                                    Information &gt; App-Level Tokens, generate a token with the{" "}
+                                                    <span className="font-medium">connections:write</span> scope.
                                                 </Text>
                                             ),
                                         },
@@ -280,11 +286,11 @@ function LoadedSlackChannelForm({
                         />
                         <FormInput
                             control={form.control}
-                            name="signingSecret"
+                            name="appToken"
                             type="password"
-                            label="Signing secret"
-                            placeholder="From Basic Information > App Credentials"
-                            description="Verifies that event deliveries really come from Slack. Never shown again."
+                            label="App-level token"
+                            placeholder="xapp-..."
+                            description="Opens the Socket Mode connection Slack delivers messages over. Needs the connections:write scope. Validated with Slack and never shown again."
                         />
                         <FormInput
                             control={form.control}

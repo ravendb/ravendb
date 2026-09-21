@@ -17,7 +17,7 @@ public sealed record TelegramUpdateRequest(
 
 public sealed record SlackUpdateRequest(
     string? BotToken = null,
-    string? SigningSecret = null,
+    string? AppToken = null,
     Dictionary<string, ChannelParameterBinding>? ParameterBindings = null);
 
 public sealed record DiscordUpdateRequest(

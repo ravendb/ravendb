@@ -406,23 +406,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/apps/{slug}/channels/{channelId}/slack/webhook": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description The event subscription configuration for this channel: the public request URL, ready to paste into the Slack app's Event Subscriptions page. */
-        get: operations["slack.webhookInfo"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/apps/{slug}/slack/health": {
         parameters: {
             query?: never;
@@ -430,7 +413,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Per-channel connection health for the app's Slack channels: bot token validity (cached a few minutes) plus in-memory webhook and send activity since the last restart. */
+        /** @description Per-channel connection health for the app's Slack channels: bot token validity (cached a few minutes) plus the live Socket Mode connection state and the inbound and send activity seen since the last restart. */
         get: operations["slack.health"];
         put?: never;
         post?: never;
@@ -1793,17 +1776,19 @@ export interface components {
             enabled: boolean;
             tokenValid: null | boolean;
             tokenError: null | string;
+            socketConnected: boolean;
+            /** Format: date-time */
+            lastConnectedAt: null | string;
+            lastSocketError: null | string;
             /** Format: date-time */
             lastInboundAt: null | string;
-            /** Format: date-time */
-            lastSignatureFailureAt: null | string;
             /** Format: date-time */
             lastSendErrorAt: null | string;
             lastSendError: null | string;
         };
         SlackProvisionRequest: {
             botToken: null | string;
-            signingSecret: null | string;
+            appToken: null | string;
             parameterBindings?: null | {
                 [key: string]: components["schemas"]["ChannelParameterBinding"];
             };
@@ -1818,13 +1803,10 @@ export interface components {
         };
         SlackUpdateRequest: {
             botToken?: null | string;
-            signingSecret?: null | string;
+            appToken?: null | string;
             parameterBindings?: null | {
                 [key: string]: components["schemas"]["ChannelParameterBinding"];
             };
-        };
-        SlackWebhookInfoResponse: {
-            requestUrl: string;
         };
         SuggestAgentRequest: {
             intentPrompt: null | string;
@@ -2961,38 +2943,6 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    "slack.webhookInfo": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                channelId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SlackWebhookInfoResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
         };
@@ -4517,7 +4467,6 @@ export type SlackChannelHealthResponse = components["schemas"]["SlackChannelHeal
 export type SlackProvisionRequest = components["schemas"]["SlackProvisionRequest"];
 export type SlackSummaryResponse = components["schemas"]["SlackSummaryResponse"];
 export type SlackUpdateRequest = components["schemas"]["SlackUpdateRequest"];
-export type SlackWebhookInfoResponse = components["schemas"]["SlackWebhookInfoResponse"];
 export type SuggestAgentRequest = components["schemas"]["SuggestAgentRequest"];
 export type SuggestAgentResponse = components["schemas"]["SuggestAgentResponse"];
 export type SuggestCdcRequest = components["schemas"]["SuggestCdcRequest"];
@@ -4640,7 +4589,6 @@ export const API_ENDPOINTS = {
     },
     slack: {
         health: (slug: string) => `/apps/${encodeURIComponent(slug)}/slack/health`,
-        webhookInfo: (slug: string, channelId: string) => `/apps/${encodeURIComponent(slug)}/channels/${encodeURIComponent(channelId)}/slack/webhook`,
     },
     stats: {
         activity: (slug: string) => `/apps/${encodeURIComponent(slug)}/activity`,
@@ -4747,7 +4695,6 @@ export function createServerApi(client: ApiClient) {
         },
         slack: {
             health: (slug: string) => client.get<SlackChannelHealthResponse[], ApiErrorResponse>(API_ENDPOINTS.slack.health(slug)),
-            webhookInfo: (slug: string, channelId: string) => client.get<SlackWebhookInfoResponse, ApiErrorResponse>(API_ENDPOINTS.slack.webhookInfo(slug, channelId)),
         },
         stats: {
             activity: (slug: string) => client.get<ActivityEventDto[], ApiErrorResponse>(API_ENDPOINTS.stats.activity(slug)),

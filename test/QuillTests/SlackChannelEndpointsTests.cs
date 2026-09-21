@@ -25,7 +25,7 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Slack, agentId, null,
-            DisplayName: "Support bot", Slack: new(botToken, "signing-secret-1")));
+            DisplayName: "Support bot", Slack: new(botToken, NewAppToken())));
 
         var channels = await app.GetChannelsAsync();
         var summary = Assert.Single(channels, c => c.ChannelId == created.ChannelId);
@@ -42,52 +42,78 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Channel_responses_never_leak_credentials_or_webhook_tokens()
+    public async Task Channel_responses_never_leak_credentials()
     {
         await using var app = await NewAppAsync();
         var agentId = await SeedAgentAsync(app);
         var botToken = NewBotToken();
-        var signingSecret = "secret-signing-" + Guid.NewGuid().ToString("N");
+        var appToken = NewAppToken();
         Slack.AddBot(botToken, NewTeamId(), "Leaky Inc", NewBotUserId());
 
-        var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
+        await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Slack, agentId, null,
-            DisplayName: "Support bot", Slack: new(botToken, signingSecret)));
-
-        var info = await QuillHttp.GetAsync<SlackWebhookInfoResponse>(
-            Host.Client, QuillRoutes.SlackWebhookInfo(app.Slug, created.ChannelId));
-        var webhookToken = info.RequestUrl[(info.RequestUrl.LastIndexOf('/') + 1)..];
+            DisplayName: "Support bot", Slack: new(botToken, appToken)));
 
         var listResponse = await (await Host.Client.GetAsync(QuillRoutes.Channels(app.Slug))).EnsureSuccessAsync();
         var body = await listResponse.Content.ReadAsStringAsync();
         Assert.DoesNotContain(botToken, body);
-        Assert.DoesNotContain(signingSecret, body);
-        Assert.DoesNotContain(webhookToken, body);
+        Assert.DoesNotContain(appToken, body);
+
+        var health = await (await Host.Client.GetAsync(QuillRoutes.SlackHealth(app.Slug))).EnsureSuccessAsync();
+        var healthBody = await health.Content.ReadAsStringAsync();
+        Assert.DoesNotContain(botToken, healthBody);
+        Assert.DoesNotContain(appToken, healthBody);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Provision_requires_a_bot_token_and_a_signing_secret()
+    public async Task Provision_requires_a_bot_token_and_an_app_level_token()
     {
         await using var app = await NewAppAsync();
         var agentId = await SeedAgentAsync(app);
 
         var noToken = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.Slack, agentId, null,
-                DisplayName: "Support bot", Slack: new(null, "s"))));
+                DisplayName: "Support bot", Slack: new(null, "xapp-1"))));
         Assert.Equal(HttpStatusCode.BadRequest, noToken.StatusCode);
         Assert.Contains("botToken is required", noToken.Body);
 
         var badToken = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.Slack, agentId, null,
-                DisplayName: "Support bot", Slack: new("xoxp-a-user-token", "s"))));
+                DisplayName: "Support bot", Slack: new("xoxp-a-user-token", "xapp-1"))));
         Assert.Equal(HttpStatusCode.BadRequest, badToken.StatusCode);
         Assert.Contains("must be the bot token (xoxb-)", badToken.Body);
 
-        var noSecret = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
+        var noAppToken = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.Slack, agentId, null,
                 DisplayName: "Support bot", Slack: new(NewBotToken(), null))));
-        Assert.Equal(HttpStatusCode.BadRequest, noSecret.StatusCode);
-        Assert.Contains("signingSecret is required", noSecret.Body);
+        Assert.Equal(HttpStatusCode.BadRequest, noAppToken.StatusCode);
+        Assert.Contains("appToken is required", noAppToken.Body);
+
+        var badAppToken = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.Slack, agentId, null,
+                DisplayName: "Support bot", Slack: new(NewBotToken(), "xoxb-not-an-app-token"))));
+        Assert.Equal(HttpStatusCode.BadRequest, badAppToken.StatusCode);
+        Assert.Contains("must be the app-level token (xapp-)", badAppToken.Body);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Provision_rejects_an_app_token_slack_rejects_and_never_echoes_it()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+        var botToken = NewBotToken();
+        Slack.AddBot(botToken, NewTeamId(), "Acme", NewBotUserId());
+        var unknownAppToken = "xapp-1-A0MOCK-" + Guid.NewGuid().ToString("N");
+
+        var e = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.Slack, agentId, null,
+                DisplayName: "Support bot", Slack: new(botToken, unknownAppToken))));
+
+        Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
+        Assert.Contains("rejected the app-level token", e.Body);
+        Assert.DoesNotContain(unknownAppToken, e.Body);
+        Assert.Contains(unknownAppToken, Slack.SocketOpenCalls);
+        Assert.Empty(await app.GetChannelsAsync());
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -97,7 +123,7 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
 
         var e = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.Slack, "no-such-agent", null,
-                DisplayName: "Support bot", Slack: new(NewBotToken(), "s"))));
+                DisplayName: "Support bot", Slack: new(NewBotToken(), NewAppToken()))));
 
         Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
         Assert.Contains("unknown agentId 'no-such-agent'", e.Body);
@@ -112,7 +138,7 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
 
         var e = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.Slack, agentId, null,
-                DisplayName: "Support bot", Slack: new(unknownToken, "s"))));
+                DisplayName: "Support bot", Slack: new(unknownToken, NewAppToken()))));
 
         Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
         Assert.Contains("slack rejected the bot token", e.Body);
@@ -124,11 +150,12 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
     {
         await using var app = await NewAppAsync();
         var agentId = await SeedAgentAsync(app);
+        var appToken = NewAppToken();
         Slack.Down = true;
 
         var e = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.Slack, agentId, null,
-                DisplayName: "Support bot", Slack: new(NewBotToken(), "s"))));
+                DisplayName: "Support bot", Slack: new(NewBotToken(), appToken))));
 
         Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
         Assert.Contains("unavailable", e.Body);
@@ -140,18 +167,19 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
         await using var app = await NewAppAsync();
         var agentId = await SeedAgentAsync(app, new AiAgentParameter("slackUser", "the sender's Slack user id"));
         var botToken = NewBotToken();
+        var appToken = NewAppToken();
         Slack.AddBot(botToken, NewTeamId(), "Acme", NewBotUserId());
 
         var missing = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.Slack, agentId, null,
-                DisplayName: "Support bot", Slack: new(botToken, "s"))));
+                DisplayName: "Support bot", Slack: new(botToken, appToken))));
         Assert.Equal(HttpStatusCode.BadRequest, missing.StatusCode);
         Assert.Contains("missing parameter binding(s)", missing.Body);
         Assert.Contains("missing_parameters", missing.Body);
 
         var unsupported = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.Slack, agentId, null,
-                DisplayName: "Support bot", Slack: new(botToken, "s",
+                DisplayName: "Support bot", Slack: new(botToken, appToken,
                     ParameterBindings: new Dictionary<string, ChannelParameterBinding>
                     {
                         ["slackUser"] = new() { Source = ChannelParameterSource.PhoneNumber },
@@ -161,7 +189,7 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
 
         var created = await app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.Slack, agentId, null,
-                DisplayName: "Support bot", Slack: new(botToken, "s",
+                DisplayName: "Support bot", Slack: new(botToken, appToken,
                     ParameterBindings: new Dictionary<string, ChannelParameterBinding>
                     {
                         ["slackUser"] = new() { Source = ChannelParameterSource.UserId },
@@ -179,7 +207,7 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
 
         var created = await app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.Slack, agentId, null,
-                DisplayName: "Support bot", Slack: new(botToken, "s",
+                DisplayName: "Support bot", Slack: new(botToken, NewAppToken(),
                     ParameterBindings: new Dictionary<string, ChannelParameterBinding>
                     {
                         ["senderEmail"] = new() { Source = ChannelParameterSource.Email },
@@ -204,7 +232,7 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
 
         var invalid = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.Slack, agentId, null,
-                DisplayName: "Support bot", Slack: new(botToken, "s",
+                DisplayName: "Support bot", Slack: new(botToken, NewAppToken(),
                     ParameterBindings: new Dictionary<string, ChannelParameterBinding>
                     {
                         ["orderLimit"] = new() { Source = ChannelParameterSource.UserId },
@@ -224,17 +252,17 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
         var telegram = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.Slack, agentId, null,
                 DisplayName: "Support bot", Telegram: new("123:token"),
-                Slack: new(NewBotToken(), "s"))));
+                Slack: new(NewBotToken(), "xapp-1"))));
         Assert.Contains("telegram settings apply to Telegram channels only", telegram.Body);
 
         var origins = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.Slack, agentId, new[] { "https://a.example" },
-                DisplayName: "Support bot", Slack: new(NewBotToken(), "s"))));
+                DisplayName: "Support bot", Slack: new(NewBotToken(), "xapp-1"))));
         Assert.Contains("allowedOrigins does not apply", origins.Body);
 
         var crossType = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.IFrame, agentId, new[] { "https://a.example" },
-                Slack: new(NewBotToken(), "s"))));
+                DisplayName: "Support bot", Slack: new(NewBotToken(), "xapp-1"))));
         Assert.Contains("slack settings apply to Slack channels only", crossType.Body);
     }
 
@@ -249,11 +277,11 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
         Slack.AddBot(botToken, NewTeamId(), "Acme", NewBotUserId());
 
         await first.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Slack, firstAgent, null, DisplayName: "Support bot", Slack: new(botToken, "s")));
+            ChannelType.Slack, firstAgent, null, DisplayName: "Support bot", Slack: new(botToken, NewAppToken())));
 
         var e = await Assert.ThrowsAsync<QuillHttpException>(() => second.ProvisionChannelAsync(
             new ProvisionChannelRequest(ChannelType.Slack, secondAgent, null,
-                DisplayName: "Support bot", Slack: new(botToken, "s"))));
+                DisplayName: "Support bot", Slack: new(botToken, NewAppToken()))));
 
         Assert.Equal(HttpStatusCode.BadRequest, e.StatusCode);
         Assert.Contains("already connected", e.Body);
@@ -265,11 +293,12 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
         await using var app = await NewAppAsync();
         var agentId = await SeedAgentAsync(app);
         var botToken = NewBotToken();
-        Slack.AddBot(botToken, NewTeamId(), "Acme", NewBotUserId());
+        var teamId = NewTeamId();
+        var botUserId = NewBotUserId();
+        Slack.AddBot(botToken, teamId, "Acme", botUserId);
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Slack, agentId, null, DisplayName: "Support bot", Slack: new(botToken, "s")));
-        var orphanToken = await WebhookTokenAsync(app, created.ChannelId);
+            ChannelType.Slack, agentId, null, DisplayName: "Support bot", Slack: new(botToken, NewAppToken())));
 
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
@@ -278,25 +307,16 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
         }
 
         var reclaimed = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Slack, agentId, null, DisplayName: "Support bot", Slack: new(botToken, "s")));
+            ChannelType.Slack, agentId, null, DisplayName: "Support bot", Slack: new(botToken, NewAppToken())));
         Assert.NotEmpty(reclaimed.ChannelId);
-        var reclaimedToken = await WebhookTokenAsync(app, reclaimed.ChannelId);
 
         using (var configSession = Host.Config.OpenAsyncSession())
         {
-            Assert.Null(await configSession.LoadAsync<SlackWebhookRoute>(SlackWebhookRoute.IdFor(orphanToken)));
-
-            var route = await configSession.LoadAsync<SlackWebhookRoute>(SlackWebhookRoute.IdFor(reclaimedToken));
-            Assert.NotNull(route);
-            Assert.Equal(Channel.IdPrefix + reclaimed.ChannelId, route!.ChannelId);
+            var reservation = await configSession.LoadAsync<SlackBotReservation>(
+                SlackBotReservation.IdFor(teamId, botUserId));
+            Assert.NotNull(reservation);
+            Assert.Equal(Channel.IdPrefix + reclaimed.ChannelId, reservation!.ChannelId);
         }
-    }
-
-    private async Task<string> WebhookTokenAsync(QuillApp app, string channelId)
-    {
-        var info = await QuillHttp.GetAsync<SlackWebhookInfoResponse>(
-            Host.Client, QuillRoutes.SlackWebhookInfo(app.Slug, channelId));
-        return info.RequestUrl[(info.RequestUrl.LastIndexOf('/') + 1)..];
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -310,7 +330,7 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
         Slack.AddBot(oldToken, teamId, "Old Name", botUserId);
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Slack, agentId, null, DisplayName: "Support bot", Slack: new(oldToken, "old-secret")));
+            ChannelType.Slack, agentId, null, DisplayName: "Support bot", Slack: new(oldToken, NewAppToken())));
 
         var bad = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync(created.ChannelId,
             new UpdateChannelRequest(null, null, null, Slack: new(BotToken: NewBotToken()))));
@@ -323,13 +343,24 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
             new UpdateChannelRequest(null, null, null, Slack: new(BotToken: foreignToken))));
         Assert.Contains("different workspace or bot", foreign.Body);
 
+        var badAppToken = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync(created.ChannelId,
+            new UpdateChannelRequest(null, null, null, Slack: new(AppToken: "xoxb-wrong-kind"))));
+        Assert.Contains("must be the app-level token (xapp-)", badAppToken.Body);
+
+        var revokedAppToken = "xapp-1-A0MOCK-" + Guid.NewGuid().ToString("N");
+        var rejectedAppToken = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync(created.ChannelId,
+            new UpdateChannelRequest(null, null, null, Slack: new(AppToken: revokedAppToken))));
+        Assert.Contains("rejected the app-level token", rejectedAppToken.Body);
+
         var newToken = NewBotToken();
+        var newAppToken = NewAppToken();
         Slack.AddBot(newToken, teamId, "New Name", botUserId);
         var updated = await app.UpdateChannelAsync(created.ChannelId,
-            new UpdateChannelRequest(null, null, null, Slack: new(BotToken: newToken, SigningSecret: "new-secret")));
+            new UpdateChannelRequest(null, null, null, Slack: new(BotToken: newToken, AppToken: newAppToken)));
 
         Assert.Equal("New Name", updated.Slack!.TeamName);
         Assert.True(Slack.AuthTestCalls.Count >= 3, "rotation must re-validate against auth.test");
+        Assert.Contains(newAppToken, Slack.SocketOpenCalls);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -342,7 +373,7 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Slack, agentId, null,
-            DisplayName: "Support bot", Slack: new(botToken, "s",
+            DisplayName: "Support bot", Slack: new(botToken, NewAppToken(),
                 ParameterBindings: new Dictionary<string, ChannelParameterBinding>
                 {
                     ["slackUser"] = new() { Source = ChannelParameterSource.UserId },
@@ -374,7 +405,7 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
             ChannelType.IFrame, agentId, new[] { "https://a.example" }, "Storefront widget"));
 
         var onIFrame = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync(iframe.ChannelId,
-            new UpdateChannelRequest(null, null, null, Slack: new(SigningSecret: "rotated"))));
+            new UpdateChannelRequest(null, null, null, Slack: new(AppToken: "xapp-rotated"))));
         Assert.Equal(HttpStatusCode.BadRequest, onIFrame.StatusCode);
         Assert.Contains("slack settings apply to Slack channels only", onIFrame.Body);
 
@@ -395,59 +426,35 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
         }
 
         var onTelegram = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync(telegramChannelId,
-            new UpdateChannelRequest(null, null, null, Slack: new(SigningSecret: "rotated"))));
+            new UpdateChannelRequest(null, null, null, Slack: new(AppToken: "xapp-rotated"))));
         Assert.Equal(HttpStatusCode.BadRequest, onTelegram.StatusCode);
         Assert.Contains("slack settings apply to Slack channels only", onTelegram.Body);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Delete_releases_the_bot_and_the_webhook_route()
+    public async Task Delete_releases_the_bot_reservation_and_closes_the_socket()
     {
         await using var app = await NewAppAsync();
         var agentId = await SeedAgentAsync(app);
         var botToken = NewBotToken();
-        Slack.AddBot(botToken, NewTeamId(), "Acme", NewBotUserId());
+        var teamId = NewTeamId();
+        var botUserId = NewBotUserId();
+        Slack.AddBot(botToken, teamId, "Acme", botUserId);
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Slack, agentId, null, DisplayName: "Support bot", Slack: new(botToken, "s")));
-        var info = await QuillHttp.GetAsync<SlackWebhookInfoResponse>(
-            Host.Client, QuillRoutes.SlackWebhookInfo(app.Slug, created.ChannelId));
-        var webhookToken = info.RequestUrl[(info.RequestUrl.LastIndexOf('/') + 1)..];
+            ChannelType.Slack, agentId, null, DisplayName: "Support bot", Slack: new(botToken, NewAppToken())));
+        await Slack.WaitUntilConnectedAsync();
 
         await app.DeleteChannelAsync(created.ChannelId);
+        await Slack.WaitUntilAsync(() => Slack.IsConnected == false, "the socket to close");
+
+        using (var configSession = Host.Config.OpenAsyncSession())
+            Assert.Null(await configSession.LoadAsync<SlackBotReservation>(SlackBotReservation.IdFor(teamId, botUserId)));
 
         var recreated = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Slack, agentId, null, DisplayName: "Support bot", Slack: new(botToken, "s")));
+            ChannelType.Slack, agentId, null, DisplayName: "Support bot", Slack: new(botToken, NewAppToken())));
         Assert.NotEmpty(recreated.ChannelId);
-
-        var drop = await Host.Client.PostAsync(QuillRoutes.SlackWebhook(webhookToken),
-            new StringContent("{}", System.Text.Encoding.UTF8, "application/json"));
-        Assert.Equal(HttpStatusCode.OK, drop.StatusCode);
-        Assert.Empty(Router.Requests);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task Webhook_info_returns_the_public_request_url()
-    {
-        await using var app = await NewAppAsync();
-        var agentId = await SeedAgentAsync(app);
-        var botToken = NewBotToken();
-        Slack.AddBot(botToken, NewTeamId(), "Acme", NewBotUserId());
-
-        var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Slack, agentId, null, DisplayName: "Support bot", Slack: new(botToken, "s")));
-
-        var info = await QuillHttp.GetAsync<SlackWebhookInfoResponse>(
-            Host.Client, QuillRoutes.SlackWebhookInfo(app.Slug, created.ChannelId));
-
-        Assert.Contains("/webhooks/slack/", info.RequestUrl);
-        Assert.Equal(32, info.RequestUrl[(info.RequestUrl.LastIndexOf('/') + 1)..].Length);
-
-        var widget = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.IFrame, agentId, Array.Empty<string>(), "Storefront widget"));
-        var e = await Assert.ThrowsAsync<QuillHttpException>(() => QuillHttp.GetAsync<SlackWebhookInfoResponse>(
-            Host.Client, QuillRoutes.SlackWebhookInfo(app.Slug, widget.ChannelId)));
-        Assert.Equal(HttpStatusCode.NotFound, e.StatusCode);
+        await Slack.WaitUntilConnectedAsync();
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -460,7 +467,7 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
         Slack.AddBot(botToken, teamId, "Acme", NewBotUserId());
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Slack, agentId, null, DisplayName: "Support bot", Slack: new(botToken, "s")));
+            ChannelType.Slack, agentId, null, DisplayName: "Support bot", Slack: new(botToken, NewAppToken())));
 
         var rows = await QuillHttp.GetAsync<SlackChannelHealthResponse[]>(
             Host.Client, QuillRoutes.SlackHealth(app.Slug));
