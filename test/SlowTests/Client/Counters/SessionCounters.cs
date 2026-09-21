@@ -970,9 +970,9 @@ namespace SlowTests.Client.Counters
                     Assert.Equal(100, val);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
-                    session.CountersFor("users/1-A").Increment("likes", 50); // should not increment the counter value in cache
+                    session.CountersFor("users/1-A").Increment("likes", 50); // should increment the counter value in cache
                     val = session.CountersFor("users/1-A").Get("likes");
-                    Assert.Equal(100, val);
+                    Assert.Equal(150, val);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     session.CountersFor("users/1-A").Increment("dislikes", 200); // should not add the counter to cache
@@ -983,8 +983,6 @@ namespace SlowTests.Client.Counters
                     session.CountersFor("users/1-A").Increment("score", 1000); // should not add the counter to cache
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
 
-                    // SaveChanges should updated counters values in cache
-                    // according to increment result
                     session.SaveChanges();
                     Assert.Equal(3, session.Advanced.NumberOfRequests);
 
@@ -1005,7 +1003,7 @@ namespace SlowTests.Client.Counters
         }
 
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
-        public void SessionShouldRemoveCounterFromCacheAfterCounterDeletion()
+        public void SessionShouldSetCounterAsKnownMissingInCacheAfterCounterDeletion()
         {
             using (var store = GetDocumentStore())
             {
@@ -1027,9 +1025,10 @@ namespace SlowTests.Client.Counters
                     session.SaveChanges();
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
 
+                    // should not go to server again
                     val = session.CountersFor("users/1-A").Get("likes");
                     Assert.Null(val);
-                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
 
                 }
             }
