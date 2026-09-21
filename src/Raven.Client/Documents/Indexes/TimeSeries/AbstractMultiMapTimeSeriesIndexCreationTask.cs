@@ -110,7 +110,11 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
 
             var indexDefinition = builder.ToIndexDefinition(Conventions, validateMap: false);
 
-            IndexDefinitionHelper.AddMaps(indexDefinition.Maps, _maps, IndexName);
+            foreach (var map in _maps.Select(generateMap => generateMap()))
+            {
+                string formattedMap = map;
+                indexDefinition.Maps.Add(formattedMap);
+            }
 
             return indexDefinition;
         }
