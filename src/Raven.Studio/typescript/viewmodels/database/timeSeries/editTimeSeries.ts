@@ -27,8 +27,7 @@ import recentQueriesStorage = require("common/storage/savedQueriesStorage");
 import popoverUtils = require("common/popoverUtils");
 import moment = require("moment");
 import typeUtils = require("common/typeUtils");
-
-type timeSeriesDisplayTimezone = "utc" | "local";
+import timeSeriesRangeUtils = require("components/pages/database/timeSeries/timeSeriesRangeUtils");
 
 class timeSeriesInfo {
     name = ko.observable<string>();
@@ -81,7 +80,7 @@ class editTimeSeries extends viewModelBase {
     localEndDateInFilter = ko.observable<moment.Moment>();
 
     // Display-only zone for grid timestamps. Defaults to UTC (how the raw data is stored).
-    displayTimezone = ko.observable<timeSeriesDisplayTimezone>("utc");
+    displayTimezone = ko.observable<timeSeriesRangeUtils.FilterTimezone>("utc");
     displayTimezoneLabel: KnockoutComputed<string>;
 
     filterTimeSeriesModalView = ko.observable<ReactInKnockoutOptions<typeof FilterTimeSeriesModal.default>>();
@@ -386,7 +385,7 @@ class editTimeSeries extends viewModelBase {
         return this.displayTimezone() === "local" ? "Date (Local)" : "Date (UTC)";
     }
 
-    setDisplayTimezone(timezone: timeSeriesDisplayTimezone) {
+    setDisplayTimezone(timezone: timeSeriesRangeUtils.FilterTimezone) {
         if (this.displayTimezone() === timezone) {
             return;
         }

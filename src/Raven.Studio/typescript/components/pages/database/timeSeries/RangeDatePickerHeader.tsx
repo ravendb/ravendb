@@ -1,10 +1,11 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef } from "react";
 import moment from "moment";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
 import { SelectOption } from "components/common/select/Select";
 import { useClickOutside } from "components/hooks/useClickOutside";
 import { useScrollActiveIntoView } from "components/hooks/useScrollActiveIntoView";
+import useBoolean from "components/hooks/useBoolean";
 
 const MONTH_NAMES = moment.months();
 
@@ -21,11 +22,11 @@ interface HeaderSelectProps {
 // A controlled dropdown used instead of the real Select / a native <select>, both of which
 // misbehave inside react-datepicker's calendar (their focus and outside-click handling fights it).
 function HeaderSelect({ ariaLabel, value, options, onChange, className }: HeaderSelectProps) {
-    const [open, setOpen] = useState(false);
+    const { value: open, toggle, setFalse: close } = useBoolean(false);
     const ref = useRef<HTMLDivElement>(null);
     const { listRef: menuRef, activeRef } = useScrollActiveIntoView<HTMLUListElement, HTMLButtonElement>(open);
 
-    useClickOutside(ref, open, () => setOpen(false));
+    useClickOutside(ref, open, close);
 
     const selected = options.find((o) => o.value === value);
 
@@ -34,7 +35,7 @@ function HeaderSelect({ ariaLabel, value, options, onChange, className }: Header
             <button
                 type="button"
                 className="ts-dp-header__control"
-                onClick={() => setOpen((o) => !o)}
+                onClick={toggle}
                 aria-label={ariaLabel}
                 aria-expanded={open}
             >
@@ -53,7 +54,7 @@ function HeaderSelect({ ariaLabel, value, options, onChange, className }: Header
                                 })}
                                 onClick={() => {
                                     onChange(o.value);
-                                    setOpen(false);
+                                    close();
                                 }}
                             >
                                 {o.label}

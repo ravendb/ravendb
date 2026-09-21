@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef } from "react";
 import moment from "moment";
 import classNames from "classnames";
 import Form from "react-bootstrap/Form";
@@ -6,7 +6,8 @@ import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import { useClickOutside } from "components/hooks/useClickOutside";
 import { useScrollActiveIntoView } from "components/hooks/useScrollActiveIntoView";
-import { FilterTimezone } from "./timeSeriesRange.utils";
+import useBoolean from "components/hooks/useBoolean";
+import { FilterTimezone } from "./timeSeriesRangeUtils";
 
 export const TIME_FORMAT = "HH:mm:ss.SSS";
 export const TIME_PARSE_FORMATS = ["HH:mm:ss.SSS", "HH:mm:ss", "HH:mm"];
@@ -92,10 +93,10 @@ function TimeColumn({ label, values, current, onPick }: TimeColumnDef & { onPick
 // Free-form text input (the source of truth, so exact HH:mm:ss.SSS can always be typed) plus a
 // click-to-pick Hour/Minute/Second dropdown. 24-hour, no native <select> (see HeaderSelect).
 export default function TimePicker({ value, invalid, timezone, onChange }: TimePickerProps) {
-    const [open, setOpen] = useState(false);
+    const { value: open, setTrue: openMenu, setFalse: closeMenu } = useBoolean(false);
     const ref = useRef<HTMLDivElement>(null);
 
-    useClickOutside(ref, open, () => setOpen(false));
+    useClickOutside(ref, open, closeMenu);
 
     const parts = parseTimeParts(value);
     const columns: TimeColumnDef[] = [
@@ -114,7 +115,7 @@ export default function TimePicker({ value, invalid, timezone, onChange }: TimeP
                 isInvalid={invalid}
                 placeholder={TIME_FORMAT}
                 onChange={(e) => onChange(e.target.value)}
-                onFocus={() => setOpen(true)}
+                onFocus={openMenu}
                 onBlur={() => {
                     // Normalise a partial-but-valid entry to the full format so buildInstant's
                     // stricter parse never rejects text this field just accepted.
@@ -139,7 +140,7 @@ export default function TimePicker({ value, invalid, timezone, onChange }: TimeP
                         <button type="button" className="ts-time-picker__action" onClick={() => onChange(nowText())}>
                             Now
                         </button>
-                        <Button variant="primary" size="sm" onClick={() => setOpen(false)}>
+                        <Button variant="primary" size="sm" onClick={closeMenu}>
                             Apply
                         </Button>
                     </div>
