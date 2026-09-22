@@ -1214,6 +1214,43 @@ return docs[0];`,
         };
     }
 
+    static documentsPreviewColumns(): string[] {
+        return ["Company", "Freight", "OrderedAt", "ShipTo", "Lines", "__metadata"];
+    }
+
+    static documentsPreviewItems(skip: number, count: number, collectionName = "Orders"): document[] {
+        return Array.from({ length: count }, (_, i) => {
+            const index = skip + i;
+
+            return new document({
+                "@metadata": {
+                    "@id": `${collectionName.toLowerCase()}/${index + 1}-A`,
+                    "@collection": collectionName,
+                    "@change-vector": `A:${index + 1}-F9I6Egqwm0Kz+K0oFVIR9Q`,
+                    "@last-modified": "2024-01-01T12:00:00.0000000Z",
+                    "@flags": index % 2 === 0 ? "HasRevisions" : "",
+                },
+                Company: `companies/${(index % 10) + 1}-A`,
+                Freight: index * 1.5,
+                OrderedAt: "2024-01-01T00:00:00.0000000",
+                ShipTo: { City: "Reims", Country: "France" },
+                Lines: [],
+            });
+        });
+    }
+
+    static documentsPreview(): pagedResultWithAvailableColumns<document> {
+        const items = DatabasesStubs.documentsPreviewItems(0, 5);
+
+        return {
+            items,
+            totalResultCount: items.length,
+            availableColumns: DatabasesStubs.documentsPreviewColumns(),
+            continuationToken: null,
+            resultEtag: "1",
+        };
+    }
+
     static revisionsPreview(): pagedResultWithToken<RevisionsPreviewResultItem> {
         return {
             items: [

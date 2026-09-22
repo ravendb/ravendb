@@ -139,6 +139,7 @@ class collectionsTracker {
         
         this.conflictsCount(notification.CountOfConflicts);
         storeCompat.globalDispatch(collectionsTrackerSlice.collectionsTrackerActions.collectionsLoaded(this.collections().map((x) => x.toCollectionState())));
+        storeCompat.globalDispatch(collectionsTrackerSlice.collectionsTrackerActions.globalChangeVectorUpdated(notification.GlobalChangeVector));
     }
 
     getCollectionNames() {

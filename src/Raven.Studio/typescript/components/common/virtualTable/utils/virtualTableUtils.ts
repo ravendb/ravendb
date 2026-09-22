@@ -1,7 +1,13 @@
 import { virtualTableConstants } from "components/common/virtualTable/utils/virtualTableConstants";
 
-const { defaultRowHeightInPx, headerHeightInPx, paddingInPx, scrollbarWidthInPx, scrollbarHeightInPx } =
-    virtualTableConstants;
+const {
+    defaultRowHeightInPx,
+    headerHeightInPx,
+    paddingInPx,
+    scrollbarWidthInPx,
+    scrollbarHeightInPx,
+    minTableHeightInPx,
+} = virtualTableConstants;
 
 interface TableBodyWidthOptions {
     isWithoutTablePadding?: boolean;
@@ -45,8 +51,14 @@ function getHeightInPx(rowsCount: number, maxHeightInPx: number, rowHeight = def
     return Math.min(calculatedHeightInPx, maxHeightInPx);
 }
 
+// height of the scrollable container, the rest of heightInPx is the padding around the table
+function getTableContainerHeightInPx(heightInPx: number, isPaddingDisabled = false) {
+    return Math.max(heightInPx - (isPaddingDisabled ? 0 : paddingInPx), minTableHeightInPx);
+}
+
 export const virtualTableUtils = {
     getCellSizeProvider,
     getTableBodyWidth,
     getHeightInPx,
+    getTableContainerHeightInPx,
 };

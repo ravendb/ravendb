@@ -352,7 +352,7 @@ class appUrl {
         return baseUrlPart + databasePart;
     }
     
-    static forNewDoc(db: database, collection: string = null): string {
+    static forNewDoc(db: database | string, collection: string = null): string {
         const baseUrlPart = "#databases/edit?";
         const databasePart = appUrl.getEncodedDbPart(db);
         if (collection) {

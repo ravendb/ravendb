@@ -5,17 +5,20 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { useAppSelector } from "components/store";
 import * as yup from "yup";
 
-interface UseDocumentColumnsProviderProps {
+interface CellDocumentValueProps {
     value: unknown;
     databaseName: string;
     hasHyperlinkForIds: boolean;
+    // fetches the full value for the preview when the cell holds a trimmed or stubbed one
+    resolvePreviewValue?: () => Promise<unknown>;
 }
 
 export default function CellDocumentValue({
     value,
     databaseName,
     hasHyperlinkForIds,
-}: UseDocumentColumnsProviderProps) {
+    resolvePreviewValue,
+}: CellDocumentValueProps) {
     const { appUrl } = useAppUrls();
     const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
 
@@ -39,7 +42,7 @@ export default function CellDocumentValue({
     const documentLink = getLinkToDocument(value);
     if (hasHyperlinkForIds && documentLink) {
         return (
-            <CellWithCopy value={value}>
+            <CellWithCopy value={value} resolvePreviewValue={resolvePreviewValue}>
                 <a href={documentLink}>{String(value)}</a>
             </CellWithCopy>
         );
@@ -48,14 +51,14 @@ export default function CellDocumentValue({
     const url = getUrl(value);
     if (url) {
         return (
-            <CellWithCopy value={url}>
+            <CellWithCopy value={url} resolvePreviewValue={resolvePreviewValue}>
                 <a href={url}>{url}</a>
             </CellWithCopy>
         );
     }
 
     return (
-        <CellWithCopy value={value}>
+        <CellWithCopy value={value} resolvePreviewValue={resolvePreviewValue}>
             <CellValue value={value} />
         </CellWithCopy>
     );
@@ -64,6 +67,10 @@ export default function CellDocumentValue({
 const externalIdRegex = /^\w+\/\w+/gi;
 
 function getUrl(cellValue: unknown): string {
+    if (typeof cellValue !== "string" || !cellValue.includes("//")) {
+        return null;
+    }
+
     try {
         return yup.string().url().validateSync(cellValue);
     } catch (_) {
