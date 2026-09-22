@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Raven.Client;
+using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow;
 using Sparrow.Json;
@@ -143,6 +145,29 @@ namespace Raven.Server.Documents
         public static bool operator !=(CollectionName left, CollectionName right)
         {
             return Equals(left, right) == false;
+        }
+
+        private static readonly HashSet<string> SystemCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            HiLoCollection,
+            Constants.Documents.Collections.EmbeddingsCacheCollection,
+            CdcSinkTaskState.CollectionName
+        };
+
+        /// <summary>
+        /// A collection holding RavenDB's own bookkeeping documents rather than user data: '@hilo',
+        /// '@embeddings-cache', the '@embeddings/*' family and '@cdc-states'.
+        /// A closed list on purpose - a leading '@' alone does not make a collection internal, so a
+        /// collection added later is covered only once it is named here.
+        /// </summary>
+        public static bool IsSystemCollection(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+                return false;
+
+            return SystemCollections.Contains(name) ||
+                   // '@embeddings/<source collection>' is generated per source collection, so it cannot be listed
+                   name.StartsWith(EmbeddingsHelper.EmbeddingDocumentCollectionNamePrefix, StringComparison.OrdinalIgnoreCase);
         }
 
         public static bool IsHiLoCollection(string name)

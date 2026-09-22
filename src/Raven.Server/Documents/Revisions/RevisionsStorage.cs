@@ -187,7 +187,9 @@ namespace Raven.Server.Documents.Revisions
                 return ConflictConfiguration.Default;
             }
 
-            if (Configuration?.Default != null)
+            // system collections hold RavenDB's own bookkeeping documents, the database wide default
+            // doesn't apply to them - they are versioned only when explicitly configured above
+            if (Configuration?.Default != null && CollectionName.IsSystemCollection(collection) == false)
                 return Configuration.Default;
 
             return deleteRevisionsWhenNoCofiguration ? ZeroConfiguration : _emptyConfiguration;
