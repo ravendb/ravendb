@@ -16,6 +16,10 @@ public sealed class SortMetadataTemplate
 
     /// <summary>Per-query patches for slots whose <see cref="OrderMetadata"/> must be re-resolved each query.</summary>
     public SortSlotPatch[] Patches { get; init; }
+
+    /// <summary>Per slot, the equality that pins that key to a single value, or null. Whether the key may actually
+    /// be dropped depends on which representation the equality matched, so it is decided per execution.</summary>
+    public ClauseInfo[] ElidePins { get; init; }
 }
 
 public struct SortSlotPatch

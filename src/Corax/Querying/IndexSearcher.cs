@@ -38,8 +38,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private Dictionary<Slice, Hnsw.SearchState> _vectorSearchStateCache;
     private IReadOnlyDictionary<Slice, HnswIndexCache> _vectorNodeCaches;
     private HashSet<string> _fieldsWithMultipleTerms;
-    private HashSet<string> _fieldsWithNumericTerms;
-    private long _planCacheGenerationAtOpen = -1;
     private HashSet<long> _nullTermsMarkers;
     private HashSet<long> _nonExistingTermsMarkers;
     private long[] _vectorFieldsMarkers;
@@ -602,19 +600,11 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _vectorNodeCaches = caches;
     }
 
-    public void AttachTransactionCache(IReadOnlyDictionary<Slice, HnswIndexCache> vectorNodeCaches, HashSet<string> fieldsWithMultipleTerms,
-        HashSet<string> fieldsWithNumericTerms, long planCacheGeneration)
+    public void AttachTransactionCache(IReadOnlyDictionary<Slice, HnswIndexCache> vectorNodeCaches, HashSet<string> fieldsWithMultipleTerms)
     {
         _vectorNodeCaches = vectorNodeCaches;
         _fieldsWithMultipleTerms = fieldsWithMultipleTerms;
-        _fieldsWithNumericTerms = fieldsWithNumericTerms;
-        _planCacheGenerationAtOpen = planCacheGeneration;
     }
-
-    /// <summary>Taken at reader open, before the field snapshots below. Memoizing a plan under a generation
-    /// newer than the snapshots it was built from would outlive the change that should invalidate it. Falls back
-    /// to the live value for a searcher built outside CoraxIndexReadOperation, which carries no snapshots.</summary>
-    public long PlanCacheGenerationAtOpen => _planCacheGenerationAtOpen >= 0 ? _planCacheGenerationAtOpen : PlanCache.GenerationIdx;
 
     public void Dispose()
     {
@@ -637,42 +627,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     // this is meant for debugging / tests only
     public Slice GetFirstIndexedFiledName() => _fieldMapping.GetFirstField().FieldName;
-
-    /// <summary>Answered from the snapshot the persistence publishes on commit, because the generation it pairs
-    /// with is not transactional: probing this transaction would let a query memoize an elision under a
-    /// generation that already moved past it. The probe below is the unattached-searcher fallback.</summary>
-    public bool HasNumericTermsInField(string fieldName)
-    {
-        if (_fieldsWithNumericTerms is { } snapshot)
-            return snapshot.Contains(fieldName);
-
-        if (_fieldMapping.TryGetByFieldName(fieldName, out var binding))
-            return HasNumericTermsInField(binding.Metadata.FieldName);
-
-        using var _ = Slice.From(Allocator, fieldName, out var slice);
-        return HasNumericTermsInField(slice);
-    }
-
-    private bool HasNumericTermsInField(Slice fieldName)
-    {
-        IndexFieldsMappingBuilder.GetFieldNameForLongs(Allocator, fieldName, out var longsName);
-        if (HasNonEmptyLookup(longsName))
-            return true;
-
-        IndexFieldsMappingBuilder.GetFieldNameForDoubles(Allocator, fieldName, out var doublesName);
-        return HasNonEmptyLookup(doublesName);
-    }
-
-    // Read the header, don't open: a field named Vitamin-D owns the key the probe for Vitamin lands on, and
-    // stores a CompactTree there - opening that as a lookup throws.
-    private bool HasNonEmptyLookup(Slice name)
-    {
-        if (_fieldsTree == null || _fieldsTree.TryRead(name, out var reader) == false)
-            return false;
-
-        var state = (LookupState*)reader.Base;
-        return state->RootObjectType == RootObjectType.Lookup && state->NumberOfEntries > 0;
-    }
 
     public bool HasMultipleTermsInField(string fieldName)
     {

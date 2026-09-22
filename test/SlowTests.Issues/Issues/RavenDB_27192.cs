@@ -1,8 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Queries.Timings;
@@ -18,8 +16,8 @@ public class RavenDB_27192 : RavenTestBase
     {
     }
 
-    // ComputeEffectiveOrderBy elides an ORDER BY key on a field an equality names, but the equality pins only the
-    // representation it matched: Num = 1 matches the long term that 1.1 / 1.5 / 1.8 share, so double ordering must run.
+    // An equality pins only the representation it matched: a long equality matches the long term 1.1 / 1.5 / 1.8
+    // share, so it does not pin the double the sort reads.
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void OrderByMustSurviveAnEqualityThatPinsOnlyOneRepresentation(Options options)
@@ -41,10 +39,10 @@ public class RavenDB_27192 : RavenTestBase
 
         Assert.Equal(new[] { 1.1, 1.5, 1.8 }, Nums(read, "where Num == $v order by Num as double", 1L));
 
-        // implicit ordering, not in the ticket, breaks the same way
+        // implicit ordering reads the text term, which a long equality does not pin either
         Assert.Equal(new[] { 1.1, 1.5, 1.8 }, Nums(read, "where Num == $v order by Num", 1L));
 
-        // control: ties on the pinned representation, so only the count is asserted
+        // ties on the pinned representation, so only the count is asserted
         Assert.Equal(3, Nums(read, "where Num == $v order by Num as long", 1L).Count);
 
         Assert.Equal(new[] { 1.5 }, Nums(read, "where Num == $v order by Num as double", 1.5));
@@ -113,154 +111,94 @@ public class RavenDB_27192 : RavenTestBase
             $"the pinned leading key should still be elided, ordering came from [{string.Join(", ", ordering)}]: {Describe(plan)}");
     }
 
-    // The elision reads index state, so a plan cached while the field was text-only must not survive the first number.
+    // The template picks its sorted scans assuming every pinned key elides. When one survives, the scan would walk
+    // the tree of a field that is no longer the leading sort key, so those strategies have to stand down.
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void TheElisionIsRePlannedWhenTheFieldGainsNumericTerms(Options options)
+    public void ASurvivingKeyStandsDownTheScanChosenForTheElidedOrder(Options options)
     {
         using var store = GetDocumentStore(options);
 
         using (var session = store.OpenSession())
         {
-            session.Store(new MixedItem { Tag = "x" });
+            // Every Num is 1 as a long, and Other descends as Num ascends - a scan driven by Other cannot pass
+            // for Num order. Enough rows with a small page for the scan to look cheaper than a bitmap.
+            for (int i = 0; i < 200; i++)
+                session.Store(new DoubleItem { Num = 1.0 + i / 1000.0, Other = 1.0 - i / 1000.0 });
+
             session.SaveChanges();
         }
 
-        new MixedItems_ByTag().Execute(store);
-        Indexes.WaitForIndexing(store);
-
-        // warms the plan cache while Tag is text-only
-        using (var first = store.OpenSession())
-            first.Advanced.RawQuery<MixedItem>("from index 'MixedItems/ByTag' where Tag = $v order by Tag as double")
-                .AddParameter("v", "x")
-                .ToList();
-
-        using (var session = store.OpenSession())
-        {
-            session.Store(new MixedItem { Tag = 1.1 });
-            session.Store(new MixedItem { Tag = 1.8 });
-            session.Store(new MixedItem { Tag = 1.5 });
-            session.SaveChanges();
-        }
-
+        new DoubleItems_ByNumAndOther().Execute(store);
         Indexes.WaitForIndexing(store);
 
         using var read = store.OpenSession();
 
         var nums = read.Advanced
-            .RawQuery<MixedItem>("from index 'MixedItems/ByTag' where Tag = $v order by Tag as double")
+            .RawQuery<DoubleItem>("from index 'DoubleItems/ByNumAndOther' where Num == $v and Other > $lo order by Num as double, Other as double limit 25")
             .AddParameter("v", 1L)
+            .AddParameter("lo", 0.5)
             .ToList()
-            .Select(x => double.Parse(x.Tag.ToString()))
+            .Select(x => x.Num)
             .ToList();
 
-        Assert.Equal(new[] { 1.1, 1.5, 1.8 }, nums);
+        Assert.Equal(25, nums.Count);
+        Assert.Equal(nums.OrderBy(x => x).ToList(), nums);
+        Assert.Equal(1.0, nums[0]);
     }
 
-    // Same for a CreateField-only field: absent from the index definition, so nothing there marks its first number.
+    // The other direction: the equality matched the representation the sort reads, so the key really is pinned.
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void TheElisionIsRePlannedWhenADynamicFieldGainsNumericTerms(Options options)
+    public void AnEqualityThatPinsTheSortedRepresentationStillElides(Options options)
     {
         using var store = GetDocumentStore(options);
 
         using (var session = store.OpenSession())
         {
-            session.Store(new MixedItem { Tag = "x" });
+            session.Store(new DoubleItem { Num = 1.1 });
+            session.Store(new DoubleItem { Num = 1.8 });
+            session.Store(new DoubleItem { Num = 1.5 });
             session.SaveChanges();
         }
 
-        new MixedItems_ByDynamicTag().Execute(store);
-        Indexes.WaitForIndexing(store);
-
-        // warms the plan cache while Dyn is text-only
-        using (var first = store.OpenSession())
-            first.Advanced.RawQuery<MixedItem>("from index 'MixedItems/ByDynamicTag' where Dyn = $v order by Dyn as double")
-                .AddParameter("v", "x")
-                .ToList();
-
-        using (var session = store.OpenSession())
-        {
-            session.Store(new MixedItem { Tag = 1.1 });
-            session.Store(new MixedItem { Tag = 1.8 });
-            session.Store(new MixedItem { Tag = 1.5 });
-            session.SaveChanges();
-        }
-
+        new DoubleItems_ByNum().Execute(store);
         Indexes.WaitForIndexing(store);
 
         using var read = store.OpenSession();
 
-        var nums = read.Advanced
-            .RawQuery<MixedItem>("from index 'MixedItems/ByDynamicTag' where Dyn = $v order by Dyn as double")
+        var results = read.Advanced
+            .RawQuery<DoubleItem>("from index 'DoubleItems/ByNum' where Num == $v order by Num as long include timings()")
             .AddParameter("v", 1L)
-            .ToList()
-            .Select(x => double.Parse(x.Tag.ToString()))
+            .Timings(out var timings)
             .ToList();
 
-        Assert.Equal(new[] { 1.1, 1.5, 1.8 }, nums);
+        Assert.Equal(3, results.Count);
+
+        var plan = Assert.IsType<QueryInspectionNode>(timings.QueryPlan);
+        Assert.False(Contains(plan, "SortingMatch"),
+            $"a long equality pins the long term the sort reads, so the key should be elided: {Describe(plan)}");
     }
 
-    // The snapshot has to exist before any field holds a number - that is the transition it guards. This pins
-    // only that a text-only index gets one at all, not which part of UpdateIndexCache delivers it.
-    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
-    public async Task TheNumericTermsSnapshotIsPublishedEvenWhenNothingIsNumeric()
+    private static bool Contains(QueryInspectionNode node, string operation)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        if (node.Operation == operation)
+            return true;
 
-        using (var session = store.OpenSession())
+        if (node.Children == null)
+            return false;
+
+        foreach (var child in node.Children)
         {
-            session.Store(new MixedItem { Tag = "x" });
-            session.SaveChanges();
+            if (Contains(child, operation))
+                return true;
         }
 
-        var definition = new MixedItems_ByTag();
-        definition.Execute(store);
-        Indexes.WaitForIndexing(store);
-
-        var database = await GetDatabase(store.Database);
-        var persistence = Assert.IsType<CoraxIndexPersistence>(database.IndexStore.GetIndex(definition.IndexName).IndexPersistence);
-
-        Assert.NotNull(persistence.FieldsWithNumericTerms);
-        Assert.Empty(persistence.FieldsWithNumericTerms);
+        return false;
     }
 
-    // A -L/-D lookup empties when its last posting list does, so the raw walk stops reporting the field - while
-    // a reader whose transaction predates that commit still holds the numbers. The set therefore only grows.
-    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Corax)]
-    public async Task TheNumericTermsSnapshotKeepsAFieldThatLostItsNumbers()
-    {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
-
-        using (var session = store.OpenSession())
-        {
-            session.Store(new MixedItem { Tag = 1.5 }, "items/1");
-            session.SaveChanges();
-        }
-
-        var definition = new MixedItems_ByTag();
-        definition.Execute(store);
-        Indexes.WaitForIndexing(store);
-
-        var database = await GetDatabase(store.Database);
-        var persistence = Assert.IsType<CoraxIndexPersistence>(database.IndexStore.GetIndex(definition.IndexName).IndexPersistence);
-        Assert.Contains("Tag", persistence.FieldsWithNumericTerms);
-
-        using (var session = store.OpenSession())
-        {
-            session.Delete("items/1");
-            session.Store(new MixedItem { Tag = "x" }, "items/2");
-            session.SaveChanges();
-        }
-
-        Indexes.WaitForIndexing(store);
-
-        Assert.Contains("Tag", persistence.FieldsWithNumericTerms);
-    }
-
-    // Where the order comes from: a SortingMatch sorts on one field, a direct scan takes it from the tree it drives.
-    // A per-execution cost gate picks between the two shapes, so the field carries the signal, not the strategy -
-    // and the DecisionTrail lists a strategy whether it was accepted or rejected.
+    // Where the order comes from: a SortingMatch sorts on a field, a direct scan takes it from the tree it drives.
+    // A cost gate picks between the two per execution, so the field carries the signal and the strategy name does not.
     private static List<string> OrderingFields(QueryInspectionNode node)
     {
         var fields = new List<string>();
@@ -304,31 +242,6 @@ public class RavenDB_27192 : RavenTestBase
         }
     }
 
-    private class MixedItem
-    {
-        public string Id { get; set; }
-
-        public object Tag { get; set; }
-    }
-
-    private class MixedItems_ByTag : AbstractIndexCreationTask<MixedItem>
-    {
-        public MixedItems_ByTag()
-        {
-            Map = items => from i in items
-                           select new { i.Tag };
-        }
-    }
-
-    private class MixedItems_ByDynamicTag : AbstractIndexCreationTask<MixedItem>
-    {
-        public MixedItems_ByDynamicTag()
-        {
-            Map = items => from i in items
-                           select new { _ = CreateField("Dyn", i.Tag) };
-        }
-    }
-
     private static List<double> Nums(IDocumentSession session, string rql, object value)
     {
         return session.Advanced
@@ -344,6 +257,17 @@ public class RavenDB_27192 : RavenTestBase
         public string Id { get; set; }
 
         public double Num { get; set; }
+
+        public double Other { get; set; }
+    }
+
+    private class DoubleItems_ByNumAndOther : AbstractIndexCreationTask<DoubleItem>
+    {
+        public DoubleItems_ByNumAndOther()
+        {
+            Map = items => from i in items
+                           select new { i.Num, i.Other };
+        }
     }
 
     private class DoubleItems_ByNum : AbstractIndexCreationTask<DoubleItem>
