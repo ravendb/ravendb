@@ -3,6 +3,7 @@ import {
     FormDestinationDataBase,
     LocalDestination,
     S3Destination,
+    AzureAuthType,
     AzureDestination,
     GoogleCloudDestination,
     GlacierDestination,
@@ -108,9 +109,16 @@ export const defaultAzureFormData: AzureDestination = {
     storageContainer: null,
     remoteFolderName: null,
     accountName: null,
+    authType: "accountKey",
     accountKey: null,
     sasToken: null,
 };
+
+export function mapAzureAuthTypeFromDto(
+    dto: Pick<Raven.Client.Documents.Operations.Backups.AzureSettings, "SasToken">
+): AzureAuthType {
+    return dto.SasToken ? "sasToken" : "accountKey";
+}
 
 function mapAzureFromDto(dto: Raven.Client.Documents.Operations.Backups.AzureSettings): AzureDestination {
     if (!dto) {
@@ -122,6 +130,7 @@ function mapAzureFromDto(dto: Raven.Client.Documents.Operations.Backups.AzureSet
         storageContainer: dto.StorageContainer,
         remoteFolderName: dto.RemoteFolderName,
         accountName: dto.AccountName,
+        authType: mapAzureAuthTypeFromDto(dto),
         accountKey: dto.AccountKey,
         sasToken: dto.SasToken,
     };

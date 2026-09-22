@@ -1,10 +1,9 @@
 import { ColumnFiltersState, Updater } from "@tanstack/react-table";
 import { useMemo } from "react";
-import { IndexErrorsDropdownType, NameAndCount } from "components/pages/database/indexes/errors/types";
+import { IndexErrorsDropdownType } from "components/pages/database/indexes/errors/types";
 
 interface UseIndexErrorsDropdownProps {
     setFilters: (updater: Updater<ColumnFiltersState>) => void;
-    indexesList: NameAndCount[];
     dropdownType: IndexErrorsDropdownType;
     dropdownTypeLabelText: string;
     filters: ColumnFiltersState;
@@ -15,7 +14,6 @@ export function useIndexErrorsDropdown({
     dropdownType,
     filters,
     dropdownTypeLabelText,
-    indexesList,
 }: UseIndexErrorsDropdownProps) {
     const columnFilter = filters.find((filter) => filter.id === dropdownType);
     const selectedColumnFilters = (columnFilter?.value as string[]) ?? [];
@@ -31,12 +29,12 @@ export function useIndexErrorsDropdown({
     };
 
     const labelText = useMemo(() => {
-        if (selectedColumnFilters.length !== 0 && selectedColumnFilters.length < indexesList.length) {
+        if (selectedColumnFilters.length > 0) {
             return `Selected ${dropdownTypeLabelText} (${selectedColumnFilters.length})`;
         }
 
         return `All ${dropdownTypeLabelText} selected`;
-    }, [selectedColumnFilters.length, indexesList.length, dropdownTypeLabelText]);
+    }, [selectedColumnFilters.length, dropdownTypeLabelText]);
 
     return {
         labelText,

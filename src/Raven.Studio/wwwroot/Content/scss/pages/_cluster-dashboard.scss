@@ -79,7 +79,7 @@
     table {
         tbody {
             tr {
-                font-family: var(--table-font);
+                font-family: var(--table-font), var(--bs-font-sans-serif);
             }
         }
     }

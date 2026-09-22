@@ -8,6 +8,7 @@ import {
 import {
     defaultAzureFormData,
     defaultS3FormData,
+    mapAzureAuthTypeFromDto,
 } from "components/common/formDestinations/utils/formDestinationsMapsFromDto";
 import { mapAmazonToDto, mapAzureToDto } from "components/common/formDestinations/utils/formDestinationsMapsToDto";
 import IconName from "../../../../../../typings/server/icons";
@@ -90,7 +91,9 @@ function mapFromDto(dto: RemoteAttachmentsConfiguration): RemoteAttachmentsFormD
                     azure: {
                         ...defaultAzureFormData,
                         accountName: azureConfig.AccountName,
+                        authType: mapAzureAuthTypeFromDto(azureConfig),
                         accountKey: azureConfig.AccountKey,
+                        sasToken: azureConfig.SasToken,
                         storageContainer: azureConfig.StorageContainer,
                         remoteFolderName: azureConfig.RemoteFolderName,
                     },

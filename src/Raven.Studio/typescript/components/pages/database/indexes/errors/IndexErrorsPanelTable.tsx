@@ -4,6 +4,7 @@ import { LoadError } from "components/common/LoadError";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import { AsyncStateStatus } from "react-async-hook";
 import { useMemo } from "react";
+import { virtualTableConstants } from "components/common/virtualTable/utils/virtualTableConstants";
 
 interface IndexErrorsPanelTableProps {
     status: AsyncStateStatus;
@@ -42,7 +43,12 @@ export function IndexErrorsPanelTable({
             {status === "error" ? (
                 <LoadError error="Error during loading identities" refresh={refresh} />
             ) : (
-                <VirtualTable heightInPx={400} table={indexErrorsPanelTable} isLoading={isLoading} />
+                <VirtualTable
+                    heightInPx={400}
+                    rowHeightInPx={virtualTableConstants.doubleLineRowHeightInPx}
+                    table={indexErrorsPanelTable}
+                    isLoading={isLoading}
+                />
             )}
         </>
     );

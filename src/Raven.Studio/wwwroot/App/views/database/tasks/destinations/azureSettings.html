@@ -18,7 +18,21 @@
         <input data-bind="textInput: accountName" class="form-control" />
     </div>
 </div>
-<div class="row margin-bottom" data-bind="validationElement: accountKey">
+<div class="row margin-bottom">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">Authentication</label>
+    <div class="col-xs-12 col-sm-6 col-lg-8">
+        <div class="radio-toggle">
+            <input type="radio" id="azureAuthTypeAccountKey" name="azureAuthType" value="accountKey" data-bind="checked: authType">
+            <label for="azureAuthTypeAccountKey">Account key</label>
+            <input type="radio" id="azureAuthTypeSasToken" name="azureAuthType" value="sasToken" data-bind="checked: authType">
+            <label for="azureAuthTypeSasToken">SAS token</label>
+            <div class="toggle-knob">
+                <i class="icon-key m-0"></i><i class="icon-lock m-0"></i>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row margin-bottom" data-bind="validationElement: accountKey, visible: authType() === 'accountKey'">
     <label class="control-label col-xs-12 col-sm-6 col-lg-4">Account key <i class="required"></i></label>
     <div class="col-xs-12 col-sm-6 col-lg-8" >
         <div class="input-group flex-grow">
@@ -27,6 +41,20 @@
                 <i class="icon-preview"></i>
             </button>
             <button type="button" class="btn btn-info" data-bind="click: toggleIsKeyHidden, visible: !isKeyHidden()" title="Hide characters">
+                <i class="icon-preview-off"></i>
+            </button>
+        </div>
+    </div>
+</div>
+<div class="row margin-bottom" data-bind="validationElement: sasToken, visible: authType() === 'sasToken'">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">SAS token <i class="required"></i></label>
+    <div class="col-xs-12 col-sm-6 col-lg-8">
+        <div class="input-group flex-grow">
+            <input data-bind="textInput: sasToken, attr: { type: isSasTokenHidden() ? 'password' : 'text' }" class="form-control" />
+            <button type="button" class="btn btn-default" data-bind="click: toggleIsSasTokenHidden, visible: isSasTokenHidden()" title="View hidden characters">
+                <i class="icon-preview"></i>
+            </button>
+            <button type="button" class="btn btn-info" data-bind="click: toggleIsSasTokenHidden, visible: !isSasTokenHidden()" title="Hide characters">
                 <i class="icon-preview-off"></i>
             </button>
         </div>

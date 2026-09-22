@@ -104,6 +104,8 @@ Object.defineProperty(HTMLElement.prototype, "scrollTo", {
     value: jest.fn(),
 });
 
+window.scrollTo = jest.fn();
+
 if (!window.ResizeObserver) {
   window.ResizeObserver = ROP.ResizeObserver;
 }

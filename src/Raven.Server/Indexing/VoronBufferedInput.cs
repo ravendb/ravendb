@@ -32,11 +32,11 @@ public sealed class VoronBufferedInput : BufferedIndexInput
         {
             // handle directly
             byte b = buffer[bufferPosition++];
-            int i = b & 0x7F;
+            long i = b & 0x7F;
             for (int shift = 7; (b & 0x80) != 0; shift += 7)
             {
                 b = buffer[bufferPosition++];
-                i |= (b & 0x7F) << shift;
+                i |= (b & 0x7FL) << shift;
             }
 
             return i;
@@ -207,7 +207,7 @@ public sealed class VoronBufferedInput : BufferedIndexInput
 
     public override void SeekInternal(long pos, IState s)
     {
-        if (pos > _stream.Length)
+        if (pos < 0 || pos > _stream.Length)
             ThrowInvalidSeekPosition(pos);
 
         if (s is not VoronState state)

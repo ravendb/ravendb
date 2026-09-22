@@ -3,9 +3,13 @@ import staticHighlight from "ace-builds/src-noconflict/ext-static_highlight";
 import { Mode as CSharpMode } from "ace-builds/src-noconflict/mode-csharp";
 import { Mode as HtmlMode } from "ace-builds/src-noconflict/mode-html";
 import { Mode as JavaScriptMode } from "ace-builds/src-noconflict/mode-javascript";
+import { Mode as JsxMode } from "ace-builds/src-noconflict/mode-jsx";
+import { Mode as KotlinMode } from "ace-builds/src-noconflict/mode-kotlin";
 import { Mode as PowershellMode } from "ace-builds/src-noconflict/mode-powershell";
 import { Mode as PythonMode } from "ace-builds/src-noconflict/mode-python";
 import { Mode as ShMode } from "ace-builds/src-noconflict/mode-sh";
+import { Mode as SwiftMode } from "ace-builds/src-noconflict/mode-swift";
+import { Mode as VueMode } from "ace-builds/src-noconflict/mode-vue";
 import { Mode as YamlMode } from "ace-builds/src-noconflict/mode-yaml";
 import "@/components/ace-editor/ace-syntax-colors.css";
 
@@ -13,9 +17,13 @@ const MODES = {
     csharp: new CSharpMode(),
     html: new HtmlMode(),
     javascript: new JavaScriptMode(),
+    jsx: new JsxMode(),
+    kotlin: new KotlinMode(),
     powershell: new PowershellMode(),
     python: new PythonMode(),
     sh: new ShMode(),
+    swift: new SwiftMode(),
+    vue: new VueMode(),
     yaml: new YamlMode(),
 };
 

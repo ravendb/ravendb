@@ -3338,12 +3338,27 @@ namespace Raven.Server.Documents.Indexes
             return stats;
         }
 
-        public DateTime? GetLastQueryingTime() => _lastQueriedTimeTracker.LastQueryDate;
+        public DateTime? GetLastQueryingTime()
+        {
+            if (_initialized == false)
+                return null;
 
-        public TimeSpan GetElapsedTimeFromLastQuery() => _lastQueriedTimeTracker.ElapsedSinceQueried;
+            return _lastQueriedTimeTracker.LastQueryDate;
+        }
+
+        public TimeSpan? GetElapsedTimeFromLastQuery()
+        {
+            if (_initialized == false)
+                return null;
+
+            return _lastQueriedTimeTracker.ElapsedSinceQueried;
+        }
 
         public bool NoQueryRecently()
         {
+            if (_initialized == false)
+                return false;
+
             var last = _lastQueriedTimeTracker.LastQueryDate;
             return DocumentDatabase.Time.GetUtcNow() - last > Configuration.TimeSinceLastQueryAfterWhichDeepCleanupCanBeExecuted.AsTimeSpan;
         }

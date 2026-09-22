@@ -29,7 +29,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             public string[] RelatedProducts { get; set; } = [""];
         }
 
-        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenRetryTheory(RavenTestCategory.Ai, maxRetries: 3, delayBetweenRetriesMs: 10_000)]
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task Can_recreate_negative_total_tokens_with_truncation(Options options, GenAiConfiguration config)
         {

@@ -108,7 +108,7 @@ export default function ClusterRaftDebug({ summary }: ClusterRaftDebugProps) {
         <div className="cluster-raft-debug">
             {raft.loading ? (
                 <div className="hstack gap-2 justify-content-center text-muted py-3">
-                    <Spinner size="sm" /> Loading cluster raft log...
+                    <Spinner size="sm" data-testid="loader" /> Loading cluster raft log...
                 </div>
             ) : results.length === 0 ? (
                 <EmptySet compact className="justify-content-center">

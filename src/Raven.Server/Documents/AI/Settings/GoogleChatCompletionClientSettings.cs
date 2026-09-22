@@ -219,7 +219,11 @@ internal class GoogleChatCompletionClientSettings : AbstractOpenAiChatCompletion
         // }
         //
         // The "message" object contains no "content", no "refusal" metadata and no finish reason.
-        if (message != null)
+        // Guarded so GetRefusal is safe to call on any response: content or tool calls means an answer, and
+        // "length" is a token-limit stop that the shared length handling classifies.
+        if (message != null
+            && ChatCompletionClient.HasContentOrToolCalls(message) == false
+            && string.Equals(finishReason, ChatCompletionClient.Constants.ResponseFields.FinishReasonLength, StringComparison.OrdinalIgnoreCase) == false)
             return "The model refused to answer";
 
         return base.GetRefusal(choice0, message, streaming, out isCompleteMessage);

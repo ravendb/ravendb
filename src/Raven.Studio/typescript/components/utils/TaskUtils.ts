@@ -184,7 +184,7 @@ export default class TaskUtils {
             case "GenAi":
                 return { icon: "genai", label: "GenAI" };
             case "CdcSink":
-                return { icon: "sql-etl", label: "CDC Sink" };
+                return { icon: "cdc-sink", label: "CDC Sink" };
             default:
                 return { icon: "help", label: "Other" };
         }

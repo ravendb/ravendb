@@ -108,8 +108,12 @@ export function GenAiPanel(props: GenAiPanelProps) {
                     </RichPanelDetailItem>
                 )}
                 {nextBatchStartingPoint && (
-                    <RichPanelDetailItem label="Next Batch Starting Point">
+                    <RichPanelDetailItem label="Next Batch Starting Point" contentClassName="d-flex align-items-center">
+                        <div className="text-truncate" style={{ maxWidth: "200px" }}>
+                            {nextBatchStartingPoint}
+                        </div>
                         <PopoverWithHoverWrapper
+                            wrapperClassName="ms-1"
                             message={nextBatchStartingPoint
                                 .split(",")
                                 .map((item) => item.trim())
@@ -117,6 +121,15 @@ export function GenAiPanel(props: GenAiPanelProps) {
                         >
                             <Icon icon="info" color="info" margin="m-0" />
                         </PopoverWithHoverWrapper>
+                        <Button
+                            variant="link"
+                            onClick={() =>
+                                copyToClipboard.copy(nextBatchStartingPoint, "Change vector copied to clipboard")
+                            }
+                            size="xs"
+                        >
+                            <Icon icon="copy-to-clipboard" />
+                        </Button>
                     </RichPanelDetailItem>
                 )}
                 <ConnectionStringItem

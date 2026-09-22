@@ -34,4 +34,22 @@ describe("Replication Sink", function () {
         expect(await container.findByText(/Last DB Etag/)).toBeInTheDocument();
         expect(await container.findByText(/Last Sent Etag/)).toBeInTheDocument();
     });
+
+    it("truncates a long cursor and exposes the full value on hover", async () => {
+        const Story = composeStory(stories.LongCursors, stories.default);
+
+        const { screen, fireClick, user } = rtlRender(<Story />);
+        const container = within(await screen.findByTestId(containerTestId));
+
+        await fireClick(await container.findByTitle(/Click for details/));
+
+        const hubCursor = await container.findByText(/^A:100-/);
+        expect(within(hubCursor).getByText(/\(\+3 more\)/)).toBeInTheDocument();
+        expect(container.queryByText(new RegExp("M:112-mmmmmmmmmmmmmmmmmmmmmm"))).not.toBeInTheDocument();
+
+        await user.hover(hubCursor);
+
+        expect(await screen.findByText(new RegExp("M:112-mmmmmmmmmmmmmmmmmmmmmm"))).toBeInTheDocument();
+        expect(await screen.findByLabelText("Copy Hub Cursor to clipboard")).toBeInTheDocument();
+    });
 });

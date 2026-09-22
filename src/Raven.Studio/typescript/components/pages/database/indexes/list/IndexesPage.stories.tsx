@@ -1,11 +1,12 @@
 import { IndexesPage } from "./IndexesPage";
 import { Meta, StoryFn } from "@storybook/react-webpack5";
 import React from "react";
-import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
+import { DatabaseType, withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { mockServices } from "test/mocks/services/MockServices";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { IndexesStubs } from "test/stubs/IndexesStubs";
 import { mockStore } from "test/mocks/store/MockStore";
+import assertUnreachable from "components/utils/assertUnreachable";
 
 export default {
     title: "Pages/Indexes/List of Indexes",
@@ -18,7 +19,7 @@ export default {
     },
 } satisfies Meta;
 
-function commonInit() {
+function commonInit(databaseType: DatabaseType) {
     const { accessManager, license } = mockStore;
     const { licenseService } = mockServices;
 
@@ -28,6 +29,28 @@ function commonInit() {
     licenseService.withLimitsUsage();
 
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
+
+    configureActiveDatabase(databaseType);
+}
+
+function configureActiveDatabase(databaseType: DatabaseType) {
+    const { databases } = mockStore;
+    const { databasesService } = mockServices;
+
+    const db = (() => {
+        switch (databaseType) {
+            case "singleNode":
+                return databases.withActiveDatabase_NonSharded_SingleNode();
+            case "cluster":
+                return databases.withActiveDatabase_NonSharded_Cluster();
+            case "sharded":
+                return databases.withActiveDatabase_Sharded();
+            default:
+                return assertUnreachable(databaseType);
+        }
+    })();
+
+    databasesService.withGetDatabasesStateForDatabase(db);
 }
 
 function configureIndexService() {
@@ -82,10 +105,7 @@ function configureDifferentIndexStates() {
 }
 
 export const EmptyView: StoryFn = () => {
-    commonInit();
-
-    const { databases } = mockStore;
-    databases.withActiveDatabase_NonSharded_SingleNode();
+    commonInit("singleNode");
 
     const { indexesService } = mockServices;
 
@@ -100,72 +120,54 @@ export const EmptyView: StoryFn = () => {
 };
 
 export const SampleDataSingleNode: StoryFn = () => {
-    commonInit();
+    commonInit("singleNode");
     configureIndexService();
-
-    const { databases } = mockStore;
-    databases.withActiveDatabase_NonSharded_SingleNode();
 
     return <IndexesPage />;
 };
 
 export const SampleDataCluster: StoryFn = () => {
-    commonInit();
+    commonInit("cluster");
     configureIndexService();
-
-    const { databases } = mockStore;
-    databases.withActiveDatabase_NonSharded_Cluster();
 
     return <IndexesPage />;
 };
 
 export const SampleDataSharded: StoryFn = () => {
-    commonInit();
+    commonInit("sharded");
     configureIndexService();
-
-    const { databases } = mockStore;
-    databases.withActiveDatabase_Sharded();
 
     return <IndexesPage />;
 };
 
 export const DifferentIndexNodeStatesSingleNode: StoryFn = () => {
-    commonInit();
+    commonInit("singleNode");
     configureDifferentIndexStates();
-
-    const { databases } = mockStore;
-    databases.withActiveDatabase_NonSharded_SingleNode();
 
     return <IndexesPage />;
 };
 
 export const DifferentIndexNodeStatesSharded: StoryFn = () => {
-    commonInit();
+    commonInit("sharded");
     configureDifferentIndexStates();
-
-    const { databases } = mockStore;
-    databases.withActiveDatabase_Sharded();
 
     return <IndexesPage />;
 };
 
 export const FaultyIndexSingleNode: StoryFn = () => {
-    commonInit();
+    commonInit("singleNode");
     const { indexesService } = mockServices;
 
     const [faultyStats] = IndexesStubs.getFaultyIndex();
 
     indexesService.withGetStats([faultyStats].filter((x) => x));
     indexesService.withGetProgress([]);
-
-    const { databases } = mockStore;
-    databases.withActiveDatabase_NonSharded_SingleNode();
 
     return <IndexesPage />;
 };
 
 export const FaultyIndexSharded: StoryFn = () => {
-    commonInit();
+    commonInit("sharded");
     const { indexesService } = mockServices;
 
     const [faultyStats] = IndexesStubs.getFaultyIndex();
@@ -173,22 +175,17 @@ export const FaultyIndexSharded: StoryFn = () => {
     indexesService.withGetStats([faultyStats].filter((x) => x));
     indexesService.withGetProgress([]);
 
-    const { databases } = mockStore;
-    databases.withActiveDatabase_Sharded();
-
     return <IndexesPage />;
 };
 
 export const LicenseLimits: StoryFn = () => {
-    commonInit();
+    commonInit("sharded");
     configureDifferentIndexStates();
 
-    const { databases, license } = mockStore;
+    const { license } = mockStore;
 
     license.with_LicenseLimited();
     license.with_LimitsUsage();
-
-    databases.withActiveDatabase_Sharded();
 
     return <IndexesPage />;
 };

@@ -10,8 +10,8 @@ namespace Sparrow.Server.Platform.Posix
         MAP_TYPE = 0x0f,     // Mask for type of mapping.
         MAP_FIXED = 0x10,     // Interpret addr exactly.
         MAP_FILE = 0,
-        MAP_ANONYMOUS = 0x20,     // Don't use a file.
-        MAP_ANON = MAP_ANONYMOUS,
+        // MAP_ANONYMOUS = 0x20,  // Don't use a file. Linux only value, on macOS it is 0x1000 - use PerPlatformValues.MmapFlags.MAP_ANONYMOUS
+        // MAP_ANON = MAP_ANONYMOUS,
 
         // These are Linux-specific.
         MAP_GROWSDOWN = 0x00100,  // Stack-like segment.

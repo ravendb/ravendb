@@ -1,9 +1,10 @@
 import { useId, useState, type ChangeEvent, type ComponentProps, type ReactNode } from "react";
 import { type FieldPath, type FieldValues, type UseControllerProps, useController } from "react-hook-form";
 import { Eye, EyeOff } from "lucide-react";
+import { FormFieldLabel } from "@/components/form/form-field-label";
 import { Button } from "@/components/shadcn/ui/button";
 import { Input } from "@/components/shadcn/ui/input";
-import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/shadcn/ui/field";
+import { Field, FieldContent, FieldDescription } from "@/components/shadcn/ui/field";
 import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/shadcn/ui/input-group";
 
 type FormInputProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = ComponentProps<
@@ -12,6 +13,7 @@ type FormInputProps<TFieldValues extends FieldValues, TName extends FieldPath<TF
     UseControllerProps<TFieldValues, TName> & {
         addons?: ReactNode;
         label?: ReactNode;
+        labelAddon?: ReactNode;
         description?: ReactNode;
         /**
          * "responsive" puts the label and description in a column beside the control, stacking again
@@ -32,6 +34,7 @@ export function FormInput<TFieldValues extends FieldValues, TName extends FieldP
     disabled,
     id,
     label,
+    labelAddon,
     name,
     orientation = "vertical",
     type,
@@ -67,7 +70,7 @@ export function FormInput<TFieldValues extends FieldValues, TName extends FieldP
         afterChange?.(event);
     }
 
-    const labelNode = label != null ? <FieldLabel htmlFor={inputId}>{label}</FieldLabel> : null;
+    const labelNode = <FormFieldLabel htmlFor={inputId} label={label} addon={labelAddon} />;
     const errorNode = error?.message ? (
         <FieldDescription className="text-destructive">{error.message}</FieldDescription>
     ) : null;
