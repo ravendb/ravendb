@@ -111,9 +111,23 @@ public sealed class ApiKeyStore(
             return null;
         }
 
-        var record = doc.Revoked ? null : new Record(Convert.FromBase64String(doc.Salt), Convert.FromBase64String(doc.Hash));
+        var record = doc.Revoked ? null : Decode(doc, keyId);
         _cache[keyId] = new CacheEntry(record, now + options.Value.ApiKeyCacheDuration);
         return record;
+    }
+
+    private Record? Decode(ApiKey doc, string keyId)
+    {
+        try
+        {
+            return new Record(Convert.FromBase64String(doc.Salt), Convert.FromBase64String(doc.Hash));
+        }
+        catch (FormatException ex)
+        {
+            if (logger.IsWarnEnabled)
+                logger.Warn(ex, $"API key '{keyId}' has malformed Base64 in Salt or Hash; treating it as revoked.");
+            return null;
+        }
     }
 
     private async Task SeedPrimaryAsync(CancellationToken ct)
