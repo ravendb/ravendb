@@ -147,17 +147,9 @@ internal sealed class AgentRouter(
         if (attempt >= ProviderLimits.MaxRateLimitedRetries)
             return null;
 
-        var failure = ProviderFailures.Classify(e);
-        if (failure.Kind != ProviderFailureKind.RateLimited)
-            return null;
-
-        if (failure.RetryAfter is not { } retryAfter)
-            return ProviderLimits.MinRetryDelay * Math.Pow(2, attempt);
-
-        if (retryAfter > ProviderLimits.MaxRetryDelay)
-            return null;
-
-        return retryAfter < ProviderLimits.MinRetryDelay ? ProviderLimits.MinRetryDelay : retryAfter;
+        return ProviderFailures.Classify(e).Kind == ProviderFailureKind.RateLimited
+            ? ProviderLimits.RetryDelay * Math.Pow(2, attempt)
+            : null;
     }
 
     private static Dictionary<string, object?> ConvertParameters(AgentRequest request, AiAgentConfiguration config)
