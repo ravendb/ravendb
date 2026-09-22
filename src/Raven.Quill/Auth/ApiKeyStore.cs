@@ -24,6 +24,7 @@ public sealed class ApiKeyStore(
 
     private const int SaltBytes = 16;
     private const int MaxKeyIdLength = 64;
+    private const int MaxCacheEntries = 1024;
     private const int MinRecommendedApiKeyLength = 16;
 
     private static readonly Record Decoy = new(RandomNumberGenerator.GetBytes(SaltBytes), RandomNumberGenerator.GetBytes(32));
@@ -105,15 +106,17 @@ public sealed class ApiKeyStore(
             return null;
         }
 
-        if (doc is null)
-        {
-            _cache.TryRemove(keyId, out _);
-            return null;
-        }
-
-        var record = doc.Revoked ? null : Decode(doc, keyId);
-        _cache[keyId] = new CacheEntry(record, now + options.Value.ApiKeyCacheDuration);
+        var record = doc is null || doc.Revoked ? null : Decode(doc, keyId);
+        Cache(keyId, record, now);
         return record;
+    }
+
+    private void Cache(string keyId, Record? record, DateTime now)
+    {
+        if (_cache.Count >= MaxCacheEntries && _cache.ContainsKey(keyId) == false)
+            _cache.Clear();
+
+        _cache[keyId] = new CacheEntry(record, now + options.Value.ApiKeyCacheDuration);
     }
 
     private Record? Decode(ApiKey doc, string keyId)
