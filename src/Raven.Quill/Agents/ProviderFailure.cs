@@ -1,5 +1,7 @@
 using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Raven.Client.Exceptions;
 
 namespace Raven.Quill.Agents;
@@ -20,8 +22,7 @@ public sealed record ProviderFailure(
     ProviderFailureKind Kind,
     bool Retryable,
     string VisitorMessage,
-    string OperatorMessage,
-    TimeSpan? RetryAfter = null)
+    string OperatorMessage)
 {
     public string Code => Retryable ? RetryableCode : FailedCode;
 
@@ -34,50 +35,58 @@ public sealed class ProviderTimeoutException(TimeSpan limit)
 
 public sealed class EmptyAnswerException() : Exception("the AI provider returned an answer with no content");
 
-public static class ProviderFailures
+public static partial class ProviderFailures
 {
     public static ProviderFailure Classify(Exception exception)
     {
-        for (var e = exception; e is not null; e = e.InnerException)
-        {
-            if (Match(e) is { } failure)
-                return failure;
-        }
+        var text = exception.ToString();
+
+        if (Names(text, nameof(RateLimitException), nameof(TooManyRequestsException), nameof(TooManyTokensException)))
+            return RateLimited;
+        if (Names(text, nameof(InsufficientQuotaException)))
+            return QuotaExhausted;
+        if (Names(text, nameof(RefusedToAnswerException)))
+            return Refused;
+        if (Names(text, nameof(UnsuccessfulAiRequestException)))
+            return StatusIn(text) is { } status ? FromStatus(status) : Unknown;
+        if (Names(text, nameof(ProviderTimeoutException), nameof(TaskCanceledException), nameof(TimeoutException)))
+            return TimedOut;
+        if (Names(text, nameof(EmptyAnswerException), nameof(InvalidDataException), nameof(JsonException), "UnexpectedResponseException"))
+            return Protocol;
+        if (Names(text, nameof(HttpRequestException), nameof(SocketException), nameof(IOException)))
+            return Unavailable;
 
         return Unknown;
     }
 
-    private static ProviderFailure? Match(Exception e) => e switch
+    private static bool Names(string text, params string[] typeNames) =>
+        typeNames.Any(name => text.Contains($".{name}:", StringComparison.Ordinal));
+
+    private static HttpStatusCode? StatusIn(string text)
     {
-        RateLimitException rate => RateLimited(rate.RetryAfter > TimeSpan.Zero ? rate.RetryAfter : null),
-        InsufficientQuotaException => QuotaExhausted,
-        TooManyRequestsException => RateLimited(null),
-        RefusedToAnswerException => Refused,
-        UnsuccessfulAiRequestException unsuccessful => FromStatus(unsuccessful.StatusCode),
-        ProviderTimeoutException => TimedOut,
-        EmptyAnswerException => Protocol,
-        InvalidDataException or JsonException => Protocol,
-        HttpRequestException or IOException => Unavailable,
-        _ => null,
-    };
+        var match = StatusCode().Match(text);
+        return match.Success && Enum.TryParse<HttpStatusCode>(match.Groups[1].Value, out var status) ? status : null;
+    }
+
+    [GeneratedRegex(@"Status Code: (\w+)")]
+    private static partial Regex StatusCode();
 
     private static ProviderFailure FromStatus(HttpStatusCode status) => (int)status switch
     {
         401 or 403 or 407 => Credentials,
         402 => QuotaExhausted,
-        429 => RateLimited(null),
+        429 => RateLimited,
         408 or 502 or 503 or 504 => Unavailable,
         >= 500 => Unavailable,
         400 or 404 or 422 => Protocol,
         _ => Unknown,
     };
 
-    private static ProviderFailure RateLimited(TimeSpan? retryAfter) => new(
+    private static readonly ProviderFailure RateLimited = new(
         ProviderFailureKind.RateLimited,
         Retryable: true,
         "The assistant is busy right now. Please try again in a moment.",
-        "the AI provider rate-limited the request",
-        retryAfter);
+        "the AI provider rate-limited the request");
 
     private static readonly ProviderFailure QuotaExhausted = new(
         ProviderFailureKind.QuotaExhausted,
