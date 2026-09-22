@@ -53,6 +53,7 @@ export const CreateSlack: Story = {
         await userEvent.click(sheet.getByRole("combobox", { name: /agent/i }));
         await userEvent.click(await body.findByRole("option", { name: /faq bot/i }));
         await userEvent.type(sheet.getByLabelText(/bot token/i), "xoxb-111-222-secret");
+        await userEvent.type(sheet.getByLabelText(/channel name/i), "Support Slack");
         await userEvent.type(sheet.getByLabelText(/signing secret/i), "8f742231b10e8888abcd99yyyzzz85a5");
         await userEvent.click(sheet.getByRole("button", { name: /connect bot/i }));
 
@@ -84,6 +85,7 @@ export const CreateDiscord: Story = {
         await userEvent.click(sheet.getByRole("combobox", { name: /agent/i }));
         await userEvent.click(await body.findByRole("option", { name: /faq bot/i }));
         await userEvent.type(sheet.getByLabelText(/bot token/i), "MTIzNDU2.Gabcde.fghijklmnopqrstuvwxyz");
+        await userEvent.type(sheet.getByLabelText(/channel name/i), "Support Discord");
         await userEvent.click(sheet.getByRole("button", { name: /connect bot/i }));
 
         await waitFor(() => expect(sheet.getByText(/oauth2\/authorize/i)).toBeInTheDocument());

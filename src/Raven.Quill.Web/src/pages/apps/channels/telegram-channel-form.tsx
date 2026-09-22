@@ -184,7 +184,7 @@ function LoadedTelegramChannelForm({
                             control={form.control}
                             name="displayName"
                             label="Channel name"
-                            placeholder="Defaults to the bot's username"
+                            placeholder="e.g. Support Telegram"
                             description="Shown in the channels list."
                         />
                         <ParameterBindingFields

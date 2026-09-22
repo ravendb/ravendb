@@ -250,7 +250,7 @@ function LoadedDiscordChannelForm({
                             control={form.control}
                             name="displayName"
                             label="Channel name"
-                            placeholder="Defaults to the bot's Discord username"
+                            placeholder="e.g. Community Discord"
                             description="Shown in the channels list."
                         />
                         <ParameterBindingFields

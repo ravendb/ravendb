@@ -290,7 +290,7 @@ function LoadedSlackChannelForm({
                             control={form.control}
                             name="displayName"
                             label="Channel name"
-                            placeholder="Defaults to the bot's Slack name"
+                            placeholder="e.g. Support Slack"
                             description="Shown in the channels list."
                         />
                         <ParameterBindingFields
