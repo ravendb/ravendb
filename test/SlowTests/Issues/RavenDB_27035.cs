@@ -395,6 +395,55 @@ public class RavenDB_27035 : RavenTestBase
         }
     }
 
+    private class Show
+    {
+        public string Id { get; set; }
+
+        public object Title { get; set; }
+
+        public object Extra { get; set; }
+    }
+
+    // Title is declared, so the order by carries a real field id, and CreateField writes a second term into it
+    private class Shows_ByTitle : AbstractIndexCreationTask<Show>
+    {
+        public Shows_ByTitle()
+        {
+            Map = shows => from s in shows
+                           select new
+                           {
+                               s.Title,
+                               _ = CreateField("Title", s.Extra)
+                           };
+        }
+    }
+
+    // shows/1 sits in the null posting list and in the longs tree at once, so the counts the gate sums are not
+    // disjoint and reach NumberOfEntries even though shows/2 has no long term at all (reported by Maciej Aszyk).
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void OrderByAsLongKeepsAnEntryWhenAStaticNullAndADynamicNumberShareTheField(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Show { Id = "shows/1", Title = null, Extra = 10L });
+            session.Store(new Show { Id = "shows/2", Title = "Alpha", Extra = "Beta" });
+            session.SaveChanges();
+        }
+
+        store.ExecuteIndex(new Shows_ByTitle());
+        Indexes.WaitForIndexing(store);
+
+        using (var session = store.OpenSession())
+        {
+            var results = session.Advanced.RawQuery<Show>("from index 'Shows/ByTitle' order by Title as long").ToList();
+
+            Assert.Equal(2, results.Count);
+        }
+    }
+
     private static string PlanOperations(QueryInspectionNode node)
     {
         var operations = new List<string>();
