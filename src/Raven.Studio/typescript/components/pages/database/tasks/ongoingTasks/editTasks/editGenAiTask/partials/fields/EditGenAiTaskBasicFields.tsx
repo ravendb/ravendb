@@ -39,7 +39,7 @@ export default function EditGenAiTaskBasicFields() {
                         isActive: isEditTask,
                         message: tasksCommonContent.taskNameLocked,
                     }}
-                    className="w-100"
+                    className="w-100 flex-column"
                 >
                     <FormInput
                         type="text"

@@ -3,76 +3,25 @@ import { Icon } from "components/common/Icon";
 import { PropSummary, PropSummaryItem, PropSummaryName, PropSummaryValue } from "components/common/PropSummary";
 import { CreateDatabaseRegularFormData } from "./createDatabaseRegularValidation";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { ReactNode } from "react";
 
 interface QuickCreateButtonProps {
     formValues: CreateDatabaseRegularFormData;
     isSubmitting: boolean;
+    disabledReason: ReactNode;
     handleQuickCreate: () => void;
 }
 
-export default function QuickCreateButton({ formValues, isSubmitting, handleQuickCreate }: QuickCreateButtonProps) {
+export default function QuickCreateButton({
+    formValues,
+    isSubmitting,
+    disabledReason,
+    handleQuickCreate,
+}: QuickCreateButtonProps) {
     return (
         <PopoverWithHoverWrapper
-            isInPopoverBody={false}
-            message={
-                <PropSummary>
-                    <PropSummaryItem>
-                        <PropSummaryName>
-                            <Icon icon="encryption" /> Encryption
-                        </PropSummaryName>
-                        {formValues.basicInfoStep.isEncrypted ? (
-                            <PropSummaryValue color="success"> ON</PropSummaryValue>
-                        ) : (
-                            <PropSummaryValue color="danger"> OFF</PropSummaryValue>
-                        )}
-                    </PropSummaryItem>
-
-                    <PropSummaryItem>
-                        <PropSummaryName>
-                            <Icon icon="replication" /> Replication
-                        </PropSummaryName>
-                        {formValues.replicationAndShardingStep.replicationFactor > 1 ? (
-                            <PropSummaryValue color="success"> ON</PropSummaryValue>
-                        ) : (
-                            <PropSummaryValue color="danger"> OFF</PropSummaryValue>
-                        )}
-                    </PropSummaryItem>
-
-                    <PropSummaryItem>
-                        <PropSummaryName>
-                            <Icon icon="sharding" /> Sharding
-                        </PropSummaryName>
-                        {formValues.replicationAndShardingStep.isSharded ? (
-                            <PropSummaryValue color="success"> ON</PropSummaryValue>
-                        ) : (
-                            <PropSummaryValue color="danger"> OFF</PropSummaryValue>
-                        )}
-                    </PropSummaryItem>
-
-                    {formValues.replicationAndShardingStep.isManualReplication && (
-                        <PropSummaryItem>
-                            <PropSummaryName>
-                                <Icon icon="node" /> Manual node selection
-                            </PropSummaryName>
-                            <PropSummaryValue color="success"> ON</PropSummaryValue>
-                        </PropSummaryItem>
-                    )}
-
-                    <PropSummaryItem>
-                        <PropSummaryName>
-                            {formValues.dataDirectoryStep.isDefault ? (
-                                <>
-                                    <Icon icon="path" /> <strong>Default</strong> path
-                                </>
-                            ) : (
-                                <>
-                                    <Icon icon="path" /> <strong className="text-success">Custom</strong> path
-                                </>
-                            )}
-                        </PropSummaryName>
-                    </PropSummaryItem>
-                </PropSummary>
-            }
+            isInPopoverBody={!!disabledReason}
+            message={disabledReason ?? <ConfigurationSummary formValues={formValues} />}
         >
             <ButtonWithSpinner
                 type="button"
@@ -81,10 +30,73 @@ export default function QuickCreateButton({ formValues, isSubmitting, handleQuic
                 variant="secondary"
                 icon="star"
                 isSpinning={isSubmitting}
+                disabled={!!disabledReason}
                 title="Quick Create (Ctrl + Enter)"
             >
                 Quick Create
             </ButtonWithSpinner>
         </PopoverWithHoverWrapper>
+    );
+}
+
+function ConfigurationSummary({ formValues }: { formValues: CreateDatabaseRegularFormData }) {
+    return (
+        <PropSummary>
+            <PropSummaryItem>
+                <PropSummaryName>
+                    <Icon icon="encryption" /> Encryption
+                </PropSummaryName>
+                {formValues.basicInfoStep.isEncrypted ? (
+                    <PropSummaryValue color="success"> ON</PropSummaryValue>
+                ) : (
+                    <PropSummaryValue color="danger"> OFF</PropSummaryValue>
+                )}
+            </PropSummaryItem>
+
+            <PropSummaryItem>
+                <PropSummaryName>
+                    <Icon icon="replication" /> Replication
+                </PropSummaryName>
+                {formValues.replicationAndShardingStep.replicationFactor > 1 ? (
+                    <PropSummaryValue color="success"> ON</PropSummaryValue>
+                ) : (
+                    <PropSummaryValue color="danger"> OFF</PropSummaryValue>
+                )}
+            </PropSummaryItem>
+
+            <PropSummaryItem>
+                <PropSummaryName>
+                    <Icon icon="sharding" /> Sharding
+                </PropSummaryName>
+                {formValues.replicationAndShardingStep.isSharded ? (
+                    <PropSummaryValue color="success"> ON</PropSummaryValue>
+                ) : (
+                    <PropSummaryValue color="danger"> OFF</PropSummaryValue>
+                )}
+            </PropSummaryItem>
+
+            {formValues.replicationAndShardingStep.isManualReplication && (
+                <PropSummaryItem>
+                    <PropSummaryName>
+                        <Icon icon="node" /> Manual node selection
+                    </PropSummaryName>
+                    <PropSummaryValue color="success"> ON</PropSummaryValue>
+                </PropSummaryItem>
+            )}
+
+            <PropSummaryItem>
+                <PropSummaryName>
+                    {formValues.dataDirectoryStep.isDefault ? (
+                        <>
+                            <Icon icon="path" /> <strong>Default</strong> path
+                        </>
+                    ) : (
+                        <>
+                            <Icon icon="path" /> <strong className="text-success">Custom</strong> path
+                        </>
+                    )}
+                </PropSummaryName>
+            </PropSummaryItem>
+        </PropSummary>
     );
 }

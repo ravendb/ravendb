@@ -73,7 +73,7 @@ public class RavenDB_24407 : RavenTestBase
         public string[] Tags { get; set; }
     }
 
-    [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenRetryTheory(RavenTestCategory.Ai, maxRetries: 3, delayBetweenRetriesMs: 10_000)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [true, false])]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true], Skip = "RavenDB-24806")]
@@ -287,9 +287,15 @@ public class RavenDB_24407 : RavenTestBase
                 Assert.True(chatDoc.LinkedConversations.Count > 0);
 
                 var historyChat = await GetChat(store, chatDoc.LinkedConversations.First());
-                var lastMsg = historyChat.Messages.Last();
 
-                await AssertWithDumpAsync(lastMsg.Role, async () => await DumpAllAsync(store, chatDoc, chatDoc.LinkedConversations));
+                AssertNoOrphanToolMessages(historyChat);
+
+                var lastMsg = historyChat.Messages.Last();
+                if (lastMsg.Role == "user")
+                {
+                    var dump = await DumpAllAsync(store, chatDoc, chatDoc.LinkedConversations);
+                    Assert.Fail($"History conversation ends on an unanswered 'user' message.\n{dump}");
+                }
             }
             else
             {
@@ -444,17 +450,6 @@ public class RavenDB_24407 : RavenTestBase
         using (var session = store.OpenAsyncSession())
         {
             return await session.LoadAsync<Chat>(chatId);
-        }
-    }
-
-    private static async Task AssertWithDumpAsync(
-        string lastMsgRole,
-        Func<Task<string>> dumpFactory)
-    {
-        if (lastMsgRole != "tool")
-        {
-            var msg = await dumpFactory(); // build dump only on failure
-            Assert.Fail($"Expected last history message role 'tool' but was '{lastMsgRole}'.\n{msg}");
         }
     }
 

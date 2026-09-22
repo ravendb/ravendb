@@ -41,7 +41,7 @@ public class AiAgentClientApiBasics : RavenTestBase
         public int Quantity;
     }
 
-    [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { true })]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { false })]
     public async Task AiAgentClientApiBasicTest(Options options, GenAiConfiguration config, bool sendSchema)
@@ -174,7 +174,7 @@ public class AiAgentClientApiBasics : RavenTestBase
         var r = await chat.RunAsync<AnswerSchema>();
     }
 
-    [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task AiAgentClientApi(Options options, GenAiConfiguration config)
     {
@@ -246,7 +246,7 @@ public class AiAgentClientApiBasics : RavenTestBase
         Assert.Equal(AiConversationResult.Done, r.Status);
     }
 
-    [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task ThrowConcurrencyException(Options options, GenAiConfiguration config)
     {

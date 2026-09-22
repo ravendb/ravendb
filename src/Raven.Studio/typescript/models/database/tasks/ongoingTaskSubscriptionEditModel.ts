@@ -115,7 +115,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
     
     toDto(): Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions {
         return {
-            Name: this.taskName(),
+            Name: this.taskName() || null,
             Query: this.query() || null,
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             PinToMentorNode: this.pinMentorNode(),

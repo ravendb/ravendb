@@ -17,7 +17,7 @@ namespace Sparrow.Server.Debugging
             var allocatedSize = (sizeInPages + 2) * 4096;
 
             var virtualAlloc = (byte*)Syscall.mmap64(IntPtr.Zero, (UIntPtr)allocatedSize, MmapProts.PROT_NONE,
-                MmapFlags.MAP_PRIVATE | MmapFlags.MAP_ANONYMOUS, -1, 0L);
+                MmapFlags.MAP_PRIVATE | PerPlatformValues.MmapFlags.MAP_ANONYMOUS, -1, 0L);
 
             if (virtualAlloc == (byte*)-1)
             {
@@ -33,7 +33,7 @@ namespace Sparrow.Server.Debugging
 
             virtualAlloc = (byte*)Syscall.mmap64((IntPtr)virtualAlloc, (UIntPtr)allocatedSize,
                 MmapProts.PROT_READ | MmapProts.PROT_WRITE,
-                MmapFlags.MAP_FIXED | MmapFlags.MAP_SHARED | MmapFlags.MAP_ANONYMOUS, -1, 0L);
+                MmapFlags.MAP_FIXED | MmapFlags.MAP_SHARED | PerPlatformValues.MmapFlags.MAP_ANONYMOUS, -1, 0L);
 
             if (virtualAlloc == (byte*)-1)
             {
@@ -91,7 +91,7 @@ namespace Sparrow.Server.Debugging
             var dwSize = *(int*)address;
 
             // var virtualAlloc = (byte*)Syscall.mmap((IntPtr)address, (UIntPtr)dwSize, MmapProts.PROT_NONE,
-            //     MmapFlags.MAP_FIXED | MmapFlags.MAP_PRIVATE | MmapFlags.MAP_ANONYMOUS, -1, IntPtr.Zero);
+            //     MmapFlags.MAP_FIXED | MmapFlags.MAP_PRIVATE | PerPlatformValues.MmapFlags.MAP_ANONYMOUS, -1, IntPtr.Zero);
 
             // if (virtualAlloc == null)
             // {

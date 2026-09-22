@@ -293,14 +293,17 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
 
         var streamed = new StringBuilder();
         using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
-        var error = await Assert.ThrowsAnyAsync<TooManyTokensException>(() => chat.StreamAsync<AnswerSchema>(x => x.Answer, chunk =>
+        // The agent wraps every model failure in AiException (RavenDB-25401); the real error must survive inside it
+        // as its type name and message rather than being parsed as the final result (which used to surface as a
+        // NullReferenceException). The chunks were delivered before the failure.
+        var error = await Assert.ThrowsAsync<AiException>(() => chat.StreamAsync<AnswerSchema>(x => x.Answer, chunk =>
         {
             streamed.Append(chunk);
             return Task.CompletedTask;
         }, cts.Token));
 
-        // the chunks were delivered before the failure, and the real server error survives the started stream
-        // rather than being parsed as the final result (which used to surface as a NullReferenceException)
+        Assert.Contains(nameof(TooManyTokensException), error.Message);
+        Assert.Contains("finish_reason='length'", error.Message);
         Assert.Contains("partial answer", streamed.ToString());
         Assert.DoesNotContain(nameof(NullReferenceException), error.ToString());
     }

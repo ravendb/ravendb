@@ -8,6 +8,7 @@ import { ApiState } from "@/components/data/api-state";
 import { CardListSkeleton } from "@/components/data/loading-skeletons";
 import { CountBadge } from "@/components/data/count-badge";
 import { Button } from "@/components/shadcn/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import { CertificateCard } from "@/pages/dashboard/certificates/certificate-card";
 import {
     getCertificateState,
@@ -16,6 +17,7 @@ import {
 } from "@/pages/dashboard/certificates/certificate-labels";
 import { CertificatesToolbar, type CertificateSort } from "@/pages/dashboard/certificates/certificates-toolbar";
 import { GenerateCertificateDialog } from "@/pages/dashboard/certificates/generate-certificate-dialog";
+import { CERTIFICATES_DOCS_URL } from "@/lib/help-links";
 import { originForSubdomain } from "@/lib/subdomain-origin";
 import { Heading, Text } from "@/components/typography";
 
@@ -46,19 +48,44 @@ export function DashboardCertificates() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between gap-3">
-                <div>
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 space-y-1">
                     <Heading as="h1" variant="page">
                         Certificates
                     </Heading>
+                    <Text variant="muted" className="max-w-2xl">
+                        Client certificates provide access to RavenDB databases associated with Quill apps, either from
+                        applications using the RavenDB Client API or from RavenDB Studio in a browser.
+                        <span className="mt-1 block">
+                            <a
+                                href={CERTIFICATES_DOCS_URL}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline underline-offset-4 hover:text-primary-strong"
+                            >
+                                Learn more about client certificates
+                            </a>
+                            .
+                        </span>
+                    </Text>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" asChild>
-                        <a href={originForSubdomain("db")} target="_blank" rel="noreferrer">
-                            <ExternalLink aria-hidden="true" />
-                            Open database
-                        </a>
-                    </Button>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="outline" size="sm" asChild>
+                                    <a href={originForSubdomain("db")} target="_blank" rel="noreferrer">
+                                        <ExternalLink aria-hidden="true" />
+                                        Open database
+                                    </a>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                Open RavenDB Studio in a new tab to access the RavenDB databases associated with your
+                                Quill apps. Your browser must have a client certificate installed.
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                     <Button
                         variant="outline"
                         size="sm"
@@ -102,7 +129,7 @@ export function DashboardCertificates() {
                 {visibleCertificates.length === 0 ? (
                     <Text as="div" variant="muted" className="rounded-lg border p-8 text-center">
                         {certificates.length === 0
-                            ? "No certificates yet."
+                            ? "No client certificates yet. Generate one to connect an application to an app database or access RavenDB Studio."
                             : "No certificates match the current filters."}
                     </Text>
                 ) : (

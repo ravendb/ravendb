@@ -14,7 +14,7 @@ namespace SlowTests.Issues;
 
 public class RavenDB_25698(ITestOutputHelper output) : RavenTestBase(output)
 {
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task EmbeddingGenerationCreatesValueInEmbeddingCacheDocument()
     {
 

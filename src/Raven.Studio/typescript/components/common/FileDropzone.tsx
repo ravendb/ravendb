@@ -47,7 +47,11 @@ export default function FileDropzone({
             return;
         }
 
-        if (files.some((file) => !validExtensions.includes(genUtils.getFileExtension(file.name)))) {
+        const hasUnsupportedFile =
+            validExtensions.length > 0 &&
+            files.some((file) => !validExtensions.includes(genUtils.getFileExtension(file.name)));
+
+        if (hasUnsupportedFile) {
             setError(`File type is not supported`);
             handleSetFiles([]);
             return;

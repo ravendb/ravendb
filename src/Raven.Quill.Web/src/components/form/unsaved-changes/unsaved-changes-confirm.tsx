@@ -14,7 +14,13 @@ export function UnsavedChangesConfirm({ open, onOpenChange, onConfirm }: Unsaved
             onConfirm={onConfirm}
             variant="warning"
             title="Discard unsaved changes?"
-            description="What you filled in here has not been saved yet. Leaving now discards it."
+            description={
+                <>
+                    Your changes haven’t been saved.
+                    <br />
+                    Discarding them cannot be undone.
+                </>
+            }
             confirmLabel="Discard changes"
             cancelLabel="Keep editing"
         />

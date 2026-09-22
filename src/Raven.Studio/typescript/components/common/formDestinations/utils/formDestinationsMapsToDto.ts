@@ -72,6 +72,17 @@ export function mapS3ToDto(destination: S3Destination): Raven.Client.Documents.O
     };
 }
 
+export function mapAzureCredentialsToDto(
+    destination: Pick<AzureDestination, "authType" | "accountKey" | "sasToken">
+): Pick<Raven.Client.Documents.Operations.Backups.AzureSettings, "AccountKey" | "SasToken"> {
+    const isSasToken = destination.authType === "sasToken";
+
+    return {
+        AccountKey: isSasToken ? null : destination.accountKey,
+        SasToken: isSasToken ? destination.sasToken : null,
+    };
+}
+
 export function mapAzureToDto(destination: AzureDestination): Raven.Client.Documents.Operations.Backups.AzureSettings {
     if (!destination.isEnabled) {
         return undefined;
@@ -79,11 +90,10 @@ export function mapAzureToDto(destination: AzureDestination): Raven.Client.Docum
 
     return {
         ...mapBackupSettingsToDto(destination),
+        ...mapAzureCredentialsToDto(destination),
         StorageContainer: destination.storageContainer,
         RemoteFolderName: destination.remoteFolderName,
         AccountName: destination.accountName,
-        AccountKey: destination.accountKey,
-        SasToken: destination.sasToken,
     };
 }
 

@@ -5,7 +5,7 @@
                 <i class="icon-cancel"></i>
             </button>
             <div data-bind="with: recentError">
-                <h3 class="modal-title" id="myModalLabel" data-bind="text: title, attr: { class: headerClass }"></h3>
+                <h3 class="modal-title" id="myModalLabel" data-bind="text: title, attr: { class: 'modal-title ' + headerClass() }"></h3>
                 <div class="notification-time" data-bind="text: displayDate().format('LLL')"></div>
             </div>
         </div>

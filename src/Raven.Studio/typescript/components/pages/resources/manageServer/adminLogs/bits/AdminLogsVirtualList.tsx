@@ -35,7 +35,7 @@ export default function AdminLogsVirtualList(props: { availableHeightInPx: numbe
 
     // Scroll to bottom if isMonitorTail is true
     useLayoutEffect(() => {
-        if (isMonitorTail) {
+        if (isMonitorTail && filteredLogsLength > 0) {
             virtualizer.scrollToIndex(filteredLogsLength - 1);
         }
     }, [isMonitorTail, virtualizer, filteredLogsLength]);

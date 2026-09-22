@@ -8,7 +8,7 @@ namespace SlowTests.Issues;
 
 public class RavenDB_24613_MultipleEmbeddingsGenerateCalls(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task MultipleEmbeddingsGenerateCallsShouldCreateAllEmbeddings()
     {
         using var store = GetDocumentStore();

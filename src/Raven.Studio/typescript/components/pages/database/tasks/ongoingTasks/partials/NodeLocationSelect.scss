@@ -4,13 +4,17 @@
 .node-location-tabs {
     display: flex;
     gap: sizes.$gutter-xs;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: sizes.$gutter-xs;
 
     .node-location-tab {
         display: flex;
         align-items: center;
         gap: sizes.$gutter-xs;
         padding: sizes.$gutter-xxs sizes.$gutter-xs;
-        margin-bottom: sizes.$gutter-xxs;
+        flex-shrink: 0;
         cursor: pointer;
         border-radius: sizes.$border-radius;
         font-size: 0.8125rem;

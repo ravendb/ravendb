@@ -185,7 +185,7 @@ class genUtils {
         const futureTime = timeDiff < 0; 
         const diff = futureTime ? timeDiff * -1 : timeDiff;
         
-        const duration = genUtils.formatDuration(moment.duration(diff), true, 2, true);
+        const duration = genUtils.formatDuration(moment.duration(diff), true, 2, true).trim();
         
         if (!addTimeText) {
             return duration; 

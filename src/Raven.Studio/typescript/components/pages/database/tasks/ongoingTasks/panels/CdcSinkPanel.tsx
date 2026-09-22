@@ -150,7 +150,7 @@ export function CdcSinkPanel(props: CdcSinkPanelProps) {
                 </RichPanelInfo>
                 <RichPanelActions>
                     <span>
-                        <Icon icon="sql-etl" />
+                        <Icon icon="cdc-sink" />
                         CDC Sink
                     </span>
                     <OngoingTaskResponsibleNode task={data} />

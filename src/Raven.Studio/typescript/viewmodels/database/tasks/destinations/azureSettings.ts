@@ -3,6 +3,7 @@ import jsonUtil = require("common/jsonUtil");
 import genUtils = require("common/generalUtils");
 import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
+import formDestinationsTypes = require("components/common/formDestinations/utils/formDestinationsTypes");
 
 class azureSettings extends backupSettings {
 
@@ -11,9 +12,11 @@ class azureSettings extends backupSettings {
     storageContainer = ko.observable<string>();
     remoteFolderName = ko.observable<string>();
     accountName = ko.observable<string>();
+    authType = ko.observable<formDestinationsTypes.AzureAuthType>();
     accountKey = ko.observable<string>();
     isKeyHidden = ko.observable<boolean>(true);
     sasToken = ko.observable<string>();
+    isSasTokenHidden = ko.observable<boolean>(true);
 
     targetOperation: string;
 
@@ -23,6 +26,7 @@ class azureSettings extends backupSettings {
         this.storageContainer(dto.StorageContainer);
         this.remoteFolderName(dto.RemoteFolderName || "");
         this.accountName(dto.AccountName);
+        this.authType(dto.SasToken ? "sasToken" : "accountKey");
         this.accountKey(dto.AccountKey);
         this.sasToken(dto.SasToken);
 
@@ -35,7 +39,9 @@ class azureSettings extends backupSettings {
             this.storageContainer,
             this.remoteFolderName,
             this.accountName,
+            this.authType,
             this.accountKey,
+            this.sasToken,
             this.configurationScriptDirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
@@ -87,14 +93,21 @@ class azureSettings extends backupSettings {
 
         this.accountKey.extend({
             required: {
-                onlyIf: () => this.enabled()
+                onlyIf: () => this.enabled() && this.authType() === "accountKey"
+            }
+        });
+
+        this.sasToken.extend({
+            required: {
+                onlyIf: () => this.enabled() && this.authType() === "sasToken"
             }
         });
 
         this.localConfigValidationGroup = ko.validatedObservable({
             storageContainer: this.storageContainer,
             accountName: this.accountName,
-            accountKey: this.accountKey
+            accountKey: this.accountKey,
+            sasToken: this.sasToken
         });
     }
 
@@ -103,8 +116,10 @@ class azureSettings extends backupSettings {
         dto.StorageContainer = this.storageContainer();
         dto.RemoteFolderName = this.remoteFolderName() || null;
         dto.AccountName = this.accountName();
-        dto.AccountKey = this.accountKey();
-        dto.SasToken = this.sasToken();
+
+        const isSasToken = this.authType() === "sasToken";
+        dto.AccountKey = isSasToken ? null : this.accountKey();
+        dto.SasToken = isSasToken ? this.sasToken() : null;
 
         return genUtils.trimProperties(dto, ["RemoteFolderName", "AccountName"]);
     }
@@ -123,6 +138,10 @@ class azureSettings extends backupSettings {
 
     toggleIsKeyHidden() {
         this.isKeyHidden(!this.isKeyHidden());
+    }
+
+    toggleIsSasTokenHidden() {
+        this.isSasTokenHidden(!this.isSasTokenHidden());
     }
 }
 

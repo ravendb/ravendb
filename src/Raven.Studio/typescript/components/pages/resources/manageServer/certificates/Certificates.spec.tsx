@@ -1,5 +1,5 @@
 import * as stories from "./Certificates.stories";
-import { act, rtlRender, rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
+import { rtlRender, rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
 import { composeStories } from "@storybook/react-webpack5";
 import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 import moment from "moment";
@@ -262,10 +262,6 @@ async function selectStateFilterOption(
 ) {
     const stateFilterInput = screen.getByText(selectors.stateFilterLabel).closest("div").querySelector("input");
 
-    await act(async () => {
-        await user.click(stateFilterInput);
-    });
-    await act(async () => {
-        await user.click(await screen.findByText(optionLabel));
-    });
+    await user.click(stateFilterInput);
+    await user.click(await screen.findByText(optionLabel));
 }

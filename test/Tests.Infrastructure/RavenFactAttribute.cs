@@ -187,6 +187,9 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute, Xunit.v3.IFact
         {
             if (category.HasFlag(RavenTestCategory.Sharding))
                 return RavenDataAttributeBase.ShardingSkipMessage;
+
+            if (category.HasFlag(RavenTestCategory.Ai))
+                return RavenDataAttributeBase.AiSkipMessage;
         }
 
         if (licenseRequired && ShouldSkipLicense(out skip))

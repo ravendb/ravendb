@@ -1,12 +1,14 @@
 import React from "react";
-import { rtlRender, waitFor } from "test/rtlTestUtils";
+import { rtlRender, rtlRender_WithWaitForLoad, waitFor } from "test/rtlTestUtils";
 import DebugPackageAnalysisView from "./DebugPackageAnalysisView";
 import { DebugPackageStubs } from "test/stubs/DebugPackageStubs";
 import { flattenIssues } from "./analyzerUtils";
 
 describe("DebugPackageAnalysisView rail", () => {
-    it("lists cluster sections in the rail by default", () => {
-        const { screen } = rtlRender(<DebugPackageAnalysisView summary={DebugPackageStubs.analysisSummary()} />);
+    it("lists cluster sections in the rail by default", async () => {
+        const { screen } = await rtlRender_WithWaitForLoad(
+            <DebugPackageAnalysisView summary={DebugPackageStubs.analysisSummary()} />
+        );
         expect(screen.getByRole("button", { name: "Analysis Results" })).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Cluster Overview" })).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Resource Usage" })).toBeInTheDocument();

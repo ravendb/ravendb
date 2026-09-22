@@ -21,7 +21,7 @@ namespace FastTests.Sparrow
 {
     public class EncryptionTests(ITestOutputHelper output) : StorageTest(output)
     {
-        [RavenMultiplatformFact(RavenTestCategory.Voron | RavenTestCategory.Encryption, RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Encryption)]
         public unsafe void WriteAndReadPageUsingCryptoPager()
         {
             Options.Encryption.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
@@ -113,7 +113,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.Voron | RavenTestCategory.Encryption, RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Encryption)]
         public unsafe void StreamsTempFile_With_Encryption_ShouldNotThrow_When_NotAllStreamsWereRead()
         {
             using (var options = StorageEnvironmentOptions.ForPathForTests(DataDir))
@@ -154,7 +154,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.Voron | RavenTestCategory.Encryption, RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Encryption)]
         public unsafe void StreamsTempFile_With_Encryption_ShouldThrow_When_SeekAndWrite_AreMixed_Without_ExecutingReset()
         {
             using (var options = StorageEnvironmentOptions.ForPathForTests(DataDir))
@@ -192,7 +192,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.Voron | RavenTestCategory.Encryption, RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Encryption)]
         public unsafe void RavenDB_15975()
         {
             Options.Encryption.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
@@ -238,7 +238,7 @@ namespace FastTests.Sparrow
                     }
                 }
 
-        [RavenMultiplatformFact(RavenTestCategory.Encryption | RavenTestCategory.Voron, RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Voron)]
         public unsafe void RavenDB_159751()
         {
             Options.Encryption.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
