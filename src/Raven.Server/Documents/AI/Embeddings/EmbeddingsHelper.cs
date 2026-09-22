@@ -60,9 +60,13 @@ public static class EmbeddingsHelper
         return $"embeddings/{documentId}";
     }
 
+    // One collection per source collection, so the full names only exist at run time - anything that has to
+    // recognize them (CollectionName.IsSystemCollection) matches on this prefix.
+    public const string EmbeddingDocumentCollectionNamePrefix = "@embeddings/";
+
     public static string GetEmbeddingDocumentCollectionName(string sourceCollectionName)
     {
-        return $"@embeddings/{sourceCollectionName}";
+        return $"{EmbeddingDocumentCollectionNamePrefix}{sourceCollectionName}";
     }
 
     public static string GetEmbeddingCacheDocumentId(AiConnectionStringIdentifier id, string valueHash, VectorEmbeddingType targetQuantization)
