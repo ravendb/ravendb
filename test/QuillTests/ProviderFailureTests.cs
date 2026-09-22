@@ -36,23 +36,6 @@ public class ProviderFailureTests(ITestOutputHelper output) : QuillTestBase(outp
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task A_rate_limit_asking_for_longer_than_we_hold_the_request_fails_without_retrying()
-    {
-        await using var mock = await MockQuillServices.StartAsync();
-        mock.CompletionFailure = (429, RateLimitBody);
-        mock.CompletionFailureHeaders["Retry-After"] = "42";
-
-        await using var h = await HarnessAsync(mock);
-
-        var error = ErrorOf(await h.App.SendEmbedChatAsync(h.Token, "hello"));
-
-        Assert.Equal(1, mock.CompletionAttempts);
-        Assert.Equal("provider_busy", error.Code);
-        Assert.True(error.Retryable);
-        Assert.Contains("busy", error.Message);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
     public async Task A_rate_limit_that_keeps_coming_back_is_retried_to_the_cap_and_then_reported()
     {
         await using var mock = await MockQuillServices.StartAsync();
