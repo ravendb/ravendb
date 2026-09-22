@@ -1,5 +1,5 @@
-import { PropsWithChildren } from "react";
-import { virtualTableConstants } from "../utils/virtualTableConstants";
+import { PropsWithChildren, ReactNode } from "react";
+import { virtualTableUtils } from "../utils/virtualTableUtils";
 import VirtualTableHead from "./VirtualTableHead";
 import { VirtualTableState } from "./VirtualTableState";
 import classNames from "classnames";
@@ -11,10 +11,15 @@ export interface VirtualTableBodyWrapperProps<T> {
     table: TanstackTable<T>;
     heightInPx: number;
     isLoading?: boolean;
+    // overrides the default "no rows in the table" check, e.g. when rows are fetched lazily
+    isEmpty?: boolean;
+    emptyMessage?: ReactNode;
     tableContainerRef: React.MutableRefObject<HTMLDivElement>;
     isCompact?: boolean;
     isRoundingDisabled?: boolean;
     isPaddingDisabled?: boolean;
+    // rendered on top of the scrollable area (e.g. a banner)
+    overlay?: ReactNode;
 }
 
 export default function VirtualTableBodyWrapper<T>({
@@ -22,14 +27,16 @@ export default function VirtualTableBodyWrapper<T>({
     className,
     tableContainerRef,
     isLoading,
+    isEmpty,
+    emptyMessage,
     heightInPx,
     isCompact,
     isRoundingDisabled,
     isPaddingDisabled,
+    overlay,
     children,
 }: PropsWithChildren<VirtualTableBodyWrapperProps<T>> & ClassNameProps) {
-    const paddingInPx = isPaddingDisabled ? 0 : virtualTableConstants.paddingInPx;
-    const tableHeightInPx = Math.max(heightInPx - paddingInPx, virtualTableConstants.minTableHeightInPx);
+    const tableHeightInPx = virtualTableUtils.getTableContainerHeightInPx(heightInPx, isPaddingDisabled);
 
     return (
         <div
@@ -40,17 +47,24 @@ export default function VirtualTableBodyWrapper<T>({
                 className
             )}
         >
-            <VirtualTableState isLoading={isLoading} isEmpty={table.getRowCount() === 0} />
+            <VirtualTableState
+                isLoading={isLoading}
+                isEmpty={isEmpty ?? table.getRowCount() === 0}
+                emptyMessage={emptyMessage}
+            />
 
-            <div
-                ref={tableContainerRef}
-                className={classNames("table-container", { "rounded-0": isRoundingDisabled })}
-                style={{ height: tableHeightInPx }}
-            >
-                <Table className="m-0" borderless>
-                    <VirtualTableHead table={table} isCompact={isCompact} />
-                    {children}
-                </Table>
+            <div className="position-relative">
+                <div
+                    ref={tableContainerRef}
+                    className={classNames("table-container", { "rounded-0": isRoundingDisabled })}
+                    style={{ height: tableHeightInPx }}
+                >
+                    <Table className="m-0" borderless>
+                        <VirtualTableHead table={table} isCompact={isCompact} />
+                        {children}
+                    </Table>
+                </div>
+                {overlay}
             </div>
         </div>
     );

@@ -10,6 +10,7 @@ import { CellWithCopy, CellWithCopyWrapper } from "components/common/virtualTabl
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useAppSelector } from "components/store";
+import { useMemo } from "react";
 
 export function useAllRevisionsColumns(
     databaseName: string,
@@ -20,6 +21,29 @@ export function useAllRevisionsColumns(
 ): ColumnDef<RevisionsPreviewResultItem>[] {
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
+    // column defs must be stable between renders, otherwise flexRender remounts every cell on each render
+    return useMemo(
+        () =>
+            createColumns(
+                databaseName,
+                isSharded,
+                tableBodyWidth,
+                rowSelection,
+                setRowSelection,
+                hasDatabaseAdminAccess
+            ),
+        [databaseName, isSharded, tableBodyWidth, rowSelection, setRowSelection, hasDatabaseAdminAccess]
+    );
+}
+
+function createColumns(
+    databaseName: string,
+    isSharded: boolean,
+    tableBodyWidth: number,
+    rowSelection: RevisionsPreviewResultItem[],
+    setRowSelection: (rows: RevisionsPreviewResultItem[]) => void,
+    hasDatabaseAdminAccess: boolean
+): ColumnDef<RevisionsPreviewResultItem>[] {
     const checkboxWidth = hasDatabaseAdminAccess ? 38 : 0;
 
     const sizeProvider = virtualTableUtils.getCellSizeProvider(tableBodyWidth - checkboxWidth);
