@@ -122,6 +122,9 @@ public abstract class AbstractNotificationCenter : NotificationsBase
 
     public IDisposable GetStored(out IEnumerable<NotificationTableValue> actions, bool postponed = true, JsonOperationContext context = null, Func<BlittableJsonReaderObject, bool> shouldInclude = null)
     {
+        if (shouldInclude != null && context == null)
+            throw new ArgumentException($"Filtering the notifications is only supported when they are cloned, '{nameof(context)}' must be provided as well", nameof(shouldInclude));
+
         var scope = Storage.ReadActionsOrderedByCreationDate(out actions);
 
         if (postponed == false)

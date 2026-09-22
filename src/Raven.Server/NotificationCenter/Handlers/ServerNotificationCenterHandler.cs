@@ -56,13 +56,12 @@ namespace Raven.Server.NotificationCenter.Handlers
                 {
                     using (var writer = new NotificationCenterWebSocketWriter<TransactionOperationContext>(webSocket, ServerStore.NotificationCenter, ServerStore.ContextPool, token.Token))
                     {
-                        var shouldInclude = isValidFor == null
-                            ? null
-                            : (Func<BlittableJsonReaderObject, bool>)(json =>
-                                json.TryGet("Database", out string db) && isValidFor(db, false));
+                        Func<BlittableJsonReaderObject, bool> shouldInclude = null;
+                        if (isValidFor != null)
+                            shouldInclude = json => json.TryGet("Database", out string db) && isValidFor(db, false); // skipping the ones that are not valid for this
 
                         using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext notificationsContext))
-                        using (ServerStore.NotificationCenter.GetStored(out var storedNotifications, postponed: false, notificationsContext, shouldInclude))
+                        using (ServerStore.NotificationCenter.GetStored(out var storedNotifications, postponed: false, context: notificationsContext, shouldInclude: shouldInclude))
                         {
                             foreach (var action in storedNotifications)
                             {
