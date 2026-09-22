@@ -1,10 +1,11 @@
+using FastTests;
 using Raven.Quill.Auth;
 using Tests.Infrastructure;
 using Xunit;
 
 namespace QuillTests;
 
-public class LoginFailureLimiterTests
+public class LoginFailureLimiterTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
     [RavenFact(RavenTestCategory.Quill)]
     public void Throttles_after_the_failure_limit_and_recovers_after_the_window()
