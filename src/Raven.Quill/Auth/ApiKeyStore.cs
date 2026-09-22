@@ -29,7 +29,7 @@ public sealed class ApiKeyStore(
     private static readonly Record Decoy = new(RandomNumberGenerator.GetBytes(SaltBytes), RandomNumberGenerator.GetBytes(32));
 
     private readonly SemaphoreSlim _seedLock = new(1, 1);
-    private readonly ConcurrentDictionary<string, CacheEntry> _cache = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, CacheEntry> _cache = new(StringComparer.OrdinalIgnoreCase);
     private volatile bool _seeded;
 
     public async Task<bool> ValidateAsync(string? presentedKey, CancellationToken ct)
