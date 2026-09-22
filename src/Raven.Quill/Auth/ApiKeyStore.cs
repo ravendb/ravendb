@@ -38,7 +38,11 @@ public sealed class ApiKeyStore(
             return false;
 
         if (_seeded == false)
+        {
             await SeedPrimaryAsync(ct);
+            if (_seeded == false && string.Equals(keyId, PrimaryKeyId, StringComparison.OrdinalIgnoreCase))
+                return false;
+        }
 
         var record = await LoadAsync(keyId, ct);
         var target = record ?? Decoy;
