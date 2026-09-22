@@ -49,7 +49,7 @@ internal static partial class QueryPlanBuilder
         }
 
         var template = ParseTemplate(planParams);
-        template.SortMetadataTemplate = BuildSortMetadataTemplate(planParams, template);
+        template.SortMetadataTemplate = BuildSortMetadataTemplate(planParams);
         var bucket = planCache.GetOrAddBucket(structuralKey, template, planParams.CacheKey);
         metadata.CachedPlanMemo = new QueryMetadata.PlanMemo(generation, bucket);
         return Finalize(bucket);
@@ -99,7 +99,7 @@ internal static partial class QueryPlanBuilder
         var template = BuildTemplate(planParams);
 
         var exec = new BuildResolver(template, planParams, builderParameters, walkerCtx).Resolve();
-        var orderByFields = GetSortMetadata(builderParameters, exec.Plan.Template, exec);
+        var orderByFields = GetSortMetadata(builderParameters, exec.Plan);
         // A single vector-search post-filter already streams its output in score order, we can skip the sorting step then
         exec.VectorPostFilterProvidesScoreOrder = VectorPostFilterProvidesResultOrder(exec, builderParameters, orderByFields);
         var (queryMatch,  innerMatch) = Instantiate(exec, orderByFields, planParams, builderParameters, walkerCtx, highlightingTerms, wantTimings, token);

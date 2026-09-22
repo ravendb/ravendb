@@ -57,6 +57,12 @@ public sealed class CompiledPlan
 
     public volatile ExecutionStrategy Strategy;
 
+    /// <summary>Pinned ORDER BY slots this plan drops. Part of the cache key, so fixed for the plan.</summary>
+    public ushort SortDropMask { get; init; }
+
+    /// <summary>A pinned slot survived: the template chose its sorted scans for the elided ORDER BY, so they cannot run.</summary>
+    public bool SortElisionDiverged { get; init; }
+
     public PlanDecisionTrail DecisionTrail;
 
     // The structure we'll use for inspecting the query result when using `include timings()`

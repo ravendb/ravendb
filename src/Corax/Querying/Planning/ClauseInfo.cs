@@ -56,6 +56,9 @@ public sealed class ClauseInfo
     /// Boost is intentionally ignored on such clauses (matches Lucene — there is no match to score).</summary>
     public bool IsOrChainNotEquals { get; set; }
 
+    /// <summary>The ORDER BY slot this equality pins to a single value, -1 when none.</summary>
+    public int PinnedSortSlot { get; set; } = -1;
+
     public List<ClauseInfo> SubClauses { get; init; }
 
     /// <summary>Parameter bindings indexed by <see cref="BindingIndex"/> constants.

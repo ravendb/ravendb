@@ -134,17 +134,27 @@ public class RavenDB_27192 : RavenTestBase
 
         using var read = store.OpenSession();
 
-        var nums = read.Advanced
-            .RawQuery<DoubleItem>("from index 'DoubleItems/ByNumAndOther' where Num == $v and Other > $lo order by Num as double, Other as double limit 25")
-            .AddParameter("v", 1L)
-            .AddParameter("lo", 0.5)
-            .ToList()
-            .Select(x => x.Num)
-            .ToList();
+        AssertNumOrder(forcedStrategy: null);
 
-        Assert.Equal(25, nums.Count);
-        Assert.Equal(nums.OrderBy(x => x).ToList(), nums);
-        Assert.Equal(1.0, nums[0]);
+        // Forcing the scan skips strategy selection, so the stand-down has to hold on the strategy cases themselves.
+        AssertNumOrder(forcedStrategy: "FieldSortedScan");
+
+        void AssertNumOrder(string forcedStrategy)
+        {
+            var query = read.Advanced
+                .RawQuery<DoubleItem>("from index 'DoubleItems/ByNumAndOther' where Num == $v and Other > $lo order by Num as double, Other as double limit 25")
+                .AddParameter("v", 1L)
+                .AddParameter("lo", 0.5);
+
+            if (forcedStrategy != null)
+                query.AddParameter("rvn_corax_strategy", forcedStrategy);
+
+            var nums = query.ToList().Select(x => x.Num).ToList();
+
+            Assert.Equal(25, nums.Count);
+            Assert.Equal(nums.OrderBy(x => x).ToList(), nums);
+            Assert.Equal(1.0, nums[0]);
+        }
     }
 
     // The other direction: the equality matched the representation the sort reads, so the key really is pinned.

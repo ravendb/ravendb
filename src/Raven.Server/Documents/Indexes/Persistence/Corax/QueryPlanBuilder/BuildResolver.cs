@@ -22,10 +22,13 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
     private ulong[] _sentinelOverflow;
 
     private QueryExecution _exec;
+    private ushort _sortDropMask;
 
     public QueryExecution Resolve()
     {
         _exec = CreateQueryExecution();
+        if (template.PinnedSortSlots != 0)
+            _sortDropMask = QueryPlanBuilder.ComputeSortElisionMask(template.SortMetadataTemplate, _exec.Executions);
         var cacheKeyHash = ComputeCacheKeyHash();
 
         // BuildTemplate already resolved the per-query bucket for this structural key;
@@ -69,6 +72,8 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
             CompoundFieldResidualSet = compoundFieldResidualSet,
             DirectScanResidualSet = directScanResidualSet,
             AllNegated = CheckAllNegated(),
+            SortDropMask = _sortDropMask,
+            SortElisionDiverged = _sortDropMask != template.PinnedSortSlots,
         };
 
         planParams.Bucket.Publish(plan);
@@ -564,6 +569,10 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
             var kind = QueryPlanBuilder.ClassifyParamType(planParams.QueryParameters, slot);
             _builder.Append((byte)kind, 8);
         }
+
+        // Which pinned sort keys drop depends on the bound value types, so plans that differ there must differ here
+        if (template.PinnedSortSlots != 0)
+            _builder.Append(_sortDropMask, 16);
 
         return _builder.ToHash();
     }
