@@ -63,8 +63,9 @@ internal static partial class QueryPlanBuilder
 
     private static SortMetadataTemplate BuildSortMetadataTemplate(PlanParameters p, PlanTemplate planTemplate)
     {
-        // sort elision - where Name = $foo order by Name - all results has the same value, can drop the sort (for single value fields).
-        var orderByFields = ComputeEffectiveOrderBy(p.Metadata.OrderBy, planTemplate.Clauses, planTemplate.IsOr, p.IndexSearcher);
+        // Over the full ORDER BY: which keys drop is decided per execution, so every key needs its metadata built.
+        var orderByFields = p.Metadata.OrderBy;
+        var elidePins = ComputeSortPins(orderByFields, planTemplate.Clauses, planTemplate.IsOr, p.IndexSearcher);
 
         if (orderByFields is null)
         {   
@@ -106,7 +107,7 @@ internal static partial class QueryPlanBuilder
                     // The seed (literal or parameter) is read from the live query at materialize time, so it is NOT
                     // baked into the cached template and is deliberately absent from the structural key.
                     patches[i].Kind = field.Arguments is { Length: > 0 } ? SortSlotPatchKind.RandomSeeded : SortSlotPatchKind.RandomFreshSeed;
-                    patches[i].OrderByIndex = OrderByIndex(ref field);
+                    patches[i].OrderByIndex = i;
                     anyPatch = true;
                     continue;
                 case OrderByFieldType.Score:
@@ -116,7 +117,7 @@ internal static partial class QueryPlanBuilder
                     // The center point/units (literal or parameter) are read from the live query at materialize time.
                     patches[i].Kind = SortSlotPatchKind.DistanceRuntime;
                     patches[i].FieldName = field.Name;
-                    patches[i].OrderByIndex = OrderByIndex(ref field);
+                    patches[i].OrderByIndex = i;
                     anyPatch = true;
                     continue;
                 case OrderByFieldType.Implicit when p.Index.Configuration.OrderByTicksAutomaticallyWhenDatesAreInvolved && p.Index.IndexFieldsPersistence.HasTimeValues(field.Name.Value):
@@ -139,8 +140,9 @@ internal static partial class QueryPlanBuilder
         {
             Prebuilt = prebuilt,
             Patches = anyPatch ? patches : null,
+            ElidePins = elidePins,
         };
-        
+
         MatchCompareFieldType GetMatchCompareFieldType(OrderByFieldType orderingType)
         {
             var compareType = orderingType switch
@@ -153,58 +155,71 @@ internal static partial class QueryPlanBuilder
             };
             return compareType;
         }
-
-        int OrderByIndex(ref OrderByField field) => 
-            // recovers this slot's position in the raw, pre-elision array (relies on Arguments field uniqueness)
-            Array.IndexOf(p.Metadata.OrderBy, field);
     }
 
 
-    // Partial sort elision -> WHERE status = 'Released' ORDER BY status, vote DESC → ORDER BY vote DESC.
-    // Returns the surviving keys (the input array unchanged when nothing was elided). 
-    private static OrderByField[] ComputeEffectiveOrderBy(OrderByField[] orderBy, List<ClauseInfo> clauses, bool isOr, global::Corax.Querying.IndexSearcher indexSearcher)
+    // Per ORDER BY key, the equality that pins it to a single value, null when none. Pinning is structural; whether
+    // the key can be dropped needs the bound value's type and is decided per execution.
+    private static ClauseInfo[] ComputeSortPins(OrderByField[] orderBy, List<ClauseInfo> clauses, bool isOr, global::Corax.Querying.IndexSearcher indexSearcher)
     {
         if (orderBy is not { Length: > 0 } || isOr)
-            return orderBy;
+            return null;
 
-        List<OrderByField> kept = null;
+        ClauseInfo[] pins = null;
         for (int i = 0; i < orderBy.Length; i++)
         {
             var field = orderBy[i];
-            bool elide = false;
-            if (field.OrderingType is not (OrderByFieldType.Random or OrderByFieldType.Score or OrderByFieldType.Distance) &&
-                field.Name?.Value is { } name)
-            {
-                bool pinned = false;
-                foreach (var clause in clauses)
-                {
-                    if (clause.ClauseType == ClauseType.Equals && !clause.IsNegated && clause.WhenCondition == null &&
-                        clause.FieldName is { } fn && fn == name)
-                    {
-                        pinned = true;
-                        break;
-                    }
-                }
-
-                // `Num = 1` matches the long term that 1.1 / 1.5 / 1.8 share - an equality pins only the representation
-                // it matched, and the type here is unknown because the template is cached before parameters are bound.
-                if (pinned && indexSearcher.HasMultipleTermsInField(name) is false && indexSearcher.HasNumericTermsInField(name) is false)
-                    elide = true;
-            }
-
-            if (elide && kept == null)
-            {
-                kept = new List<OrderByField>(orderBy.Length);
-                for (int k = 0; k < i; k++) 
-                    kept.Add(orderBy[k]);
+            if (field.OrderingType is OrderByFieldType.Random or OrderByFieldType.Score or OrderByFieldType.Distance ||
+                field.Name?.Value is not { } name)
                 continue;
-            }
 
-            if (kept != null && !elide)
-                kept.Add(field);
+            if (indexSearcher.HasMultipleTermsInField(name)) // several terms per document - the equality pins nothing
+                continue;
+
+            foreach (var clause in clauses)
+            {
+                if (clause.ClauseType != ClauseType.Equals || clause.IsNegated || clause.WhenCondition != null ||
+                    clause.FieldName is not { } fn || fn != name)
+                    continue;
+
+                (pins ??= new ClauseInfo[orderBy.Length])[i] = clause;
+                break;
+            }
         }
 
-        return kept?.ToArray() ?? orderBy;
+        return pins;
+    }
+
+    // Partial sort elision -> WHERE status = 'Released' ORDER BY status, vote DESC → ORDER BY vote DESC.
+    // Optimistic: assumes every pin elides. Selects candidate optimizations only, each re-gated per execution.
+    private static OrderByField[] ComputeEffectiveOrderBy(OrderByField[] orderBy, List<ClauseInfo> clauses, bool isOr, global::Corax.Querying.IndexSearcher indexSearcher)
+    {
+        var pins = ComputeSortPins(orderBy, clauses, isOr, indexSearcher);
+        if (pins is null)
+            return orderBy;
+
+        var kept = new List<OrderByField>(orderBy.Length);
+        for (int i = 0; i < orderBy.Length; i++)
+        {
+            if (pins[i] is null)
+                kept.Add(orderBy[i]);
+        }
+
+        return kept.ToArray();
+    }
+
+    // A value is indexed under several representations (text, long, double) and an equality matches exactly one, so
+    // the sort key is pinned only if that is the representation it sorts on. Null excluded: it also matches
+    // non-existing entries. Same rule as the driving-scan check in TryCreateSimpleFieldDirectScan.
+    private static bool PinReadsSameRepresentation(ParamValueType pinned, MatchCompareFieldType sorted)
+    {
+        return pinned switch
+        {
+            ParamValueType.Long => sorted is MatchCompareFieldType.Integer,
+            ParamValueType.Double => sorted is MatchCompareFieldType.Floating,
+            ParamValueType.String => sorted is MatchCompareFieldType.Sequence or MatchCompareFieldType.Alphanumeric,
+            _ => false
+        };
     }
 
     private static NullsSortMode? GetNullsSortMode(OrderByField field)
@@ -220,17 +235,61 @@ internal static partial class QueryPlanBuilder
         return nullsSortMode;
     }
 
-    private static OrderMetadata[] GetSortMetadata(QueryBuilderParameters builderParameters, PlanTemplate planTemplate)
+    private static OrderMetadata[] GetSortMetadata(QueryBuilderParameters builderParameters, PlanTemplate planTemplate, QueryExecution exec)
     {
         // PageSize == 0 (count-only) is per-query and short-circuits all the sort work.
         if (builderParameters.Query.PageSize == 0)
             return null;
 
-        return MaterializeSortMetadata(planTemplate.SortMetadataTemplate, builderParameters);
+        return MaterializeSortMetadata(planTemplate.SortMetadataTemplate, builderParameters, exec);
+    }
+
+    private static int CountPins(ClauseInfo[] pins)
+    {
+        int count = 0;
+        foreach (var pin in pins)
+        {
+            if (pin is not null)
+                count++;
+        }
+
+        return count;
+    }
+
+    /// <summary>The sort keys this execution drops: a pinned key whose equality matched the representation it sorts on.</summary>
+    private static bool[] ResolveElidedSortSlots(SortMetadataTemplate template, QueryExecution exec, out int elided)
+    {
+        elided = 0;
+        if (template.ElidePins is null)
+            return null;
+
+        bool[] drop = null;
+        for (int i = 0; i < template.ElidePins.Length; i++)
+        {
+            if (template.ElidePins[i] is not { } pin)
+                continue;
+
+            foreach (var clause in exec.Executions)
+            {
+                if (ReferenceEquals(clause.Clause, pin) == false)
+                    continue;
+
+                // A sentinel has no populated value, so its type says nothing.
+                if (clause.IsSentinel == false && PinReadsSameRepresentation(clause.TermValueType, template.Prebuilt[i].FieldType))
+                {
+                    (drop ??= new bool[template.ElidePins.Length])[i] = true;
+                    elided++;
+                }
+
+                break;
+            }
+        }
+
+        return drop;
     }
 
     /// <summary>Runtime materializer: apply per-query patches to the template's prebuilt array.</summary>
-    private static OrderMetadata[] MaterializeSortMetadata(SortMetadataTemplate template, QueryBuilderParameters builderParameters)
+    private static OrderMetadata[] MaterializeSortMetadata(SortMetadataTemplate template, QueryBuilderParameters builderParameters, QueryExecution exec)
     {
         if (template.NoSort)
             return null;
@@ -241,24 +300,42 @@ internal static partial class QueryPlanBuilder
             return template.Prebuilt;
         }
 
-        if (template.Patches is null) // hot path
+        var drop = ResolveElidedSortSlots(template, exec, out var elided);
+
+        // Sorted scans were picked from the elided ORDER BY; a surviving key invalidates that choice.
+        exec.SortElisionDivergedFromTemplate = template.ElidePins is not null && elided != CountPins(template.ElidePins);
+
+        if (elided == template.Prebuilt.Length)
+            return null;
+
+        if (template.Patches is null && drop is null) // hot path
             return template.Prebuilt;
 
         var indexSearcher = builderParameters.IndexSearcher;
 
-        var result = new OrderMetadata[template.Prebuilt.Length];
+        var result = new OrderMetadata[template.Prebuilt.Length - elided];
 
-        for (int i = 0; i < template.Prebuilt.Length; i++)
+        for (int i = 0, slot = 0; i < template.Prebuilt.Length; i++)
         {
+            if (drop is not null && drop[i])
+                continue;
+
+            int target = slot++;
+            if (template.Patches is null)
+            {
+                result[target] = template.Prebuilt[i];
+                continue;
+            }
+
             ref var patch = ref template.Patches[i];
             switch (patch.Kind)
             {
                 case SortSlotPatchKind.None:
-                    result[i] = template.Prebuilt[i];
+                    result[target] = template.Prebuilt[i];
                     break;
 
                 case SortSlotPatchKind.RandomFreshSeed:
-                    result[i] = new OrderMetadata(Random.Shared.Next());
+                    result[target] = new OrderMetadata(Random.Shared.Next());
                     break;
 
                 case SortSlotPatchKind.RandomSeeded:
@@ -268,7 +345,7 @@ internal static partial class QueryPlanBuilder
                     var seedArg = builderParameters.Metadata.OrderBy[patch.OrderByIndex].Arguments[0];
                     var seedValue = seedArg.GetString(builderParameters.Query.QueryParameters);
                     var seed = (int)Hashing.XXHash32.CalculateRaw(seedValue ?? string.Empty);
-                    result[i] = new OrderMetadata(seed);
+                    result[target] = new OrderMetadata(seed);
                     break;
                 }
 
@@ -280,7 +357,7 @@ internal static partial class QueryPlanBuilder
                     bool mayHaveMissingEntries = p.MayHaveMissingEntries
                         || indexSearcher.GetDistinctTermCountInField(fieldMeta) == 0 // no entries at all
                         || indexSearcher.HasAnyNonExistingEntries(fieldMeta);         
-                    result[i] = new OrderMetadata(fieldMeta, p.Ascending, p.FieldType, p.NullsSortMode, mayHaveMissingEntries);
+                    result[target] = new OrderMetadata(fieldMeta, p.Ascending, p.FieldType, p.NullsSortMode, mayHaveMissingEntries);
                     break;
                 }
 
@@ -290,7 +367,7 @@ internal static partial class QueryPlanBuilder
                     // coordinates share one cached template/structural bucket.
                     var liveField = builderParameters.Metadata.OrderBy[patch.OrderByIndex];
                     var fieldMeta = ResolveSortFieldMeta(builderParameters, patch.FieldName);
-                    result[i] = BuildDistanceOrderMetadata(builderParameters, liveField, fieldMeta);
+                    result[target] = BuildDistanceOrderMetadata(builderParameters, liveField, fieldMeta);
                     break;
                 }
             }

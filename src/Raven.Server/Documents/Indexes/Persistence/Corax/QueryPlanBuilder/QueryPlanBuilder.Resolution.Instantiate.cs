@@ -44,7 +44,9 @@ internal static partial class QueryPlanBuilder
                 exec.ActualStrategy = ExecutionStrategy.CompoundKeyLookup;
                 return (innerMatch, innerMatch);
             }
-            case ExecutionStrategy.CompoundSortedScan when orderByFields != null: // no order by -> bitmap is more efficient 
+            // Checked per execution, not once per plan: the strategy is memoized on the CompiledPlan, and the elision
+            // the scans assume can hold for one set of bound values and not for another.
+            case ExecutionStrategy.CompoundSortedScan when orderByFields != null && exec.SortElisionDivergedFromTemplate == false:
             {
                 bool cfEffective = CompoundFieldCostEffective(ref ctx, out long cfEntriesToScan, out long cfBitmapCost, out var cfReason);
                 exec.StrategyGateReason = forced is not null ? "forced via $rvn_corax_strategy" : cfReason; 
@@ -62,7 +64,7 @@ internal static partial class QueryPlanBuilder
                     : OrderBy(builderParameters, innerMatch, orderByFields); // this uses SortingMultiMatch, $rvn_corax_sort is inapplicable
                 return (outer, innerMatch);
             }
-            case ExecutionStrategy.FieldSortedScan when orderByFields != null: // no order by -> bitmap is more efficient
+            case ExecutionStrategy.FieldSortedScan when orderByFields != null && exec.SortElisionDivergedFromTemplate == false:
             {
                 var execs = exec.Executions;
                 bool isFullScan = execs is not { Count: > 0 };

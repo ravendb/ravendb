@@ -266,8 +266,6 @@ internal static partial class QueryPlanBuilder
         foreach (var field in orderBy)
         {
             AppendFieldName(ref builder, field.Name?.Value, searcher);
-            // sort elision depends on this bit, and it flips the first time a number lands in a text-only field
-            builder.Append(field.Name?.Value is { } orderByName && searcher.HasNumericTermsInField(orderByName) ? 1 : 0, 1);
             builder.Append((int)field.OrderingType, OrderingTypeBits);
             builder.Append(field.Ascending.ToInt32(), 1);
             builder.Append((int)field.NullsOrdering, NullsOrderingBits);

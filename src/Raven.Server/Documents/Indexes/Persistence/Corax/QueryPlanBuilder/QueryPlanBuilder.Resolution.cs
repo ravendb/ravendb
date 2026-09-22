@@ -32,8 +32,7 @@ internal static partial class QueryPlanBuilder
         var planCache = planParams.IndexSearcher.PlanCache;
         var metadata = planParams.Metadata;
 
-        // As of reader open, not now: a memo stamped newer than the snapshots its plan came from never expires.
-        var generation = planParams.IndexSearcher.PlanCacheGenerationAtOpen;
+        var generation = planCache.GenerationIdx;
 
         if (metadata.CachedPlanMemo is { } memo
             && memo.PlanCacheGeneration == generation
@@ -100,7 +99,7 @@ internal static partial class QueryPlanBuilder
         var template = BuildTemplate(planParams);
 
         var exec = new BuildResolver(template, planParams, builderParameters, walkerCtx).Resolve();
-        var orderByFields = GetSortMetadata(builderParameters, exec.Plan.Template);
+        var orderByFields = GetSortMetadata(builderParameters, exec.Plan.Template, exec);
         // A single vector-search post-filter already streams its output in score order, we can skip the sorting step then
         exec.VectorPostFilterProvidesScoreOrder = VectorPostFilterProvidesResultOrder(exec, builderParameters, orderByFields);
         var (queryMatch,  innerMatch) = Instantiate(exec, orderByFields, planParams, builderParameters, walkerCtx, highlightingTerms, wantTimings, token);
