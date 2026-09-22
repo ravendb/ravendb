@@ -355,19 +355,48 @@ namespace Sparrow.Server.Tensors
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             internal static double CosineSimilarityInternalX64(ref float aRef, float aMagnitude, ref float bRef, float bMagnitude, nuint size)
             {
-                Vector512<float> abVec = Vector512<float>.Zero;
-                Vector512<float> a2Vec = Vector512<float>.Zero;
-                Vector512<float> b2Vec = Vector512<float>.Zero;
+                // PERF: Two sets of accumulators double the independent FMA chains (6 vs. 3),
+                // hiding the ~4-cycle accumulator RAW latency behind parallel throughput.
+                // On hardware without native 512-bit support each V512 decomposes into two
+                // V256 lanes, yielding 12 independent V256 chains from the two loop slots.
+                Vector512<float> abVec0 = Vector512<float>.Zero, abVec1 = Vector512<float>.Zero;
+                Vector512<float> a2Vec0 = Vector512<float>.Zero, a2Vec1 = Vector512<float>.Zero;
+                Vector512<float> b2Vec0 = Vector512<float>.Zero, b2Vec1 = Vector512<float>.Zero;
 
                 nuint i = 0;
                 nuint oneVectorFromEnd = size - (nuint)Vector512<float>.Count;
+                nuint stride = 2 * (nuint)Vector512<float>.Count;
+                nuint twoVectorsFromEnd = 0;
+
+                if (size < stride)
+                    goto Loop;
+
+                twoVectorsFromEnd = size - stride;
+
+            UnrolledLoop:
+
+                Vector512<float> aVec0 = Vector512.LoadUnsafe(ref aRef, i);
+                Vector512<float> bVec0 = Vector512.LoadUnsafe(ref bRef, i);
+                Vector512<float> aVec1 = Vector512.LoadUnsafe(ref aRef, i + (nuint)Vector512<float>.Count);
+                Vector512<float> bVec1 = Vector512.LoadUnsafe(ref bRef, i + (nuint)Vector512<float>.Count);
+                i += stride;
+
+                abVec0 = Arithmetics.MultiplyAddEstimate(aVec0, bVec0, abVec0);
+                abVec1 = Arithmetics.MultiplyAddEstimate(aVec1, bVec1, abVec1);
+                a2Vec0 = Arithmetics.MultiplyAddEstimate(aVec0, aVec0, a2Vec0);
+                a2Vec1 = Arithmetics.MultiplyAddEstimate(aVec1, aVec1, a2Vec1);
+                b2Vec0 = Arithmetics.MultiplyAddEstimate(bVec0, bVec0, b2Vec0);
+                b2Vec1 = Arithmetics.MultiplyAddEstimate(bVec1, bVec1, b2Vec1);
+
+                if (i <= twoVectorsFromEnd)
+                    goto UnrolledLoop;
+
+                abVec0 += abVec1;
+                a2Vec0 += a2Vec1;
+                b2Vec0 += b2Vec1;
 
             Loop:
 
-                // PERF: The reason why this would work on hardware not supporting 512-bit vectors is
-                // that it will effectively create 2 lanes (xmm and ymm) of 256-bit vectors. And because
-                // there are no overlapping lanes, there will be less pipeline dependencies hiding latency
-                // of the instructions themselves.
                 Vector512<float> aVec = Vector512.LoadUnsafe(ref aRef, i);
                 Vector512<float> bVec = Vector512.LoadUnsafe(ref bRef, i);
 
@@ -375,9 +404,9 @@ namespace Sparrow.Server.Tensors
 
             LoopWithoutLoad:
 
-                abVec = Arithmetics.MultiplyAddEstimate(aVec, bVec, abVec);
-                a2Vec = Arithmetics.MultiplyAddEstimate(aVec, aVec, a2Vec);
-                b2Vec = Arithmetics.MultiplyAddEstimate(bVec, bVec, b2Vec);
+                abVec0 = Arithmetics.MultiplyAddEstimate(aVec, bVec, abVec0);
+                a2Vec0 = Arithmetics.MultiplyAddEstimate(aVec, aVec, a2Vec0);
+                b2Vec0 = Arithmetics.MultiplyAddEstimate(bVec, bVec, b2Vec0);
 
                 if (i <= oneVectorFromEnd)
                     goto Loop;
@@ -397,9 +426,9 @@ namespace Sparrow.Server.Tensors
                     goto LoopWithoutLoad;
                 }
 
-                float ab = aMagnitude * bMagnitude * Vector512.Sum(abVec);
-                float a2 = aMagnitude * aMagnitude * Vector512.Sum(a2Vec);
-                float b2 = bMagnitude * bMagnitude * Vector512.Sum(b2Vec);
+                float ab = aMagnitude * bMagnitude * Vector512.Sum(abVec0);
+                float a2 = aMagnitude * aMagnitude * Vector512.Sum(a2Vec0);
+                float b2 = bMagnitude * bMagnitude * Vector512.Sum(b2Vec0);
 
                 // Special cases
                 if (a2 == 0 && b2 == 0)
@@ -438,7 +467,7 @@ namespace Sparrow.Server.Tensors
                 //   - Lane 1 contains a2 reciprocal.
                 double b2Reciprocal = rsqrts.ToScalar(); // lane 0
                 double a2Reciprocal = Sse2.UnpackHigh(rsqrts, rsqrts).ToScalar(); // lane 1
-                return  ab * a2Reciprocal * b2Reciprocal;
+                return ab * a2Reciprocal * b2Reciprocal;
             }
 
             /// <summary>
@@ -635,19 +664,48 @@ namespace Sparrow.Server.Tensors
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             internal static double CosineSimilarityInternalX64(ref double aRef, double aMagnitude, ref double bRef, double bMagnitude, nuint size)
             {
-                Vector512<double> abVec = Vector512<double>.Zero;
-                Vector512<double> a2Vec = Vector512<double>.Zero;
-                Vector512<double> b2Vec = Vector512<double>.Zero;
+                // PERF: Two sets of accumulators double the independent FMA chains (6 vs. 3),
+                // hiding the ~4-cycle accumulator RAW latency behind parallel throughput.
+                // On hardware without native 512-bit support each V512 decomposes into two
+                // V256 lanes, yielding 12 independent V256 chains from the two loop slots.
+                Vector512<double> abVec0 = Vector512<double>.Zero, abVec1 = Vector512<double>.Zero;
+                Vector512<double> a2Vec0 = Vector512<double>.Zero, a2Vec1 = Vector512<double>.Zero;
+                Vector512<double> b2Vec0 = Vector512<double>.Zero, b2Vec1 = Vector512<double>.Zero;
 
                 nuint i = 0;
                 nuint oneVectorFromEnd = size - (nuint)Vector512<double>.Count;
+                nuint stride = 2 * (nuint)Vector512<double>.Count;
+                nuint twoVectorsFromEnd = 0;
+
+                if (size < stride)
+                    goto Loop;
+
+                twoVectorsFromEnd = size - stride;
+
+            UnrolledLoop:
+
+                Vector512<double> aVec0 = Vector512.LoadUnsafe(ref aRef, i);
+                Vector512<double> bVec0 = Vector512.LoadUnsafe(ref bRef, i);
+                Vector512<double> aVec1 = Vector512.LoadUnsafe(ref aRef, i + (nuint)Vector512<double>.Count);
+                Vector512<double> bVec1 = Vector512.LoadUnsafe(ref bRef, i + (nuint)Vector512<double>.Count);
+                i += stride;
+
+                abVec0 = Arithmetics.MultiplyAddEstimate(aVec0, bVec0, abVec0);
+                abVec1 = Arithmetics.MultiplyAddEstimate(aVec1, bVec1, abVec1);
+                a2Vec0 = Arithmetics.MultiplyAddEstimate(aVec0, aVec0, a2Vec0);
+                a2Vec1 = Arithmetics.MultiplyAddEstimate(aVec1, aVec1, a2Vec1);
+                b2Vec0 = Arithmetics.MultiplyAddEstimate(bVec0, bVec0, b2Vec0);
+                b2Vec1 = Arithmetics.MultiplyAddEstimate(bVec1, bVec1, b2Vec1);
+
+                if (i <= twoVectorsFromEnd)
+                    goto UnrolledLoop;
+
+                abVec0 += abVec1;
+                a2Vec0 += a2Vec1;
+                b2Vec0 += b2Vec1;
 
             Loop:
 
-                // PERF: The reason why this would work on hardware not supporting 512-bit vectors is
-                // that it will effectively create 2 lanes (xmm and ymm) of 256-bit vectors. And because
-                // there are no overlapping lanes, there will be less pipeline dependencies hiding latency
-                // of the instructions themselves.
                 Vector512<double> aVec = Vector512.LoadUnsafe(ref aRef, i);
                 Vector512<double> bVec = Vector512.LoadUnsafe(ref bRef, i);
 
@@ -655,9 +713,9 @@ namespace Sparrow.Server.Tensors
 
             LoopWithoutLoad:
 
-                abVec = Arithmetics.MultiplyAddEstimate(aVec, bVec, abVec);
-                a2Vec = Arithmetics.MultiplyAddEstimate(aVec, aVec, a2Vec);
-                b2Vec = Arithmetics.MultiplyAddEstimate(bVec, bVec, b2Vec);
+                abVec0 = Arithmetics.MultiplyAddEstimate(aVec, bVec, abVec0);
+                a2Vec0 = Arithmetics.MultiplyAddEstimate(aVec, aVec, a2Vec0);
+                b2Vec0 = Arithmetics.MultiplyAddEstimate(bVec, bVec, b2Vec0);
 
                 if (i <= oneVectorFromEnd)
                     goto Loop;
@@ -677,9 +735,9 @@ namespace Sparrow.Server.Tensors
                     goto LoopWithoutLoad;
                 }
 
-                double ab = aMagnitude * bMagnitude * Vector512.Sum(abVec);
-                double a2 = aMagnitude * aMagnitude * Vector512.Sum(a2Vec);
-                double b2 = bMagnitude * bMagnitude * Vector512.Sum(b2Vec);
+                double ab = aMagnitude * bMagnitude * Vector512.Sum(abVec0);
+                double a2 = aMagnitude * aMagnitude * Vector512.Sum(a2Vec0);
+                double b2 = bMagnitude * bMagnitude * Vector512.Sum(b2Vec0);
 
                 // Special cases
                 if (a2 == 0 && b2 == 0)
