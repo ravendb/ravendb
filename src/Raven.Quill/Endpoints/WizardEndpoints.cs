@@ -549,16 +549,6 @@ public static class WizardEndpoints
             if (status.Created == false)
                 return Results.Conflict(new ApiErrorResponse(DatabaseExistsMessage(slug)));
 
-            // transplant the source creds captured at connect (held on the wizard doc) onto the app DB
-            var transplantedCs = new SqlConnectionString
-            {
-                Name = state.LastMapConfiguration.ConnectionStringName,
-                FactoryName = state.Provider,
-                ConnectionString = state.SourceConnectionString,
-            };
-            await store.Maintenance.ForDatabase(slug).SendAsync(
-                new PutConnectionStringOperation<SqlConnectionString>(transplantedCs), ct);
-
             await AppDatabaseFeatures.ConfigureAsync(store, slug, ct);
 
             app = new App
@@ -577,6 +567,16 @@ public static class WizardEndpoints
             await session.StoreAsync(app, id: AppLookup.DocumentIdFor(slug), ct);
             await session.SaveChangesAsync(ct);
         }
+
+        // transplant the source creds captured at connect (held on the wizard doc) onto the app DB
+        var transplantedCs = new SqlConnectionString
+        {
+            Name = state.LastMapConfiguration.ConnectionStringName,
+            FactoryName = state.Provider,
+            ConnectionString = state.SourceConnectionString,
+        };
+        await store.Maintenance.ForDatabase(slug).SendAsync(
+            new PutConnectionStringOperation<SqlConnectionString>(transplantedCs), ct);
 
         await CreateOrUpdateCdcAsync(store, app, state.LastMapConfiguration, ct);
         if (logger.IsInfoEnabled)
