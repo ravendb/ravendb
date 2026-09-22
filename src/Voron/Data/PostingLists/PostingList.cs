@@ -553,6 +553,8 @@ namespace Voron.Data.PostingLists
             if (sibling.Header->NumberOfEntries + current.Header->NumberOfEntries > PostingListBranchPage.MinNumberOfValuesBeforeMerge * 2)
                 return; // not enough space to _ensure_ that we can merge
 
+            current.Header->CollapsedLevels = Math.Max(current.Header->CollapsedLevels, sibling.Header->CollapsedLevels);
+
             for (int i = 0; i < sibling.Header->NumberOfEntries; i++)
             {
                 (long key, long page) = sibling.GetByIndex(i);
@@ -722,7 +724,7 @@ namespace Voron.Data.PostingLists
 
             _state.BranchPages++;
             // we'll copy the current page and reuse it, to avoid changing the page number the parent points to
-            var page = _llt.AllocatePage(1);
+            var page = _llt.AllocatePage(1, zeroPage: false);
             long cpy = page.PageNumber;
             ref var state = ref _stk[_pos];
             Debug.Assert(_llt.IsDirty(page.PageNumber));

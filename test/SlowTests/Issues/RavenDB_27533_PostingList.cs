@@ -191,6 +191,62 @@ public unsafe class RavenDB_27533_PostingList(ITestOutputHelper output) : Storag
         AssertContents(model);
     }
 
+    [RavenFact(RavenTestCategory.Voron)]
+    public void MergingBranchesMustKeepTheCollapsedLevelsOfTheSibling()
+    {
+        const long step = 1L << 20;
+        var model = new SortedSet<long>();
+        long next = step;
+
+        (long Key, long Page)[] rootChildren;
+        while (true)
+        {
+            using (var wtx = Env.WriteTransaction())
+            {
+                var list = wtx.OpenPostingList(Name);
+                for (int i = 0; i < 100_000; i++)
+                {
+                    list.Add(next);
+                    model.Add(next);
+                    next += step;
+                }
+
+                wtx.Commit();
+            }
+
+            using (var rtx = Env.ReadTransaction())
+            {
+                var list = rtx.OpenPostingList(Name);
+                if (list.State.Depth < 3)
+                    continue;
+
+                rootChildren = RootChildren(list);
+                if (rootChildren.Length >= 3)
+                    break;
+            }
+        }
+
+        long siblingPage = rootChildren[0].Page;
+        long currentPage = rootChildren[1].Page;
+        Assert.True(BranchEntryCount(siblingPage) > PostingListBranchPage.MinNumberOfValuesBeforeMerge);
+        Assert.True(BranchEntryCount(currentPage) > PostingListBranchPage.MinNumberOfValuesBeforeMerge);
+
+        while (BranchEntryCount(siblingPage) > PostingListBranchPage.MinNumberOfValuesBeforeMerge)
+            RemoveLastLeafFromBranch(siblingPage, model);
+
+        Assert.Contains(RootChildren(), child => child.Page == siblingPage);
+        SetCollapsedLevels(siblingPage, 1);
+
+        int numberOfRootChildren = RootChildren().Length;
+        while (RootChildren().Length == numberOfRootChildren)
+            RemoveLastLeafFromBranch(currentPage, model);
+
+        Assert.DoesNotContain(RootChildren(), child => child.Page == siblingPage);
+        Assert.Contains(RootChildren(), child => child.Page == currentPage);
+        Assert.Equal(1, CollapsedLevelsOf(currentPage));
+        AssertContents(model);
+    }
+
     private static List<long> AllPagesOf(PostingList list)
     {
         return list.AllPages();
@@ -199,6 +255,40 @@ public unsafe class RavenDB_27533_PostingList(ITestOutputHelper output) : Storag
     private static int CollapsedLevelsOf(PostingList list, long pageNumber)
     {
         return ((PostingListLeafPageHeader*)list.Llt.GetPage(pageNumber).Pointer)->CollapsedLevels;
+    }
+
+    private int BranchEntryCount(long pageNumber)
+    {
+        using (var rtx = Env.ReadTransaction())
+        {
+            var list = rtx.OpenPostingList(Name);
+            return new PostingListBranchPage(list.Llt.GetPage(pageNumber)).Header->NumberOfEntries;
+        }
+    }
+
+    private void RemoveLastLeafFromBranch(long branchPageNumber, SortedSet<long> model)
+    {
+        List<long> values;
+        using (var rtx = Env.ReadTransaction())
+        {
+            var list = rtx.OpenPostingList(Name);
+            var branch = new PostingListBranchPage(list.Llt.GetPage(branchPageNumber));
+            (_, long leafPageNumber) = branch.GetByIndex(branch.Header->NumberOfEntries - 1);
+            values = new PostingListLeafPage(list.Llt.GetPage(leafPageNumber)).GetDebugOutput();
+        }
+
+        Assert.NotEmpty(values);
+        using (var wtx = Env.WriteTransaction())
+        {
+            var list = wtx.OpenPostingList(Name);
+            foreach (long value in values)
+            {
+                list.Remove(value);
+                model.Remove(value);
+            }
+
+            wtx.Commit();
+        }
     }
 
     /// <summary>

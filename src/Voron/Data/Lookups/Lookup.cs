@@ -1191,7 +1191,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         ref var state = ref _internalCursor._stk[_internalCursor._pos];
 
         // we'll copy the current page and reuse it, to avoid changing the page number the parent points to
-        var page = _llt.AllocatePage(1);
+        var page = _llt.AllocatePage(1, zeroPage: false);
 
         long cpy = page.PageNumber;
         Debug.Assert(_llt.IsDirty(page.PageNumber));
