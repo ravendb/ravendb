@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
@@ -1625,7 +1626,15 @@ more responsive application.
             }
             else
             {
-                RegisterCountersInternal(resultCounters, countersToInclude: null, fromQueryResult: false, gotAll: gotAll);
+                Dictionary<string, string[]> includeMap = null;
+                if (countersToInclude != null)
+                {
+                    includeMap = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var id in ids)
+                        includeMap[id] = countersToInclude;
+                }
+
+                RegisterCountersInternal(resultCounters, countersToInclude: includeMap, fromQueryResult: false, gotAll: gotAll);
             }
 
             RegisterMissingCounters(ids, countersToInclude);
@@ -1689,16 +1698,28 @@ more responsive application.
 
         private void RegisterCountersForDocument(string id, bool gotAll, BlittableJsonReaderArray counters, Dictionary<string, string[]> countersToInclude)
         {
-            if (CountersByDocId.TryGetValue(id, out var cache) == false)
+            if (CountersByDocId.TryGetValue(id, out var cache) == false || cache.Values == null)
             {
                 cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
             }
 
-            var deletedCounters = cache.Values.Count == 0
-                ? new HashSet<string>()
-                : countersToInclude[id].Length == 0 // IncludeAllCounters
-                    ? new HashSet<string>(cache.Values.Keys)
-                    : new HashSet<string>(countersToInclude[id]);
+            HashSet<string> deletedCounters;
+            if (cache.Values.Count == 0 || countersToInclude == null)
+            {
+                deletedCounters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            }
+            else if (countersToInclude.TryGetValue(id, out var included) == false)
+            {
+                deletedCounters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            }
+            else if (included.Length == 0) // IncludeAllCounters
+            {
+                deletedCounters = new HashSet<string>(cache.Values.Keys);
+            }
+            else
+            {
+                deletedCounters = new HashSet<string>(included);
+            }
 
             foreach (BlittableJsonReaderObject counterBlittable in counters)
             {
@@ -1707,7 +1728,20 @@ more responsive application.
                     counterBlittable.TryGet(nameof(CounterDetail.TotalValue), out long value) == false)
                     continue;
 
-                cache.Values[name] = value;
+                var merged = value;
+                if (TryGetDeferredCounterDelta(id, name, out var delta, out var deleted))
+                {
+                    if (deleted)
+                    {
+                        cache.Values.Remove(name);
+                        deletedCounters.Remove(name);
+                        continue;
+                    }
+
+                    merged += delta;
+                }
+
+                cache.Values[name] = merged;
                 deletedCounters.Remove(name);
             }
 
@@ -1715,12 +1749,43 @@ more responsive application.
             {
                 foreach (var name in deletedCounters)
                 {
+                    if (TryGetDeferredCounterDelta(id, name, out _, out var deleted) && deleted == false)
+                        continue; // there is a deferred operation for this counter, so we don't remove it
+
                     cache.Values.Remove(name);
                 }
             }
 
             cache.GotAll = gotAll;
             CountersByDocId[id] = cache;
+        }
+
+        private bool TryGetDeferredCounterDelta(string docId, string counter, out long delta, out bool deleted)
+        {
+            delta = 0;
+            deleted = false;
+
+            if (DeferredCommandsDictionary.TryGetValue((docId, CommandType.Counters, null), out var cmd) == false)
+                return false;
+
+            var batch = (CountersBatchCommandData)cmd;
+
+            foreach (var op in batch.Counters.Operations)
+            {
+                if (string.Equals(op.CounterName, counter, StringComparison.OrdinalIgnoreCase) == false)
+                    continue;
+
+                if (op.Type == CounterOperationType.Delete)
+                {
+                    deleted = true;
+                    return true;
+                }
+
+                if (op.Type == CounterOperationType.Increment)
+                    delta += op.Delta;
+            }
+
+            return delta != 0 || deleted;
         }
 
         private void SetGotAllInCacheIfNeeded(Dictionary<string, string[]> countersToInclude)
@@ -2254,35 +2319,71 @@ more responsive application.
 
         public bool CheckIfIdAlreadyIncluded(string[] ids, IEnumerable<string> includes)
         {
-            foreach (var id in ids)
+            foreach (var (_, existsInSession) in GetDocumentsRequiredToLoad(ids, includes))
             {
-                if (_knownMissingIds.Contains(id))
-                    continue;
-
-                // Check if document was already loaded, the check if we've received it through include
-                if (DocumentsById.TryGetValue(id, out DocumentInfo documentInfo) == false &&
-                    IncludedDocumentsById.TryGetValue(id, out documentInfo) == false)
+                if (existsInSession == false)
                     return false;
-
-                if ((documentInfo.Entity == null) && (documentInfo.Document == null))
-                    return false;
-
-                if (includes == null)
-                    continue;
-
-                foreach (var include in includes)
-                {
-                    var hasAll = true;
-                    IncludesUtil.Include(documentInfo.Document, include, s => { hasAll &= IsLoaded(s); });
-
-                    if (hasAll == false)
-                        return false;
-                }
             }
 
             return true;
         }
 
+        public IEnumerable<(string Id, bool ExistsInSession)> GetDocumentsRequiredToLoad<TEnumerable>(string[] ids, TEnumerable includes)
+        where TEnumerable : IEnumerable<string>
+        {
+            foreach (var id in ids)
+            {
+                
+                if (_knownMissingIds.Contains(id))
+                {
+                    yield return (id, true);
+                    continue;
+                }
+
+                // Check if a document was already loaded, the check if we've received it through include
+                if (DocumentsById.TryGetValue(id, out DocumentInfo documentInfo) == false &&
+                    IncludedDocumentsById.TryGetValue(id, out documentInfo) == false)
+                {
+                    yield return (id, false);
+                    continue;
+                }
+                
+                Debug.Assert(documentInfo is not null);
+                if ((documentInfo.Entity == null) && (documentInfo.Document == null))
+                {
+                    yield return (id, false);
+                    continue;
+                }
+                
+                if (includes == null)
+                {
+                    // Document exists in a session, there is no include, so we've the data we need
+                    yield return (id, true);
+                    continue;
+                }
+
+                var hasAll = true;
+                foreach (var include in includes)
+                {
+                    // We've to check if every include is present in the session
+                    IncludesUtil.Include(documentInfo.Document, include, s => { hasAll &= IsLoaded(s); });
+
+                    if (hasAll == false)
+                    {
+                        yield return (id, false);
+                        break;
+                    }
+                }
+
+                if (hasAll == false)
+                {
+                    continue;
+                }
+                
+                yield return (id, true);
+            }
+        }
+        
         protected void BuildEntityDocInfoByIdHolder<T>(
             IEnumerable<T> entities,
             out Dictionary<string, (object Entity, DocumentInfo Info)> idsEntitiesPairs
