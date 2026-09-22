@@ -202,9 +202,8 @@ namespace SlowTests.Server.Documents.CdcSink
             var result = await dryRunTask;
             Assert.True(result.Success, result.Error);
 
-            var slotAfter = await QueryScalarAsync(connectionString,
-                "SELECT 1 FROM pg_replication_slots WHERE slot_name = @slot", "slot", config.Postgres.SlotName);
-            Assert.Null(slotAfter);
+            await AssertWaitForNullAsync(() => QueryScalarAsync(connectionString,
+                "SELECT 1 FROM pg_replication_slots WHERE slot_name = @slot", "slot", config.Postgres.SlotName), timeout: 30_000);
 
             var publicationAfter = await QueryScalarAsync(connectionString,
                 "SELECT 1 FROM pg_publication WHERE pubname = @pub", "pub", config.Postgres.PublicationName);
