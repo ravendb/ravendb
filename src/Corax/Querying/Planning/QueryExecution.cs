@@ -19,10 +19,6 @@ public class QueryExecution
     public ClauseExecution CompoundFieldField2Range;
     public ClauseExecution SortSeekClause;
 
-    /// <summary>Set when a sort key the template expected to be elided survived this execution. The template's
-    /// sorted scans assume the elided ORDER BY, so they cannot run.</summary>
-    public bool SortElisionDivergedFromTemplate;
-
     /// <summary>
     /// When we can tell (cheaply) how many records will be returned by this query without materializing the full results.
     /// For example, an equality / inequality query on a single field
