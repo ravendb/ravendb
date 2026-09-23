@@ -54,9 +54,9 @@ describe("DocumentExpiration", () => {
 
         await fireClick(enableButton);
 
-        const setMaxNumberOfDocumentToProcessCheckbox = await screen.findByLabelText(
-            "Set max number of documents to process in a single run"
-        );
+        const setMaxNumberOfDocumentToProcessCheckbox = await screen.findByRole("checkbox", {
+            name: "Max number of documents to process in a single run",
+        });
         expect(setMaxNumberOfDocumentToProcessCheckbox).toBeChecked();
         expect(await screen.findByName("maxItemsToProcess")).toHaveValue(65536);
     });

@@ -1,4 +1,4 @@
-﻿import { useEffect } from "react";
+import { useEffect } from "react";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
@@ -20,6 +20,7 @@ import { LoadError } from "components/common/LoadError";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { FormInput, FormSwitch } from "components/common/Form";
+import OverridableField from "components/common/OverridableField";
 import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
@@ -157,7 +158,7 @@ export default function DataArchival() {
                             <Col className={hasDataArchival ? "" : "item-disabled pe-none"}>
                                 <Card>
                                     <Card.Body>
-                                        <div className="vstack gap-2">
+                                        <div className="vstack gap-3">
                                             <FormSwitch
                                                 name="isDataArchivalEnabled"
                                                 control={control}
@@ -166,48 +167,47 @@ export default function DataArchival() {
                                                 Enable Data Archival
                                             </FormSwitch>
                                             <div>
-                                                <FormSwitch
-                                                    name="isArchiveFrequencyEnabled"
+                                                <OverridableField
                                                     control={control}
-                                                    className="mb-3"
+                                                    overrideName="isArchiveFrequencyEnabled"
+                                                    label="Custom archive frequency"
                                                     disabled={
                                                         formState.isSubmitting || !formValues.isDataArchivalEnabled
                                                     }
+                                                    marginClass="mb-0"
                                                 >
-                                                    Set custom archive frequency
-                                                </FormSwitch>
-                                                <FormInput
-                                                    name="archiveFrequency"
-                                                    control={control}
-                                                    type="number"
-                                                    disabled={
-                                                        formState.isSubmitting || !formValues.isArchiveFrequencyEnabled
-                                                    }
-                                                    placeholder="Default (60)"
-                                                    addon="seconds"
-                                                />
+                                                    {({ isOverridden }) => (
+                                                        <FormInput
+                                                            name="archiveFrequency"
+                                                            control={control}
+                                                            type="number"
+                                                            disabled={formState.isSubmitting || !isOverridden}
+                                                            placeholder="Default (60)"
+                                                            addon="seconds"
+                                                        />
+                                                    )}
+                                                </OverridableField>
                                             </div>
                                             <div>
-                                                <FormSwitch
-                                                    name="isLimitMaxItemsToProcessEnabled"
+                                                <OverridableField
                                                     control={control}
-                                                    className="mb-3"
+                                                    overrideName="isLimitMaxItemsToProcessEnabled"
+                                                    label="Max number of documents to process in a single run"
                                                     disabled={
                                                         formState.isSubmitting || !formValues.isDataArchivalEnabled
                                                     }
+                                                    marginClass="mb-0"
                                                 >
-                                                    Set max number of documents to process in a single run
-                                                </FormSwitch>
-                                                <FormInput
-                                                    name="maxItemsToProcess"
-                                                    control={control}
-                                                    type="number"
-                                                    disabled={
-                                                        formState.isSubmitting ||
-                                                        !formValues.isLimitMaxItemsToProcessEnabled
-                                                    }
-                                                    addon="items"
-                                                />
+                                                    {({ isOverridden }) => (
+                                                        <FormInput
+                                                            name="maxItemsToProcess"
+                                                            control={control}
+                                                            type="number"
+                                                            disabled={formState.isSubmitting || !isOverridden}
+                                                            addon="items"
+                                                        />
+                                                    )}
+                                                </OverridableField>
                                             </div>
                                         </div>
                                     </Card.Body>
