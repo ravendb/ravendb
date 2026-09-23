@@ -20,7 +20,7 @@ class internalReplicationProgressCommand extends commandBase {
         const url = endpoints.databases.replication.replicationInternalOutgoingProgress;
         const args = this.location;
 
-        return this.query<resultsDto<InternalReplicationTaskProgress>>(url, args, this.db)
+        return this.query<resultsDto<InternalReplicationTaskProgress>>(url, args, this.db, null, { timeout: commandBase.perNodeRequestTimeoutMs })
             .fail((response: JQueryXHR) => {
                 if (this.reportFailure) {
                     this.reportError(`Failed to fetch internal replication progress`, response.responseText);    

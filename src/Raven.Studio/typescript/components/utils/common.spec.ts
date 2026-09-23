@@ -1,4 +1,4 @@
-import { getErrorHeadline } from "components/utils/common";
+import { getErrorHeadline, getRequestErrorMessage } from "components/utils/common";
 
 describe("common", function () {
     describe("getErrorHeadline", function () {
@@ -30,6 +30,28 @@ describe("common", function () {
             const result = getErrorHeadline("System.InvalidOperationException  : operation is not valid");
 
             expect(result).toEqual("System.InvalidOperationException  : operation is not valid");
+        });
+    });
+
+    describe("getRequestErrorMessage", function () {
+        it("joins message and error from the response body", () => {
+            const result = getRequestErrorMessage({
+                responseText: JSON.stringify({ Message: "Load failed", Error: "System.Exception: boom" }),
+            } as JQueryXHR);
+
+            expect(result).toEqual("Load failed: System.Exception: boom");
+        });
+
+        it("describes a timed out request", () => {
+            const result = getRequestErrorMessage({ statusText: "timeout" } as JQueryXHR);
+
+            expect(result).toEqual("Request timed out");
+        });
+
+        it("falls back to status text when the response has no body", () => {
+            const result = getRequestErrorMessage({ statusText: "Service Unavailable" } as JQueryXHR);
+
+            expect(result).toEqual("Service Unavailable");
         });
     });
 });

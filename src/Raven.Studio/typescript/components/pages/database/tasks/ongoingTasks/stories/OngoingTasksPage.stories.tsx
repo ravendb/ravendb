@@ -147,6 +147,23 @@ export const WithLoadError: StoryObj = {
     },
 };
 
+export const WithUnreachableNode: StoryObj = {
+    render: () => {
+        commonInit("cluster");
+
+        const { tasksService } = mockServices;
+
+        tasksService.withHangingGetTasks((location) => location.nodeTag === "C");
+        tasksService.withGetEtlProgress();
+        tasksService.withTaskErrors();
+        tasksService.withEtlStats();
+        tasksService.withGetExternalReplicationProgress();
+        tasksService.withGetInternalReplicationProgress();
+
+        return <OngoingTasksPage />;
+    },
+};
+
 export const EmptyView: StoryObj = {
     render: () => {
         commonInit();

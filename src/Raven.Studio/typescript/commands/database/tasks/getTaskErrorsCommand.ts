@@ -18,11 +18,11 @@ class getTaskErrorsCommand extends commandBase {
         if (this.taskNames.length > 0) {
             args.name = this.taskNames;
             const url = endpoints.databases.etl.etlErrors + this.urlEncodeArgs(args);
-            return this.query<TaskErrors[]>(url, null, this.db, (res) => res.Results);
+            return this.query<TaskErrors[]>(url, null, this.db, (res) => res.Results, { timeout: commandBase.perNodeRequestTimeoutMs });
         }
         
         const url = endpoints.databases.taskErrors.tasksErrors + this.urlEncodeArgs(args);
-        return this.query<TaskErrors[]>(url, null, this.db, (res) => res.Results);
+        return this.query<TaskErrors[]>(url, null, this.db, (res) => res.Results, { timeout: commandBase.perNodeRequestTimeoutMs });
     }
 }
 

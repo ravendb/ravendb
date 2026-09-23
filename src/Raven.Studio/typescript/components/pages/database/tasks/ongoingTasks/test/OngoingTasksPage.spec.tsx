@@ -5,7 +5,7 @@ import * as stories from "../stories/OngoingTasksPage.stories";
 
 import { composeStories } from "@storybook/react-webpack5";
 
-const { FullView, EmptyView } = composeStories(stories);
+const { FullView, EmptyView, WithUnreachableNode } = composeStories(stories);
 
 describe("OngoingTasksPage", function () {
     it("can render full view", async () => {
@@ -18,5 +18,11 @@ describe("OngoingTasksPage", function () {
         const { screen } = rtlRender(<EmptyView />);
 
         expect(await screen.findByText(/No tasks have been created/)).toBeInTheDocument();
+    });
+
+    it("renders tasks from reachable nodes when one node never responds", async () => {
+        const { screen } = rtlRender(<WithUnreachableNode />);
+
+        expect(await screen.findByText(/RavenDB ETL/)).toBeInTheDocument();
     });
 });
