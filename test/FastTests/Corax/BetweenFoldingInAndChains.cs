@@ -330,6 +330,77 @@ namespace FastTests.Corax
             }
         }
 
+        [RavenTheory(RavenTestCategory.Querying)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void DeepAndChainsDoNotOverflowTheStack(bool leftNested)
+        {
+            const int clauses = 20_000;
+
+            var lower = Parse("CreatedAt >= $p1").Where;
+            var upper = Parse("CreatedAt < $p2").Where;
+            var filler = Parse("CustomerId = 'customers/1'").Where;
+
+            // the same filler instance many times over is fine, the tree is only read
+            var operands = new List<QueryExpression> { lower };
+            for (var i = 0; i < clauses; i++)
+                operands.Add(filler);
+            operands.Add(upper);
+
+            QueryExpression chain;
+            if (leftNested)
+            {
+                chain = operands[0];
+                for (var i = 1; i < operands.Count; i++)
+                    chain = new BinaryExpression(chain, operands[i], OperatorType.And);
+            }
+            else
+            {
+                chain = operands[^1];
+                for (var i = operands.Count - 2; i >= 0; i--)
+                    chain = new BinaryExpression(operands[i], chain, OperatorType.And);
+            }
+
+            Assert.True(QueryBuilderHelper.TryFoldRangePairsInAndChain((BinaryExpression)chain, out var folded));
+
+            var (betweens, looseBounds, total) = CountIteratively(folded);
+            Assert.Equal(1, betweens);
+            Assert.Equal(0, looseBounds);
+            Assert.Equal(clauses + 1, total);
+        }
+
+        private static (int Betweens, int LooseBounds, int Total) CountIteratively(QueryExpression root)
+        {
+            int betweens = 0, looseBounds = 0, total = 0;
+            var pending = new Stack<QueryExpression>();
+            pending.Push(root);
+
+            while (pending.Count > 0)
+            {
+                var current = pending.Pop();
+                switch (current)
+                {
+                    case BinaryExpression { Operator: OperatorType.And or OperatorType.Or } binary:
+                        pending.Push(binary.Left);
+                        pending.Push(binary.Right);
+                        break;
+                    case BinaryExpression { IsRangeOperation: true }:
+                        looseBounds++;
+                        total++;
+                        break;
+                    case BetweenExpression:
+                        betweens++;
+                        total++;
+                        break;
+                    default:
+                        total++;
+                        break;
+                }
+            }
+
+            return (betweens, looseBounds, total);
+        }
+
         private static int CountNodes(QueryExpression expression, Func<QueryExpression, bool> predicate)
         {
             var count = predicate(expression) ? 1 : 0;

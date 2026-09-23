@@ -88,16 +88,24 @@ public static class QueryBuilderHelper
         return true;
     }
 
-    private static void FlattenAndChain(QueryExpression expression, List<QueryExpression> operands)
+    // iterative on purpose: a chain of thousands of clauses must not cost one stack frame per clause
+    private static void FlattenAndChain(BinaryExpression root, List<QueryExpression> operands)
     {
-        if (expression is BinaryExpression { Operator: OperatorType.And } and)
-        {
-            FlattenAndChain(and.Left, operands);
-            FlattenAndChain(and.Right, operands);
-            return;
-        }
+        var pending = new Stack<QueryExpression>();
+        pending.Push(root);
 
-        operands.Add(expression);
+        while (pending.Count > 0)
+        {
+            var current = pending.Pop();
+            if (current is BinaryExpression { Operator: OperatorType.And } and)
+            {
+                pending.Push(and.Right);
+                pending.Push(and.Left);
+                continue;
+            }
+
+            operands.Add(current);
+        }
     }
 
     private static bool IsFoldableRangeOperation(BinaryExpression expression)
