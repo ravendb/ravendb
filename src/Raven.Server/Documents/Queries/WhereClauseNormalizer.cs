@@ -7,9 +7,9 @@ namespace Raven.Server.Documents.Queries;
 /// <summary>
 /// Rewrites a where clause once, when its query metadata is built, so every request sharing the cached query text gets
 /// the cheaper shape: a lower and an upper bound on the same field become one <see cref="BetweenExpression"/> regardless
-/// of how the 'and' chain is nested or parenthesized. Only the structure is looked at, never a parameter value, because
-/// the cached metadata serves requests with different parameter values. The input tree is never mutated and unchanged
-/// subtrees come back as the same instances.
+/// of how the 'and' chain is nested or parenthesized, and duplicated bounds are dropped. Only the structure is looked at,
+/// never a parameter value, because the cached metadata serves requests with different parameter values. The input tree
+/// is never mutated and unchanged subtrees come back as the same instances.
 /// </summary>
 public static class WhereClauseNormalizer
 {
@@ -64,6 +64,7 @@ public static class WhereClauseNormalizer
         var operands = new List<QueryExpression>();
         var changed = Flatten(root, operands);
 
+        changed |= DropDuplicateBounds(operands);
         changed |= FoldOppositeBoundsIntoBetween(operands);
 
         if (changed == false)
@@ -98,6 +99,28 @@ public static class WhereClauseNormalizer
 
             changed |= TryNormalize(current, out var operand);
             operands.Add(operand);
+        }
+
+        return changed;
+    }
+
+    // 'Foo > $a and Foo > $a' is the same bound twice, whatever $a turns out to be
+    private static bool DropDuplicateBounds(List<QueryExpression> operands)
+    {
+        var changed = false;
+        for (var i = 0; i < operands.Count; i++)
+        {
+            if (IsBound(operands[i], out var first) == false)
+                continue;
+
+            for (var j = operands.Count - 1; j > i; j--)
+            {
+                if (IsBound(operands[j], out var second) && first.Operator == second.Operator && OnSameField(first, second) && first.Right.Equals(second.Right))
+                {
+                    operands.RemoveAt(j);
+                    changed = true;
+                }
+            }
         }
 
         return changed;
