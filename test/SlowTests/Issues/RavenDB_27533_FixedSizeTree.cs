@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests.Voron;
@@ -5,6 +6,7 @@ using Tests.Infrastructure;
 using Voron;
 using Voron.Data;
 using Voron.Data.Fixed;
+using Voron.Global;
 using Voron.Impl;
 using Xunit;
 using Xunit.Abstractions;
@@ -202,6 +204,80 @@ public unsafe class RavenDB_27533_FixedSizeTree(ITestOutputHelper output) : Stor
         }
 
         AssertContents(treeName, model);
+    }
+
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void MergingBranchesMustKeepTheCollapsedLevelsOfTheFreedPage(bool markedPageShrinks)
+    {
+        Slice.From(Allocator, "entries", out Slice treeName);
+        var model = new SortedSet<long>();
+
+        long next = Stride;
+        while (true)
+        {
+            Add(treeName, model, ref next, 20_000);
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var fst = tx.FixedTreeFor(treeName, valSize: 8);
+                if (fst.Depth == 3 && ChildrenOf(fst, RootPage(fst)).Length >= 3)
+                    break;
+            }
+        }
+
+        long rootPage, survivorPage, markedPage;
+        int rootEntries;
+        using (var tx = Env.ReadTransaction())
+        {
+            var fst = tx.FixedTreeFor(treeName, valSize: 8);
+            rootPage = RootPage(fst);
+            var children = ChildrenOf(fst, rootPage);
+            rootEntries = children.Length;
+            survivorPage = children[0];
+            markedPage = children[1];
+        }
+
+        long triggerPage = markedPageShrinks ? markedPage : survivorPage;
+        long otherPage = markedPageShrinks ? survivorPage : markedPage;
+        int halfAPage = Constants.Storage.PageSize / FixedSizeTree.BranchEntrySize / 2;
+        RemoveLastLeavesOf(treeName, model, otherPage, fst => fst.GetReadOnlyPage(otherPage).NumberOfEntries <= halfAPage);
+
+        SetCollapsedLevels(treeName, markedPage, 1);
+
+        RemoveLastLeavesOf(treeName, model, triggerPage, fst => fst.GetReadOnlyPage(rootPage).NumberOfEntries < rootEntries);
+
+        using (var tx = Env.ReadTransaction())
+        {
+            var fst = tx.FixedTreeFor(treeName, valSize: 8);
+            fst.ValidateTree_Forced();
+
+            var children = ChildrenOf(fst, rootPage);
+            Assert.DoesNotContain(markedPage, children);
+            Assert.Contains(survivorPage, children);
+            Assert.Equal(1, fst.GetReadOnlyPage(survivorPage).CollapsedLevels);
+        }
+
+        AssertContents(treeName, model);
+    }
+
+    private void RemoveLastLeavesOf(Slice treeName, SortedSet<long> model, long branchPage, Func<FixedSizeTree, bool> until)
+    {
+        using (var tx = Env.WriteTransaction())
+        {
+            var fst = tx.FixedTreeFor(treeName, valSize: 8);
+            while (until(fst) == false)
+            {
+                var branch = fst.GetReadOnlyPage(branchPage);
+                var leaf = fst.GetReadOnlyPage(branch.GetEntry(branch.NumberOfEntries - 1)->PageNumber);
+                long from = leaf.GetKey(0), to = leaf.GetKey(leaf.NumberOfEntries - 1);
+                fst.DeleteRange(from, to);
+                model.GetViewBetween(from, to).Clear();
+            }
+
+            tx.Commit();
+        }
     }
 
     private void Add(Slice treeName, SortedSet<long> model, ref long next, int count)
