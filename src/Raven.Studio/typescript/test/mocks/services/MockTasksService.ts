@@ -85,6 +85,19 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         });
     }
 
+    withHangingGetTasks(
+        shouldHang: (location: databaseLocationSpecifier) => boolean,
+        dto?: MockedValue<OngoingTasksResult>
+    ) {
+        const mockedValue = this.createValue(dto, TasksStubs.getTasksList());
+        return this.mocks.getOngoingTasks.mockImplementation((_, location) => {
+            if (shouldHang(location)) {
+                return new Promise<OngoingTasksResult>(() => {});
+            }
+            return Promise.resolve(withLocationSpecificHubHandlerIds(mockedValue, location));
+        });
+    }
+
     withGetEtlProgress(dto?: MockedValue<resultsDto<EtlTaskProgress>>) {
         return this.mockResolvedValue(this.mocks.getEtlProgress, dto, TasksStubs.getEtlTasksProgress());
     }
