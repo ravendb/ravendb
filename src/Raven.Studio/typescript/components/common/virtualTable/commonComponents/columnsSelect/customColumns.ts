@@ -1,4 +1,5 @@
 import { RowData } from "@tanstack/react-table";
+import genUtils from "common/generalUtils";
 
 // a column defined by the user with a JavaScript expression evaluated against every row, e.g. this.ShipTo.City
 export interface CustomColumnDefinition {
@@ -15,7 +16,7 @@ declare module "@tanstack/react-table" {
 }
 
 export function createCustomColumnId() {
-    return `custom-column-${crypto.randomUUID()}`;
+    return `custom-column-${genUtils.generateUUID()}`;
 }
 
 export function getCustomColumnExpressionError(expression: string): string | null {
@@ -45,14 +46,14 @@ export function createCustomColumnAccessor(expression: string): (item: unknown) 
     };
 }
 
-// the expression accesses the row as `this`, so this.FirstName + this.Address.City gives [FirstName, Address]
+// the expression accesses the row as `this`, so this.FirstName + this["Address"].City gives [FirstName, Address]
 export function getCustomColumnProperties(expression: string): string[] {
     const properties = new Set<string>();
-    const propertyRegex = /this\.(\w+)/g;
+    const propertyRegex = /this(?:\.(\w+)|\[\s*(["'`])(.+?)\2\s*\])/g;
 
     let match: RegExpExecArray;
     while ((match = propertyRegex.exec(expression)) !== null) {
-        properties.add(match[1]);
+        properties.add(match[1] ?? match[3]);
     }
 
     return Array.from(properties);

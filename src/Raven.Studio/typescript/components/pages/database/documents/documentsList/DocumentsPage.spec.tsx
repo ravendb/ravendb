@@ -15,6 +15,8 @@ type Screen = ReturnType<typeof rtlRender>["screen"];
 const getSelectAllCheckbox = (screen: Screen) => screen.getByRole("checkbox", { name: "Select all documents" });
 const getDocumentCheckboxes = (screen: Screen) => screen.getAllByRole("checkbox", { name: "Select document" });
 const getSelectionActions = (screen: Screen) => screen.queryByTestId("selection-actions");
+const getRowCheckbox = (screen: Screen, documentId: string) =>
+    within(screen.getByText(documentId).closest("tr")).getByRole("checkbox", { name: "Select document" });
 
 const openDisplayDropdown = (screen: Screen) => {
     fireEvent.click(screen.getByRole("button", { name: /Display/ }));
@@ -59,6 +61,32 @@ describe("DocumentsPage", () => {
         expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
         expect(screen.getByText("Company")).toBeInTheDocument();
         expect(screen.getByText("@id")).toBeInTheDocument();
+    });
+
+    it("shows by default only the property columns the preview sent values for", async () => {
+        const withGeneratedDocumentsPreview = jest
+            .spyOn(mockServices.databasesService, "withGeneratedDocumentsPreview")
+            .mockImplementation(() => {
+                // without bindings the server sends the values of some of the available columns only
+                mockServices.databasesService.getMock("getDocumentsPreview").mockImplementation(async () => ({
+                    ...DatabasesStubs.documentsPreview(),
+                    availableColumns: ["Employee", ...DatabasesStubs.documentsPreviewColumns()],
+                }));
+            });
+
+        try {
+            const { screen } = rtlRender(<DocumentsListStory collection="Orders" isSharded={false} totalCount={5} />);
+
+            expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
+            expect(screen.getByText("Company")).toBeInTheDocument();
+            expect(screen.queryByText("Employee")).not.toBeInTheDocument();
+
+            await openColumnSettings(screen);
+
+            expect(screen.getByRole("checkbox", { name: "Employee" })).not.toBeChecked();
+        } finally {
+            withGeneratedDocumentsPreview.mockRestore();
+        }
     });
 
     it("can render all documents with metadata columns and offers the property columns", async () => {
@@ -232,6 +260,44 @@ describe("DocumentsPage", () => {
         expect(rows[2]).not.toHaveClass("selection-preview");
     });
 
+    it("toggles the clicked document after scrolling shifted the loaded rows", async () => {
+        const { screen, container } = rtlRender(
+            <DocumentsListStory collection="Orders" isSharded={false} totalCount={1000} />
+        );
+
+        expect(await screen.findByText("orders/16-A")).toBeInTheDocument();
+
+        const scrollContainer = container.querySelector<HTMLDivElement>(".table-container");
+        fireEvent.scroll(scrollContainer, { target: { scrollTop: 1200 } });
+
+        expect(await screen.findByText("orders/40-A")).toBeInTheDocument();
+
+        fireEvent.click(getRowCheckbox(screen, "orders/16-A"));
+
+        expect(getRowCheckbox(screen, "orders/16-A")).toBeChecked();
+        expect(getRowCheckbox(screen, "orders/26-A")).not.toBeChecked();
+    });
+
+    it("selects the whole shift range when its start is scrolled out of view", async () => {
+        const { screen, container } = rtlRender(
+            <DocumentsListStory collection="Orders" isSharded={false} totalCount={1000} />
+        );
+
+        expect(await screen.findByText("orders/3-A")).toBeInTheDocument();
+
+        fireEvent.click(getRowCheckbox(screen, "orders/3-A"));
+
+        const scrollContainer = container.querySelector<HTMLDivElement>(".table-container");
+        fireEvent.scroll(scrollContainer, { target: { scrollTop: 2400 } });
+
+        expect(await screen.findByText("orders/71-A")).toBeInTheDocument();
+        expect(screen.queryByText("orders/3-A")).not.toBeInTheDocument();
+
+        fireEvent.click(getRowCheckbox(screen, "orders/71-A"), { shiftKey: true });
+
+        expect(within(getSelectionActions(screen)).getByText("69")).toBeInTheDocument();
+    });
+
     it("can toggle pagination from the display dropdown", async () => {
         const { screen } = rtlRender(<DocumentsListStory collection="Orders" isSharded={false} totalCount={5} />);
 
@@ -390,6 +456,11 @@ describe("DocumentsPage", () => {
 
         await openColumnSettings(secondVisit.screen);
         fireEvent.click(secondVisit.screen.getByRole("button", { name: /Restart to default/ }));
+
+        expect(secondVisit.screen.queryByRole("checkbox", { name: "City" })).not.toBeInTheDocument();
+        expect(getColumnLayoutStorageKeys()).toHaveLength(1);
+
+        fireEvent.click(secondVisit.screen.getByRole("button", { name: "Apply" }));
         await flushFetches();
 
         expect(secondVisit.screen.queryByText("City")).not.toBeInTheDocument();
