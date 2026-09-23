@@ -21,6 +21,4 @@ public sealed class SlackOptions
     public TimeSpan SocketHandshakeTimeout { get; set; } = TimeSpan.FromSeconds(15);
 
     public TimeSpan SocketRestartDelay { get; set; } = TimeSpan.FromMinutes(5);
-
-    public int MaxSocketFrameBytes { get; set; } = 1024 * 1024;
 }
