@@ -239,6 +239,10 @@ namespace Voron.Data.RawData
                     $"Asked to load a past the allocated values: {id} from page {pageHeader->PageNumber}");
             }
 
+            if (posInPage + sizeof(RawDataEntrySizes) > Constants.Storage.PageSize)
+                VoronUnrecoverableErrorException.Raise(tx,
+                    $"Asked to load a value whose header runs past the end of the page: {id} from page {pageHeader->PageNumber}");
+
             var sizes = (RawDataEntrySizes*)((byte*)pageHeader + posInPage);
             if (sizes->IsFreed)
                 VoronUnrecoverableErrorException.Raise(tx,

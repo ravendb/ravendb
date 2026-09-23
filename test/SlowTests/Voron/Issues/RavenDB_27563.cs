@@ -76,17 +76,33 @@ public class RavenDB_27563 : RavenTestBase
 
     // Same setup, one step further. The re-saved document is relocated into an overflow page, so only one of the freed pages is
     // reused right away and the rest stay free. A second Table instance would then allocate the next archived document using its
-    // stale view of the released section, on pages that no longer belong to it. Here the section was allocated and released within
-    // the same transaction, so the data file was never extended to hold those pages and the pager rejects the read with a
-    // VoronUnrecoverableErrorException. When the released pages do exist in the file (a section carved out of free space on a
-    // long-lived database) they still carry an old raw data header, the write goes through silently, and the document ends up on
-    // pages that are free for anyone to reuse.
+    // stale view of the released section, on pages that no longer belong to it. Those pages still carry an old raw data header, so
+    // the write goes through silently and the document ends up on pages that are free for anyone to reuse.
     [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Compression)]
     public async Task ArchivedAndPlainDocumentsInOneTransaction_NextArchivedDocumentMustNotBeWrittenIntoFreedPages()
     {
         using var store = GetDocumentStore();
         var database = await Databases.GetDocumentDatabaseInstanceFor(store);
         var collectionName = new CollectionName(Collection);
+
+        // leave a run of free pages behind, so the section the archived documents move to is carved out of pages that exist in the
+        // data file and a write into it after its release lands silently instead of being rejected by the pager
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        {
+            using (var tx = context.OpenWriteTransaction())
+            {
+                for (var i = 0; i < 256; i++)
+                    Put(context, $"orders/filler-{i}", DocumentFlags.None, bodySize: 6000);
+                tx.Commit();
+            }
+
+            using (var tx = context.OpenWriteTransaction())
+            {
+                for (var i = 0; i < 256; i++)
+                    database.DocumentsStorage.Delete(context, $"orders/filler-{i}", expectedChangeVector: null);
+                tx.Commit();
+            }
+        }
 
         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (var tx = context.OpenWriteTransaction())

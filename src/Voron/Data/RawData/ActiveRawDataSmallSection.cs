@@ -163,11 +163,17 @@ namespace Voron.Data.RawData
                     if (oldSize->AllocatedSize <= 0)
                         VoronUnrecoverableErrorException.Raise(_llt, $"Allocated size cannot be zero or negative, but was {oldSize->AllocatedSize} in page {pageHeader->PageNumber}");
 
+                    if (pos + sizeof(RawDataEntrySizes) + oldSize->AllocatedSize > maxUsedPos)
+                        VoronUnrecoverableErrorException.Raise(_llt, $"Entry at {pos} in page {pageHeader->PageNumber} runs past the allocated area ({maxUsedPos})");
+
                     if (oldSize->IsFreed)
                     {
                         pos += (ushort)(oldSize->AllocatedSize + sizeof(RawDataEntrySizes));
                         continue; // this was freed
                     }
+
+                    if (oldSize->UsedSize > oldSize->AllocatedSize)
+                        VoronUnrecoverableErrorException.Raise(_llt, $"Entry at {pos} in page {pageHeader->PageNumber} uses {oldSize->UsedSize} bytes of {oldSize->AllocatedSize} allocated");
 
                     var prevId = (pageHeader->PageNumber) * Constants.Storage.PageSize + pos;
                     var newId = (pageHeader->PageNumber) * Constants.Storage.PageSize + pageHeader->NextAllocation;

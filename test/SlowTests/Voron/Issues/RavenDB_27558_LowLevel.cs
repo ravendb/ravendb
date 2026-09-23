@@ -21,8 +21,8 @@ namespace SlowTests.Voron.Issues
         {
         }
 
-        // the ledger says a page has room, the page does not: the state a second Table object over the same section
-        // (with a stale copy of the section header) used to leave behind, then allocate past the end of the page from
+        // the ledger says a page has room, the page does not: this is what a second Table object over the same section
+        // (with a stale copy of the section header) used to see, and it then allocated past the end of the page
         [RavenFact(RavenTestCategory.Voron)]
         public void Ledger_claiming_more_space_than_the_page_has_must_not_allocate_past_the_end_of_the_page()
         {
@@ -154,6 +154,88 @@ namespace SlowTests.Voron.Issues
                 // the old DefragPage threw too, after modifying the page and running off its copy of it
                 Assert.Contains("past the end of the page", e.Message);
                 Assert.False(tx.LowLevelTransaction.IsDirty(sectionPage + 1));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void Entry_header_running_past_the_end_of_the_page_is_reported_as_corruption()
+        {
+            long id;
+            using (var tx = Env.WriteTransaction())
+            {
+                CreateSchemas(tx, out _, out var plain);
+                plain.Create(tx, "Items", 16);
+                id = Insert(tx, tx.OpenTable(plain, "Items"), "item", 100, new Random(27558), new Dictionary<string, byte[]>());
+                tx.Commit();
+            }
+
+            var pageNumber = id / Constants.Storage.PageSize;
+            using (var tx = Env.WriteTransaction())
+            {
+                // an already overrun page lets ids near the end of the page through the NextAllocation check
+                ((RawDataSmallPageHeader*)tx.LowLevelTransaction.ModifyPage(pageNumber).Pointer)->NextAllocation = Constants.Storage.PageSize + 100;
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var idOfEntryWithHeaderPastTheEnd = pageNumber * Constants.Storage.PageSize + Constants.Storage.PageSize - 2;
+                var e = Assert.Throws<VoronUnrecoverableErrorException>(() => RawDataSection.GetRawDataEntrySizeFor(tx.LowLevelTransaction, idOfEntryWithHeaderPastTheEnd));
+                Assert.Contains("header runs past the end of the page", e.Message);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void Entry_running_past_the_allocated_area_of_the_page_is_not_defragged()
+        {
+            var e = CorruptFirstEntryAndInsertThroughTheDefragPass((sizes, pageHeader) =>
+                sizes->AllocatedSize = (short)(Constants.Storage.PageSize - 100)); // fits the page, not the allocated area
+            Assert.Contains("runs past the allocated area", e.Message);
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void Entry_using_more_than_it_allocated_is_not_defragged()
+        {
+            var e = CorruptFirstEntryAndInsertThroughTheDefragPass((sizes, pageHeader) =>
+                sizes->UsedSize = (short)(sizes->AllocatedSize + 10));
+            Assert.Contains("bytes of", e.Message);
+        }
+
+        private delegate void CorruptEntry(RawDataSection.RawDataEntrySizes* sizes, RawDataSmallPageHeader* pageHeader);
+
+        private VoronUnrecoverableErrorException CorruptFirstEntryAndInsertThroughTheDefragPass(CorruptEntry corrupt)
+        {
+            long sectionPage, id;
+            using (var tx = Env.WriteTransaction())
+            {
+                CreateSchemas(tx, out _, out var plain);
+                plain.Create(tx, "Items", 16);
+                var table = tx.OpenTable(plain, "Items");
+                id = Insert(tx, table, "item", 100, new Random(27558), new Dictionary<string, byte[]>());
+                sectionPage = table.ActiveDataSmallSection.PageNumber;
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var page = (RawDataSmallPageHeader*)tx.LowLevelTransaction.ModifyPage(id / Constants.Storage.PageSize).Pointer;
+                corrupt((RawDataSection.RawDataEntrySizes*)((byte*)page + id % Constants.Storage.PageSize), page);
+
+                // the first pass of TryAllocate skips the page (no room at the end), the ledger sends the defrag pass to it
+                page->NextAllocation = Constants.Storage.PageSize - 100;
+                tx.LowLevelTransaction.ModifyPage(sectionPage);
+                var section = new RawDataSection(tx.LowLevelTransaction, sectionPage);
+                for (var i = 0; i < section.NumberOfPages; i++)
+                    section.AvailableSpace[i] = 0;
+                section.AvailableSpace[page->PageNumberInSection] = 4000;
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                CreateSchemas(tx, out _, out var plain);
+                var table = tx.OpenTable(plain, "Items");
+                return Assert.Throws<VoronUnrecoverableErrorException>(() => Insert(tx, table, "item/2", 100, new Random(27558), new Dictionary<string, byte[]>()));
             }
         }
 
