@@ -36,6 +36,18 @@ public static class QueryBuilderHelper
         return expression.IsRangeOperation && expression.Right is ValueExpression;
     }
 
+    // lower bounds keep the greater value, upper bounds the lesser; on a tie the strict operator wins
+    internal static BinaryExpression TighterBound(BinaryExpression first, BinaryExpression second, int comparison)
+    {
+        if (comparison == 0)
+            return first.Operator is OperatorType.GreaterThan or OperatorType.LessThan ? first : second;
+
+        if (first.IsGreaterThan)
+            return comparison > 0 ? first : second;
+
+        return comparison < 0 ? first : second;
+    }
+
     internal static IEnumerable<(object Value, ValueTokenType Type)> GetValues(Query query, QueryMetadata metadata,
         BlittableJsonReaderObject parameters, ValueExpression value)
     {
