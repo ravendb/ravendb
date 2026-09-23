@@ -144,8 +144,13 @@ namespace Voron.Data.BTrees
                 }
             }
             else
+            {
                 result = cached;
+            }
 
+
+            result.CollapsedLevels = input.Page.CollapsedLevels;
+            
             return result;
         }
 
