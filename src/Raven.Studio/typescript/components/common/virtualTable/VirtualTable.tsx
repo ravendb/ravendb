@@ -11,7 +11,7 @@ import { values } from "lodash";
 
 // Chrome/Edge can render up to 838 859 rows in a table
 // Firefox only up to 223 695 rows
-// If you want to render more rows (or fetch them on scroll), use LazyVirtualTable component along with useLazyVirtualTable hook
+// If you want to render more rows (or fetch them on scroll), use LazyVirtualTable component along with useLazyRows hook
 
 // May have performance problems but only in dev mode (prod build works fine)
 

@@ -37,15 +37,6 @@ function selectActiveDatabase(store: RootState) {
     return selectDatabaseByName(activeDatabaseName)(store);
 }
 
-function selectIsActiveDatabaseSharded(store: RootState): boolean {
-    const activeDatabaseName = selectActiveDatabaseName(store);
-    if (!activeDatabaseName) {
-        return false;
-    }
-
-    return selectDatabaseByName(activeDatabaseName)(store).isSharded;
-}
-
 const selectIsRestrictExternalScriptUsageForNonClusterAdmin = createSelector(
     (store: RootState) => store.databases.activeDatabaseSettings,
     (settings): boolean => settings["Security.RestrictExternalScriptUsageForNonClusterAdmin"] === "True"
@@ -58,6 +49,5 @@ export const databaseSelectors = {
     allDatabaseNames: selectAllDatabaseNames,
     allDatabasesCount: selectAllDatabasesCount,
     databaseByName: selectDatabaseByName,
-    isActiveDatabaseSharded: selectIsActiveDatabaseSharded,
     isRestrictExternalScriptUsageForNonClusterAdmin: selectIsRestrictExternalScriptUsageForNonClusterAdmin,
 };

@@ -1,6 +1,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Checkbox } from "components/common/Checkbox";
 import { CellDocumentPreviewWrapper } from "components/common/virtualTable/cells/CellDocumentPreview";
+import { ChangeEvent } from "react";
 
 export const columnPreview: ColumnDef<unknown> = {
     header: "Preview",
@@ -47,3 +48,49 @@ export const columnCheckbox: ColumnDef<unknown> = {
     enableColumnFilter: false,
     enablePinning: false,
 };
+
+interface LazySelectionColumnLabels {
+    selectAllLabel: string;
+    selectRowLabel: string;
+}
+
+// reads the selection from the table meta (lazySelection) when clicked, so memoized rows never use a stale one
+export function createLazySelectionColumn<T>({
+    selectAllLabel,
+    selectRowLabel,
+}: LazySelectionColumnLabels): ColumnDef<T> {
+    return {
+        id: columnCheckbox.id,
+        accessorFn: (x) => x,
+        size: columnCheckbox.size,
+        minSize: columnCheckbox.minSize,
+        enableSorting: false,
+        enableHiding: false,
+        enableColumnFilter: false,
+        enablePinning: false,
+        header: ({ table }) => {
+            const { selectionState, toggleAll } = table.options.meta.lazySelection;
+
+            return (
+                <Checkbox
+                    selected={selectionState === "AllSelected"}
+                    indeterminate={selectionState === "SomeSelected"}
+                    toggleSelection={toggleAll}
+                    aria-label={selectAllLabel}
+                />
+            );
+        },
+        cell: ({ row, table }) => (
+            <Checkbox
+                selected={row.getIsSelected()}
+                toggleSelection={(e) => table.options.meta.lazySelection.toggleRow(row.original, isShiftKeyPressed(e))}
+                aria-label={selectRowLabel}
+            />
+        ),
+    };
+}
+
+// React fires the change event of a checkbox from the click, so the mouse modifiers are available
+function isShiftKeyPressed(e: ChangeEvent<HTMLInputElement>) {
+    return e.nativeEvent instanceof MouseEvent && e.nativeEvent.shiftKey;
+}

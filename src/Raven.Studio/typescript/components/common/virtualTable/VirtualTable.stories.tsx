@@ -18,11 +18,9 @@ import TableDisplaySettings from "./commonComponents/columnsSelect/TableDisplayS
 import { FlexGrow } from "components/common/FlexGrow";
 import { CellValueWrapper } from "./cells/CellValue";
 import { useVirtualTableWithToken } from "components/common/virtualTable/hooks/useVirtualTableWithToken";
-import {
-    LazyVirtualTableFetchMode,
-    useLazyVirtualTable,
-} from "components/common/virtualTable/hooks/useLazyVirtualTable";
-import { useVirtualTableArea } from "components/common/virtualTable/hooks/useVirtualTableArea";
+import { useLazyRows } from "components/common/virtualTable/hooks/useLazyRows";
+import { LazyFetchMode } from "components/common/virtualTable/utils/LazyRowsLoader";
+import { lazyTableOptions } from "components/common/virtualTable/utils/lazyTableUtils";
 import LazyVirtualTable from "components/common/virtualTable/LazyVirtualTable";
 import { Switch } from "components/common/Checkbox";
 
@@ -67,7 +65,7 @@ export const VirtualTableStory: StoryObj = {
 
 interface LazyLoadingStoryArgs {
     totalCount: number;
-    fetchMode: LazyVirtualTableFetchMode;
+    fetchMode: LazyFetchMode;
     fetchDelayInMs: number;
     minFetchCount: number;
     heightInPx: number;
@@ -86,7 +84,7 @@ export const LazyVirtualTableStory: StoryObj<LazyLoadingStoryArgs> = {
     argTypes: {
         fetchMode: {
             control: "radio",
-            options: ["skipTake", "continuationToken"] satisfies LazyVirtualTableFetchMode[],
+            options: ["skipTake", "continuationToken"] satisfies LazyFetchMode[],
         },
     },
 };
@@ -163,18 +161,12 @@ function LazyVirtualTableExample({
 }: LazyLoadingStoryArgs) {
     const fetchData = useMemo(() => createLazyLoadingFetcher(totalCount, fetchDelayInMs), [totalCount, fetchDelayInMs]);
 
-    const area = useVirtualTableArea({ heightInPx });
-
-    const lazyTable = useLazyVirtualTable({
-        area,
-        fetchData,
-        fetchMode,
-        minFetchCount,
-        reloadDependencies: [fetchData, fetchMode, minFetchCount],
-    });
+    const lazyRows = useLazyRows({ fetchData, fetchMode, minFetchCount, reloadDependencies: [fetchData] });
+    const [isPaginated, setIsPaginated] = useState(false);
 
     const table = useReactTable({
-        data: lazyTable.data,
+        ...lazyTableOptions,
+        data: lazyRows.data,
         columns: itemColumnDefs,
         getCoreRowModel: getCoreRowModel(),
     });
@@ -183,15 +175,17 @@ function LazyVirtualTableExample({
         <div className="d-flex flex-column" style={{ height: heightInPx }}>
             <div className="d-flex align-items-center gap-3 mb-2">
                 <h2 className="m-0">{totalCount.toLocaleString()} items</h2>
-                <Switch
-                    selected={lazyTable.isPaginated}
-                    toggleSelection={() => lazyTable.setIsPaginated(!lazyTable.isPaginated)}
-                    color="primary"
-                >
+                <Switch selected={isPaginated} toggleSelection={() => setIsPaginated(!isPaginated)} color="primary">
                     Pagination
                 </Switch>
             </div>
-            <LazyVirtualTable lazyTable={lazyTable} table={table} />
+            <LazyVirtualTable
+                table={table}
+                lazyRows={lazyRows}
+                isPaginated={isPaginated}
+                onIsPaginatedChange={setIsPaginated}
+                heightInPx={heightInPx}
+            />
         </div>
     );
 }

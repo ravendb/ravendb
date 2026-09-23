@@ -1,8 +1,8 @@
 import { useReactTable, getCoreRowModel } from "@tanstack/react-table";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { useLazyVirtualTable } from "components/common/virtualTable/hooks/useLazyVirtualTable";
-import { useVirtualTableArea } from "components/common/virtualTable/hooks/useVirtualTableArea";
+import { useLazyRows } from "components/common/virtualTable/hooks/useLazyRows";
 import LazyVirtualTable from "components/common/virtualTable/LazyVirtualTable";
+import { lazyTableOptions } from "components/common/virtualTable/utils/lazyTableUtils";
 import { useServices } from "components/hooks/useServices";
 import { AllRevisionsTableProps } from "components/pages/database/documents/allRevisions/common/allRevisionsTypes";
 import { useAllRevisionsColumns } from "components/pages/database/documents/allRevisions/hooks/useAllRevisionsColumns";
@@ -21,10 +21,7 @@ export default function AllRevisionsTableNonSharded({
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
 
-    const area = useVirtualTableArea();
-
-    const lazyTable = useLazyVirtualTable({
-        area,
+    const lazyRows = useLazyRows({
         fetchData: (skip: number, take: number) =>
             databasesService.getRevisionsPreview({
                 databaseName,
@@ -39,18 +36,19 @@ export default function AllRevisionsTableNonSharded({
     const columns = useAllRevisionsColumns(databaseName, false, width, selectedRows, setSelectedRows);
 
     useImperativeHandle(fetcherRef, () => ({
-        reload: lazyTable.reload,
+        reload: lazyRows.reload,
     }));
 
     const table = useReactTable({
+        ...lazyTableOptions,
         columns,
-        data: lazyTable.data,
+        data: lazyRows.data,
         getCoreRowModel: getCoreRowModel(),
     });
 
     return (
         <div className="d-flex flex-column" style={{ height }}>
-            <LazyVirtualTable lazyTable={lazyTable} table={table} itemsName="revisions" />
+            <LazyVirtualTable table={table} lazyRows={lazyRows} itemsName="revisions" />
         </div>
     );
 }

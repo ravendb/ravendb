@@ -15,6 +15,8 @@ type Screen = ReturnType<typeof rtlRender>["screen"];
 const getSelectAllCheckbox = (screen: Screen) => screen.getByRole("checkbox", { name: "Select all documents" });
 const getDocumentCheckboxes = (screen: Screen) => screen.getAllByRole("checkbox", { name: "Select document" });
 const getSelectionActions = (screen: Screen) => screen.queryByTestId("selection-actions");
+const getRowCheckbox = (screen: Screen, documentId: string) =>
+    within(screen.getByText(documentId).closest("tr")).getByRole("checkbox", { name: "Select document" });
 
 const openDisplayDropdown = (screen: Screen) => {
     fireEvent.click(screen.getByRole("button", { name: /Display/ }));
@@ -230,6 +232,44 @@ describe("DocumentsPage", () => {
         fireEvent.keyUp(document, { key: "Shift", shiftKey: false });
 
         expect(rows[2]).not.toHaveClass("selection-preview");
+    });
+
+    it("toggles the clicked document after scrolling shifted the loaded rows", async () => {
+        const { screen, container } = rtlRender(
+            <DocumentsListStory collection="Orders" isSharded={false} totalCount={1000} />
+        );
+
+        expect(await screen.findByText("orders/16-A")).toBeInTheDocument();
+
+        const scrollContainer = container.querySelector<HTMLDivElement>(".table-container");
+        fireEvent.scroll(scrollContainer, { target: { scrollTop: 1200 } });
+
+        expect(await screen.findByText("orders/40-A")).toBeInTheDocument();
+
+        fireEvent.click(getRowCheckbox(screen, "orders/16-A"));
+
+        expect(getRowCheckbox(screen, "orders/16-A")).toBeChecked();
+        expect(getRowCheckbox(screen, "orders/26-A")).not.toBeChecked();
+    });
+
+    it("selects the whole shift range when its start is scrolled out of view", async () => {
+        const { screen, container } = rtlRender(
+            <DocumentsListStory collection="Orders" isSharded={false} totalCount={1000} />
+        );
+
+        expect(await screen.findByText("orders/3-A")).toBeInTheDocument();
+
+        fireEvent.click(getRowCheckbox(screen, "orders/3-A"));
+
+        const scrollContainer = container.querySelector<HTMLDivElement>(".table-container");
+        fireEvent.scroll(scrollContainer, { target: { scrollTop: 2400 } });
+
+        expect(await screen.findByText("orders/71-A")).toBeInTheDocument();
+        expect(screen.queryByText("orders/3-A")).not.toBeInTheDocument();
+
+        fireEvent.click(getRowCheckbox(screen, "orders/71-A"), { shiftKey: true });
+
+        expect(within(getSelectionActions(screen)).getByText("69")).toBeInTheDocument();
     });
 
     it("can toggle pagination from the display dropdown", async () => {

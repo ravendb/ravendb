@@ -7,14 +7,15 @@ import { CustomDropdownToggle } from "components/common/Dropdown";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { systemCollectionNames } from "components/common/shell/collectionsTrackerSlice";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { LazyTableSelection } from "components/common/virtualTable/hooks/useLazyTableSelection";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useServices } from "components/hooks/useServices";
 import { CollectionDeletionCallbacks } from "components/pages/database/documents/documentsList/hooks/useCollectionRemovalRedirect";
-import { DocumentsSelection } from "components/pages/database/documents/documentsList/hooks/useDocumentsSelection";
 import CopyDocumentsModal, {
     CopyDocumentsModalData,
 } from "components/pages/database/documents/documentsList/partials/CopyDocumentsModal";
 import { useAppSelector } from "components/store";
+import document from "models/database/documents/document";
 import { useState } from "react";
 import { useAsyncCallback } from "react-async-hook";
 import Button from "react-bootstrap/Button";
@@ -26,7 +27,7 @@ interface DocumentsSelectionActionsProps {
     // null means all documents
     collectionName: string | null;
     collectionDocumentCount: number | null;
-    selection: DocumentsSelection;
+    selection: LazyTableSelection<document>;
     collectionDeletionCallbacks: CollectionDeletionCallbacks;
     onSelectionDeleted: () => void;
 }
