@@ -64,7 +64,24 @@ namespace Sparrow.Utils
             }
         }
 
-        private static async Task WaitForInternal(TimeSpan time, bool canBeCanceled, CancellationToken token)
+        private sealed class CancellationSignal : TaskCompletionSource<object>
+        {
+            public static readonly Action<object> Callback = static state =>
+            {
+                var signal = (CancellationSignal)state;
+                signal.TrySetCanceled(signal._token);
+            };
+
+            private readonly CancellationToken _token;
+
+            public CancellationSignal(CancellationToken token)
+                : base(TaskCreationOptions.RunContinuationsAsynchronously)
+            {
+                _token = token;
+            }
+        }
+
+        private static async Task WaitForInternal(TimeSpan time, CancellationToken token)
         {
             if (time.TotalMilliseconds < 0)
                 ThrowOutOfRange();
@@ -79,26 +96,21 @@ namespace Sparrow.Utils
                 duration += 50 - mod;
             }
 
-            var value = GetHolderForDuration(duration);
+            var step = duration / 8;
+            var deadline = duration - step;
 
-            using (canBeCanceled ? (IDisposable)token.Register(value.TimerCallback, null) : null)
+            var sp = Stopwatch.StartNew();
+
+            var next = GetHolderForDuration(duration).NextTask;
+            while (true)
             {
-                var sp = Stopwatch.StartNew();
-                await value.NextTask.ConfigureAwait(false);
+                await next.ConfigureAwait(false);
                 token.ThrowIfCancellationRequested();
 
-                var step = duration / 8;
-
-                if (sp.ElapsedMilliseconds >= (duration - step))
+                if (sp.ElapsedMilliseconds >= deadline)
                     return;
 
-                value = GetHolderForDuration(step);
-
-                do
-                {
-                    token.ThrowIfCancellationRequested();
-                    await value.NextTask.ConfigureAwait(false);
-                } while (sp.ElapsedMilliseconds < (duration - step));
+                next = GetHolderForDuration(step).NextTask;
             }
         }
 
@@ -135,22 +147,20 @@ namespace Sparrow.Utils
                 return await Task.WhenAny(outer, Task.Delay(duration, token)).ConfigureAwait(false);
             }
 
-            var canBeCanceled = token != CancellationToken.None && token.CanBeCanceled;
-
             Task task;
             // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
             if (duration != Timeout.InfiniteTimeSpan)
-                task = WaitForInternal(duration, canBeCanceled, token);
+                task = WaitForInternal(duration, token);
             else
                 task = InfiniteTask;
 
-            if (canBeCanceled == false)
+            if (token.CanBeCanceled == false)
             {
                 return await Task.WhenAny(outer, task).ConfigureAwait(false);
             }
 
-            var onCancel = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-            using (token.Register(tcs => onCancel.TrySetCanceled(), onCancel))
+            var onCancel = new CancellationSignal(token);
+            using (token.Register(CancellationSignal.Callback, onCancel))
             {
                 return await Task.WhenAny(outer, task, onCancel.Task).ConfigureAwait(false);
             }
@@ -175,29 +185,21 @@ namespace Sparrow.Utils
                 return;
             }
 
-            var canBeCanceled = token != CancellationToken.None && token.CanBeCanceled;
-
             Task task;
             // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
             if (duration != Timeout.InfiniteTimeSpan)
-                task = WaitForInternal(duration, canBeCanceled, token);
+                task = WaitForInternal(duration, token);
             else
                 task = InfiniteTask;
 
-            if (canBeCanceled == false)
+            if (token.CanBeCanceled == false)
             {
                 await task.ConfigureAwait(false);
                 return;
             }
 
-            var onCancel = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-            if (task == InfiniteTask)
-            {
-                await onCancel.Task.ConfigureAwait(false);
-                return;
-            }
-
-            using (token.Register(tcs => onCancel.TrySetCanceled(), onCancel))
+            var onCancel = new CancellationSignal(token);
+            using (token.Register(CancellationSignal.Callback, onCancel))
             {
                 await Task.WhenAny(task, onCancel.Task).ConfigureAwait(false);
             }
