@@ -28,6 +28,10 @@ public sealed class PlanTemplate
     /// <summary>Pre-identified direct scan driving clause. (range/eq on the primary ORDER BY field, non-negated, non-boosted). </summary>
     public int SortDrivingClauseIndex = -1;
 
+    /// <summary>ORDER BY slots a top-level equality pins. Which of them a plan drops depends on the bound value's
+    /// type - see <see cref="CompiledPlan.SortDropMask"/>.</summary>
+    public ushort PinnedSortSlots;
+
     /// <summary>Pre-identified compound-exact-match clause pair (template-position indices).</summary>
     public (int First, int Second) CompoundExact = (-1, -1);
     
