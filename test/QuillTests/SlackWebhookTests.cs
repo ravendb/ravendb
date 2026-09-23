@@ -58,8 +58,7 @@ public class SlackWebhookTests(ITestOutputHelper output, QuillSlackFixture fixtu
         Assert.Equal(Channel.IdPrefix + channel.ChannelId, request.ChannelId);
         Assert.Matches($"^chats/slack/{channel.ChannelId}/{Sender}/[0-9a-f]{{16}}$", request.ConversationId);
         Assert.Equal(Sender, request.Parameters["slackUser"].GetString());
-        Assert.NotNull(request.Lifetime?.TranscriptIdleWindow);
-        Assert.NotNull(request.Lifetime?.PreviewRetention);
+        Assert.NotNull(request.IdleWindow);
 
         await Slack.WaitUntilAsync(
             () => Slack.EditedMessages.Any(e => e.Text == "Hello from the fake agent."), "the finalized edit");

@@ -9,16 +9,15 @@ namespace QuillTests;
 
 public class UsageRollupTests(ITestOutputHelper output) : QuillTestBase(output)
 {
-    private static readonly ConversationLifetime ChannelLifetime =
-        new(TranscriptIdleWindow: TimeSpan.FromHours(24), PreviewRetention: TimeSpan.FromDays(30));
+    private static readonly TimeSpan ChannelIdleWindow = TimeSpan.FromHours(24);
 
-    private static AgentRequest Request(string database, string conversationId, ConversationLifetime? lifetime) =>
+    private static AgentRequest Request(string database, string conversationId, TimeSpan? idleWindow) =>
         new(database, "support", conversationId, "hello", "channels/abc123",
-            new Dictionary<string, JsonElement>(), lifetime);
+            new Dictionary<string, JsonElement>(), idleWindow);
 
     private static Task<bool> TurnAsync(QuillApp app, string conversationId, DateTime at,
-        long tokens = 0, ConversationLifetime? lifetime = null) =>
-        AgentRouter.RecordTurnAsync(app.Store, Request(app.Slug, conversationId, lifetime ?? ChannelLifetime),
+        long tokens = 0, bool withIdleWindow = true) =>
+        AgentRouter.RecordTurnAsync(app.Store, Request(app.Slug, conversationId, withIdleWindow ? ChannelIdleWindow : null),
             "support", conversationId, "hi", tokens, at, CancellationToken.None);
 
     private static async Task<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry<UsageIncrement>[]> EntriesAsync(QuillApp app)
@@ -88,8 +87,8 @@ public class UsageRollupTests(ITestOutputHelper output) : QuillTestBase(output)
         await using var app = await NewAppAsync();
         var first = new DateTime(2026, 8, 17, 12, 0, 0, DateTimeKind.Utc);
 
-        Assert.False(await TurnAsync(app, "chats/one", first, lifetime: new ConversationLifetime(null, null)));
-        Assert.False(await TurnAsync(app, "chats/one", first.AddDays(90), lifetime: new ConversationLifetime(null, null)));
+        Assert.False(await TurnAsync(app, "chats/one", first, withIdleWindow: false));
+        Assert.False(await TurnAsync(app, "chats/one", first.AddDays(90), withIdleWindow: false));
 
         var entries = await EntriesAsync(app);
         Assert.Equal(1, entries.Sum(e => e.Value.Conversations));

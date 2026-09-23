@@ -45,8 +45,6 @@ public sealed class ApplianceOptions
 
     public DiscordOptions Discord { get; set; } = new();
 
-    public TimeSpan? ChannelConversationRetention { get; set; } = TimeSpan.FromDays(30);
-
     public TimeSpan? ChannelConversationIdleWindow { get; set; } = TimeSpan.FromHours(24);
 
     public TimeSpan ReadinessInitialDelay { get; set; } = TimeSpan.FromSeconds(15);

@@ -19,7 +19,7 @@ public class ConversationLifetimeE2ETests(ITestOutputHelper output, QuillCollect
     private const string AgentId = "lifetime";
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Transcript_expires_with_the_idle_window_and_the_preview_with_the_retention()
+    public async Task Transcript_and_preview_both_expire_with_the_idle_window()
     {
         await using var mock = await MockQuillServices.StartAsync(new FinalTurn("""{"reply":"ok"}"""));
 
@@ -27,10 +27,8 @@ public class ConversationLifetimeE2ETests(ITestOutputHelper output, QuillCollect
         var config = (await app.GetAgentAsync(AgentId)).Configuration;
 
         var idleWindow = TimeSpan.FromHours(24);
-        var retention = TimeSpan.FromDays(30);
         var request = new AgentRequest(app.Slug, AgentId, "chats/lifetime-e2e", "hello", "",
-            new Dictionary<string, JsonElement>(),
-            new ConversationLifetime(idleWindow, retention));
+            new Dictionary<string, JsonElement>(), idleWindow);
 
         var before = DateTime.UtcNow;
         var result = await Router(app).RunAsync(request, _ => ValueTask.CompletedTask, config, CancellationToken.None);
@@ -45,7 +43,7 @@ public class ConversationLifetimeE2ETests(ITestOutputHelper output, QuillCollect
         var preview = await session.LoadAsync<ConversationPreview>(
             ConversationPreview.IdFor(result.ConversationId));
         var previewExpires = ExpiresOf(session.Advanced.GetMetadataFor(preview));
-        Assert.InRange(previewExpires, before.Add(retention), after.Add(retention));
+        Assert.InRange(previewExpires, before.Add(idleWindow), after.Add(idleWindow));
     }
 
     private static DateTime ExpiresOf(Raven.Client.Documents.Session.IMetadataDictionary metadata) =>
