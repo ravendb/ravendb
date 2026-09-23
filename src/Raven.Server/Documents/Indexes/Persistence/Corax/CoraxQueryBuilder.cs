@@ -261,12 +261,8 @@ public static class CoraxQueryBuilder
                 coraxQuery = ToCoraxQuery(builderParameters, metadata.Query.Where, ref streamingOptimization);
                 coraxQuery = MaterializeWhenNeeded(builderParameters, coraxQuery, ref streamingOptimization);
             }
-            // We sort on known field types, we'll optimize based on the first one to get the rest
-            // Non-existing posting list isn't aware of dynamic fields, so we can't use this optimization for them
-            // The scan replaces the source with one value tree of the sort field, so it needs that tree to cover every entry
-            // A CreateField write can add a term to a declared field without marking it multi-termed, which breaks the
-            // coverage counts below, so an index that writes dynamic fields at all does not get the scan.
-            else if (sortMetadata is [{ FieldType: MatchCompareFieldType.Floating or MatchCompareFieldType.Integer or MatchCompareFieldType.Sequence, Field.FieldId: not CoraxConstants.IndexWriter.DynamicField } sortBy, ..]
+            // CreateField can bypass the multi-term marker; also rules out dynamic sort fields
+            else if (sortMetadata is [{ FieldType: MatchCompareFieldType.Floating or MatchCompareFieldType.Integer or MatchCompareFieldType.Sequence } sortBy, ..]
                      && builderParameters.HasDynamics == false
                      && indexSearcher.SortFieldTreeCoversAllEntries(sortBy.Field, sortBy.FieldType))
             {
