@@ -6,6 +6,7 @@ import Col from "react-bootstrap/Col";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { FormInput, FormSwitch } from "components/common/Form";
+import OverridableField from "components/common/OverridableField";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -30,16 +31,12 @@ import moment from "moment";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import RichAlert from "components/common/RichAlert";
-import { useStudioTranslation } from "hooks/useStudioTranslation";
-import { StudioTrans } from "components/common/i18n/StudioTrans";
 
 const defaultItemsToProcess = 65536;
 
 export default function DocumentRefresh() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
-    const t = useStudioTranslation("documentRefresh");
-    const commonT = useStudioTranslation("common");
 
     const asyncGetRefreshConfiguration = useAsyncCallback<DocumentRefreshFormData>(async () =>
         mapToFormData(await databasesService.getRefreshConfiguration(databaseName))
@@ -68,7 +65,6 @@ export default function DocumentRefresh() {
     });
 
     const refreshFrequencyInHours = moment.duration(formValues.refreshFrequency, "seconds").asHours();
-    const minPeriodForRefreshInSeconds = moment.duration(minPeriodForRefreshInHours, "hours").asSeconds();
 
     const isLimitWarningVisible =
         minPeriodForRefreshInHours > 0 &&
@@ -116,7 +112,7 @@ export default function DocumentRefresh() {
                 MaxItemsToProcess: formData.isLimitMaxItemsToProcessEnabled ? formData.maxItemsToProcess : null,
             });
 
-            messagePublisher.reportSuccess(t("saveSuccess"));
+            messagePublisher.reportSuccess("Refresh configuration saved successfully");
             activeDatabaseTracker.default.database().hasRefreshConfiguration(formData.isDocumentRefreshEnabled);
 
             reset(formData);
@@ -128,7 +124,7 @@ export default function DocumentRefresh() {
     }
 
     if (asyncGetRefreshConfiguration.status === "error") {
-        return <LoadError error={t("loadError")} refresh={asyncGetRefreshConfiguration.execute} />;
+        return <LoadError error="Unable to load document refresh" refresh={asyncGetRefreshConfiguration.execute} />;
     }
 
     return (
@@ -137,7 +133,7 @@ export default function DocumentRefresh() {
                 <Row className="gy-sm">
                     <Col>
                         <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
-                            <AboutViewHeading title={t("title")} icon="expos-refresh" />
+                            <AboutViewHeading title="Document Refresh" icon="expos-refresh" />
                             <ButtonWithSpinner
                                 type="submit"
                                 variant="primary"
@@ -146,75 +142,77 @@ export default function DocumentRefresh() {
                                 disabled={!formState.isDirty || isLimitWarningVisible}
                                 isSpinning={formState.isSubmitting}
                             >
-                                {commonT("save")}
+                                Save
                             </ButtonWithSpinner>
                             <Col>
                                 <Card>
                                     <Card.Body>
-                                        <div className="vstack gap-2">
+                                        <div className="vstack gap-3">
                                             <FormSwitch
                                                 name="isDocumentRefreshEnabled"
                                                 control={control}
                                                 disabled={formState.isSubmitting}
                                             >
-                                                {t("enableSwitch")}
+                                                Enable Document Refresh
                                             </FormSwitch>
                                             <div>
-                                                <FormSwitch
-                                                    name="isRefreshFrequencyEnabled"
+                                                <OverridableField
                                                     control={control}
-                                                    className="mb-3"
+                                                    overrideName="isRefreshFrequencyEnabled"
+                                                    label="Custom refresh frequency"
                                                     disabled={
                                                         formState.isSubmitting || !formValues.isDocumentRefreshEnabled
                                                     }
+                                                    marginClass="mb-0"
                                                 >
-                                                    {t("customFrequencySwitch")}
-                                                </FormSwitch>
-                                                <FormInput
-                                                    name="refreshFrequency"
-                                                    control={control}
-                                                    type="number"
-                                                    disabled={
-                                                        formState.isSubmitting || !formValues.isRefreshFrequencyEnabled
-                                                    }
-                                                    placeholder={t("frequencyPlaceholder", {
-                                                        seconds:
-                                                            minPeriodForRefreshInHours > 0
-                                                                ? minPeriodForRefreshInSeconds
-                                                                : 60,
-                                                    })}
-                                                    addon={t("secondsAddon")}
-                                                />
+                                                    {({ isOverridden }) => (
+                                                        <FormInput
+                                                            name="refreshFrequency"
+                                                            control={control}
+                                                            type="number"
+                                                            disabled={formState.isSubmitting || !isOverridden}
+                                                            placeholder={
+                                                                minPeriodForRefreshInHours > 0
+                                                                    ? `Default (${moment
+                                                                          .duration(minPeriodForRefreshInHours, "hours")
+                                                                          .asSeconds()})`
+                                                                    : "Default (60)"
+                                                            }
+                                                            addon="seconds"
+                                                        />
+                                                    )}
+                                                </OverridableField>
                                                 {isLimitWarningVisible && (
                                                     <RichAlert variant="warning" className="mt-3">
-                                                        {t("limitWarning", {
-                                                            hours: minPeriodForRefreshInHours,
-                                                            seconds: minPeriodForRefreshInSeconds,
-                                                        })}
+                                                        Your current license does not allow a frequency higher than{" "}
+                                                        {minPeriodForRefreshInHours} hours (
+                                                        {moment
+                                                            .duration(minPeriodForRefreshInHours, "hours")
+                                                            .asSeconds()}{" "}
+                                                        seconds)
                                                     </RichAlert>
                                                 )}
                                             </div>
                                             <div>
-                                                <FormSwitch
-                                                    name="isLimitMaxItemsToProcessEnabled"
+                                                <OverridableField
                                                     control={control}
-                                                    className="mb-3"
+                                                    overrideName="isLimitMaxItemsToProcessEnabled"
+                                                    label="Max number of documents to process in a single run"
                                                     disabled={
                                                         formState.isSubmitting || !formValues.isDocumentRefreshEnabled
                                                     }
+                                                    marginClass="mb-0"
                                                 >
-                                                    {t("maxItemsSwitch")}
-                                                </FormSwitch>
-                                                <FormInput
-                                                    name="maxItemsToProcess"
-                                                    control={control}
-                                                    type="number"
-                                                    disabled={
-                                                        formState.isSubmitting ||
-                                                        !formValues.isLimitMaxItemsToProcessEnabled
-                                                    }
-                                                    addon={t("itemsAddon")}
-                                                />
+                                                    {({ isOverridden }) => (
+                                                        <FormInput
+                                                            name="maxItemsToProcess"
+                                                            control={control}
+                                                            type="number"
+                                                            disabled={formState.isSubmitting || !isOverridden}
+                                                            addon="items"
+                                                        />
+                                                    )}
+                                                </OverridableField>
                                             </div>
                                         </div>
                                     </Card.Body>
@@ -226,35 +224,29 @@ export default function DocumentRefresh() {
                         <AboutViewAnchored>
                             <AccordionItemWrapper targetId="1" icon="about" color="info">
                                 <p>
-                                    <StudioTrans
-                                        ns="documentRefresh"
-                                        i18nKey="about.intro"
-                                        components={{ strong: <strong /> }}
-                                    />
+                                    When <strong>Document Refresh</strong> is enabled:
                                 </p>
                                 <ul>
                                     <li>
-                                        <StudioTrans
-                                            ns="documentRefresh"
-                                            i18nKey="about.scanItem"
-                                            components={{ strong: <strong /> }}
-                                        />
+                                        The server scans the database at the specified <strong>frequency</strong>,
+                                        searching for documents that should be refreshed.
                                     </li>
                                     <li>
-                                        <StudioTrans
-                                            ns="documentRefresh"
-                                            i18nKey="about.metadataItem"
-                                            components={{ code: <code /> }}
-                                        />
+                                        Any document that has a <code>@refresh</code> metadata property whose time has
+                                        passed at the time of the scan will be modified by removing this property.
                                     </li>
-                                    <li>{t("about.triggerItem")}</li>
+                                    <li>
+                                        This modification will trigger any processes related to the document, such as:
+                                        re-indexing or taking part in an ongoing-task (e.g. Replication, ETL,
+                                        Subscriptions, etc.), as defined by your configuration.
+                                    </li>
                                 </ul>
-                                <p>{t("about.exampleLabel")}</p>
+                                <p>Example of a document scheduled for refresh:</p>
                                 <Code code={codeExample} language="javascript" />
                                 <hr />
-                                <div className="small-label mb-2">{commonT("usefulLinks")}</div>
+                                <div className="small-label mb-2">useful links</div>
                                 <a href={documentRefreshDocsLink} target="_blank">
-                                    <Icon icon="newtab" /> {t("about.docsLink")}
+                                    <Icon icon="newtab" /> Docs - Document Refresh
                                 </a>
                             </AccordionItemWrapper>
                             <FeatureAvailabilitySummaryWrapper

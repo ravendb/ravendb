@@ -1,6 +1,7 @@
 import savedQueriesStorage from "common/storage/savedQueriesStorage";
 import AceEditor from "components/common/ace/AceEditor";
-import { FormInput, FormAceEditor, FormGroup, FormLabel, FormSelect, FormSwitch } from "components/common/Form";
+import { FormInput, FormAceEditor, FormGroup, FormLabel, FormSelect } from "components/common/Form";
+import OverridableField from "components/common/OverridableField";
 import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import useRqlLanguageService from "components/hooks/useRqlLanguageService";
@@ -190,74 +191,43 @@ export default function EditGenAiTaskQueryToolItem({ index, remove, save, edit }
                     <Accordion.Header
                         as={() => <AccordionButton className="rounded-2 panel-bg-2">Advanced settings</AccordionButton>}
                     ></Accordion.Header>
-                    <Accordion.Body>
+                    <Accordion.Body className="pt-0">
                         <hr className="my-0 mb-2" />
-                        <FormGroup>
-                            <FormLabel>
-                                Allow model queries
-                                <PopoverWithHoverWrapper message={<AllowModelQueriesTooltip />}>
-                                    <Icon icon="info-new" margin="ms-1" />
-                                </PopoverWithHoverWrapper>
-                            </FormLabel>
-                            <div className="d-flex flex-wrap align-items-center">
+                        <OverridableField
+                            control={control}
+                            overrideName={`queries.${index}.isAllowModelQueriesOverride`}
+                            resetOnDisable={{ setValue, valueName: `queries.${index}.isAllowModelQueries` }}
+                            label="Allow model queries"
+                            tooltip={<AllowModelQueriesTooltip />}
+                        >
+                            {({ isOverridden }) => (
                                 <FormSelect
                                     control={control}
                                     name={`queries.${index}.isAllowModelQueries`}
                                     options={isAllowModelQueriesOptions}
-                                    isDisabled={!queryItem.isAllowModelQueriesOverride}
-                                    placeholder={
-                                        queryItem.isAllowModelQueriesOverride ? "Select True or False" : "Default"
-                                    }
+                                    isDisabled={!isOverridden}
+                                    placeholder={isOverridden ? "Select True or False" : "Default"}
                                 />
-                                <FormSwitch
-                                    control={control}
-                                    name={`queries.${index}.isAllowModelQueriesOverride`}
-                                    className="ms-2"
-                                    afterChange={(isChecked) => {
-                                        if (!isChecked) {
-                                            setValue(`queries.${index}.isAllowModelQueries`, null, {
-                                                shouldValidate: true,
-                                            });
-                                        }
-                                    }}
-                                >
-                                    Override
-                                </FormSwitch>
-                            </div>
-                        </FormGroup>
-                        <FormGroup className="mb-0">
-                            <FormLabel>
-                                Add to initial context
-                                <PopoverWithHoverWrapper message={<AddToInitialContextTooltip />}>
-                                    <Icon icon="info-new" margin="ms-1" />
-                                </PopoverWithHoverWrapper>
-                            </FormLabel>
-                            <div className="d-flex flex-wrap align-items-center">
+                            )}
+                        </OverridableField>
+                        <OverridableField
+                            control={control}
+                            overrideName={`queries.${index}.isAddToInitialContextOverride`}
+                            resetOnDisable={{ setValue, valueName: `queries.${index}.isAddToInitialContext` }}
+                            label="Add to initial context"
+                            tooltip={<AddToInitialContextTooltip />}
+                            marginClass="mb-0"
+                        >
+                            {({ isOverridden }) => (
                                 <FormSelect
                                     control={control}
                                     name={`queries.${index}.isAddToInitialContext`}
                                     options={isAddToInitialContextOptions}
-                                    isDisabled={!queryItem.isAddToInitialContextOverride}
-                                    placeholder={
-                                        queryItem.isAddToInitialContextOverride ? "Select True or False" : "Default"
-                                    }
+                                    isDisabled={!isOverridden}
+                                    placeholder={isOverridden ? "Select True or False" : "Default"}
                                 />
-                                <FormSwitch
-                                    control={control}
-                                    name={`queries.${index}.isAddToInitialContextOverride`}
-                                    className="ms-2"
-                                    afterChange={(isChecked) => {
-                                        if (!isChecked) {
-                                            setValue(`queries.${index}.isAddToInitialContext`, null, {
-                                                shouldValidate: true,
-                                            });
-                                        }
-                                    }}
-                                >
-                                    Override
-                                </FormSwitch>
-                            </div>
-                        </FormGroup>
+                            )}
+                        </OverridableField>
                     </Accordion.Body>
                 </Accordion.Item>
             </Accordion>

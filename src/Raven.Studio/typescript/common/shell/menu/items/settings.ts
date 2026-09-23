@@ -1,4 +1,4 @@
-﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
+import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 import reactUtils = require("common/reactUtils");
@@ -126,7 +126,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             search: {
                 innerActions: [
                     { name: "Enable Document Refresh" },
-                    { name: "Set custom refresh frequency" },
+                    { name: "Custom refresh frequency" },
                 ],
             },
         }),
@@ -237,7 +237,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             search: {
                 innerActions: [
                     { name: "Enable Data Archival" },
-                    { name: "Set custom archival frequency" },
+                    { name: "Custom archival frequency" },
                 ],
             },
         }),
