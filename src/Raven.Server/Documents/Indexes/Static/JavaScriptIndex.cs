@@ -359,7 +359,7 @@ function map(name, lambda) {
         
         private static bool CallsCreateField(string code) =>
             string.IsNullOrEmpty(code) == false &&
-            new JavaScriptParser(DefaultParserOptions).ParseScript(code).DescendantNodes().Any(n => n is CallExpression { Callee: Identifier { Name: "createField" } });
+            new JavaScriptParser(DefaultParserOptions).ParseScript(code).DescendantNodes().Any(n => n is CallExpression { Callee: Identifier { Name: "createField" }, Arguments.Count: 3 });
 
         private MapMetadata ExecuteCodeAndCollectReferencedCollections(string code, string additionalSources)
         {
