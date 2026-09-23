@@ -369,7 +369,15 @@ public static class CoraxQueryBuilder
                 {
                     IQueryMatch left = null;
                     IQueryMatch right = null;
-                    
+
+                    // 'Foo > $a and Foo > $b' keeps only the tighter bound. The query metadata already placed such bounds
+                    // next to each other; their values are known only here.
+                    if (QueryBuilderHelper.TryMergeSameDirectionBounds(where, metadata.Query, metadata, queryParameters, index, out var tighterBound, out var remainder))
+                    {
+                        var mergedExpression = remainder == null ? tighterBound : new BinaryExpression(remainder, tighterBound, OperatorType.And);
+                        builderParameters.BuildSteps?.Add($"Kept the tighter of the same-direction bounds: {expression} -> {mergedExpression}");
+                        return ToCoraxQuery(builderParameters, mergedExpression, ref leftOnlyOptimization, exact);
+                    }
 
                     leftOnlyOptimization.BinaryMatchTraversed();
                     switch (@where.Left, @where.Right)
