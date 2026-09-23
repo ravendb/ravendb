@@ -74,9 +74,12 @@ internal sealed class GetTombstonesStateCommand : RavenCommand<GetTombstonesStat
         }
     }
 
-    public GetTombstonesStateCommand(string nodeTag)
+    private readonly bool _exact;
+
+    public GetTombstonesStateCommand(string nodeTag, bool exact = false)
     {
         SelectedNodeTag = nodeTag;
+        _exact = exact;
     }
 
     public override bool IsReadRequest => false;
@@ -84,6 +87,11 @@ internal sealed class GetTombstonesStateCommand : RavenCommand<GetTombstonesStat
     public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
     {
         url = $"{node.Url}/databases/{node.Database}/admin/tombstones/state";
+
+        if (_exact)
+        {
+            url += "?exact=true";
+        }
 
         return new HttpRequestMessage
         {

@@ -53,6 +53,8 @@ export interface IndexPanelProps {
     deleteIndex: () => Promise<void>;
     resetIndex: (mode?: Raven.Client.Documents.Indexes.IndexResetMode) => void;
     openFaulty: (location: databaseLocationSpecifier) => Promise<void>;
+    exactProgress: boolean;
+    toggleExactProgress: (location: databaseLocationSpecifier) => Promise<void>;
     selected: boolean;
     hasReplacement?: boolean;
     toggleSelection: () => void;
@@ -504,6 +506,8 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                 globalIndexingStatus={globalIndexingStatus}
                                 showStaleReason={(location) => showStaleReasons(index, location)}
                                 openFaulty={openFaulty}
+                                exactProgress={props.exactProgress}
+                                toggleExactProgress={props.toggleExactProgress}
                             />
                         </div>
                     </Collapse>

@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             };
         }
 
-        internal override IndexProgress GetProgress(QueryOperationContext queryContext, Stopwatch overallDuration, bool? isStale = null)
+        internal override IndexProgress GetProgress(QueryOperationContext queryContext, Stopwatch overallDuration, bool exact)
         {
             return new IndexProgress
             {

@@ -1337,14 +1337,14 @@ namespace Voron.Data.Tables
         }
 
 
-        public long GetNumberOfEntriesAfter(TableSchema.FixedSizeKeyIndexDef index, long afterValue, out long totalCount, Stopwatch overallDuration)
+        public NumberOfEntriesAfterResult GetNumberOfEntriesAfter(FixedSizeKeyIndexDef index, long afterValue, Stopwatch overallDuration, bool exact)
         {
             var fst = GetFixedSizeTree(index);
 
-            return fst.GetNumberOfEntriesAfter(afterValue, out totalCount, overallDuration, EstimationAccuracy.EstimateIfLongRunning);
+            return fst.GetNumberOfEntriesAfter(afterValue, overallDuration, exact ? EstimationAccuracy.Exact : EstimationAccuracy.EstimateIfLongRunning);
         }
 
-        public long GetNumberOfEntriesFor(TableSchema.FixedSizeKeyIndexDef index)
+        public long GetNumberOfEntriesFor(FixedSizeKeyIndexDef index)
         {
             var fst = GetFixedSizeTree(index);
             return fst.NumberOfEntries;

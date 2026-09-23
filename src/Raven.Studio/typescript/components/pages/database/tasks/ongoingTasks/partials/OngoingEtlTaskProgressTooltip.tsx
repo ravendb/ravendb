@@ -49,6 +49,14 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
                         const nameNode = (
                             <div className="d-flex align-items-center justify-content-center gap-1">
                                 {transformationScriptProgress.transformationName}
+                                {transformationScriptProgress.estimated && (
+                                    <small
+                                        className="text-muted"
+                                        title="Estimated value. The exact count takes too long to calculate and will be skipped for performance."
+                                    >
+                                        (~)
+                                    </small>
+                                )}
                                 <Button
                                     variant="link"
                                     className="p-0"
