@@ -2,13 +2,10 @@ import {
     ColumnDef,
     ColumnOrderState,
     ColumnPinningState,
-    functionalUpdate,
-    OnChangeFn,
     Table as TanstackTable,
     VisibilityState,
 } from "@tanstack/react-table";
 import changeVectorUtils from "common/changeVectorUtils";
-import { Checkbox } from "components/common/Checkbox";
 import { useDocumentColumnsProvider } from "components/common/virtualTable/columnProviders/useDocumentColumnsProvider";
 import CellValue from "components/common/virtualTable/cells/CellValue";
 import { CellWithCopy } from "components/common/virtualTable/cells/CellWithCopy";
@@ -23,23 +20,21 @@ import {
     CustomColumnDefinition,
     getCustomColumnProperties,
 } from "components/common/virtualTable/commonComponents/columnsSelect/customColumns";
-import { columnCheckbox } from "components/common/virtualTable/utils/commonColumnDefs";
+import { columnCheckbox, createLazySelectionColumn } from "components/common/virtualTable/utils/commonColumnDefs";
 import { columnDocumentFlags } from "components/common/virtualTable/utils/documentColumnDefs";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import { useAppUrls } from "components/hooks/useAppUrls";
-import { DocumentsSelection } from "components/pages/database/documents/documentsList/hooks/useDocumentsSelection";
 import { FullDocumentProvider } from "components/pages/database/documents/documentsList/hooks/useFullDocumentProvider";
 import { documentsColumnLayoutStorage } from "components/pages/database/documents/documentsList/utils/documentsColumnLayoutStorage";
 import { uniq } from "lodash";
 import document from "models/database/documents/document";
-import { ChangeEvent, RefObject, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 interface UseDocumentsColumnsProps {
     databaseName: string;
     // null means all documents
     collectionName: string | null;
     tableBodyWidthInPx: number;
-    selectionRef: RefObject<DocumentsSelection>;
     // provides the full values for the cell previews, the rows hold trimmed and stubbed ones
     fullDocumentProvider: FullDocumentProvider;
 }
@@ -51,14 +46,11 @@ export interface DocumentsColumns {
         columnOrder: ColumnOrderState;
         columnPinning: ColumnPinningState;
     };
-    onColumnVisibilityChange: OnChangeFn<VisibilityState>;
-    onColumnOrderChange: OnChangeFn<ColumnOrderState>;
-    onColumnPinningChange: OnChangeFn<ColumnPinningState>;
     // properties the documents preview has to include, the table reloads whenever they change
     previewBindings: string[];
     // properties the custom columns read, they are fetched in full because the preview may trim them
     fullBindings: string[];
-    onAvailableColumns: (columnNames: string[]) => void;
+    onPreviewResult: (result: pagedResultWithAvailableColumns<document>) => void;
     isCustomLayout: boolean;
     settingsOptions: TableDisplaySettingsOptions;
     getExportFields: (table: TanstackTable<document>) => string[];
@@ -66,6 +58,7 @@ export interface DocumentsColumns {
 
 const noColumns: string[] = [];
 const noCustomColumns: CustomColumnDefinition[] = [];
+const noPinning: ColumnPinningState = {};
 const flagsColumnWidth = 130;
 const propertyColumnWidth = 150;
 const customColumnWidth = 200;
@@ -75,13 +68,17 @@ const changeVectorColumnId = "Change Vector";
 const lastModifiedColumnId = "Last Modified";
 const collectionColumnId = "Collection";
 
+const selectionColumn = createLazySelectionColumn<document>({
+    selectAllLabel: "Select all documents",
+    selectRowLabel: "Select document",
+});
+
 type AppUrl = ReturnType<typeof useAppUrls>["appUrl"];
 
 export function useDocumentsColumns({
     databaseName,
     collectionName,
     tableBodyWidthInPx,
-    selectionRef,
     fullDocumentProvider,
 }: UseDocumentsColumnsProps): DocumentsColumns {
     const { appUrl } = useAppUrls();
@@ -92,15 +89,10 @@ export function useDocumentsColumns({
         documentsColumnLayoutStorage.load(databaseName, collectionName)
     );
     const [availableColumns, setAvailableColumns] = useState<string[]>(null);
-    const [customColumns, setCustomColumns] = useState<CustomColumnDefinition[]>(
-        () => appliedLayout?.customColumns ?? noCustomColumns
-    );
-    // only the columns toggled by the user, the rest follows the defaults (which may arrive later than the first render)
-    const [columnVisibilityChanges, setColumnVisibilityChanges] = useState<VisibilityState>({});
-    const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(() => appliedLayout?.columnOrder ?? []);
-    const [columnPinning, setColumnPinning] = useState<ColumnPinningState>(() =>
-        appliedLayout ? { left: appliedLayout.pinnedColumnIds } : {}
-    );
+    // the properties the preview sent values for, without bindings the server sends only some of the available ones
+    const [previewedColumns, setPreviewedColumns] = useState<string[]>(null);
+
+    const customColumns = appliedLayout?.customColumns ?? noCustomColumns;
 
     // without an applied layout the server picks the previewed properties itself
     const previewBindings = useMemo(
@@ -113,11 +105,10 @@ export function useDocumentsColumns({
         [customColumns]
     );
 
-    const selectionColumn = useMemo(() => createSelectionColumn(selectionRef), [selectionRef]);
-
     const collectionColumns = useDocumentColumnsProvider({
         columnNames: isAllDocuments ? noColumns : (availableColumns ?? noColumns),
         availableWidth: tableBodyWidthInPx,
+        columnsWithValues: previewedColumns ?? noColumns,
         databaseName,
         hasCheckbox: true,
         hasFlags: true,
@@ -145,15 +136,10 @@ export function useDocumentsColumns({
         const propertyColumnNames = (availableColumns ?? noColumns).filter((x) => x !== metadataColumnName);
 
         return {
-            columnDefs: withColumnsBeforeFlags(
-                createAllDocumentsColumns(databaseName, tableBodyWidthInPx, appUrl, selectionColumn),
-                [
-                    ...propertyColumnNames.map((x) =>
-                        createPropertyColumn(x, databaseName, getPropertyPreviewResolver)
-                    ),
-                    ...customColumnDefs,
-                ]
-            ),
+            columnDefs: withColumnsBeforeFlags(createAllDocumentsColumns(databaseName, tableBodyWidthInPx, appUrl), [
+                ...propertyColumnNames.map((x) => createPropertyColumn(x, databaseName, getPropertyPreviewResolver)),
+                ...customColumnDefs,
+            ]),
             // the metadata columns describe every document, the properties are available on demand
             defaultColumnVisibility: Object.fromEntries(propertyColumnNames.map((x) => [x, false])),
         };
@@ -164,7 +150,6 @@ export function useDocumentsColumns({
         tableBodyWidthInPx,
         appUrl,
         collectionColumns,
-        selectionColumn,
         customColumnDefs,
         getPropertyPreviewResolver,
     ]);
@@ -182,37 +167,42 @@ export function useDocumentsColumns({
         [appliedLayout, columnDefs]
     );
 
-    const columnVisibility = useMemo(
-        () => ({ ...(savedVisibility ?? defaultColumnVisibility), ...columnVisibilityChanges }),
-        [savedVisibility, defaultColumnVisibility, columnVisibilityChanges]
+    // the layout is the only source of the table state, the settings sheet changes it through onApplied
+    const tableState = useMemo(
+        () => ({
+            columnVisibility: savedVisibility ?? defaultColumnVisibility,
+            columnOrder: appliedLayout?.columnOrder ?? noColumns,
+            columnPinning: appliedLayout ? { left: appliedLayout.pinnedColumnIds } : noPinning,
+        }),
+        [appliedLayout, savedVisibility, defaultColumnVisibility]
     );
+
+    const defaultVisibleColumnIds = columnDefs
+        .map((column) => column.id)
+        .filter((id) => defaultColumnVisibility[id] !== false);
 
     return {
         columnDefs,
-        tableState: { columnVisibility, columnOrder, columnPinning },
-        onColumnVisibilityChange: (updater) =>
-            setColumnVisibilityChanges((prev) =>
-                functionalUpdate(updater, { ...(savedVisibility ?? defaultColumnVisibility), ...prev })
-            ),
-        onColumnOrderChange: setColumnOrder,
-        onColumnPinningChange: setColumnPinning,
+        tableState,
         previewBindings,
         fullBindings,
-        onAvailableColumns: (columnNames) => setAvailableColumns((prev) => mergeColumnNames(prev, columnNames)),
+        onPreviewResult: (result) => {
+            setAvailableColumns((prev) => mergeColumnNames(prev, result.availableColumns));
+            setPreviewedColumns((prev) => mergeColumnNames(prev, uniq(result.items.flatMap((x) => Object.keys(x)))));
+        },
         isCustomLayout: appliedLayout !== null,
         settingsOptions: {
-            customColumns: { columns: customColumns, onChange: setCustomColumns },
+            customColumns,
             onApplied: (layout) => {
                 documentsColumnLayoutStorage.save(databaseName, collectionName, layout);
                 setAppliedLayout(layout);
             },
-            onRestoreDefaults: () => {
-                documentsColumnLayoutStorage.clear(databaseName, collectionName);
-                setAppliedLayout(null);
-                setCustomColumns(noCustomColumns);
-                setColumnVisibilityChanges({});
-                setColumnOrder([]);
-                setColumnPinning({});
+            restoreDefaults: {
+                visibleColumnIds: defaultVisibleColumnIds,
+                onRestore: () => {
+                    documentsColumnLayoutStorage.clear(databaseName, collectionName);
+                    setAppliedLayout(null);
+                },
             },
         },
         getExportFields: (table) => {
@@ -261,43 +251,6 @@ function withColumnsBeforeFlags(columnDefs: ColumnDef<document>[], columnsToInse
     const insertIndex = flagsIndex === -1 ? columnDefs.length : flagsIndex;
 
     return [...columnDefs.slice(0, insertIndex), ...columnsToInsert, ...columnDefs.slice(insertIndex)];
-}
-
-function createSelectionColumn(selectionRef: RefObject<DocumentsSelection>): ColumnDef<document> {
-    return {
-        id: columnCheckbox.id,
-        accessorFn: (x) => x,
-        size: columnCheckbox.size,
-        minSize: columnCheckbox.minSize,
-        enableSorting: false,
-        enableHiding: false,
-        enableColumnFilter: false,
-        enablePinning: false,
-        header: () => {
-            const { selectionState, toggleAll } = selectionRef.current;
-
-            return (
-                <Checkbox
-                    selected={selectionState === "AllSelected"}
-                    indeterminate={selectionState === "SomeSelected"}
-                    toggleSelection={toggleAll}
-                    aria-label="Select all documents"
-                />
-            );
-        },
-        cell: ({ row }) => (
-            <Checkbox
-                selected={row.getIsSelected()}
-                toggleSelection={(e) => selectionRef.current.toggleRow(row.index, isShiftKeyPressed(e))}
-                aria-label="Select document"
-            />
-        ),
-    };
-}
-
-// React fires the change event of a checkbox from the click, so the mouse modifiers are available
-function isShiftKeyPressed(e: ChangeEvent<HTMLInputElement>) {
-    return e.nativeEvent instanceof MouseEvent && e.nativeEvent.shiftKey;
 }
 
 function createPropertyColumn(
@@ -349,8 +302,7 @@ function createCustomColumn(
 function createAllDocumentsColumns(
     databaseName: string,
     tableBodyWidthInPx: number,
-    appUrl: AppUrl,
-    selectionColumn: ColumnDef<document>
+    appUrl: AppUrl
 ): ColumnDef<document>[] {
     const getSize = virtualTableUtils.getCellSizeProvider(tableBodyWidthInPx - columnCheckbox.size - flagsColumnWidth);
 

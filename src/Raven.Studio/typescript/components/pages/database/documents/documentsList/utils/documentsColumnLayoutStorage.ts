@@ -3,7 +3,7 @@ import { AppliedColumnLayout } from "components/common/virtualTable/commonCompon
 
 const storagePrefix = "documents-columns-";
 
-// the layout is saved per collection, the all documents view always uses the defaults
+// the layout is saved per collection, the one of all documents lasts only until the view is left
 function getStorageKey(databaseName: string, collectionName: string | null): string | null {
     if (collectionName === null) {
         return null;

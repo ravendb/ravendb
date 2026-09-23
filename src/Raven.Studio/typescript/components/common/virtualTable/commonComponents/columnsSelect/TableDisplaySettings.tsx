@@ -30,12 +30,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { CSSProperties, useState } from "react";
 import genUtils from "common/generalUtils";
 import Card from "react-bootstrap/Card";
-
-// when provided, the sheet lets the user add, edit and remove columns defined by a JavaScript expression
-export interface CustomColumnsSettings {
-    columns: CustomColumnDefinition[];
-    onChange: (columns: CustomColumnDefinition[]) => void;
-}
+import { isEqual, xor } from "lodash";
 
 export interface AppliedColumnLayout {
     visibleColumnIds: string[];
@@ -44,12 +39,19 @@ export interface AppliedColumnLayout {
     customColumns: CustomColumnDefinition[];
 }
 
+export interface RestoreDefaultsSettings {
+    visibleColumnIds: string[];
+    // called instead of onApplied when the applied layout is the default one
+    onRestore: () => void;
+}
+
 export interface TableDisplaySettingsOptions {
-    customColumns?: CustomColumnsSettings;
+    // when provided, the sheet lets the user add, edit and remove columns defined by a JavaScript expression
+    customColumns?: CustomColumnDefinition[];
     // called with the layout after it is applied to the table, e.g. to persist it
     onApplied?: (layout: AppliedColumnLayout) => void;
-    // when provided, "Restart to default" delegates to the consumer instead of reverting the sheet to its initial state
-    onRestoreDefaults?: () => void;
+    // when provided, "Restart to default" resets the sheet to the default layout instead of its initial state
+    restoreDefaults?: RestoreDefaultsSettings;
 }
 
 interface TableDisplaySettingsProps<T> extends ClassNameProps, TableDisplaySettingsOptions {
@@ -57,7 +59,7 @@ interface TableDisplaySettingsProps<T> extends ClassNameProps, TableDisplaySetti
 }
 
 export function useTableDisplaySettingsSheet<T>(table: TanstackTable<T>, options: TableDisplaySettingsOptions = {}) {
-    const { customColumns, onApplied, onRestoreDefaults } = options;
+    const { customColumns, onApplied, restoreDefaults } = options;
     const { open } = useViewSheet();
     const {
         columnMetas,
@@ -80,7 +82,6 @@ export function useTableDisplaySettingsSheet<T>(table: TanstackTable<T>, options
                     customColumns={customColumns}
                     onApply={(selectedIds, columnOrder, pinnedIds, customColumnList) => {
                         applySettings(selectedIds, columnOrder, pinnedIds);
-                        customColumns?.onChange(customColumnList);
                         onApplied?.({
                             visibleColumnIds: selectedIds,
                             columnOrder,
@@ -88,7 +89,7 @@ export function useTableDisplaySettingsSheet<T>(table: TanstackTable<T>, options
                             customColumns: customColumnList,
                         });
                     }}
-                    onRestoreDefaults={onRestoreDefaults}
+                    restoreDefaults={restoreDefaults}
                 />
             ),
             initialWidth: 400,
@@ -120,14 +121,14 @@ interface TableDisplaySettingsSheetProps {
     initialSelectedIds: string[];
     initialColumnOrder: string[];
     initialPinnedIds: string[];
-    customColumns?: CustomColumnsSettings;
+    customColumns?: CustomColumnDefinition[];
     onApply: (
         selectedIds: string[],
         columnOrder: string[],
         pinnedIds: string[],
         customColumns: CustomColumnDefinition[]
     ) => void;
-    onRestoreDefaults?: () => void;
+    restoreDefaults?: RestoreDefaultsSettings;
 }
 
 function TableDisplaySettingsSheet({
@@ -138,11 +139,12 @@ function TableDisplaySettingsSheet({
     initialPinnedIds,
     customColumns,
     onApply,
-    onRestoreDefaults,
+    restoreDefaults,
 }: TableDisplaySettingsSheetProps) {
     const { close } = useViewSheet();
 
-    const initialCustomColumns = customColumns?.columns ?? [];
+    const initialCustomColumns = customColumns ?? [];
+    const defaultColumnOrder = columnMetas.filter((m) => !m.customColumn).map((m) => m.id);
 
     const [columnOrder, setColumnOrder] = useState<string[]>(initialColumnOrder);
     const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedIds);
@@ -197,21 +199,36 @@ function TableDisplaySettingsSheet({
     };
 
     const handleReset = () => {
-        if (onRestoreDefaults) {
-            onRestoreDefaults();
-            close();
-            return;
+        if (restoreDefaults) {
+            setColumnOrder(defaultColumnOrder);
+            setSelectedIds(restoreDefaults.visibleColumnIds);
+            setPinnedIds([]);
+            setCustomColumnList([]);
+        } else {
+            setColumnOrder(initialColumnOrder);
+            setSelectedIds(initialSelectedIds);
+            setPinnedIds(initialPinnedIds);
+            setCustomColumnList(initialCustomColumns);
         }
 
-        setColumnOrder(initialColumnOrder);
-        setSelectedIds(initialSelectedIds);
-        setPinnedIds(initialPinnedIds);
-        setCustomColumnList(initialCustomColumns);
         setEditedCustomColumn(null);
     };
 
+    const getHideableSelection = (ids: string[]) => ids.filter((id) => hideableIds.includes(id));
+
+    const isDefaultLayout = (defaultVisibleColumnIds: string[]) =>
+        customColumnList.length === 0 &&
+        pinnedIds.length === 0 &&
+        isEqual(orderedIds, defaultColumnOrder) &&
+        xor(getHideableSelection(selectedIds), getHideableSelection(defaultVisibleColumnIds)).length === 0;
+
     const handleApply = () => {
-        onApply(selectedIds, columnOrder, pinnedIds, customColumnList);
+        if (restoreDefaults && isDefaultLayout(restoreDefaults.visibleColumnIds)) {
+            restoreDefaults.onRestore();
+        } else {
+            onApply(selectedIds, columnOrder, pinnedIds, customColumnList);
+        }
+
         close();
     };
 

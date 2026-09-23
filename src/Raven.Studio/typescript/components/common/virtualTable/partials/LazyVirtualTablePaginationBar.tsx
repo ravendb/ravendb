@@ -1,10 +1,22 @@
 import { Icon } from "components/common/Icon";
 import Select, { SelectOption } from "components/common/select/Select";
-import { LazyVirtualTablePagination } from "components/common/virtualTable/hooks/useLazyVirtualTable";
 import { KeyboardEvent, useEffect, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import "./LazyVirtualTablePaginationBar.scss";
+
+export interface LazyVirtualTablePagination {
+    page: number;
+    totalPages: number;
+    firstRowNumber: number;
+    lastRowNumber: number;
+    totalCount: number | null;
+    pageSize: number;
+    pageSizeOptions: number[];
+    onPageChange: (page: number) => void;
+    onPageSizeChange: (pageSize: number) => void;
+    turnOff: (() => void) | null;
+}
 
 interface LazyVirtualTablePaginationBarProps {
     pagination: LazyVirtualTablePagination;

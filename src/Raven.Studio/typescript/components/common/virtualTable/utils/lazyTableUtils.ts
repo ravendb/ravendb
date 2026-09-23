@@ -7,7 +7,14 @@ export interface RowRange {
     end: number;
 }
 
-export const lazyVirtualTablePageSizeOptions = [25, 50, 100];
+const lazyVirtualTablePageSizeOptions = [25, 50, 100];
+
+// autoResetPageIndex is off so tanstack does not reset its (unused) page index on every fetch
+export const lazyTableOptions = {
+    autoResetPageIndex: false,
+    columnResizeMode: "onChange",
+    defaultColumn: { enableSorting: false, enableColumnFilter: false },
+} as const;
 
 export function isInRange(range: RowRange, rowIndex: number) {
     return rowIndex >= range.start && rowIndex < range.end;
