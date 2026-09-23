@@ -459,9 +459,14 @@ namespace Raven.Server.Documents.Queries
         {
             var fieldName = ExtractIndexFieldName(query, parameters, be.Source, metadata);
             var (valueFirst, valueFirstType) = QueryBuilderHelper.GetValue(query, metadata, parameters, be.Min);
-            var (valueSecond, _) = QueryBuilderHelper.GetValue(query, metadata, parameters, be.Max);
+            var (valueSecond, valueSecondType) = QueryBuilderHelper.GetValue(query, metadata, parameters, be.Max);
 
-            var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueFirstType);
+            // a between assembled from 'Foo > 1 and Foo < 2.5' mixes a long with a double; both bounds then query the double field
+            var valueType = valueFirstType == ValueTokenType.Long && valueSecondType == ValueTokenType.Double
+                ? ValueTokenType.Double
+                : valueFirstType;
+
+            var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueType);
 
             Lucene.Net.Search.Query betweenQuery;
             switch (fieldType)
@@ -491,8 +496,8 @@ namespace Raven.Server.Documents.Queries
                     betweenQuery = LuceneQueryHelper.Between(index, luceneFieldName, valueFirstAsLong, be.MinInclusive, valueSecondAsLong, be.MaxInclusive);
                     break;
                 case IndexFieldType.Double:
-                    var valueFirstAsDouble = (double)valueFirst;
-                    var valueSecondAsDouble = (double)valueSecond;
+                    var valueFirstAsDouble = Convert.ToDouble(valueFirst, CultureInfo.InvariantCulture);
+                    var valueSecondAsDouble = Convert.ToDouble(valueSecond, CultureInfo.InvariantCulture);
                     betweenQuery = LuceneQueryHelper.Between(index, luceneFieldName, valueFirstAsDouble, be.MinInclusive, valueSecondAsDouble, be.MaxInclusive);
                     break;
                 default:
