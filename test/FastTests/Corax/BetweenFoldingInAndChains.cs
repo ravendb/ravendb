@@ -316,6 +316,38 @@ namespace FastTests.Corax
             }
         }
 
+        // a hand-written between must pair values of one kind, but a between assembled from two comparisons may mix a
+        // literal with a parameter or a long with a double, exactly as the two comparisons did
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData("Amount > $a and Amount < 8", 6, "coins/3", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Amount < 8 and Amount > 6.5", 0, "coins/3", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Amount >= 5 and Amount < $a", 7.5, "coins/2,coins/3", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void BoundsOfMixedValueKindsStillFold(Options options, string where, object a, string expectedIds)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                Seed(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced
+                        .RawQuery<Coin>($"from index 'CoinIndex' where {where}")
+                        .AddParameter("a", a)
+                        .ToList();
+
+                    Assert.Equal(expectedIds.Split(','), results.Select(x => x.Id).OrderBy(x => x).ToArray());
+                }
+            }
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var parameters = context.ReadObject(new DynamicJsonValue { ["a"] = a }, "parameters");
+                var metadata = new QueryMetadata($"from index 'CoinIndex' where {where}", parameters, cacheKey: 1);
+
+                Assert.IsType<BetweenExpression>(metadata.Query.Where);
+            }
+        }
+
         [RavenFact(RavenTestCategory.Querying)]
         public void QueryMetadataCarriesTheNormalizedWhereClause()
         {
