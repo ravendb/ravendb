@@ -18,6 +18,7 @@ import { tryHandleSubmit } from "components/utils/common";
 import { AboutViewHeading } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { FormDurationPicker, FormGroup, FormInput, FormSwitch } from "components/common/Form";
+import OverridableField from "components/common/OverridableField";
 import { RevisionsBinCleanerInfoHub } from "components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleanerInfoHub";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
@@ -157,34 +158,33 @@ export default function RevisionsBinCleaner() {
                                                 </FormGroup>
                                             </div>
                                         </Collapse>
-                                        <FormGroup>
-                                            <FormSwitch
-                                                name="isCleanerFrequencyInSecEnabled"
-                                                control={control}
-                                                color="primary"
-                                                className="mb-3"
-                                                disabled={
-                                                    !hasDatabaseAdminAccess ||
-                                                    formState.isSubmitting ||
-                                                    !formValues.isRevisionsBinCleanerEnabled
-                                                }
-                                            >
-                                                Set custom cleaner frequency
-                                            </FormSwitch>
-                                            <FormInput
-                                                name="cleanerFrequencyInSec"
-                                                control={control}
-                                                type="number"
-                                                disabled={
-                                                    !hasDatabaseAdminAccess ||
-                                                    formState.isSubmitting ||
-                                                    !formValues.isRevisionsBinCleanerEnabled ||
-                                                    !formValues.isCleanerFrequencyInSecEnabled
-                                                }
-                                                placeholder="Default (300)"
-                                                addon="seconds"
-                                            />
-                                        </FormGroup>
+                                        <OverridableField
+                                            control={control}
+                                            overrideName="isCleanerFrequencyInSecEnabled"
+                                            label="Custom cleaner frequency"
+                                            disabled={
+                                                !hasDatabaseAdminAccess ||
+                                                formState.isSubmitting ||
+                                                !formValues.isRevisionsBinCleanerEnabled
+                                            }
+                                            marginClass="mb-0"
+                                        >
+                                            {({ isOverridden }) => (
+                                                <FormInput
+                                                    name="cleanerFrequencyInSec"
+                                                    control={control}
+                                                    type="number"
+                                                    disabled={
+                                                        !hasDatabaseAdminAccess ||
+                                                        formState.isSubmitting ||
+                                                        !formValues.isRevisionsBinCleanerEnabled ||
+                                                        !isOverridden
+                                                    }
+                                                    placeholder="Default (300)"
+                                                    addon="seconds"
+                                                />
+                                            )}
+                                        </OverridableField>
                                     </Card.Body>
                                 </Card>
                             </Col>
