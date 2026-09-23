@@ -199,9 +199,7 @@ internal sealed class SlackInboundProcessor(
                     parameters.ToDictionary(
                         parameter => parameter.Key,
                         parameter => AgentParameterValue.FromString(parameter.Value)),
-                    new ConversationLifetime(
-                        options.Value.ChannelConversationIdleWindow,
-                        options.Value.ChannelConversationRetention)),
+                    options.Value.ChannelConversationIdleWindow),
                 reply.OnChunkAsync, config, ct);
 
             await reply.FinalizeAsync();

@@ -16,7 +16,7 @@ public sealed record AgentRequest(
     string Prompt,
     string ChannelId,
     IReadOnlyDictionary<string, JsonElement> Parameters,
-    ConversationLifetime? Lifetime = null);
+    TimeSpan? IdleWindow = null);
 
 public sealed record AgentRunResult(object Answer, string ConversationId, bool StartedFresh = false);
 
@@ -48,7 +48,7 @@ internal sealed class AgentRouter(
         var conversationId = NormalizeConversationId(request.ConversationId);
 
         var creationOptions = new AiConversationCreationOptions();
-        if (request.Lifetime?.TranscriptIdleWindow is { } idleWindow)
+        if (request.IdleWindow is { } idleWindow)
             creationOptions.ExpirationInSec = (int)idleWindow.TotalSeconds;
 
         foreach (var (key, value) in ConvertParameters(request, config))
@@ -162,7 +162,7 @@ internal sealed class AgentRouter(
         var preview = await session.LoadAsync<ConversationPreview>(id, ct);
 
         var rolled = preview is not null &&
-            request.Lifetime?.TranscriptIdleWindow is { } idleWindow && nowUtc - preview.LastMessageAt > idleWindow;
+            request.IdleWindow is { } idleWindow && nowUtc - preview.LastMessageAt > idleWindow;
         var isNewConversation = preview is null || rolled;
 
         preview ??= new ConversationPreview
@@ -185,9 +185,9 @@ internal sealed class AgentRouter(
         preview.LastAgentReply = reply;
 
         await session.StoreAsync(preview, id, ct);
-        if (request.Lifetime?.PreviewRetention is { } retention)
+        if (request.IdleWindow is { } expiresAfter)
             session.Advanced.GetMetadataFor(preview)[Client.Constants.Documents.Metadata.Expires] =
-                nowUtc.Add(retention);
+                nowUtc.Add(expiresAfter);
 
         return (isNewConversation, rolled);
     }

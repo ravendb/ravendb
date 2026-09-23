@@ -44,8 +44,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         Assert.Equal(Channel.IdPrefix + channel.ChannelId, request.ChannelId);
         Assert.Matches($"^chats/discord/{channel.ChannelId}/{Sender}/[0-9a-f]{{16}}$", request.ConversationId);
         Assert.Equal(Sender, request.Parameters["discordUser"].GetString());
-        Assert.NotNull(request.Lifetime?.TranscriptIdleWindow);
-        Assert.NotNull(request.Lifetime?.PreviewRetention);
+        Assert.NotNull(request.IdleWindow);
 
         await Discord.WaitUntilAsync(
             () => Discord.EditedMessages.Any(e => e.Content == "Hello from the fake agent."), "the finalized edit");
