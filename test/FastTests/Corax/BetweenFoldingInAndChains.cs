@@ -87,7 +87,8 @@ namespace FastTests.Corax
         [InlineData(RangeFirstShape, "AND[ AND[ CreatedAt between $p1 and $p2 , CustomerId in ($p0) ] , EntityType in ($p3) ]")]
         [InlineData(ReversedSeparatedShape, "AND[ AND[ EntityType in ($p3) , CreatedAt between $p1 and $p2 ] , CustomerId in ($p0) ]")]
         [InlineData(SplitAcrossGroupsShape, "AND[ AND[ CreatedAt between $p1 and $p2 , CustomerId in ($p0) ] , EntityType in ($p3) ]")]
-        [InlineData(DuplicateDirectionShape, "AND[ AND[ AND[ CreatedAt between $p1 and $p2 , CreatedAt >= $p1 ] , CustomerId in ($p0) ] , EntityType in ($p3) ]")]
+        // the second 'CreatedAt >= $p1' is the same bound twice and is dropped
+        [InlineData(DuplicateDirectionShape, "AND[ AND[ CreatedAt between $p1 and $p2 , CustomerId in ($p0) ] , EntityType in ($p3) ]")]
         [InlineData(NegatedOperandShape, "AND[ AND[ CustomerId in ($p0) , CreatedAt between $p1 and $p2 ] , NOT[ EntityType = 'Withdrawal' ] ]")]
         public void FoldRewritesAnyAndChainIntoBetween(string where, string expectedTree)
         {
@@ -132,6 +133,26 @@ namespace FastTests.Corax
         [InlineData("CustomerId = 'x' or (Amount > 1 and Amount < 5)", "OR[ CustomerId = 'x' , Amount between 1 and 5 ]")]
         [InlineData("CustomerId = 'x' and not (Amount > 1 and Amount < 5)", "AND[ CustomerId = 'x' , NOT[ Amount between 1 and 5 ] ]")]
         public void NormalizerReachesIntoOrAndNotGroups(string where, string expectedTree)
+        {
+            var query = Parse(where);
+
+            Assert.True(WhereClauseNormalizer.TryNormalize(query.Where, out var rewritten));
+
+            var after = Dump(rewritten);
+            _output.WriteLine($"RQL    : {where}");
+            _output.WriteLine($"AFTER  : {after}");
+
+            Assert.Equal(expectedTree, after);
+            Assert.False(WhereClauseNormalizer.TryNormalize(rewritten, out _));
+        }
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        // the very same bound twice is dropped, whatever the parameter turns out to be
+        [InlineData("Amount > $a and Amount > $a and CustomerId = 'x'", "AND[ Amount > $a , CustomerId = 'x' ]")]
+        [InlineData("Amount >= 1 and CustomerId = 'x' and Amount >= 1", "AND[ Amount >= 1 , CustomerId = 'x' ]")]
+        // a different operator or a different value is a different bound
+        [InlineData("Amount > $a and Amount >= $a and Amount < 5", "AND[ Amount between $a and 5 , Amount >= $a ]")]
+        public void NormalizerDropsDuplicateBounds(string where, string expectedTree)
         {
             var query = Parse(where);
 
