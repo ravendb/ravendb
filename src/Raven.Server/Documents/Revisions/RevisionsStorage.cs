@@ -181,8 +181,6 @@ namespace Raven.Server.Documents.Revisions
                     Configuration.Collections.TryGetValue(collection, out RevisionsCollectionConfiguration configuration))
                     return configuration;
 
-                // system collections hold RavenDB's own bookkeeping documents, the database wide default
-                // doesn't apply to them - they are versioned only when explicitly configured above
                 if (Configuration.Default != null && CollectionName.IsSystemCollection(collection) == false)
                     return Configuration.Default;
             }
