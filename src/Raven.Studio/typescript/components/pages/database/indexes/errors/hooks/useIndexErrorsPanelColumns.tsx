@@ -1,6 +1,6 @@
 import { useAppSelector } from "components/store";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
-import { CellContext, ColumnDef, Row, Table as TanstackTable } from "@tanstack/react-table";
+import { CellContext, ColumnDef, Row, RowData, Table as TanstackTable } from "@tanstack/react-table";
 import { useMemo } from "react";
 import CellValue, { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
 import CellDocumentValue from "components/common/virtualTable/cells/CellDocumentValue";
@@ -13,6 +13,13 @@ import IndexErrorsSheet from "components/pages/database/indexes/errors/IndexErro
 import { OpenSheetOptions, useViewSheet } from "components/common/splitView/ViewSheet";
 import React from "react";
 import { CellDateWithRelativeTimeWrapper } from "components/common/virtualTable/cells/CellDateWithRelativeTime";
+
+declare module "@tanstack/react-table" {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    interface TableMeta<TData extends RowData> {
+        disableLinks?: boolean;
+    }
+}
 
 const indexErrorsSheetConfig: Pick<OpenSheetOptions, "initialWidth" | "minWidth" | "maxWidth"> = {
     initialWidth: "60%",
@@ -99,7 +106,7 @@ type HyperLinkDocumentCellValueProps = Pick<
 
 const HyperLinkDocumentCellValue = ({ getValue, table }: HyperLinkDocumentCellValueProps) => {
     const dbName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const disableLinks = (table.options.meta as { disableLinks?: boolean })?.disableLinks;
+    const disableLinks = table.options.meta?.disableLinks;
 
     return <CellDocumentValue value={getValue()} databaseName={dbName} hasHyperlinkForIds={!disableLinks} />;
 };
@@ -112,7 +119,7 @@ type HyperlinkIndexCellValueProps = Pick<
 const HyperlinkIndexCellValue = ({ getValue, table }: HyperlinkIndexCellValueProps) => {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { appUrl } = useAppUrls();
-    const disableLinks = (table.options.meta as { disableLinks?: boolean })?.disableLinks;
+    const disableLinks = table.options.meta?.disableLinks;
 
     const getLinkToIndex = (cellValue: IndexErrorPerDocument["IndexName"]): string => {
         if (typeof cellValue !== "string") {

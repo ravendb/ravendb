@@ -15,6 +15,8 @@ interface UseDocumentColumnsProviderProps {
     columnNames?: string[];
     // when provided, the columns that do not fit start hidden and the visible ones are stretched to fill the width
     availableWidth?: number;
+    // when provided, the other columns start hidden, e.g. the ones the documents preview did not send values for
+    columnsWithValues?: string[];
     databaseName?: string;
     hasPreview?: boolean;
     hasFlags?: boolean;
@@ -37,6 +39,7 @@ export function useDocumentColumnsProvider(props: UseDocumentColumnsProviderProp
         documents,
         columnNames,
         availableWidth,
+        columnsWithValues,
         hasHyperlinkForIds = true,
         hasPreview = false,
         hasFlags = false,
@@ -54,6 +57,7 @@ export function useDocumentColumnsProvider(props: UseDocumentColumnsProviderProp
                 documents,
                 columnNames,
                 availableWidth,
+                columnsWithValues,
                 databaseName,
                 hasHyperlinkForIds,
                 hasPreview,
@@ -65,6 +69,7 @@ export function useDocumentColumnsProvider(props: UseDocumentColumnsProviderProp
             documents,
             columnNames,
             availableWidth,
+            columnsWithValues,
             databaseName,
             hasHyperlinkForIds,
             hasPreview,
@@ -80,6 +85,7 @@ function createColumns(options: CreateColumnsOptions) {
         documents,
         columnNames,
         availableWidth,
+        columnsWithValues,
         databaseName,
         hasHyperlinkForIds,
         hasPreview,
@@ -121,7 +127,10 @@ function createColumns(options: CreateColumnsOptions) {
     const allColumnNames = prioritizeColumnNames(columnNames ?? extractUniquePropertyNames(documents));
     const propertyColumnsWidth = availableWidth === undefined ? undefined : availableWidth - fixedColumnsWidth;
 
-    const visibleColumnNames = getVisibleColumnNames(allColumnNames, propertyColumnsWidth);
+    const visibleColumnCandidates = columnsWithValues
+        ? allColumnNames.filter((x) => x === "__metadata" || columnsWithValues.includes(x))
+        : allColumnNames;
+    const visibleColumnNames = getVisibleColumnNames(visibleColumnCandidates, propertyColumnsWidth);
     const propertyColumnSize = getPropertyColumnSize(propertyColumnsWidth, visibleColumnNames.length);
 
     const propertyColumnDefs = allColumnNames.map((columnName): ColumnDef<document> => {
