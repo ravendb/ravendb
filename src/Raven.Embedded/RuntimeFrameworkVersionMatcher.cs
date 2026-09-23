@@ -1,9 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 
 namespace Raven.Embedded
 {
@@ -61,7 +64,7 @@ namespace Raven.Embedded
         private static async Task<List<RuntimeFrameworkVersion>> GetFrameworkVersionsAsync(ServerOptions options)
         {
             if (string.IsNullOrWhiteSpace(options.DotNetPath))
-                throw new InvalidOperationException();
+                throw new InvalidOperationException("'ServerOptions.DotNetPath' must specify the dotnet executable used to discover installed .NET runtimes.");
 
             var processStartInfo = new ProcessStartInfo
             {
@@ -74,49 +77,86 @@ namespace Raven.Embedded
                 UseShellExecute = false
             };
 
-            Process process = null;
+            using var process = new Process();
+            process.StartInfo = processStartInfo;
+            process.EnableRaisingEvents = true;
+
+            var workingDirectory = Directory.GetCurrentDirectory();
             try
             {
-                process = Process.Start(processStartInfo);
-                process.EnableRaisingEvents = true;
+                process.Start();
             }
             catch (Exception e)
             {
-                process?.Kill();
-                throw new InvalidOperationException($"Unable to execute dotnet to retrieve list of installed runtimes.{Environment.NewLine}Command was: {Environment.NewLine}{processStartInfo.WorkingDirectory}> {processStartInfo.FileName} {processStartInfo.Arguments}", e);
+                string message = $"Unable to execute dotnet to retrieve list of installed runtimes.{Environment.NewLine}" +
+                                 $"Command was: {Environment.NewLine}" +
+                                 $"{workingDirectory}> \"{processStartInfo.FileName}\" {processStartInfo.Arguments}";
+
+                throw new InvalidOperationException(message, e);
             }
 
-            var insideRuntimes = false;
+            var isInsideRuntimes = false;
             var runtimeLines = new List<string>();
-            await ProcessHelper.ReadOutput(process.StandardOutput, elapsed: null, options, (line, builder) =>
+            var output = process.ReadOutput(onOutputLine: line =>
             {
                 line = line.Trim();
-
                 if (line.StartsWith(".NET runtimes installed:") || line.StartsWith(".NET Core runtimes installed:"))
+                    isInsideRuntimes = true;
+                else if (isInsideRuntimes && line.StartsWith("Microsoft.NETCore.App"))
+                    runtimeLines.Add(line);
+            });
+
+            try
+            {
+                process.StandardInput.Close();
+
+                if (await output.Completion.WaitWithTimeout(options.MaxServerStartupTimeDuration).ConfigureAwait(false) == false)
+                    throw new InvalidOperationException($"The dotnet runtime discovery command did not complete within {options.MaxServerStartupTimeDuration}.");
+
+                await output.Completion.ConfigureAwait(false);
+                if (process.ExitCode != 0)
+                    throw new InvalidOperationException("The dotnet runtime discovery command failed.");
+
+                var runtimes = new List<RuntimeFrameworkVersion>();
+                foreach (string line in runtimeLines)
                 {
-                    insideRuntimes = true;
-                    return Task.FromResult(false);
+                    var values = line.Split(' ');
+                    if (values.Length < 2)
+                        throw new InvalidOperationException($"Invalid runtime line. Expected 'Microsoft.NETCore.App x.x.x', but was '{line}'.");
+
+                    runtimes.Add(new RuntimeFrameworkVersion(values[1]));
                 }
 
-                if (insideRuntimes && line.StartsWith("Microsoft.NETCore.App"))
-                    runtimeLines.Add(line);
-
-                return Task.FromResult(false);
-            }).ConfigureAwait(false);
-
-            var runtimes = new List<RuntimeFrameworkVersion>();
-            foreach (string runtimeLine in runtimeLines) // Microsoft.NETCore.App 5.0.2 [C:\Program Files\dotnet\shared\Microsoft.NETCore.App]
-            {
-                var values = runtimeLine.Split(' ');
-                if (values.Length < 2)
-                    throw new InvalidOperationException($"Invalid runtime line. Expected 'Microsoft.NETCore.App x.x.x', but was '{runtimeLine}'.");
-
-                runtimes.Add(new RuntimeFrameworkVersion(values[1]));
+                return runtimes.Count != 0
+                    ? runtimes
+                    : throw new InvalidOperationException("The command completed successfully, but no Microsoft.NETCore.App runtimes were found in its output. " +
+                                                          "Check the .NET installation and the output below.");
             }
+            catch (Exception e)
+            {
+                var exitCodeBeforeTermination = output.ExitCode;
+                try
+                {
+                    if (process.HasExited == false)
+                        process.Kill();
+                }
+                catch (Exception cleanupError) when (cleanupError is Win32Exception or InvalidOperationException)
+                {
+                    // Cleanup must not replace the original discovery failure.
+                }
 
-            return runtimes;
+                await output.DrainAsync(options.ProcessKillTimeout).ConfigureAwait(false);
+
+                var message = new StringBuilder();
+                message.AppendLine("Unable to discover installed .NET runtimes.");
+                message.AppendLine(e.Message);
+                message.AppendLine($"Command: \"{processStartInfo.FileName}\" {processStartInfo.Arguments}");
+                message.AppendLine("Run the command above from the same working directory and under the same account/environment as the tests. Check ServerOptions.DotNetPath and the .NET installation.");
+
+                output.AppendDiagnostics(message, exitCodeBeforeTermination);
+                throw new InvalidOperationException(message.ToString(), e);
+            }
         }
-
         internal sealed class RuntimeFrameworkVersion
         {
             private static readonly char[] Separators = { '.' };
