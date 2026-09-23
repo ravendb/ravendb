@@ -127,7 +127,7 @@ namespace SlowTests.Sharding
         }
 
         [RavenFact(RavenTestCategory.Sharding)]
-        public async Task GetBucketsView_OwnerShardIsTheDestinationDuringWholeMigration()
+        public async Task GetBucketsView_OwnerShardFollowsShardingConfigurationDuringMigration()
         {
             DoNotReuseServer();
             using (var store = Sharding.GetDocumentStore())
@@ -154,7 +154,7 @@ namespace SlowTests.Sharding
                 Assert.True(exists, $"{id} wasn't found at shard {destinationShard}");
 
                 // Moving: the bucket already exists on both shards, but the sharding configuration still points at the source
-                await AssertOwnerShardAsync(store, bucket, MigrationStatus.Moving, sourceShard, destinationShard);
+                await AssertOwnerShardAsync(store, bucket, MigrationStatus.Moving, sourceShard, destinationShard, expectedOwnerShard: sourceShard);
 
                 string lastSourceChangeVector;
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, sourceShard)))
@@ -167,17 +167,17 @@ namespace SlowTests.Sharding
                 await Server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
 
                 // Moved: the destination has everything, but the sharding configuration still points at the source
-                await AssertOwnerShardAsync(store, bucket, MigrationStatus.Moved, sourceShard, destinationShard);
+                await AssertOwnerShardAsync(store, bucket, MigrationStatus.Moved, sourceShard, destinationShard, expectedOwnerShard: sourceShard);
 
                 result = await Server.ServerStore.Sharding.DestinationMigrationConfirm(store.Database, bucket, migrationIndex);
                 await Server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
 
                 // OwnershipTransferred: the sharding configuration points at the destination, the source copy awaits cleanup
-                await AssertOwnerShardAsync(store, bucket, MigrationStatus.OwnershipTransferred, sourceShard, destinationShard);
+                await AssertOwnerShardAsync(store, bucket, MigrationStatus.OwnershipTransferred, sourceShard, destinationShard, expectedOwnerShard: destinationShard);
             }
         }
 
-        private async Task AssertOwnerShardAsync(IDocumentStore store, int bucket, MigrationStatus expectedStatus, int sourceShard, int destinationShard)
+        private async Task AssertOwnerShardAsync(IDocumentStore store, int bucket, MigrationStatus expectedStatus, int sourceShard, int destinationShard, int expectedOwnerShard)
         {
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
             Assert.True(record.Sharding.BucketMigrations.TryGetValue(bucket, out var migration), $"bucket {bucket} is not migrating");
@@ -190,14 +190,14 @@ namespace SlowTests.Sharding
             {
                 var results = await store.Operations.SendAsync(new GetBucketsOperation(range: 1));
                 return results.BucketRanges.TryGetValue(bucket, out var bucketRange) ? bucketRange.OwnerShardNumber : null;
-            }, (int?)destinationShard);
+            }, (int?)expectedOwnerShard);
 
             var results = await store.Operations.SendAsync(new GetBucketsOperation(range: 1));
             Assert.True(results.BucketRanges.TryGetValue(bucket, out var bucketRange), $"bucket {bucket} is missing from the report");
             Assert.Equal(2, bucketRange.ShardNumbers.Count);
             Assert.Contains(sourceShard, bucketRange.ShardNumbers);
             Assert.Contains(destinationShard, bucketRange.ShardNumbers);
-            Assert.Equal((int?)destinationShard, ownerShard);
+            Assert.Equal((int?)expectedOwnerShard, ownerShard);
         }
 
         [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]

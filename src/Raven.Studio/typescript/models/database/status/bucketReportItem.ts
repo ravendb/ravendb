@@ -22,8 +22,7 @@ class bucketReportItem {
     
     shards: number[] = [];
 
-    // shard which will own the bucket once resharding completes (the migration destination) - set only when
-    // the bucket temporarily resides on more than one shard (resharding in progress)
+    // shard which owns the bucket according to the sharding configuration - set only for a single bucket
     ownerShard: number = null;
 
     constructor(name: string, size: number, numberOfBuckets: number, documentsCount: number, shards: number[], internalChildren: bucketReportItem[] = null) {
