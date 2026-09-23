@@ -4,7 +4,6 @@ using Tests.Infrastructure;
 using Voron.Data;
 using Voron.Data.Lookups;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 
