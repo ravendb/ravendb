@@ -1357,6 +1357,7 @@ namespace Voron.Data.Fixed
                             parentPage.GetKey(parentPage.LastSearchPosition + 1),
                             oldNumberOfPages);
                     }
+                    page.CollapsedLevels = Math.Max(page.CollapsedLevels, siblingPage.CollapsedLevels);
                     FreePage(siblingNum);
 
                     // now fix parent ref, in this case, just removing it is enough
@@ -1423,6 +1424,7 @@ namespace Voron.Data.Fixed
                           parentPage.GetKey(parentPage.LastSearchPosition),
                           oldNumberOfPages);
                     }
+                    siblingPage.CollapsedLevels = Math.Max(siblingPage.CollapsedLevels, page.CollapsedLevels);
                     FreePage(page.PageNumber);
 
                     // now fix parent ref, in this case, just removing it is enough
