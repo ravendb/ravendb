@@ -200,7 +200,7 @@ namespace Raven.Server
             // In unsecured + HTTP/2-only (h2c) mode, Kestrel expects HTTP/2 prior-knowledge (no HTTP/1.1 upgrade).
             // Ensure RequestExecutor uses RequestVersionExact so server-to-self calls succeed, without mutating frozen conventions instances.
             if (Configuration.Http.Protocols == HttpProtocols.Http2 && Certificate.ServerCertificate == null)
-                DocumentConventions.DefaultHttpVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
+                DocumentConventions.DefaultHttpVersionPolicy = HttpVersionPolicy.RequestVersionExact;
 
             CpuUsageCalculator = string.IsNullOrEmpty(Configuration.Monitoring.CpuUsageMonitorExec)
                 ? CpuHelper.GetOSCpuUsageCalculator()
