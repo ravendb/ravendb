@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
@@ -18,6 +19,30 @@ public class RavenDB_27584 : RavenTestBase
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void CreateFieldUnderANamedKey(Options options) => Assert.Equal(1, Count<Users_NamedKey>(options, "where Dyn = 5"));
+
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public async Task CreateFieldInABoostedDocument(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(new User { Name = "a", V = 5 });
+            session.Store(new User { Name = "a", V = 7 });
+            session.SaveChanges();
+        }
+
+        var index = new Users_BoostedDocument();
+        await index.ExecuteAsync(store);
+        Indexes.WaitForIndexing(store);
+
+        var database = await GetDatabase(store.Database);
+        Assert.True(database.IndexStore.GetIndex(index.IndexName).Definition.HasDynamicFields);
+
+        using (var session = store.OpenSession())
+            Assert.Equal(1, session.Advanced.RawQuery<object>($"from index '{index.IndexName}' where Dyn = 5").Count());
+    }
 
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
@@ -77,6 +102,17 @@ public class RavenDB_27584 : RavenTestBase
             Maps = new HashSet<string>
             {
                 "map('Users', u => ({ Name: u.Name, Attr: createField('Dyn', u.V, { indexing: 'Exact', storage: false }) }))"
+            };
+        }
+    }
+
+    private class Users_BoostedDocument : AbstractJavaScriptIndexCreationTask
+    {
+        public Users_BoostedDocument()
+        {
+            Maps = new HashSet<string>
+            {
+                "map('Users', u => boost({ Name: u.Name, _: createField('Dyn', u.V, { indexing: 'Exact', storage: false }) }, 2))"
             };
         }
     }
