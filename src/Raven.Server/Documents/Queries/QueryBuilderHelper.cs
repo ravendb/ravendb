@@ -30,85 +30,8 @@ public static class QueryBuilderHelper
 {
     internal const int ScoreId = -1;
 
-    /// <summary>
-    /// Rewrites an 'and' chain so that two range comparisons on the same field with opposite directions,
-    /// e.g. 'Foo >= $a and Bar = 1 and Foo &lt; $b', become a single <see cref="BetweenExpression"/>, regardless of how
-    /// the chain is nested or parenthesized. 'and' is associative and commutative, so flattening the chain and
-    /// pairing operands does not change the query semantics. The original AST is never mutated because the parsed
-    /// query is cached and shared between requests. Returns false when there is nothing to fold.
-    /// </summary>
-    public static bool TryFoldRangePairsInAndChain(BinaryExpression andExpression, out QueryExpression rewritten)
-    {
-        rewritten = null;
-
-        if (andExpression.Operator != OperatorType.And)
-            return false;
-
-        var operands = new List<QueryExpression>();
-        FlattenAndChain(andExpression, operands);
-
-        var folded = false;
-        for (var i = 0; i < operands.Count; i++)
-        {
-            if (operands[i] is not BinaryExpression first || IsFoldableRangeOperation(first) == false)
-                continue;
-
-            for (var j = i + 1; j < operands.Count; j++)
-            {
-                if (operands[j] is not BinaryExpression second || IsFoldableRangeOperation(second) == false)
-                    continue;
-
-                if (first.Left.Equals(second.Left) == false)
-                    continue;
-
-                // same direction, e.g. 'Foo > 1 and Foo > 2', is not a range
-                if (first.IsGreaterThan == second.IsGreaterThan)
-                    continue;
-
-                var (greater, less) = first.IsGreaterThan ? (first, second) : (second, first);
-
-                operands[i] = new BetweenExpression(first.Left, (ValueExpression)greater.Right, (ValueExpression)less.Right)
-                {
-                    MinInclusive = greater.Operator == OperatorType.GreaterThanEqual,
-                    MaxInclusive = less.Operator == OperatorType.LessThanEqual
-                };
-                operands.RemoveAt(j);
-                folded = true;
-                break;
-            }
-        }
-
-        if (folded == false)
-            return false;
-
-        rewritten = operands[0];
-        for (var i = 1; i < operands.Count; i++)
-            rewritten = new BinaryExpression(rewritten, operands[i], OperatorType.And);
-
-        return true;
-    }
-
-    // iterative on purpose: a chain of thousands of clauses must not cost one stack frame per clause
-    private static void FlattenAndChain(BinaryExpression root, List<QueryExpression> operands)
-    {
-        var pending = new Stack<QueryExpression>();
-        pending.Push(root);
-
-        while (pending.Count > 0)
-        {
-            var current = pending.Pop();
-            if (current is BinaryExpression { Operator: OperatorType.And } and)
-            {
-                pending.Push(and.Right);
-                pending.Push(and.Left);
-                continue;
-            }
-
-            operands.Add(current);
-        }
-    }
-
-    private static bool IsFoldableRangeOperation(BinaryExpression expression)
+    // a lower or an upper bound on a field against a literal or a parameter, the shape the between fold works on
+    internal static bool IsRangeBound(BinaryExpression expression)
     {
         return expression.IsRangeOperation && expression.Right is ValueExpression;
     }

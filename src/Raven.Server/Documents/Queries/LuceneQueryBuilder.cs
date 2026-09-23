@@ -214,15 +214,6 @@ namespace Raven.Server.Documents.Queries
                         }
                     case OperatorType.And:
                         {
-                            // translate 'Foo >= $p1 and ... and Foo <= $p2' into a single, more efficient between query,
-                            // regardless of how the 'and' chain is nested or parenthesized
-                            if (QueryBuilderHelper.TryFoldRangePairsInAndChain(where, out var foldedExpression))
-                            {
-                                buildSteps?.Add($"Folded range pairs in AND chain: {expression} -> {foldedExpression}");
-                                return ToLuceneQuery(serverContext, documentsContext, query, foldedExpression, metadata, index, parameters, analyzer,
-                                    factories, exact, secondary: secondary, buildSteps: buildSteps);
-                            }
-
                             var left = ToLuceneQuery(serverContext, documentsContext, query, @where.Left, metadata, index, parameters, analyzer,
                                 factories, exact, secondary: secondary, buildSteps: buildSteps);
                             var right = ToLuceneQuery(serverContext, documentsContext, query, @where.Right, metadata, index, parameters, analyzer,
