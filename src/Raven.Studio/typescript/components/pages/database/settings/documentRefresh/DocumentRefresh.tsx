@@ -6,6 +6,7 @@ import Col from "react-bootstrap/Col";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { FormInput, FormSwitch } from "components/common/Form";
+import OverridableField from "components/common/OverridableField";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -146,7 +147,7 @@ export default function DocumentRefresh() {
                             <Col>
                                 <Card>
                                     <Card.Body>
-                                        <div className="vstack gap-2">
+                                        <div className="vstack gap-3">
                                             <FormSwitch
                                                 name="isDocumentRefreshEnabled"
                                                 control={control}
@@ -155,32 +156,32 @@ export default function DocumentRefresh() {
                                                 Enable Document Refresh
                                             </FormSwitch>
                                             <div>
-                                                <FormSwitch
-                                                    name="isRefreshFrequencyEnabled"
+                                                <OverridableField
                                                     control={control}
-                                                    className="mb-3"
+                                                    overrideName="isRefreshFrequencyEnabled"
+                                                    label="Custom refresh frequency"
                                                     disabled={
                                                         formState.isSubmitting || !formValues.isDocumentRefreshEnabled
                                                     }
+                                                    marginClass="mb-0"
                                                 >
-                                                    Set custom refresh frequency
-                                                </FormSwitch>
-                                                <FormInput
-                                                    name="refreshFrequency"
-                                                    control={control}
-                                                    type="number"
-                                                    disabled={
-                                                        formState.isSubmitting || !formValues.isRefreshFrequencyEnabled
-                                                    }
-                                                    placeholder={
-                                                        minPeriodForRefreshInHours > 0
-                                                            ? `Default (${moment
-                                                                  .duration(minPeriodForRefreshInHours, "hours")
-                                                                  .asSeconds()})`
-                                                            : "Default (60)"
-                                                    }
-                                                    addon="seconds"
-                                                />
+                                                    {({ isOverridden }) => (
+                                                        <FormInput
+                                                            name="refreshFrequency"
+                                                            control={control}
+                                                            type="number"
+                                                            disabled={formState.isSubmitting || !isOverridden}
+                                                            placeholder={
+                                                                minPeriodForRefreshInHours > 0
+                                                                    ? `Default (${moment
+                                                                          .duration(minPeriodForRefreshInHours, "hours")
+                                                                          .asSeconds()})`
+                                                                    : "Default (60)"
+                                                            }
+                                                            addon="seconds"
+                                                        />
+                                                    )}
+                                                </OverridableField>
                                                 {isLimitWarningVisible && (
                                                     <RichAlert variant="warning" className="mt-3">
                                                         Your current license does not allow a frequency higher than{" "}
@@ -193,26 +194,25 @@ export default function DocumentRefresh() {
                                                 )}
                                             </div>
                                             <div>
-                                                <FormSwitch
-                                                    name="isLimitMaxItemsToProcessEnabled"
+                                                <OverridableField
                                                     control={control}
-                                                    className="mb-3"
+                                                    overrideName="isLimitMaxItemsToProcessEnabled"
+                                                    label="Max number of documents to process in a single run"
                                                     disabled={
                                                         formState.isSubmitting || !formValues.isDocumentRefreshEnabled
                                                     }
+                                                    marginClass="mb-0"
                                                 >
-                                                    Set max number of documents to process in a single run
-                                                </FormSwitch>
-                                                <FormInput
-                                                    name="maxItemsToProcess"
-                                                    control={control}
-                                                    type="number"
-                                                    disabled={
-                                                        formState.isSubmitting ||
-                                                        !formValues.isLimitMaxItemsToProcessEnabled
-                                                    }
-                                                    addon="items"
-                                                />
+                                                    {({ isOverridden }) => (
+                                                        <FormInput
+                                                            name="maxItemsToProcess"
+                                                            control={control}
+                                                            type="number"
+                                                            disabled={formState.isSubmitting || !isOverridden}
+                                                            addon="items"
+                                                        />
+                                                    )}
+                                                </OverridableField>
                                             </div>
                                         </div>
                                     </Card.Body>
