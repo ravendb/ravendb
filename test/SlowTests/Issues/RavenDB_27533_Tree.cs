@@ -287,6 +287,101 @@ public unsafe class RavenDB_27533_Tree(ITestOutputHelper output) : StorageTest(o
         AssertContents(model);
     }
 
+    
+    [RavenFact(RavenTestCategory.Voron)]
+    public void SplitOfACachedDecompressionMustSeeTheLevelsMarkedAfterItWasCached()
+    {
+        var model = new SortedSet<long>();
+        var gapValue = new byte[1024];
+
+        using (var tx = Env.WriteTransaction())
+        {
+            tx.CreateTree(TreeName, flags: TreeFlags.LeafsCompressed);
+            tx.Commit();
+        }
+
+        long next = 0;
+        while (true)
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.ReadTree(TreeName);
+                for (int i = 0; i < 2_000; i++, next += 2)
+                {
+                    tree.Add(Key(next), Value);
+                    model.Add(next);
+                }
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var tree = tx.ReadTree(TreeName);
+                if (tree.State.Header.Depth == 2 && RootChildren(tree).Length >= 3)
+                    break;
+            }
+        }
+
+        long rootPage, markedPage, from;
+        using (var tx = Env.ReadTransaction())
+        {
+            var tree = tx.ReadTree(TreeName);
+            rootPage = tree.State.Header.RootPageNumber;
+            var root = tree.GetReadOnlyTreePage(rootPage);
+            markedPage = root.GetNode(1)->PageNumber;
+            Assert.True(tree.GetReadOnlyTreePage(markedPage).IsCompressed);
+            from = KeyOf(root, 1);
+        }
+
+        using (var tx = Env.WriteTransaction())
+        {
+            var tree = tx.ReadTree(TreeName);
+            long key = from + 1;
+
+            while (tree.DecompressionsCache.TryGet(markedPage, DecompressionUsage.Write, out _) == false)
+                AddToMarkedPage();
+
+            tree.ModifyPage(markedPage).CollapsedLevels = 2;
+
+            int rootEntries = tree.GetReadOnlyTreePage(rootPage).NumberOfEntries;
+            while (true)
+            {
+                var root = tree.GetReadOnlyTreePage(rootPage);
+                if (root.NumberOfEntries != rootEntries || root.GetNode(1)->PageNumber != markedPage)
+                    break;
+
+                Assert.True(tree.DecompressionsCache.TryGet(markedPage, DecompressionUsage.Write, out _), $"the Write decompression of page {markedPage} is not cached anymore");
+                AddToMarkedPage();
+            }
+
+            tx.Commit();
+
+            void AddToMarkedPage()
+            {
+                Assert.True(key < KeyOf(tree.GetReadOnlyTreePage(rootPage), 2), $"ran out of keys in the range of page {markedPage}");
+                tree.Add(Key(key), gapValue);
+                model.Add(key);
+                key += 2;
+            }
+        }
+
+        using (var tx = Env.ReadTransaction())
+        {
+            var tree = tx.ReadTree(TreeName);
+            long wrapperPage = tree.GetReadOnlyTreePage(rootPage).GetNode(1)->PageNumber;
+            var wrapper = tree.GetReadOnlyTreePage(wrapperPage);
+            Assert.True(wrapper.IsBranch, $"page {markedPage} split next to its siblings instead of wrapping itself in a branch");
+            Assert.Equal(1, wrapper.CollapsedLevels);
+
+            var children = ChildrenOf(tree, wrapperPage);
+            Assert.Contains(markedPage, children);
+            Assert.All(children, child => Assert.Equal(0, tree.GetReadOnlyTreePage(child).CollapsedLevels));
+        }
+
+        AssertContents(model);
+    }
+
     private Slice Key(long value)
     {
         Slice.From(Allocator, $"entries/{value:D10}", out Slice key);
