@@ -164,6 +164,60 @@ export const WithUnreachableNode: StoryObj = {
     },
 };
 
+// Orchestrator-level request to node A never responds: shard-level tasks still load
+export const WithUnreachableOrchestrator: StoryObj = {
+    render: () => {
+        commonInit("sharded");
+
+        const { tasksService } = mockServices;
+
+        tasksService.withHangingGetTasks((location) => location.shardNumber == null && location.nodeTag === "A");
+        tasksService.withGetEtlProgress();
+        tasksService.withTaskErrors();
+        tasksService.withEtlStats();
+        tasksService.withGetExternalReplicationProgress();
+        tasksService.withGetInternalReplicationProgress();
+
+        return <OngoingTasksPage />;
+    },
+};
+
+// Node C returns an error: its cells show the failure state, A and B render normally
+export const WithFailingNode: StoryObj = {
+    render: () => {
+        commonInit("cluster");
+
+        const { tasksService } = mockServices;
+
+        tasksService.withThrowingGetTasks((_, location) => location.nodeTag === "C");
+        tasksService.withGetEtlProgress();
+        tasksService.withTaskErrors([]);
+        tasksService.withEtlStats([]);
+        tasksService.withGetExternalReplicationProgress();
+        tasksService.withGetInternalReplicationProgress();
+
+        return <OngoingTasksPage />;
+    },
+};
+
+// Every node returns an error: the view shows the load error state
+export const WithAllNodesFailing: StoryObj = {
+    render: () => {
+        commonInit("cluster");
+
+        const { tasksService } = mockServices;
+
+        tasksService.withThrowingGetTasks(() => true);
+        tasksService.withGetEtlProgress();
+        tasksService.withTaskErrors();
+        tasksService.withEtlStats();
+        tasksService.withGetExternalReplicationProgress();
+        tasksService.withGetInternalReplicationProgress();
+
+        return <OngoingTasksPage />;
+    },
+};
+
 export const EmptyView: StoryObj = {
     render: () => {
         commonInit();
