@@ -166,6 +166,46 @@ namespace FastTests.Corax
             Assert.False(WhereClauseNormalizer.TryNormalize(rewritten, out _));
         }
 
+        [RavenTheory(RavenTestCategory.Querying)]
+        // lower bounds keep the greater value, upper bounds the lesser
+        [InlineData("Amount > 1 and CustomerId = 'x' and Amount > 2", "AND[ Amount > 2 , CustomerId = 'x' ]")]
+        [InlineData("Amount < 5 and Amount < 7", "Amount < 5")]
+        // on a tie the strict operator wins
+        [InlineData("Amount >= 2 and Amount > 2", "Amount > 2")]
+        [InlineData("Amount <= 2 and Amount < 2", "Amount < 2")]
+        // a long and a double compare as numbers
+        [InlineData("Amount > 1 and Amount > 1.5", "Amount > 1.5")]
+        [InlineData("Amount > 3 and Amount > 2.5", "Amount > 3")]
+        // and the survivor still pairs with the opposite bound
+        [InlineData("Amount > 1 and Amount > 2 and Amount < 5", "Amount between 2 and 5")]
+        public void NormalizerKeepsTheTighterLiteralBound(string where, string expectedTree)
+        {
+            var query = Parse(where);
+
+            Assert.True(WhereClauseNormalizer.TryNormalize(query.Where, out var rewritten));
+
+            var after = Dump(rewritten);
+            _output.WriteLine($"RQL    : {where}");
+            _output.WriteLine($"AFTER  : {after}");
+
+            Assert.Equal(expectedTree, after);
+            Assert.False(WhereClauseNormalizer.TryNormalize(rewritten, out _));
+        }
+
+        [RavenFact(RavenTestCategory.Querying)]
+        public void MergedLiteralBoundsKeepTheirInclusivity()
+        {
+            var query = Parse("Amount > 1 and Amount >= 2 and Amount <= 5 and Amount < 7");
+
+            Assert.True(WhereClauseNormalizer.TryNormalize(query.Where, out var rewritten));
+
+            var between = Assert.IsType<BetweenExpression>(rewritten);
+            Assert.Equal("2", between.Min.Token.Value);
+            Assert.Equal("5", between.Max.Token.Value);
+            Assert.True(between.MinInclusive);
+            Assert.True(between.MaxInclusive);
+        }
+
         [RavenFact(RavenTestCategory.Querying)]
         public void QueryMetadataCarriesTheNormalizedWhereClause()
         {
