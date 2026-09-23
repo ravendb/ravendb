@@ -8,10 +8,11 @@ namespace Raven.Server.Documents.Queries;
 /// <summary>
 /// Rewrites a where clause once, when its query metadata is built, so every request sharing the cached query text gets
 /// the cheaper shape: a lower and an upper bound on the same field become one <see cref="BetweenExpression"/> regardless
-/// of how the 'and' chain is nested or parenthesized, duplicated bounds are dropped, and literal bounds in the same
-/// direction keep only the tighter one. Only the structure is looked at, never a parameter value, because the cached
-/// metadata serves requests with different parameter values. The input tree is never mutated and unchanged subtrees come
-/// back as the same instances.
+/// of how the 'and' chain is nested or parenthesized, duplicated bounds are dropped, literal bounds in the same direction
+/// keep only the tighter one, and same-direction bounds whose values are parameters are moved next to each other so the
+/// query builders can keep the tighter one once the values are known. Only the structure is looked at, never a parameter
+/// value, because the cached metadata serves requests with different parameter values. The input tree is never mutated
+/// and unchanged subtrees come back as the same instances.
 /// </summary>
 public static class WhereClauseNormalizer
 {
@@ -69,6 +70,7 @@ public static class WhereClauseNormalizer
         changed |= DropDuplicateBounds(operands);
         changed |= MergeLiteralBoundsInTheSameDirection(operands);
         changed |= FoldOppositeBoundsIntoBetween(operands);
+        changed |= GroupBoundsInTheSameDirection(operands);
 
         if (changed == false)
         {
@@ -181,6 +183,36 @@ public static class WhereClauseNormalizer
                 operands.RemoveAt(j);
                 changed = true;
                 break;
+            }
+        }
+
+        return changed;
+    }
+
+    // same-direction bounds with parameter values are placed next to each other, so the query builders, which know the
+    // values, find them as adjacent siblings and keep the tighter one
+    private static bool GroupBoundsInTheSameDirection(List<QueryExpression> operands)
+    {
+        var changed = false;
+        for (var i = 0; i < operands.Count; i++)
+        {
+            if (IsBound(operands[i], out var first) == false)
+                continue;
+
+            var insertAt = i + 1;
+            for (var j = i + 1; j < operands.Count; j++)
+            {
+                if (IsBound(operands[j], out var other) == false || OnSameField(first, other) == false || first.IsGreaterThan != other.IsGreaterThan)
+                    continue;
+
+                if (j != insertAt)
+                {
+                    operands.RemoveAt(j);
+                    operands.Insert(insertAt, other);
+                    changed = true;
+                }
+
+                insertAt++;
             }
         }
 
