@@ -1,14 +1,23 @@
 using Raven.Quill.Logging;
 using System.Net.WebSockets;
-using System.Text;
-using System.Text.Json;
+using System.Threading.Channels;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Quill.Channels;
 using Raven.Quill.Hosting;
+using SlackNet;
+using Channel = Raven.Quill.Channels.Channel;
+using SlackNet.Events;
+using SlackNet.SocketMode;
 
 namespace Raven.Quill.Slack;
 
 internal sealed class SlackSocketRuntime
 {
+    private const string HelloType = "hello";
+    private const string DisconnectType = "disconnect";
+    private const string EventsApiType = "events_api";
+
     private const string SocketModeDisabledError =
         "slack disabled Socket Mode for this app; turn it on under the app's Socket Mode page";
 
@@ -17,7 +26,7 @@ internal sealed class SlackSocketRuntime
     private static readonly TimeSpan KeepAliveInterval = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan KeepAliveTimeout = TimeSpan.FromSeconds(20);
 
-    private static readonly JsonSerializerOptions JsonOptions = new();
+    private static readonly JsonSerializer Serializer = JsonSerializer.Create(SlackApiClient.JsonSettings.SerializerSettings);
 
     private readonly string _database;
     private readonly string _shortChannelId;
@@ -30,8 +39,6 @@ internal sealed class SlackSocketRuntime
     private readonly QuillLogger<SlackChannelManager> _logger;
 
     private readonly CancellationTokenSource _cts = new();
-    private readonly byte[] _receiveBuffer = new byte[8 * 1024];
-    private readonly MemoryStream _frameBuffer = new();
 
     private volatile bool _canRestart = true;
     private Task _run = Task.CompletedTask;
@@ -100,7 +107,6 @@ internal sealed class SlackSocketRuntime
         }
 
         _cts.Dispose();
-        _frameBuffer.Dispose();
     }
 
     private async Task RunAsync()
@@ -184,17 +190,25 @@ internal sealed class SlackSocketRuntime
     {
         var url = await OpenSocketUrlAsync();
 
-        using var socket = new ClientWebSocket();
-        socket.Options.KeepAliveInterval = KeepAliveInterval;
-        socket.Options.KeepAliveTimeout = KeepAliveTimeout;
-        _frameBuffer.SetLength(0);
+        var client = new ClientWebSocket();
+        client.Options.KeepAliveInterval = KeepAliveInterval;
+        client.Options.KeepAliveTimeout = KeepAliveTimeout;
+        using var socket = new WebSocketWrapper(client, url);
 
-        var hello = await HandshakeAsync(socket, url) ??
+        var frames = System.Threading.Channels.Channel.CreateUnbounded<string>(
+            new UnboundedChannelOptions { SingleReader = true });
+        using var subscription = socket.Messages.Subscribe(
+            frame => frames.Writer.TryWrite(frame),
+            _ => frames.Writer.TryComplete(),
+            () => frames.Writer.TryComplete());
+        _ = socket.Closed.ContinueWith(_ => frames.Writer.TryComplete(), TaskScheduler.Default);
+
+        var hello = await HandshakeAsync(socket, frames.Reader) ??
                     throw new InvalidOperationException("slack closed the socket before sending a hello frame");
 
-        if (hello.Type != SlackSocketFrame.HelloType)
+        if (TypeOf(hello) != HelloType)
             throw new InvalidOperationException(
-                $"slack opened the socket with a '{hello.Type ?? "(untyped)"}' frame instead of hello");
+                $"slack opened the socket with a '{TypeOf(hello) ?? "(untyped)"}' frame instead of hello");
 
         OnConnected();
 
@@ -202,20 +216,20 @@ internal sealed class SlackSocketRuntime
         {
             while (true)
             {
-                var frame = await ReceiveFrameAsync(socket, _cts.Token);
+                var frame = await ReceiveFrameAsync(frames.Reader, _cts.Token);
                 if (frame is null)
                     return (null, false);
 
-                if (frame.EnvelopeId is { Length: > 0 } envelopeId)
-                    await SendAsync(socket, new { envelope_id = envelopeId }, _cts.Token);
+                if (frame.Value<string>("envelope_id") is { Length: > 0 } envelopeId)
+                    await AcknowledgeAsync(socket, envelopeId);
 
-                switch (frame.Type)
+                switch (TypeOf(frame))
                 {
-                    case SlackSocketFrame.DisconnectType:
-                        return OnDisconnectRequested(frame.Reason);
+                    case DisconnectType:
+                        return OnDisconnectRequested(frame.Value<string>("reason"));
 
-                    case SlackSocketFrame.EventsApiType:
-                        OnEvent(frame.Payload);
+                    case EventsApiType:
+                        OnEvent(frame);
                         break;
                 }
             }
@@ -226,19 +240,20 @@ internal sealed class SlackSocketRuntime
         }
     }
 
-    private async Task<SlackSocketFrame?> HandshakeAsync(ClientWebSocket socket, string url)
+    private async Task<JObject?> HandshakeAsync(IWebSocket socket, ChannelReader<string> frames)
     {
         using var handshake = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
         handshake.CancelAfter(_options.SocketHandshakeTimeout);
 
         try
         {
-            await socket.ConnectAsync(new Uri(url), handshake.Token);
-            return await ReceiveFrameAsync(socket, handshake.Token);
+            if (await socket.Open(handshake.Token) == false)
+                throw new InvalidOperationException("slack refused the websocket handshake");
+
+            return await ReceiveFrameAsync(frames, handshake.Token);
         }
         catch (OperationCanceledException) when (_cts.IsCancellationRequested == false)
         {
-            socket.Abort();
             throw new TimeoutException(
                 $"slack did not send a hello frame within {_options.SocketHandshakeTimeout}");
         }
@@ -262,12 +277,12 @@ internal sealed class SlackSocketRuntime
         return (null, true);
     }
 
-    private void OnEvent(JsonElement? payloadElement)
+    private void OnEvent(JObject frame)
     {
-        SlackEventPayload? payload;
+        EventCallback? payload;
         try
         {
-            payload = payloadElement?.Deserialize<SlackEventPayload>(JsonOptions);
+            payload = frame.ToObject<EventEnvelope>(Serializer)?.Payload;
         }
         catch (JsonException e)
         {
@@ -276,7 +291,7 @@ internal sealed class SlackSocketRuntime
             return;
         }
 
-        if (payload?.Type != "event_callback" || payload.Event is not { } message)
+        if (payload?.Event is not MessageEvent message)
             return;
 
         if (payload.TeamId != _settings.TeamId)
@@ -286,17 +301,17 @@ internal sealed class SlackSocketRuntime
             return;
         }
 
-        if (message.Type != "message" || message.ChannelType != "im")
+        if (message.ChannelType != "im")
             return;
 
         if (string.IsNullOrEmpty(message.BotId) == false ||
             string.IsNullOrEmpty(message.User) || message.User == _settings.BotUserId)
             return;
 
-        var kind = message.Subtype switch
+        var kind = message switch
         {
-            null or "" => "text",
-            "file_share" => "unsupported",
+            SlackNet.Events.FileShare => "unsupported",
+            { Subtype: null or "" } => "text",
             _ => null,
         };
         if (kind is null || string.IsNullOrEmpty(message.Channel))
@@ -307,38 +322,23 @@ internal sealed class SlackSocketRuntime
             _database, _channelDocId, message.User, message.Channel, payload.EventId ?? "", kind, message.Text);
     }
 
-    private async Task<SlackSocketFrame?> ReceiveFrameAsync(ClientWebSocket socket, CancellationToken ct)
+    private async Task<JObject?> ReceiveFrameAsync(ChannelReader<string> frames, CancellationToken ct)
     {
         while (true)
         {
-            WebSocketReceiveResult result;
+            string text;
             try
             {
-                result = await socket.ReceiveAsync(_receiveBuffer, ct);
+                text = await frames.ReadAsync(ct);
             }
-            catch (WebSocketException)
+            catch (ChannelClosedException)
             {
                 return null;
             }
 
-            if (result.MessageType == WebSocketMessageType.Close)
-                return null;
-
-            if (_frameBuffer.Length + result.Count > _options.MaxSocketFrameBytes)
-                throw new InvalidOperationException(
-                    $"slack sent a socket frame over {_options.MaxSocketFrameBytes} bytes");
-
-            _frameBuffer.Write(_receiveBuffer, 0, result.Count);
-
-            if (result.EndOfMessage == false)
-                continue;
-
-            var text = Encoding.UTF8.GetString(_frameBuffer.GetBuffer(), 0, (int)_frameBuffer.Length);
-            _frameBuffer.SetLength(0);
-
             try
             {
-                return JsonSerializer.Deserialize<SlackSocketFrame>(text, JsonOptions);
+                return JObject.Parse(text);
             }
             catch (JsonException e)
             {
@@ -355,12 +355,14 @@ internal sealed class SlackSocketRuntime
         return await slack.OpenSocketAsync(_settings.AppToken, _cts.Token);
     }
 
-    private static async Task SendAsync(ClientWebSocket socket, object payload, CancellationToken ct)
+    private static Task AcknowledgeAsync(IWebSocket socket, string envelopeId)
     {
         if (socket.State != WebSocketState.Open)
-            return;
+            return Task.CompletedTask;
 
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(payload, JsonOptions);
-        await socket.SendAsync(bytes, WebSocketMessageType.Text, true, ct);
+        var ack = new Acknowledgement { EnvelopeId = envelopeId };
+        return socket.Send(JsonConvert.SerializeObject(ack, SlackApiClient.JsonSettings.SerializerSettings));
     }
+
+    private static string? TypeOf(JObject frame) => frame.Value<string>("type");
 }

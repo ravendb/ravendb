@@ -152,7 +152,6 @@ builder.Services.AddOptions<ApplianceOptions>()
     .Validate(o => o.Slack.SocketBackoffMax > TimeSpan.Zero, "Slack SocketBackoffMax must be positive")
     .Validate(o => o.Slack.SocketHandshakeTimeout > TimeSpan.Zero, "Slack SocketHandshakeTimeout must be positive")
     .Validate(o => o.Slack.SocketRestartDelay > TimeSpan.Zero, "Slack SocketRestartDelay must be positive")
-    .Validate(o => o.Slack.MaxSocketFrameBytes > 0, "Slack MaxSocketFrameBytes must be positive")
     .Validate(o => Uri.TryCreate(o.Discord.ApiUrl, UriKind.Absolute, out var u) &&
                    (u.Scheme == Uri.UriSchemeHttp || u.Scheme == Uri.UriSchemeHttps),
         "Discord ApiUrl must be an absolute http(s) URL")

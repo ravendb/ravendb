@@ -10,7 +10,7 @@ namespace Raven.Quill.Slack;
 
 internal sealed class SlackApiClient : ISlackClient
 {
-    private static readonly SlackJsonSettings JsonSettings = Default.JsonSettings();
+    internal static readonly SlackJsonSettings JsonSettings = Default.JsonSettings();
 
     private readonly ISlackApiClient _sdk;
 
