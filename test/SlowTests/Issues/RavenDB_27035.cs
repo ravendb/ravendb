@@ -422,7 +422,13 @@ public class RavenDB_27035 : RavenTestBase
     // disjoint and reach NumberOfEntries even though shows/2 has no long term at all (reported by Maciej Aszyk).
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void OrderByAsLongKeepsAnEntryWhenAStaticNullAndADynamicNumberShareTheField(Options options)
+    public void OrderByAsLongKeepsAnEntryWhenAStaticNullAndADynamicNumberShareTheField(Options options) => AssertKeepsBothShows<Shows_ByTitle>(options);
+
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void OrderByAsLongKeepsAnEntryWhenAJavaScriptIndexSharesTheField(Options options) => AssertKeepsBothShows<Shows_ByTitle_JavaScript>(options);
+
+    private void AssertKeepsBothShows<TIndex>(Options options) where TIndex : IAbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStore(options);
 
@@ -433,14 +439,28 @@ public class RavenDB_27035 : RavenTestBase
             session.SaveChanges();
         }
 
-        store.ExecuteIndex(new Shows_ByTitle());
+        var index = new TIndex();
+        store.ExecuteIndex(index);
         Indexes.WaitForIndexing(store);
 
         using (var session = store.OpenSession())
         {
-            var results = session.Advanced.RawQuery<Show>("from index 'Shows/ByTitle' order by Title as long").ToList();
+            var results = session.Advanced.RawQuery<Show>($"from index '{index.IndexName}' order by Title as long").ToList();
 
             Assert.Equal(2, results.Count);
+        }
+    }
+
+    private class Shows_ByTitle_JavaScript : AbstractJavaScriptIndexCreationTask
+    {
+        public Shows_ByTitle_JavaScript()
+        {
+            Maps = new HashSet<string>
+            {
+                @"map('Shows', function (s) {
+                    return { Title: s.Title, _: [ createField('Title', s.Extra, { indexing: 'Default', storage: false, termVector: null }) ] };
+                })"
+            };
         }
     }
 
