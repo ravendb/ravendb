@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using Raven.Server.Documents.Queries.AST;
 
@@ -7,9 +8,10 @@ namespace Raven.Server.Documents.Queries;
 /// <summary>
 /// Rewrites a where clause once, when its query metadata is built, so every request sharing the cached query text gets
 /// the cheaper shape: a lower and an upper bound on the same field become one <see cref="BetweenExpression"/> regardless
-/// of how the 'and' chain is nested or parenthesized, and duplicated bounds are dropped. Only the structure is looked at,
-/// never a parameter value, because the cached metadata serves requests with different parameter values. The input tree
-/// is never mutated and unchanged subtrees come back as the same instances.
+/// of how the 'and' chain is nested or parenthesized, duplicated bounds are dropped, and literal bounds in the same
+/// direction keep only the tighter one. Only the structure is looked at, never a parameter value, because the cached
+/// metadata serves requests with different parameter values. The input tree is never mutated and unchanged subtrees come
+/// back as the same instances.
 /// </summary>
 public static class WhereClauseNormalizer
 {
@@ -65,6 +67,7 @@ public static class WhereClauseNormalizer
         var changed = Flatten(root, operands);
 
         changed |= DropDuplicateBounds(operands);
+        changed |= MergeLiteralBoundsInTheSameDirection(operands);
         changed |= FoldOppositeBoundsIntoBetween(operands);
 
         if (changed == false)
@@ -126,6 +129,34 @@ public static class WhereClauseNormalizer
         return changed;
     }
 
+    // 'Foo > 1 and Foo > 2' is 'Foo > 2'; only literals can be compared here, parameters are left to the query builders
+    private static bool MergeLiteralBoundsInTheSameDirection(List<QueryExpression> operands)
+    {
+        var changed = false;
+        for (var i = 0; i < operands.Count; i++)
+        {
+            if (IsBound(operands[i], out var first) == false)
+                continue;
+
+            for (var j = i + 1; j < operands.Count; j++)
+            {
+                if (IsBound(operands[j], out var second) == false || OnSameField(first, second) == false || first.IsGreaterThan != second.IsGreaterThan)
+                    continue;
+
+                if (TryCompareNumericLiterals((ValueExpression)first.Right, (ValueExpression)second.Right, out var comparison) == false)
+                    continue;
+
+                first = QueryBuilderHelper.TighterBound(first, second, comparison);
+                operands[i] = first;
+                operands.RemoveAt(j);
+                j--;
+                changed = true;
+            }
+        }
+
+        return changed;
+    }
+
     // 'Foo >= $a and ... and Foo < $b' is one bounded range scan instead of two open-ended ones
     private static bool FoldOppositeBoundsIntoBetween(List<QueryExpression> operands)
     {
@@ -165,5 +196,37 @@ public static class WhereClauseNormalizer
     private static bool OnSameField(BinaryExpression first, BinaryExpression second)
     {
         return first.Left.Equals(second.Left);
+    }
+
+    private static bool TryCompareNumericLiterals(ValueExpression first, ValueExpression second, out int comparison)
+    {
+        comparison = 0;
+
+        if (first.Value == ValueTokenType.Long && second.Value == ValueTokenType.Long)
+        {
+            comparison = QueryBuilderHelper.ParseInt64WithSeparators(first.Token.Value).CompareTo(QueryBuilderHelper.ParseInt64WithSeparators(second.Token.Value));
+            return true;
+        }
+
+        if (TryGetNumericLiteral(first, out var firstNumber) == false || TryGetNumericLiteral(second, out var secondNumber) == false)
+            return false;
+
+        comparison = firstNumber.CompareTo(secondNumber);
+        return true;
+    }
+
+    private static bool TryGetNumericLiteral(ValueExpression value, out double number)
+    {
+        switch (value.Value)
+        {
+            case ValueTokenType.Long:
+                number = QueryBuilderHelper.ParseInt64WithSeparators(value.Token.Value);
+                return true;
+            case ValueTokenType.Double:
+                return double.TryParse(value.Token.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out number);
+            default:
+                number = 0;
+                return false;
+        }
     }
 }
