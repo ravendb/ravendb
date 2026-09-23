@@ -155,10 +155,7 @@ namespace Raven.Server.Documents
         };
 
         /// <summary>
-        /// A collection holding RavenDB's own bookkeeping documents rather than user data: '@hilo',
-        /// '@embeddings-cache', the '@embeddings/*' family and '@cdc-states'.
-        /// A closed list on purpose - a leading '@' alone does not make a collection internal, so a
-        /// collection added later is covered only once it is named here.
+        /// Closed list on purpose - a leading '@' alone isn't a system collection (example `@conversations`)
         /// </summary>
         public static bool IsSystemCollection(string name)
         {
@@ -166,7 +163,6 @@ namespace Raven.Server.Documents
                 return false;
 
             return SystemCollections.Contains(name) ||
-                   // '@embeddings/<source collection>' is generated per source collection, so it cannot be listed
                    name.StartsWith(EmbeddingsHelper.EmbeddingDocumentCollectionNamePrefix, StringComparison.OrdinalIgnoreCase);
         }
 
