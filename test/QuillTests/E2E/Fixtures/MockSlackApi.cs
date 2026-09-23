@@ -320,7 +320,7 @@ public sealed class MockSlackApi : IAsyncDisposable
         {
             if (SocketOpenRetryAfter is { } retryAfter)
                 ctx.Response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString(CultureInfo.InvariantCulture);
-            return SlackError(error);
+            return SlackError(error, error == "ratelimited" ? 429 : 200);
         }
 
         if (known == false)
@@ -579,8 +579,8 @@ public sealed class MockSlackApi : IAsyncDisposable
         return header.StartsWith("Bearer ", StringComparison.Ordinal) ? header["Bearer ".Length..] : "";
     }
 
-    private static IResult SlackError(string error) =>
-        Results.Json(new JsonObject { ["ok"] = false, ["error"] = error });
+    private static IResult SlackError(string error, int statusCode = 200) =>
+        Results.Json(new JsonObject { ["ok"] = false, ["error"] = error }, statusCode: statusCode);
 
     public async ValueTask DisposeAsync()
     {
