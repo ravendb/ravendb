@@ -206,6 +206,116 @@ namespace FastTests.Corax
             Assert.True(between.MaxInclusive);
         }
 
+        [RavenTheory(RavenTestCategory.Querying)]
+        // parameter bounds cannot be compared here, they are grouped next to each other for the query builders
+        [InlineData("Amount > $a and CustomerId = 'x' and Amount > $b", "AND[ AND[ Amount > $a , Amount > $b ] , CustomerId = 'x' ]")]
+        [InlineData("Amount > $a and CustomerId = 'x' and Amount > $b and EntityType = 'y' and Amount >= $c", "AND[ AND[ AND[ AND[ Amount > $a , Amount > $b ] , Amount >= $c ] , CustomerId = 'x' ] , EntityType = 'y' ]")]
+        // opposite directions still pair into a between first
+        [InlineData("Amount > $a and CustomerId = 'x' and Amount < $b and Amount > $c", "AND[ AND[ Amount between $a and $b , CustomerId = 'x' ] , Amount > $c ]")]
+        public void NormalizerGroupsSameDirectionParameterBounds(string where, string expectedTree)
+        {
+            var query = Parse(where);
+
+            Assert.True(WhereClauseNormalizer.TryNormalize(query.Where, out var rewritten));
+
+            var after = Dump(rewritten);
+            _output.WriteLine($"RQL    : {where}");
+            _output.WriteLine($"AFTER  : {after}");
+
+            Assert.Equal(expectedTree, after);
+            Assert.False(WhereClauseNormalizer.TryNormalize(rewritten, out _));
+        }
+
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        // lower bounds keep the greater value
+        [RavenData("Amount > $a and Amount > $b", 3, 6, "coins/1,coins/3,coins/4,coins/5", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Amount > $a and Amount > $b", 6, 3, "coins/1,coins/3,coins/4,coins/5", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Amount > $a and CustomerId in ($p0) and Amount >= $b", 3, 7, "coins/1,coins/3,coins/4,coins/5", SearchEngineMode = RavenSearchEngineMode.All)]
+        // upper bounds keep the lesser value
+        [RavenData("Amount < $a and Amount < $b", 8, 6, "coins/2,coins/6,coins/7", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Amount < $a and Amount < $b", 6, 8, "coins/2,coins/6,coins/7", SearchEngineMode = RavenSearchEngineMode.All)]
+        // a long and a double compare as numbers
+        [RavenData("Amount > $a and Amount > $b", 3, 6.5, "coins/1,coins/3,coins/4,coins/5", SearchEngineMode = RavenSearchEngineMode.All)]
+        // three bounds on one field
+        [RavenData("Amount > $a and Amount > $b and Amount > 4", 3, 6, "coins/1,coins/3,coins/4,coins/5", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TheTighterOfSameDirectionParameterBoundsWins(Options options, string where, object a, object b, string expectedIds)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                Seed(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced
+                        .RawQuery<Coin>($"from index 'CoinIndex' where {where} include timings()")
+                        .AddParameter("a", a)
+                        .AddParameter("b", b)
+                        .AddParameter("p0", new[] { "customers/1", "customers/2" })
+                        .Timings(out QueryTimings timings)
+                        .ToList();
+
+                    Assert.Equal(expectedIds.Split(','), results.Select(x => x.Id).OrderBy(x => x).ToArray());
+
+                    if (options.SearchEngineMode == RavenSearchEngineMode.Corax)
+                    {
+                        var plan = (QueryInspectionNode)timings.QueryPlan;
+                        _output.WriteLine($"RQL  : {where} (a={a}, b={b})");
+                        _output.WriteLine("PLAN :");
+                        Print(plan, 1);
+
+                        var rangeScans = new List<QueryInspectionNode>();
+                        Collect(plan, rangeScans, "Amount");
+                        Assert.Single(rangeScans);
+                    }
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DateParameterBoundsCompareAsDates(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                Seed(store);
+
+                using (var session = store.OpenSession())
+                {
+                    // the later lower bound wins: coins/1 sits on From and is excluded, coins/2 is ten days in and stays
+                    var results = session.Advanced
+                        .RawQuery<Coin>("from index 'CoinIndex' where CreatedAt >= $p1 and CustomerId in ($p0) and CreatedAt >= $later")
+                        .AddParameter("p0", new[] { "customers/1", "customers/2" })
+                        .AddParameter("p1", From)
+                        .AddParameter("later", From.AddDays(5))
+                        .ToList();
+
+                    Assert.Equal(new[] { "coins/2", "coins/3", "coins/4" }, results.Select(x => x.Id).OrderBy(x => x).ToArray());
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void StringBoundsThatAreNotDatesAreLeftAlone(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                Seed(store);
+
+                using (var session = store.OpenSession())
+                {
+                    // two string bounds, no date in sight: nothing is merged and both still apply
+                    var results = session.Advanced
+                        .RawQuery<Coin>("from index 'CoinIndex' where CustomerId > $a and CustomerId > $b")
+                        .AddParameter("a", "customers/1")
+                        .AddParameter("b", "customers/2")
+                        .ToList();
+
+                    Assert.Equal(new[] { "coins/6" }, results.Select(x => x.Id).ToArray());
+                }
+            }
+        }
+
         [RavenFact(RavenTestCategory.Querying)]
         public void QueryMetadataCarriesTheNormalizedWhereClause()
         {
@@ -590,7 +700,7 @@ namespace FastTests.Corax
                 Print(child, depth + 1);
         }
 
-        private static void Collect(QueryInspectionNode node, List<QueryInspectionNode> rangeScansOnCreatedAt)
+        private static void Collect(QueryInspectionNode node, List<QueryInspectionNode> rangeScansOnField, string fieldName = "CreatedAt")
         {
             if (node == null)
                 return;
@@ -598,13 +708,13 @@ namespace FastTests.Corax
             if (node.Operation.Contains("RangeProvider") &&
                 node.Parameters != null &&
                 node.Parameters.TryGetValue("FieldName", out var field) &&
-                field.Contains("CreatedAt"))
+                field.Contains(fieldName))
             {
-                rangeScansOnCreatedAt.Add(node);
+                rangeScansOnField.Add(node);
             }
 
             foreach (var child in node.Children ?? new List<QueryInspectionNode>())
-                Collect(child, rangeScansOnCreatedAt);
+                Collect(child, rangeScansOnField, fieldName);
         }
 
         private static string Dump(QueryExpression expression)

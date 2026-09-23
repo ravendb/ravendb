@@ -214,6 +214,16 @@ namespace Raven.Server.Documents.Queries
                         }
                     case OperatorType.And:
                         {
+                            // 'Foo > $a and Foo > $b' keeps only the tighter bound. The query metadata already placed such bounds
+                            // next to each other; their values are known only here.
+                            if (QueryBuilderHelper.TryMergeSameDirectionBounds(where, query, metadata, parameters, index, out var tighterBound, out var remainder))
+                            {
+                                var mergedExpression = remainder == null ? tighterBound : new BinaryExpression(remainder, tighterBound, OperatorType.And);
+                                buildSteps?.Add($"Kept the tighter of the same-direction bounds: {expression} -> {mergedExpression}");
+                                return ToLuceneQuery(serverContext, documentsContext, query, mergedExpression, metadata, index, parameters, analyzer,
+                                    factories, exact, secondary: secondary, buildSteps: buildSteps);
+                            }
+
                             var left = ToLuceneQuery(serverContext, documentsContext, query, @where.Left, metadata, index, parameters, analyzer,
                                 factories, exact, secondary: secondary, buildSteps: buildSteps);
                             var right = ToLuceneQuery(serverContext, documentsContext, query, @where.Right, metadata, index, parameters, analyzer,
