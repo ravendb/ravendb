@@ -76,9 +76,8 @@ namespace Raven.Server.Web.Studio.Processors
         public long RangeSize;
         public HashSet<int> ShardNumbers = new();
 
-        // set only for a single-bucket range that resides on more than one shard (resharding in progress);
-        // points to the shard that will own the bucket once the migration completes (its destination),
-        // the copies on the remaining shards are pending removal
+        // set only for a single-bucket range; points to the shard that owns the bucket according to the sharding configuration,
+        // when the bucket resides on more than one shard (resharding in progress) the copies on the remaining shards are pending removal
         public int? OwnerShardNumber;
 
         public string RangeSizeHumane => Size.Humane(RangeSize);
