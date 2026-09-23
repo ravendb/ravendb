@@ -8,9 +8,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Server;
-using Raven.Server.Commercial.WriteUsageMetering;
-using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.ServerWide.Context;
@@ -20,13 +17,10 @@ using ITestOutputHelper = Xunit.ITestOutputHelper;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_27365 : ClusterTestBase
+    public class RavenDB_27365 : QuillAppServerTestBase
     {
         public RavenDB_27365(ITestOutputHelper output) : base(output)
         {
-            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.SupervisorSamplePeriod)] = "50";
-            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.WorkerSamplePeriod)] = "25";
-            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.OnErrorDelayTime)] = "15";
         }
 
         private const string SourceCollection = "Dtos";
@@ -36,9 +30,6 @@ namespace SlowTests.Issues
             public string Id { get; set; }
             public string Name { get; set; }
         }
-
-        private static WriteUsageApplicationSnapshot SnapshotEntryByDatabase(RavenServer leader, string database)
-            => leader.ServerStore.Observer?.LatestWriteUsageSnapshot?.Applications.SingleOrDefault(d => d.ApplicationName == database);
 
         private static void AddEmbeddingsGenerationTask(IDocumentStore store, string collection)
         {
@@ -74,12 +65,10 @@ namespace SlowTests.Issues
             store.Maintenance.Send(new AddEmbeddingsGenerationOperation(configuration));
         }
 
-        [RavenFact(RavenTestCategory.Licensing | RavenTestCategory.Cluster)]
+        [RavenFact(RavenTestCategory.Licensing | RavenTestCategory.Cluster | RavenTestCategory.Quill)]
         public async Task LastEtag_IsReportedPerDatabaseId()
         {
-            var (nodes, leader) = await CreateRaftCluster(1, watcherCluster: true);
-
-            using (var store = GetDocumentStore(new Options { ReplicationFactor = 1, Server = leader }))
+            using (var store = GetQuillAppDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -89,7 +78,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var database = await nodes.Single().ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var database = await GetDatabase(store.Database);
                 string expectedDatabaseId;
                 long expectedLastEtag;
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -102,12 +91,12 @@ namespace SlowTests.Issues
                 Assert.False(string.IsNullOrEmpty(expectedDatabaseId), "Expected the node to expose its database id.");
                 Assert.True(expectedLastEtag > 0, $"Expected the writes to advance the last etag, got {expectedLastEtag}.");
 
-                await WaitForValueAsync(() => SnapshotEntryByDatabase(leader, store.Database)?.Nodes?.Count ?? 0, 1,
+                await WaitForValueAsync(() => SnapshotEntryByDatabase(Server, store.Database)?.Nodes?.SingleOrDefault()?.LastEtag, expectedLastEtag,
                     timeout: 30_000, interval: 100);
 
-                leader.ServerStore.Observer.Suspended = true;
+                Server.ServerStore.Observer.Suspended = true;
 
-                var entry = SnapshotEntryByDatabase(leader, store.Database);
+                var entry = SnapshotEntryByDatabase(Server, store.Database);
                 Assert.NotNull(entry);
 
                 Assert.Equal(1, entry.Nodes.Count);
@@ -120,12 +109,10 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Licensing | RavenTestCategory.Cluster | RavenTestCategory.Ai)]
+        [RavenFact(RavenTestCategory.Licensing | RavenTestCategory.Cluster | RavenTestCategory.Quill | RavenTestCategory.Ai)]
         public async Task SystemCollections_AreReported_FromCollectionsTheProductCreates()
         {
-            var (nodes, leader) = await CreateRaftCluster(1, watcherCluster: true);
-
-            using (var store = GetDocumentStore(new Options { ReplicationFactor = 1, Server = leader }))
+            using (var store = GetQuillAppDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -147,13 +134,13 @@ namespace SlowTests.Issues
 
                 await WaitForValueAsync(() =>
                 {
-                    var reported = SnapshotEntryByDatabase(leader, store.Database)?.Nodes?.SingleOrDefault()?.SystemCollections;
+                    var reported = SnapshotEntryByDatabase(Server, store.Database)?.Nodes?.SingleOrDefault()?.SystemCollections;
                     return reported != null && expected.All(reported.ContainsKey);
                 }, true, timeout: 30_000, interval: 100);
 
-                leader.ServerStore.Observer.Suspended = true;
+                Server.ServerStore.Observer.Suspended = true;
 
-                var entry = SnapshotEntryByDatabase(leader, store.Database);
+                var entry = SnapshotEntryByDatabase(Server, store.Database);
                 Assert.NotNull(entry);
 
                 var reportedByMember = entry.Nodes.Single();
@@ -177,12 +164,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Licensing | RavenTestCategory.Cluster, LicenseRequired = true)]
+        [RavenFact(RavenTestCategory.Licensing | RavenTestCategory.Cluster | RavenTestCategory.Quill, LicenseRequired = true)]
         public async Task SystemCollections_AreReportedPerDatabaseId_Unmerged()
         {
             var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: true);
 
-            using (var store = GetDocumentStore(new Options { ReplicationFactor = 2, Server = leader }))
+            using (var store = GetQuillAppDocumentStore(new Options { ReplicationFactor = 2, Server = leader }))
             {
                 const string reportedCollection = "@custom-collection";
                 using (var commands = store.Commands())
@@ -197,7 +184,7 @@ namespace SlowTests.Issues
                 var expectedByDatabaseId = new Dictionary<string, (long LastEtag, long Count)>();
                 foreach (var node in nodes)
                 {
-                    var database = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    var database = await GetDatabase(node, store.Database);
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (var tx = context.OpenReadTransaction())
                     {
