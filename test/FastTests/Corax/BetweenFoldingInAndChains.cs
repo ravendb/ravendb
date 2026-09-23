@@ -8,6 +8,8 @@ using Raven.Client.Documents.Queries.Timings;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -92,7 +94,7 @@ namespace FastTests.Corax
             var query = Parse(where);
             var before = Dump(query.Where);
 
-            Assert.True(QueryBuilderHelper.TryFoldRangePairsInAndChain((BinaryExpression)query.Where, out var rewritten));
+            Assert.True(WhereClauseNormalizer.TryNormalize(query.Where, out var rewritten));
 
             var after = Dump(rewritten);
             _output.WriteLine($"RQL    : {where}");
@@ -101,12 +103,12 @@ namespace FastTests.Corax
 
             Assert.Equal(expectedTree, after);
 
-            // the parsed query is cached and shared, the fold must not touch it
+            // the input tree is never mutated, the caller decides what to do with the rewrite
             Assert.Equal(before, Dump(query.Where));
 
-            // the rewritten chain has nothing left to fold
-            if (rewritten is BinaryExpression rewrittenChain)
-                Assert.False(QueryBuilderHelper.TryFoldRangePairsInAndChain(rewrittenChain, out _));
+            // normalizing is idempotent
+            Assert.False(WhereClauseNormalizer.TryNormalize(rewritten, out var again));
+            Assert.Same(rewritten, again);
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
@@ -115,12 +117,52 @@ namespace FastTests.Corax
         [InlineData("CreatedAt > $p1 and CustomerId = 'customers/1'")]
         [InlineData("not (CreatedAt > $p1) and CreatedAt < $p2")]
         [InlineData("CreatedAt > $p1 and CreatedAt < Amount")]
-        public void FoldLeavesChainsWithoutARangePairAlone(string where)
+        [InlineData("CustomerId > 'a' and CustomerId > 'b'")]
+        [InlineData("CustomerId = 'a' or CustomerId = 'b'")]
+        [InlineData("CustomerId = 'a'")]
+        public void NormalizerLeavesChainsWithNothingToRewriteAlone(string where)
         {
             var query = Parse(where);
 
-            Assert.False(QueryBuilderHelper.TryFoldRangePairsInAndChain((BinaryExpression)query.Where, out var rewritten));
-            Assert.Null(rewritten);
+            Assert.False(WhereClauseNormalizer.TryNormalize(query.Where, out var rewritten));
+            Assert.Same(query.Where, rewritten);
+        }
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [InlineData("CustomerId = 'x' or (Amount > 1 and Amount < 5)", "OR[ CustomerId = 'x' , Amount between 1 and 5 ]")]
+        [InlineData("CustomerId = 'x' and not (Amount > 1 and Amount < 5)", "AND[ CustomerId = 'x' , NOT[ Amount between 1 and 5 ] ]")]
+        public void NormalizerReachesIntoOrAndNotGroups(string where, string expectedTree)
+        {
+            var query = Parse(where);
+
+            Assert.True(WhereClauseNormalizer.TryNormalize(query.Where, out var rewritten));
+
+            var after = Dump(rewritten);
+            _output.WriteLine($"RQL    : {where}");
+            _output.WriteLine($"AFTER  : {after}");
+
+            Assert.Equal(expectedTree, after);
+            Assert.False(WhereClauseNormalizer.TryNormalize(rewritten, out _));
+        }
+
+        [RavenFact(RavenTestCategory.Querying)]
+        public void QueryMetadataCarriesTheNormalizedWhereClause()
+        {
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var parameters = context.ReadObject(new DynamicJsonValue
+                {
+                    ["p0"] = new DynamicJsonArray { "customers/1" },
+                    ["p1"] = From,
+                    ["p2"] = To,
+                    ["p3"] = new DynamicJsonArray { "Deposit" }
+                }, "parameters");
+
+                var metadata = new QueryMetadata($"from index 'CoinIndex' where {ClientShape}", parameters, cacheKey: 1);
+
+                Assert.Equal("AND[ AND[ CustomerId in ($p0) , CreatedAt between $p1 and $p2 ] , EntityType in ($p3) ]", Dump(metadata.Query.Where));
+                Assert.Equal($"from index 'CoinIndex' where {ClientShape}", metadata.QueryText);
+            }
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
@@ -134,7 +176,7 @@ namespace FastTests.Corax
         {
             var query = Parse(where);
 
-            Assert.True(QueryBuilderHelper.TryFoldRangePairsInAndChain((BinaryExpression)query.Where, out var rewritten));
+            Assert.True(WhereClauseNormalizer.TryNormalize(query.Where, out var rewritten));
 
             var between = Assert.IsType<BetweenExpression>(rewritten);
             Assert.Equal("p1", between.Min.Token.Value);
@@ -243,7 +285,7 @@ namespace FastTests.Corax
             var query = Parse(where);
             var before = Dump(query.Where);
 
-            var folded = FoldLikeTheBuilders(query.Where);
+            var folded = WhereClauseNormalizer.Normalize(query.Where);
             var after = Dump(folded);
 
             _output.WriteLine($"RQL    : {where}");
@@ -312,24 +354,6 @@ namespace FastTests.Corax
             }
         }
 
-        // Mirrors what both query builders do: fold each 'and' chain, then descend into whatever is left.
-        private static QueryExpression FoldLikeTheBuilders(QueryExpression expression)
-        {
-            switch (expression)
-            {
-                case BinaryExpression { Operator: OperatorType.And } and:
-                    if (QueryBuilderHelper.TryFoldRangePairsInAndChain(and, out var rewritten))
-                        return FoldLikeTheBuilders(rewritten);
-                    return new BinaryExpression(FoldLikeTheBuilders(and.Left), FoldLikeTheBuilders(and.Right), OperatorType.And);
-                case BinaryExpression { Operator: OperatorType.Or } or:
-                    return new BinaryExpression(FoldLikeTheBuilders(or.Left), FoldLikeTheBuilders(or.Right), OperatorType.Or);
-                case NegatedExpression not:
-                    return new NegatedExpression(FoldLikeTheBuilders(not.Expression));
-                default:
-                    return expression;
-            }
-        }
-
         [RavenTheory(RavenTestCategory.Querying)]
         [InlineData(true)]
         [InlineData(false)]
@@ -361,7 +385,7 @@ namespace FastTests.Corax
                     chain = new BinaryExpression(operands[i], chain, OperatorType.And);
             }
 
-            Assert.True(QueryBuilderHelper.TryFoldRangePairsInAndChain((BinaryExpression)chain, out var folded));
+            var folded = WhereClauseNormalizer.Normalize(chain);
 
             var (betweens, looseBounds, total) = CountIteratively(folded);
             Assert.Equal(1, betweens);

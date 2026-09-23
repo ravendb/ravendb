@@ -370,14 +370,6 @@ public static class CoraxQueryBuilder
                     IQueryMatch left = null;
                     IQueryMatch right = null;
                     
-                    // translate 'Foo >= $p1 and ... and Foo <= $p2' into a single, more efficient between query,
-                    // regardless of how the 'and' chain is nested or parenthesized
-                    if (QueryBuilderHelper.TryFoldRangePairsInAndChain(where, out var foldedExpression))
-                    {
-                        builderParameters.BuildSteps?.Add($"Folded range pairs in AND chain: {expression} -> {foldedExpression}");
-                        return ToCoraxQuery(builderParameters, foldedExpression, ref leftOnlyOptimization, exact);
-                    }
-
 
                     leftOnlyOptimization.BinaryMatchTraversed();
                     switch (@where.Left, @where.Right)
