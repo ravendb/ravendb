@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.RateLimiting;
@@ -225,9 +225,7 @@ builder.Services.AddHttpClient(WebhookActionExecutor.ClientName,
 
 builder.Services.AddHttpClient<ISlackClient, SlackApiClient>(static (sp, http) =>
 {
-    var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value.Slack;
-    http.BaseAddress = new Uri(opts.ApiUrl.EndsWith('/') ? opts.ApiUrl : opts.ApiUrl + "/");
-    http.Timeout = opts.RequestTimeout;
+    http.Timeout = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value.Slack.RequestTimeout;
 });
 
 builder.Services.AddHttpClient<IDiscordClient, DiscordApiClient>(static (sp, http) =>
