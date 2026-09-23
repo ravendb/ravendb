@@ -67,6 +67,7 @@ import RichAlert from "components/common/RichAlert";
 import { OngoingTasksHeader } from "components/pages/database/tasks/ongoingTasks/partials/OngoingTasksHeader";
 import { InternalReplicationPanel } from "./panels/InternalReplicationPanel";
 import { LoadingView } from "components/common/LoadingView";
+import { LoadError } from "components/common/LoadError";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { getRequestErrorMessage } from "components/utils/common";
 import { SnowflakeEtlPanel } from "components/pages/database/tasks/ongoingTasks/panels/SnowflakeEtlPanel";
@@ -137,7 +138,8 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps = {
     const { result: taskErrorsResult } = useDatabaseWideAsync(getTaskErrors);
 
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
-    const { value: isInitialLoadDone, setTrue: markInitialLoadDone } = useBoolean(false);
+    const isInitialLoadDone = tasks.locationsLoadStatus.some((x) => x.status !== "idle");
+    const allLocationsFailed = tasks.locationsLoadStatus.every((x) => x.status === "failure");
 
     const fetchTasks = useCallback(
         async (location: databaseLocationSpecifier) => {
@@ -161,8 +163,6 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps = {
                     location,
                     error: getRequestErrorMessage(e),
                 });
-            } finally {
-                markInitialLoadDone();
             }
         },
         [db, tasksService, dispatch, startTrackingEtlProgress]
@@ -422,6 +422,14 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps = {
 
     if (!isInitialLoadDone) {
         return <LoadingView />;
+    }
+
+    if (allLocationsFailed) {
+        return (
+            <div className="content-margin">
+                <LoadError error={tasks.locationsLoadStatus[0].error} refresh={reload} />
+            </div>
+        );
     }
 
     return (
