@@ -26,16 +26,14 @@ internal sealed class DiscordStreamingReply(
     protected override async Task ShowPreviewAsync(string text, CancellationToken token)
     {
         if (_currentMessageId.Length == 0)
-            _currentMessageId = await discord.CreateMessageAsync(botToken, dmChannelId, text, token);
+            _currentMessageId = await discord.CreateMessageAsync(botToken, dmChannelId, text, suppressEmbeds: true, token);
         else
-            await discord.EditMessageAsync(botToken, dmChannelId, _currentMessageId, text, token);
+            await discord.EditMessageAsync(botToken, dmChannelId, _currentMessageId, text, suppressEmbeds: true, token);
     }
 
     protected override Task SendFinalAsync(string text, CancellationToken token) =>
-        discord.CreateMessageAsync(botToken, dmChannelId, text, token);
+        discord.CreateMessageAsync(botToken, dmChannelId, text, suppressEmbeds: false, token);
 
     protected override Task EditFinalAsync(string text, CancellationToken token) =>
-        text == LastShownText
-            ? Task.CompletedTask
-            : discord.EditMessageAsync(botToken, dmChannelId, _currentMessageId, text, token);
+        discord.EditMessageAsync(botToken, dmChannelId, _currentMessageId, text, suppressEmbeds: false, token);
 }
