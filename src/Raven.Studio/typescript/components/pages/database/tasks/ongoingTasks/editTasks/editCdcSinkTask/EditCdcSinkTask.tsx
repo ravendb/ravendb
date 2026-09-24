@@ -42,6 +42,7 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const isRawView = useAppSelector(editCdcSinkTaskSelectors.isRawView);
+    const isRawViewDirty = useAppSelector(editCdcSinkTaskSelectors.isRawViewDirty);
     const hasCdcSink = useAppSelector(licenseSelectors.statusValue("HasCdcSink"));
 
     const taskId = queryParams?.taskId ? parseInt(queryParams.taskId, 10) : null;
@@ -70,11 +71,12 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
         resolver: editCdcSinkTaskResolver,
     });
 
-    const { setIsDirty } = useDirtyFlag(editForm.formState.isDirty);
+    const isDirty = editForm.formState.isDirty || isRawViewDirty;
+    const { setIsDirty } = useDirtyFlag(isDirty);
     const { appUrl } = useAppUrls();
     const confirm = useConfirm();
     const asyncVerify = useEditCdcSinkTaskVerification(editForm);
-    const applyRawViewContent = useEditCdcSinkTaskRawViewSync(editForm);
+    const { applyRawViewContent, revealValidationErrors } = useEditCdcSinkTaskRawViewSync(editForm);
 
     const tablesFieldArray = useFieldArray({
         control: editForm.control,
@@ -116,6 +118,7 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
 
             await tasksService.saveCdcSinkTask(databaseName, editCdcSinkTaskUtils.mapToDto(formData, taskId));
             editForm.reset(formData);
+            dispatch(editCdcSinkTaskActions.rawViewContentSaved());
             setIsDirty(false);
             cancel();
         });
@@ -127,7 +130,7 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
             return;
         }
 
-        return editForm.handleSubmit(handleSubmit)(e);
+        return editForm.handleSubmit(handleSubmit, revealValidationErrors)(e);
     };
 
     if (asyncGetDefaultValues.loading) {
@@ -168,7 +171,12 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
                         </div>
                     )}
                 </div>
-                <EditCdcSinkTaskFooter asyncVerify={asyncVerify} isDisabled={!hasCdcSink} onCancel={cancel} />
+                <EditCdcSinkTaskFooter
+                    asyncVerify={asyncVerify}
+                    isDirty={isDirty}
+                    isDisabled={!hasCdcSink}
+                    onCancel={cancel}
+                />
             </form>
         </FormProvider>
     );

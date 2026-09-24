@@ -91,6 +91,16 @@ export const VerificationFailed: StoryObj = {
     },
 };
 
+export const VerificationRequestFailed: StoryObj = {
+    render: () => {
+        prepareMocks();
+        mockServices.tasksService.withGetCdcSinkTaskInfo();
+        mockServices.tasksService.withThrowingVerifyCdcSink();
+
+        return <EditCdcSinkTask queryParams={{ taskId: String(TasksStubs.getCdcSink().TaskId) }} />;
+    },
+};
+
 export const VerificationPassedWithWarnings: StoryObj = {
     render: () => {
         prepareMocks();

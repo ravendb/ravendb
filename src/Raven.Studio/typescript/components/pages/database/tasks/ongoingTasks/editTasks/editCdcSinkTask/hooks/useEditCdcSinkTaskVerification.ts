@@ -9,6 +9,7 @@ import { editCdcSinkTaskSelectors } from "components/pages/database/tasks/ongoin
 import { editCdcSinkTaskUtils } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskUtils";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import { useAppSelector } from "components/store";
+import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
 import { useRef } from "react";
 import { useAsyncCallback } from "react-async-hook";
@@ -33,8 +34,15 @@ export interface EditCdcSinkTaskVerification {
     result: CdcTestResult;
 }
 
+const requestFailedResult: CdcTestResult = {
+    Success: false,
+    Error: "The dry run request failed. Check the Notification Center for details.",
+    CompletedTables: [],
+    Warnings: [],
+};
+
 function pickVerifiedInputs(formData: EditCdcSinkTaskFormData): VerifiedInputs {
-    return verifiedFields.map((field) => structuredClone(formData[field]));
+    return verifiedFields.map((field) => cloneDeep(formData[field]));
 }
 
 export function useEditCdcSinkTaskVerification(
@@ -45,7 +53,7 @@ export function useEditCdcSinkTaskVerification(
     const taskId = useAppSelector(editCdcSinkTaskSelectors.taskId);
     const sqlConnections = useAppSelector(connectionStringSelectors.connectionsByType("Sql"));
     const { control, getValues, trigger } = editForm;
-    const applyRawViewContent = useEditCdcSinkTaskRawViewSync(editForm);
+    const { applyRawViewContent, revealValidationErrors } = useEditCdcSinkTaskRawViewSync(editForm);
 
     const lastVerification = useRef<Verification>(null);
 
@@ -69,10 +77,12 @@ export function useEditCdcSinkTaskVerification(
         const inputs = pickVerifiedInputs(formData);
         lastVerification.current = { inputs, result: null };
 
-        const result = await tasksService.verifyCdcSink(databaseName, {
-            Configuration: editCdcSinkTaskUtils.mapToDto(formData, taskId),
-            Connection: mapSqlConnectionStringToDto(connection),
-        });
+        const result = await tasksService
+            .verifyCdcSink(databaseName, {
+                Configuration: editCdcSinkTaskUtils.mapToDto(formData, taskId),
+                Connection: mapSqlConnectionStringToDto(connection),
+            })
+            .catch((): CdcTestResult => requestFailedResult);
 
         lastVerification.current = { inputs, result };
         return result;
@@ -85,6 +95,7 @@ export function useEditCdcSinkTaskVerification(
 
         const isValid = await trigger();
         if (!isValid) {
+            revealValidationErrors();
             return null;
         }
 
