@@ -546,8 +546,10 @@ namespace Voron.Impl.Journal
                     throw new InvalidOperationException(
                         "Encountered an encrypted transaction when opening a non encrypted storage. Did you forget to provide the encryption key?");
 
-                bool hashIsValid = ValidatePagesHash(options, current);
-                if (hashIsValid == false && CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current->TransactionId, options))
+                if (ValidatePagesHash(options, current))
+                    return true;
+
+                if (CanIgnoreIntegrityErrorOfEntry(current, options))
                 {
                     options.InvokeIntegrityErrorOfAlreadySyncedData(this,
                         $"Invalid hash of data of first transaction which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalNumber}). " +
@@ -555,8 +557,12 @@ namespace Voron.Impl.Journal
 
                     return true;
                 }
-                return hashIsValid;
+                return false;
             }
+
+            // Hash of an encrypted entry is just the tag, and a stale entry would still decrypt
+            if (current->Hash != TransactionHeader.IncarnationTag(Incarnation) && MayBeOwnTransaction(current) == false)
+                return false;
 
             // We use temp buffers to hold the transaction before decrypting, and release the buffers afterwards.
             var pagesSize = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
@@ -576,7 +582,7 @@ namespace Voron.Impl.Journal
             }
             catch (InvalidOperationException ex)
             {
-                if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current->TransactionId, options))
+                if (CanIgnoreIntegrityErrorOfEntry(current, options))
                 {
                     options.InvokeIntegrityErrorOfAlreadySyncedData(this,
                         $"Unable to decrypt data of transaction which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalNumber}). " +
@@ -585,6 +591,9 @@ namespace Voron.Impl.Journal
 
                     return true;
                 }
+
+                if (MayBeOwnTransaction(current) == false)
+                    return false; // another environment reports its own corruption
 
                 RequireHeaderUpdate = true;
                 options.InvokeRecoveryError(this, $"Could not decrypt transaction {current->TransactionId}. It could be not committed", ex);
@@ -943,7 +952,7 @@ namespace Voron.Impl.Journal
             var size = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
             if (size < 0)
             {
-                if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current->TransactionId, options) == false)
+                if (ShouldReportIntegrityErrorOf(current, options))
                 {
                     RequireHeaderUpdate = true;
                     // negative size is not supported
@@ -955,7 +964,7 @@ namespace Voron.Impl.Journal
 
             if (size > (_journalPagerNumberOfAllocated4Kb - _readAt4Kb) * 4 * Constants.Size.Kilobyte)
             {
-                if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current->TransactionId, options) == false)
+                if (ShouldReportIntegrityErrorOf(current, options))
                 {
                     // we can't read past the end of the journal
                     RequireHeaderUpdate = true;
@@ -968,18 +977,40 @@ namespace Voron.Impl.Journal
             }
 
             ulong hash = Hashing.XXHash64.Calculate(dataPtr, (ulong)size, (ulong)current->TransactionId);
-            if (hash != current->Hash)
-            {
-                if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current->TransactionId, options) == false)
-                {
-                    RequireHeaderUpdate = true;
-                    options.InvokeRecoveryError(this, "Invalid hash signature for transaction: " + current->ToString(), null);
-                }
 
-                return false;
+            if ((hash ^ current->Hash) == TransactionHeader.IncarnationTag(Incarnation))
+                return true;
+
+            if (ShouldReportIntegrityErrorOf(current, options))
+            {
+                RequireHeaderUpdate = true;
+                options.InvokeRecoveryError(this, "Invalid hash signature for transaction: " + current->ToString(), null);
             }
 
-            return true;
+            return false;
+        }
+
+        // Only our own entries are reported: an entry of an earlier incarnation of the file decodes to a foreign JournalId and
+        // is just the end of the live data, and another environment reports its own corruption
+        private bool ShouldReportIntegrityErrorOf(TransactionHeader* current, StorageEnvironmentOptions options)
+        {
+            return MayBeOwnTransaction(current) && CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current->TransactionId, options) == false;
+        }
+
+        // The already-synced leniency is for our own transactions only. An entry that is not ours has nothing to do with
+        // our synced state, and ignoring its error would make it pass as valid.
+        private bool CanIgnoreIntegrityErrorOfEntry(TransactionHeader* current, StorageEnvironmentOptions options)
+        {
+            return MayBeOwnTransaction(current) && CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current->TransactionId, options);
+        }
+
+        private bool MayBeOwnTransaction(TransactionHeader* current)
+        {
+            if (JournalId == Guid.Empty)
+                return true; // not known yet, so we cannot rule it out
+
+            var effectiveJournalId = current->JournalId.Xor(Incarnation);
+            return effectiveJournalId == JournalId || effectiveJournalId == Guid.Empty;
         }
 
         public override string ToString()

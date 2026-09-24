@@ -94,6 +94,14 @@ namespace Voron.Impl.Journal
                    $" UncompressedSize: {UncompressedSize}, LastDurableTxIdAtSubmit: {LastDurableTxIdAtSubmit}, TimeStamp: {timestamp}";
         }
 
+        public static ulong IncarnationTag(Guid incarnation)
+        {
+            // we XOR the two halves of the guid to get a single ulong value that is unique to this incarnation
+            // this way, we *fail* the validation for transactions from older file incarnations
+            var halves = MemoryMarshal.Cast<Guid, ulong>(new ReadOnlySpan<Guid>(in incarnation));
+            return halves[0] ^ halves[1];
+        }
+
         public long LastDurableTxIdAtSubmit => DurableTxIdDeltaAtSubmit == 0 ? TransactionId : TransactionId - DurableTxIdDeltaAtSubmit;
 
         public void SetLastDurableTxIdAtSubmit(long lastDurableTxId)
