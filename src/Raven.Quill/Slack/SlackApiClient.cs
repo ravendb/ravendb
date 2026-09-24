@@ -1,4 +1,5 @@
 using SlackNet;
+using SlackNet.Blocks;
 using SlackNet.WebApi;
 
 namespace Raven.Quill.Slack;
@@ -50,9 +51,15 @@ internal sealed class SlackApiClient(SlackSdk sdk) : ISlackClient
     }
 
     public async Task<string> PostMessageAsync(
-        string botToken, string channel, string text, CancellationToken ct)
+        string botToken, string channel, string markdown, CancellationToken ct)
     {
-        var message = new Message { Channel = channel, Text = text, Parse = ParseMode.None };
+        var message = new Message
+        {
+            Channel = channel,
+            Text = SlackText.Escape(markdown),
+            Parse = ParseMode.None,
+            Blocks = [new MarkdownBlock { Text = markdown }],
+        };
         var payload = await CallAsync(() => Api(botToken).Chat.PostMessage(message, ct), "chat.postMessage", ct);
 
         if (string.IsNullOrEmpty(payload?.Ts))
@@ -62,9 +69,16 @@ internal sealed class SlackApiClient(SlackSdk sdk) : ISlackClient
     }
 
     public Task UpdateMessageAsync(
-        string botToken, string channel, string ts, string text, CancellationToken ct)
+        string botToken, string channel, string ts, string markdown, CancellationToken ct)
     {
-        var update = new MessageUpdate { ChannelId = channel, Ts = ts, Text = text, Parse = ParseMode.None };
+        var update = new MessageUpdate
+        {
+            ChannelId = channel,
+            Ts = ts,
+            Text = SlackText.Escape(markdown),
+            Parse = ParseMode.None,
+            Blocks = [new MarkdownBlock { Text = markdown }],
+        };
         return CallAsync(() => Api(botToken).Chat.Update(update, ct), "chat.update", ct);
     }
 
