@@ -417,6 +417,8 @@ namespace Voron.Impl.Journal
             lastJournal ??= journalToStartReadingFrom;
 
             using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+
+            List<long> unrecoveredJournals = null;
             
             for (var journalNumber = journalToStartReadingFrom; journalNumber <= lastJournal.Value; journalNumber++)
             {
@@ -536,7 +538,33 @@ namespace Voron.Impl.Journal
 
                     addToInitLog?.Invoke(LogLevel.Debug, $"Journal {journalNumber:#,#;;0} Recovered (requireHeaderUpdate: {journalReader.RequireHeaderUpdate})");
 
-                    if (journalReader.RequireHeaderUpdate) //this should prevent further load of transactions
+                    var partialRecovery = journalReader.RequireHeaderUpdate;
+                    if (partialRecovery || journalReader.EndedAtPipeliningHole)
+                    {
+                        var lastRecoveredTxId = Math.Max(txHeader->TransactionId, logInfo.LastSyncedTransactionId);
+                        var laterJournals = FindLaterJournalsWithTransactionsOfOurs(journalNumber, lastJournal.Value, logInfo, currentFileHeader,
+                            lastRecoveredTxId, ref dataPagerState, allocator, out var firstLaterTxId);
+
+                        if (laterJournals.Count > 0 && firstLaterTxId == lastRecoveredTxId + 1)
+                        {
+                            // our transactions continue right where this journal stopped - written after an earlier recovery ended
+                            // here, or the invalid entry was not ours - so nothing of ours is missing: keep reading as usual
+                            partialRecovery = false;
+                        }
+                        else if (laterJournals.Count > 0)
+                        {
+                            partialRecovery = true;
+                            unrecoveredJournals = laterJournals;
+                            PartialRecoveryDetails =
+                                $"Recovery stopped in journal {journalNumber:D19} after transaction {lastRecoveredTxId}, but journals {string.Join(", ", laterJournals.Select(n => n.ToString("D19")))} " +
+                                $"hold later transactions of this environment, starting at {firstLaterTxId}. We switch to a new journal only once every write to the current one completed, " +
+                                "so these transactions were acknowledged - the storage lost or damaged a completed write. The journals were not applied, and are kept with the " +
+                                $"'{StorageEnvironmentOptions.UnrecoveredJournalSuffix}' suffix in '{_env.Options.JournalPath?.FullPath}' for investigation.";
+                            addToInitLog?.Invoke(LogLevel.Warn, PartialRecoveryDetails);
+                        }
+                    }
+
+                    if (partialRecovery) //this should prevent further load of transactions
                     {
                         requireHeaderUpdate = true;
                         break;
@@ -708,11 +736,15 @@ namespace Voron.Impl.Journal
             if (requireHeaderUpdate)
             {
                 // we didn't process all journals due to encountered errors
-                // we must delete all the journals after the last processed one
+                // we must delete all the journals after the last processed one, and keep those that hold acknowledged transactions
 
-                var nextJournalsToDelete = lastProcessedJournal +1;
-                while (_env.Options.TryDeleteJournal(nextJournalsToDelete))
-                    nextJournalsToDelete++;
+                for (var journalNumber = lastProcessedJournal + 1; journalNumber <= lastJournal.Value; journalNumber++)
+                {
+                    if (unrecoveredJournals?.Contains(journalNumber) == true)
+                        _env.Options.TryPreserveUnrecoveredJournal(journalNumber);
+                    else
+                        _env.Options.TryDeleteJournal(journalNumber);
+                }
                 
                 if (CurrentFile != null)
                 {
@@ -754,6 +786,64 @@ namespace Voron.Impl.Journal
 
             return requireHeaderUpdate;
         }
+
+        // Recovery stopped early in journal K, after our transaction N-1: at an invalid entry at the end of K, or at a pipelining
+        // hole. The various cases are:
+        //
+        //   K:   | ... | N-1 | <invalid> |
+        //   K+1: nothing of ours                   -> the incomplete write of a crash, stop here as usual
+        //
+        //   K:   | ... | N-1 | <invalid> |
+        //   K+1: | N | N+1 | ...                   -> our sequence continues (written after an earlier recovery stopped at the
+        //                                             same point, or the invalid entry was not ours), keep reading
+        //
+        //   K:   | ... | N-1 | <invalid: N> |
+        //   K+1: | N+1 | N+2 | ...                 -> K+1 was written after every write to K completed, so N was acknowledged
+        //                                             and is lost: partial recovery, and K+1 is kept for investigation
+        //
+        // Returns the journals after stoppedAtJournal that hold a transaction of ours above lastRecoveredTxId (N-1), and the
+        // first such transaction id.
+        private List<long> FindLaterJournalsWithTransactionsOfOurs(long stoppedAtJournal, long lastJournal, JournalInfo logInfo, FileHeader currentFileHeader,
+            long lastRecoveredTxId, ref Pager.State dataPagerState, ByteStringContext allocator, out long firstTransactionId)
+        {
+            var journals = new List<long>();
+            firstTransactionId = -1;
+
+            for (var journalNumber = stoppedAtJournal + 1; journalNumber <= lastJournal; journalNumber++)
+            {
+                if (_env.Options.JournalExists(journalNumber) == false)
+                    continue;
+
+                (Pager journalPager, Pager.State journalPagerState) = _env.Options.OpenJournalPager(journalNumber, logInfo);
+                using var _ = journalPager;
+
+                Pager.PagerTransactionState txState = default;
+                var journalReader = new JournalReader(_env, journalNumber, journalPager, journalPagerState, _env.DataPager, recoveryPager: null, [], logInfo, currentFileHeader,
+                    previous: null, allocator);
+                long? transactionId;
+                try
+                {
+                    transactionId = journalReader.FindTransactionOfOursAbove(_env.Options, ref txState, lastRecoveredTxId);
+                }
+                finally
+                {
+                    journalReader.Complete(ref dataPagerState, ref txState);
+                }
+
+                if (transactionId == null)
+                    continue;
+
+                if (journals.Count == 0)
+                    firstTransactionId = transactionId.Value;
+
+                journals.Add(journalNumber);
+            }
+
+            return journals;
+        }
+
+        // Set when recovery stopped early while later journals hold acknowledged transactions of ours
+        internal string PartialRecoveryDetails { get; private set; }
 
         private void CleanupNewerInvalidJournalFiles(long lastSyncedJournal)
         {
