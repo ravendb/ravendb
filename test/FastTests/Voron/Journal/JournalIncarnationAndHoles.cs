@@ -63,6 +63,89 @@ public class JournalIncarnationAndHoles(ITestOutputHelper output) : RavenTestBas
         Assert.Equal(liveEnd4Kb, env.CurrentStateRecord.Journal.Last4KWritePosition);
     }
 
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void HoleExplainedByTheWatermarkEndsTheReplayAndClosesTheFile(bool encrypted)
+    {
+        var path = NewDataPath();
+        var (journalFile, journalNumber, journalId) = WriteTransactions(path, count: 6, encrypted);
+
+        var bytes = File.ReadAllBytes(journalFile);
+        var own = ReadEntries(bytes, journalId).Entries.Where(e => e.JournalId == journalId).ToList();
+        var missing = own[^2];
+        var after = own[^1];
+        Assert.Equal(missing.TxId + 1, after.TxId);
+
+        CorruptPayload(bytes, missing);
+        // submitted while the missing transaction was still in flight
+        SetDurableTxIdDelta(bytes, after, 2);
+        File.WriteAllBytes(journalFile, bytes);
+
+        using var options = CreateOptions(path, recoveryErrors: [], encrypted);
+        using (var env = new StorageEnvironment(options))
+        {
+            AssertKeys(env, present: ["k1", "k2", "k3", "k4"], missing: ["k5", "k6"]);
+
+            using (var tx = env.WriteTransaction())
+            {
+                tx.CreateTree("t").Add("k7", "v");
+                tx.Commit();
+            }
+
+            Assert.True(env.CurrentStateRecord.Journal.Number > journalNumber, "a journal with a hole must not take further writes");
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TransactionSubmittedAfterTheMissingOneBecameDurableIsAHardError(bool encrypted)
+    {
+        var path = NewDataPath();
+        var (journalFile, _, journalId) = WriteTransactions(path, count: 7, encrypted);
+
+        var bytes = File.ReadAllBytes(journalFile);
+        var own = ReadEntries(bytes, journalId).Entries.Where(e => e.JournalId == journalId).ToList();
+        var missing = own[^3];
+        var inFlight = own[^2];
+        var later = own[^1];
+
+        CorruptPayload(bytes, missing);
+        // the first transaction after the hole explains it, but the next one was submitted once the missing one was durable
+        SetDurableTxIdDelta(bytes, inFlight, 2);
+        SetDurableTxIdDelta(bytes, later, 1);
+        File.WriteAllBytes(journalFile, bytes);
+
+        using var options = CreateOptions(path, recoveryErrors: [], encrypted);
+        Assert.Throws<InvalidJournalException>(() =>
+        {
+            using var env = new StorageEnvironment(options);
+        });
+    }
+
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void HoleWithoutAWatermarkIsAHardError(bool encrypted)
+    {
+        var path = NewDataPath();
+        var (journalFile, _, journalId) = WriteTransactions(path, count: 6, encrypted);
+
+        var bytes = File.ReadAllBytes(journalFile);
+        var own = ReadEntries(bytes, journalId).Entries.Where(e => e.JournalId == journalId).ToList();
+
+        CorruptPayload(bytes, own[^2]);
+        SetDurableTxIdDelta(bytes, own[^1], 0);
+        File.WriteAllBytes(journalFile, bytes);
+
+        using var options = CreateOptions(path, recoveryErrors: [], encrypted);
+        Assert.Throws<InvalidJournalException>(() =>
+        {
+            using var env = new StorageEnvironment(options);
+        });
+    }
+
     private (string JournalFile, long JournalNumber, Guid JournalId) WriteTransactions(string path, int count, bool encrypted)
     {
         IOExtensions.DeleteDirectory(path);
@@ -107,6 +190,13 @@ public class JournalIncarnationAndHoles(ITestOutputHelper output) : RavenTestBas
     private static void CorruptPayload(byte[] bytes, Entry entry)
     {
         bytes[entry.Offset + TransactionHeader.SizeOf] ^= 0xFF;
+    }
+
+    // not covered by the hash or the MAC, so it can be changed in place
+    private static unsafe void SetDurableTxIdDelta(byte[] bytes, Entry entry, byte delta)
+    {
+        fixed (byte* p = bytes)
+            ((TransactionHeader*)(p + entry.Offset))->DurableTxIdDeltaAtSubmit = delta;
     }
 
     private sealed record Entry(long Offset, long SizeIn4Kb, Guid JournalId, long TxId);
