@@ -1,11 +1,15 @@
 import messagePublisher from "common/messagePublisher";
-import { editCdcSinkTaskSelectors } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
+import {
+    editCdcSinkTaskActions,
+    editCdcSinkTaskSelectors,
+} from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
 import { editCdcSinkTaskUtils } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskUtils";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
-import { useAppSelector } from "components/store";
+import { useAppDispatch, useAppSelector } from "components/store";
 import { UseFormReturn } from "react-hook-form";
 
 export function useEditCdcSinkTaskRawViewSync(editForm: UseFormReturn<EditCdcSinkTaskFormData>) {
+    const dispatch = useAppDispatch();
     const isRawView = useAppSelector(editCdcSinkTaskSelectors.isRawView);
     const rawViewContent = useAppSelector(editCdcSinkTaskSelectors.rawViewContent);
 
@@ -27,5 +31,14 @@ export function useEditCdcSinkTaskRawViewSync(editForm: UseFormReturn<EditCdcSin
         }
     };
 
-    return applyRawViewContent;
+    const revealValidationErrors = () => {
+        if (!isRawView) {
+            return;
+        }
+
+        dispatch(editCdcSinkTaskActions.rawViewClosed());
+        messagePublisher.reportWarning("The configuration has validation errors. Please fix them in the form view.");
+    };
+
+    return { applyRawViewContent, revealValidationErrors };
 }

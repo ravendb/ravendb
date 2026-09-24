@@ -175,6 +175,10 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         return this.mockResolvedValue(this.mocks.verifyCdcSink, dto, TasksStubs.verifyCdcSink());
     }
 
+    withThrowingVerifyCdcSink() {
+        this.mocks.verifyCdcSink.mockRejectedValue(new Error());
+    }
+
     withTestSnowflakeConnectionString(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
         return this.mockResolvedValue(
             this.mocks.testSqlConnectionString,

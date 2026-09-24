@@ -1,20 +1,22 @@
 import { Icon } from "components/common/Icon";
 import EditCdcSinkTaskVerificationAlert from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskVerificationAlert";
 import EditCdcSinkTaskVerifyButton from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskVerifyButton";
-import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import Button from "react-bootstrap/Button";
-import { useFormContext } from "react-hook-form";
 import { EditCdcSinkTaskVerification } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/hooks/useEditCdcSinkTaskVerification";
 
 interface EditCdcSinkTaskFooterProps {
     asyncVerify: EditCdcSinkTaskVerification;
+    isDirty: boolean;
     isDisabled: boolean;
     onCancel: () => void;
 }
 
-export default function EditCdcSinkTaskFooter({ asyncVerify, isDisabled, onCancel }: EditCdcSinkTaskFooterProps) {
-    const { formState } = useFormContext<EditCdcSinkTaskFormData>();
-
+export default function EditCdcSinkTaskFooter({
+    asyncVerify,
+    isDirty,
+    isDisabled,
+    onCancel,
+}: EditCdcSinkTaskFooterProps) {
     return (
         <>
             <EditCdcSinkTaskVerificationAlert result={asyncVerify.result} className="px-3 pb-2" />
@@ -28,7 +30,7 @@ export default function EditCdcSinkTaskFooter({ asyncVerify, isDisabled, onCance
                         type="submit"
                         variant="primary"
                         className="rounded-pill"
-                        disabled={!formState.isDirty || isDisabled || asyncVerify.loading}
+                        disabled={!isDirty || isDisabled || asyncVerify.loading}
                     >
                         <Icon icon="save" />
                         Save task configuration

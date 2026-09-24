@@ -19,28 +19,25 @@ export default function EditCdcSinkTaskRawViewSwitch({ taskId, isDisabled }: Edi
     const dispatch = useAppDispatch();
     const isRawView = useAppSelector(editCdcSinkTaskSelectors.isRawView);
     const editForm = useFormContext<EditCdcSinkTaskFormData>();
-    const applyRawViewContent = useEditCdcSinkTaskRawViewSync(editForm);
+    const { applyRawViewContent } = useEditCdcSinkTaskRawViewSync(editForm);
 
     const handleToggleRawView = (e: React.ChangeEvent<HTMLInputElement, Element>) => {
         if (e.target.checked) {
             try {
                 const dto = editCdcSinkTaskUtils.mapToDto(editForm.getValues(), taskId);
-                dispatch(editCdcSinkTaskActions.rawViewContentSet(JSON.stringify(dto, null, 2)));
+                dispatch(editCdcSinkTaskActions.rawViewOpened(JSON.stringify(dto, null, 2)));
             } catch (error) {
                 messagePublisher.reportError(
                     "The current form data cannot be converted. Please fix validation errors and try again.",
                     error
                 );
-                return;
             }
-        } else {
-            if (!applyRawViewContent()) {
-                return;
-            }
-            dispatch(editCdcSinkTaskActions.rawViewContentSet(null));
+            return;
         }
 
-        dispatch(editCdcSinkTaskActions.rawViewToggled());
+        if (applyRawViewContent()) {
+            dispatch(editCdcSinkTaskActions.rawViewClosed());
+        }
     };
 
     return (
