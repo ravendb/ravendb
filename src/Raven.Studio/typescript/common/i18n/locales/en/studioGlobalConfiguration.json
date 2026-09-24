@@ -1,0 +1,34 @@
+{
+    "title": "Studio Configuration",
+    "loadError": "Unable to load studio configuration",
+    "language": "Language",
+    "environment": {
+        "label": "Server Environment",
+        "tagInfo": "Apply a <strong>tag</strong> to the Studio indicating the server environment.",
+        "noEffectInfo": "This does not affect any settings or features."
+    },
+    "replicationFactor": {
+        "label": "Default Replication Factor",
+        "defaultInfo": "Set the default <strong>replication factor</strong> when creating a new database.",
+        "clusterSizeInfo": "If not set, then the number of nodes in your cluster will be used.",
+        "addNodesInfo": "Additional nodes can always be added to the database after it is created.",
+        "placeholder": "Cluster size (default)"
+    },
+    "tableFont": {
+        "label": "Table Font",
+        "info": "Choose the font used for displaying data in <strong>tables</strong> across the Studio, including document IDs, column values, and other tabular content."
+    },
+    "codeFont": {
+        "label": "Code Font",
+        "info": "Choose the font used for displaying <strong>code</strong> across the Studio, including code editors and samples."
+    },
+    "fontPreview": "Preview",
+    "collapseDocsSwitch": "Collapse documents when opening",
+    "usageStatsSwitch": "Help improve the Studio by gathering anonymous usage statistics",
+    "about": {
+        "scope": "This is the <strong>Server-wide Studio-Configuration</strong> view.",
+        "scopeDetails": "The available studio-configuration options will apply server-wide to all databases.",
+        "environmentPerDatabase": "The environment tag can be customized per database in the Database Studio-Configuration view.",
+        "docsLink": "Docs - Client Configuration"
+    }
+}
