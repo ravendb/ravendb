@@ -171,15 +171,15 @@ namespace Raven.Server.Documents.Revisions
                 if (Configuration.Collections != null &&
                     Configuration.Collections.TryGetValue(collection, out RevisionsCollectionConfiguration configuration))
                     return configuration;
-
-                if (Configuration.Default != null)
-                    return Configuration.Default;
             }
 
             if (flags.Contain(DocumentFlags.Resolved) || flags.Contain(DocumentFlags.Conflicted))
             {
                 return ConflictConfiguration.Default;
             }
+
+            if (Configuration?.Default != null)
+                return Configuration.Default;
 
             return deleteRevisionsWhenNoCofiguration ? ZeroConfiguration : _emptyConfiguration;
         }
