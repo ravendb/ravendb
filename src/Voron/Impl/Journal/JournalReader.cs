@@ -876,6 +876,37 @@ namespace Voron.Impl.Journal
             }
         }
 
+        // Scans the whole journal for a valid transaction of ours with an id above the given one, without applying anything
+        internal long? FindTransactionOfOursAbove(StorageEnvironmentOptions options, ref Pager.PagerTransactionState txState, long transactionId)
+        {
+            using var _ = options.DisableOnRecoveryErrorHandler();
+            using var __ = options.DisableOnIntegrityErrorOfAlreadySyncedDataHandler();
+
+            for (_readAt4Kb = 0; _readAt4Kb < _journalPagerNumberOfAllocated4Kb;)
+            {
+                if (TryValidateTransaction(options, ref txState, out TransactionHeader* current) == false)
+                {
+                    _readAt4Kb++;
+                    continue;
+                }
+
+                if ((current->Flags & TransactionPersistenceModeFlags.JournalHeaderRecord) != 0)
+                {
+                    Incarnation = *(Guid*)((byte*)current + sizeof(TransactionHeader));
+                }
+                else if ((current->Flags & TransactionPersistenceModeFlags.LinkedJournalsRecord) == 0 &&
+                         current->TransactionId > transactionId &&
+                         MayBeOwnTransaction(current))
+                {
+                    return current->TransactionId;
+                }
+
+                _readAt4Kb += GetTransactionSizeIn4Kb(current);
+            }
+
+            return null;
+        }
+
         private static bool IsWellFormedJournalHeaderRecord(TransactionHeader* current)
         {
             return current->TransactionId == WriteAheadJournal.JournalHeaderRecord.TransactionIdMarker &&

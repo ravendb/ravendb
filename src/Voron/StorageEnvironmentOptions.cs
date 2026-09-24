@@ -855,6 +855,25 @@ namespace Voron
                 return true;
             }
 
+            public override bool TryPreserveUnrecoveredJournal(long number)
+            {
+                var name = JournalName(number);
+
+                if (_journals.TryRemove(name, out var lazy) && lazy.IsValueCreated)
+                    lazy.Value.Dispose();
+
+                var file = JournalPath.Combine(name);
+                if (File.Exists(file.FullPath) == false)
+                    return false;
+
+                var preserved = file.FullPath + UnrecoveredJournalSuffix;
+                if (File.Exists(preserved))
+                    preserved += $".{DateTime.UtcNow:yyyyMMddHHmmss}.{Guid.NewGuid():N}";
+
+                File.Move(file.FullPath, preserved);
+                return true;
+            }
+
             private bool TryRecycleJournal(VoronPathSetting file)
             {
                 // Writing to a recycled file is safe only when we hold the last link (st_nlink == 1), when ware the sole owners
@@ -1577,6 +1596,8 @@ namespace Voron
                 return true;
             }
 
+            public override bool TryPreserveUnrecoveredJournal(long number) => TryDeleteJournal(number); // nothing outlives the process
+
             public override void DeleteJournalsBelow(long journalNumber)
             {
                 foreach (var name in _logs.Keys.ToArray())
@@ -1745,6 +1766,11 @@ namespace Voron
         }
 
         public abstract bool TryDeleteJournal(long number);
+
+        // Not listed, deleted or recycled as a journal any more, but kept for investigation and manual recovery
+        public const string UnrecoveredJournalSuffix = ".unrecovered";
+
+        public abstract bool TryPreserveUnrecoveredJournal(long number);
 
         public abstract bool ReadValidMetadata(string filename, out MetadataFile metadata);
         

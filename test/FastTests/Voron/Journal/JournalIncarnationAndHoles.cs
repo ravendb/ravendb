@@ -146,6 +146,128 @@ public class JournalIncarnationAndHoles(ITestOutputHelper output) : RavenTestBas
         });
     }
 
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void InvalidTransactionAtTheEndOfAJournalWithOurTransactionsInALaterOneRecoversPartiallyAndKeepsTheLaterJournals(bool encrypted)
+    {
+        var path = NewDataPath();
+        var (journals, _) = WriteTransactionsOverSeveralJournals(path, encrypted);
+
+        // a journal is switched only once all its writes completed, so its last transaction was acknowledged
+        var (file, entries) = journals[0];
+        var bytes = File.ReadAllBytes(file);
+        CorruptPayload(bytes, entries[^1]);
+        File.WriteAllBytes(file, bytes);
+
+        AssertPartialRecoveryKeepsTheLaterJournals(path, journals, encrypted);
+    }
+
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void PipeliningHoleWithOurTransactionsInALaterJournalRecoversPartiallyAndKeepsTheLaterJournals(bool encrypted)
+    {
+        var path = NewDataPath();
+        var (journals, journalId) = WriteTransactionsOverSeveralJournals(path, encrypted);
+
+        var (file, entries) = journals[0];
+        var own = entries.Where(e => e.JournalId == journalId).ToList();
+        Assert.True(own.Count >= 3, $"the first journal must hold enough of our transactions, got {own.Count}");
+        Assert.Equal(own[^2].TxId + 1, own[^1].TxId);
+
+        // an explained hole at the end of the journal - but the next journal can only exist once all its writes completed
+        var bytes = File.ReadAllBytes(file);
+        CorruptPayload(bytes, own[^2]);
+        SetDurableTxIdDelta(bytes, own[^1], 2);
+        File.WriteAllBytes(file, bytes);
+
+        AssertPartialRecoveryKeepsTheLaterJournals(path, journals, encrypted);
+    }
+
+    private void AssertPartialRecoveryKeepsTheLaterJournals(string path, List<(string File, List<Entry> Entries)> journals, bool encrypted)
+    {
+        var recoveryErrors = new List<string>();
+        using (var options = CreateOptions(path, recoveryErrors, encrypted, SmallJournals))
+        using (var env = new StorageEnvironment(options))
+        {
+            AssertKeys(env, present: ["k1"], missing: [$"k{TransactionsOverSeveralJournals}"]);
+
+            Assert.Contains(recoveryErrors, e => e.Contains("Database recovered partially") && e.Contains("hold later transactions of this environment"));
+
+            foreach (var (later, _) in journals.Skip(1))
+            {
+                Assert.False(File.Exists(later), $"{later} must not be recovered or reused");
+                Assert.True(File.Exists(later + StorageEnvironmentOptions.UnrecoveredJournalSuffix), $"{later} holds acknowledged transactions and must be kept");
+            }
+
+            using var tx = env.WriteTransaction();
+            tx.CreateTree("t").Add("after", "v");
+            tx.Commit();
+        }
+
+        // the kept journals are not journals any more, and our transactions written after the partial recovery continue the
+        // sequence where it stopped - the next recovery applies them and reports no partial recovery
+        recoveryErrors.Clear();
+        using (var options = CreateOptions(path, recoveryErrors, encrypted, SmallJournals))
+        using (var env = new StorageEnvironment(options))
+        {
+            Assert.DoesNotContain(recoveryErrors, e => e.Contains("recovered partially"));
+            AssertKeys(env, present: ["k1", "after"], missing: []);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void InvalidTransactionAtTheEndOfTheLastJournalIsATornTail(bool encrypted)
+    {
+        var path = NewDataPath();
+        var (journals, _) = WriteTransactionsOverSeveralJournals(path, encrypted);
+
+        var (file, entries) = journals[^1];
+        var bytes = File.ReadAllBytes(file);
+        CorruptPayload(bytes, entries[^1]);
+        File.WriteAllBytes(file, bytes);
+
+        using var options = CreateOptions(path, recoveryErrors: [], encrypted, SmallJournals);
+        using var env = new StorageEnvironment(options);
+
+        AssertKeys(env, present: ["k1"], missing: [$"k{TransactionsOverSeveralJournals}"]);
+    }
+
+    private const long SmallJournals = 256 * 1024;
+    private const int TransactionsOverSeveralJournals = 24;
+
+    private (List<(string File, List<Entry> Entries)> Journals, Guid JournalId) WriteTransactionsOverSeveralJournals(string path, bool encrypted)
+    {
+        IOExtensions.DeleteDirectory(path);
+
+        Guid journalId;
+        using (var options = CreateOptions(path, recoveryErrors: [], encrypted, SmallJournals))
+        using (var env = new StorageEnvironment(options))
+        {
+            var value = new byte[24 * 1024];
+            for (int i = 1; i <= TransactionsOverSeveralJournals; i++)
+            {
+                Random.Shared.NextBytes(value); // incompressible, so the transactions fill the small journals
+                using var tx = env.WriteTransaction();
+                tx.CreateTree("t").Add("k" + i, new MemoryStream(value));
+                tx.Commit();
+            }
+
+            journalId = env.HeaderAccessor.JournalId;
+        }
+
+        var journals = Directory.GetFiles(Path.Combine(path, "Journals"), "*.journal")
+            .Order()
+            .Select(f => (File: f, ReadEntries(File.ReadAllBytes(f), journalId).Entries))
+            .Where(j => j.Entries.Count > 0)
+            .ToList();
+        Assert.True(journals.Count >= 2, $"the transactions must span several journals, got {journals.Count}");
+        return (journals, journalId);
+    }
+
     private (string JournalFile, long JournalNumber, Guid JournalId) WriteTransactions(string path, int count, bool encrypted)
     {
         IOExtensions.DeleteDirectory(path);
