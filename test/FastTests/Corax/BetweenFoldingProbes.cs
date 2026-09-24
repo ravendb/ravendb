@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -40,6 +41,15 @@ namespace FastTests.Corax
             }
         }
 
+        // Lucene splits date ranges into day segments only when the query clause cache is on, and it is off by default
+        private class Items_ByTagWithClauseCache : Items_ByTag
+        {
+            public Items_ByTagWithClauseCache()
+            {
+                Configuration[RavenConfiguration.GetKey(x => x.Indexing.QueryClauseCacheDisabled)] = "false";
+            }
+        }
+
         private class Shipment
         {
             public string Id { get; set; }
@@ -58,6 +68,63 @@ namespace FastTests.Corax
             public string Id { get; set; }
             public string Name { get; set; }
             public int Age { get; set; }
+        }
+
+        // B1 (query clause cache on): 'from' mid-day, 'to' on the next midnight, '<' must exclude the document sitting on 'to'
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void HalfOpenDateRangeEndingOnTheNextMidnight(Options options)
+        {
+            var from = new DateTime(2024, 1, 10, 12, 0, 0, DateTimeKind.Utc);
+            var to = new DateTime(2024, 1, 11, 0, 0, 0, DateTimeKind.Utc);
+
+            using var store = Seed(options, new Items_ByTagWithClauseCache(),
+                new Item { Id = "items/inside", Tag = "t", At = from.AddHours(1) },
+                new Item { Id = "items/on-upper", Tag = "t", At = to });
+
+            using var session = store.OpenSession();
+            var linq = session.Query<Item, Items_ByTagWithClauseCache>()
+                .Where(x => x.Tag == "t" && x.At >= from && x.At < to);
+
+            Output.WriteLine(linq.ToString());
+            Assert.Equal(new[] { "items/inside" }, linq.ToList().Select(x => x.Id).OrderBy(x => x).ToArray());
+        }
+
+        // B2 (query clause cache on): 'from' after 'to', on different days, nothing can match
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void InvertedDateRangeMatchesNothing(Options options)
+        {
+            var from = new DateTime(2024, 1, 10, 12, 0, 0, DateTimeKind.Utc);
+            var to = new DateTime(2024, 1, 5, 12, 0, 0, DateTimeKind.Utc);
+
+            using var store = Seed(options, new Items_ByTagWithClauseCache(),
+                new Item { Id = "items/after-from", Tag = "t", At = from.AddHours(1) },
+                new Item { Id = "items/before-to", Tag = "t", At = to.AddHours(-6) });
+
+            Assert.Empty(Query(store, "from index 'Items/ByTagWithClauseCache' where (Tag = 't' and At >= $from) and At < $to", ("from", from), ("to", to)));
+        }
+
+        // a range spanning several days with both ends mid-day: head, cached middle days and tail, the documents on the
+        // day boundaries must be counted exactly once each and the one sitting on 'to' must be excluded
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DateRangeAcrossSeveralDaysWithUnalignedEnds(Options options)
+        {
+            var from = new DateTime(2024, 1, 10, 12, 0, 0, DateTimeKind.Utc);
+            var to = new DateTime(2024, 1, 13, 6, 0, 0, DateTimeKind.Utc);
+
+            using var store = Seed(options, new Items_ByTagWithClauseCache(),
+                new Item { Id = "items/before", Tag = "t", At = from.AddHours(-1) },
+                new Item { Id = "items/on-from", Tag = "t", At = from },
+                new Item { Id = "items/first-midnight", Tag = "t", At = new DateTime(2024, 1, 11, 0, 0, 0, DateTimeKind.Utc) },
+                new Item { Id = "items/middle", Tag = "t", At = new DateTime(2024, 1, 12, 15, 0, 0, DateTimeKind.Utc) },
+                new Item { Id = "items/last-midnight", Tag = "t", At = new DateTime(2024, 1, 13, 0, 0, 0, DateTimeKind.Utc) },
+                new Item { Id = "items/on-to", Tag = "t", At = to },
+                new Item { Id = "items/after", Tag = "t", At = to.AddHours(1) });
+
+            Assert.Equal(new[] { "items/first-midnight", "items/last-midnight", "items/middle", "items/on-from" },
+                Query(store, "from index 'Items/ByTagWithClauseCache' where (Tag = 't' and At >= $from) and At < $to", ("from", from), ("to", to)));
         }
 
         // B3: an integer lower bound and a fractional upper bound on the same field
