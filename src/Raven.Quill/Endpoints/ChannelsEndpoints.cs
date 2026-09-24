@@ -1094,17 +1094,8 @@ public static class ChannelsEndpoints
             if (e.Error == SlackApiException.RateLimitedError)
                 return "slack is rate-limiting the app-level token check; try again shortly";
 
-            return e.Error switch
-            {
-                "not_allowed_token_type" =>
-                    "slack refused the app-level token because it is the wrong token type; paste the xapp- token from the app's Basic Information page",
-                "missing_scope" =>
-                    "the app-level token lacks the connections:write scope; regenerate it with that scope on the app's Basic Information page",
-                "invalid_auth" or "not_authed" or "token_revoked" or "account_inactive" or "token_expired" =>
-                    "slack rejected the app-level token; copy the xapp- token from the app's Basic Information page and try again",
-                null => e.Message,
-                _ => $"slack refused the app-level token check: {e.Error}",
-            };
+            return SlackApiErrors.DescribeAppTokenError(e.Error) ??
+                   (e.Error is null ? e.Message : $"slack refused the app-level token check: {e.Error}");
         }
     }
 

@@ -61,10 +61,6 @@ public sealed class MockSlackApi : IAsyncDisposable
 
     public TimeSpan? SocketOpenRetryAfter { get; set; }
 
-    public bool StallBeforeHello { get; set; }
-
-    public bool CloseOnConnect { get; set; }
-
     private MockSlackApi(WebApplication app, string baseAddress, string socketUrl)
     {
         _app = app;
@@ -158,8 +154,6 @@ public sealed class MockSlackApi : IAsyncDisposable
         UsersReadScopeGranted = true;
         SocketOpenError = null;
         SocketOpenRetryAfter = null;
-        StallBeforeHello = false;
-        CloseOnConnect = false;
     }
 
     public Task WaitUntilAsync(Func<bool> condition, string what, TimeSpan? timeout = null) =>
@@ -209,6 +203,7 @@ public sealed class MockSlackApi : IAsyncDisposable
         await WaitUntilConnectedAsync();
         var session = ReadySession ?? throw new InvalidOperationException("MockSlackApi: the session went away.");
         await SendAsync(session, new JsonObject { ["type"] = "disconnect", ["reason"] = reason });
+        await CloseAsync(session);
     }
 
     public async Task CloseCurrentAsync()
@@ -367,18 +362,6 @@ public sealed class MockSlackApi : IAsyncDisposable
 
     private async Task RunSessionAsync(SocketSession session, CancellationToken ct)
     {
-        if (CloseOnConnect)
-        {
-            await CloseAsync(session);
-            return;
-        }
-
-        if (StallBeforeHello)
-        {
-            await Task.Delay(Timeout.Infinite, ct);
-            return;
-        }
-
         await SendAsync(session, new JsonObject
         {
             ["type"] = "hello",

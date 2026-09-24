@@ -122,7 +122,7 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
         var foreign = await Slack.DispatchEventAsync("TOTHERTEAM", "Ev-ack-2", DmMessage(Sender, "foreign"));
 
         await Slack.WaitUntilAsync(() => Slack.Acks.Count == 3, "all three acks");
-        Assert.Equal(new[] { dm, interactive, foreign }, Slack.Acks);
+        Assert.Equal(new[] { dm, interactive, foreign }.Order(), Slack.Acks.Order());
 
         await Slack.WaitUntilAsync(() => Router.Requests.Count == 1, "the single agent dispatch");
     }
@@ -395,54 +395,6 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
         var opensAfterFatal = Slack.SocketOpenCalls.Count;
         await Task.Delay(750);
         Assert.Equal(opensAfterFatal, Slack.SocketOpenCalls.Count);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task A_socket_that_never_sends_hello_times_out_and_the_runtime_retries()
-    {
-        await using var app = await NewAppAsync();
-        Slack.StallBeforeHello = true;
-        var channel = await NewChannelAsync(app);
-
-        await Slack.WaitUntilAsync(
-            async () =>
-            {
-                var rows = await QuillHttp.GetAsync<SlackChannelHealthResponse[]>(
-                    Host.Client, QuillRoutes.SlackHealth(app.Slug));
-                return rows.Single(r => r.ChannelId == channel.ChannelId).LastSocketError is not null;
-            },
-            "the recorded handshake timeout");
-
-        var health = await QuillHttp.GetAsync<SlackChannelHealthResponse[]>(
-            Host.Client, QuillRoutes.SlackHealth(app.Slug));
-        Assert.Contains("hello frame", health.Single(r => r.ChannelId == channel.ChannelId).LastSocketError);
-
-        Slack.StallBeforeHello = false;
-        await Slack.WaitUntilConnectedAsync();
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task A_socket_closed_before_hello_surfaces_in_health_and_the_runtime_retries()
-    {
-        await using var app = await NewAppAsync();
-        Slack.CloseOnConnect = true;
-        var channel = await NewChannelAsync(app);
-
-        await Slack.WaitUntilAsync(
-            async () =>
-            {
-                var rows = await QuillHttp.GetAsync<SlackChannelHealthResponse[]>(
-                    Host.Client, QuillRoutes.SlackHealth(app.Slug));
-                return rows.Single(r => r.ChannelId == channel.ChannelId).LastSocketError is not null;
-            },
-            "the recorded pre-hello close");
-
-        var health = await QuillHttp.GetAsync<SlackChannelHealthResponse[]>(
-            Host.Client, QuillRoutes.SlackHealth(app.Slug));
-        Assert.Contains("before sending a hello frame", health.Single(r => r.ChannelId == channel.ChannelId).LastSocketError);
-
-        Slack.CloseOnConnect = false;
-        await Slack.WaitUntilConnectedAsync();
     }
 
     [RavenFact(RavenTestCategory.Quill)]

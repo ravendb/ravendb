@@ -21,7 +21,7 @@ internal sealed class SlackChannelManager(
     IDocumentStore store,
     SlackInboundProcessor processor,
     SlackHealthRegistry health,
-    IServiceScopeFactory scopes,
+    SlackSdk sdk,
     IOptions<ApplianceOptions> options,
     IServerReady ready,
     QuillLogger<SlackChannelManager> logger) : BackgroundService, ISlackChannelManager
@@ -110,6 +110,9 @@ internal sealed class SlackChannelManager(
             }
         }
 
+        foreach (var runtime in _runtimes.Values)
+            runtime.CheckConnection();
+
         foreach (var (key, runtime) in _runtimes)
         {
             if (unreadable.Contains(key.Database))
@@ -148,7 +151,7 @@ internal sealed class SlackChannelManager(
             try
             {
                 _runtimes[key] = SlackSocketRuntime.Start(
-                    key.Database, entry.Channel, entry.ChangeVector, processor, health, scopes,
+                    key.Database, entry.Channel, entry.ChangeVector, sdk, processor, health,
                     options.Value.Slack, logger);
             }
             catch (Exception e) when (e is not OperationCanceledException)
@@ -163,9 +166,9 @@ internal sealed class SlackChannelManager(
         }
     }
 
-    private bool IsRestartDue(SlackSocketRuntime runtime) =>
+    private static bool IsRestartDue(SlackSocketRuntime runtime) =>
         runtime.CanRestart && runtime.ExitedAt is { } exitedAt &&
-        DateTime.UtcNow - exitedAt >= options.Value.Slack.SocketRestartDelay;
+        DateTime.UtcNow - exitedAt >= runtime.RestartDelay;
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {

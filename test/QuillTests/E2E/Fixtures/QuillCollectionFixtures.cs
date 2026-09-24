@@ -275,8 +275,6 @@ public abstract class QuillSlackTestBase(ITestOutputHelper output, QuillSlackFix
                 opts.Slack.ApiUrl = fixture.Slack.BaseAddress;
                 opts.Slack.EditDebounce = TimeSpan.FromMilliseconds(50);
                 opts.Slack.ApplyChangesInterval = TimeSpan.FromSeconds(1);
-                opts.Slack.SocketBackoffMax = TimeSpan.FromMilliseconds(200);
-                opts.Slack.SocketHandshakeTimeout = TimeSpan.FromSeconds(2);
                 opts.Slack.SocketRestartDelay = SocketRestartDelay;
                 configure?.Invoke(opts);
             },

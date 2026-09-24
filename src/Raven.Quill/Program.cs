@@ -149,8 +149,6 @@ builder.Services.AddOptions<ApplianceOptions>()
     .Validate(o => o.Slack.EditDebounce > TimeSpan.Zero, "Slack EditDebounce must be positive")
     .Validate(o => o.Slack.SenderQueueCapacity > 0, "Slack SenderQueueCapacity must be positive")
     .Validate(o => o.Slack.ApplyChangesInterval > TimeSpan.Zero, "Slack ApplyChangesInterval must be positive")
-    .Validate(o => o.Slack.SocketBackoffMax > TimeSpan.Zero, "Slack SocketBackoffMax must be positive")
-    .Validate(o => o.Slack.SocketHandshakeTimeout > TimeSpan.Zero, "Slack SocketHandshakeTimeout must be positive")
     .Validate(o => o.Slack.SocketRestartDelay > TimeSpan.Zero, "Slack SocketRestartDelay must be positive")
     .Validate(o => Uri.TryCreate(o.Discord.ApiUrl, UriKind.Absolute, out var u) &&
                    (u.Scheme == Uri.UriSchemeHttp || u.Scheme == Uri.UriSchemeHttps),
@@ -222,10 +220,12 @@ builder.Services.ConfigureHttpClientDefaults(httpBuilder =>
 builder.Services.AddHttpClient(WebhookActionExecutor.ClientName,
     static http => http.Timeout = TimeSpan.FromSeconds(30));
 
-builder.Services.AddHttpClient<ISlackClient, SlackApiClient>(static (sp, http) =>
+builder.Services.AddHttpClient(SlackSdk.HttpClientName, static (sp, http) =>
 {
     http.Timeout = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value.Slack.RequestTimeout;
 });
+builder.Services.AddSingleton<SlackSdk>();
+builder.Services.AddTransient<ISlackClient, SlackApiClient>();
 
 builder.Services.AddHttpClient<IDiscordClient, DiscordApiClient>(static (sp, http) =>
 {
