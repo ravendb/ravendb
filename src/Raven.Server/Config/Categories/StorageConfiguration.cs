@@ -81,7 +81,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("EXPERT: Journal writes become eligible for pipelining once their measured write latency exceeds this value (ticks, 10,000 per millisecond). Pipelining also requires small write batches - large batches are bandwidth bound and stay on the group-commit path. Set to 0 to make writes always eligible.")]
         [DefaultValue(20_000)]
-        [ConfigurationEntry("Storage.PipelineJournalWritesAboveLatencyInTicks", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("Storage.PipelineJournalWritesAboveLatencyInTicks", ConfigurationEntryScope.ServerWideOnly)]
         public long PipelineJournalWritesAboveLatencyInTicks { get; set; }
 
         [Description("EXPERT: The journal write size that batch consolidation aims for. 0 (the default) lets the server adapt the target at runtime from measured throughput.")]
@@ -156,7 +156,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("Moving-average sync cost threshold per device; exceeding this value switches writeback from trickle to drain mode to handle elevated I/O latency or exhausted burst credits.")]
         [DefaultValue(100)]
-        [ConfigurationEntry("Storage.SyncWritebackBarrierCostThresholdInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("Storage.SyncWritebackBarrierCostThresholdInMs", ConfigurationEntryScope.ServerWideOnly)]
         public int SyncWritebackBarrierCostThresholdInMs { get; set; }
 
         [Description("Minimum contiguous dirty run for paced writeback; shorter runs are left to the OS writeback to avoid burning the device IOPS budget on unmergeable small requests. Set to 0 to write back every dirty run.")]
@@ -178,7 +178,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("Time-weighted device queue depth threshold (iostat aqu-sz) that switches writeback from trickle to paced drain mode; reverts when queue stays below 60% of this value for 30 seconds.")]
         [DefaultValue(5)]
-        [ConfigurationEntry("Storage.SyncWritebackDrainQueueDepthThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("Storage.SyncWritebackDrainQueueDepthThreshold", ConfigurationEntryScope.ServerWideOnly)]
         public int SyncWritebackDrainQueueDepthThreshold { get; set; }
         
         [Description("EXPERT: Determine the acceleration level that Voron will use when compressing journals.")]
