@@ -16,6 +16,7 @@ import Tooltip from "react-bootstrap/Tooltip";
 import PopoverWithHoverWrapper from "./PopoverWithHoverWrapper";
 import useBoolean from "components/hooks/useBoolean";
 import Modal from "components/common/Modal";
+import { useStudioTranslation } from "hooks/useStudioTranslation";
 
 const ravendbLogo = require("Content/img/ravendb_logo.svg");
 
@@ -285,6 +286,7 @@ export default function FeatureAvailabilitySummaryWrapper({
 }: FeatureAvailabilitySummaryProps & { isUnlimited: boolean; isOpenedByDefault?: boolean }) {
     const { value: isOpen, toggle: toggleIsOpen } = useBoolean(isOpenedByDefault);
     const isQuill = useAppSelector(licenseSelectors.licenseType) === "Quill";
+    const { t } = useStudioTranslation("featureAvailabilitySummary");
 
     return (
         <>
@@ -303,12 +305,10 @@ export default function FeatureAvailabilitySummaryWrapper({
                         ></Icon>
                         <div className="vstack gap-1">
                             <div className="hstack flex-wrap gap-1">
-                                <h4 className="m-0">Licensing</h4>
+                                <h4 className="m-0">{t("heading")}</h4>
                             </div>
                             <small className="description">
-                                {isQuill
-                                    ? "See what features are included in this license"
-                                    : "See which plans include this feature and other exciting features"}
+                                {t("description", { context: isQuill ? "quill" : "plans" })}
                             </small>
                         </div>
                     </button>

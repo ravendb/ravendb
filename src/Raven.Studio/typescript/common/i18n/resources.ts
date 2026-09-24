@@ -1,13 +1,17 @@
+import enAboutView from "./locales/en/aboutView.json";
 import enCommon from "./locales/en/common.json";
 import enDocuments from "./locales/en/documents.json";
 import enDocumentRefresh from "./locales/en/documentRefresh.json";
 import enEditCustomSorter from "./locales/en/editCustomSorter.json";
+import enFeatureAvailabilitySummary from "./locales/en/featureAvailabilitySummary.json";
 import enRevisionsBin from "./locales/en/revisionsBin.json";
 import enStudioGlobalConfiguration from "./locales/en/studioGlobalConfiguration.json";
+import plAboutView from "./locales/pl/aboutView.json";
 import plCommon from "./locales/pl/common.json";
 import plDocuments from "./locales/pl/documents.json";
 import plDocumentRefresh from "./locales/pl/documentRefresh.json";
 import plEditCustomSorter from "./locales/pl/editCustomSorter.json";
+import plFeatureAvailabilitySummary from "./locales/pl/featureAvailabilitySummary.json";
 import plRevisionsBin from "./locales/pl/revisionsBin.json";
 import plStudioGlobalConfiguration from "./locales/pl/studioGlobalConfiguration.json";
 
@@ -23,19 +27,23 @@ export const languageNames: Record<StudioLanguage, string> = {
 export const defaultNS = "common";
 
 const en = {
+    aboutView: enAboutView,
     common: enCommon,
     documentRefresh: enDocumentRefresh,
     documents: enDocuments,
     editCustomSorter: enEditCustomSorter,
+    featureAvailabilitySummary: enFeatureAvailabilitySummary,
     revisionsBin: enRevisionsBin,
     studioGlobalConfiguration: enStudioGlobalConfiguration,
 };
 
 const pl: typeof en = {
+    aboutView: plAboutView,
     common: plCommon,
     documentRefresh: plDocumentRefresh,
     documents: plDocuments,
     editCustomSorter: plEditCustomSorter,
+    featureAvailabilitySummary: plFeatureAvailabilitySummary,
     revisionsBin: plRevisionsBin,
     studioGlobalConfiguration: plStudioGlobalConfiguration,
 };

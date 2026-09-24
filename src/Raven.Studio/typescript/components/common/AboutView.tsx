@@ -11,6 +11,7 @@ import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/Lice
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Popover from "react-bootstrap/Popover";
 import Accordion from "react-bootstrap/Accordion";
+import { useStudioTranslation } from "hooks/useStudioTranslation";
 
 interface AboutViewProps {
     children?: ReactNode | ReactNode[];
@@ -121,11 +122,12 @@ interface AccordionItemWrapperProps {
 }
 
 const AccordionItemWrapper = (props: AccordionItemWrapperProps) => {
+    const { t } = useStudioTranslation("aboutView");
     const {
         icon,
         color,
-        heading = "About this view",
-        description = "Learn more about this view",
+        heading = t("heading"),
+        description = t("description"),
         children,
         pill,
         pillText,

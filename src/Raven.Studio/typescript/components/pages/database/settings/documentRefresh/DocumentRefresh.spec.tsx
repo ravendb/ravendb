@@ -20,6 +20,8 @@ describe("DocumentRefresh", () => {
         expect(await screen.findByText("Włącz odświeżanie dokumentów")).toBeInTheDocument();
         expect(await screen.findByRole("button", { name: /Zapisz/ })).toBeInTheDocument();
         expect(screen.getByText("odświeżanie dokumentów", { selector: "strong" })).toBeInTheDocument();
+        expect(screen.getByText("O tym widoku")).toBeInTheDocument();
+        expect(screen.getByText("Licencjonowanie")).toBeInTheDocument();
     });
 
     it("can render", async () => {
