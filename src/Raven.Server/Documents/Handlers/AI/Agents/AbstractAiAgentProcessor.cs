@@ -125,11 +125,13 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             optionsBlittable.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject parameters);
             optionsBlittable.TryGet(nameof(AiConversationCreationOptions.ExpirationInSec), out int? conversationExpirationInSec);
             optionsBlittable.TryGet(nameof(AiConversationCreationOptions.MaxModelIterationsPerCall), out int? maxModelIterationsPerCall);
+            optionsBlittable.TryGet(nameof(AiConversationCreationOptions.SnapshotBeforeRunning), out bool snapshotBeforeRunning);
 
             var options = new AiConversationCreationOptions
             {
                 ExpirationInSec = conversationExpirationInSec,
-                MaxModelIterationsPerCall = maxModelIterationsPerCall
+                MaxModelIterationsPerCall = maxModelIterationsPerCall,
+                SnapshotBeforeRunning = snapshotBeforeRunning
             };
 
             var request = new RequestBody

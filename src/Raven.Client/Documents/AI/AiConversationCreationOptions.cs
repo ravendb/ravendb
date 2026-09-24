@@ -26,6 +26,37 @@ public class AiConversationCreationOptions : IDynamicJson
     public int? ExpirationInSec { get; set; }
     public int? MaxModelIterationsPerCall { get; set; }
 
+    /// <summary>
+    /// When set to <c>true</c>, the server creates a snapshot of the conversation document
+    /// and all sub-conversation documents <em>before</em> processing each user prompt.
+    /// The snapshot is returned as <see cref="AiAnswer{TAnswer}.SnapshotToken"/>,
+    /// which can later be passed to <see cref="AiOperations.ForkConversationAsync"/> to create
+    /// a new conversation that starts from that earlier state.
+    ///
+    /// <para>
+    /// This does not apply when handling action responses — only for user prompts and attachments.
+    /// Action responses are considered part of the previous <c>RunAsync</c> turn.
+    /// </para>
+    ///
+    /// <para>
+    /// This is functionally equivalent to calling <see cref="AiOperations.CreateSnapshotAsync"/> followed
+    /// by <see cref="IAiConversationOperations.RunAsync{TAnswer}"/>, but in a single server roundtrip.
+    /// </para>
+    ///
+    /// <para>
+    /// <strong>Important:</strong> Snapshots are stored as document revisions. To control how many snapshots
+    /// are retained (and to prevent unbounded growth), configure a <c>RevisionsConfiguration</c> for the
+    /// <c>@conversations</c> collection with appropriate <c>MinimumRevisionsToKeep</c> or
+    /// <c>MinimumRevisionAgeToKeep</c> values. Without a revisions policy, snapshots accumulate indefinitely.
+    /// If revisions are purged (by policy or by <see cref="AiOperations.PurgeConversationSnapshotsAsync"/>),
+    /// any <see cref="AiAnswer{TAnswer}.SnapshotToken"/> referencing those revisions becomes invalid
+    /// and <see cref="AiOperations.ForkConversationAsync"/> will fail.
+    /// </para>
+    ///
+    /// Default is <c>false</c>.
+    /// </summary>
+    public bool SnapshotBeforeRunning { get; set; }
+
     public AiConversationCreationOptions()
     {
     }
@@ -64,6 +95,7 @@ public class AiConversationCreationOptions : IDynamicJson
         {
             [nameof(ExpirationInSec)] = ExpirationInSec,
             [nameof(MaxModelIterationsPerCall)] = MaxModelIterationsPerCall,
+            [nameof(SnapshotBeforeRunning)] = SnapshotBeforeRunning,
             [nameof(Parameters)] = Parameters != null ? DynamicJsonValue.Convert(Parameters) : null,
         };
     }

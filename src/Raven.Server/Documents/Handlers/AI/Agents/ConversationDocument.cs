@@ -324,6 +324,11 @@ public partial class ConversationDocument([NotNull] string agent, BlittableJsonR
             conversation.SubConversationIds = subConversationIds.Items.Select(m => ((LazyStringValue)m).ToString(CultureInfo.InvariantCulture)).ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
 
+        // Eagerly materialize messages to decouple from the original document's
+        // underlying memory, which may be backed by a read transaction that will be
+        // disposed before the messages are mutated (AddMessage, RemoveRange, etc.).
+        conversation.Messages.Materialize();
+
         return conversation;
     }
 
