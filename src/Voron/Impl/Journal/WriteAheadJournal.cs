@@ -1299,7 +1299,7 @@ namespace Voron.Impl.Journal
                     if (pageFromScratchBuffer.File == null)
                         continue;
 
-                    scratchBufferPool.Free(txw, pageFromScratchBuffer.File.Number, pageFromScratchBuffer.PositionInScratchBuffer);
+                    scratchBufferPool.Free(txw, pageFromScratchBuffer);
 
 #if DEBUG
                     freedUpToTx = long.Max(freedUpToTx, pageFromScratchBuffer.AllocatedInTransaction);
