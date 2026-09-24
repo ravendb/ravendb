@@ -227,7 +227,7 @@ public static class WhereClauseNormalizer
 
     private static bool OnSameField(BinaryExpression first, BinaryExpression second)
     {
-        return first.Left.Equals(second.Left);
+        return QueryBuilderHelper.IsSameField(first.Left, second.Left);
     }
 
     private static bool TryCompareNumericLiterals(ValueExpression first, ValueExpression second, out int comparison)

@@ -36,6 +36,16 @@ public static class QueryBuilderHelper
         return expression.IsRangeOperation && expression.Right is ValueExpression;
     }
 
+    // the paths must match in full: FieldExpression.Equals ignores the first segment to tolerate an alias,
+    // which would make 'Origin.X' and 'Destination.X' the same field
+    internal static bool IsSameField(QueryExpression first, QueryExpression second)
+    {
+        if (first is FieldExpression firstField && second is FieldExpression secondField)
+            return firstField.FieldValue == secondField.FieldValue;
+
+        return first.Equals(second);
+    }
+
     // lower bounds keep the greater value, upper bounds the lesser; on a tie the strict operator wins
     internal static BinaryExpression TighterBound(BinaryExpression first, BinaryExpression second, int comparison)
     {
@@ -87,7 +97,7 @@ public static class QueryBuilderHelper
             else
                 break;
 
-            if (candidate.Left.Equals(tighter.Left) == false || candidate.IsGreaterThan != tighter.IsGreaterThan)
+            if (IsSameField(candidate.Left, tighter.Left) == false || candidate.IsGreaterThan != tighter.IsGreaterThan)
                 break;
 
             fieldName ??= ExtractIndexFieldName(query, parameters, tighter.Left, metadata);
