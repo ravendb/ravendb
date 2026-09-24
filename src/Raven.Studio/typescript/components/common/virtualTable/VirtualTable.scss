@@ -2,6 +2,9 @@
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
 
+$row-bg-selected: color-mix(in srgb, colors.$primary-var 20%, colors.$row-bg-var);
+$row-bg-selection-preview: color-mix(in srgb, colors.$primary-var 8%, colors.$row-bg-var);
+
 .virtual-table {
     background-color: colors.$panel-bg-2-var;
     padding: sizes.$gutter-xxs;
@@ -12,6 +15,44 @@
         border-radius: sizes.$gutter-xxs;
         overflow: auto;
         position: relative;
+        background-color: colors.$row-bg-var;
+    }
+
+    .floating-bars-container {
+        position: absolute;
+        bottom: sizes.$gutter-xs;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 3;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: sizes.$gutter-xxs;
+    }
+
+    .floating-bar {
+        display: flex;
+        align-items: center;
+        gap: sizes.$gutter-xxs;
+        padding: sizes.$gutter-xxxs sizes.$gutter-xs;
+        background-color: colors.$panel-bg-1-var;
+        border: 1px solid colors.$border-color-light-var;
+        border-radius: sizes.$border-radius-pill;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+
+        .vr {
+            align-self: stretch;
+            opacity: 0.5;
+        }
+    }
+
+    .scroll-to-top {
+        position: absolute;
+        bottom: sizes.$gutter-xs;
+        right: sizes.$gutter-sm;
+        z-index: 3;
+        padding: sizes.$gutter-xxs;
+        line-height: 1;
     }
 
     .table-state {
@@ -173,6 +214,18 @@
                 }
             }
 
+            &.is-selected {
+                td {
+                    background-color: $row-bg-selected !important;
+                }
+            }
+
+            &.selection-preview {
+                td {
+                    background-color: $row-bg-selection-preview !important;
+                }
+            }
+
             .flags {
                 i {
                     color: colors.$border-color-light-var;
@@ -216,5 +269,18 @@
                 transition: bs5variables.$transition-base;
             }
         }
+    }
+}
+
+.lazy-virtual-table {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+
+    .lazy-virtual-table-area {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
     }
 }

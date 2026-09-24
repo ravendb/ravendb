@@ -8,7 +8,7 @@ export interface AllRevisionsWithSizeProps {
 }
 
 export interface AllRevisionsFetcherRef {
-    reload: () => Promise<void | pagedResultWithToken<RevisionsPreviewResultItem>>;
+    reload: () => void | Promise<unknown>;
 }
 
 export interface AllRevisionsTableProps extends AllRevisionsWithSizeProps {

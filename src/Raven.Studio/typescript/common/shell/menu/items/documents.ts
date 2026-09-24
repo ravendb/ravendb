@@ -6,6 +6,7 @@ import DocumentIdentities = require("components/pages/database/documents/identit
 import reactUtils = require("common/reactUtils");
 import AllRevisions = require("components/pages/database/documents/allRevisions/AllRevisions");
 import CompareExchange = require("components/pages/database/documents/compareExchange/CompareExchange");
+import DocumentsPage = require("components/pages/database/documents/documentsList/DocumentsPage");
 
 export = getDocumentsMenuItem;
 
@@ -13,7 +14,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
     const documentsItems = [
         new leafMenuItem({
             route: "databases/documents",
-            moduleId: require("viewmodels/database/documents/documents"),
+            moduleId: reactUtils.bridgeToReact(DocumentsPage.default, "shardedView"),
             shardingMode: "allShards",
             title: "All Documents",
             nav: false,

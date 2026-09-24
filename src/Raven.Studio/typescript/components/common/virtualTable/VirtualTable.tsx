@@ -1,16 +1,17 @@
 import "./VirtualTable.scss";
 import { useRef } from "react";
-import { FilterFn, flexRender, Row } from "@tanstack/react-table";
+import { FilterFn, Row } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ClassNameProps } from "components/models/common";
 import VirtualTableBodyWrapper, { VirtualTableBodyWrapperProps } from "./partials/VirtualTableBodyWrapper";
+import VirtualTableCells from "./partials/VirtualTableCells";
 import { virtualTableConstants } from "components/common/virtualTable/utils/virtualTableConstants";
 import classNames from "classnames";
 import { values } from "lodash";
 
 // Chrome/Edge can render up to 838 859 rows in a table
 // Firefox only up to 223 695 rows
-// If you want to render more rows, you need to use VirtualTableWithLazyLoading component along with useVirtualTableWithLazyLoading hook
+// If you want to render more rows (or fetch them on scroll), use LazyVirtualTable component along with useLazyRows hook
 
 // May have performance problems but only in dev mode (prod build works fine)
 
@@ -95,30 +96,7 @@ export default function VirtualTable<T>(props: VirtualTableProps<T> & ClassNameP
                             }}
                             className={classNames({ "is-odd": virtualRow.index % 2 !== 0 }, getRowClassName?.(row))}
                         >
-                            {row.getVisibleCells().map((cell) => {
-                                const isPinned = cell.column.getIsPinned();
-                                return (
-                                    <td
-                                        key={cell.id}
-                                        style={{
-                                            width: cell.column.getSize(),
-                                            padding: isCompact ? "0px 7.5px" : undefined,
-                                            ...(isPinned
-                                                ? {
-                                                      position: "sticky",
-                                                      left: cell.column.getStart("left"),
-                                                  }
-                                                : {}),
-                                        }}
-                                        className={classNames("align-content-center", {
-                                            "col-pinned": isPinned,
-                                            "font-size-11": isCompact,
-                                        })}
-                                    >
-                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                    </td>
-                                );
-                            })}
+                            <VirtualTableCells row={row} isCompact={isCompact} />
                         </tr>
                     );
                 })}

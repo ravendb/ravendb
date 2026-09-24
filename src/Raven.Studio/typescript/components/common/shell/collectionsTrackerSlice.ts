@@ -1,7 +1,7 @@
 import { EntityState, PayloadAction, createEntityAdapter, createSelector, createSlice } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
 
-const collectionNames = {
+export const systemCollectionNames = {
     allDocuments: "All Documents",
     allRevisions: "All Revisions",
     revisionsBin: "Revisions Bin",
@@ -9,7 +9,9 @@ const collectionNames = {
     empty: "@empty",
 } as const;
 
-type CollectionName = (typeof collectionNames)[keyof typeof collectionNames] | (string & NonNullable<unknown>);
+type CollectionName =
+    | (typeof systemCollectionNames)[keyof typeof systemCollectionNames]
+    | (string & NonNullable<unknown>);
 
 export interface Collection {
     name: CollectionName;
@@ -22,6 +24,7 @@ export interface Collection {
 
 interface CollectionsTrackerState {
     collections: EntityState<Collection, CollectionName>;
+    globalChangeVector: string | null;
 }
 
 const collectionsAdapter = createEntityAdapter<Collection, CollectionName>({
@@ -32,6 +35,7 @@ const collectionsSelectors = collectionsAdapter.getSelectors();
 
 const initialState: CollectionsTrackerState = {
     collections: collectionsAdapter.getInitialState(),
+    globalChangeVector: null,
 };
 
 export const collectionsTrackerSlice = createSlice({
@@ -41,6 +45,9 @@ export const collectionsTrackerSlice = createSlice({
         collectionsLoaded: (state, { payload: collections }: PayloadAction<Collection[]>) => {
             collectionsAdapter.setAll(state.collections, collections);
         },
+        globalChangeVectorUpdated: (state, { payload: changeVector }: PayloadAction<string | null>) => {
+            state.globalChangeVector = changeVector;
+        },
     },
 });
 
@@ -48,7 +55,7 @@ export const collectionsTrackerActions = collectionsTrackerSlice.actions;
 
 const selectCollectionNames = createSelector(
     (store: RootState) => collectionsSelectors.selectIds(store.collectionsTracker.collections),
-    (collections) => collections.filter((name) => name !== collectionNames.allDocuments)
+    (collections) => collections.filter((name) => name !== systemCollectionNames.allDocuments)
 );
 
 const selectUserCollectionNames = createSelector(selectCollectionNames, (collections) =>
@@ -57,6 +64,9 @@ const selectUserCollectionNames = createSelector(selectCollectionNames, (collect
 
 export const collectionsTrackerSelectors = {
     collections: (store: RootState) => collectionsSelectors.selectAll(store.collectionsTracker.collections),
+    collectionByName: (name: CollectionName) => (store: RootState) =>
+        collectionsSelectors.selectById(store.collectionsTracker.collections, name) ?? null,
     collectionNames: selectCollectionNames,
     userCollectionNames: selectUserCollectionNames,
+    globalChangeVector: (store: RootState) => store.collectionsTracker.globalChangeVector,
 };

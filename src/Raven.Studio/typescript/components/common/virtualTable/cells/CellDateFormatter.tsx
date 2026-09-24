@@ -48,24 +48,24 @@ export function DateFormatterCell<TData, TValue>({
     }
 
     return (
-        <PopoverWithHoverWrapper
-            message={
-                <>
-                    <div className="index-errors-details-tooltip__container">
-                        <b>UTC: </b>
-                        <time className="index-errors-details-tooltip__date">
-                            {moment.utc(dateValue).toISOString()}
-                        </time>
-                    </div>
-                    <div className="index-errors-details-tooltip__container">
-                        <b>Relative: </b>
-                        <time>{genUtils.formatDurationByDate(moment.utc(dateValue), true)}</time>
-                    </div>
-                </>
-            }
-        >
+        <PopoverWithHoverWrapper message={<DateTooltip date={dateValue} />}>
             <CellValue value={formattedDate} className={cellClassName} />
         </PopoverWithHoverWrapper>
+    );
+}
+
+function DateTooltip({ date }: { date: Date }) {
+    return (
+        <>
+            <div className="index-errors-details-tooltip__container">
+                <b>UTC: </b>
+                <time className="index-errors-details-tooltip__date">{moment.utc(date).toISOString()}</time>
+            </div>
+            <div className="index-errors-details-tooltip__container">
+                <b>Relative: </b>
+                <time>{genUtils.formatDurationByDate(moment.utc(date), true)}</time>
+            </div>
+        </>
     );
 }
 

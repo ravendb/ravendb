@@ -259,6 +259,28 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         return this.mockResolvedValue(this.mocks.getRevisionsPreview, dto, DatabasesStubs.revisionsPreview());
     }
 
+    withDocumentsPreview(dto?: MockedValue<pagedResultWithAvailableColumns<document>>) {
+        return this.mockResolvedValue(this.mocks.getDocumentsPreview, dto, DatabasesStubs.documentsPreview());
+    }
+
+    withGeneratedDocumentsPreview(totalCount: number) {
+        this.mocks.getDocumentsPreview.mockImplementation(
+            async (_database, skip, take, collectionName, _previewBindings, _fullBindings, continuationToken) => {
+                const start = continuationToken ? Number(continuationToken) : skip;
+                const count = Math.max(0, Math.min(take, totalCount - start));
+                const next = start + count;
+
+                return {
+                    items: DatabasesStubs.documentsPreviewItems(start, count, collectionName),
+                    totalResultCount: totalCount,
+                    availableColumns: DatabasesStubs.documentsPreviewColumns(),
+                    continuationToken: next < totalCount ? String(next) : null,
+                    resultEtag: "1",
+                };
+            }
+        );
+    }
+
     withDocumentWithMetadata(dto?: MockedValue<any>) {
         return this.mockResolvedValue(this.mocks.getDocumentWithMetadata, dto, new document({ Name: "some-name" }));
     }

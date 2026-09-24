@@ -1,4 +1,4 @@
-﻿import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import Popover, { PopoverProps } from "react-bootstrap/Popover";
 import Overlay, { OverlayProps } from "react-bootstrap/Overlay";
 import { Placement } from "react-bootstrap/types";
@@ -32,6 +32,7 @@ export function PopoverWithHover(props: PopoverWithHoverProps) {
 
     const div = target as HTMLDivElement;
     const [open, setOpen] = useState<boolean>(false);
+    const [hasBeenOpened, setHasBeenOpened] = useState<boolean>(false);
     const overElement = useRef<boolean>(false);
 
     const popoverId = useUniqueId("popover-");
@@ -83,6 +84,7 @@ export function PopoverWithHover(props: PopoverWithHoverProps) {
             tooltipMutex(div, () => setOpen(false));
             showHandle.current = setTimeout(() => {
                 setOpen(true);
+                setHasBeenOpened(true);
                 showHandle.current = null;
             }, 180);
 
@@ -106,7 +108,7 @@ export function PopoverWithHover(props: PopoverWithHoverProps) {
         }
     }, [maybeCancelShow, target, scheduleHide, maybeCancelHide, div]);
 
-    if (!target) {
+    if (!target || !hasBeenOpened) {
         return null;
     }
 

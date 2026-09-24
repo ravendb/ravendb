@@ -1,10 +1,13 @@
 import { Column, Table as TanstackTable } from "@tanstack/react-table";
+import { CustomColumnDefinition } from "components/common/virtualTable/commonComponents/columnsSelect/customColumns";
 
 export interface ColumnMeta {
     id: string;
     headerTitle: string;
     canHide: boolean;
     canPin: boolean;
+    // set for the columns defined by the user, they can be edited and removed
+    customColumn?: CustomColumnDefinition;
 }
 
 function getColumnHeaderTitle<T>(column: Column<T, unknown>): string {
@@ -26,6 +29,7 @@ export function useTableDisplaySettings<T>(table: TanstackTable<T>) {
         headerTitle: getColumnHeaderTitle(column),
         canHide: column.getCanHide(),
         canPin: column.getCanPin(),
+        customColumn: column.columnDef.meta?.customColumn,
     }));
 
     const allColumnIds = allColumns.map((x) => x.id);

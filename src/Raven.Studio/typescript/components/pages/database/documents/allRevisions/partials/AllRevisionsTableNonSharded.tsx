@@ -1,7 +1,8 @@
 import { useReactTable, getCoreRowModel } from "@tanstack/react-table";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { useVirtualTableWithLazyLoading } from "components/common/virtualTable/hooks/useVirtualTableWithLazyLoading";
-import VirtualTableWithLazyLoading from "components/common/virtualTable/VirtualTableWithLazyLoading";
+import { useLazyRows } from "components/common/virtualTable/hooks/useLazyRows";
+import LazyVirtualTable from "components/common/virtualTable/LazyVirtualTable";
+import { lazyTableOptions } from "components/common/virtualTable/utils/lazyTableUtils";
 import { useServices } from "components/hooks/useServices";
 import { AllRevisionsTableProps } from "components/pages/database/documents/allRevisions/common/allRevisionsTypes";
 import { useAllRevisionsColumns } from "components/pages/database/documents/allRevisions/hooks/useAllRevisionsColumns";
@@ -20,37 +21,34 @@ export default function AllRevisionsTableNonSharded({
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
 
-    const { dataPreview, componentProps, reload } = useVirtualTableWithLazyLoading({
-        fetchData: (skip: number, take: number) => {
-            if (databaseName) {
-                return databasesService.getRevisionsPreview({
-                    databaseName,
-                    start: skip,
-                    pageSize: take,
-                    type: selectedType,
-                    collection: selectedCollectionName,
-                });
-            }
-        },
-        dependencies: [databaseName, selectedType, selectedCollectionName],
+    const lazyRows = useLazyRows({
+        fetchData: (skip: number, take: number) =>
+            databasesService.getRevisionsPreview({
+                databaseName,
+                start: skip,
+                pageSize: take,
+                type: selectedType,
+                collection: selectedCollectionName,
+            }),
+        reloadDependencies: [databaseName, selectedType, selectedCollectionName],
     });
 
     const columns = useAllRevisionsColumns(databaseName, false, width, selectedRows, setSelectedRows);
 
     useImperativeHandle(fetcherRef, () => ({
-        reload,
+        reload: lazyRows.reload,
     }));
 
     const table = useReactTable({
-        defaultColumn: {
-            enableSorting: false,
-            enableColumnFilter: false,
-        },
+        ...lazyTableOptions,
         columns,
-        data: dataPreview,
-        columnResizeMode: "onChange",
+        data: lazyRows.data,
         getCoreRowModel: getCoreRowModel(),
     });
 
-    return <VirtualTableWithLazyLoading {...componentProps} table={table} heightInPx={height} />;
+    return (
+        <div className="d-flex flex-column" style={{ height }}>
+            <LazyVirtualTable table={table} lazyRows={lazyRows} itemsName="revisions" />
+        </div>
+    );
 }
