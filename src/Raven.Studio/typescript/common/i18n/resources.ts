@@ -2,10 +2,14 @@ import enCommon from "./locales/en/common.json";
 import enDocuments from "./locales/en/documents.json";
 import enDocumentRefresh from "./locales/en/documentRefresh.json";
 import enEditCustomSorter from "./locales/en/editCustomSorter.json";
+import enRevisionsBin from "./locales/en/revisionsBin.json";
+import enStudioGlobalConfiguration from "./locales/en/studioGlobalConfiguration.json";
 import plCommon from "./locales/pl/common.json";
 import plDocuments from "./locales/pl/documents.json";
 import plDocumentRefresh from "./locales/pl/documentRefresh.json";
 import plEditCustomSorter from "./locales/pl/editCustomSorter.json";
+import plRevisionsBin from "./locales/pl/revisionsBin.json";
+import plStudioGlobalConfiguration from "./locales/pl/studioGlobalConfiguration.json";
 
 export const supportedLanguages = ["en", "pl"] as const;
 
@@ -23,6 +27,8 @@ const en = {
     documentRefresh: enDocumentRefresh,
     documents: enDocuments,
     editCustomSorter: enEditCustomSorter,
+    revisionsBin: enRevisionsBin,
+    studioGlobalConfiguration: enStudioGlobalConfiguration,
 };
 
 const pl: typeof en = {
@@ -30,6 +36,8 @@ const pl: typeof en = {
     documentRefresh: plDocumentRefresh,
     documents: plDocuments,
     editCustomSorter: plEditCustomSorter,
+    revisionsBin: plRevisionsBin,
+    studioGlobalConfiguration: plStudioGlobalConfiguration,
 };
 
 export const resources = { en, pl } satisfies Record<StudioLanguage, typeof en>;
