@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using Voron.Data.BTrees;
@@ -101,9 +102,10 @@ namespace Voron.Impl.Journal
             if (delta < 0)
                 ThrowInvalidLastDurableTxIdAtSubmit(lastDurableTxId, delta);
 
-            // delta too high cannot be represented in a byte, so we will just set it to 0, and trust the recovery for this.
-            // > 255 is *really* rare, and adding a corruption handling to recover from this isn't worth it
-            DurableTxIdDeltaAtSubmit = delta is 0 or > byte.MaxValue ? (byte)0 : (byte)delta;
+            Debug.Assert(delta <= StorageEnvironmentOptions.MaxSupportedConcurrentJournalWrites + 1,
+                $"Durability watermark delta of transaction {TransactionId} is {delta}, which is above the {StorageEnvironmentOptions.MaxSupportedConcurrentJournalWrites} journal writes we allow in flight");
+
+            DurableTxIdDeltaAtSubmit = (byte)Math.Clamp(delta, 0, byte.MaxValue);
         }
 
         [DoesNotReturn]
