@@ -16,9 +16,5 @@ public sealed class SlackOptions
 
     public TimeSpan ApplyChangesInterval { get; set; } = TimeSpan.FromSeconds(30);
 
-    public TimeSpan SocketBackoffMax { get; set; } = TimeSpan.FromMinutes(1);
-
-    public TimeSpan SocketHandshakeTimeout { get; set; } = TimeSpan.FromSeconds(15);
-
     public TimeSpan SocketRestartDelay { get; set; } = TimeSpan.FromMinutes(5);
 }

@@ -24,10 +24,6 @@ internal sealed class SlackApiException(
     public TimeSpan? RetryAfter { get; } = retryAfter;
 
     public bool SlackResponded { get; } = slackResponded;
-
-    internal bool RejectsAppToken => Error is
-        "invalid_auth" or "not_authed" or "account_inactive" or "token_revoked" or "token_expired" or
-        "not_allowed_token_type" or "missing_scope";
 }
 
 internal interface ISlackClient
