@@ -42,6 +42,8 @@ import { virtualTableUtils } from "components/common/virtualTable/utils/virtualT
 import AceEditor from "components/common/ace/AceEditor";
 import studioSettings = require("common/settings/studioSettings");
 import { languageNames, StudioLanguage, supportedLanguages } from "common/i18n/resources";
+import { useStudioTranslation } from "hooks/useStudioTranslation";
+import { StudioTrans } from "components/common/i18n/StudioTrans";
 
 const languageOptions: SelectOption<StudioLanguage>[] = supportedLanguages.map((language) => ({
     value: language,
@@ -51,6 +53,8 @@ const languageOptions: SelectOption<StudioLanguage>[] = supportedLanguages.map((
 export default function StudioGlobalConfiguration() {
     const [tableHoveredFont, setTableHoveredFont] = useState<string>(null);
     const [codeHoveredFont, setCodeHoveredFont] = useState<string>(null);
+    const { t } = useStudioTranslation("studioGlobalConfiguration");
+    const { t: tCommon } = useStudioTranslation("common");
 
     const asyncGlobalSettings = useAsyncCallback<StudioGlobalConfigurationFormData>(async () => {
         const settings = await studioSettings.default.globalSettings(true);
@@ -115,7 +119,7 @@ export default function StudioGlobalConfiguration() {
     }
 
     if (asyncGlobalSettings.status === "error") {
-        return <LoadError error="Unable to load studio configuration" refresh={onRefresh} />;
+        return <LoadError error={t("loadError")} refresh={onRefresh} />;
     }
 
     return (
@@ -124,7 +128,7 @@ export default function StudioGlobalConfiguration() {
                 <Col>
                     <AboutViewHeading
                         icon="studio-configuration"
-                        title="Studio Configuration"
+                        title={t("title")}
                         licenseBadgeText={hasStudioConfiguration ? null : "Professional +"}
                     />
                     <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
@@ -142,13 +146,13 @@ export default function StudioGlobalConfiguration() {
                                 disabled={!formState.isDirty}
                                 isSpinning={formState.isSubmitting}
                             >
-                                Save
+                                {tCommon("save")}
                             </ButtonWithSpinner>
                         </ConditionalPopover>
                         <Card className="mb-3">
                             <Card.Body className="vstack gap-3">
                                 <div className="gap-1">
-                                    <FormLabel className="mb-0 md-label">Language</FormLabel>
+                                    <FormLabel className="mb-0 md-label">{t("language")}</FormLabel>
                                     <FormSelect
                                         control={control}
                                         name="language"
@@ -167,15 +171,18 @@ export default function StudioGlobalConfiguration() {
                                                 message={
                                                     <ul>
                                                         <li className="margin-bottom-xs">
-                                                            Apply a <strong>tag</strong> to the Studio indicating the
-                                                            server environment.
+                                                            <StudioTrans
+                                                                ns="studioGlobalConfiguration"
+                                                                i18nKey="environment.tagInfo"
+                                                                components={{ strong: <strong /> }}
+                                                            />
                                                         </li>
-                                                        <li>This does not affect any settings or features.</li>
+                                                        <li>{t("environment.noEffectInfo")}</li>
                                                     </ul>
                                                 }
                                                 placement="right"
                                             >
-                                                Server Environment <Icon icon="info-new" id="EnvironmentInfo" />
+                                                {t("environment.label")} <Icon icon="info-new" id="EnvironmentInfo" />
                                             </PopoverWithHoverWrapper>
                                         </FormLabel>
                                         <FormSelect
@@ -187,23 +194,21 @@ export default function StudioGlobalConfiguration() {
                                     </div>
                                     <div className="gap-1">
                                         <FormLabel className="mb-0 md-label">
-                                            Default Replication Factor{" "}
+                                            {t("replicationFactor.label")}{" "}
                                             <PopoverWithHoverWrapper
                                                 message={
                                                     <ul>
                                                         <li className="margin-bottom-xs">
-                                                            Set the default <strong>replication factor</strong> when
-                                                            creating a new database.
+                                                            <StudioTrans
+                                                                ns="studioGlobalConfiguration"
+                                                                i18nKey="replicationFactor.defaultInfo"
+                                                                components={{ strong: <strong /> }}
+                                                            />
                                                         </li>
                                                         <li className="margin-bottom-xs">
-                                                            {" "}
-                                                            If not set, then the number of nodes in your cluster will be
-                                                            used.
+                                                            {t("replicationFactor.clusterSizeInfo")}
                                                         </li>
-                                                        <li>
-                                                            Additional nodes can always be added to the database after
-                                                            it is created.
-                                                        </li>
+                                                        <li>{t("replicationFactor.addNodesInfo")}</li>
                                                     </ul>
                                                 }
                                                 placement="right"
@@ -215,7 +220,7 @@ export default function StudioGlobalConfiguration() {
                                             control={control}
                                             name="replicationFactor"
                                             type="number"
-                                            placeholder="Cluster size (default)"
+                                            placeholder={t("replicationFactor.placeholder")}
                                         />
                                     </div>
                                 </Card.Body>
@@ -224,7 +229,7 @@ export default function StudioGlobalConfiguration() {
                                 <Card.Body className="vstack gap-3">
                                     <div className="gap-1">
                                         <FormLabel className="mb-0 md-label">
-                                            Table Font{" "}
+                                            {t("tableFont.label")}{" "}
                                             <PopoverWithHoverWrapper
                                                 message={<TableFontPopoverContent />}
                                                 placement="right"
@@ -251,7 +256,7 @@ export default function StudioGlobalConfiguration() {
                                     </div>
                                     <div className="gap-1">
                                         <FormLabel className="mb-0 md-label">
-                                            Code Font{" "}
+                                            {t("codeFont.label")}{" "}
                                             <PopoverWithHoverWrapper
                                                 message={<CodeFontPopoverContent />}
                                                 placement="right"
@@ -278,10 +283,10 @@ export default function StudioGlobalConfiguration() {
                                     </div>
                                     <div className="d-flex flex-column">
                                         <FormSwitch control={control} name="isCollapseDocsWhenOpening">
-                                            Collapse documents when opening
+                                            {t("collapseDocsSwitch")}
                                         </FormSwitch>
                                         <FormSwitch control={control} name="isSendUsageStats" className="mt-2">
-                                            Help improve the Studio by gathering anonymous usage statistics
+                                            {t("usageStatsSwitch")}
                                         </FormSwitch>
                                     </div>
                                 </Card.Body>
@@ -294,19 +299,20 @@ export default function StudioGlobalConfiguration() {
                         <AccordionItemWrapper icon="about" color="info" targetId="1">
                             <ul>
                                 <li className="margin-bottom-xs">
-                                    This is the <strong>Server-wide Studio-Configuration</strong> view.
+                                    <StudioTrans
+                                        ns="studioGlobalConfiguration"
+                                        i18nKey="about.scope"
+                                        components={{ strong: <strong /> }}
+                                    />
                                     <br />
-                                    The available studio-configuration options will apply server-wide to all databases.
+                                    {t("about.scopeDetails")}
                                 </li>
-                                <li>
-                                    The environment tag can be customized per database in the Database
-                                    Studio-Configuration view.
-                                </li>
+                                <li>{t("about.environmentPerDatabase")}</li>
                             </ul>
                             <hr />
-                            <div className="small-label mb-2">useful links</div>
+                            <div className="small-label mb-2">{tCommon("usefulLinks")}</div>
                             <a href={clientConfigurationDocsLink} target="_blank">
-                                <Icon icon="newtab" /> Docs - Client Configuration
+                                <Icon icon="newtab" /> {t("about.docsLink")}
                             </a>
                         </AccordionItemWrapper>
                         <FeatureAvailabilitySummaryWrapper
@@ -422,6 +428,7 @@ const vtPreviewColumns: ColumnDef<VtPreviewRow>[] = [
 ];
 
 function VtTablePreview({ fontFamily }: { fontFamily?: string }) {
+    const { t } = useStudioTranslation("studioGlobalConfiguration");
     const table = useReactTable({
         data: vtPreviewData,
         columns: vtPreviewColumns,
@@ -435,7 +442,7 @@ function VtTablePreview({ fontFamily }: { fontFamily?: string }) {
             className="flex-grow-1 p-2 overflow-hidden"
             style={{ "--table-font": fontFamily, borderRadius: 8 } as React.CSSProperties}
         >
-            <span className="md-label">Preview</span>
+            <span className="md-label">{t("fontPreview")}</span>
             <VirtualTable table={table} heightInPx={virtualTableUtils.getHeightInPx(vtPreviewData.length, 300)} />
         </div>
     );
@@ -447,12 +454,14 @@ order by Freight as double
 select Lines[].ProductName as ProductNames, OrderedAt, ShipTo.City`;
 
 function CodePreview({ fontFamily }: { fontFamily?: string }) {
+    const { t } = useStudioTranslation("studioGlobalConfiguration");
+
     return (
         <div
             className="flex-grow-1 p-2 overflow-hidden"
             style={{ "--monospace-font": fontFamily, borderRadius: 8 } as React.CSSProperties}
         >
-            <span className="md-label">Preview</span>
+            <span className="md-label">{t("fontPreview")}</span>
             <AceEditor
                 mode="rql"
                 value={codePreviewValue}
@@ -485,8 +494,7 @@ function formatFontOptionLabel(option: SelectOption<string>) {
 function TableFontPopoverContent() {
     return (
         <p className="mb-0">
-            Choose the font used for displaying data in <strong>tables</strong> across the Studio, including document
-            IDs, column values, and other tabular content.
+            <StudioTrans ns="studioGlobalConfiguration" i18nKey="tableFont.info" components={{ strong: <strong /> }} />
         </p>
     );
 }
@@ -494,8 +502,7 @@ function TableFontPopoverContent() {
 function CodeFontPopoverContent() {
     return (
         <p className="mb-0">
-            Choose the font used for displaying <strong>code</strong> across the Studio, including code editors and
-            samples.
+            <StudioTrans ns="studioGlobalConfiguration" i18nKey="codeFont.info" components={{ strong: <strong /> }} />
         </p>
     );
 }
