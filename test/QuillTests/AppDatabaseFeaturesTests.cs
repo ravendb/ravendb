@@ -38,7 +38,7 @@ public class AppDatabaseFeaturesTests(ITestOutputHelper output) : RavenTestBase(
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task ConfigureAsync_deploys_conversation_metrics_index()
+    public async Task ConfigureAsync_deploys_the_preview_index_and_no_metrics_index()
     {
         var store = GetDocumentStore(new Options
         {
@@ -48,7 +48,8 @@ public class AppDatabaseFeaturesTests(ITestOutputHelper output) : RavenTestBase(
         await AppDatabaseFeatures.ConfigureAsync(store, store.Database, CancellationToken.None);
 
         var indexNames = await store.Maintenance.SendAsync(new GetIndexNamesOperation(0, 50));
-        Assert.Contains("Conversations/Metrics", indexNames);
+        Assert.Contains("ConversationPreviewsIndex", indexNames);
+        Assert.DoesNotContain("Conversations/Metrics", indexNames);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
