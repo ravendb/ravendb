@@ -1,70 +1,74 @@
 using Raven.Quill.Logging;
-using System.Net.WebSockets;
-using System.Threading.Channels;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Quill.Channels;
 using Raven.Quill.Hosting;
 using SlackNet;
-using Channel = Raven.Quill.Channels.Channel;
-using SlackNet.Events;
 using SlackNet.SocketMode;
+using Channel = Raven.Quill.Channels.Channel;
 
 namespace Raven.Quill.Slack;
 
 internal sealed class SlackSocketRuntime
 {
-    private const string HelloType = "hello";
-    private const string DisconnectType = "disconnect";
-    private const string EventsApiType = "events_api";
-
     private const string SocketModeDisabledError =
         "slack disabled Socket Mode for this app; turn it on under the app's Socket Mode page";
 
-    private static readonly TimeSpan MinBackoff = TimeSpan.FromSeconds(1);
-    private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(10);
-    private static readonly TimeSpan KeepAliveInterval = TimeSpan.FromSeconds(30);
-    private static readonly TimeSpan KeepAliveTimeout = TimeSpan.FromSeconds(20);
+    private const int PassesBeforeConnectionLost = 2;
 
-    private static readonly JsonSerializer Serializer = JsonSerializer.Create(SlackApiClient.JsonSettings.SerializerSettings);
+    private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(10);
 
     private readonly string _database;
     private readonly string _shortChannelId;
-    private readonly string _channelDocId;
-    private readonly SlackSettings _settings;
+    private readonly string _botUserId;
     private readonly SlackOptions _options;
-    private readonly SlackInboundProcessor _processor;
     private readonly SlackHealthRegistry _health;
-    private readonly IServiceScopeFactory _scopes;
     private readonly QuillLogger<SlackChannelManager> _logger;
-
+    private readonly ISlackSocketModeClient _client;
+    private readonly IDisposable _frames;
     private readonly CancellationTokenSource _cts = new();
+    private readonly object _exitLock = new();
 
-    private volatile bool _canRestart = true;
     private Task _run = Task.CompletedTask;
-    private TimeSpan _backoff = MinBackoff;
+    private volatile bool _connected;
+    private volatile bool _canRestart = true;
+    private int _disconnectedPasses;
+    private TimeSpan _restartDelay;
     private long _exitedAtTicks;
 
     private SlackSocketRuntime(
-        string database, Channel channel, string? channelChangeVector, SlackSettings settings,
-        SlackInboundProcessor processor, SlackHealthRegistry health, IServiceScopeFactory scopes,
-        SlackOptions options, QuillLogger<SlackChannelManager> logger)
+        string database, Channel channel, string? channelChangeVector, SlackSdk sdk,
+        SlackInboundProcessor processor, SlackHealthRegistry health, SlackOptions options,
+        QuillLogger<SlackChannelManager> logger)
     {
+        var settings = channel.Slack!;
+
         _database = database;
         _shortChannelId = channel.ShortId;
-        _channelDocId = channel.Id!;
-        _settings = settings;
-        _processor = processor;
-        _health = health;
-        _scopes = scopes;
+        _botUserId = settings.BotUserId;
         _options = options;
+        _health = health;
         _logger = logger;
         ChannelChangeVector = channelChangeVector;
+
+        var handler = new SlackMessageHandler(database, channel.Id!, channel.ShortId, settings, processor, health);
+        var socket = sdk.NewSocketClient(settings.AppToken, handler, new SlackNetLogger(channel.ShortId, logger));
+        _client = socket.Client;
+        _frames = socket.RawMessages.Subscribe(OnRawMessage);
     }
 
     public string? ChannelChangeVector { get; }
 
     public bool CanRestart => _canRestart;
+
+    public TimeSpan RestartDelay
+    {
+        get
+        {
+            lock (_exitLock)
+                return _restartDelay;
+        }
+    }
 
     public DateTime? ExitedAt
     {
@@ -76,24 +80,40 @@ internal sealed class SlackSocketRuntime
     }
 
     public static SlackSocketRuntime Start(
-        string database, Channel channel, string? channelChangeVector, SlackInboundProcessor processor,
-        SlackHealthRegistry health, IServiceScopeFactory scopes, SlackOptions options,
+        string database, Channel channel, string? channelChangeVector, SlackSdk sdk,
+        SlackInboundProcessor processor, SlackHealthRegistry health, SlackOptions options,
         QuillLogger<SlackChannelManager> logger)
     {
         var runtime = new SlackSocketRuntime(
-            database, channel, channelChangeVector, channel.Slack!, processor, health, scopes, options, logger);
+            database, channel, channelChangeVector, sdk, processor, health, options, logger);
 
-        runtime._run = Task.Run(runtime.RunAsync);
+        runtime._run = Task.Run(runtime.ConnectAsync);
         return runtime;
+    }
+
+    public void CheckConnection()
+    {
+        if (_connected == false || ExitedAt is not null)
+            return;
+
+        if (_client.Connected)
+        {
+            _disconnectedPasses = 0;
+            return;
+        }
+
+        if (++_disconnectedPasses >= PassesBeforeConnectionLost)
+            Exit(null, TimeSpan.Zero);
     }
 
     public async Task StopAsync()
     {
         await _cts.CancelAsync();
+        _frames.Dispose();
 
         try
         {
-            await _run.WaitAsync(StopTimeout);
+            await Task.WhenAll(_run, _client.DisposeAsync().AsTask()).WaitAsync(StopTimeout);
         }
         catch (TimeoutException)
         {
@@ -109,260 +129,69 @@ internal sealed class SlackSocketRuntime
         _cts.Dispose();
     }
 
-    private async Task RunAsync()
+    private async Task ConnectAsync()
     {
         try
         {
-            await ReconnectLoopAsync();
+            await _client.Connect(new SocketModeConnectionOptions { NumberOfConnections = 1 }, _cts.Token);
+            _connected = true;
+            _health.RecordSocketConnected(_database, _shortChannelId);
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"Slack socket connected for channel {_shortChannelId} (bot {_botUserId})");
         }
-        finally
+        catch (OperationCanceledException) when (_cts.IsCancellationRequested)
         {
+        }
+        catch (Exception e)
+        {
+            var error = SlackApiErrors.Translate(e, "apps.connections.open");
+            var tokenError = SlackApiErrors.DescribeAppTokenError(error?.Error);
+            _canRestart = tokenError is null || SlackApiErrors.AppTokenErrorIsFixableInSlack(error!.Error);
+            Exit(tokenError ?? error?.Message ?? e.Message, _options.SocketRestartDelay);
+        }
+    }
+
+    private void OnRawMessage(RawSocketMessage raw)
+    {
+        if (raw.Message.Contains("link_disabled", StringComparison.Ordinal) == false)
+            return;
+
+        JObject frame;
+        try
+        {
+            frame = JObject.Parse(raw.Message);
+        }
+        catch (JsonException)
+        {
+            return;
+        }
+
+        if (frame.Value<string>("type") != "disconnect" || frame.Value<string>("reason") != "link_disabled")
+            return;
+
+        Exit(SocketModeDisabledError, _options.SocketRestartDelay);
+        _ = Task.Run(_client.DisconnectAsync);
+    }
+
+    private void Exit(string? error, TimeSpan restartDelay)
+    {
+        lock (_exitLock)
+        {
+            if (_exitedAtTicks != 0)
+                return;
+
+            _restartDelay = restartDelay;
             Interlocked.Exchange(ref _exitedAtTicks, DateTime.UtcNow.Ticks);
         }
-    }
 
-    private async Task ReconnectLoopAsync()
-    {
-        while (_cts.IsCancellationRequested == false)
+        _health.RecordSocketDisconnected(_database, _shortChannelId, error);
+
+        if (error is null)
         {
-            string? fatal;
-            var reconnectRequested = false;
-            TimeSpan? retryAfter = null;
-            try
-            {
-                (fatal, reconnectRequested) = await ConnectAndPumpAsync();
-            }
-            catch (OperationCanceledException) when (_cts.IsCancellationRequested)
-            {
-                return;
-            }
-            catch (SlackApiException e) when (e.RejectsAppToken)
-            {
-                _canRestart = e.Error is "missing_scope" or "not_allowed_token_type";
-                fatal = e.Error switch
-                {
-                    "not_allowed_token_type" =>
-                        "slack refused the app-level token because it is the wrong token type; paste the xapp- token from the app's Basic Information page",
-                    "missing_scope" =>
-                        "the app-level token lacks the connections:write scope; regenerate it with that scope on the app's Basic Information page",
-                    _ => "slack rejected the app-level token; regenerate it on the app's Basic Information page and rotate it on this channel",
-                };
-            }
-            catch (Exception e)
-            {
-                fatal = null;
-                retryAfter = (e as SlackApiException)?.RetryAfter;
-                _health.RecordSocketDisconnected(_database, _shortChannelId, e.Message);
-                if (_logger.IsWarnEnabled)
-                    _logger.Warn($"Slack socket attempt failed for channel {_shortChannelId}: {e.Message}");
-            }
-
-            if (fatal is not null)
-            {
-                _health.RecordSocketDisconnected(_database, _shortChannelId, fatal);
-                if (_logger.IsErrorEnabled)
-                    _logger.Error($"Slack socket stopped for channel {_shortChannelId}: {fatal}");
-                return;
-            }
-
-            var delay = reconnectRequested
-                ? TimeSpan.FromMilliseconds(Random.Shared.Next(250, 1000))
-                : retryAfter > _backoff ? retryAfter.Value : _backoff;
-
-            try
-            {
-                await Task.Delay(delay, _cts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                return;
-            }
-
-            if (reconnectRequested)
-                continue;
-
-            var doubled = _backoff * 2 + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 250));
-            _backoff = doubled < _options.SocketBackoffMax ? doubled : _options.SocketBackoffMax;
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"Slack socket for channel {_shortChannelId} stayed down; replacing it");
         }
+        else if (_logger.IsWarnEnabled)
+            _logger.Warn($"Slack socket for channel {_shortChannelId} exited: {error}");
     }
-
-    private async Task<(string? Fatal, bool ReconnectRequested)> ConnectAndPumpAsync()
-    {
-        var url = await OpenSocketUrlAsync();
-
-        var client = new ClientWebSocket();
-        client.Options.KeepAliveInterval = KeepAliveInterval;
-        client.Options.KeepAliveTimeout = KeepAliveTimeout;
-        using var socket = new WebSocketWrapper(client, url);
-
-        var frames = System.Threading.Channels.Channel.CreateUnbounded<string>(
-            new UnboundedChannelOptions { SingleReader = true });
-        using var subscription = socket.Messages.Subscribe(
-            frame => frames.Writer.TryWrite(frame),
-            _ => frames.Writer.TryComplete(),
-            () => frames.Writer.TryComplete());
-        _ = socket.Closed.ContinueWith(_ => frames.Writer.TryComplete(), TaskScheduler.Default);
-
-        var hello = await HandshakeAsync(socket, frames.Reader) ??
-                    throw new InvalidOperationException("slack closed the socket before sending a hello frame");
-
-        if (TypeOf(hello) != HelloType)
-            throw new InvalidOperationException(
-                $"slack opened the socket with a '{TypeOf(hello) ?? "(untyped)"}' frame instead of hello");
-
-        OnConnected();
-
-        try
-        {
-            while (true)
-            {
-                var frame = await ReceiveFrameAsync(frames.Reader, _cts.Token);
-                if (frame is null)
-                    return (null, false);
-
-                if (frame.Value<string>("envelope_id") is { Length: > 0 } envelopeId)
-                    await AcknowledgeAsync(socket, envelopeId);
-
-                switch (TypeOf(frame))
-                {
-                    case DisconnectType:
-                        return OnDisconnectRequested(frame.Value<string>("reason"));
-
-                    case EventsApiType:
-                        OnEvent(frame);
-                        break;
-                }
-            }
-        }
-        finally
-        {
-            _health.RecordSocketDisconnected(_database, _shortChannelId, null);
-        }
-    }
-
-    private async Task<JObject?> HandshakeAsync(IWebSocket socket, ChannelReader<string> frames)
-    {
-        using var handshake = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
-        handshake.CancelAfter(_options.SocketHandshakeTimeout);
-
-        try
-        {
-            if (await socket.Open(handshake.Token) == false)
-                throw new InvalidOperationException("slack refused the websocket handshake");
-
-            return await ReceiveFrameAsync(frames, handshake.Token);
-        }
-        catch (OperationCanceledException) when (_cts.IsCancellationRequested == false)
-        {
-            throw new TimeoutException(
-                $"slack did not send a hello frame within {_options.SocketHandshakeTimeout}");
-        }
-    }
-
-    private void OnConnected()
-    {
-        _backoff = MinBackoff;
-        _health.RecordSocketConnected(_database, _shortChannelId);
-        if (_logger.IsInfoEnabled)
-            _logger.Info($"Slack socket connected for channel {_shortChannelId} (bot {_settings.BotUserId})");
-    }
-
-    private (string? Fatal, bool ReconnectRequested) OnDisconnectRequested(string? reason)
-    {
-        if (reason == "link_disabled")
-            return (SocketModeDisabledError, false);
-
-        if (_logger.IsInfoEnabled)
-            _logger.Info($"Slack asked channel {_shortChannelId} to reconnect its socket ({reason ?? "no reason"})");
-        return (null, true);
-    }
-
-    private void OnEvent(JObject frame)
-    {
-        EventCallback? payload;
-        try
-        {
-            payload = frame.ToObject<EventEnvelope>(Serializer)?.Payload;
-        }
-        catch (JsonException e)
-        {
-            if (_logger.IsDebugEnabled)
-                _logger.Debug($"Dropped an unparseable Slack event for channel {_shortChannelId}: {e.Message}");
-            return;
-        }
-
-        if (payload?.Event is not MessageEvent message)
-            return;
-
-        if (payload.TeamId != _settings.TeamId)
-        {
-            if (_logger.IsDebugEnabled)
-                _logger.Debug($"Dropped a Slack event for channel {_shortChannelId} from foreign team {payload.TeamId}");
-            return;
-        }
-
-        if (message.ChannelType != "im")
-            return;
-
-        if (string.IsNullOrEmpty(message.BotId) == false ||
-            string.IsNullOrEmpty(message.User) || message.User == _settings.BotUserId)
-            return;
-
-        var kind = message switch
-        {
-            SlackNet.Events.FileShare => "unsupported",
-            { Subtype: null or "" } => "text",
-            _ => null,
-        };
-        if (kind is null || string.IsNullOrEmpty(message.Channel))
-            return;
-
-        _health.RecordInbound(_database, _shortChannelId);
-        _processor.Enqueue(
-            _database, _channelDocId, message.User, message.Channel, payload.EventId ?? "", kind, message.Text);
-    }
-
-    private async Task<JObject?> ReceiveFrameAsync(ChannelReader<string> frames, CancellationToken ct)
-    {
-        while (true)
-        {
-            string text;
-            try
-            {
-                text = await frames.ReadAsync(ct);
-            }
-            catch (ChannelClosedException)
-            {
-                return null;
-            }
-
-            try
-            {
-                return JObject.Parse(text);
-            }
-            catch (JsonException e)
-            {
-                if (_logger.IsDebugEnabled)
-                    _logger.Debug($"Dropped an unparseable Slack socket frame for channel {_shortChannelId}: {e.Message}");
-            }
-        }
-    }
-
-    private async Task<string> OpenSocketUrlAsync()
-    {
-        await using var scope = _scopes.CreateAsyncScope();
-        var slack = scope.ServiceProvider.GetRequiredService<ISlackClient>();
-        return await slack.OpenSocketAsync(_settings.AppToken, _cts.Token);
-    }
-
-    private static Task AcknowledgeAsync(IWebSocket socket, string envelopeId)
-    {
-        if (socket.State != WebSocketState.Open)
-            return Task.CompletedTask;
-
-        var ack = new Acknowledgement { EnvelopeId = envelopeId };
-        return socket.Send(JsonConvert.SerializeObject(ack, SlackApiClient.JsonSettings.SerializerSettings));
-    }
-
-    private static string? TypeOf(JObject frame) => frame.Value<string>("type");
 }
