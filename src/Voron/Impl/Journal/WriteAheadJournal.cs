@@ -824,6 +824,10 @@ namespace Voron.Impl.Journal
             // touched only under _flushingLock
             private readonly List<(long Start, long Count)> _pendingSparseRegions = new();
 
+            // mirrors _pendingSparseRegions.Count so the idle timer can tell there is something to punch
+            // without taking the flushing lock
+            private int _pendingSparseRegionsCount;
+
             // touched only under _flushingLock
             private FlushBuffers _flushBuffers;
 
@@ -1065,6 +1069,8 @@ namespace Voron.Impl.Journal
 
                     if (flushedPageRanges != null)
                         SubtractRanges(_pendingSparseRegions, flushedPageRanges);
+
+                    Volatile.Write(ref _pendingSparseRegionsCount, _pendingSparseRegions.Count);
 
                     try
                     {
@@ -1543,7 +1549,7 @@ namespace Voron.Impl.Journal
                         return false;
 
                     // runs here because the file is now synced (clean) and we hold _flushingLock - the deferred punch's two preconditions (RavenDB-26910)
-                    parent.ApplyPendingSparseRegions();
+                    parent.ApplyPendingSparseRegions(onIdle: false);
 
                     Interlocked.Add(ref parent._totalWrittenButUnsyncedBytes, -_currentTotalWrittenBytes);
 
@@ -1827,14 +1833,30 @@ namespace Voron.Impl.Journal
             // Caller must hold _flushingLock and have synced first - punching a clean section is much cheaper on Windows (RavenDB-26910).
             // Pending holds flushed frees (older than every reader, per the flush's uptoTxIdExclusive bound) minus pages later flushes rewrote.
             // Space reclamation only (cf. DisableSparseRegions) - failures are swallowed and never fail the sync.
-            private void ApplyPendingSparseRegions()
+            //
+            // Being clean is not enough on Windows: FSCTL_SET_ZERO_DATA makes NTFS walk the whole mapped section, so a
+            // single call costs seconds on a large data file regardless of how big the hole is, and NTFS holds the
+            // file's paging resource exclusively while it runs - every page fault of the transaction merger queues
+            // behind it. A sync cycle that punches 30 regions can therefore stall writes for a minute. When
+            // PunchSparseRegionsOnIdleOnly is set we keep accumulating instead, and punch from the idle timer.
+            private void ApplyPendingSparseRegions(bool onIdle)
             {
                 if (_pendingSparseRegions.Count == 0)
                     return;
 
+                if (onIdle == false && _waj._env.Options.PunchSparseRegionsOnIdleOnly)
+                    return;
+
+                // one region at a time on the idle path: each punch can take seconds, and holding the flushing lock for
+                // the whole backlog would delay the first write that ends the idle period by that much. The rest is
+                // picked up by the next idle tick, and dropped for now if writes resumed.
+                var regions = onIdle && _waj._env.Options.PunchSparseRegionsOnIdleOnly
+                    ? _pendingSparseRegions.GetRange(0, 1)
+                    : _pendingSparseRegions;
+
                 try
                 {
-                    MarkSparseRegionsInDataFile(_pendingSparseRegions);
+                    MarkSparseRegionsInDataFile(regions);
 
                     // the flush captured the file sizes before this deferred punch - refresh the physical size that storage reports read
                     var dataPagerState = _waj._env.CurrentStateRecord.DataPagerState;
@@ -1847,7 +1869,38 @@ namespace Voron.Impl.Journal
                 }
                 finally
                 {
-                    _pendingSparseRegions.Clear();
+                    if (ReferenceEquals(regions, _pendingSparseRegions))
+                        _pendingSparseRegions.Clear();
+                    else
+                        _pendingSparseRegions.RemoveRange(0, regions.Count);
+
+                    Volatile.Write(ref _pendingSparseRegionsCount, _pendingSparseRegions.Count);
+                }
+            }
+
+            internal bool HasPendingSparseRegions => Volatile.Read(ref _pendingSparseRegionsCount) != 0;
+
+            /// <summary>
+            /// Punches the sparse regions that <see cref="ApplyPendingSparseRegions"/> deferred while the environment was
+            /// busy. Called from the idle timer, so it must never wait: the data file has to be clean already (punching a
+            /// dirty section is what RavenDB-26910 made expensive), and we give up rather than contend with a flush.
+            /// </summary>
+            public void PunchPendingSparseRegionsOnIdle()
+            {
+                if (HasPendingSparseRegions == false || _waj._env.Disposed || ShouldSync)
+                    return;
+
+                var lockTaken = false;
+                using (TryTakeFlushingLock(ref lockTaken))
+                {
+                    if (lockTaken == false || _waj._env.Disposed)
+                        return;
+
+                    // re-check under the lock: a flush may have run between the check above and here
+                    if (ShouldSync)
+                        return;
+
+                    ApplyPendingSparseRegions(onIdle: true);
                 }
             }
 

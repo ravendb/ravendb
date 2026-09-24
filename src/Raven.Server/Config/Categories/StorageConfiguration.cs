@@ -26,6 +26,10 @@ namespace Raven.Server.Config.Categories
 
             // The sequential read-ahead hint relies on posix_fadvise, which exists on Linux but not macOS.
             UseSequentialReadAheadHintForJournalRecovery = PlatformDetails.RunningOnLinux;
+
+            // On Windows a hole punch (FSCTL_SET_ZERO_DATA) makes NTFS walk the whole mapped section - seconds on a large file 
+            // while holding a kernel level lock. On Posix the equivalent call is cheap, so we keep punching inline there.
+            PunchSparseRegionsOnIdleOnly = PlatformDetails.RunningOnWindows;
         }
 
         // CVE-2026-74674: on arm64 Linux, kernels [7.0, 7.1.9)
@@ -249,6 +253,18 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [ConfigurationEntry("Storage.DisableSparseRegions", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool DisableSparseRegions { get; set; }
+
+        [Description("Punch the sparse regions freed by a flush only once the environment has been idle, instead of at the end of every sync cycle. Enabled by default on Windows, where FSCTL_SET_ZERO_DATA is quite expensive. Disabled by default on Posix, where punching a hole is cheap.")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [ConfigurationEntry("Storage.PunchSparseRegionsOnIdleOnly", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public bool PunchSparseRegionsOnIdleOnly { get; set; }
+
+        [Description("How long an environment must be without write activity before the sparse regions accumulated by its flushes are punched. Only relevant when Storage.PunchSparseRegionsOnIdleOnly is set.")]
+        [DefaultValue(5)]
+        [MinValue(0)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("Storage.TimeToPunchSparseRegionsAfterIdleInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting TimeToPunchSparseRegionsAfterIdle { get; set; }
 
         [Description("EXPERT: I/O for flush and sync operation is issued for a low priority thread, giving transaction commits higher priority")]
         [DefaultValue(false)]

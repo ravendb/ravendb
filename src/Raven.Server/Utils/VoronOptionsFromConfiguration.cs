@@ -38,6 +38,8 @@ namespace Raven.Server.Utils
             options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
             options.MaxNumberOfRecyclableJournals = configuration.Storage.MaxNumberOfRecyclableJournals;
             options.DisableSparseRegions = configuration.Storage.DisableSparseRegions;
+            options.PunchSparseRegionsOnIdleOnly = configuration.Storage.PunchSparseRegionsOnIdleOnly;
+            options.TimeToPunchSparseRegionsAfterIdle = configuration.Storage.TimeToPunchSparseRegionsAfterIdle.AsTimeSpan;
             options.JournalsCompressionAcceleration = configuration.Storage.JournalsCompressionAcceleration;
             options.JournalCompressionAlgorithm = configuration.Storage.JournalsCompressionAlgorithm;
             options.MinimumSharedJournalsMergeCount = configuration.Indexing.MinimumSharedJournalsMergeCount;

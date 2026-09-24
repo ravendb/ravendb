@@ -372,7 +372,9 @@ namespace Voron
 
         public static StorageEnvironmentOptions CreateMemoryOnlyForTests([CallerMemberName] string caller = null, LoggingResource loggingResource = null, LoggingComponent loggingComponent = null)
         {
-            return CreateMemoryOnly(caller, null, null, null, loggingResource, loggingComponent);
+            var options = CreateMemoryOnly(caller, null, null, null, loggingResource, loggingComponent);
+            ApplyTestDefaults(options);
+            return options;
         }
 
         public static StorageEnvironmentOptions ForPath(string path, string tempPath, string journalPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource,
@@ -387,7 +389,15 @@ namespace Voron
 
         public static StorageEnvironmentOptions ForPathForTests(string path, LoggingResource loggingResource = null, LoggingComponent loggingComponent = null)
         {
-            return ForPath(path, null, null, null, null, loggingResource, loggingComponent);
+            var options = ForPath(path, null, null, null, null, loggingResource, loggingComponent);
+            ApplyTestDefaults(options);
+            return options;
+        }
+
+        private static void ApplyTestDefaults(StorageEnvironmentOptions options)
+        {
+            // this ensure consistent behavior for windows & linux
+            options.PunchSparseRegionsOnIdleOnly = false;
         }
 
         private static string GetTempPath(string basePath = null)
@@ -1823,6 +1833,12 @@ namespace Voron
         public bool SkipChecksumValidationOnDatabaseLoading { get; set; }
         public bool DiscardVirtualMemory { get; set; } = true;
         public bool DisableSparseRegions { get; set; }
+
+        // Setting sparse regsions is _expensive_ on Windows, so we defer it to idle time
+        public bool PunchSparseRegionsOnIdleOnly { get; set; } = PlatformDetails.RunningOnWindows;
+
+        public TimeSpan TimeToPunchSparseRegionsAfterIdle { get; set; } = TimeSpan.FromMinutes(5);
+
         public int JournalsCompressionAcceleration { get; set; } = 1;
 
         public JournalCompressionAlgorithm JournalCompressionAlgorithm { get; set; } = JournalCompressionAlgorithm.Auto;
