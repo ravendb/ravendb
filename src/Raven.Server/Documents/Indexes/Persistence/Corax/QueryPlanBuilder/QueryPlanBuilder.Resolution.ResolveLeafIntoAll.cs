@@ -70,9 +70,12 @@ internal static partial class QueryPlanBuilder
                 case MatchDispatch.QueryMatch:
                     var indexSearcher = walkerCtx.IndexSearcher;
                     FieldMetadata nullMeta = ResolveFieldMetadata(clauseExec.Clause, walkerCtx);
-                    matches.Add(clauseExec.HasNullTerm
-                        ? indexSearcher.TermQuery(nullMeta, null)
-                        : EmptyQueryMatch.Instance);
+                    if (clauseExec.HasNullTerm)
+                        matches.Add(indexSearcher.TermQuery(nullMeta, null));
+                    else if (clauseExec.ClauseType == ClauseType.AllIn && clauseExec.InTermCount > 0)
+                        matches.Add(indexSearcher.AllEntries()); // ALL IN → AND → identity is "everything", as below
+                    else
+                        matches.Add(EmptyQueryMatch.Instance); // with no terms this slot is the seed, not an operand
                     leaves.Add(new LeafResolveInfo { Kind = LeafResolveKind.PreResolved });
                     return;
                 default: 
