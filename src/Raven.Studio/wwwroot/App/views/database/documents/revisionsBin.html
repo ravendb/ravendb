@@ -2,9 +2,9 @@
     <div class="flex-vertical absolute-fill">
         <div class="flex-header">
             <div class="clearfix">
-                <div class="btn-group-label" data-bind="css: { active: selectedItemsCount }, requiredAccess: 'DatabaseAdmin'" data-label="Selection" role="group">
+                <div class="btn-group-label" data-bind="css: { active: selectedItemsCount }, i18nAttr: { 'data-label': 'revisionsBin:selectionLabel' }, requiredAccess: 'DatabaseAdmin'" role="group">
                     <button type="button" class="btn btn-danger" data-bind="click: deleteSelected, css: { 'btn-spinner': spinners.delete() }, enable: deleteEnabled">
-                        <span class="icon-trash"></span> <span>Delete</span>
+                        <span class="icon-trash"></span> <span data-bind="i18n: 'common:delete'"></span>
                     </button>
                 </div>
             </div>
@@ -18,14 +18,14 @@
         </div>
         <div class="has-error" data-bind="visible: dataChanged()">
             <div class="help-block">
-                <i class="icon-danger"></i><span>The data has changed. Your results may contain duplicates or stale entries. <a href="#" data-bind="click: refresh">Refresh.</a></span>
+                <i class="icon-danger"></i><span><span data-bind="i18n: 'revisionsBin:dataChanged'"></span> <a href="#" data-bind="click: refresh, i18n: 'common:refresh'"></a></span>
             </div>
         </div>
     </div>
 </div>
 
 <script type="text/html" id="empty-collection-template">
-    The revisions bin is empty.
+    <span data-bind="i18n: 'revisionsBin:emptyBin'"></span>
 </script>
 <div class="tooltip json-preview js-revisions-bin-tooltip" style="opacity: 0">
     <pre><code></code></pre>

@@ -15,6 +15,7 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import prismjs = require("prismjs");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import database = require("models/resources/database");
+import i18nModule = require("common/i18n/i18n");
 
 class revisionsBin extends shardViewModelBase {
 
@@ -117,9 +118,9 @@ class revisionsBin extends shardViewModelBase {
         grid.headerVisible(true);
         
         const checkColumn = new checkedColumn(false);
-        const idColumn = new hyperlinkColumn<document>(grid, x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.db), "Id", "300px");
+        const idColumn = new hyperlinkColumn<document>(grid, x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.db), i18nModule.translate("revisionsBin:columns.id"), "300px");
         const changeVectorColumn = new textColumn<document>(grid, x => x.__metadata.changeVector(), "Change Vector", "210px");
-        const deletionDateColumn = new textColumn<document>(grid, x => generalUtils.formatUtcDateAsLocal(x.__metadata.lastModified()), "Deletion date", "300px");
+        const deletionDateColumn = new textColumn<document>(grid, x => generalUtils.formatUtcDateAsLocal(x.__metadata.lastModified()), i18nModule.translate("revisionsBin:columns.deletionDate"), "300px");
 
         const gridColumns = this.isAdminAccessOrAbove() ? [checkColumn, idColumn, changeVectorColumn, deletionDateColumn] : [idColumn, changeVectorColumn, deletionDateColumn];
         grid.init((s) => this.fetchRevisionsBinEntries(s), () => gridColumns);
@@ -130,7 +131,7 @@ class revisionsBin extends shardViewModelBase {
             (doc: document, column: virtualColumn, e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy: string) => void) => {
             if (column instanceof textColumn) {
                 
-                if (column.header === "Deletion date") {
+                if (column === deletionDateColumn) {
                     onValue(moment.utc(doc.__metadata.lastModified()), doc.__metadata.lastModified());
                 } else {
                     const value = column.getCellValue(doc);
@@ -149,12 +150,10 @@ class revisionsBin extends shardViewModelBase {
 
         eventsCollector.default.reportEvent("revisionsBin", "delete-selected");
         
-        this.confirmationMessage("Delete Revisions?",
-            `The selected "Delete Revision" items will be removed,<br/> 
-            and all their associated revisions will be permanently deleted.<br/><br/> 
-            This action cannot be undone.`,
+        this.confirmationMessage(i18nModule.translate("revisionsBin:deleteConfirm.title"),
+            i18nModule.translate("revisionsBin:deleteConfirm.message"),
             {
-                buttons: ["Cancel", "Yes, delete"],
+                buttons: [i18nModule.translate("common:cancel"), i18nModule.translate("revisionsBin:deleteConfirm.confirmButton")],
                 html: true
             })
             .done(result => {
