@@ -55,29 +55,31 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             _event.Reset(true);
             notifications = GetPostponedNotifications(int.MaxValue, SystemTime.UtcNow);
 
-            while (notifications.Count > 0)
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                if (CancellationToken.IsCancellationRequested)
-                    return;
-
-                var next = notifications.Dequeue();
-
-                using (var context = JsonOperationContext.ShortTermSingleUse())
-                using (_notificationsStorage.Read(next.Id, out NotificationTableValue notification, context))
+                while (notifications.Count > 0)
                 {
-                    if (notification == null) // could be deleted meanwhile
-                        continue;
+                    if (CancellationToken.IsCancellationRequested)
+                        return;
 
-                    try
+                    var next = notifications.Dequeue();
+
+                    using (_notificationsStorage.Read(next.Id, out NotificationTableValue notification, context))
                     {
-                        foreach (var watcher in _watchers)
+                        if (notification == null) // could be deleted meanwhile
+                            continue;
+
+                        try
                         {
-                            await watcher.Writer.WriteToWebSocket(notification.Json);
+                            foreach (var watcher in _watchers)
+                            {
+                                await watcher.Writer.WriteToWebSocket(notification.Json);
+                            }
                         }
-                    }
-                    finally
-                    {
-                        _notificationsStorage.ChangePostponeDate(next.Id, null);
+                        finally
+                        {
+                            _notificationsStorage.ChangePostponeDate(next.Id, null);
+                        }
                     }
                 }
             }
