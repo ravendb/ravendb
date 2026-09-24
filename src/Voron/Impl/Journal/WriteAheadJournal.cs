@@ -2532,10 +2532,12 @@ namespace Voron.Impl.Journal
             var entries = SharedJournalState.Entries;
 
             var currentIncarnation = CurrentFile.Incarnation;
+            var incarnationTag = TransactionHeader.IncarnationTag(currentIncarnation);
             foreach (var entry in entries) // stamp the tx headers with the file guid, to allow journal reuse
             {
                 var entryHeader = (TransactionHeader*)entry.Base;
                 entryHeader->JournalId = entryHeader->JournalId.Xor(currentIncarnation);
+                entryHeader->Hash ^= incarnationTag;
             }
 
             long totalNumberOf4Kbs = 0;
@@ -2991,6 +2993,7 @@ namespace Voron.Impl.Journal
             var txHeader = (TransactionHeader*)fullTxBuffer;
 
             txHeader->Flags |= TransactionPersistenceModeFlags.Encrypted;
+            txHeader->Hash = 0; // the AEAD validates the entry, Hash carries only the incarnation tag
             ulong macLen = (ulong)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
             var subKeyLen = Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
             var subKey = stackalloc byte[(int)subKeyLen];
