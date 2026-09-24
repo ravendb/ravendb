@@ -52,7 +52,7 @@ namespace SlowTests.Core.Querying
                     Assert.Equal("doduck", list[0].Title);
                     Assert.Equal("prototype your idea", list[0].Desc);
 
-                    // the other two tie, so their order is engine-specific
+                    // the other two match one term each; which scores higher depends on the engine's scoring, so the order is not pinned
                     Assert.Equal(new[] { "love programming", "prototype" }, list.Skip(1).Select(x => x.Desc).OrderBy(x => x).ToArray());
                 }
             }

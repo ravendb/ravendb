@@ -1151,7 +1151,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             if (moreLikeThisQuery.FilterQuery != null && moreLikeThisQuery.FilterQuery is AllEntriesMatch == false)
             {
-                mltQuery = IndexSearcher.And(mltQuery, moreLikeThisQuery.FilterQuery);
+                mltQuery = IndexSearcher.And(mltQuery, moreLikeThisQuery.FilterQuery, token: token);
             }
 
             // take counts entries, the loop counts documents: +1 for the base document, times fanout

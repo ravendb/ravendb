@@ -174,7 +174,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
 
             query = query is null
                 ? termQuery
-                : indexSearcher.Or(query, termQuery);
+                : indexSearcher.Or(query, termQuery, token: _builderParameters.Token);
 
             qterms++;
 
