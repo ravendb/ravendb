@@ -21,6 +21,7 @@ internal sealed class DiscordGatewayRuntime
     private readonly string _database;
     private readonly string _shortChannelId;
     private readonly string _channelDocId;
+    private readonly string _displayName;
     private readonly string _botToken;
     private readonly string _botUserId;
     private readonly DiscordOptions _options;
@@ -44,6 +45,7 @@ internal sealed class DiscordGatewayRuntime
         _database = database;
         _shortChannelId = channel.ShortId;
         _channelDocId = channel.Id!;
+        _displayName = channel.DisplayName;
         _botToken = settings.BotToken;
         _botUserId = settings.BotUserId;
         _processor = processor;
@@ -160,12 +162,12 @@ internal sealed class DiscordGatewayRuntime
             return Task.CompletedTask;
         };
 
-        client.Connected += () =>
+        client.Connected += async () =>
         {
             lastAlive = Stopwatch.GetTimestamp();
             attemptsSinceConnected = 0;
             OnConnected();
-            return Task.CompletedTask;
+            await ShowStatusAsync(client);
         };
 
         client.Disconnected += error =>
@@ -237,6 +239,22 @@ internal sealed class DiscordGatewayRuntime
         _health.RecordGatewayConnected(_database, _shortChannelId);
         if (_logger.IsInfoEnabled)
             _logger.Info($"Discord gateway connected for channel {_shortChannelId} (bot {_botUserId})");
+    }
+
+    private async Task ShowStatusAsync(DiscordSocketClient client)
+    {
+        if (string.IsNullOrWhiteSpace(_displayName))
+            return;
+
+        try
+        {
+            await client.SetCustomStatusAsync(_displayName);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            if (_logger.IsDebugEnabled)
+                _logger.Debug($"Discord custom status failed for channel {_shortChannelId}: {e.Message}");
+        }
     }
 
     private void OnMessage(SocketMessage message)

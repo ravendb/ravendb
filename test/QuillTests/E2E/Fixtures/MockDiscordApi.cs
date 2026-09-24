@@ -16,6 +16,7 @@ namespace QuillTests.E2E.Fixtures;
 public sealed class MockDiscordApi : IAsyncDisposable
 {
     internal const int DirectMessagesIntent = 1 << 12;
+    internal const int SuppressEmbedsFlag = 1 << 2;
 
     private const long InboundMessageIdBase = 1_000_000_000_000_000_000;
     private const long SentMessageIdBase = 2_000_000_000_000_000_000;
@@ -29,6 +30,8 @@ public sealed class MockDiscordApi : IAsyncDisposable
     private readonly List<IdentifyCall> _identifies = [];
     private readonly List<ResumeCall> _resumes = [];
     private readonly List<string> _identityCalls = [];
+    private readonly List<string> _typingCalls = [];
+    private readonly List<string> _presenceUpdates = [];
     private readonly Dictionary<string, long> _inboundMessageIds = new();
     private readonly HashSet<string> _sessions = new();
 
@@ -39,9 +42,11 @@ public sealed class MockDiscordApi : IAsyncDisposable
     private GatewaySession? _session;
 
     public sealed record SentMessage(
-        string BotToken, string ChannelId, string Content, string MessageId, bool MentionsSuppressed);
+        string BotToken, string ChannelId, string Content, string MessageId, bool MentionsSuppressed,
+        bool EmbedsSuppressed);
 
-    public sealed record EditedMessage(string BotToken, string ChannelId, string MessageId, string Content);
+    public sealed record EditedMessage(
+        string BotToken, string ChannelId, string MessageId, string Content, bool EmbedsSuppressed);
 
     public sealed record IdentifyCall(string Token, int Intents);
 
@@ -114,6 +119,16 @@ public sealed class MockDiscordApi : IAsyncDisposable
         get { lock (_lock) return _identityCalls.ToArray(); }
     }
 
+    public IReadOnlyList<string> TypingCalls
+    {
+        get { lock (_lock) return _typingCalls.ToArray(); }
+    }
+
+    public IReadOnlyList<string> PresenceUpdates
+    {
+        get { lock (_lock) return _presenceUpdates.ToArray(); }
+    }
+
     public int Heartbeats => Volatile.Read(ref _heartbeats);
 
     public int Connects => Volatile.Read(ref _connects);
@@ -139,6 +154,8 @@ public sealed class MockDiscordApi : IAsyncDisposable
             _identifies.Clear();
             _resumes.Clear();
             _identityCalls.Clear();
+            _typingCalls.Clear();
+            _presenceUpdates.Clear();
             session = _session;
             _session = null;
         }
@@ -256,6 +273,7 @@ public sealed class MockDiscordApi : IAsyncDisposable
         app.MapGet("/oauth2/applications/@me", (HttpContext ctx) => instance.HandleCurrentApplication(ctx));
         app.MapGet("/gateway/bot", (HttpContext ctx) => instance.HandleGatewayBot(ctx));
         app.MapGet("/channels/{channelId}", (string channelId, HttpContext ctx) => instance.HandleGetChannel(ctx, channelId));
+        app.MapPost("/channels/{channelId}/typing", (string channelId, HttpContext ctx) => instance.HandleTyping(ctx, channelId));
 
         app.MapPost("/channels/{channelId}/messages", async (string channelId, HttpContext ctx) =>
         {
@@ -353,8 +371,19 @@ public sealed class MockDiscordApi : IAsyncDisposable
             if (frame is null)
                 return;
 
-            if (frame["op"]?.GetValue<int>() == 1)
-                await AcknowledgeHeartbeatAsync(session);
+            switch (frame["op"]?.GetValue<int>())
+            {
+                case 1:
+                    await AcknowledgeHeartbeatAsync(session);
+                    break;
+
+                case 3:
+                    var activity = frame["d"]?["activities"]?[0];
+                    var status = activity?["state"]?.GetValue<string>() ?? activity?["name"]?.GetValue<string>() ?? "";
+                    lock (_lock)
+                        _presenceUpdates.Add(status);
+                    break;
+            }
         }
     }
 
@@ -613,6 +642,17 @@ public sealed class MockDiscordApi : IAsyncDisposable
         });
     }
 
+    private IResult HandleTyping(HttpContext ctx, string channelId)
+    {
+        if (BotFor(BotToken(ctx)) is null)
+            return DiscordError(401, "401: Unauthorized");
+
+        lock (_lock)
+            _typingCalls.Add(channelId);
+
+        return Results.NoContent();
+    }
+
     private IResult HandleCreateMessage(HttpContext ctx, string channelId, JsonNode? body)
     {
         var token = BotToken(ctx);
@@ -629,7 +669,7 @@ public sealed class MockDiscordApi : IAsyncDisposable
         lock (_lock)
         {
             messageId = (SentMessageIdBase + _nextMessageId++).ToString(CultureInfo.InvariantCulture);
-            _sent.Add(new SentMessage(token, channelId, content, messageId, suppressed));
+            _sent.Add(new SentMessage(token, channelId, content, messageId, suppressed, EmbedsSuppressed(body)));
         }
 
         return Results.Json(MessagePayload(messageId, channelId, content, token));
@@ -664,7 +704,7 @@ public sealed class MockDiscordApi : IAsyncDisposable
             if (_sent.Any(m => m.MessageId == messageId) == false)
                 return DiscordError(404, "10008: Unknown Message");
 
-            _edited.Add(new EditedMessage(token, channelId, messageId, content));
+            _edited.Add(new EditedMessage(token, channelId, messageId, content, EmbedsSuppressed(body)));
         }
 
         return Results.Json(MessagePayload(messageId, channelId, content, token));
@@ -688,6 +728,9 @@ public sealed class MockDiscordApi : IAsyncDisposable
             ["timestamp"] = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture),
         };
     }
+
+    private static bool EmbedsSuppressed(JsonNode? body) =>
+        ((body?["flags"]?.GetValue<int>() ?? 0) & SuppressEmbedsFlag) != 0;
 
     private BotEntry? BotFor(string botToken)
     {

@@ -1,3 +1,5 @@
+using Discord;
+
 namespace Raven.Quill.Hosting;
 
 public sealed class DiscordOptions
@@ -6,7 +8,7 @@ public sealed class DiscordOptions
 
     public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(15);
 
-    internal const int ApiMessageLimit = 2000;
+    internal const int ApiMessageLimit = DiscordConfig.MaxMessageSize;
 
     public int MessageLimit { get; set; } = ApiMessageLimit;
 

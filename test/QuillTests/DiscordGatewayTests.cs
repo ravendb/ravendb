@@ -27,6 +27,8 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         var identify = Assert.Single(Discord.Identifies);
         Assert.Equal(channel.BotToken, identify.Token);
         Assert.Equal(MockDiscordApi.DirectMessagesIntent, identify.Intents & MockDiscordApi.DirectMessagesIntent);
+
+        await Discord.WaitUntilAsync(() => Discord.PresenceUpdates.Contains("Support bot"), "the custom status");
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -51,6 +53,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         var sent = Assert.Single(Discord.SentMessages);
         Assert.Equal(DmChannel, sent.ChannelId);
         Assert.All(Discord.EditedMessages, e => Assert.Equal(sent.MessageId, e.MessageId));
+        Assert.Equal(DmChannel, Assert.Single(Discord.TypingCalls));
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -64,11 +67,16 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         await Discord.DispatchDmAsync("msg-in-2", DmChannel, Sender, "count");
 
         await Discord.WaitUntilAsync(
-            () => Discord.EditedMessages.Any(e => e.Content == "One two three."), "the finalized edit");
+            () => Discord.EditedMessages.Any(e => e.Content == "One two three." && e.EmbedsSuppressed == false),
+            "the finalized edit");
 
         var sent = Assert.Single(Discord.SentMessages);
         Assert.All(Discord.EditedMessages, e => Assert.Equal(sent.MessageId, e.MessageId));
         Assert.True(Discord.EditedMessages.Count >= 2, "mid-stream previews must edit, not re-post");
+
+        Assert.True(sent.EmbedsSuppressed, "the first preview must not unfurl links");
+        Assert.All(Discord.EditedMessages.SkipLast(1), e => Assert.True(e.EmbedsSuppressed));
+        Assert.False(Discord.EditedMessages[^1].EmbedsSuppressed, "the final edit must let links unfurl");
     }
 
     [RavenFact(RavenTestCategory.Quill)]

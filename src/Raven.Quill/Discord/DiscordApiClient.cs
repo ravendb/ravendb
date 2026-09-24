@@ -70,16 +70,18 @@ internal sealed class DiscordApiClient(DiscordSdk sdk) : IDiscordClient, IAsyncD
     }
 
     public async Task<string> CreateMessageAsync(
-        string botToken, string channelId, string content, CancellationToken ct)
+        string botToken, string channelId, string content, bool suppressEmbeds, CancellationToken ct)
     {
         var message = await CallAsync(botToken, channelId, "create message", ct,
-            (channel, options) => channel.SendMessageAsync(content, allowedMentions: SuppressMentions, options: options));
+            (channel, options) => channel.SendMessageAsync(
+                content, allowedMentions: SuppressMentions, options: options, flags: FlagsFor(suppressEmbeds)));
 
         return Snowflake(message.Id);
     }
 
     public Task EditMessageAsync(
-        string botToken, string channelId, string messageId, string content, CancellationToken ct)
+        string botToken, string channelId, string messageId, string content, bool suppressEmbeds,
+        CancellationToken ct)
     {
         var id = ParseSnowflake(messageId, "message id");
         return CallAsync(botToken, channelId, "edit message", ct,
@@ -87,8 +89,16 @@ internal sealed class DiscordApiClient(DiscordSdk sdk) : IDiscordClient, IAsyncD
             {
                 message.Content = content;
                 message.AllowedMentions = SuppressMentions;
+                message.Flags = FlagsFor(suppressEmbeds);
             }, options));
     }
+
+    public Task<IDisposable> BeginTypingAsync(string botToken, string channelId, CancellationToken ct) =>
+        CallAsync(botToken, channelId, "typing indicator", ct,
+            (channel, options) => Task.FromResult(channel.EnterTypingState(options)));
+
+    private static MessageFlags FlagsFor(bool suppressEmbeds) =>
+        suppressEmbeds ? MessageFlags.SuppressEmbeds : MessageFlags.None;
 
     public async ValueTask DisposeAsync()
     {

@@ -18,8 +18,12 @@ internal interface IDiscordClient
     Task<(DiscordBotIdentity? Identity, string? Error, bool DiscordResponded)> GetBotIdentityAsync(
         string botToken, CancellationToken ct);
 
-    Task<string> CreateMessageAsync(string botToken, string channelId, string content, CancellationToken ct);
+    Task<string> CreateMessageAsync(
+        string botToken, string channelId, string content, bool suppressEmbeds, CancellationToken ct);
 
     Task EditMessageAsync(
-        string botToken, string channelId, string messageId, string content, CancellationToken ct);
+        string botToken, string channelId, string messageId, string content, bool suppressEmbeds,
+        CancellationToken ct);
+
+    Task<IDisposable> BeginTypingAsync(string botToken, string channelId, CancellationToken ct);
 }

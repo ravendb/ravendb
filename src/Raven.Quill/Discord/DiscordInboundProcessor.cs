@@ -191,11 +191,13 @@ internal sealed class DiscordInboundProcessor(
             throw new InvalidOperationException(bindError);
         }
 
-        var reply = new DiscordStreamingReply(
+        using var reply = new DiscordStreamingReply(
             discord, settings.BotToken, dmChannel, options.Value.Discord, logger, ct);
 
         try
         {
+            await reply.BeginTypingAsync();
+
             await router.RunAsync(
                 new AgentRequest(database, config.Identifier, conversationId, prompt, channel.Id!,
                     parameters.ToDictionary(
@@ -254,7 +256,7 @@ internal sealed class DiscordInboundProcessor(
     {
         try
         {
-            await discord.CreateMessageAsync(settings.BotToken, dmChannel, text, ct);
+            await discord.CreateMessageAsync(settings.BotToken, dmChannel, text, suppressEmbeds: false, ct);
             health.RecordSendSuccess(database, shortChannelId);
         }
         catch (Exception e) when (e is not OperationCanceledException)
