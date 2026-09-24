@@ -39,7 +39,6 @@ namespace Voron.Data.Tables
         private FixedSizeTree _activeCandidateSection;
 
         private Tree[] _resolvedIndexTrees;
-        private Dictionary<Slice, Dictionary<Slice, FixedSizeTree>> _fixedSizeTreeCache;
 
         public readonly Slice Name;
         private readonly byte _tableType;
@@ -1299,22 +1298,9 @@ namespace Voron.Data.Tables
 
         internal FixedSizeTree GetFixedSizeTree(Tree parent, Slice name, ushort valSize, bool isGlobal, bool isIndexTree = false)
         {
-            if (_fixedSizeTreeCache == null || _fixedSizeTreeCache.TryGetValue(parent.Name, out Dictionary<Slice, FixedSizeTree> cache) == false)
-            {
-                cache = new Dictionary<Slice, FixedSizeTree>(SliceStructComparer.Instance);
-                
-                _fixedSizeTreeCache ??= new Dictionary<Slice, Dictionary<Slice, FixedSizeTree>>(SliceStructComparer.Instance);
-                _fixedSizeTreeCache[parent.Name] = cache;
-            }
+            NewPageAllocator allocator = isGlobal ? GlobalPageAllocator : TablePageAllocator;
 
-            if (cache.TryGetValue(name, out FixedSizeTree tree) == false)
-            {
-                NewPageAllocator allocator = isGlobal ? GlobalPageAllocator : TablePageAllocator;
-                var fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, valSize, isIndexTree: isIndexTree | parent.IsIndexTree, newPageAllocator: allocator);
-                return cache[fixedSizeTree.Name] = fixedSizeTree;
-            }
-
-            return tree;
+            return _tx.GetNestedFixedSizeTree(parent, name, valSize, isIndexTree | parent.IsIndexTree, allocator);
         }
 
         private void CreateNewActiveSection()
