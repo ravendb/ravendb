@@ -11,15 +11,15 @@ internal sealed record DiscordMessage(
 
 internal sealed class DiscordTurns(
     DiscordSettings settings,
-    IHttpClientFactory httpFactory,
+    IDiscordClient discord,
     DiscordOptions options,
     QuillLogger<DiscordRuntime> logger) : IPlatformTurns<DiscordMessage>
 {
     public Task SendAsync(DiscordMessage replyTo, string text, CancellationToken ct) =>
-        DiscordApiClient.Create(httpFactory).CreateMessageAsync(settings.BotToken, replyTo.DmChannel, text, ct);
+        discord.CreateMessageAsync(settings.BotToken, replyTo.DmChannel, text, ct);
 
     public ChannelStreamingReply CreateReply(DiscordMessage replyTo) =>
-        new DiscordStreamingReply(DiscordApiClient.Create(httpFactory), settings.BotToken, replyTo.DmChannel, options, logger);
+        new DiscordStreamingReply(discord, settings.BotToken, replyTo.DmChannel, options, logger);
 
     public string? DescribeApiFailure(Exception e) => e is DiscordApiException apiError ? apiError.Message : null;
 

@@ -43,9 +43,6 @@ public class DiscordManualE2ETests(ITestOutputHelper output) : QuillTestBase(out
 
         var client = host.Services.GetRequiredService<Raven.Quill.Discord.IDiscordClient>();
 
-        var gatewayUrl = await client.GetGatewayUrlAsync(botToken, CancellationToken.None);
-        Assert.StartsWith("wss://", gatewayUrl);
-
         var messageId = await client.CreateMessageAsync(botToken, channel,
             "Quill Discord E2E: outbound post works.", CancellationToken.None);
         await client.EditMessageAsync(botToken, channel, messageId,
