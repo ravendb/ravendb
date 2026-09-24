@@ -518,8 +518,11 @@ namespace Raven.Server.Documents.Queries
 
             var ticksFirstAligned = ticksFirst - (ticksFirst % TimeSpan.TicksPerDay);
             var ticksSecondAligned = ticksSecond - (ticksSecond % TimeSpan.TicksPerDay);
-            if (ticksFirstAligned == ticksFirst && ticksSecond == ticksSecondAligned || // already aligned on day boundary 
-                ticksFirstAligned == ticksSecondAligned) // or belonging to the same day...
+            var nextDayAfterFirst = ticksFirstAligned + TimeSpan.TicksPerDay;
+
+            if (ticksFirstAligned == ticksFirst && ticksSecond == ticksSecondAligned || // already aligned on day boundary
+                ticksFirst >= ticksSecond || // empty or inverted, there is nothing to split
+                ticksSecond <= nextDayAfterFirst) // the whole range lies within the first day, up to and including its next midnight
             {
                 return LuceneQueryHelper.Between(index, luceneFieldName, ticksFirst, be.MinInclusive, ticksSecond, be.MaxInclusive);
             }
@@ -528,8 +531,9 @@ namespace Raven.Server.Documents.Queries
             var startInclusive = be.MinInclusive;
             if (ticksFirst != ticksFirstAligned)
             {
-                ticksFirstAligned += TimeSpan.TicksPerDay; // move to tne _next_ day boundary
-                bq.Add(LuceneQueryHelper.Between(index, luceneFieldName, ticksFirst, be.MinInclusive, ticksFirstAligned, true), Occur.SHOULD);
+                // the head runs up to the next midnight, which the day-aligned middle segment then covers inclusively
+                ticksFirstAligned = nextDayAfterFirst;
+                bq.Add(LuceneQueryHelper.Between(index, luceneFieldName, ticksFirst, be.MinInclusive, ticksFirstAligned, false), Occur.SHOULD);
                 startInclusive = true;
             }
 
