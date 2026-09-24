@@ -1,9 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { InfoIcon } from "lucide-react";
 import { api } from "@/api/api";
-import type { AiModelType } from "@/api/generated/server-api";
-import { Alert } from "@/components/shadcn/ui/alert";
+import type { AiConnectionStringUsage, AiModelType } from "@/api/generated/server-api";
+import { Alert, AlertDescription, AlertTitle } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { SheetClose, SheetFooter } from "@/components/shadcn/ui/sheet";
@@ -16,8 +17,11 @@ import {
     type ConnectionStringFormData,
     createConnectionStringSchema,
     getProviderOptions,
+    hasModelLockingUsage,
     mapFormDataToDto,
 } from "@/components/ai-connection-string/ai-connection-string-utils";
+import { AiConnectionStringUsageList } from "@/components/ai-connection-string/ai-connection-string-usage";
+import ModelLockContext from "@/components/ai-connection-string/model-lock-context";
 import { TestAiConnectionStringButton } from "@/components/ai-connection-string/test-ai-connection-string-button";
 import {
     ConnectionTestFailedError,
@@ -38,6 +42,7 @@ type AiConnectionStringFormProps = {
     isEditing: boolean;
     // Preserved across an edit so re-saving (an upsert) keeps the stored id.
     existingIdentifier?: string;
+    usedBy?: AiConnectionStringUsage[];
     onSaved: (name: string) => void | Promise<void>;
 };
 
@@ -68,14 +73,33 @@ function ProviderFields({
     }
 }
 
+function InUseAlert({ usedBy, isModelLocked }: { usedBy: AiConnectionStringUsage[]; isModelLocked: boolean }) {
+    return (
+        <Alert className="shrink-0 overflow-visible">
+            <InfoIcon />
+            <AlertTitle>In use</AlertTitle>
+            <AlertDescription>
+                <p>
+                    {isModelLocked
+                        ? "The provider and the settings that shape the embeddings can’t be changed while tasks depend on this connection string. To change them, create a new connection string."
+                        : "Changes apply to everything that uses this connection string on its next request."}
+                </p>
+                <AiConnectionStringUsageList usedBy={usedBy} />
+            </AlertDescription>
+        </Alert>
+    );
+}
+
 export function AiConnectionStringForm({
     modelType,
     defaultValues,
     isEditing,
     existingIdentifier,
+    usedBy = [],
     onSaved,
 }: AiConnectionStringFormProps) {
     const queryClient = useQueryClient();
+    const isModelLocked = hasModelLockingUsage(usedBy);
 
     const form = useForm<ConnectionStringFormData>({
         mode: "onChange",
@@ -112,59 +136,65 @@ export function AiConnectionStringForm({
     });
 
     return (
-        <FormProvider {...form}>
-            <form
-                className="flex min-h-0 flex-1 flex-col"
-                onSubmit={withNestedSubmit(form.handleSubmit((values) => saveMutation.mutateAsync(values)))}
-            >
-                <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
-                    <FormInput
-                        control={form.control}
-                        name="name"
-                        label="Name"
-                        placeholder="e.g. OpenAI Production"
-                        disabled={isEditing}
-                        description={
-                            isEditing ? "The name identifies the connection string and can't be changed." : undefined
-                        }
-                    />
-                    <FormSelect
-                        control={form.control}
-                        name="provider"
-                        label="Provider"
-                        options={getProviderOptions(modelType)}
-                    />
-                    <ProviderFields provider={provider} modelType={modelType} />
+        <ModelLockContext.Provider value={isModelLocked}>
+            <FormProvider {...form}>
+                <form
+                    className="flex min-h-0 flex-1 flex-col"
+                    onSubmit={withNestedSubmit(form.handleSubmit((values) => saveMutation.mutateAsync(values)))}
+                >
+                    <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+                        {usedBy.length > 0 && <InUseAlert usedBy={usedBy} isModelLocked={isModelLocked} />}
+                        <FormInput
+                            control={form.control}
+                            name="name"
+                            label="Name"
+                            placeholder="e.g. OpenAI Production"
+                            disabled={isEditing}
+                            description={
+                                isEditing
+                                    ? "The name identifies the connection string and can't be changed."
+                                    : undefined
+                            }
+                        />
+                        <FormSelect
+                            control={form.control}
+                            name="provider"
+                            label="Provider"
+                            options={getProviderOptions(modelType)}
+                            disabled={isModelLocked}
+                        />
+                        <ProviderFields provider={provider} modelType={modelType} />
 
-                    <TestAiConnectionStringButton
-                        isVerified={connectionTest.isVerified}
-                        isPending={connectionTest.isPending}
-                        error={connectionTest.error}
-                        disabled={saveMutation.isPending}
-                        onTest={connectionTest.test}
-                    />
+                        <TestAiConnectionStringButton
+                            isVerified={connectionTest.isVerified}
+                            isPending={connectionTest.isPending}
+                            error={connectionTest.error}
+                            disabled={saveMutation.isPending}
+                            onTest={connectionTest.test}
+                        />
 
-                    {saveMutation.error && !(saveMutation.error instanceof ConnectionTestFailedError) && (
-                        <Alert variant="destructive">
-                            {saveMutation.error instanceof Error
-                                ? saveMutation.error.message
-                                : "Could not save connection string."}
-                        </Alert>
-                    )}
-                </div>
+                        {saveMutation.error && !(saveMutation.error instanceof ConnectionTestFailedError) && (
+                            <Alert variant="destructive">
+                                {saveMutation.error instanceof Error
+                                    ? saveMutation.error.message
+                                    : "Could not save connection string."}
+                            </Alert>
+                        )}
+                    </div>
 
-                <SheetFooter className="flex-row justify-end border-t">
-                    <SheetClose asChild>
-                        <Button type="button" variant="outline">
-                            Cancel
+                    <SheetFooter className="flex-row justify-end border-t">
+                        <SheetClose asChild>
+                            <Button type="button" variant="outline">
+                                Cancel
+                            </Button>
+                        </SheetClose>
+                        <Button type="submit" disabled={saveMutation.isPending}>
+                            {saveMutation.isPending && <Spinner />}
+                            {isEditing ? "Save changes" : "Save"}
                         </Button>
-                    </SheetClose>
-                    <Button type="submit" disabled={saveMutation.isPending}>
-                        {saveMutation.isPending && <Spinner />}
-                        {isEditing ? "Save changes" : "Save"}
-                    </Button>
-                </SheetFooter>
-            </form>
-        </FormProvider>
+                    </SheetFooter>
+                </form>
+            </FormProvider>
+        </ModelLockContext.Provider>
     );
 }

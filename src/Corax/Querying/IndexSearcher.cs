@@ -9,6 +9,7 @@ using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
+using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Querying.Matches.TermProviders;
 using Corax.Utils;
 using Sparrow;
@@ -400,6 +401,45 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         termAmount += nullPostingList?.State.NumberOfEntries ?? 0;
 
         return termAmount;
+    }
+
+    /// <summary>Whether a scan of the sort field's value tree, plus nulls and non-existing, reaches every entry.
+    /// False for a mixed-type field: the scan would skip the entries holding the other types (RavenDB-27035).</summary>
+    public bool SortFieldTreeCoversAllEntries(in FieldMetadata field, MatchCompareFieldType fieldType)
+    {
+        // a value of any type also writes a textual term, and null and non-existing are terms of their own, so this
+        // tree has a row for every entry the sequence scan reaches
+        if (fieldType == MatchCompareFieldType.Sequence)
+            return (EntriesToTermsReader(field.FieldName)?.NumberOfEntries ?? 0) >= NumberOfEntries;
+
+        Slice treeName;
+        switch (fieldType)
+        {
+            case MatchCompareFieldType.Integer:
+                IndexFieldsMappingBuilder.GetFieldNameForLongs(Allocator, field.FieldName, out treeName);
+                break;
+            case MatchCompareFieldType.Floating:
+                IndexFieldsMappingBuilder.GetFieldNameForDoubles(Allocator, field.FieldName, out treeName);
+                break;
+            default:
+                return false;
+        }
+
+        // only an entry holding several values for the field can sit in the value tree and in a marker list at once,
+        // so the three counts below are disjoint exactly when the field holds none
+        if (HasMultipleTermsInField(field))
+            return false;
+
+        // entries -> terms is keyed by entry id, so its count is the number of entries with a value in that tree
+        long covered = EntriesToTermsReader(treeName)?.NumberOfEntries ?? 0;
+
+        if (TryGetPostingListForNull(field, out var nullPostingListId))
+            covered += GetPostingList(nullPostingListId)?.State.NumberOfEntries ?? 0;
+
+        if (TryGetPostingListForNonExisting(field, out var nonExistingPostingListId))
+            covered += GetPostingList(nonExistingPostingListId)?.State.NumberOfEntries ?? 0;
+
+        return covered >= NumberOfEntries;
     }
 
     public bool TryGetTermsOfField(in FieldMetadata field, out ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator> existsTermProvider)

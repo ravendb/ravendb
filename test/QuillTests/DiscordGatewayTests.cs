@@ -532,7 +532,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Discord, agentId, null,
-            Discord: new(botToken, ParameterBindings: bindings)));
+            DisplayName: "Support bot", Discord: new(botToken, ParameterBindings: bindings)));
 
         return new ProvisionedChannel(created.ChannelId, botToken, applicationId, botUserId);
     }

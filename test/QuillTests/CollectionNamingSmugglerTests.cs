@@ -25,7 +25,7 @@ public class CollectionNamingSmugglerTests(ITestOutputHelper output) : QuillTest
         });
 
         var channelId = (await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://localhost" }))).ChannelId;
+            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://localhost" }, "Storefront widget"))).ChannelId;
         var token = (await app.MintEmbedLinkAsync(
             new MintEmbedLinkRequest(channelId, [], 3600, 50))).Token;
 

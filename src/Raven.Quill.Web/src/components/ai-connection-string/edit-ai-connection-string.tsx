@@ -45,9 +45,10 @@ export function EditAiConnectionString({ name, modelType, trigger, onSaved }: Ed
                 ) : (
                     <AiConnectionStringForm
                         modelType={modelType}
-                        defaultValues={mapDtoToFormData(detailQuery.data)}
+                        defaultValues={mapDtoToFormData(detailQuery.data.connectionString)}
                         isEditing
-                        existingIdentifier={detailQuery.data.identifier ?? undefined}
+                        usedBy={detailQuery.data.usedBy}
+                        existingIdentifier={detailQuery.data.connectionString.identifier ?? undefined}
                         onSaved={async (savedName) => {
                             await onSaved(savedName);
                             setIsOpen(false);

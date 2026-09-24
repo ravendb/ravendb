@@ -29,6 +29,29 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             }
         }
 
+        public static string GetRootIdentifier(ExpressionSyntax nodeToCheck)
+        {
+            while (true)
+            {
+                switch (nodeToCheck)
+                {
+                    case IdentifierNameSyntax id:
+                        return id.Identifier.ValueText;
+                    case ElementAccessExpressionSyntax aees: // docs["Foo"]
+                        nodeToCheck = aees.Expression;
+                        break;
+                    case MemberAccessExpressionSyntax maes: // docs.Name
+                        nodeToCheck = maes.Expression;
+                        break;
+                    case InvocationExpressionSyntax invocation: // docs.Users.Select()...
+                        nodeToCheck = invocation.Expression;
+                        break;
+                    default:
+                        return nodeToCheck.ToString();
+                }
+            }
+        }
+
         private sealed class MethodSyntaxRewriter : CollectionNameRetriever
         {
             public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
@@ -95,32 +118,6 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
                 return node; // nothing to do
             }
-            
-            
-            private string GetRootIdentifier(ExpressionSyntax nodeToCheck)
-            {
-                while (true)
-                {
-                    switch (nodeToCheck)
-                    {
-                        case IdentifierNameSyntax id:
-                            return id.Identifier.ValueText;
-                        case ElementAccessExpressionSyntax aees: // docs["Foo"]
-                            nodeToCheck = aees.Expression;
-                            break;
-                        case MemberAccessExpressionSyntax maes: // docs.Name
-                            nodeToCheck = maes.Expression;
-                            break;
-                        case InvocationExpressionSyntax invocation: // docs.Users.Select()...
-                            nodeToCheck = invocation.Expression;
-                            break;
-                        default:
-                            return nodeToCheck.ToString();
-                    
-                    }
-                }
-            }
-
 
             private static string[] ExtractCollectionNamesFromWhereEntityIs(InvocationExpressionSyntax node)
             {
