@@ -29,6 +29,9 @@ namespace SlowTests.Voron.Issues
 
             Exception disposeException = null;
 
+            var disposeReachedTheWriteLock = new ManualResetEventSlim(false);
+            var disposeReadThePager = new ManualResetEventSlim(false);
+
             var disposeEnvironmentThread = new Thread(() =>
             {
                 try
@@ -41,6 +44,12 @@ namespace SlowTests.Voron.Issues
                 }
             });
 
+            Env.Journal.ForTestingPurposesOnly().OnJournalDispose_BeforeTakingCompressionPagerWriteLock += () =>
+                disposeReachedTheWriteLock.Set();
+
+            Env.Journal.ForTestingPurposesOnly().OnJournalDispose_AfterDisposingCompressionPager += () =>
+                disposeReadThePager.Set();
+
             Env.Journal.ForTestingPurposesOnly().OnReduceSizeOfCompressionBufferIfNeeded_RightAfterDisposingCompressionPager += () =>
             {
                 testingActionWasCalled = true;
@@ -51,7 +60,18 @@ namespace SlowTests.Voron.Issues
                 // index itself can be torn down concurrently
                 disposeEnvironmentThread.Start();
 
-                Thread.Sleep(1000); // give the disposing thread enough time to reach the journal disposal
+                // wait for the disposal to actually arrive at the compression pager instead of guessing at it with a
+                // sleep - it first has to get through the flushing lock, WaitForSyncToCompleteOnDispose and the
+                // _envDispose drain, which on a busy machine can take longer than any sleep we would pick. if it is
+                // not here yet we publish the new pager first, and then even the unfixed teardown disposes it - the
+                // test would go green with the bug still in place
+                Assert.True(disposeReachedTheWriteLock.Wait(TimeSpan.FromSeconds(30)),
+                    "the environment dispose never reached the journal while the compression pager swap was in flight");
+
+                // bounded on purpose: with the fix the disposal is blocked behind the _writeLock we are holding here,
+                // so this wait must expire - we then publish, release the lock, and it disposes what it finds.
+                // without the fix it takes its read of _compressionPager right here and gets the one disposed above
+                disposeReadThePager.Wait(TimeSpan.FromSeconds(2));
             };
 
             Env.Journal.TryReduceSizeOfCompressionBufferIfNeeded();
@@ -69,6 +89,96 @@ namespace SlowTests.Voron.Issues
             // file backing it under Temp\ undeletable, which in turn makes the whole index directory impossible to remove
             Assert.True(compressionPager.Disposed,
                 $"The compression pager '{compressionPager}' was not disposed together with the storage environment");
+        }
+
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Compression)]
+        public void DisposeMustNotWaitForeverOnAWriteLockHeldByAStuckSwapAndMustStillNotLeaveTheNewPagerBehind()
+        {
+            // the teardown runs from StorageEnvironment.Dispose's finally, also after the _envDispose drain gave up on a
+            // transaction that is still alive - possibly one stuck inside WriteToJournal, holding _writeLock. waiting for
+            // that lock without a bound hangs the dispose and leaves everything after the journal undisposed, so it
+            // has to give up and carry on - and the pager published after it gave up must still be disposed by somebody
+            var testingActionWasCalled = false;
+            var disposeReachedTheWriteLock = false;
+            var disposeGaveUpOnTheWriteLock = false;
+            var teardownWaitedForThePublish = false;
+
+            var disposeIsAtTheWriteLock = new ManualResetEventSlim(false);
+            var disposeGotPastTheWriteLock = new ManualResetEventSlim(false);
+            var swapPublished = new ManualResetEventSlim(false);
+
+            Exception disposeException = null;
+
+            var disposeEnvironmentThread = new Thread(() =>
+            {
+                try
+                {
+                    Env.Dispose();
+                }
+                catch (Exception e)
+                {
+                    disposeException = e;
+                }
+            });
+
+            // Env.Journal is unreachable once the environment is gone, so keep the reference we mean to interrogate
+            var journal = Env.Journal;
+
+            journal.ForTestingPurposesOnly().OnReduceSizeOfCompressionBufferIfNeeded_RightAfterDisposingCompressionPager += () =>
+            {
+                testingActionWasCalled = true;
+
+                disposeEnvironmentThread.Start();
+
+                disposeReachedTheWriteLock = disposeIsAtTheWriteLock.Wait(TimeSpan.FromSeconds(30));
+
+                // we are holding _writeLock and will not let go of it until the teardown got past it - a stuck writer.
+                // bounded so that an unfixed, unbounded teardown fails the test instead of hanging it
+                disposeGaveUpOnTheWriteLock = disposeGotPastTheWriteLock.Wait(TimeSpan.FromSeconds(30));
+            };
+
+            journal.ForTestingPurposesOnly().OnJournalDispose_BeforeTakingCompressionPagerWriteLock += () => disposeIsAtTheWriteLock.Set();
+
+            journal.ForTestingPurposesOnly().OnJournalDispose_AfterDisposingCompressionPager += () =>
+            {
+                disposeGotPastTheWriteLock.Set();
+
+                // hold the teardown here until we have published, otherwise the environment finishes tearing itself down
+                // and CreateCompressionPager has nothing left to build on: that would be a failed creation, which says
+                // nothing about who owns a pager that was created
+                teardownWaitedForThePublish = swapPublished.Wait(TimeSpan.FromSeconds(30));
+            };
+
+            try
+            {
+                // this thread is the swap - StorageSpaceMonitor in production
+                journal.TryReduceSizeOfCompressionBufferIfNeeded();
+            }
+            finally
+            {
+                swapPublished.Set(); // never leave the disposing thread waiting on us
+            }
+
+            Assert.True(testingActionWasCalled, "the compression pager was not recreated, the test did not exercise anything");
+
+            Assert.True(disposeReachedTheWriteLock, "the environment was never disposed while the compression pager swap was in flight");
+
+            Assert.True(disposeGaveUpOnTheWriteLock, "the journal dispose waited on _writeLock for as long as its holder kept it, instead of giving up");
+
+            Assert.True(disposeEnvironmentThread.Join(TimeSpan.FromSeconds(60)), "disposeEnvironmentThread.Join(TimeSpan.FromSeconds(60))");
+
+            Assert.True(teardownWaitedForThePublish, "the teardown did not reach the compression pager disposal");
+
+            // giving up on the lock must not turn into an exception: StorageEnvironment.Dispose latches it into an
+            // AggregateException and Index._disposeOnce (a DisposeOnce<SingleAttempt>) then rethrows it for the lifetime
+            // of the process
+            Assert.Null(disposeException);
+
+            var pagerPublishedAfterTheTimeout = journal.ForTestingPurposesOnly().CompressionPager;
+
+            Assert.True(pagerPublishedAfterTheTimeout.Disposed,
+                $"The compression pager '{pagerPublishedAfterTheTimeout}' was published after the teardown gave up waiting for the " +
+                $"write lock, and nothing disposed it");
         }
 
         [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Compression)]
