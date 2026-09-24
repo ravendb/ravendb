@@ -33,20 +33,11 @@ namespace Voron.Impl.Scratch
         public long AllocatedInTransaction { get; set; }
     }
 
-    public sealed class AllocatedPageInScratchBuffer
-    {
-        public int ScratchFileNumber { get; set; }
-        public long PositionInScratchBuffer { get; set; }
-        public int NumberOfPages { get; set; }
-        public long AllocatedInTransaction { get; set; }
-    }
-
     public sealed class ScratchFileUsage
     {
         public ScratchFileUsage()
         {
             MostAvailableFreePages = new List<MostAvailableFreePagesBySize>();
-            First10AllocatedPages = new List<AllocatedPageInScratchBuffer>();
         }
 
         public string Name { get; set; }
@@ -62,8 +53,6 @@ namespace Voron.Impl.Scratch
         public bool CanBeDeleted { get; set; }
 
         public List<MostAvailableFreePagesBySize> MostAvailableFreePages { get; set; }
-
-        public List<AllocatedPageInScratchBuffer> First10AllocatedPages { get; set; }
 
         public bool IsInRecycleArea { get; set; }
 

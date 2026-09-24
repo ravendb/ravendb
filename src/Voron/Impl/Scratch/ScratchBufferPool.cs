@@ -209,18 +209,18 @@ namespace Voron.Impl.Scratch
             }
         }
 
-        public void Free(LowLevelTransaction tx, int scratchNumber, long page)
+        public void Free(LowLevelTransaction tx, in PageFromScratchBuffer page)
         {
-            var scratch = _scratchBuffers[scratchNumber];
+            var scratch = _scratchBuffers[page.File.Number];
             if (scratch.File.Free(tx, page))
             {
                 MaybeRecycleFile(tx, scratch);
             }
         }
 
-        public void FreeImmediately(LowLevelTransaction tx, int scratchNumber, long page)
+        public void FreeImmediately(LowLevelTransaction tx, in PageFromScratchBuffer page)
         {
-            var scratch = _scratchBuffers[scratchNumber];
+            var scratch = _scratchBuffers[page.File.Number];
             if (scratch.File.Free(tx, asOfTxId: -1, page))
             {
                 MaybeRecycleFile(tx, scratch);
@@ -589,17 +589,6 @@ namespace Voron.Impl.Scratch
                         Size = freePage.Key,
                         ValidAfterTransactionId = freePage.Value.ValidAfterTransactionId,
                         AllocatedInTransaction = freePage.Value.AllocatedInTransaction
-                    });
-                }
-
-                foreach (var allocatedPage in scratchBufferItem.File.DebugInfo.GetFirst10AllocatedPages())
-                {
-                    scratchFileUsage.First10AllocatedPages.Add(new AllocatedPageInScratchBuffer()
-                    {
-                        NumberOfPages = allocatedPage.NumberOfPages,
-                        PositionInScratchBuffer = allocatedPage.PositionInScratchBuffer,
-                        ScratchFileNumber = allocatedPage.File.Number,
-                        AllocatedInTransaction = allocatedPage.AllocatedInTransaction,
                     });
                 }
 

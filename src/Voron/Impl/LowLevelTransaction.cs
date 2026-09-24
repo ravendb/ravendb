@@ -1032,7 +1032,7 @@ namespace Voron.Impl
             {
                 RemoveTransactionPage(scratchPage);
 
-                _env.ScratchBufferPool.FreeImmediately(this, scratchPage.File.Number, scratchPage.PositionInScratchBuffer);
+                _env.ScratchBufferPool.FreeImmediately(this, scratchPage);
 
                 if (_env.Options.Encryption.IsEnabled)
                 {
@@ -1561,7 +1561,7 @@ namespace Voron.Impl
                 Debug.Assert(scratchPage.AllocatedInTransaction == Id,
                     $"Scratch page {scratchPage.PositionInScratchBuffer} in the pages of transaction {Id} was allocated in transaction {scratchPage.AllocatedInTransaction}");
 
-                _env.ScratchBufferPool.FreeImmediately(this, scratchPage.File.Number, scratchPage.PositionInScratchBuffer);
+                _env.ScratchBufferPool.FreeImmediately(this, scratchPage);
             }
 
             RolledBack = true;
