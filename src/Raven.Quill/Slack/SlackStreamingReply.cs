@@ -28,43 +28,16 @@ internal sealed class SlackStreamingReply(
 
     protected override async Task ShowPreviewAsync(string text)
     {
-        var escaped = SlackMrkdwn.Escape(text);
         if (_currentTs.Length == 0)
-            _currentTs = await slack.PostMessageAsync(botToken, dmChannel, escaped, ct);
+            _currentTs = await slack.PostMessageAsync(botToken, dmChannel, text, ct);
         else
-            await slack.UpdateMessageAsync(botToken, dmChannel, _currentTs, escaped, ct);
+            await slack.UpdateMessageAsync(botToken, dmChannel, _currentTs, text, ct);
     }
 
-    protected override async Task SendFinalAsync(string text)
-    {
-        var converted = SlackMrkdwn.Convert(text);
-        try
-        {
-            await PostWithRetryAsync(converted);
-        }
-        catch (SlackApiException e) when (e.Error != SlackApiException.RateLimitedError && converted != text)
-        {
-            await PostWithRetryAsync(SlackMrkdwn.Escape(text));
-        }
-    }
+    protected override Task SendFinalAsync(string text) => PostWithRetryAsync(text);
 
-    protected override async Task EditFinalAsync(string text)
-    {
-        var converted = SlackMrkdwn.Convert(text);
-        if (converted == LastShownText)
-            return;
-
-        try
-        {
-            await UpdateWithRetryAsync(_currentTs, converted);
-        }
-        catch (SlackApiException e) when (e.Error != SlackApiException.RateLimitedError && converted != text)
-        {
-            if (text == LastShownText)
-                return;
-            await UpdateWithRetryAsync(_currentTs, SlackMrkdwn.Escape(text));
-        }
-    }
+    protected override Task EditFinalAsync(string text) =>
+        text == LastShownText ? Task.CompletedTask : UpdateWithRetryAsync(_currentTs, text);
 
     private async Task PostWithRetryAsync(string text)
     {

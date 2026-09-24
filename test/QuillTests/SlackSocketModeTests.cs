@@ -217,19 +217,41 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Markdown_replies_are_converted_to_mrkdwn_on_finalize()
+    public async Task Markdown_replies_are_sent_as_a_markdown_block_with_an_escaped_fallback()
     {
         await using var app = await NewAppAsync();
         var channel = await NewChannelAsync(app);
-        Router.Chunks = ["**Bold** and [docs](https://example.org/a)"];
+        const string markdown = "**Bold**, [docs](https://example.org/a) & <!here>";
+        Router.Chunks = [markdown];
 
         await Slack.DispatchEventAsync(channel.TeamId, "Ev0011", DmMessage(Sender, "format"));
 
-        await Slack.WaitUntilAsync(
-            () => Slack.EditedMessages.Any(e => e.Text == "*Bold* and <https://example.org/a|docs>"),
-            "the mrkdwn-converted finalized edit");
+        await Slack.WaitUntilAsync(() => Slack.SentMessages.Count == 1, "the reply");
+        await Task.Delay(250);
 
-        Assert.All(Slack.SentMessages, m => Assert.Equal("none", m.Parse));
+        var sent = Assert.Single(Slack.SentMessages);
+        Assert.Equal(markdown, sent.Markdown);
+        Assert.Equal("**Bold**, [docs](https://example.org/a) &amp; &lt;!here&gt;", sent.Text);
+        Assert.Equal("none", sent.Parse);
+        Assert.Empty(Slack.EditedMessages);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Previews_and_finals_carry_the_markdown_block()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        Router.Chunks = ["# Title\n", "- one\n", "- two"];
+        Router.ChunkDelay = TimeSpan.FromMilliseconds(120);
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev0012", DmMessage(Sender, "list"));
+
+        await Slack.WaitUntilAsync(
+            () => Slack.EditedMessages.Any(e => e.Markdown == "# Title\n- one\n- two"), "the finalized edit");
+
+        var sent = Assert.Single(Slack.SentMessages);
+        Assert.Equal(sent.Text, sent.Markdown);
+        Assert.All(Slack.EditedMessages, e => Assert.NotNull(e.Markdown));
         Assert.All(Slack.EditedMessages, e => Assert.Equal("none", e.Parse));
     }
 

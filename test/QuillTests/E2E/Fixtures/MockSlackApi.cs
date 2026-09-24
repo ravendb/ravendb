@@ -32,9 +32,9 @@ public sealed class MockSlackApi : IAsyncDisposable
     private int _connects;
     private SocketSession? _session;
 
-    public sealed record SentMessage(string BotToken, string Channel, string Text, string Ts, string? Parse);
+    public sealed record SentMessage(string BotToken, string Channel, string Text, string Ts, string? Parse, string? Markdown);
 
-    public sealed record EditedMessage(string BotToken, string Channel, string Ts, string Text, string? Parse);
+    public sealed record EditedMessage(string BotToken, string Channel, string Ts, string Text, string? Parse, string? Markdown);
 
     private sealed record BotEntry(string TeamId, string TeamName, string BotUserId, string BotId);
 
@@ -515,7 +515,7 @@ public sealed class MockSlackApi : IAsyncDisposable
         lock (_lock)
         {
             ts = string.Create(CultureInfo.InvariantCulture, $"1700000000.{_nextTs++:D6}");
-            _sent.Add(new SentMessage(BearerToken(ctx), channel, text, ts, parse));
+            _sent.Add(new SentMessage(BearerToken(ctx), channel, text, ts, parse, MarkdownOf(body)));
         }
 
         return Results.Json(new JsonObject { ["ok"] = true, ["channel"] = channel, ["ts"] = ts });
@@ -550,11 +550,15 @@ public sealed class MockSlackApi : IAsyncDisposable
             if (_sent.Any(m => m.Ts == ts) == false)
                 return SlackError("message_not_found");
 
-            _edited.Add(new EditedMessage(BearerToken(ctx), channel, ts, text, parse));
+            _edited.Add(new EditedMessage(BearerToken(ctx), channel, ts, text, parse, MarkdownOf(body)));
         }
 
         return Results.Json(new JsonObject { ["ok"] = true, ["channel"] = channel, ["ts"] = ts });
     }
+
+    private static string? MarkdownOf(JsonNode? body) =>
+        body?["blocks"]?.AsArray()
+            .FirstOrDefault(block => block?["type"]?.GetValue<string>() == "markdown")?["text"]?.GetValue<string>();
 
     private static string BearerToken(HttpContext ctx)
     {

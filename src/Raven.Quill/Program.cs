@@ -143,9 +143,11 @@ builder.Services.AddOptions<ApplianceOptions>()
                    (u.Scheme == Uri.UriSchemeHttp || u.Scheme == Uri.UriSchemeHttps),
         "Slack ApiUrl must be an absolute http(s) URL")
     .Validate(o => o.Slack.RequestTimeout > TimeSpan.Zero, "Slack RequestTimeout must be positive")
-    .Validate(o => o.Slack.MessageLimit is > 0 and <= SlackOptions.ApiMessageLimit / SlackMrkdwn.MaxEscapeExpansion,
-        $"Slack MessageLimit must be between 1 and {SlackOptions.ApiMessageLimit / SlackMrkdwn.MaxEscapeExpansion}, " +
-        "so the worst-case mrkdwn escape stays within Slack's message cap")
+    .Validate(o => o.Slack.MessageLimit > 0 &&
+                   o.Slack.MessageLimit <= SlackOptions.MarkdownBlockLimit &&
+                   o.Slack.MessageLimit <= SlackOptions.ApiMessageLimit / SlackText.MaxEscapeExpansion,
+        $"Slack MessageLimit must be between 1 and {Math.Min(SlackOptions.MarkdownBlockLimit, SlackOptions.ApiMessageLimit / SlackText.MaxEscapeExpansion)}, " +
+        "so the markdown block and the worst-case escaped fallback text both stay within Slack's caps")
     .Validate(o => o.Slack.EditDebounce > TimeSpan.Zero, "Slack EditDebounce must be positive")
     .Validate(o => o.Slack.SenderQueueCapacity > 0, "Slack SenderQueueCapacity must be positive")
     .Validate(o => o.Slack.ApplyChangesInterval > TimeSpan.Zero, "Slack ApplyChangesInterval must be positive")
