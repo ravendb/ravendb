@@ -2,6 +2,7 @@ using System.Text;
 using FastTests.Voron;
 using Tests.Infrastructure;
 using Voron;
+using Voron.Impl.Journal;
 using Xunit;
 
 namespace SlowTests.Voron.Issues;
@@ -17,6 +18,8 @@ public class RavenDB_27429 : StorageTest
         // every transaction here is large enough to be worth compressing
         options.CompressTxAboveSizeInBytes = 1024;
         options.ManualFlushing = true;
+
+        options.ForTestingPurposesOnly().ForceMeasuredDeviceClass = DeviceWriteBudget.DeviceClass.Unknown;
     }
 
     [RavenFact(RavenTestCategory.Voron)]
