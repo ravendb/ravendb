@@ -42,6 +42,8 @@ namespace FastTests.Issues
             nameof(StorageEnvironmentOptions.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions),
             nameof(StorageEnvironmentOptions.MaxNumberOfRecyclableJournals),
             nameof(StorageEnvironmentOptions.DisableSparseRegions),
+            nameof(StorageEnvironmentOptions.PunchSparseRegionsOnIdleOnly),
+            nameof(StorageEnvironmentOptions.TimeToPunchSparseRegionsAfterIdle),
             nameof(StorageEnvironmentOptions.JournalsCompressionAcceleration),
             nameof(StorageEnvironmentOptions.JournalCompressionAlgorithm),
             nameof(StorageEnvironmentOptions.MinimumSharedJournalsMergeCount),
