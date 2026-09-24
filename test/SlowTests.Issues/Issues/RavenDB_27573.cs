@@ -19,7 +19,7 @@ public class RavenDB_27573 : RavenTestBase
     // An In/AllIn clause allocates a synthetic null-term slot that has to carry the merge operator's identity:
     // nothing for IN (OR), everything for ALL IN (AND). `order by score()` switches the clause to the query-match
     // dispatch, whose arm used the OR identity for both, so the ALL IN intersection was ANDed against an empty match.
-    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void AllInKeepsItsResultsWhenOrderedByScore(Options options)
     {
