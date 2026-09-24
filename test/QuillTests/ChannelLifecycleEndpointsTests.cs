@@ -50,7 +50,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
         {
             new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", Array.Empty<string>(), name),
             new ProvisionChannelRequest(ChannelType.Telegram, "demo-agent", null, name, Telegram: new("123:token")),
-            new ProvisionChannelRequest(ChannelType.Slack, "demo-agent", null, name, Slack: new("xoxb-token", "secret")),
+            new ProvisionChannelRequest(ChannelType.Slack, "demo-agent", null, name, Slack: new("xoxb-token", "xapp-token")),
             new ProvisionChannelRequest(ChannelType.Discord, "demo-agent", null, name, Discord: new("token")),
         };
 

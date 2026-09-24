@@ -139,13 +139,15 @@ builder.Services.AddOptions<ApplianceOptions>()
                    (u.Scheme == Uri.UriSchemeHttp || u.Scheme == Uri.UriSchemeHttps),
         "Slack ApiUrl must be an absolute http(s) URL")
     .Validate(o => o.Slack.RequestTimeout > TimeSpan.Zero, "Slack RequestTimeout must be positive")
-    .Validate(o => o.Slack.MaxWebhookBodyBytes > 0, "Slack MaxWebhookBodyBytes must be positive")
-    .Validate(o => o.Slack.MessageLimit is > 0 and <= SlackOptions.ApiMessageLimit / SlackMrkdwn.MaxEscapeExpansion,
-        $"Slack MessageLimit must be between 1 and {SlackOptions.ApiMessageLimit / SlackMrkdwn.MaxEscapeExpansion}, " +
-        "so the worst-case mrkdwn escape stays within Slack's message cap")
+    .Validate(o => o.Slack.MessageLimit > 0 &&
+                   o.Slack.MessageLimit <= SlackOptions.MarkdownBlockLimit &&
+                   o.Slack.MessageLimit <= SlackOptions.ApiMessageLimit / SlackText.MaxEscapeExpansion,
+        $"Slack MessageLimit must be between 1 and {Math.Min(SlackOptions.MarkdownBlockLimit, SlackOptions.ApiMessageLimit / SlackText.MaxEscapeExpansion)}, " +
+        "so the markdown block and the worst-case escaped fallback text both stay within Slack's caps")
     .Validate(o => o.Slack.EditDebounce > TimeSpan.Zero, "Slack EditDebounce must be positive")
     .Validate(o => o.Slack.SenderQueueCapacity > 0, "Slack SenderQueueCapacity must be positive")
-    .Validate(o => o.Slack.SignatureTolerance > TimeSpan.Zero, "Slack SignatureTolerance must be positive")
+    .Validate(o => o.Slack.ApplyChangesInterval > TimeSpan.Zero, "Slack ApplyChangesInterval must be positive")
+    .Validate(o => o.Slack.SocketRestartDelay > TimeSpan.Zero, "Slack SocketRestartDelay must be positive")
     .Validate(o => Uri.TryCreate(o.Discord.ApiUrl, UriKind.Absolute, out var u) &&
                    (u.Scheme == Uri.UriSchemeHttp || u.Scheme == Uri.UriSchemeHttps),
         "Discord ApiUrl must be an absolute http(s) URL")
@@ -186,6 +188,8 @@ builder.Services.AddSingleton<ITelegramBotClientFactory, TelegramBotClientFactor
 builder.Services.AddSingleton<SlackHealthRegistry>();
 builder.Services.AddSingleton<SlackUserDirectory>();
 builder.Services.AddSingleton<SlackInboundProcessor>();
+builder.Services.AddSingleton<SlackChannelManager>();
+builder.Services.AddSingleton<ISlackChannelManager>(sp => sp.GetRequiredService<SlackChannelManager>());
 builder.Services.AddSingleton<DiscordHealthRegistry>();
 builder.Services.AddSingleton<DiscordInboundProcessor>();
 builder.Services.AddSingleton<DiscordChannelManager>();
@@ -198,6 +202,7 @@ if (!isOpenApiDocumentGeneration)
     builder.Services.AddHostedService<ApplianceActivationService>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<TelegramChannelManager>());
     builder.Services.AddHostedService(sp => sp.GetRequiredService<SlackInboundProcessor>());
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<SlackChannelManager>());
     builder.Services.AddHostedService(sp => sp.GetRequiredService<DiscordInboundProcessor>());
     builder.Services.AddHostedService(sp => sp.GetRequiredService<DiscordChannelManager>());
 }
@@ -213,12 +218,12 @@ builder.Services.ConfigureHttpClientDefaults(httpBuilder =>
 builder.Services.AddHttpClient(WebhookActionExecutor.ClientName,
     static http => http.Timeout = TimeSpan.FromSeconds(30));
 
-builder.Services.AddHttpClient<ISlackClient, SlackApiClient>(static (sp, http) =>
+builder.Services.AddHttpClient(SlackSdk.HttpClientName, static (sp, http) =>
 {
-    var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value.Slack;
-    http.BaseAddress = new Uri(opts.ApiUrl.EndsWith('/') ? opts.ApiUrl : opts.ApiUrl + "/");
-    http.Timeout = opts.RequestTimeout;
+    http.Timeout = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value.Slack.RequestTimeout;
 });
+builder.Services.AddSingleton<SlackSdk>();
+builder.Services.AddTransient<ISlackClient, SlackApiClient>();
 
 builder.Services.AddHttpClient<IDiscordClient, DiscordApiClient>(static (sp, http) =>
 {
@@ -272,16 +277,6 @@ builder.Services.AddRateLimiter(options =>
             _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 60,
-                Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0,
-            }));
-
-    options.AddPolicy(SlackEndpoints.WebhookRateLimitPolicy, httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? httpContext.Connection.Id,
-            _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 600,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0,
             }));
