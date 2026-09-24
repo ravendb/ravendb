@@ -8,8 +8,8 @@ public enum ExecutionStrategy : byte
     // Compute the result set into a bitmap, then sort if needed:
     // from index 'Items' where Name = 'Alice' and Category = 'red' [order by Price]
     BitmapPipeline,
-    // Use a compound field index, skip ORDER BY, and merge two field WHERE into a single lookup:
-    // from index 'Items' where Category = 'Action' and Age = 40 - with compound(Category,Age)
+    // Use a compound field index and merge two field WHERE on text values into a single lookup:
+    // from index 'Items' where Category = 'Action' and Color = 'red' - with compound(Category,Color)
     CompoundKeyLookup,
     // Scan a compound field index, match the first field equality and then scan in sorted manner, to skip the ORDER BY:
     // from index 'Items' where Category = 'Action' order by Age as long limit 25 - with compound(Category, Age)

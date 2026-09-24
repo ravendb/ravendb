@@ -246,8 +246,11 @@ internal static partial class QueryPlanBuilder
         if (eqCount >= 2) TryFindCompoundFieldEqualMatches(eqBuf);
 
         // CompoundKeyLookup collapses two WHERE A = $x AND B = $y into compound($x, $y) lookup
+        // GroupCollapse lifted spatial / vector clauses out of `clauses`, the lookup would drop them
         if (walkerCtx.CompoundExact.First >= 0 &&
             clauses.Count == 2 &&
+            walkerCtx.SpatialClauses is null && walkerCtx.VectorClauses is null &&
+            p.HasBoost == false && (orderBy is null || Array.TrueForAll(orderBy, o => o.OrderingType != OrderByFieldType.Random)) &&
             clauses[walkerCtx.CompoundExact.First].WhenCondition is null &&
             clauses[walkerCtx.CompoundExact.Second].WhenCondition is null)
         {
