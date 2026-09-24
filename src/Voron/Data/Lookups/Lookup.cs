@@ -1337,7 +1337,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void PushPage(long nextPage, ref IteratorCursorState cstate)
     {
-        if (cstate._pos > cstate._stk.Length) //  should never actually happen
+        if (cstate._pos + 1 >= cstate._stk.Length) //  should never actually happen
             Array.Resize(ref cstate._stk, cstate._stk.Length * 2); // but let's be safe
 
         ref var state = ref cstate._stk[++cstate._pos];

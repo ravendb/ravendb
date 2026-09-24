@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using Acornima;
+using Acornima.Ast;
 using Jint;
 using Jint.Native;
 using Jint.Native.Function;
@@ -268,6 +269,10 @@ function map(name, lambda) {
                 ProcessReduce(definition, definitions, resolver, indexVersion);
 
                 ProcessFields(definition, collectionFunctions);
+                
+                HasDynamicFields |= maps.Concat(definition.AdditionalSources?.Values ?? Enumerable.Empty<string>())
+                    .Append(definition.Reduce)
+                    .Any(CallsCreateField);
             }
 
             _javaScriptUtils = new JavaScriptUtils(null, _engine);
@@ -383,6 +388,10 @@ function map(name, lambda) {
         }
 
         private static readonly ParserOptions DefaultParserOptions = new() { Tolerant = true };
+
+        private static bool CallsCreateField(string code) =>
+            string.IsNullOrEmpty(code) == false &&
+            new Parser(DefaultParserOptions).ParseScript(code).DescendantNodes().Any(n => n is CallExpression { Callee: Identifier { Name: "createField" }, Arguments.Count: 3 });
 
         private MapMetadata ExecuteCodeAndCollectReferencedCollections(string code, string additionalSources)
         {
