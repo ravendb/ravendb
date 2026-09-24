@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.Revisions
                     Configuration.Collections.TryGetValue(collection, out RevisionsCollectionConfiguration configuration))
                     return configuration;
 
-                if (Configuration.Default != null)
+                if (Configuration.Default != null && CollectionName.IsSystemCollection(collection) == false)
                     return Configuration.Default;
             }
 
