@@ -145,12 +145,12 @@ internal sealed class DiscordRuntime : IChannelRuntime
             return Task.CompletedTask;
         };
 
-        client.Connected += () =>
+        client.Connected += async () =>
         {
             lastAlive = Stopwatch.GetTimestamp();
             attemptsSinceConnected = 0;
             OnConnected();
-            return Task.CompletedTask;
+            await ShowStatusAsync(client);
         };
 
         client.Disconnected += error =>
@@ -222,6 +222,22 @@ internal sealed class DiscordRuntime : IChannelRuntime
         Health.MarkConnected();
         if (_logger.IsInfoEnabled)
             _logger.Info($"Discord gateway connected for channel {_channel.ShortId} (bot {_botUserId})");
+    }
+
+    private async Task ShowStatusAsync(DiscordSocketClient client)
+    {
+        if (string.IsNullOrWhiteSpace(_channel.DisplayName))
+            return;
+
+        try
+        {
+            await client.SetCustomStatusAsync(_channel.DisplayName);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            if (_logger.IsDebugEnabled)
+                _logger.Debug($"Discord custom status failed for channel {_channel.ShortId}: {e.Message}");
+        }
     }
 
     private void OnMessage(SocketMessage message)

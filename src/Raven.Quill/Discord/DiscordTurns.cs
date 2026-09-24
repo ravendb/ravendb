@@ -16,7 +16,20 @@ internal sealed class DiscordTurns(
     QuillLogger<DiscordRuntime> logger) : IPlatformTurns<DiscordMessage>
 {
     public Task SendAsync(DiscordMessage replyTo, string text, CancellationToken ct) =>
-        discord.CreateMessageAsync(settings.BotToken, replyTo.DmChannel, text, ct);
+        discord.CreateMessageAsync(settings.BotToken, replyTo.DmChannel, text, suppressEmbeds: false, ct);
+
+    public async Task TypingAsync(DiscordMessage replyTo, CancellationToken ct)
+    {
+        try
+        {
+            await discord.TriggerTypingAsync(settings.BotToken, replyTo.DmChannel, ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            if (logger.IsDebugEnabled)
+                logger.Debug($"Discord typing indicator failed for channel {replyTo.DmChannel}: {e.Message}");
+        }
+    }
 
     public ChannelStreamingReply CreateReply(DiscordMessage replyTo) =>
         new DiscordStreamingReply(discord, settings.BotToken, replyTo.DmChannel, options, logger);
