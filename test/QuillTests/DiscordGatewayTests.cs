@@ -388,7 +388,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
 
         var health = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
             Host.Client, QuillRoutes.DiscordHealth(app.Slug));
-        Assert.Contains("hello frame", health.Single(r => r.ChannelId == channel.ChannelId).LastGatewayError);
+        Assert.Contains("did not become ready", health.Single(r => r.ChannelId == channel.ChannelId).LastGatewayError);
 
         Discord.StallBeforeHello = false;
         await Discord.WaitUntilConnectedAsync();

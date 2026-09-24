@@ -54,6 +54,7 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Resilience" />
     <PackageReference Include="Polly" />
+    <PackageReference Include="Discord.Net.WebSocket" />
     <PackageReference Include="Telegram.Bot" />
     <PackageReference Include="NLog" />
     <PackageReference Include="JetBrains.Annotations" />

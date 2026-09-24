@@ -1,97 +1,63 @@
+using System.Collections.Concurrent;
+using System.Globalization;
 using System.Net;
-using System.Net.Http.Headers;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using Discord;
+using Discord.Net;
+using Discord.Rest;
 
 namespace Raven.Quill.Discord;
 
-internal sealed class DiscordApiClient(HttpClient http) : IDiscordClient
+internal sealed class DiscordApiClient(DiscordSdk sdk) : IDiscordClient, IAsyncDisposable
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private const string TokenRejected =
+        "discord rejected the bot token; reset it on the app's Bot page and try again";
+
+    private const int MaxCachedBots = 256;
+
+    private static readonly AllowedMentions SuppressMentions = new(AllowedMentionTypes.None);
+
+    private readonly ConcurrentDictionary<string, Lazy<Task<BotSession>>> _bots = new();
 
     public async Task<(DiscordBotIdentity? Identity, string? Error, bool DiscordResponded)> GetBotIdentityAsync(
         string botToken, CancellationToken ct)
     {
-        var (user, userError, userResponded) = await TryGetAsync<CurrentUserResponse>("users/@me", botToken, ct);
-        if (user is null)
-            return (null, userError, userResponded);
-
-        if (string.IsNullOrEmpty(user.Id) || string.IsNullOrEmpty(user.Username))
-            return (null, "discord returned an unrecognized users/@me payload", true);
-
-        if (user.Bot != true)
-            return (null, "that token belongs to a user account, not a bot; copy the token from the app's Bot page", true);
-
-        var (application, applicationError, applicationResponded) =
-            await TryGetAsync<CurrentApplicationResponse>("oauth2/applications/@me", botToken, ct);
-        if (application is null)
-            return (null, applicationError, applicationResponded);
-
-        if (string.IsNullOrEmpty(application.Id))
-            return (null, "discord returned an unrecognized oauth2/applications/@me payload", true);
-
-        return (new DiscordBotIdentity(application.Id, user.Id, user.Username), null, true);
-    }
-
-    public async Task<string> GetGatewayUrlAsync(string botToken, CancellationToken ct)
-    {
-        using var request = NewRequest(HttpMethod.Get, "gateway/bot", botToken);
-        var payload = await SendAsync<GatewayResponse>(request, "gateway/bot", ct);
-
-        if (string.IsNullOrEmpty(payload.Url))
-            throw new DiscordApiException("discord returned a gateway/bot payload without a url");
-
-        return payload.Url;
-    }
-
-    public async Task<string> CreateMessageAsync(
-        string botToken, string channelId, string content, CancellationToken ct)
-    {
-        using var request = NewRequest(HttpMethod.Post, $"channels/{channelId}/messages", botToken);
-        request.Content = JsonContent.Create(new MessageRequest(content));
-
-        var payload = await SendAsync<MessageResponse>(request, "create message", ct);
-        if (string.IsNullOrEmpty(payload.Id))
-            throw new DiscordApiException("discord returned a create message payload without an id");
-
-        return payload.Id;
-    }
-
-    public async Task EditMessageAsync(
-        string botToken, string channelId, string messageId, string content, CancellationToken ct)
-    {
-        using var request = NewRequest(HttpMethod.Patch, $"channels/{channelId}/messages/{messageId}", botToken);
-        request.Content = JsonContent.Create(new MessageRequest(content));
-
-        await SendAsync<MessageResponse>(request, "edit message", ct);
-    }
-
-    private async Task<(TResponse? Payload, string? Error, bool DiscordResponded)> TryGetAsync<TResponse>(
-        string path, string botToken, CancellationToken ct)
-        where TResponse : class
-    {
         try
         {
-            using var request = NewRequest(HttpMethod.Get, path, botToken);
-            using var response = await http.SendAsync(request, ct);
-            var raw = await response.Content.ReadAsStringAsync(ct);
+            await using var client = sdk.NewRestClient();
+            await client.LoginAsync(TokenType.Bot, botToken, validateToken: false).WaitAsync(ct);
 
-            if (response.StatusCode == HttpStatusCode.TooManyRequests)
-                return (null, "discord is rate-limiting the token check; try again shortly", false);
+            var user = client.CurrentUser;
+            if (user is null || string.IsNullOrEmpty(user.Username))
+                return (null, "discord returned an unrecognized users/@me payload", true);
 
-            if ((int)response.StatusCode >= 500)
-                return (null, $"the Discord API is unavailable (status {(int)response.StatusCode})", false);
+            if (user.IsBot == false)
+                return (null, "that token belongs to a user account, not a bot; copy the token from the app's Bot page", true);
 
-            if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
-                return (null, "discord rejected the bot token; reset it on the app's Bot page and try again", true);
+            var application = await client.GetApplicationInfoAsync(sdk.NewRequestOptions(ct));
+            if (application is null)
+                return (null, "discord returned an unrecognized oauth2/applications/@me payload", true);
 
-            if (response.IsSuccessStatusCode == false)
-                return (null, $"discord refused {path}: {ErrorTextOf(raw, response.StatusCode)}", true);
-
-            var payload = Deserialize<TResponse>(raw);
-            return payload is null
-                ? (null, $"discord returned an unrecognized {path} payload", true)
-                : (payload, null, true);
+            return (new DiscordBotIdentity(Snowflake(application.Id), Snowflake(user.Id), user.Username), null, true);
+        }
+        catch (RateLimitedException)
+        {
+            return (null, "discord is rate-limiting the token check; try again shortly", false);
+        }
+        catch (HttpException e) when ((int)e.HttpCode >= 500)
+        {
+            return (null, $"the Discord API is unavailable (status {(int)e.HttpCode})", false);
+        }
+        catch (HttpException e) when (e.HttpCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        {
+            return (null, TokenRejected, true);
+        }
+        catch (HttpException e)
+        {
+            return (null, $"discord refused the token check: {ErrorTextOf(e)}", true);
+        }
+        catch (TimeoutException)
+        {
+            return (null, "the Discord API did not respond while validating the bot token", false);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested == false)
         {
@@ -103,14 +69,68 @@ internal sealed class DiscordApiClient(HttpClient http) : IDiscordClient
         }
     }
 
-    private async Task<TResponse> SendAsync<TResponse>(
-        HttpRequestMessage request, string what, CancellationToken ct)
-        where TResponse : class
+    public async Task<string> CreateMessageAsync(
+        string botToken, string channelId, string content, CancellationToken ct)
     {
-        HttpResponseMessage response;
+        var message = await CallAsync(botToken, channelId, "create message", ct,
+            (channel, options) => channel.SendMessageAsync(content, allowedMentions: SuppressMentions, options: options));
+
+        return Snowflake(message.Id);
+    }
+
+    public Task EditMessageAsync(
+        string botToken, string channelId, string messageId, string content, CancellationToken ct)
+    {
+        var id = ParseSnowflake(messageId, "message id");
+        return CallAsync(botToken, channelId, "edit message", ct,
+            (channel, options) => channel.ModifyMessageAsync(id, message =>
+            {
+                message.Content = content;
+                message.AllowedMentions = SuppressMentions;
+            }, options));
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        foreach (var token in _bots.Keys)
+        {
+            if (_bots.TryRemove(token, out var bot))
+                await DisposeAsync(bot);
+        }
+    }
+
+    private async Task<TResult> CallAsync<TResult>(
+        string botToken, string channelId, string what, CancellationToken ct,
+        Func<IMessageChannel, RequestOptions, Task<TResult>> call)
+    {
+        var id = ParseSnowflake(channelId, "channel id");
         try
         {
-            response = await http.SendAsync(request, ct);
+            var bot = await BotAsync(botToken, ct);
+            var channel = await bot.ChannelAsync(id, sdk.NewRequestOptions(ct))
+                          ?? throw new DiscordApiException(
+                              $"discord refused {what}: unknown channel {channelId}", HttpStatusCode.NotFound);
+
+            return await call(channel, sdk.NewRequestOptions(ct));
+        }
+        catch (HttpException e) when (e.HttpCode == HttpStatusCode.Unauthorized)
+        {
+            if (_bots.TryRemove(botToken, out var bot))
+                await DisposeAsync(bot);
+
+            throw new DiscordApiException($"discord refused {what}: {ErrorTextOf(e)}", e.HttpCode, e);
+        }
+        catch (RateLimitedException e)
+        {
+            throw new DiscordApiException($"discord rate-limited {what}", HttpStatusCode.TooManyRequests, e);
+        }
+        catch (HttpException e)
+        {
+            throw new DiscordApiException($"discord refused {what}: {ErrorTextOf(e)}", e.HttpCode, e);
+        }
+        catch (TimeoutException e)
+        {
+            throw new DiscordApiException($"the Discord API did not respond to {what}", inner: e);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested == false)
         {
@@ -120,116 +140,97 @@ internal sealed class DiscordApiClient(HttpClient http) : IDiscordClient
         {
             throw new DiscordApiException($"could not reach the Discord API: {e.Message}", inner: e);
         }
+    }
 
-        using (response)
+    private async Task<BotSession> BotAsync(string botToken, CancellationToken ct)
+    {
+        if (_bots.Count >= MaxCachedBots)
         {
-            var raw = await response.Content.ReadAsStringAsync(ct);
-
-            if (response.StatusCode == HttpStatusCode.TooManyRequests)
-                throw new DiscordApiException(
-                    $"discord rate-limited {what}", response.StatusCode, RetryAfterOf(raw, response));
-
-            if (response.IsSuccessStatusCode == false)
-                throw new DiscordApiException(
-                    $"discord refused {what}: {ErrorTextOf(raw, response.StatusCode)}", response.StatusCode);
-
-            var payload = Deserialize<TResponse>(raw);
-            if (payload is null)
-                throw new DiscordApiException($"discord returned an unrecognized {what} payload");
-
-            return payload;
+            foreach (var token in _bots.Keys)
+            {
+                if (_bots.TryRemove(token, out var stale))
+                    await DisposeAsync(stale);
+            }
         }
-    }
 
-    private static TimeSpan? RetryAfterOf(string raw, HttpResponseMessage response)
-    {
-        var seconds = Deserialize<RateLimitResponse>(raw)?.RetryAfter;
-        if (seconds is > 0)
-            return TimeSpan.FromSeconds(seconds.Value);
-
-        return response.Headers.RetryAfter?.Delta;
-    }
-
-    private static string ErrorTextOf(string raw, HttpStatusCode status)
-    {
-        var message = Deserialize<ApiErrorPayload>(raw)?.Message;
-        return string.IsNullOrWhiteSpace(message) ? $"status {(int)status}" : message;
-    }
-
-    private static HttpRequestMessage NewRequest(HttpMethod verb, string pathAndQuery, string botToken)
-    {
-        var request = new HttpRequestMessage(verb, pathAndQuery);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bot", botToken);
-        return request;
-    }
-
-    private static T? Deserialize<T>(string body) where T : class
-    {
-        if (string.IsNullOrWhiteSpace(body))
-            return null;
-
+        var bot = _bots.GetOrAdd(botToken, token => new Lazy<Task<BotSession>>(() => BotSession.OpenAsync(sdk, token)));
         try
         {
-            return JsonSerializer.Deserialize<T>(body, JsonOptions);
+            return await bot.Value.WaitAsync(ct);
         }
-        catch (JsonException)
+        catch (Exception) when (bot.Value.IsCompletedSuccessfully == false)
         {
-            return null;
+            if (_bots.TryRemove(new KeyValuePair<string, Lazy<Task<BotSession>>>(botToken, bot)))
+                _ = DisposeAsync(bot);
+            throw;
         }
     }
 
-    private sealed record MessageRequest(
-        [property: JsonPropertyName("content")] string Content)
+    private static async Task DisposeAsync(Lazy<Task<BotSession>> bot)
     {
-        [JsonPropertyName("allowed_mentions")]
-        public AllowedMentions AllowedMentions { get; } = AllowedMentions.None;
+        try
+        {
+            await (await bot.Value).DisposeAsync();
+        }
+        catch (Exception)
+        {
+        }
     }
 
-    private sealed record AllowedMentions(
-        [property: JsonPropertyName("parse")] string[] Parse)
+    private static string ErrorTextOf(HttpException e) =>
+        string.IsNullOrWhiteSpace(e.Reason) ? $"status {(int)e.HttpCode}" : e.Reason;
+
+    private static string Snowflake(ulong id) => id.ToString(CultureInfo.InvariantCulture);
+
+    private static ulong ParseSnowflake(string value, string what) =>
+        ulong.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var id)
+            ? id
+            : throw new DiscordApiException($"'{value}' is not a Discord {what}");
+
+    private sealed class BotSession(DiscordRestClient client) : IAsyncDisposable
     {
-        internal static readonly AllowedMentions None = new([]);
-    }
+        private const int MaxCachedChannels = 1024;
 
-    private sealed class MessageResponse
-    {
-        [JsonPropertyName("id")]
-        public string? Id { get; set; }
-    }
+        private readonly ConcurrentDictionary<ulong, Lazy<Task<IMessageChannel?>>> _channels = new();
 
-    private sealed class CurrentUserResponse
-    {
-        [JsonPropertyName("id")]
-        public string? Id { get; set; }
+        public static async Task<BotSession> OpenAsync(DiscordSdk sdk, string botToken)
+        {
+            var client = sdk.NewRestClient();
+            try
+            {
+                await client.LoginAsync(TokenType.Bot, botToken, validateToken: false);
+            }
+            catch (Exception)
+            {
+                await client.DisposeAsync();
+                throw;
+            }
 
-        [JsonPropertyName("username")]
-        public string? Username { get; set; }
+            return new BotSession(client);
+        }
 
-        [JsonPropertyName("bot")]
-        public bool? Bot { get; set; }
-    }
+        public async Task<IMessageChannel?> ChannelAsync(ulong channelId, RequestOptions options)
+        {
+            if (_channels.Count >= MaxCachedChannels)
+                _channels.Clear();
 
-    private sealed class CurrentApplicationResponse
-    {
-        [JsonPropertyName("id")]
-        public string? Id { get; set; }
-    }
+            var channel = _channels.GetOrAdd(channelId, id => new Lazy<Task<IMessageChannel?>>(
+                async () => await client.GetChannelAsync(id, options) as IMessageChannel));
 
-    private sealed class GatewayResponse
-    {
-        [JsonPropertyName("url")]
-        public string? Url { get; set; }
-    }
+            try
+            {
+                var resolved = await channel.Value;
+                if (resolved is null)
+                    _channels.TryRemove(new KeyValuePair<ulong, Lazy<Task<IMessageChannel?>>>(channelId, channel));
+                return resolved;
+            }
+            catch (Exception)
+            {
+                _channels.TryRemove(new KeyValuePair<ulong, Lazy<Task<IMessageChannel?>>>(channelId, channel));
+                throw;
+            }
+        }
 
-    private sealed class RateLimitResponse
-    {
-        [JsonPropertyName("retry_after")]
-        public double? RetryAfter { get; set; }
-    }
-
-    private sealed class ApiErrorPayload
-    {
-        [JsonPropertyName("message")]
-        public string? Message { get; set; }
+        public ValueTask DisposeAsync() => client.DisposeAsync();
     }
 }
