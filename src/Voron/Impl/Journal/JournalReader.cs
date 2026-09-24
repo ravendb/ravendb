@@ -57,6 +57,8 @@ namespace Voron.Impl.Journal
         // Each env will deal with it on its own, but we don't want to keep writing to this file, we'll need a new one.
         public bool BypassedInvalidRegion => _resyncedFromInvalid4KbPosition != null;
 
+        public bool EndedAtPipeliningHole { get; private set; }
+
         public long Next4Kb => _next4Kb;
 
         public JournalReader(StorageEnvironment environment, long journalNumber, Pager journalPager, Pager.State journalPagerState, Pager dataPager, Pager recoveryPager,
@@ -770,17 +772,20 @@ namespace Voron.Impl.Journal
                 // transaction belongs to this environment - it either carries our JournalId or it has none
                 // at all, meaning a pre-8.0 (legacy) transaction
 
-                if (_unexplainedInvalid4KbPosition is { } holeAt4Kb && IsExpectedPipeliningHole(current))
+                if (_unexplainedInvalid4KbPosition is { } holeAt4Kb && IsGapInOurTransactions(current, out var firstMissingTxId))
                 {
+                    AssertNoDurableTransactionOfOursAfterHole(options, ref txState, holeAt4Kb, firstMissingTxId);
+
                     if (_log.IsInfoEnabled)
                     {
                         _log.Info(
-                            $"Journal {_journalPager.FileName} has no transaction {(LastTransactionHeader != null ? LastTransactionHeader->TransactionId : _journalInfo.LastSyncedTransactionId) + 1} at position " +
+                            $"Journal {_journalPager.FileName} has no transaction {firstMissingTxId} at position " +
                             $"{holeAt4Kb * 4 * Constants.Size.Kilobyte}, while transaction {current->TransactionId} ahead of it is valid and states that only transactions up to " +
                             $"{current->LastDurableTxIdAtSubmit} were durable when it was submitted. This is an in-flight journal write lost to a crash - " +
                             "recovery ends before the hole and discards everything after it.");
                     }
 
+                    EndedAtPipeliningHole = true;
                     _next4Kb = holeAt4Kb;
                     current = null;
                     return false;
@@ -798,27 +803,77 @@ namespace Voron.Impl.Journal
             return false;
         }
 
-        private bool IsExpectedPipeliningHole(TransactionHeader* current)
+        private bool IsGapInOurTransactions(TransactionHeader* current, out long firstMissingTxId)
         {
             var lastReadTxId = LastTransactionHeader != null
                 ? LastTransactionHeader->TransactionId
                 : _journalInfo.LastSyncedTransactionId;
 
-            if (lastReadTxId == -1)
-                return false;
+            firstMissingTxId = lastReadTxId + 1;
 
-            var firstMissingTxId = lastReadTxId + 1;
+            return lastReadTxId != -1 &&
+                   current->TransactionId > firstMissingTxId &&
+                   firstMissingTxId > _journalInfo.LastSyncedTransactionId;
+        }
 
-            if (current->TransactionId <= firstMissingTxId)
-                return false;
+        // Pipelined journal writes can complete out of order, so a crash can leave a later transaction on disk without an earlier one:
+        //
+        //     ... | N-1 | <invalid> | N+1 | N+2 | ...
+        //                 hole at N
+        //
+        // Every header records W (LastDurableTxIdAtSubmit), the last durable transaction when its write was submitted. Transactions
+        // become durable in order, and a commit is acknowledged only once it is durable. So for a transaction of ours after the hole:
+        //
+        //     W <  N   N was still in flight when this one was submitted. Neither of them was acknowledged, so ending the
+        //              replay at N-1 loses nothing that we acknowledged.
+        //     W >= N   N was already durable, and so acknowledged, when this one was submitted. N is lost - hard error.
+        //     W == 0   nothing was recorded, so we cannot prove that N was not acknowledged - hard error.
+        //
+        // Every transaction of ours after the hole must pass, not just the first one:
+        //
+        //     ... | N-1 | <invalid> | N+1 (W=N-1) | N+2 (W=N-1) | N+3 (W=N+1) |
+        //                           |- in flight with N, fine --| N was durable, hard error
+        //
+        // With at most MaxSupportedConcurrentJournalWrites writes in flight, a real hole has only a few of our transactions after it.
+        private void AssertNoDurableTransactionOfOursAfterHole(StorageEnvironmentOptions options, ref Pager.PagerTransactionState txState, long holeAt4Kb, long firstMissingTxId)
+        {
+            using var _ = options.DisableOnRecoveryErrorHandler();
+            using var __ = options.DisableOnIntegrityErrorOfAlreadySyncedDataHandler();
 
-            if (firstMissingTxId <= _journalInfo.LastSyncedTransactionId)
-                return false;
+            var readAt4Kb = _readAt4Kb;
+            var requireHeaderUpdate = RequireHeaderUpdate;
+            try
+            {
+                while (_readAt4Kb < _journalPagerNumberOfAllocated4Kb)
+                {
+                    if (TryValidateTransaction(options, ref txState, out TransactionHeader* tx) == false)
+                    {
+                        _readAt4Kb++;
+                        continue;
+                    }
 
-            if (current->LastDurableTxIdAtSubmit <= 0)
-                return false;
+                    // a legacy (pre-8.0) transaction has an empty JournalId and a zero delta - those bytes were never written
+                    var effectiveJournalId = tx->JournalId.Xor(Incarnation);
+                    if ((tx->Flags & (TransactionPersistenceModeFlags.JournalHeaderRecord | TransactionPersistenceModeFlags.LinkedJournalsRecord)) == 0 &&
+                        (effectiveJournalId == JournalId || effectiveJournalId == Guid.Empty) &&
+                        (tx->DurableTxIdDeltaAtSubmit == 0 || tx->LastDurableTxIdAtSubmit >= firstMissingTxId))
+                    {
+                        throw new InvalidJournalException(
+                            $"Journal {_journalPager.FileName} has no transaction {firstMissingTxId} at position {holeAt4Kb * 4 * Constants.Size.Kilobyte}, and transaction {tx->TransactionId} " +
+                            (tx->DurableTxIdDeltaAtSubmit == 0
+                                ? "after it does not record which transactions were durable when it was submitted, so we cannot tell whether the missing one was acknowledged."
+                                : $"after it states that transactions up to {tx->LastDurableTxIdAtSubmit} were durable when it was submitted, so the missing transaction was acknowledged and is lost.") +
+                            $" Debug details - file header {_currentFileHeader}", _journalInfo);
+                    }
 
-            return current->LastDurableTxIdAtSubmit < firstMissingTxId;
+                    _readAt4Kb += GetTransactionSizeIn4Kb(tx);
+                }
+            }
+            finally
+            {
+                _readAt4Kb = readAt4Kb;
+                RequireHeaderUpdate = requireHeaderUpdate;
+            }
         }
 
         private static bool IsWellFormedJournalHeaderRecord(TransactionHeader* current)
