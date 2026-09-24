@@ -428,6 +428,10 @@ public class RavenDB_27035 : RavenTestBase
     [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void OrderByAsLongKeepsAnEntryWhenAJavaScriptIndexSharesTheField(Options options) => AssertKeepsBothShows<Shows_ByTitle_JavaScript>(options);
 
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void OrderByAsLongKeepsAnEntryWhenABoostedJavaScriptIndexSharesTheField(Options options) => AssertKeepsBothShows<Shows_ByTitle_BoostedJavaScript>(options);
+
     private void AssertKeepsBothShows<TIndex>(Options options) where TIndex : IAbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStore(options);
@@ -459,6 +463,19 @@ public class RavenDB_27035 : RavenTestBase
             {
                 @"map('Shows', function (s) {
                     return { Title: s.Title, _: [ createField('Title', s.Extra, { indexing: 'Default', storage: false, termVector: null }) ] };
+                })"
+            };
+        }
+    }
+
+    private class Shows_ByTitle_BoostedJavaScript : AbstractJavaScriptIndexCreationTask
+    {
+        public Shows_ByTitle_BoostedJavaScript()
+        {
+            Maps = new HashSet<string>
+            {
+                @"map('Shows', function (s) {
+                    return boost({ Title: s.Title, _: [ createField('Title', s.Extra, { indexing: 'Default', storage: false, termVector: null }) ] }, 2);
                 })"
             };
         }
