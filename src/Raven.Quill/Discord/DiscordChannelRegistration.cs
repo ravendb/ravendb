@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Options;
 using Raven.Quill.Channels;
 using Raven.Quill.Hosting;
 
@@ -20,16 +19,10 @@ internal static class DiscordChannelRegistration
             .Validate(o => o.Discord.GatewayBackoffMax > TimeSpan.Zero, "Discord GatewayBackoffMax must be positive")
             .Validate(o => o.Discord.GatewayHandshakeTimeout > TimeSpan.Zero,
                 "Discord GatewayHandshakeTimeout must be positive")
-            .Validate(o => o.Discord.GatewayRestartDelay > TimeSpan.Zero, "Discord GatewayRestartDelay must be positive")
-            .Validate(o => o.Discord.MaxGatewayFrameBytes > 0, "Discord MaxGatewayFrameBytes must be positive");
+            .Validate(o => o.Discord.GatewayRestartDelay > TimeSpan.Zero, "Discord GatewayRestartDelay must be positive");
 
-        services.AddHttpClient(DiscordApiClient.HttpClientName, static (sp, http) =>
-        {
-            var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value.Discord;
-            http.BaseAddress = new Uri(opts.ApiUrl.EndsWith('/') ? opts.ApiUrl : opts.ApiUrl + "/");
-            http.Timeout = opts.RequestTimeout;
-        });
-        services.AddTransient<IDiscordClient>(sp => DiscordApiClient.Create(sp.GetRequiredService<IHttpClientFactory>()));
+        services.AddSingleton<DiscordSdk>();
+        services.AddSingleton<IDiscordClient, DiscordApiClient>();
 
         return services.AddSingleton<IChannelRuntimeFactory, DiscordRuntimeFactory>();
     }
