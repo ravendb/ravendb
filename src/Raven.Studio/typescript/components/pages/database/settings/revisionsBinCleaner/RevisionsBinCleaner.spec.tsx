@@ -51,7 +51,7 @@ describe("RevisionsBinCleaner", () => {
 
         const refreshFrequencyBefore = await screen.findByName("cleanerFrequencyInSec");
 
-        await user.click(screen.getByRole("checkbox", { name: "Set custom cleaner frequency" }));
+        await user.click(screen.getByRole("checkbox", { name: "Custom cleaner frequency" }));
 
         expect(refreshFrequencyBefore).toBeEnabled();
 
@@ -90,7 +90,7 @@ describe("RevisionsBinCleaner", () => {
         const minimumEntriesAgeToKeepSwitch = await screen.findByRole("checkbox", {
             name: "Set minimum entries age to keep",
         });
-        const refreshFrequencySwitch = await screen.findByRole("checkbox", { name: "Set custom cleaner frequency" });
+        const refreshFrequencySwitch = await screen.findByRole("checkbox", { name: "Custom cleaner frequency" });
 
         expect(isRevisionBinCleanerEnabledSwitch).toBeDisabled();
         expect(minimumEntriesAgeToKeepSwitch).toBeDisabled();
@@ -109,7 +109,7 @@ describe("RevisionsBinCleaner", () => {
         );
 
         const refreshFrequencySwitchBefore = (await screen.findByRole("checkbox", {
-            name: "Set custom cleaner frequency",
+            name: "Custom cleaner frequency",
         })) as HTMLInputElement;
         const refreshFrequencyBefore = await screen.findByName("cleanerFrequencyInSec");
 
@@ -118,7 +118,7 @@ describe("RevisionsBinCleaner", () => {
         await user.click(refreshFrequencySwitchBefore);
 
         const refreshFrequencySwitchAfter = (await screen.findByRole("checkbox", {
-            name: "Set custom cleaner frequency",
+            name: "Custom cleaner frequency",
         })) as HTMLInputElement;
         const refreshFrequencyAfter = await screen.findByName("cleanerFrequencyInSec");
 

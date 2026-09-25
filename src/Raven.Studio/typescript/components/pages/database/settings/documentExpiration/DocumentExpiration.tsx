@@ -7,6 +7,7 @@ import Col from "react-bootstrap/Col";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { FormDurationPicker, FormInput, FormSwitch } from "components/common/Form";
+import OverridableField from "components/common/OverridableField";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
@@ -174,7 +175,7 @@ export default function DocumentExpiration() {
                             <Col>
                                 <Card>
                                     <Card.Body>
-                                        <div className="vstack gap-2">
+                                        <div className="vstack gap-3">
                                             <FormSwitch name="isDocumentExpirationEnabled" control={control}>
                                                 Enable Document Expiration
                                             </FormSwitch>
@@ -213,27 +214,26 @@ export default function DocumentExpiration() {
                                                 )}
                                             </div>
                                             <div>
-                                                <FormSwitch
-                                                    name="isLimitMaxItemsToProcessEnabled"
+                                                <OverridableField
                                                     control={control}
-                                                    className="mb-3"
+                                                    overrideName="isLimitMaxItemsToProcessEnabled"
+                                                    label="Max number of documents to process in a single run"
                                                     disabled={
                                                         formState.isSubmitting ||
                                                         !formValues.isDocumentExpirationEnabled
                                                     }
+                                                    marginClass="mb-0"
                                                 >
-                                                    Set max number of documents to process in a single run
-                                                </FormSwitch>
-                                                <FormInput
-                                                    name="maxItemsToProcess"
-                                                    control={control}
-                                                    type="number"
-                                                    disabled={
-                                                        formState.isSubmitting ||
-                                                        !formValues.isLimitMaxItemsToProcessEnabled
-                                                    }
-                                                    addon="items"
-                                                />
+                                                    {({ isOverridden }) => (
+                                                        <FormInput
+                                                            name="maxItemsToProcess"
+                                                            control={control}
+                                                            type="number"
+                                                            disabled={formState.isSubmitting || !isOverridden}
+                                                            addon="items"
+                                                        />
+                                                    )}
+                                                </OverridableField>
                                             </div>
                                         </div>
                                     </Card.Body>
