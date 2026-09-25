@@ -422,7 +422,7 @@ public static class WizardEndpoints
         var result = await aiClient.SuggestCdcAsync(selectedSchema, samples: null, intentPrompt, ct);
 
         if (result.Status != AiHelperStatus.Success)
-            return Results.Ok(new SuggestCdcResponse(Configuration: null, result.Rationale, result.Status.ToString()));
+            return Results.Ok(new SuggestCdcResponse(Configuration: null, result.Rationale, result.Status.ToString(), UnmappedTables: []));
 
         if (result.Configuration is null)
             return Results.UnprocessableEntity(new ApiErrorResponse("AI service returned a success status but no configuration"));
@@ -444,7 +444,33 @@ public static class WizardEndpoints
             return Results.UnprocessableEntity(new ApiErrorResponse(Errors: errors.ToArray()));
         }
 
-        return Results.Ok(new SuggestCdcResponse(result.Configuration, result.Rationale, result.Status.ToString()));
+        var defaultSchema = SqlConnectionStringValidation.DefaultSchemaFor(state.Provider, state.LastDiscoveredSchema.CatalogName);
+        var unmappedTables = CollectUnmappedTables(selectedSchema, result.Configuration, defaultSchema);
+        if (unmappedTables.Count > 0 && logger.IsInfoEnabled)
+            logger.Info(
+                $"SuggestCdc: configuration leaves {unmappedTables.Count} of {selectedSchema.Tables.Count} " +
+                "selected table(s) unmapped");
+
+        return Results.Ok(new SuggestCdcResponse(result.Configuration, result.Rationale, result.Status.ToString(), unmappedTables));
+    }
+
+    private static List<string> CollectUnmappedTables(
+        CdcSinkSourceSchema selectedSchema,
+        CdcSinkConfiguration configuration,
+        string? defaultSchema)
+    {
+        var covered = new HashSet<CdcSinkConfiguration.TableInfo>(configuration.CollectAllTablesFlat(defaultSchema ?? string.Empty));
+
+        return selectedSchema.Tables
+            .Where(table => covered.Contains(new CdcSinkConfiguration.TableInfo
+            {
+                Schema = table.SourceTableSchema,
+                TableName = table.SourceTableName,
+            }) == false)
+            .Select(table => string.IsNullOrWhiteSpace(table.SourceTableSchema)
+                ? table.SourceTableName
+                : $"{table.SourceTableSchema}.{table.SourceTableName}")
+            .ToList();
     }
 
     private static async Task<IResult> TestMappingAsync(

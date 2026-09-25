@@ -1857,6 +1857,7 @@ export interface components {
             configuration: null | components["schemas"]["CdcSinkConfiguration"];
             rationale: string[];
             status: string;
+            unmappedTables: string[];
         };
         TelegramChannelMessages: {
             greeting?: null | string;
