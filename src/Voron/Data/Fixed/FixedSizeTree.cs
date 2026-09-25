@@ -1306,7 +1306,7 @@ namespace Voron.Data.Fixed
                 entry->PageNumber = page.GetEntry(0)->PageNumber;
 
                 var promotedChild = ModifyPage(GetReadOnlyPage(entry->PageNumber));
-                promotedChild.CollapsedLevels++; // next split of that page should wrap it in a branch
+                promotedChild.CollapsedLevels += page.CollapsedLevels + 1; // next split of that page should wrap it in a branch
 
                 // then delete the page
                 FreePage(page.PageNumber);

@@ -185,7 +185,7 @@ namespace Voron.Data.BTrees
 
             // subtree is now one level shallower than its siblings, record that for the next time
             var promotedChild = _tree.ModifyPage(pageRefNumber);
-            promotedChild.CollapsedLevels++;
+            promotedChild.CollapsedLevels += page.CollapsedLevels + 1;
 
             _tree.FreePage(page);
         }
