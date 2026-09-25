@@ -3,12 +3,14 @@ import { useServices } from "hooks/useServices";
 import { ongoingTasksReducer, ongoingTasksReducerInitializer, OngoingTasksState } from "./partials/OngoingTasksReducer";
 import { ExternalReplicationPanel } from "./panels/ExternalReplicationPanel";
 import {
-    OngoingTaskEmbeddingsGenerationInfo,
     OngoingTaskAmazonSqsEtlInfo,
     OngoingTaskAzureQueueStorageEtlInfo,
+    OngoingTaskAzureServiceBusSinkInfo,
     OngoingTaskCdcSinkInfo,
     OngoingTaskElasticSearchEtlInfo,
+    OngoingTaskEmbeddingsGenerationInfo,
     OngoingTaskExternalReplicationInfo,
+    OngoingTaskGenAiInfo,
     OngoingTaskInfo,
     OngoingTaskKafkaEtlInfo,
     OngoingTaskKafkaSinkInfo,
@@ -16,14 +18,12 @@ import {
     OngoingTaskPeriodicBackupInfo,
     OngoingTaskRabbitMqEtlInfo,
     OngoingTaskRabbitMqSinkInfo,
-    OngoingTaskAzureServiceBusSinkInfo,
     OngoingTaskRavenEtlInfo,
     OngoingTaskReplicationHubInfo,
     OngoingTaskReplicationSinkInfo,
     OngoingTaskSharedInfo,
     OngoingTaskSnowflakeEtlInfo,
     OngoingTaskSqlEtlInfo,
-    OngoingTaskGenAiInfo,
 } from "components/models/tasks";
 import { RavenEtlPanel } from "./panels/RavenEtlPanel";
 import { SqlEtlPanel } from "./panels/SqlEtlPanel";
@@ -59,7 +59,6 @@ import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils"
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import { useAppUrls } from "components/hooks/useAppUrls";
 import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
 import { AzureQueueStorageEtlPanel } from "components/pages/database/tasks/ongoingTasks/panels/AzureQueueStorageEtlPanel";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -68,19 +67,20 @@ import RichAlert from "components/common/RichAlert";
 import { OngoingTasksHeader } from "components/pages/database/tasks/ongoingTasks/partials/OngoingTasksHeader";
 import { InternalReplicationPanel } from "./panels/InternalReplicationPanel";
 import { LoadingView } from "components/common/LoadingView";
+import { LoadError } from "components/common/LoadError";
 import DatabaseUtils from "components/utils/DatabaseUtils";
-import recentError from "common/notifications/models/recentError";
+import { getRequestErrorMessage } from "components/utils/common";
 import { SnowflakeEtlPanel } from "components/pages/database/tasks/ongoingTasks/panels/SnowflakeEtlPanel";
 import { AmazonSqsEtlPanel } from "components/pages/database/tasks/ongoingTasks/panels/AmazonSqsEtlPanel";
 import { EmbeddingsGenerationPanel } from "components/pages/database/tasks/ongoingTasks/panels/EmbeddingsGenerationPanel";
 import { GenAiPanel } from "./panels/GenAiPanel";
 import { useDatabaseWideAsync } from "components/hooks/useDatabaseWideAsync";
+import genUtils from "common/generalUtils";
+import { TaskErrorsWithLocation } from "components/pages/database/tasks/tasksErrors/utils/tasksErrorsUtils";
 import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.ReplicationTaskProgress;
 import InternalReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.InternalReplicationTaskProgress;
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
-import genUtils from "common/generalUtils";
-import { TaskErrorsWithLocation } from "components/pages/database/tasks/tasksErrors/utils/tasksErrorsUtils";
 
 interface OngoingTasksPageProps {
     isAiOnly?: boolean;
@@ -138,7 +138,8 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps = {
     const { result: taskErrorsResult } = useDatabaseWideAsync(getTaskErrors);
 
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
-    const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
+    const isInitialLoadDone = tasks.locationsLoadStatus.some((x) => x.status !== "idle");
+    const allLocationsFailed = tasks.locationsLoadStatus.every((x) => x.status === "failure");
 
     const fetchTasks = useCallback(
         async (location: databaseLocationSpecifier) => {
@@ -149,40 +150,33 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps = {
                     location,
                     tasks,
                 });
-                return tasks;
+
+                const hasEtlOrAi = (tasks.OngoingTasks ?? []).some((t) =>
+                    etlAndAiTaskTypes.includes(t.TaskType as EtlOrAiOngoingTaskType)
+                );
+                if (hasEtlOrAi) {
+                    startTrackingEtlProgress();
+                }
             } catch (e) {
-                const errorAndMessage = recentError.tryExtractMessageAndException(e.responseText);
                 dispatch({
                     type: "TasksLoadError",
                     location,
-                    error: errorAndMessage.message + (errorAndMessage.error ? ": " + errorAndMessage.error : ""),
+                    error: getRequestErrorMessage(e),
                 });
             }
         },
-        [db, tasksService, dispatch]
+        [db, tasksService, dispatch, startTrackingEtlProgress]
     );
 
     const reload = useCallback(async () => {
         // if database is sharded we need to load from both orchestrator and target node point of view
         // in case of non-sharded - we have single level: node
+        const orchestratorLocations: databaseLocationSpecifier[] = db?.isSharded
+            ? db.nodes.map((node) => ({ nodeTag: node.tag }))
+            : [];
 
-        if (db?.isSharded) {
-            const orchestratorTasks = db.nodes.map((node) => fetchTasks({ nodeTag: node.tag }));
-            await Promise.all(orchestratorTasks);
-        }
-
-        const loadTasks = tasks.locations.map(fetchTasks);
-        const results = await Promise.all(loadTasks);
-
-        const hasEtlOrAi = results
-            .flatMap((r) => r?.OngoingTasks ?? [])
-            .some((t) => etlAndAiTaskTypes.includes(t.TaskType as EtlOrAiOngoingTaskType));
-
-        if (hasEtlOrAi) {
-            startTrackingEtlProgress();
-        }
-        setIsInitialLoadDone(true);
-    }, [tasks, fetchTasks, db, startTrackingEtlProgress]);
+        await Promise.all([...orchestratorLocations, ...tasks.locations].map(fetchTasks));
+    }, [tasks, fetchTasks, db]);
 
     useInterval(reload, 10_000);
 
@@ -428,6 +422,14 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps = {
 
     if (!isInitialLoadDone) {
         return <LoadingView />;
+    }
+
+    if (allLocationsFailed) {
+        return (
+            <div className="content-margin">
+                <LoadError error={tasks.locationsLoadStatus[0].error} refresh={reload} />
+            </div>
+        );
     }
 
     return (

@@ -20,7 +20,7 @@ class replicationProgressCommand extends commandBase {
         const url = endpoints.databases.replication.replicationProgress;
         const args = this.location;
 
-        return this.query<resultsDto<ReplicationTaskProgress>>(url, args, this.db)
+        return this.query<resultsDto<ReplicationTaskProgress>>(url, args, this.db, null, { timeout: commandBase.perNodeRequestTimeoutMs })
             .fail((response: JQueryXHR) => {
                 if (this.reportFailure) {
                     this.reportError(`Failed to fetch replication progress`, response.responseText);    

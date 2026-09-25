@@ -29,7 +29,7 @@ class getOngoingTasksCommand extends commandBase {
             }
             
             return result;
-        });
+        }, { timeout: commandBase.perNodeRequestTimeoutMs });
     }
 }
 

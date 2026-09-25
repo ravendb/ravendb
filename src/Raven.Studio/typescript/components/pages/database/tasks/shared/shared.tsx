@@ -14,7 +14,7 @@ import { Icon } from "components/common/Icon";
 import { OngoingTaskOperationConfirmType } from "./OngoingTaskOperationConfirm";
 import assertUnreachable from "components/utils/assertUnreachable";
 import messagePublisher from "common/messagePublisher";
-import recentError from "common/notifications/models/recentError";
+import { getRequestErrorMessage } from "components/utils/common";
 import { useServices } from "components/hooks/useServices";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -454,11 +454,10 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     tasks,
                 });
             } catch (e) {
-                const errorAndMessage = recentError.tryExtractMessageAndException(e.responseText);
                 dispatch({
                     type: "TasksLoadError",
                     location,
-                    error: errorAndMessage.message + (errorAndMessage.error ? ": " + errorAndMessage.error : ""),
+                    error: getRequestErrorMessage(e),
                 });
             }
         },
