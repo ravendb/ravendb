@@ -19,6 +19,12 @@ internal static class WidgetNotice
             "The link that opened it has expired or was revoked. Reload the page to start a new one.",
             new { reason });
 
+        internal static Notice Exhausted() => new(
+            "expired",
+            "This conversation has ended",
+            "The link that opened it has reached its usage limit. Reload the page to start a new one.",
+            new { reason = "invocation_limit" });
+
         internal static Notice NotFound() => new(
             "error",
             "This conversation is not available",
