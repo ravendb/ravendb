@@ -85,6 +85,8 @@ public sealed class MockDiscordApi : IAsyncDisposable
 
     public int? CloseAfterIdentify { get; set; }
 
+    public bool BreakNextReady { get; set; }
+
     public int? CloseAfterResume { get; set; }
 
     public int HeartbeatIntervalMs { get; set; } = 30_000;
@@ -175,6 +177,7 @@ public sealed class MockDiscordApi : IAsyncDisposable
         CloseOnConnect = null;
         StallBeforeHello = false;
         CloseAfterIdentify = null;
+        BreakNextReady = false;
         CloseAfterResume = null;
         HeartbeatIntervalMs = 30_000;
     }
@@ -432,6 +435,13 @@ public sealed class MockDiscordApi : IAsyncDisposable
                     {
                         await CloseAsync(session, 4014);
                         return false;
+                    }
+
+                    if (BreakNextReady)
+                    {
+                        BreakNextReady = false;
+                        await DispatchAsync(session, "READY", new JsonObject { ["v"] = 10 });
+                        return true;
                     }
 
                     await DispatchAsync(session, "READY", new JsonObject

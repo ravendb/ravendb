@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using Discord;
@@ -12,11 +11,9 @@ namespace Raven.Quill.Discord;
 
 internal sealed class DiscordRuntime : IChannelRuntime
 {
-    private const int AttemptsBeforeSessionReset = 3;
+    private const string SdkReadyFailure = "Processing READY failed";
 
     private static readonly TimeSpan MinBackoff = TimeSpan.FromSeconds(1);
-    private static readonly TimeSpan SdkReconnectDelayMax = TimeSpan.FromMinutes(1);
-    private static readonly TimeSpan WatchdogInterval = TimeSpan.FromSeconds(5);
 
     private readonly Channel _channel;
     private readonly string _botToken;
@@ -133,9 +130,6 @@ internal sealed class DiscordRuntime : IChannelRuntime
     private async Task<string?> RunClientAsync()
     {
         var exit = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var attemptsSinceConnected = 0;
-        var lastAlive = Stopwatch.GetTimestamp();
-        var deadAfter = SdkReconnectDelayMax + _options.GatewayHandshakeTimeout + WatchdogInterval;
 
         await using var client = _sdk.NewSocketClient();
 
@@ -147,8 +141,6 @@ internal sealed class DiscordRuntime : IChannelRuntime
 
         client.Connected += async () =>
         {
-            lastAlive = Stopwatch.GetTimestamp();
-            attemptsSinceConnected = 0;
             OnConnected();
             await ShowStatusAsync(client);
         };
@@ -157,8 +149,6 @@ internal sealed class DiscordRuntime : IChannelRuntime
         {
             if (_cts.IsCancellationRequested || exit.Task.IsCompleted)
                 return Task.CompletedTask;
-
-            lastAlive = Stopwatch.GetTimestamp();
 
             var fatal = FatalReasonFor(error);
             if (fatal is not null)
@@ -172,7 +162,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
             if (reason is not null && _logger.IsWarnEnabled)
                 _logger.Warn($"Discord gateway attempt failed for channel {_channel.ShortId}: {reason}");
 
-            if (SessionIsDead(error) || ++attemptsSinceConnected >= AttemptsBeforeSessionReset)
+            if (NeedsNewClient(error))
                 exit.TrySetResult(null);
 
             return Task.CompletedTask;
@@ -189,25 +179,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
             await client.LoginAsync(TokenType.Bot, _botToken, validateToken: false);
             await client.StartAsync();
 
-            while (true)
-            {
-                try
-                {
-                    return await exit.Task.WaitAsync(WatchdogInterval, _cts.Token);
-                }
-                catch (TimeoutException)
-                {
-                }
-
-                if (client.ConnectionState != ConnectionState.Disconnected)
-                    lastAlive = Stopwatch.GetTimestamp();
-                else if (Stopwatch.GetElapsedTime(lastAlive) > deadAfter)
-                {
-                    if (_logger.IsWarnEnabled)
-                        _logger.Warn($"Discord gateway client for channel {_channel.ShortId} stayed disconnected for {deadAfter}; replacing it");
-                    return null;
-                }
-            }
+            return await exit.Task.WaitAsync(_cts.Token);
         }
         finally
         {
@@ -314,7 +286,8 @@ internal sealed class DiscordRuntime : IChannelRuntime
         _ => error.Message,
     };
 
-    private static bool SessionIsDead(Exception error) => CloseOf(error)?.CloseCode is 4006 or 4007 or 4009;
+    private static bool NeedsNewClient(Exception error) =>
+        CloseOf(error)?.CloseCode is 4006 or 4007 or 4009 || error.Message == SdkReadyFailure;
 
     private static WebSocketClosedException? CloseOf(Exception error) =>
         error as WebSocketClosedException ?? error.InnerException as WebSocketClosedException;
