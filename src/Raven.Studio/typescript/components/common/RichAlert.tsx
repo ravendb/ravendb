@@ -10,6 +10,7 @@ interface RichAlertProps extends AlertProps {
     icon?: IconName;
     iconAddon?: IconName;
     title?: string;
+    titleTag?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
     color?: never;
     onCancel?: () => void;
     variant: (typeof richAlertColors)[number];
@@ -46,6 +47,7 @@ export function RichAlert({
     icon,
     iconAddon,
     title,
+    titleTag: TitleTag = "h3",
     childrenClassName,
     copyText,
     copyTextSuccessMessage,
@@ -74,9 +76,9 @@ export function RichAlert({
                 </Button>
             )}
             {title ? (
-                <h3 className="hstack mb-1 gap-1">
+                <TitleTag className="hstack mb-1 gap-1">
                     <Icon icon={renderAlertIcon} addon={iconAddon} margin="m-0" className="title-icon" /> {title}
-                </h3>
+                </TitleTag>
             ) : (
                 <Icon icon={renderAlertIcon} addon={iconAddon} margin="m-0" className="title-icon fs-3" />
             )}

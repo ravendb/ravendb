@@ -12,6 +12,7 @@ interface FileDropzoneProps {
     validExtensions?: string[];
     initialFiles?: File[];
     className?: string;
+    displayedExtensions?: string[];
 }
 
 export default function FileDropzone({
@@ -20,6 +21,7 @@ export default function FileDropzone({
     maxFiles = Infinity,
     initialFiles = [],
     className,
+    displayedExtensions,
 }: FileDropzoneProps & { [key: string]: any }) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -96,7 +98,7 @@ export default function FileDropzone({
 
                 <DropzoneBody files={files} error={error} />
             </div>
-            <ValidExtensionsList validExtensions={validExtensions || []} />
+            <ValidExtensionsList validExtensions={displayedExtensions ?? validExtensions} />
         </div>
     );
 }
