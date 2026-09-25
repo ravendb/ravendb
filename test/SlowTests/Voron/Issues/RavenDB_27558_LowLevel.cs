@@ -189,8 +189,17 @@ namespace SlowTests.Voron.Issues
         public void Entry_running_past_the_allocated_area_of_the_page_is_not_defragged()
         {
             var e = CorruptFirstEntryAndInsertThroughTheDefragPass((sizes, pageHeader) =>
-                sizes->AllocatedSize = (short)(Constants.Storage.PageSize - 100)); // fits the page, not the allocated area
+                sizes->AllocatedSize = AllocatedAreaEnd); // fits the page, not the allocated area
             Assert.Contains("runs past the allocated area", e.Message);
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void Entry_header_running_past_the_allocated_area_of_the_page_is_not_defragged()
+        {
+            // the first entry ends 2 bytes short of the allocated area, so the next header would be read past it
+            var e = CorruptFirstEntryAndInsertThroughTheDefragPass((sizes, pageHeader) =>
+                sizes->AllocatedSize = (short)(AllocatedAreaEnd - RawDataSmallPageHeader.SizeOf - sizeof(RawDataSection.RawDataEntrySizes) - 2));
+            Assert.Contains("Entry header at", e.Message);
         }
 
         [RavenFact(RavenTestCategory.Voron)]
@@ -202,6 +211,9 @@ namespace SlowTests.Voron.Issues
         }
 
         private delegate void CorruptEntry(RawDataSection.RawDataEntrySizes* sizes, RawDataSmallPageHeader* pageHeader);
+
+        // less than one entry of room left, so the first pass of TryAllocate skips the page and only the defrag pass touches it
+        private const int AllocatedAreaEnd = Constants.Storage.PageSize - 100;
 
         private VoronUnrecoverableErrorException CorruptFirstEntryAndInsertThroughTheDefragPass(CorruptEntry corrupt)
         {
@@ -221,8 +233,7 @@ namespace SlowTests.Voron.Issues
                 var page = (RawDataSmallPageHeader*)tx.LowLevelTransaction.ModifyPage(id / Constants.Storage.PageSize).Pointer;
                 corrupt((RawDataSection.RawDataEntrySizes*)((byte*)page + id % Constants.Storage.PageSize), page);
 
-                // the first pass of TryAllocate skips the page (no room at the end), the ledger sends the defrag pass to it
-                page->NextAllocation = Constants.Storage.PageSize - 100;
+                page->NextAllocation = AllocatedAreaEnd;
                 tx.LowLevelTransaction.ModifyPage(sectionPage);
                 var section = new RawDataSection(tx.LowLevelTransaction, sectionPage);
                 for (var i = 0; i < section.NumberOfPages; i++)
