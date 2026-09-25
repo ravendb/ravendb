@@ -1486,6 +1486,7 @@ namespace Voron.Data.Fixed
                 System.Diagnostics.Debug.Assert(_tx.IsDirty(page.PageNumber));
                 Memory.Copy(page.Pointer, GetReadOnlyPage(childPage).Pointer, Constants.Storage.PageSize);
                 page.PageNumber = rootPageNum; //overwritten by copy
+                page.CollapsedLevels = 0; // levels are owed to siblings, the root has none
 
                 using (ModifyLargeHeader(out largeHeader))
                 {

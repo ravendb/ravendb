@@ -261,6 +261,43 @@ public unsafe class RavenDB_27533_FixedSizeTree(ITestOutputHelper output) : Stor
         AssertContents(treeName, model);
     }
 
+    [RavenFact(RavenTestCategory.Voron)]
+    public void PageThatBecomesTheRootMustNotOweLevels()
+    {
+        Slice.From(Allocator, "entries", out Slice treeName);
+
+        using (var tx = Env.WriteTransaction())
+        {
+            var fst = tx.FixedTreeFor(treeName, valSize: 8);
+            long next = Stride;
+            while (fst.Depth < 3)
+            {
+                fst.Add(next, Value);
+                next += Stride;
+            }
+
+            fst.Delete(next - Stride);
+
+            var rootChildren = ChildrenOf(fst, RootPage(fst));
+            Assert.Equal(2, rootChildren.Length);
+            Assert.True(fst.GetReadOnlyPage(rootChildren[0]).IsBranch);
+            var owingLeaf = fst.GetReadOnlyPage(rootChildren[1]);
+            Assert.Equal(1, owingLeaf.CollapsedLevels);
+
+            fst.DeleteRange(Stride, owingLeaf.GetKey(0) - 1);
+
+            tx.Commit();
+        }
+
+        using (var tx = Env.ReadTransaction())
+        {
+            var fst = tx.FixedTreeFor(treeName, valSize: 8);
+            var root = fst.GetReadOnlyPage(RootPage(fst));
+            Assert.True(root.IsLeaf);
+            Assert.True(root.CollapsedLevels == 0, $"the root is owing {root.CollapsedLevels} levels, but it has no siblings to be shallower than");
+        }
+    }
+
     private void RemoveLastLeavesOf(Slice treeName, SortedSet<long> model, long branchPage, Func<FixedSizeTree, bool> until)
     {
         using (var tx = Env.WriteTransaction())
