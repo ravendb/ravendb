@@ -27,6 +27,8 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         var identify = Assert.Single(Discord.Identifies);
         Assert.Equal(channel.BotToken, identify.Token);
         Assert.Equal(MockDiscordApi.DirectMessagesIntent, identify.Intents & MockDiscordApi.DirectMessagesIntent);
+
+        await Discord.WaitUntilAsync(() => Discord.PresenceUpdates.Contains("Support bot"), "the custom status");
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -51,6 +53,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         var sent = Assert.Single(Discord.SentMessages);
         Assert.Equal(DmChannel, sent.ChannelId);
         Assert.All(Discord.EditedMessages, e => Assert.Equal(sent.MessageId, e.MessageId));
+        Assert.Equal(DmChannel, Assert.Single(Discord.TypingCalls));
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -64,11 +67,16 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         await Discord.DispatchDmAsync("msg-in-2", DmChannel, Sender, "count");
 
         await Discord.WaitUntilAsync(
-            () => Discord.EditedMessages.Any(e => e.Content == "One two three."), "the finalized edit");
+            () => Discord.EditedMessages.Any(e => e.Content == "One two three." && e.EmbedsSuppressed == false),
+            "the finalized edit");
 
         var sent = Assert.Single(Discord.SentMessages);
         Assert.All(Discord.EditedMessages, e => Assert.Equal(sent.MessageId, e.MessageId));
         Assert.True(Discord.EditedMessages.Count >= 2, "mid-stream previews must edit, not re-post");
+
+        Assert.True(sent.EmbedsSuppressed, "the first preview must not unfurl links");
+        Assert.All(Discord.EditedMessages.SkipLast(1), e => Assert.True(e.EmbedsSuppressed));
+        Assert.False(Discord.EditedMessages[^1].EmbedsSuppressed, "the final edit must let links unfurl");
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -388,14 +396,14 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
 
         var health = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
             Host.Client, QuillRoutes.DiscordHealth(app.Slug));
-        Assert.Contains("hello frame", health.Single(r => r.ChannelId == channel.ChannelId).LastGatewayError);
+        Assert.Contains("did not become ready", health.Single(r => r.ChannelId == channel.ChannelId).LastGatewayError);
 
         Discord.StallBeforeHello = false;
         await Discord.WaitUntilConnectedAsync();
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Repeated_failures_before_the_first_frame_drop_the_cached_session()
+    public async Task Repeated_failures_before_the_first_frame_resume_the_session_once_the_gateway_is_back()
     {
         await using var app = await NewAppAsync();
         await NewChannelAsync(app);
@@ -406,13 +414,23 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         await Discord.RequestReconnectAsync();
 
         await Discord.WaitUntilAsync(
-            () => Discord.Connects >= connectsBefore + 4, "the attempts that never reach a frame");
+            () => Discord.Connects >= connectsBefore + 2, "the attempts that never reach a frame");
         Discord.CloseOnConnect = null;
 
-        await Discord.WaitUntilAsync(
-            () => Discord.Identifies.Count >= 2, "a fresh identify once the cached session is dropped");
+        await Discord.WaitUntilAsync(() => Discord.Resumes.Count >= 1, "the resume once the gateway is back");
         await Discord.WaitUntilConnectedAsync();
-        Assert.Empty(Discord.Resumes);
+        Assert.Single(Discord.Identifies);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_ready_the_sdk_cannot_process_replaces_the_client()
+    {
+        await using var app = await NewAppAsync();
+        Discord.BreakNextReady = true;
+        await NewChannelAsync(app);
+
+        await Discord.WaitUntilAsync(() => Discord.Identifies.Count >= 2, "a fresh identify after the broken ready");
+        await Discord.WaitUntilConnectedAsync();
     }
 
     [RavenFact(RavenTestCategory.Quill)]

@@ -159,7 +159,6 @@ builder.Services.AddOptions<ApplianceOptions>()
     .Validate(o => o.Discord.GatewayHandshakeTimeout > TimeSpan.Zero,
         "Discord GatewayHandshakeTimeout must be positive")
     .Validate(o => o.Discord.GatewayRestartDelay > TimeSpan.Zero, "Discord GatewayRestartDelay must be positive")
-    .Validate(o => o.Discord.MaxGatewayFrameBytes > 0, "Discord MaxGatewayFrameBytes must be positive")
     .ValidateOnStart();
 
 builder.Services.AddSingleton<IDocumentStore>(sp =>
@@ -220,12 +219,8 @@ builder.Services.AddHttpClient<ISlackClient, SlackApiClient>(static (sp, http) =
     http.Timeout = opts.RequestTimeout;
 });
 
-builder.Services.AddHttpClient<IDiscordClient, DiscordApiClient>(static (sp, http) =>
-{
-    var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value.Discord;
-    http.BaseAddress = new Uri(opts.ApiUrl.EndsWith('/') ? opts.ApiUrl : opts.ApiUrl + "/");
-    http.Timeout = opts.RequestTimeout;
-});
+builder.Services.AddSingleton<DiscordSdk>();
+builder.Services.AddSingleton<IDiscordClient, DiscordApiClient>();
 
 builder.Services.AddHttpClient<IAiHelperClient, AiHelperInternalClient>(static (sp, http) =>
     {

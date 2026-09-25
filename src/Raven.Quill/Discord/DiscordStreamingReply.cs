@@ -10,16 +10,27 @@ internal sealed class DiscordStreamingReply(
     string dmChannelId,
     DiscordOptions options,
     QuillLogger<DiscordInboundProcessor> logger,
-    CancellationToken ct) : ChannelStreamingReply(options.MessageLimit, options.EditDebounce)
+    CancellationToken ct) : ChannelStreamingReply(options.MessageLimit, options.EditDebounce), IDisposable
 {
-    private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(60);
-
     private string _currentMessageId = "";
-    private DateTime _previewCooldownUntil;
+    private IDisposable? _typing;
 
     protected override bool HasOpenMessage => _currentMessageId.Length > 0;
 
-    protected override bool CanPreview => DateTime.UtcNow >= _previewCooldownUntil;
+    public async Task BeginTypingAsync()
+    {
+        try
+        {
+            _typing = await discord.BeginTypingAsync(botToken, dmChannelId, ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            if (logger.IsDebugEnabled)
+                logger.Debug($"Discord typing indicator failed for channel {dmChannelId}: {e.Message}");
+        }
+    }
+
+    public void Dispose() => Interlocked.Exchange(ref _typing, null)?.Dispose();
 
     protected override void CloseCurrentMessage() => _currentMessageId = "";
 
@@ -31,55 +42,21 @@ internal sealed class DiscordStreamingReply(
 
     protected override async Task ShowPreviewAsync(string text)
     {
-        try
+        if (_currentMessageId.Length == 0)
         {
-            if (_currentMessageId.Length == 0)
-                _currentMessageId = await discord.CreateMessageAsync(botToken, dmChannelId, text, ct);
-            else
-                await discord.EditMessageAsync(botToken, dmChannelId, _currentMessageId, text, ct);
+            Dispose();
+            _currentMessageId = await discord.CreateMessageAsync(botToken, dmChannelId, text, suppressEmbeds: true, ct);
         }
-        catch (DiscordApiException e) when (e.RateLimited)
-        {
-            var delay = e.RetryAfter ?? TimeSpan.FromSeconds(1);
-            _previewCooldownUntil = DateTime.UtcNow + (delay > MaxRetryDelay ? MaxRetryDelay : delay);
-            throw;
-        }
+        else
+            await discord.EditMessageAsync(botToken, dmChannelId, _currentMessageId, text, suppressEmbeds: true, ct);
     }
 
-    protected override Task SendFinalAsync(string text) => CreateWithRetryAsync(text);
+    protected override Task SendFinalAsync(string text)
+    {
+        Dispose();
+        return discord.CreateMessageAsync(botToken, dmChannelId, text, suppressEmbeds: false, ct);
+    }
 
     protected override Task EditFinalAsync(string text) =>
-        text == LastShownText ? Task.CompletedTask : EditWithRetryAsync(_currentMessageId, text);
-
-    private async Task CreateWithRetryAsync(string text)
-    {
-        try
-        {
-            await discord.CreateMessageAsync(botToken, dmChannelId, text, ct);
-        }
-        catch (DiscordApiException e) when (e.RateLimited)
-        {
-            await DelayForRetryAsync(e);
-            await discord.CreateMessageAsync(botToken, dmChannelId, text, ct);
-        }
-    }
-
-    private async Task EditWithRetryAsync(string messageId, string text)
-    {
-        try
-        {
-            await discord.EditMessageAsync(botToken, dmChannelId, messageId, text, ct);
-        }
-        catch (DiscordApiException e) when (e.RateLimited)
-        {
-            await DelayForRetryAsync(e);
-            await discord.EditMessageAsync(botToken, dmChannelId, messageId, text, ct);
-        }
-    }
-
-    private Task DelayForRetryAsync(DiscordApiException e)
-    {
-        var delay = e.RetryAfter ?? TimeSpan.FromSeconds(1);
-        return Task.Delay(delay > MaxRetryDelay ? MaxRetryDelay : delay, ct);
-    }
+        discord.EditMessageAsync(botToken, dmChannelId, _currentMessageId, text, suppressEmbeds: false, ct);
 }
