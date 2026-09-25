@@ -444,5 +444,76 @@ exit 0";
                 Assert.NotEqual(ts.Task, await Task.WhenAny(ts.Task, Task.Delay(5 * 1000)));
             }
         }
+
+        [RavenFact(RavenTestCategory.Configuration)]
+        public async Task OnDatabaseDeleteExecTest()
+        {
+            string script;
+            IDictionary<string, string> customSettings = new ConcurrentDictionary<string, string>();
+
+            var scriptExt = PlatformDetails.RunningOnPosix ? ".sh" : ".ps1";
+            var scriptFile = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), scriptExt));
+            var outputFile = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".txt"));
+
+            try
+            {
+                if (PlatformDetails.RunningOnPosix)
+                {
+                    customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExec)] = "bash";
+                    customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExecArguments)] = $"{scriptFile} {outputFile}";
+
+                    // bash passes the '--' sentinel through to the script, so the database name is $3
+                    script = "#!/bin/bash\necho \"$3 $4 $5\" >> $1";
+                    File.WriteAllText(scriptFile, script);
+                }
+                else
+                {
+                    customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExec)] = "powershell";
+                    customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExecArguments)] = $"-NoProfile {scriptFile} {outputFile}";
+
+                    // PowerShell's binder consumes the '--' sentinel, so the database name binds to the second parameter
+                    script = @"
+param([string]$outputPath, [string]$dbName, [string]$dbNameBase64, [string]$deletionKind)
+Add-Content $outputPath ""$dbName $dbNameBase64 $deletionKind""
+exit 0";
+                    File.WriteAllText(scriptFile, script);
+                }
+
+                UseNewLocalServer(customSettings: customSettings);
+
+                string databaseName;
+                using (var store = GetDocumentStore())
+                {
+                    databaseName = store.Database;
+
+                    // Ensure the database is created
+                    await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+
+                    // Delete the database
+                    store.Maintenance.Server.Send(new Raven.Client.ServerWide.Operations.DeleteDatabasesOperation(databaseName, hardDelete: true));
+
+                    // Wait for the exec to complete
+                    var timeout = Stopwatch.StartNew();
+                    while (File.Exists(outputFile) == false && timeout.Elapsed < TimeSpan.FromSeconds(30))
+                    {
+                        await Task.Delay(100);
+                    }
+                }
+
+                Assert.True(File.Exists(outputFile), "Output file was not created by the OnDatabaseDelete exec script.");
+
+                var content = File.ReadAllText(outputFile).Trim();
+                var expectedBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(databaseName));
+
+                Assert.Contains(databaseName, content);
+                Assert.Contains(expectedBase64, content);
+                Assert.Contains("hard", content);
+            }
+            finally
+            {
+                if (File.Exists(scriptFile)) File.Delete(scriptFile);
+                if (File.Exists(outputFile)) File.Delete(outputFile);
+            }
+        }
     }
 }
