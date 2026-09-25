@@ -1,0 +1,27 @@
+{
+    "newDocument": "New document",
+    "toggleDropdown": "Toggle Dropdown",
+    "newDocumentInCollection": "New document in current collection",
+    "selectionLabel": "Selection",
+    "copyIds": "Copy IDs",
+    "copyLimitReason": "You can only copy up to {{limit}} documents",
+    "copyDialogTitle": "Documents",
+    "copyIdsDialogTitle": "Document IDs",
+    "query": "Query",
+    "queryTitle": "Query current collection",
+    "exportPanel": {
+        "button": "Export to file",
+        "title": "Export documents as CSV/JSON",
+        "format": "Format",
+        "columns": "Columns",
+        "allColumns": "All",
+        "visibleColumns": "Visible"
+    },
+    "display": "Display",
+    "displayTitle_custom": "Using custom columns and its order",
+    "displayTitle_default": "Choose visible columns",
+    "dataChanged": "The data has changed. Your results may contain duplicates or non-current entries.",
+    "emptyGrid_allDocuments": "There are no documents in the database",
+    "emptyGrid_collection": "Collection is empty",
+    "collectionRemoved": "{{name}} was removed"
+}

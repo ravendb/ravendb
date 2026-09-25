@@ -1,0 +1,34 @@
+{
+    "title": "Konfiguracja Studio",
+    "loadError": "Nie można wczytać konfiguracji Studio",
+    "language": "Język",
+    "environment": {
+        "label": "Środowisko serwera",
+        "tagInfo": "Nadaj Studio <strong>tag</strong> wskazujący środowisko serwera.",
+        "noEffectInfo": "Nie wpływa to na żadne ustawienia ani funkcje."
+    },
+    "replicationFactor": {
+        "label": "Domyślny współczynnik replikacji",
+        "defaultInfo": "Ustaw domyślny <strong>współczynnik replikacji</strong> używany przy tworzeniu nowej bazy danych.",
+        "clusterSizeInfo": "Jeśli nie jest ustawiony, zostanie użyta liczba węzłów w klastrze.",
+        "addNodesInfo": "Kolejne węzły można zawsze dodać do bazy danych po jej utworzeniu.",
+        "placeholder": "Rozmiar klastra (domyślnie)"
+    },
+    "tableFont": {
+        "label": "Czcionka tabel",
+        "info": "Wybierz czcionkę używaną do wyświetlania danych w <strong>tabelach</strong> w całym Studio, w tym identyfikatorów dokumentów, wartości kolumn i innych danych tabelarycznych."
+    },
+    "codeFont": {
+        "label": "Czcionka kodu",
+        "info": "Wybierz czcionkę używaną do wyświetlania <strong>kodu</strong> w całym Studio, w tym w edytorach kodu i przykładach."
+    },
+    "fontPreview": "Podgląd",
+    "collapseDocsSwitch": "Zwijaj dokumenty przy otwieraniu",
+    "usageStatsSwitch": "Pomóż ulepszać Studio, zbierając anonimowe statystyki użycia",
+    "about": {
+        "scope": "To jest widok <strong>konfiguracji Studio dla całego serwera</strong>.",
+        "scopeDetails": "Dostępne opcje konfiguracji Studio będą obowiązywać na całym serwerze, dla wszystkich baz danych.",
+        "environmentPerDatabase": "Tag środowiska można dostosować dla każdej bazy danych w widoku konfiguracji Studio bazy danych.",
+        "docsLink": "Dokumentacja - konfiguracja klienta"
+    }
+}

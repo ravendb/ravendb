@@ -6,31 +6,31 @@
                     <button type="button" class="btn btn-primary"
                             data-bind="click: newDocument, requiredAccess: 'DatabaseReadWrite'">
                         <i class="icon-new-document"></i>
-                        <span>New document</span>
+                        <span data-bind="i18n: 'documents:newDocument'"></span>
                     </button>
                     <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                             data-bind="enable: inSpecificCollection, requiredAccess: 'DatabaseReadWrite'">
                         <span class="caret"></span>
-                        <span class="sr-only">Toggle Dropdown</span>
+                        <span class="sr-only" data-bind="i18n: 'documents:toggleDropdown'"></span>
                     </button>
                     <ul class="dropdown-menu">
-                        <li><a href="#" data-bind="click: newDocumentInCollection.bind($root)"><i class="icon-new-document"></i> <span>New document in current collection</span></a></li>
+                        <li><a href="#" data-bind="click: newDocumentInCollection.bind($root)"><i class="icon-new-document"></i> <span data-bind="i18n: 'documents:newDocumentInCollection'"></span></a></li>
                     </ul>
                 </div>
-                <div class="btn-group-label" data-bind="css: { active: selectedItemsCount }" data-label="Selection" role="group">
+                <div class="btn-group-label" data-bind="css: { active: selectedItemsCount }, i18nAttr: { 'data-label': 'documents:selectionLabel' }" role="group">
                     <button type="button" class="btn btn-danger"
                             data-bind="click: deleteSelected, css: { 'btn-spinner': spinners.delete() }, enable: deleteEnabled, requiredAccess: 'DatabaseReadWrite'">
-                        <span class="icon-trash"></span> <span>Delete</span>
+                        <span class="icon-trash"></span> <span data-bind="i18n: 'common:delete'"></span>
                     </button>
                     <div class="btn-group has-disable-reason" data-bind="attr: { 'data-original-title': copyDisabledReason().reason }">
                         <button type="button" class="btn" data-bind="disable: copyDisabledReason().disabled || spinners.copy(), click: copySelectedDocs, css: { 'btn-spinner': spinners.copy() }">
-                            <span class="icon-copy"></span> <span>Copy</span>
+                            <span class="icon-copy"></span> <span data-bind="i18n: 'common:copy'"></span>
                         </button>
                         <button type="button" class="btn dropdown-toggle" disabled="disabled" data-toggle="dropdown" data-bind="disable: copyDisabledReason().disabled">
                             <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu">
-                            <li><a href="#" data-bind="click: copySelectedDocIds">Copy IDs</a></li>
+                            <li><a href="#" data-bind="click: copySelectedDocIds, i18n: 'documents:copyIds'"></a></li>
                         </ul>
                     </div>
                     <!-- TODO
@@ -43,20 +43,20 @@
             </div>
             <div class="clearfix">
                 <div class="pull-right">
-                    <button class="btn btn-default btn-sm" title="Query current collection" data-bind="click: $root.queryCollection">
+                    <button class="btn btn-default btn-sm" data-bind="click: $root.queryCollection, i18nAttr: { title: 'documents:queryTitle' }">
                         <i class="icon-query"></i>
-                        <span>Query</span>
+                        <span data-bind="i18n: 'documents:query'"></span>
                     </button>
                     <div class="btn-group" data-bind="visible: canExportToFile">
                         <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown"
-                                aria-haspopup="true" aria-expanded="true" title="Export documents as CSV/JSON">
-                            <i class="icon-csv-export"></i><span>Export to file</span>
+                                aria-haspopup="true" aria-expanded="true" data-bind="i18nAttr: { title: 'documents:exportPanel.title' }">
+                            <i class="icon-csv-export"></i><span data-bind="i18n: 'documents:exportPanel.button'"></span>
                             <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu padding padding-sm slidein-style" role="menu" data-bind="dropdownPanel: true">
                             <div class="flex-form padding padding-sm">
                                 <div class="form-group flex-horizontal gap-3">
-                                    <label class="mb-0 align-self-center" style="width: 60px;">Format</label>
+                                    <label class="mb-0 align-self-center" style="width: 60px;" data-bind="i18n: 'documents:exportPanel.format'"></label>
                                     <div class="btn-group flex-horizontal">
                                         <button type="button" class="btn btn-dark"
                                                 data-bind="click: _.partial(exportAsFileSettings.format, 'csv'), css: { active: exportAsFileSettings.format() === 'csv' }">CSV</button>
@@ -65,19 +65,19 @@
                                     </div>
                                 </div>
                                 <div class="form-group flex-horizontal gap-3">
-                                    <label class="mb-0 align-self-center" style="width: 60px;">Columns</label>
+                                    <label class="mb-0 align-self-center" style="width: 60px;" data-bind="i18n: 'documents:exportPanel.columns'"></label>
                                     <div class="btn-group flex-horizontal">
                                         <button type="button" class="btn btn-dark"
-                                                data-bind="click: _.partial(exportAsFileSettings.allColumns, true), css: { active: exportAsFileSettings.allColumns() }">All</button>
+                                                data-bind="click: _.partial(exportAsFileSettings.allColumns, true), css: { active: exportAsFileSettings.allColumns() }, i18n: 'documents:exportPanel.allColumns'"></button>
                                         <button type="button" class="btn btn-dark"
-                                                data-bind="click: _.partial(exportAsFileSettings.allColumns, false), css: { active: !exportAsFileSettings.allColumns() }">Visible</button>
+                                                data-bind="click: _.partial(exportAsFileSettings.allColumns, false), css: { active: !exportAsFileSettings.allColumns() }, i18n: 'documents:exportPanel.visibleColumns'"></button>
                                     </div>
                                 </div>
                                 <div class="form-group margin-top-sm mb-0">
                                     <div class="btn-group">
                                         <button type="button" class="btn btn-primary close-panel" data-bind="click: exportAsFile">
                                             <i class="icon-download"></i>
-                                            <span>Export</span>
+                                            <span data-bind="i18n: 'common:export'"></span>
                                         </button>
                                     </div>
                                 </div>
@@ -87,8 +87,8 @@
                     </div>
                     <div class="btn-group dropdown-right">
                         <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                data-bind="css: { active: columnsSelector.customLayout }, attr: { title: columnsSelector.customLayout() ? 'Using custom columns and its order' : 'Choose visible columns' } ">
-                            <i class="icon-table"></i><span>Display</span>
+                                data-bind="css: { active: columnsSelector.customLayout }, i18nAttr: { title: { key: 'documents:displayTitle', options: { context: columnsSelector.customLayout() ? 'custom' : 'default' } } }">
+                            <i class="icon-table"></i><span data-bind="i18n: 'documents:display'"></span>
                             <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu colselect-dropdown slidein-style" role="menu" data-bind="dropdownPanel: true">
@@ -107,7 +107,7 @@
         </div>
         <div class="has-error" data-bind="visible: dataChanged()">
             <div class="help-block">
-                <i class="icon-danger"></i><span>The data has changed. Your results may contain duplicates or non-current entries. <a href="#" data-bind="click: refresh">Refresh</a></span>
+                <i class="icon-danger"></i><span><span data-bind="i18n: 'documents:dataChanged'"></span> <a href="#" data-bind="click: refresh, i18n: 'common:refresh'"></a></span>
             </div>
         </div>
     </div>
@@ -119,7 +119,7 @@
 </div>
 
 <script type="text/html" id="empty-collection-template">
-    <div data-bind="text: $root.currentCollection().isAllDocuments ? 'There are no documents in the database' : 'Collection is empty'">
+    <div data-bind="i18n: { key: 'documents:emptyGrid', options: { context: $root.currentCollection().isAllDocuments ? 'allDocuments' : 'collection' } }">
     </div>
 </script>
 <div class="tooltip json-preview js-documents-preview" style="opacity: 0">

@@ -4,6 +4,7 @@ import appUrl = require("common/appUrl");
 import generalUtils = require("common/generalUtils");
 import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import messagePublisher = require("common/messagePublisher");
+import i18nModule = require("common/i18n/i18n");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import changeVectorUtils = require("common/changeVectorUtils");
 import documentPropertyProvider = require("common/helpers/database/documentPropertyProvider");
@@ -126,7 +127,7 @@ class documents extends shardViewModelBase {
 
             return {
                 disabled: true,
-                reason: `You can only copy up to ${documents.copyLimit} documents`
+                reason: i18nModule.translate("documents:copyLimitReason", { limit: documents.copyLimit })
             }
         });
         
@@ -175,7 +176,7 @@ class documents extends shardViewModelBase {
 
             if (c === this.currentCollection()) {
                 if (!isExpectedRemoval) {
-                    messagePublisher.reportWarning(c.name + " was removed");
+                    messagePublisher.reportWarning(i18nModule.translate("documents:collectionRemoved", { name: c.name }));
                 }
                 this.currentCollection(this.tracker.getAllDocumentsCollection());
             } else if (this.currentCollection().isAllDocuments) {
@@ -414,7 +415,7 @@ class documents extends shardViewModelBase {
                 const prettifySpacing = 4;
                 const text = results.map(d => d.getId() + "\r\n" + JSON.stringify(d.toDto(false), null, prettifySpacing)).join("\r\n\r\n");
 
-                app.showBootstrapDialog(new showDataDialog("Documents", text, "javascript"));
+                app.showBootstrapDialog(new showDataDialog(i18nModule.translate("documents:copyDialogTitle"), text, "javascript"));
             })
             .always(() => this.spinners.copy(false));
     }
@@ -426,7 +427,7 @@ class documents extends shardViewModelBase {
 
         const text = selectedItems.map(x => '"' + x.getId() + '"').join(", \r\n");
 
-        app.showBootstrapDialog(new showDataDialog("Document IDs", text, "javascript"));
+        app.showBootstrapDialog(new showDataDialog(i18nModule.translate("documents:copyIdsDialogTitle"), text, "javascript"));
     }
 
     exportAsFile() {
