@@ -583,4 +583,20 @@
         display: block;
         white-space: nowrap;
     }
+
+    .label.shard-pending-removal {
+        background-color: transparent;
+        border: 1px dashed @brand-warning;
+        color: @brand-warning;
+        cursor: help;
+
+        i {
+            margin-right: 3px;
+        }
+
+        .pending-removal-text {
+            margin-left: 4px;
+            font-weight: normal;
+        }
+    }
 }
