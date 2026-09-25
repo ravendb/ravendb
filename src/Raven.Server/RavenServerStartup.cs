@@ -249,13 +249,6 @@ namespace Raven.Server
                     LogTrafficWatch(context, sp?.ElapsedMilliseconds ?? 0, database);
                 }
 
-                if (sp != null && requestHandlerContext.HttpContext.WebSockets.IsWebSocketRequest == false) // exclude web sockets
-                {
-                    var requestDuration = sp.ElapsedMilliseconds;
-                    requestHandlerContext.RavenServer?.Metrics.Requests.RecordRequest(requestDuration);
-                    requestHandlerContext.DatabaseMetrics?.Requests.RecordRequest(requestDuration);
-                }
-
                 if (_logger.IsDebugEnabled && SkipHttpLogging == false)
                 {
                     _logger.Debug($"{context.Request.Method} {context.Request.Path.Value}{context.Request.QueryString.Value} - {context.Response.StatusCode} - {(sp?.ElapsedMilliseconds ?? 0):#,#;;0} ms", exception);

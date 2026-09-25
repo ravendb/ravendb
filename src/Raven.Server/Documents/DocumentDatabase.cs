@@ -1935,11 +1935,6 @@ namespace Raven.Server.Documents
             _compressedCollections = new HashSet<string>(record.DocumentsCompression.Collections, StringComparer.OrdinalIgnoreCase);
         }
 
-        public TableSchema GetDocsSchemaForCollection(CollectionName collection, DocumentFlags flags)
-        {
-            return flags.HasFlag(DocumentFlags.Archived) ? DocumentsStorage.CompressedDocsSchema : GetDocsSchemaForCollection(collection);
-        }
-
         private void LoadTimeSeriesPolicyRunnerConfigurations()
         {
             LicenseLimitWarning.DismissLicenseLimitNotification(_serverStore.NotificationCenter, LimitType.TimeSeriesRollupsAndRetention);

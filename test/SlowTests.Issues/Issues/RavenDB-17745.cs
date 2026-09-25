@@ -16,8 +16,11 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
+    [Collection(UnsecuredHttp2OnlyServerCollection.Name)]
     public class RavenDB_17745 : RavenTestBase
     {
+        private readonly HttpVersionPolicy? _defaultHttpVersionPolicy = DocumentConventions.DefaultHttpVersionPolicy;
+
         public RavenDB_17745(ITestOutputHelper output) : base(output)
         {
         }
@@ -220,6 +223,18 @@ namespace SlowTests.Issues
                     Assert.NotNull(user);
                     Assert.Equal("Daniel", user.Name);
                 }
+            }
+        }
+
+        public override async ValueTask DisposeAsync()
+        {
+            try
+            {
+                await base.DisposeAsync();
+            }
+            finally
+            {
+                DocumentConventions.DefaultHttpVersionPolicy = _defaultHttpVersionPolicy;
             }
         }
     }
