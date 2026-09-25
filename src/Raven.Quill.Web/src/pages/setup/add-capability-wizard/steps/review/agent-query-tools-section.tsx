@@ -13,6 +13,7 @@ import type {
 import { emptyAgentQueryTool } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { ConfigItemCard, ConfigListEmpty } from "@/pages/setup/add-capability-wizard/steps/review/config-item-card";
 import { SampleObjectAndSchemaTabs } from "@/pages/setup/add-capability-wizard/steps/review/sample-object-and-schema-tabs";
+import { TestQueryButton } from "@/pages/setup/add-capability-wizard/steps/review/test-query-sheet";
 import AceEditor from "@/components/ace-editor/ace-editor";
 import { cn } from "@/lib/utils";
 
@@ -104,6 +105,18 @@ function QueryToolItem({ index, remove }: { index: number; remove: () => void })
                 control={control}
                 name={`review.queries.${index}.query`}
                 label="Query"
+                labelAction={
+                    <TestQueryButton
+                        query={tool.query}
+                        parametersSampleObject={tool.parametersSampleObject}
+                        onApplyQuery={(query) =>
+                            setValue(`review.queries.${index}.query`, query, {
+                                shouldDirty: true,
+                                shouldValidate: true,
+                            })
+                        }
+                    />
+                }
                 mode="sql"
                 height="120px"
                 description="The RQL query the agent runs against the database when the LLM triggers this tool."

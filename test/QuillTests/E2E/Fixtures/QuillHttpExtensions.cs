@@ -151,6 +151,7 @@ internal static class QuillRoutes
     public static string Agent(string slug, string agentId) => $"/api/apps/{slug}/agent/{agentId}";
     public static string SetupAgent(string slug) => $"/api/apps/{slug}/setup/agent";
     public static string EditAgent(string slug) => $"/api/apps/{slug}/agent";
+    public static string TestQuery(string slug) => $"/api/apps/{slug}/agent/test-query";
     public static string SuggestAgent(string slug) => $"/api/apps/{slug}/suggest/agent";
 
     public static string Channels(string slug) => $"/api/apps/{slug}/channels";
