@@ -158,6 +158,9 @@ namespace Voron.Data.RawData
 
                 while (pos < maxUsedPos)
                 {
+                    if (pos + sizeof(RawDataEntrySizes) > maxUsedPos)
+                        VoronUnrecoverableErrorException.Raise(_llt, $"Entry header at {pos} in page {pageHeader->PageNumber} runs past the allocated area ({maxUsedPos})");
+
                     var oldSize = (RawDataEntrySizes*)(tmpPtr + pos);
 
                     if (oldSize->AllocatedSize <= 0)
