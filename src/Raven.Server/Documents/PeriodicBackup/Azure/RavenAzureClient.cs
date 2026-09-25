@@ -192,19 +192,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 if (await _client.ExistsAsync(cancellationToken: _cancellationToken) == false)
                     throw new ContainerNotFoundException($"Container '{_storageContainer}' wasn't found!");
             }
-            catch (RequestFailedException e) when (IsMissingPermissionToCheckContainerExistence(e))
+            catch (UnauthorizedAccessException)
             {
                 // we don't have the permissions to see if the container exists
             }
-        }
-
-        private static bool IsMissingPermissionToCheckContainerExistence(RequestFailedException e)
-        {
-            // only a valid token that lacks the permission for this check
-            // any other 403 (invalid credentials,firewall, etc.) means the token can't be used at all and must be reported
-            return e.Status == 403 &&
-                   (e.ErrorCode == BlobErrorCode.AuthorizationPermissionMismatch.ToString() ||
-                    e.ErrorCode == BlobErrorCode.AuthorizationResourceTypeMismatch.ToString());
         }
 
         public void Report(long value)
