@@ -16,9 +16,7 @@ import { tryHandleSubmit } from "components/utils/common";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import router from "plugins/router";
-import Button from "react-bootstrap/Button";
-import { Icon } from "components/common/Icon";
-import { useEffect } from "react";
+import { SubmitEventHandler, useEffect } from "react";
 import {
     editCdcSinkTaskActions,
     editCdcSinkTaskSelectors,
@@ -29,6 +27,11 @@ import EditCdcSinkTaskRawViewSwitch from "components/pages/database/tasks/ongoin
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import EditCdcSinkTaskInfoHub from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskInfoHub";
 import classNames from "classnames";
+import EditCdcSinkTaskFooter from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskFooter";
+import { useEditCdcSinkTaskVerification } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/hooks/useEditCdcSinkTaskVerification";
+import EditCdcSinkTaskVerificationAlert from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskVerificationAlert";
+import useConfirm from "components/common/ConfirmDialog";
+import { useEditCdcSinkTaskRawViewSync } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/hooks/useEditCdcSinkTaskRawViewSync";
 
 interface QueryParams {
     taskId?: string;
@@ -39,6 +42,7 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const isRawView = useAppSelector(editCdcSinkTaskSelectors.isRawView);
+    const isRawViewDirty = useAppSelector(editCdcSinkTaskSelectors.isRawViewDirty);
     const hasCdcSink = useAppSelector(licenseSelectors.statusValue("HasCdcSink"));
 
     const taskId = queryParams?.taskId ? parseInt(queryParams.taskId, 10) : null;
@@ -67,8 +71,12 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
         resolver: editCdcSinkTaskResolver,
     });
 
-    const { setIsDirty } = useDirtyFlag(editForm.formState.isDirty);
+    const isDirty = editForm.formState.isDirty || isRawViewDirty;
+    const { setIsDirty } = useDirtyFlag(isDirty);
     const { appUrl } = useAppUrls();
+    const confirm = useConfirm();
+    const asyncVerify = useEditCdcSinkTaskVerification(editForm);
+    const { applyRawViewContent, revealValidationErrors } = useEditCdcSinkTaskRawViewSync(editForm);
 
     const tablesFieldArray = useFieldArray({
         control: editForm.control,
@@ -86,11 +94,43 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
 
     const handleSubmit: SubmitHandler<EditCdcSinkTaskFormData> = (formData) => {
         return tryHandleSubmit(async () => {
+            const result = asyncVerify.getCurrentResult(formData) ?? (await asyncVerify.verify(formData));
+
+            if (!result) {
+                return;
+            }
+
+            if (!result.Success || result.Warnings.length > 0) {
+                const isConfirmed = await confirm({
+                    title: "Save the task configuration anyway?",
+                    message: <EditCdcSinkTaskVerificationAlert result={result} />,
+                    icon: result.Success ? "warning" : "danger",
+                    actionColor: result.Success ? "warning" : "danger",
+                    confirmText: "Save anyway",
+                    confirmIcon: "save",
+                    size: "lg",
+                });
+
+                if (!isConfirmed) {
+                    return;
+                }
+            }
+
             await tasksService.saveCdcSinkTask(databaseName, editCdcSinkTaskUtils.mapToDto(formData, taskId));
             editForm.reset(formData);
+            dispatch(editCdcSinkTaskActions.rawViewContentSaved());
             setIsDirty(false);
             cancel();
         });
+    };
+
+    const onSubmit: SubmitEventHandler<HTMLFormElement> = (e) => {
+        if (!applyRawViewContent()) {
+            e.preventDefault();
+            return;
+        }
+
+        return editForm.handleSubmit(handleSubmit, revealValidationErrors)(e);
     };
 
     if (asyncGetDefaultValues.loading) {
@@ -103,7 +143,7 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
 
     return (
         <FormProvider {...editForm}>
-            <form onSubmit={editForm.handleSubmit(handleSubmit)} className="edit-cdc-sink-task vstack h-100 w-100">
+            <form onSubmit={onSubmit} className="edit-cdc-sink-task vstack h-100 w-100">
                 <div className="p-3 flex-grow-1 overflow-y-auto vstack">
                     <div className="hstack align-items-center flex-wrap gap-2">
                         <AboutViewHeading
@@ -131,20 +171,12 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
                         </div>
                     )}
                 </div>
-                <div className="hstack justify-content-between gap-2 py-2 px-3 border-top border-secondary">
-                    <Button variant="outline-secondary" className="rounded-pill" onClick={cancel}>
-                        Cancel
-                    </Button>
-                    <Button
-                        type="submit"
-                        variant="primary"
-                        className="rounded-pill"
-                        disabled={!editForm.formState.isDirty || !hasCdcSink}
-                    >
-                        <Icon icon="save" />
-                        Save task configuration
-                    </Button>
-                </div>
+                <EditCdcSinkTaskFooter
+                    asyncVerify={asyncVerify}
+                    isDirty={isDirty}
+                    isDisabled={!hasCdcSink}
+                    onCancel={cancel}
+                />
             </form>
         </FormProvider>
     );

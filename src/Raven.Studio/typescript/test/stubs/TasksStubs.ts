@@ -27,6 +27,7 @@ import EmbeddingsGeneration = Raven.Client.Documents.Operations.OngoingTasks.Emb
 import GenAi = Raven.Client.Documents.Operations.OngoingTasks.GenAi;
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 import TaskErrors = Raven.Server.Documents.TasksErrors.TaskErrors;
+import CdcTestResult = Raven.Client.Documents.Operations.CdcSink.Test.CdcTestResult;
 
 export class TasksStubs {
     static getTasksList(): OngoingTasksResult {
@@ -793,6 +794,35 @@ export class TasksStubs {
                     WouldDelete: false,
                 },
             ],
+        };
+    }
+
+    static verifyCdcSink(): CdcTestResult {
+        return {
+            Success: true,
+            Error: null,
+            CompletedTables: ["dbo.orders", "dbo.order_lines"],
+            Warnings: [],
+        };
+    }
+
+    static verifyCdcSinkWarning(): CdcTestResult {
+        return {
+            Success: true,
+            Error: null,
+            CompletedTables: ["dbo.orders", "dbo.order_lines"],
+            Warnings: ["Source cleanup failed: publication rvn_cdc_p_8f3a was left in place."],
+        };
+    }
+
+    static verifyCdcSinkFailed(): CdcTestResult {
+        return {
+            Success: false,
+            Error:
+                "System.InvalidOperationException: The database user must have the REPLICATION role attribute to create a replication slot.\n" +
+                "   at Raven.Server.Documents.CdcSink.PostgresCdcSinkProcess.EnsureReplicationSlotAsync()",
+            CompletedTables: [],
+            Warnings: ["Source cleanup failed: publication rvn_cdc_p_8f3a was left in place."],
         };
     }
 
