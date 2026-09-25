@@ -519,9 +519,6 @@ internal static partial class QueryPlanBuilder
             return null;
 
         int totalLen = first.Size + second.Size + 1;
-        if (totalLen > Constants.Terms.MaxLength)
-            return null;
-
         ctx.PlanParams.Allocator.Allocate(totalLen, out ByteString keyBuf);
         var keySpan = keyBuf.ToSpan();
         first.AsReadOnlySpan().CopyTo(keySpan);
@@ -540,7 +537,7 @@ internal static partial class QueryPlanBuilder
     {
         term = default;
         if (boolTerms.True is null)
-            return false; // field isn't indexed
+            return false;
 
         var indexSearcher = ctx.PlanParams.IndexSearcher;
         var fieldMeta = ResolveFieldMetadata(exec.Clause, walkerCtx); // analyze like the equality, exact() included
@@ -559,14 +556,16 @@ internal static partial class QueryPlanBuilder
     // A bool is indexed as "true"/"false" through the field's own analyzer; fixed per index, so the template caches it
     private static (byte[] True, byte[] False) AnalyzeBoolLiterals(ref InstantiateContext ctx, ClauseExecution exec)
     {
-        var indexedMeta = QueryBuilderHelper.GetFieldMetadata(in ctx.BuilderParams, exec.Clause.ResolvedFieldName ?? exec.Clause.FieldName, hasBoost: false, handleSearch: true);
-        if (indexedMeta.Mode == global::Corax.FieldIndexingMode.No)
+        var name = exec.Clause.ResolvedFieldName ?? exec.Clause.FieldName;
+        var indexedMeta = QueryBuilderHelper.GetFieldMetadata(in ctx.BuilderParams, name, hasBoost: false, handleSearch: true);
+        if (indexedMeta.Mode == global::Corax.FieldIndexingMode.No ||
+            (indexedMeta.Mode == global::Corax.FieldIndexingMode.Search && ctx.BuilderParams.Index.Definition.IndexFields.TryGetValue(name, out var field) && field.Analyzer != null)) // the reader may swap a [NotForQuerying] analyzer
             return default;
 
         var searcher = ctx.PlanParams.IndexSearcher;
-        return (Analyze("true"), Analyze("false"));
-
-        byte[] Analyze(string literal) => searcher.TryAnalyzeSingleToken(indexedMeta, literal, out var analyzed) ? analyzed.AsReadOnlySpan().ToArray() : [];
+        return searcher.TryAnalyzeSingleToken(indexedMeta, "true", out var t) && searcher.TryAnalyzeSingleToken(indexedMeta, "false", out var f)
+            ? (t.AsReadOnlySpan().ToArray(), f.AsReadOnlySpan().ToArray())
+            : default;
     }
 
     private static bool TryCreateCompoundFieldMatch(ref InstantiateContext ctx, out string rejectReason)

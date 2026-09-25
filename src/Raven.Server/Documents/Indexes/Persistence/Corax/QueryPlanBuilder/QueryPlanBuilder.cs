@@ -247,10 +247,11 @@ internal static partial class QueryPlanBuilder
 
         // CompoundKeyLookup collapses two WHERE A = $x AND B = $y into compound($x, $y) lookup
         // GroupCollapse lifted spatial / vector clauses out of `clauses`, the lookup would drop them
+        // A CreateField named like a compound member adds values the key never holds
         if (walkerCtx.CompoundExact.First >= 0 &&
             clauses.Count == 2 &&
-            walkerCtx.SpatialClauses is null && walkerCtx.VectorClauses is null &&
-            p.HasBoost == false && (orderBy is null || Array.TrueForAll(orderBy, o => o.OrderingType != OrderByFieldType.Random)) &&
+            (walkerCtx.SpatialClauses ?? walkerCtx.VectorClauses) is null &&
+            p.HasBoost == false && p.HasDynamics == false &&
             clauses[walkerCtx.CompoundExact.First].WhenCondition is null &&
             clauses[walkerCtx.CompoundExact.Second].WhenCondition is null)
         {

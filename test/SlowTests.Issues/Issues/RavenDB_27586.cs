@@ -81,6 +81,24 @@ namespace SlowTests.Data.RavenDB_27586
     }
 }";
 
+        private const string SplitOnUAnalyzerCode = @"
+using System.IO;
+using Lucene.Net.Analysis;
+
+namespace SlowTests.Data.RavenDB_27586
+{
+    public class SplitOnUAnalyzer : Analyzer
+    {
+        public override TokenStream TokenStream(string fieldName, TextReader reader) => new SplitOnU(reader);
+
+        private class SplitOnU : CharTokenizer
+        {
+            public SplitOnU(TextReader input) : base(input) { }
+            protected override bool IsTokenChar(char c) => c != 'u';
+        }
+    }
+}";
+
         private class Items_ByNameStemmedFlag : AbstractIndexCreationTask<Item>
         {
             public Items_ByNameStemmedFlag()
@@ -143,6 +161,37 @@ namespace SlowTests.Data.RavenDB_27586
             }
         }
 
+        private class Items_ByNameNGramFlag : AbstractIndexCreationTask<Item>
+        {
+            public Items_ByNameNGramFlag()
+            {
+                Map = items => from i in items select new { i.Name, i.Flag };
+                Index(i => i.Flag, FieldIndexing.Search);
+                Analyze(i => i.Flag, "NGramAnalyzer"); // [NotForQuerying]: the reader swaps it for the standard analyzer
+                CompoundField("Name", "Flag");
+            }
+        }
+
+        private class Items_ByNameSplitDefaultFlag : AbstractIndexCreationTask<Item>
+        {
+            public Items_ByNameSplitDefaultFlag()
+            {
+                Map = items => from i in items select new { i.Name, i.Flag };
+                Index(i => i.Flag, FieldIndexing.Search);
+                CompoundField("Name", "Flag");
+                Configuration[RavenConfiguration.GetKey(x => x.Indexing.DefaultSearchAnalyzer)] = "SplitOnUAnalyzer"; // "true" -> "tr", "e"
+            }
+        }
+
+        private class Items_ByNameTagAndCreatedName : AbstractIndexCreationTask<Item>
+        {
+            public Items_ByNameTagAndCreatedName()
+            {
+                Map = items => from i in items select new { i.Name, i.Tag, _ = CreateField("Name", i.Tag) };
+                CompoundField("Name", "Tag");
+            }
+        }
+
         [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
         [RavenData("where Num == $v and Other == 7 order by Num as double", 1L, new[] { 1.0, 1.1, 1.5, 1.8 }, true, Bitmap, SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("where Num == $v and Other == 7", 1L, new[] { 1.0, 1.1, 1.5, 1.8 }, false, Bitmap, SearchEngineMode = RavenSearchEngineMode.All)]
@@ -153,7 +202,7 @@ namespace SlowTests.Data.RavenDB_27586
         [RavenData("where Flag == $v and Name == 'ann'", false, new[] { 1.0 }, false, Bitmap, SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("where Grade == $v and Tag == 'red'", "A", new[] { 1.5, 1.8 }, false, Bitmap, SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("where exact(Grade == $v) and Tag == 'red'", "A\u0000", new double[0], false, Bitmap, SearchEngineMode = RavenSearchEngineMode.All)]
-        [RavenData("where Name == $v and Tag == 'red' order by random('x')", "Ann", new[] { 1.0, 1.1, 1.5, 1.8 }, false, Bitmap, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("where Name == $v and Tag == 'red' order by random('x')", "Ann", new[] { 1.0, 1.1, 1.5, 1.8 }, false, Lookup, SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("where Name == $v and Tag == 'red' order by score()", "Ann", new[] { 1.0, 1.1, 1.5, 1.8 }, false, Bitmap, SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("where exact(Name == $v) and Tag == 'red'", "Ann", new double[0], false, Lookup, SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("where exact(Name == $v) and Tag == 'red'", "ann", new[] { 1.0, 1.1, 1.5, 1.8 }, false, Lookup, SearchEngineMode = RavenSearchEngineMode.All)]
@@ -385,6 +434,81 @@ namespace SlowTests.Data.RavenDB_27586
             AssertNums(options, store, rql, "hello world", [], Bitmap);
         }
 
+        [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void LookupTurnedDownWhereTheReaderSwapsTheBoolAnalyzer(Options options) =>
+            AssertBoolLiteralLookup(options, new Items_ByNameNGramFlag(), "ru");
+
+        [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void LookupTurnedDownWhereTheBoolLiteralSplitsIntoTokens(Options options) =>
+            AssertBoolLiteralLookup(options, new Items_ByNameSplitDefaultFlag(), "tr");
+
+        private void AssertBoolLiteralLookup(Options options, AbstractIndexCreationTask<Item> index, object value)
+        {
+            using var store = GetDocumentStore(options);
+            store.Maintenance.Send(new PutAnalyzersOperation(new AnalyzerDefinition { Name = "SplitOnUAnalyzer", Code = SplitOnUAnalyzerCode }));
+            index.Execute(store);
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Item { Num = 1, Name = "Ann", Flag = true });
+                session.Store(new Item { Num = 2, Name = "Ann", Flag = false });
+                session.SaveChanges();
+            }
+
+            Indexes.WaitForIndexing(store);
+            AssertNums(options, store, $"from index '{index.IndexName}' where Name == 'ann' and Flag == $v", value, [1], Bitmap);
+        }
+
+        [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void LookupTurnedDownWhenACreatedFieldSharesTheName(Options options)
+        {
+            using var store = GetDocumentStore(options);
+            new Items_ByNameTagAndCreatedName().Execute(store);
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Item { Num = 1, Name = "Ann", Tag = "red" });
+                session.SaveChanges();
+            }
+
+            Indexes.WaitForIndexing(store);
+            AssertNums(options, store, "from index 'Items/ByNameTagAndCreatedName' where Name == 'red' and Tag == 'red'", null, [1], Bitmap);
+        }
+
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+        public void LookupSortStreamsInIndexOrderAndLearnsWithThePlan()
+        {
+            using var store = GetStoreWithFourItems(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+            const string rql = "from index 'Items/ByCompounds' where Name == 'ann' and Tag == 'red' order by Num as double";
+
+            Assert.Equal([1.0, 1.1], Sorted(store, rql + " limit 2", Bitmap, null, out var sort));
+            Assert.Equal("IndexOrderStreaming", sort?.Parameters.GetValueOrDefault("Strategy"));
+            Assert.Equal([1.0, 1.1], Sorted(store, rql + " limit 2", Lookup, null, out sort));
+            Assert.True(sort?.Parameters.ContainsKey("StreamScanInflation"), "the lookup corrects its estimate by the plan's bitmap run");
+            Assert.Equal("IndexOrderStreaming", sort?.Parameters.GetValueOrDefault("Strategy"));
+            Assert.Equal([1.0, 1.1, 1.5, 1.8], Sorted(store, rql, Lookup, "IndexOrderStreaming", out sort)); // no limit: only the pin streams
+            Assert.Equal("IndexOrderStreaming", sort?.Parameters.GetValueOrDefault("Strategy"));
+        }
+
+        private static List<double> Sorted(IDocumentStore store, string rql, string strategy, string sortPin, out QueryInspectionNode sort)
+        {
+            using var session = store.OpenSession();
+            var query = session.Advanced.RawQuery<Item>(rql + " include timings()").NoCaching().Timings(out QueryTimings timings);
+            if (strategy == Bitmap)
+                query.AddParameter("rvn_corax_strategy", Bitmap);
+            if (sortPin != null)
+                query.AddParameter("rvn_corax_sort", sortPin);
+
+            var nums = query.ToList().Select(x => x.Num).ToList();
+            var plan = timings.QueryPlan as QueryInspectionNode;
+            Assert.Equal(strategy, FindNode(plan, "CompiledQuery")?.Parameters.GetValueOrDefault("OptimizationHint"));
+            sort = FindNode(plan, "SortingMatch");
+            return nums;
+        }
+
         private static void AssertNums(Options options, IDocumentStore store, string rql, object value, double[] expected, string strategy)
         {
             var (actual, ran) = Query<Item>(store, rql, value);
@@ -411,9 +535,9 @@ namespace SlowTests.Data.RavenDB_27586
             string strategy = null;
             FindNode(timings.QueryPlan as QueryInspectionNode, "CompiledQuery")?.Parameters?.TryGetValue("OptimizationHint", out strategy);
             return (results, strategy);
-
-            static QueryInspectionNode FindNode(QueryInspectionNode node, string operation) =>
-                node == null ? null : node.Operation == operation ? node : node.Children?.Select(c => FindNode(c, operation)).FirstOrDefault(n => n != null);
         }
+
+        private static QueryInspectionNode FindNode(QueryInspectionNode node, string operation) =>
+            node == null ? null : node.Operation == operation ? node : node.Children?.Select(c => FindNode(c, operation)).FirstOrDefault(n => n != null);
     }
 }

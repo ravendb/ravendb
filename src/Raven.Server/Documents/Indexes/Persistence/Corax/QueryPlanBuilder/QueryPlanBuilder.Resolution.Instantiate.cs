@@ -42,9 +42,13 @@ internal static partial class QueryPlanBuilder
                 var innerMatch = ConstructCompoundExact(ref ctx, walkerCtx);
                 if (innerMatch is null) goto default;
                 exec.ActualStrategy = ExecutionStrategy.CompoundKeyLookup;
-                return orderByFields is null
-                    ? (innerMatch, innerMatch)
-                    : (ApplyForcedSort(OrderBy(builderParameters, innerMatch, orderByFields), forcedSort), innerMatch);
+                if (orderByFields is null)
+                    return (innerMatch, innerMatch);
+                // SortingMatch streams and learns with the plan only over a bitmap
+                var sorted = OrderBy(builderParameters, new LazyOrMatch(ctx.PlanParams.IndexSearcher.Allocator, innerMatch, EmptyQueryMatch.Instance, token), orderByFields);
+                if (sorted is SortingMatch sortingMatch)
+                    sortingMatch.StreamScanInflation = compiledPlan.GetOrCreateStreamScanInflation();
+                return (ApplyForcedSort(sorted, forcedSort), innerMatch);
             }
             // On the cases rather than in SelectExecutionStrategy: a forced $rvn_corax_strategy skips selection.
             case ExecutionStrategy.CompoundSortedScan when orderByFields != null && compiledPlan.SortElisionDiverged == false: // no order by -> bitmap is more efficient 
