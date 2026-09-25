@@ -75,11 +75,15 @@ namespace Voron.Data.RawData
                 var pageHeader = PageHeaderFor(_llt, _sectionHeader->PageNumber + i + 1);
                 pageHeader = DefragPage(pageHeader);
 
+                EnsureHeaderModified();
+                AvailableSpace[i] = (ushort)(Constants.Storage.PageSize - pageHeader->NextAllocation);
+                if (AvailableSpace[i] < size)
+                    continue;
+
                 id = (pageHeader->PageNumber) * Constants.Storage.PageSize + pageHeader->NextAllocation;
                 ((short*)((byte*)pageHeader + pageHeader->NextAllocation))[0] = allocatedSize;
                 pageHeader->NextAllocation += (ushort)size;
                 pageHeader->NumberOfEntries++;
-                EnsureHeaderModified();
                 _sectionHeader->NumberOfEntries++;
                 _sectionHeader->LastUsedPage = i;
                 _sectionHeader->AllocatedSize += size;
@@ -123,6 +127,9 @@ namespace Voron.Data.RawData
 
         private RawDataSmallPageHeader* DefragPage(RawDataSmallPageHeader* pageHeader)
         {
+            if (pageHeader->NextAllocation > Constants.Storage.PageSize)
+                VoronUnrecoverableErrorException.Raise(_llt, $"Page {pageHeader->PageNumber} allocated up to {pageHeader->NextAllocation}, past the end of the page");
+
             pageHeader = ModifyPage(pageHeader);
 
             if (pageHeader->NumberOfEntries == 0)
@@ -151,16 +158,25 @@ namespace Voron.Data.RawData
 
                 while (pos < maxUsedPos)
                 {
+                    if (pos + sizeof(RawDataEntrySizes) > maxUsedPos)
+                        VoronUnrecoverableErrorException.Raise(_llt, $"Entry header at {pos} in page {pageHeader->PageNumber} runs past the allocated area ({maxUsedPos})");
+
                     var oldSize = (RawDataEntrySizes*)(tmpPtr + pos);
 
                     if (oldSize->AllocatedSize <= 0)
                         VoronUnrecoverableErrorException.Raise(_llt, $"Allocated size cannot be zero or negative, but was {oldSize->AllocatedSize} in page {pageHeader->PageNumber}");
+
+                    if (pos + sizeof(RawDataEntrySizes) + oldSize->AllocatedSize > maxUsedPos)
+                        VoronUnrecoverableErrorException.Raise(_llt, $"Entry at {pos} in page {pageHeader->PageNumber} runs past the allocated area ({maxUsedPos})");
 
                     if (oldSize->IsFreed)
                     {
                         pos += (ushort)(oldSize->AllocatedSize + sizeof(RawDataEntrySizes));
                         continue; // this was freed
                     }
+
+                    if (oldSize->UsedSize > oldSize->AllocatedSize)
+                        VoronUnrecoverableErrorException.Raise(_llt, $"Entry at {pos} in page {pageHeader->PageNumber} uses {oldSize->UsedSize} bytes of {oldSize->AllocatedSize} allocated");
 
                     var prevId = (pageHeader->PageNumber) * Constants.Storage.PageSize + pos;
                     var newId = (pageHeader->PageNumber) * Constants.Storage.PageSize + pageHeader->NextAllocation;

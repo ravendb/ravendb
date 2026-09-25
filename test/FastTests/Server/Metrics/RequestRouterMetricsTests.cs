@@ -1,3 +1,4 @@
+using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Tests.Infrastructure;
@@ -22,6 +23,23 @@ namespace FastTests.Server.Metrics
             await store.Maintenance.SendAsync(new GetStatisticsOperation());
 
             await AssertWaitForGreaterThanAsync(() => Task.FromResult(database.Metrics.Requests.RequestsPerSec.Count), initialCount);
+        }
+
+        [RavenFact(RavenTestCategory.Core)]
+        public async Task EachRequestIsRecordedOnce()
+        {
+            const long numberOfRequests = 10;
+
+            using var store = GetDocumentStore();
+            var database = await GetDocumentDatabaseInstanceForAsync(store.Database);
+            var initialCount = database.Metrics.Requests.RequestsPerSec.Count;
+
+            // reading a response to the end means the server already left RequestHandler, so every metric update for it is done
+            using var client = new HttpClient();
+            for (var i = 0; i < numberOfRequests; i++)
+                await client.GetStringAsync($"{store.Urls[0]}/databases/{store.Database}/stats");
+
+            Assert.Equal(numberOfRequests, database.Metrics.Requests.RequestsPerSec.Count - initialCount);
         }
     }
 }
