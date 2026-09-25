@@ -147,7 +147,6 @@ export function SetupWizardUsePackageStep() {
                             maxFiles={1}
                             validExtensions={["zip"]}
                             initialFiles={getInitialFiles}
-                            {...field}
                             onChange={(files) => handleFileChange(files, field)}
                         />
                     )}

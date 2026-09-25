@@ -6,107 +6,110 @@ import database = require("models/resources/database");
 import viewHelpers = require("common/helpers/view/viewHelpers")
 import notificationCenter = require("common/notifications/notificationCenter");
 import attachmentUpload = require("common/notifications/models/attachmentUpload");
+import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
+import RemoteAttachmentParameters = Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters;
+
+type progressCallback = (progress: attachmentUploadProgress) => void;
 
 class editDocumentUploader {
 
-    static readonly filePickerSelector = "#uploadAttachmentFilePicker";
-    static readonly userCancelledErrorCode = "ATTACHMENT_OVERWRITE_CANCELLED";
-
     currentUpload = ko.observable<attachmentUpload>();
-    
-    uploadButtonText = ko.pureComputed(() => {
-        if (this.currentUpload()) {
-            return "Uploading (" + this.currentUpload().textualProgress() + ")";
-        }
-        return "Add Attachment";
-    });
-
-    spinners = {
-        upload: ko.observable<boolean>(false)
-    };
+    private batchPosition = ko.observable<number>(0);
+    private batchSize = ko.observable<number>(0);
 
     constructor(private document: KnockoutObservable<document>, private db: database, private afterUpload: () => void) {}
 
-    fileSelected(fileName: string) {
-        if (fileName) {
-            const selector = $(editDocumentUploader.filePickerSelector)[0] as HTMLInputElement;
-            const file = selector.files[0];
+    async uploadFiles(files: File[], remoteParameters?: RemoteAttachmentParameters, onProgress?: progressCallback) {
+        const filesToUpload = await this.resolveNameConflicts(files);
+        const skipped = files.filter(x => !filesToUpload.includes(x));
 
-            const nameAlreadyExists = this.findAttachment(file.name);
-            if (nameAlreadyExists) {
-                viewHelpers.confirmationMessage(`Attachment '${file.name}' already exists.`, "Do you want to overwrite existing attachment?", {
-                    buttons: ["No", "Yes, overwrite"]
-                })
-                    .done(result => {
-                        if (result.can) {
-                            this.uploadInternal(file);
-                        }
-                    });
-            } else {
-                this.uploadInternal(file);
-            }
-        }
-    }
+        this.batchPosition(0);
+        this.batchSize(filesToUpload.length);
+        skipped.forEach(x => this.report(onProgress, x, "skipped", 0, x.size));
 
-    private findAttachment(name: string) {
-        const attachments = this.document().__metadata.attachments();
-        if (!attachments) {
-            return null;
+        if (!filesToUpload.length) {
+            return;
         }
 
-        return attachments.find(x => x.Name === name);
+        for (let i = 0; i < filesToUpload.length; i++) {
+            this.batchPosition(i + 1);
+            await this.uploadSingle(filesToUpload[i], remoteParameters, onProgress);
+        }
+
+        this.afterUpload();
     }
 
-    private async uploadInternal(file: File, remoteParameters?: Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters) {
-        this.spinners.upload(true);
+    abortCurrent() {
+        this.currentUpload()?.abortUpload();
+    }
 
-        const upload = attachmentUpload.forFile(this.db, this.document().getId(), file.name);
-        
+    private async resolveNameConflicts(files: File[]): Promise<File[]> {
+        const existingNames = new Set((this.document().__metadata.attachments() ?? []).map(x => x.Name));
+        const conflicting = files.filter(x => existingNames.has(x.name));
+        if (!conflicting.length) {
+            return files;
+        }
+
+        const overwrite = await this.confirmOverwrite(conflicting);
+        return overwrite ? files : files.filter(x => !existingNames.has(x.name));
+    }
+
+    private confirmOverwrite(conflicting: File[]): Promise<boolean> {
+        const title = `Overwrite existing ${pluralizeHelpers.pluralize(conflicting.length, "attachment", "attachments", true)}?`;
+        const names = conflicting.map(x => `'${x.name}'`).join(", ");
+        const message = `Document already has: ${names}. Overwriting replaces current content, skipping uploads only the new files.`;
+
+        return new Promise<boolean>(resolve => {
+            viewHelpers.confirmationMessage(title, message, {
+                buttons: ["No, skip existing", "Yes, overwrite"],
+                forceRejectWithResolve: true
+            })
+                .done(result => resolve(result.can))
+                .fail(() => resolve(false));
+        });
+    }
+
+    private async uploadSingle(file: File, remoteParameters?: RemoteAttachmentParameters, onProgress?: progressCallback) {
+        const documentId = this.document().getId();
+        const upload = attachmentUpload.forFile(this.db, documentId, file.name);
         this.currentUpload(upload);
-        
         notificationCenter.instance.monitorAttachmentUpload(upload);
 
-        const command = new uploadAttachmentCommand(file, this.document().getId(), this.db, event => upload.updateProgress(event), remoteParameters);
-        
-        await command.execute()
-            .done(() => {
-                this.afterUpload();
-            })
-            .fail(() => {
-                // remove progress notification - failure notification will be shown instead.
-                notificationCenter.instance.databaseNotifications.remove(upload);
-            })
-            .always(() => {
-                // reset file upload widget so user can reupload same file twice
-                $(editDocumentUploader.filePickerSelector).val("");
-                this.spinners.upload(false);
-                this.currentUpload(null);
-            });
-     
-        upload.abort = () => command.abort();
+        this.report(onProgress, file, "uploading", 0, file.size);
+
+        const command = new uploadAttachmentCommand(file, documentId, this.db, event => {
+            upload.updateProgress(event);
+            if (event.lengthComputable) {
+                this.report(onProgress, file, "uploading", event.loaded, event.total);
+            }
+        }, remoteParameters);
+
+        let cancelled = false;
+        upload.abort = () => {
+            cancelled = true;
+            command.abort();
+        };
+
+        try {
+            await command.execute();
+            this.report(onProgress, file, "uploaded", file.size, file.size);
+        } catch {
+            notificationCenter.instance.databaseNotifications.remove(upload);
+            this.report(onProgress, file, cancelled ? "cancelled" : "failed", 0, file.size);
+        } finally {
+            this.currentUpload(null);
+        }
     }
 
-    async uploadFileWithRemoteParameters(file: File, remoteParameters: Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters) {
-        const nameAlreadyExists = this.findAttachment(file.name);
-
-        if (nameAlreadyExists) {
-            const confirmed = await new Promise<boolean>((resolve) => {
-                viewHelpers
-                    .confirmationMessage(
-                        `Attachment '${file.name}' already exists.`,
-                        "Do you want to overwrite existing attachment?",
-                        { buttons: ["No", "Yes, overwrite"] }
-                    )
-                    .done((result: any) => resolve(!!result?.can))
-                    .fail(() => resolve(false));
-            });
-
-            if (!confirmed) {
-                throw new Error(editDocumentUploader.userCancelledErrorCode);
-            }
-        }
-
-        await this.uploadInternal(file, remoteParameters);
+    private report(onProgress: progressCallback | undefined, file: File, status: attachmentUploadStatus, loaded: number, total: number) {
+        onProgress?.({
+            position: this.batchPosition(),
+            count: this.batchSize(),
+            fileName: file.name,
+            status,
+            loaded,
+            total
+        });
     }
 }
 

@@ -4,10 +4,11 @@ import * as yup from "yup";
 import { Icon } from "components/common/Icon";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { FormDatePicker, FormGroup, FormLabel, FormSelectAutocomplete } from "components/common/Form";
-import FileDropzone from "components/common/FileDropzone";
+import FileUploadPanel from "components/common/FileUploadPanel";
+import useAttachmentUpload from "components/hooks/useAttachmentUpload";
 import messagePublisher from "common/messagePublisher";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import * as React from "react";
+import React from "react";
 import document from "models/database/documents/document";
 import database from "models/resources/database";
 import Button from "react-bootstrap/Button";
@@ -17,7 +18,7 @@ import moment from "moment";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import RichAlert from "components/common/RichAlert";
 import { components, GroupBase, OptionProps } from "react-select";
-import editDocumentUploader = require("viewmodels/database/documents/editDocumentUploader");
+import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import RemoteAttachmentParameters = Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters;
 
 type AddAttachmentWithRemoteParametersModalProps = {
@@ -47,47 +48,54 @@ export default function AddAttachmentWithRemoteParametersModal({
     });
 
     const { control, formState } = form;
-
-    const uploader = new editDocumentUploader(document, db, onUploaded);
-
-    const asyncUploadFileWithRemoteParameters = useAsyncCallback((file: File, dto: RemoteAttachmentParameters) =>
-        uploader.uploadFileWithRemoteParameters(file, dto)
-    );
+    const { uploadItems, batchProgress, upload, abortCurrent } = useAttachmentUpload(document, db, onUploaded);
 
     const selectedDestination = useWatch({
         control,
         name: "identifier",
     });
 
+    const selectedFiles = useWatch({ control, name: "files" }) as File[];
+    const selectedUploadDate = useWatch({ control, name: "uploadDate" });
+
     const handleSubmit = async (formData: AttachmentWithRemoteParametersFormData) => {
-        try {
-            await asyncUploadFileWithRemoteParameters.execute(formData.file as File, mapToDto(formData));
+        if (await upload(formData.files as File[], mapToDto(formData))) {
             onClose();
-        } catch (e) {
-            if ((e as Error).message === editDocumentUploader.userCancelledErrorCode) {
-                return;
-            }
         }
     };
 
-    const onFileDropzoneChange = async (files: File[], field: ControllerRenderProps<FieldValues, "file">) => {
-        const file = files[0];
-
-        if (!file.name.trim()) {
+    const onFileDropzoneChange = (files: File[], field: ControllerRenderProps<FieldValues, "files">) => {
+        if (files.some((file) => !file.name.trim())) {
             messagePublisher.reportError("Failed to load file");
-            form.setError("file", { type: "manual", message: "Failed to load file" });
+            form.setError("files", { type: "manual", message: "Failed to load file" });
             return;
         }
 
-        field.onChange(file);
+        const current: File[] = field.value ?? [];
+        const replaced = current.filter((x) => !files.some((file) => file.name === x.name));
+        field.onChange([...replaced, ...files]);
     };
+
+    const removeFile = (file: File) => {
+        form.setValue(
+            "files",
+            selectedFiles.filter((x) => x !== file),
+            { shouldValidate: true, shouldDirty: true }
+        );
+    };
+
+    const clearFiles = () => {
+        form.setValue("files", [], { shouldValidate: true, shouldDirty: true });
+    };
+
+    const attachmentsLabel = pluralizeHelpers.pluralize(selectedFiles?.length || 1, "attachment", "attachments", true);
 
     return (
         <Modal size="lg" show contentClassName="modal-border bulge-info">
             <Modal.Header className="pb-0" onCloseClick={onClose}>
                 <h3>
                     <Icon icon="remote-attachment" color="info" />
-                    Add attachment to remote storage
+                    Add {attachmentsLabel} to remote storage
                 </h3>
             </Modal.Header>
             <FormProvider {...form}>
@@ -95,12 +103,14 @@ export default function AddAttachmentWithRemoteParametersModal({
                     <form onSubmit={form.handleSubmit(handleSubmit)}>
                         <FormGroup>
                             <Controller
-                                name="file"
+                                name="files"
                                 render={({ field }) => (
-                                    <FileDropzone
-                                        {...field}
-                                        maxFiles={1}
+                                    <FileUploadPanel
+                                        items={uploadItems(selectedFiles ?? [])}
                                         onChange={(files) => onFileDropzoneChange(files, field)}
+                                        onRemove={removeFile}
+                                        onCancel={abortCurrent}
+                                        onClearAll={clearFiles}
                                     />
                                 )}
                             ></Controller>
@@ -128,7 +138,7 @@ export default function AddAttachmentWithRemoteParametersModal({
                                 placeholderText="e.g. 11/21/2025 10:57 AM"
                                 showTimeSelect
                                 minDate={new Date()}
-                                minTime={moment().subtract(29, "minutes").toDate()}
+                                minTime={getMinUploadTime(selectedUploadDate)}
                                 maxTime={moment().endOf("day").toDate()}
                                 name="uploadDate"
                                 control={control}
@@ -147,7 +157,9 @@ export default function AddAttachmentWithRemoteParametersModal({
                         onClick={form.handleSubmit(handleSubmit)}
                         disabled={!formState.isValid}
                     >
-                        Save attachment with remote settings
+                        {batchProgress
+                            ? `Uploading ${batchProgress.position}/${batchProgress.count}`
+                            : `Save ${attachmentsLabel} with remote settings`}
                     </ButtonWithSpinner>
                 </Modal.Footer>
             </FormProvider>
@@ -182,8 +194,13 @@ function RemoteAttachmentWarning({ config, selectedDestination }: RemoteAttachme
     return null;
 }
 
+function getMinUploadTime(selectedDate: Date): Date {
+    const isToday = !selectedDate || moment(selectedDate).isSame(moment(), "day");
+    return isToday ? moment().subtract(29, "minutes").toDate() : moment().startOf("day").toDate();
+}
+
 const schema = yup.object({
-    file: yup.mixed().required("File is required"),
+    files: yup.array().of(yup.mixed()).min(1, "File is required").required("File is required"),
     identifier: yup.string().required("Identifier is required"),
     uploadDate: yup.date().required("Upload date is required"),
 });
@@ -216,14 +233,14 @@ function getDefaultValues(configResult: RemoteAttachmentsStudioConfiguration): A
         return {
             identifier: options[0].value,
             uploadDate: new Date(),
-            file: null,
+            files: [],
         };
     }
 
     return {
         identifier: null,
         uploadDate: new Date(),
-        file: null,
+        files: [],
     };
 }
 
