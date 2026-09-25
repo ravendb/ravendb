@@ -376,33 +376,16 @@ public static class CoraxQueryBuilder
                 {
                     IQueryMatch left = null;
                     IQueryMatch right = null;
-                    
-                    // translate ((Foo >= $p1) and (Foo <= $p2)) to a more efficient between query
-                    if (@where.Left is BinaryExpression lbe && lbe.IsRangeOperation &&
-                        @where.Right is BinaryExpression rbe && rbe.IsRangeOperation && lbe.Left.Equals(rbe.Left) &&
-                        lbe.Right is ValueExpression leftVal && rbe.Right is ValueExpression rightVal)
+
+                    // 'Foo > $a and Foo > $b' keeps only the tighter bound. The query metadata already placed such bounds
+                    // next to each other; their values are known only here.
+                    if (QueryBuilderHelper.TryMergeSameDirectionBounds(where, metadata.Query, metadata, queryParameters, index, out var tighterBound, out var remainder))
                     {
-                        BetweenExpression bq = null;
-                        if (lbe.IsGreaterThan && rbe.IsLessThan)
-                        {
-                            bq = new BetweenExpression(lbe.Left, leftVal, rightVal)
-                            {
-                                MinInclusive = lbe.Operator == OperatorType.GreaterThanEqual, MaxInclusive = rbe.Operator == OperatorType.LessThanEqual,
-                            };
-                        }
-
-                        if (lbe.IsLessThan && rbe.IsGreaterThan)
-                        {
-                            bq = new BetweenExpression(lbe.Left, rightVal, leftVal)
-                            {
-                                MinInclusive = rbe.Operator == OperatorType.GreaterThanEqual, MaxInclusive = lbe.Operator == OperatorType.LessThanEqual
-                            };
-                        }
-
-                        if (bq != null)
-                            return TranslateBetweenQuery(builderParameters, bq, exact);
+                        var mergedExpression = remainder == null ? tighterBound : new BinaryExpression(remainder, tighterBound, OperatorType.And);
+                        builderParameters.BuildSteps?.Add($"Kept the tighter of the same-direction bounds: {expression} -> {mergedExpression}");
+                        return ToCoraxQuery(builderParameters, mergedExpression, ref leftOnlyOptimization, exact);
                     }
-                    
+
                     leftOnlyOptimization.BinaryMatchTraversed();
                     switch (@where.Left, @where.Right)
                     {
