@@ -1,11 +1,9 @@
-﻿using System;
-using System.Diagnostics;
+using System;
 using System.Threading;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Threading;
-using Sparrow.Utils;
 
 namespace Sparrow.Json
 {
@@ -23,37 +21,25 @@ namespace Sparrow.Json
 
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
         private readonly long _maxContextSizeToKeepInBytes;
-        private readonly long _maxNumberOfContextsToKeepInGlobalStack;
-        private long _numberOfContextsDisposedInGlobalStack;
 
-        private readonly PerCoreContainer<T> _perCoreCache = new PerCoreContainer<T>();
-        private readonly CountingConcurrentStack<T> _globalStack = new CountingConcurrentStack<T>();
-        private readonly Timer _cleanupTimer;
+        private readonly PerCoreContainer<T> _contextBuffer = new PerCoreContainer<T>(PlatformDetails.Is32Bits ? 4 * 1024 : 64 * 1024);
 
-        protected JsonContextPoolBase(IRavenLogger logger)
+        protected JsonContextPoolBase(IRavenLogger logger, int? perCoreSlots = null)
         {
             _logger = logger;
-            _cleanupTimer = new Timer(Cleanup, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
             _maxContextSizeToKeepInBytes = long.MaxValue;
-            _maxNumberOfContextsToKeepInGlobalStack = PlatformDetails.Is32Bits == false
-                ? 4096
-                : 1024;
+
+            var slots = perCoreSlots ?? (PlatformDetails.Is32Bits ? 8 : 16);
         }
 
-        protected JsonContextPoolBase(Size? maxContextSizeToKeep, IRavenLogger logger)
-            : this(logger)
+        protected JsonContextPoolBase(Size? maxContextSizeToKeep, IRavenLogger logger, int? perCoreSlots = null)
+            : this(logger, perCoreSlots)
         {
             if (maxContextSizeToKeep.HasValue)
                 _maxContextSizeToKeepInBytes = maxContextSizeToKeep.Value.GetValue(SizeUnit.Bytes);
         }
 
-        protected JsonContextPoolBase(Size? maxContextSizeToKeep, long? maxNumberOfContextsToKeepInGlobalStack, IRavenLogger logger)
-            : this(maxContextSizeToKeep, logger)
-        {
-            if (maxNumberOfContextsToKeepInGlobalStack.HasValue)
-                _maxNumberOfContextsToKeepInGlobalStack = maxNumberOfContextsToKeepInGlobalStack.Value;
-        }
 
         public IDisposable AllocateOperationContext(out JsonOperationContext context)
         {
@@ -65,38 +51,40 @@ namespace Sparrow.Json
 
         public void Clean()
         {
-            // we are expecting to be called here when there is no
-            // more work to be done, and we want to release resources
-            // to the system
-
-            // currently we have nothing to do here
+            // intentionally no-op by default
         }
 
         public IDisposable AllocateOperationContext(out T context)
         {
             _cts.Token.ThrowIfCancellationRequested();
 
-            while (_perCoreCache.TryPull(out context))
+            while (_contextBuffer.TryPull(out context))
             {
+                // We must raise InUse flag before doing anything else with the context
+                // to prevent it from being disposed by another thread
                 if (context.InUse.Raise() == false)
+                {
+                    // Context is disposed or already in use. Due to lock-free ring buffer semantics,
+                    // once we pull it from the buffer, no other thread can get it, so this means
+                    // the context was disposed. Do NOT put it back in the pool - just skip it.
                     continue;
-                // This what ensures that we work correctly with races from other threads
-                // if there is a context switch at the wrong time
-                context.Renew();
-                return new ReturnRequestContext
-                {
-                    Parent = this,
-                    Context = context
-                };
-            }
+                }
 
-            if (TryGetFromStack(_globalStack, out context))
-            {
-                return new ReturnRequestContext
+                try
                 {
-                    Parent = this,
-                    Context = context
-                };
+                    context.Renew();
+                    return new ReturnRequestContext
+                    {
+                        Parent = this,
+                        Context = context
+                    };
+                }
+                catch
+                {
+                    // If Renew() fails (e.g., context was disposed), lower the flag and continue
+                    context.InUse.Lower();
+                    continue;
+                }
             }
 
             // no choice, got to create it
@@ -107,25 +95,6 @@ namespace Sparrow.Json
                 Parent = this,
                 Context = context
             };
-
-            static bool TryGetFromStack(CountingConcurrentStack<T> stack, out T context)
-            {
-                context = default;
-
-                if (stack == null || stack.IsEmpty)
-                    return false;
-
-                while (stack.TryPop(out context))
-                {
-                    if (context.InUse.Raise() == false)
-                        continue;
-
-                    context.Renew();
-                    return true;
-                }
-
-                return false;
-            }
         }
 
         protected abstract T CreateContext();
@@ -137,11 +106,9 @@ namespace Sparrow.Json
 
             public void Dispose()
             {
-                var parent = Parent;
+                var parent = Interlocked.Exchange(ref Parent, null);             
                 if (parent == null)
                     return; // disposed already
-
-                Parent = null;
 
                 if (Context.DoNotReuse)
                 {
@@ -162,130 +129,32 @@ namespace Sparrow.Json
                     return;
                 }
 
-                Context.Reset();
-                // These contexts are reused, so we don't want to use LowerOrDie here.
-                Context.InUse.Lower();
-                Context.InPoolSince = DateTime.UtcNow;
-
                 parent.Push(Context);
 
                 Context = null;
             }
         }
 
-        private DateTime _lastPerCoreCleanup = DateTime.UtcNow;
-        private readonly TimeSpan _perCoreCleanupInterval = TimeSpan.FromMinutes(5);
-
-        private DateTime _lastGlobalStackRebuild = DateTime.UtcNow;
-        private readonly TimeSpan _globalStackRebuildInterval = TimeSpan.FromMinutes(15);
-
-        private void Cleanup(object _)
-        {
-            if (Monitor.TryEnter(_locker) == false)
-                return;
-
-            try
-            {
-                var currentTime = DateTime.UtcNow;
-                var idleTime = TimeSpan.FromMinutes(5);
-                var currentGlobalStack = _globalStack;
-
-                var perCoreCleanupNeeded = currentGlobalStack.IsEmpty || currentTime - _lastPerCoreCleanup >= _perCoreCleanupInterval;
-                if (perCoreCleanupNeeded)
-                {
-                    _lastPerCoreCleanup = currentTime;
-
-                    foreach (var current in _perCoreCache)
-                    {
-                        var context = current.Item;
-                        var timeInPool = currentTime - context.InPoolSince;
-                        if (timeInPool <= idleTime)
-                            continue;
-
-                        if (context.InUse.Raise() == false)
-                            continue;
-
-                        _perCoreCache.Remove(current.Item, current.Pos);
-                        context.Dispose();
-                    }
-
-                    return;
-                }
-
-                using (var globalStackEnumerator = currentGlobalStack.GetEnumerator())
-                {
-                    while (globalStackEnumerator.MoveNext())
-                    {
-                        var context = globalStackEnumerator.Current;
-
-                        var timeInPool = currentTime - context.InPoolSince;
-                        if (timeInPool <= idleTime)
-                            continue;
-
-                        if (context.InUse.Raise() == false)
-                            continue;
-
-                        context.Dispose();
-                        _numberOfContextsDisposedInGlobalStack++;
-                    }
-                }
-
-                var globalStackRebuildNeeded = currentTime - _lastGlobalStackRebuild >= _globalStackRebuildInterval;
-
-                if (globalStackRebuildNeeded && _numberOfContextsDisposedInGlobalStack > 0)
-                {
-                    _lastGlobalStackRebuild = currentTime;
-
-                    _numberOfContextsDisposedInGlobalStack = 0;
-
-                    var localStack = new CountingConcurrentStack<T>();
-
-                    while (currentGlobalStack.TryPop(out var context))
-                    {
-                        if (context.InUse.Raise() == false)
-                            continue;
-
-                        context.InUse.Lower();
-                        localStack.Push(context);
-                    }
-
-                    while (localStack.TryPop(out var context))
-                        currentGlobalStack.Push(context);
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.Assert(e is OutOfMemoryException, $"Expecting OutOfMemoryException but got: {e}");
-                if (_logger.IsErrorEnabled)
-                    _logger.Error("Error during cleanup.", e);
-            }
-            finally
-            {
-                Monitor.Exit(_locker);
-            }
-        }
-
         private void Push(T context)
         {
-            if (_perCoreCache.TryPush(context))
-                return;
-
+            // If we are in low memory mode, dispose the context immediately
             if (LowMemoryFlag.IsRaised())
             {
                 context.Dispose();
                 return;
             }
 
-            var currentGlobalStack = _globalStack;
+            // These contexts are reused, so we don't want to use LowerOrDie here.
+            context.Reset();
+            context.InUse.Lower();
+            context.InPoolSince = DateTime.UtcNow;
 
-            // couldn't find a place for it, let's add it to the global list
-            if (currentGlobalStack.Count >= _maxNumberOfContextsToKeepInGlobalStack)
+            // Try to enqueue the context back into the ring buffer
+            if (_contextBuffer.TryPush(context) == false)
             {
+                // Ring buffer is full, dispose the context
                 context.Dispose();
-                return;
             }
-
-            currentGlobalStack.Push(context);
         }
 
         public virtual void Dispose()
@@ -300,25 +169,6 @@ namespace Sparrow.Json
 
                 _cts.Cancel();
                 _disposed = true;
-                _cleanupTimer.Dispose();
-
-                ClearStack(_globalStack);
-
-                foreach (var context in _perCoreCache.EnumerateAndClear())
-                {
-                    context.Dispose();
-                }
-            }
-
-            static void ClearStack(CountingConcurrentStack<T> stack)
-            {
-                if (stack == null || stack.IsEmpty)
-                    return;
-
-                while (stack.TryPop(out var context))
-                {
-                    context.Dispose();
-                }
             }
         }
 
@@ -335,25 +185,7 @@ namespace Sparrow.Json
             if (_isExtremelyLowMemory.Raise() == false)
                 return;
 
-            ClearStack(_globalStack);
-
-            foreach (var context in _perCoreCache.EnumerateAndClear())
-            {
-                if (context.InUse.Raise())
-                    context.Dispose();
-            }
-
-            static void ClearStack(CountingConcurrentStack<T> stack)
-            {
-                if (stack == null || stack.IsEmpty)
-                    return;
-
-                while (stack.TryPop(out var context))
-                {
-                    if (context.InUse.Raise())
-                        context.Dispose();
-                }
-            }
+            _contextBuffer.Cleanup(new RemoveAllAndDisposePolicy<T>());
         }
 
         public void LowMemoryOver()
