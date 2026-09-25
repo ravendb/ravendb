@@ -572,6 +572,10 @@ public static class QueryBuilderHelper
         
         if (indexMapping.TryGetByFieldName(allocator, fieldName, out var indexFinding))
         {
+            // ask the binding: 'exact' below rewrites the mode of the metadata we return
+            if (indexFinding.IsIndexed == false)
+                ThrowFieldIsNotIndexed(fieldName, index.Name);
+
             if (exact) //When field has exact let's change the analyzer to do nothing
                 metadata = indexFinding.Metadata.ChangeAnalyzer(FieldIndexingMode.Exact);
             else if (indexFinding.FieldIndexingMode is FieldIndexingMode.Search) // in case of search
@@ -602,6 +606,17 @@ public static class QueryBuilderHelper
         return metadata;
         void ThrowNotFoundInIndex() => throw new InvalidQueryException($"Field {fieldName} not found in Index '{index.Name}'.");
     }
+
+    internal static void AssertFieldIsIndexed(string fieldName, Index index)
+    {
+        if (index.Definition.IndexFields.TryGetValue(fieldName, out var field) && field.Indexing == FieldIndexing.No)
+            ThrowFieldIsNotIndexed(fieldName, index.Name);
+    }
+
+    [DoesNotReturn]
+    private static void ThrowFieldIsNotIndexed(string fieldName, string indexName) => throw new InvalidQueryException(
+        $"Field '{fieldName}' of index '{indexName}' is not indexed (its indexing option is 'FieldIndexing.No'), " +
+        "so it cannot be used to match or to order documents. Remove it from the query or change its indexing option.");
 
     internal static bool IsExact(Index index, bool exact, QueryFieldName fieldName)
     {
