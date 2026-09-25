@@ -481,6 +481,54 @@ public class RavenDB_27035 : RavenTestBase
         }
     }
 
+    private class Item
+    {
+        public string Id { get; set; }
+
+        public string[] Tags { get; set; }
+    }
+
+    private class Items_ByTag : AbstractIndexCreationTask<Item>
+    {
+        public Items_ByTag()
+        {
+            Map = items => from i in items
+                           select new
+                           {
+                               _ = i.Tags.Select(t => CreateField("Tag", t))
+                           };
+        }
+    }
+
+    // the WHERE-clause streaming optimization drops the sort and streams the tree, which orders a multi-termed
+    // document by whichever term it meets first. The oracle is the same query with the optimization refused.
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void WhereStreamingKeepsTheOrderWhenCreateFieldWritesSeveralTerms(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Item { Id = "items/1", Tags = new[] { "a", "z" } });
+            session.Store(new Item { Id = "items/2", Tags = new[] { "m" } });
+            session.SaveChanges();
+        }
+
+        store.ExecuteIndex(new Items_ByTag());
+        Indexes.WaitForIndexing(store);
+
+        Assert.Equal(
+            Ids(store, "from index 'Items/ByTag' where exists(Tag) or exists(Tag) order by Tag desc"),
+            Ids(store, "from index 'Items/ByTag' where exists(Tag) order by Tag desc"));
+    }
+
+    private static string[] Ids(IDocumentStore store, string rql)
+    {
+        using var session = store.OpenSession();
+        return session.Advanced.RawQuery<Item>(rql).ToList().Select(x => x.Id).ToArray();
+    }
+
     private static string PlanOperations(QueryInspectionNode node)
     {
         var operations = new List<string>();
