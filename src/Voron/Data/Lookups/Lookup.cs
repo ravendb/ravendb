@@ -723,6 +723,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             DecrementPageNumbers(ref parent);
 
             var parentPageNumber = parent.Page.PageNumber;
+            int parentCollapsedLevels = parent.Header->CollapsedLevels;
             Debug.Assert(_llt.IsDirty(parent.Page.PageNumber));
             Memory.Copy(parent.Page.Pointer, stateToKeep.Page.Pointer, Constants.Storage.PageSize);
 
@@ -733,7 +734,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             if (_internalCursor._pos > 1) // not the root, so we record the collapse
             {
                 // subtree is now one level shallower than its siblings, next split here should grow down
-                parent.Header->CollapsedLevels++;
+                parent.Header->CollapsedLevels += parentCollapsedLevels + 1;
             }
             
             _llt.FreePage(stateToDelete.Page.PageNumber);

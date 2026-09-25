@@ -507,6 +507,7 @@ namespace Voron.Data.PostingLists
                 var leafPage = _llt.GetPage(leafPageNum);
                 
                 long cpy = state.Page.PageNumber;
+                int collapsedLevels = current.Header->CollapsedLevels;
                 leafPage.CopyTo(state.Page);
                 state.Page.PageNumber = cpy;
 
@@ -518,7 +519,7 @@ namespace Voron.Data.PostingLists
                 {
                     // PostingListLeafPageHeader & PostingListBranchPageHeader both have CollapsedLevels at the same offset
                     var survivor = (PostingListLeafPageHeader*)state.Page.Pointer;
-                    survivor->CollapsedLevels++;
+                    survivor->CollapsedLevels += collapsedLevels + 1;
                 }
 
                 _state.BranchPages--;

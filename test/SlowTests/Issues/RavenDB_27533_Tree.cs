@@ -353,6 +353,50 @@ public unsafe class RavenDB_27533_Tree(ITestOutputHelper output) : StorageTest(o
             Assert.True(root.CollapsedLevels == 0, $"the root is owing {root.CollapsedLevels} levels, but it has no siblings to be shallower than");
         }
     }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CollapsingABranchThatOwesALevelMustPassItToItsChild()
+    {
+        var model = new SortedSet<long>();
+        using (var tx = Env.WriteTransaction())
+        {
+            var tree = tx.CreateTree(TreeName);
+            long next = 0;
+            while (tree.State.Header.Depth < 4)
+            {
+                tree.Add(PaddedKey(next), Value);
+                model.Add(next);
+                next++;
+            }
+
+            long rightBranch = RootChildren(tree)[1];
+            long promotedBranch = ChildrenOf(tree, rightBranch)[0];
+            long firstKeyOfSibling = KeyOf(tree.GetReadOnlyTreePage(rightBranch), 1);
+            while (RootChildren(tree)[1] == rightBranch)
+            {
+                long key = model.GetViewBetween(long.MinValue, firstKeyOfSibling - 1).Max;
+                tree.Delete(PaddedKey(key));
+                model.Remove(key);
+            }
+
+            Assert.Equal(promotedBranch, RootChildren(tree)[1]);
+            Assert.Equal(1, tree.GetReadOnlyTreePage(promotedBranch).CollapsedLevels);
+
+            while (ChildrenOf(tree, promotedBranch).Length > 2)
+            {
+                tree.Delete(PaddedKey(model.Min));
+                model.Remove(model.Min);
+            }
+
+            long survivor = ChildrenOf(tree, promotedBranch)[0];
+            tree.Delete(PaddedKey(model.Max));
+            model.Remove(model.Max);
+
+            Assert.Equal(survivor, RootChildren(tree)[1]);
+            var page = tree.GetReadOnlyTreePage(survivor);
+            Assert.True(page.CollapsedLevels == 2, $"page {survivor} replaced a branch that owed a level, but owes {page.CollapsedLevels} levels instead of 2");
+        }
+    }
     
     [RavenFact(RavenTestCategory.Voron)]
     public void SplitOfACachedDecompressionMustSeeTheLevelsMarkedAfterItWasCached()
