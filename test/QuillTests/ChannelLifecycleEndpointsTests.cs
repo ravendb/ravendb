@@ -37,6 +37,33 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
         Assert.False(item.TryGetProperty("bindingId", out _));
     }
 
+    [RavenTheory(RavenTestCategory.Quill)]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Provisioning_any_channel_type_requires_a_display_name(string? name)
+    {
+        await using var app = await NewAppAsync();
+        await SeedDemoAgentAsync(app);
+
+        var requests = new[]
+        {
+            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", Array.Empty<string>(), name),
+            new ProvisionChannelRequest(ChannelType.Telegram, "demo-agent", null, name, Telegram: new("123:token")),
+            new ProvisionChannelRequest(ChannelType.Slack, "demo-agent", null, name, Slack: new("xoxb-token", "secret")),
+            new ProvisionChannelRequest(ChannelType.Discord, "demo-agent", null, name, Discord: new("token")),
+        };
+
+        foreach (var request in requests)
+        {
+            var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(request));
+            Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
+            Assert.Contains("displayName is required", ex.Body);
+        }
+
+        Assert.Empty(await app.GetChannelsAsync());
+    }
+
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Channels_list_is_empty_for_app_with_no_channels()
     {
@@ -107,7 +134,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
             Assert.Null(await session.LoadAsync<Channel>($"channels/{channelId}"));
         }
 
-        var reChannel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://localhost" }));
+        var reChannel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://localhost" }, "Storefront widget"));
         Assert.False(string.IsNullOrEmpty(reChannel.ChannelId));
     }
 
@@ -137,7 +164,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
 
         await SeedDemoAgentAsync(appB);
         var openChannel = await appB.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", Array.Empty<string>()));
+            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", Array.Empty<string>(), "Storefront widget"));
         var openToken = await MintLinkAsync(appB, openChannel.ChannelId);
 
         var open = await Host.Client.GetAsync(QuillRoutes.EmbedPage(appB.Slug, openToken));
@@ -232,7 +259,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
 
         await app.DeleteChannelAsync(channelId);
 
-        var reChannel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://localhost" }));
+        var reChannel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://localhost" }, "Storefront widget"));
         Assert.NotEqual(channelId, reChannel.ChannelId);
     }
 
@@ -328,7 +355,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
     private static async Task<string> ProvisionIFrameChannelAsync(QuillApp app, string agentId = "demo-agent")
     {
         await SeedDemoAgentAsync(app, agentId);
-        var channel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, agentId, new[] { "http://localhost" }));
+        var channel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, agentId, new[] { "http://localhost" }, "Storefront widget"));
         return channel.ChannelId;
     }
 

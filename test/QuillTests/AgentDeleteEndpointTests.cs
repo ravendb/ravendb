@@ -44,7 +44,7 @@ public class AgentDeleteEndpointTests(ITestOutputHelper output) : QuillTestBase(
         await using var app = await NewAppAsync();
         var agentId = await ProvisionAgentAsync(app);
 
-        await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, agentId, Array.Empty<string>()));
+        await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, agentId, Array.Empty<string>(), "Storefront widget"));
 
         var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.DeleteAgentAsync(agentId));
         Assert.Equal(HttpStatusCode.Conflict, ex.StatusCode);
@@ -60,7 +60,7 @@ public class AgentDeleteEndpointTests(ITestOutputHelper output) : QuillTestBase(
         var agentId = await ProvisionAgentAsync(app);
 
         for (var i = 0; i < 30; i++)
-            await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, agentId, Array.Empty<string>()));
+            await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, agentId, Array.Empty<string>(), "Storefront widget"));
 
         var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.DeleteAgentAsync(agentId));
         Assert.Equal(HttpStatusCode.Conflict, ex.StatusCode);

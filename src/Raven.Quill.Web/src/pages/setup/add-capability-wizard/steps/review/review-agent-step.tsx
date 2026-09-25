@@ -13,10 +13,11 @@ export function ReviewAgentStep() {
     const mode = useWatch({ control, name: "create.mode" });
     const { errors } = useFormState({ control, name: "review" });
     const [activeTab, setActiveTab] = useState<ReviewTabId>("suggestion");
+    const configurationTab = <AgentConfigurationTab />;
 
     // Manual setup skips the AI suggestion overview — there is no suggestion to show.
     if (mode === "manual") {
-        return <AgentConfigurationTab />;
+        return configurationTab;
     }
 
     return (
@@ -34,7 +35,7 @@ export function ReviewAgentStep() {
                 <AgentSuggestionTab />
             </TabsContent>
             <TabsContent value="configuration" className="mt-3">
-                <AgentConfigurationTab />
+                {configurationTab}
             </TabsContent>
         </Tabs>
     );

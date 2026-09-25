@@ -53,7 +53,7 @@ const parameterBindingSchema = z
 
 const slackChannelSchema = z.object({
     agentId: z.string().min(1, "Select an agent to route conversations to"),
-    displayName: z.string().trim(),
+    displayName: z.string().trim().min(1, "Channel name is required"),
     botToken: newTokenField(SLACK_BOT_TOKEN_FORMAT, "Paste the bot token from the Slack app's OAuth page"),
     signingSecret: z.string().trim().min(1, "Paste the signing secret (Basic Information > App Credentials)"),
     parameters: z.array(parameterBindingSchema),
@@ -133,7 +133,7 @@ function LoadedSlackChannelForm({
                 type: "Slack",
                 agentId: values.agentId,
                 allowedOrigins: null,
-                displayName: values.displayName.trim() || null,
+                displayName: values.displayName.trim(),
                 slack: {
                     botToken: values.botToken.trim(),
                     signingSecret: values.signingSecret.trim(),
@@ -290,8 +290,8 @@ function LoadedSlackChannelForm({
                             control={form.control}
                             name="displayName"
                             label="Channel name"
-                            placeholder="Defaults to the bot's Slack name"
-                            description="Shown in the channels list. Optional."
+                            placeholder="e.g. Support Slack"
+                            description="Shown in the channels list."
                         />
                         <ParameterBindingFields
                             control={form.control}

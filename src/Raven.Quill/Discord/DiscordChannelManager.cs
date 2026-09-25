@@ -128,8 +128,9 @@ internal sealed class DiscordChannelManager(
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
+                _runtimes.TryAdd(key, runtime);
                 if (logger.IsWarnEnabled)
-                    logger.Warn($"Discord gateway stop failed for channel {key.ChannelId} on {key.Database}: {e.Message}");
+                    logger.Warn($"Discord gateway stop failed for channel {key.ChannelId} on {key.Database}: {e.Message}; keeping it to retry");
                 continue;
             }
 

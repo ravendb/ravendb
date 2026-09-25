@@ -38,7 +38,7 @@ public class SlackManualE2ETests(ITestOutputHelper output) : QuillTestBase(outpu
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Slack, agentId, null,
-            Slack: new(botToken, signingSecret)));
+            DisplayName: "Support bot", Slack: new(botToken, signingSecret)));
 
         var channels = await app.GetChannelsAsync();
         var summary = Assert.Single(channels, c => c.ChannelId == created.ChannelId);

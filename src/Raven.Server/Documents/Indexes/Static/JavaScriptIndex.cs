@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using Acornima;
+using Acornima.Ast;
 using Jint;
 using Jint.Native;
 using Jint.Native.Function;
@@ -13,6 +14,7 @@ using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.AI.Embeddings;
@@ -268,6 +270,10 @@ function map(name, lambda) {
                 ProcessReduce(definition, definitions, resolver, indexVersion);
 
                 ProcessFields(definition, collectionFunctions);
+                
+                HasDynamicFields |= maps.Concat(definition.AdditionalSources?.Values ?? Enumerable.Empty<string>())
+                    .Append(definition.Reduce)
+                    .Any(CallsCreateField);
             }
 
             _javaScriptUtils = new JavaScriptUtils(null, _engine);
@@ -448,6 +454,10 @@ function map(name, lambda) {
 
         private static readonly ParserOptions DefaultParserOptions = new() { Tolerant = true };
 
+        private static bool CallsCreateField(string code) =>
+            string.IsNullOrEmpty(code) == false &&
+            new Parser(DefaultParserOptions).ParseScript(code).DescendantNodes().Any(n => n is CallExpression { Callee: Identifier { Name: "createField" }, Arguments.Count: 3 });
+
         private MapMetadata ExecuteCodeAndCollectReferencedCollections(string code, string additionalSources)
         {
             _engine.ExecuteWithReset(code);
@@ -505,15 +515,31 @@ function map(name, lambda) {
 
             var mapReferencedCollections = new List<MapMetadata>();
             var additionalSources = sb.ToString();
-            foreach (var map in maps)
+            for (var i = 0; i < maps.Count; i++)
             {
-                var result = ExecuteCodeAndCollectReferencedCollections(map, additionalSources);
-                mapReferencedCollections.Add(result);
+                try
+                {
+                    var result = ExecuteCodeAndCollectReferencedCollections(maps[i], additionalSources);
+                    mapReferencedCollections.Add(result);
+                }
+                catch (Exception e)
+                {
+                    IndexCompilationException.ThrowFor(Definition.Name,
+                        $"{e.Message} The map was compiled as JavaScript because it does not start with 'from', 'docs', 'timeSeries' or 'counters'; a C# map must start its enumeration from one of these sources.",
+                        e, nameof(IndexDefinition.Maps), definition.Maps.ElementAt(i));
+                }
             }
 
             if (definition.Reduce != null)
             {
-                _engine.ExecuteWithReset(definition.Reduce);
+                try
+                {
+                    _engine.ExecuteWithReset(definition.Reduce);
+                }
+                catch (Exception e)
+                {
+                    IndexCompilationException.ThrowFor(Definition.Name, e.Message, e, nameof(IndexDefinition.Reduce), definition.Reduce);
+                }
             }
 
             return mapReferencedCollections;

@@ -1,6 +1,7 @@
 using System.Net;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Metrics;
@@ -54,6 +55,20 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : QuillTestBas
 
         Assert.Equal(DateTimeKind.Utc, detail.LastActivityAt.Kind);
         Assert.Equal(DateTimeKind.Utc, detail.StartedAt!.Value.Kind);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Conversations_list_returns_empty_when_the_preview_index_is_missing()
+    {
+        await using var app = await NewAppAsync();
+
+        await app.Store.Maintenance.ForDatabase(app.Slug)
+            .SendAsync(new DeleteIndexOperation(new ConversationPreviewIndex().IndexName));
+
+        var result = await app.GetConversationsAsync(year: DateTime.UtcNow.Year);
+
+        Assert.Empty(result.Conversations);
+        Assert.Equal(0, result.TotalResults);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -125,7 +140,7 @@ public class ConversationsEndpointTests(ITestOutputHelper output) : QuillTestBas
         {
             Identifier = "demo", Name = "Demo", SystemPrompt = "You help.", ConnectionStringName = Host.ConnectionStringName,
         });
-        var channel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo", Array.Empty<string>()));
+        var channel = await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo", Array.Empty<string>(), "Storefront widget"));
 
         var nonConversation = await Assert.ThrowsAsync<QuillHttpException>(() => app.GetConversationAsync($"channels/{channel.ChannelId}"));
         Assert.Equal(HttpStatusCode.NotFound, nonConversation.StatusCode);

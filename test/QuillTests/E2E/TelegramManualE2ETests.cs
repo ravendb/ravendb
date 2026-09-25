@@ -34,7 +34,7 @@ public class TelegramManualE2ETests(ITestOutputHelper output) : QuillTestBase(ou
 
         // real getMe: a bad token fails here with telegram's reason
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Telegram, agentId, null, Telegram: new(botToken)));
+            ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(botToken)));
 
         var summary = Assert.Single(await app.GetChannelsAsync(), c => c.ChannelId == created.ChannelId);
         Assert.NotNull(summary.Telegram);
