@@ -403,7 +403,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Repeated_failures_before_the_first_frame_drop_the_cached_session()
+    public async Task Repeated_failures_before_the_first_frame_resume_the_session_once_the_gateway_is_back()
     {
         await using var app = await NewAppAsync();
         await NewChannelAsync(app);
@@ -414,13 +414,23 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         await Discord.RequestReconnectAsync();
 
         await Discord.WaitUntilAsync(
-            () => Discord.Connects >= connectsBefore + 4, "the attempts that never reach a frame");
+            () => Discord.Connects >= connectsBefore + 2, "the attempts that never reach a frame");
         Discord.CloseOnConnect = null;
 
-        await Discord.WaitUntilAsync(
-            () => Discord.Identifies.Count >= 2, "a fresh identify once the cached session is dropped");
+        await Discord.WaitUntilAsync(() => Discord.Resumes.Count >= 1, "the resume once the gateway is back");
         await Discord.WaitUntilConnectedAsync();
-        Assert.Empty(Discord.Resumes);
+        Assert.Single(Discord.Identifies);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_ready_the_sdk_cannot_process_replaces_the_client()
+    {
+        await using var app = await NewAppAsync();
+        Discord.BreakNextReady = true;
+        await NewChannelAsync(app);
+
+        await Discord.WaitUntilAsync(() => Discord.Identifies.Count >= 2, "a fresh identify after the broken ready");
+        await Discord.WaitUntilConnectedAsync();
     }
 
     [RavenFact(RavenTestCategory.Quill)]
