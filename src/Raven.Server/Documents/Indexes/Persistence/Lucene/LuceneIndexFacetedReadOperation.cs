@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
@@ -156,9 +157,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         {
                             var docsInQuery = new ArraySegment<int>(intersectedDocuments.Documents, 0, intersectedDocuments.Count);
                             ApplyAggregation(result.Value.Aggregations, collectionOfFacetValues, docsInQuery, readerFacetInfo.Reader, readerFacetInfo.DocBase, _state);
-                            IntArraysPool.Instance.FreeArray(intersectedDocuments.Documents);
-                            intersectedDocuments.Documents = null;
                         }
+
+                        intersectedDocuments.Free();
                     }
                 }
             }
@@ -182,14 +183,30 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             var needToApplyAggregation = result.Value.Aggregations.Count > 0;
 
+            if (facetsByName.TryGetValue(result.Key, out var facetValues) == false)
+                facetsByName[result.Key] = facetValues = new Dictionary<string, FacetValues>();
+
             foreach (var readerFacetInfo in returnedReaders)
             {
                 Dictionary<string, int[]> termsForField;
                 using (queryTimings?.For(nameof(QueryTimingsScope.Names.Terms)))
                     termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, result.Value.AggregateBy, _indexName, _state);
 
-                if (facetsByName.TryGetValue(result.Key, out var facetValues) == false)
-                    facetsByName[result.Key] = facetValues = new Dictionary<string, FacetValues>();
+                // Intersecting every distinct term with the matches is a full pass over the field's terms on every query,
+                // however few documents matched. When the matches are fewer than the terms, the norm for high cardinality
+                // fields such as ids, walk the matches and read their terms instead.
+                if (readerFacetInfo.Results.Count < termsForField.Count)
+                {
+                    IndexedTerms.DocumentTermsIndex documentTerms;
+                    using (queryTimings?.For(nameof(QueryTimingsScope.Names.Terms)))
+                        documentTerms = IndexedTerms.GetDocumentTermsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, result.Value.AggregateBy, _indexName, _state);
+
+                    if (documentTerms != null)
+                    {
+                        HandleFacetsByMatchingDocuments(readerFacetInfo, documentTerms, result, facetValues, legacy, needToApplyAggregation, token);
+                        continue;
+                    }
+                }
 
                 foreach (var kvp in termsForField)
                 {
@@ -199,42 +216,82 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     token.ThrowIfCancellationRequested();
 
                     var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, needToApplyAggregation);
-                    var intersectCount = intersectedDocuments.Count;
-                    if (intersectCount == 0)
-                    {
-                        if (intersectedDocuments.Documents != null)
-                        {
-                            IntArraysPool.Instance.FreeArray(intersectedDocuments.Documents);
-                        }
+                    if (intersectedDocuments.Count == 0)
                         continue;
-                    }
 
-                    if (facetValues.TryGetValue(kvp.Key, out var collectionOfFacetValues) == false)
-                    {
-                        var range = FacetedQueryHelper.GetRangeName(result.Value.AggregateBy, kvp.Key);
-                        collectionOfFacetValues = new FacetValues(legacy);
-                        if (needToApplyAggregation == false)
-                            collectionOfFacetValues.AddDefault(range);
-                        else
-                        {
-                            foreach (var aggregation in result.Value.Aggregations)
-                                collectionOfFacetValues.Add(aggregation.Key, range);
-                        }
-
-                        facetValues.Add(kvp.Key, collectionOfFacetValues);
-                    }
-
-                    collectionOfFacetValues.IncrementCount(intersectCount);
-
-                    if (needToApplyAggregation)
-                    {
-                        var docsInQuery = new ArraySegment<int>(intersectedDocuments.Documents, 0, intersectedDocuments.Count);
-                        ApplyAggregation(result.Value.Aggregations, collectionOfFacetValues, docsInQuery, readerFacetInfo.Reader, readerFacetInfo.DocBase, _state);
-                    }
+                    AddTermMatches(readerFacetInfo, result, facetValues, legacy, needToApplyAggregation, kvp.Key, intersectedDocuments);
                 }
             }
         }
-        
+
+        private void HandleFacetsByMatchingDocuments(
+            ReaderFacetInfo readerFacetInfo,
+            IndexedTerms.DocumentTermsIndex documentTerms,
+            KeyValuePair<string, FacetedQueryParser.FacetResult> result,
+            Dictionary<string, FacetValues> facetValues,
+            bool legacy,
+            bool needToApplyAggregation,
+            CancellationToken token)
+        {
+            var matchesByTerm = new Dictionary<int, IntersectDocs>();
+
+            var matches = readerFacetInfo.Results;
+            var array = matches.Array;
+            var end = matches.Offset + matches.Count;
+            for (var i = matches.Offset; i < end; i++)
+            {
+                token.ThrowIfCancellationRequested();
+
+                var doc = array[i];
+                foreach (var ordinal in documentTerms.GetTermOrdinals(doc - readerFacetInfo.DocBase))
+                {
+                    ref var docs = ref CollectionsMarshal.GetValueRefOrAddDefault(matchesByTerm, ordinal, out var exists);
+                    if (exists == false)
+                        docs = new IntersectDocs(needToApplyAggregation);
+
+                    docs.AddIntersection(doc);
+                }
+            }
+
+            foreach (var (ordinal, docs) in matchesByTerm)
+                AddTermMatches(readerFacetInfo, result, facetValues, legacy, needToApplyAggregation, documentTerms.Terms[ordinal], docs);
+        }
+
+        private void AddTermMatches(
+            ReaderFacetInfo readerFacetInfo,
+            KeyValuePair<string, FacetedQueryParser.FacetResult> result,
+            Dictionary<string, FacetValues> facetValues,
+            bool legacy,
+            bool needToApplyAggregation,
+            string term,
+            IntersectDocs matches)
+        {
+            if (facetValues.TryGetValue(term, out var collectionOfFacetValues) == false)
+            {
+                var range = FacetedQueryHelper.GetRangeName(result.Value.AggregateBy, term);
+                collectionOfFacetValues = new FacetValues(legacy);
+                if (needToApplyAggregation == false)
+                    collectionOfFacetValues.AddDefault(range);
+                else
+                {
+                    foreach (var aggregation in result.Value.Aggregations)
+                        collectionOfFacetValues.Add(aggregation.Key, range);
+                }
+
+                facetValues.Add(term, collectionOfFacetValues);
+            }
+
+            collectionOfFacetValues.IncrementCount(matches.Count);
+
+            if (needToApplyAggregation)
+            {
+                var docsInQuery = new ArraySegment<int>(matches.Documents, 0, matches.Count);
+                ApplyAggregation(result.Value.Aggregations, collectionOfFacetValues, docsInQuery, readerFacetInfo.Reader, readerFacetInfo.DocBase, _state);
+            }
+
+            matches.Free();
+        }
+
         private static void ApplyAggregation(Dictionary<FacetAggregationField, FacetedQueryParser.FacetResult.Aggregation> aggregations, FacetValues values, ArraySegment<int> docsInQuery, IndexReader indexReader, int docBase, IState state)
         {
             foreach (var kvp in aggregations)
@@ -331,11 +388,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             double o1 = nSize + mSize;
             double o2 = mSize * Math.Log(nSize, 2);
 
-            var result = new IntersectDocs();
-            if (needToApplyAggregation)
-            {
-                result.Documents = IntArraysPool.Instance.AllocateArray();
-            }
+            var result = new IntersectDocs(needToApplyAggregation);
 
             if (o1 < o2)
             {
@@ -375,11 +428,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
             }
 
-            if (result.Count == 0 && needToApplyAggregation)
-            {
-                IntArraysPool.Instance.FreeArray(result.Documents);
-                result.Documents = null;
-            }
             return result;
         }
 
@@ -391,23 +439,43 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private sealed class IntersectDocs
         {
-            public static readonly IntersectDocs Empty = new();
+            public static readonly IntersectDocs Empty = new(collectDocuments: false);
+
+            private readonly bool _collectDocuments;
 
             public int Count;
+
+            // rented from the pool on the first intersection, so the many terms without any cost nothing
             public int[] Documents;
+
+            public IntersectDocs(bool collectDocuments)
+            {
+                _collectDocuments = collectDocuments;
+            }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void AddIntersection(int docId)
             {
-                if (Documents != null)
+                if (_collectDocuments)
                 {
-                    if (Count >= Documents.Length)
-                    {
+                    if (Documents == null)
+                        Documents = IntArraysPool.Instance.AllocateArray();
+                    else if (Count >= Documents.Length)
                         IncreaseSize();
-                    }
+
                     Documents[Count] = docId;
                 }
+
                 Count++;
+            }
+
+            public void Free()
+            {
+                if (Documents == null)
+                    return;
+
+                IntArraysPool.Instance.FreeArray(Documents);
+                Documents = null;
             }
 
             private void IncreaseSize()
