@@ -26,7 +26,7 @@ describe("DocumentRevisions", () => {
             <DefaultDocumentRevisions canSetupDefaultRevisionsConfiguration={false} />
         );
 
-        const addDefaultButton = screen.getAllByRole("button", { name: /Add new/ })[0];
+        const addDefaultButton = screen.getByTestId("add-default-config-button");
         expect(addDefaultButton).toBeDisabled();
     });
 });
