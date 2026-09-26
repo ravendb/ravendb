@@ -545,6 +545,17 @@ namespace Raven.Server.Documents.Revisions
             return true;
         }
 
+        private static bool StripSchedule(BlittableJsonReaderObject metadata, string schedule)
+        {
+            if (metadata.TryGet(schedule, out object _) == false)
+                return false;
+
+            metadata.Modifications ??= new DynamicJsonValue(metadata);
+            metadata.Modifications.Remove(schedule);
+
+            return true;
+        }
+
         private static BlittableJsonReaderObject RevertSnapshotFlags(DocumentsOperationContext context, BlittableJsonReaderObject document, string documentId)
         {
             if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
@@ -552,6 +563,12 @@ namespace Raven.Server.Documents.Revisions
 
             var metadataModified = RevertSnapshotFlag(metadata, Constants.Documents.Metadata.RevisionCounters, Constants.Documents.Metadata.Counters);
             metadataModified |= RevertSnapshotFlag(metadata, Constants.Documents.Metadata.RevisionTimeSeries, Constants.Documents.Metadata.TimeSeries);
+
+            // a schedule recorded in a revision describes the moment that revision was taken, not the reverted
+            // document - keeping it would expire, refresh or archive the document by a date that is already past
+            metadataModified |= StripSchedule(metadata, Constants.Documents.Metadata.Expires);
+            metadataModified |= StripSchedule(metadata, Constants.Documents.Metadata.Refresh);
+            metadataModified |= StripSchedule(metadata, Constants.Documents.Metadata.ArchiveAt);
 
             if (metadataModified)
             {
