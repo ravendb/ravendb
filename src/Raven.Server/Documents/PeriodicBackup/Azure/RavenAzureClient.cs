@@ -37,6 +37,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         private readonly CancellationToken _cancellationToken;
         private readonly BlobContainerClient _client;
+        private readonly bool _canCheckContainerExistence;
 
         public string RemoteFolderName { get; }
         private readonly string _storageContainer;
@@ -87,6 +88,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 VerifySasToken(azureSettings.SasToken);
                 _client = new BlobContainerClient(serverUrlForContainer, new AzureSasCredential(azureSettings.SasToken), options);
             }
+
+            _canCheckContainerExistence = hasAccountKey || CanSasTokenReadContainerProperties(azureSettings.SasToken);
 
             _progress = progress;
             _cancellationToken = cancellationToken;
@@ -187,15 +190,38 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public async Task TestConnectionAsync()
         {
-            try
+            if (_canCheckContainerExistence == false)
+                return;
+
+            if (await _client.ExistsAsync(cancellationToken: _cancellationToken) == false)
+                throw new ContainerNotFoundException($"Container '{_storageContainer}' wasn't found!");
+        }
+
+        private static bool CanSasTokenReadContainerProperties(string sasToken)
+        {
+            // a service / user delegation SAS (has 'sr') can't read container properties at all,
+            // an account SAS needs srt=c and sp=r
+            // https://learn.microsoft.com/en-us/rest/api/storageservices/create-account-sas#blob-service
+            string resourceTypes = null;
+            string permissions = null;
+
+            foreach (var parameter in sasToken.TrimStart('?').Split('&'))
             {
-                if (await _client.ExistsAsync(cancellationToken: _cancellationToken) == false)
-                    throw new ContainerNotFoundException($"Container '{_storageContainer}' wasn't found!");
+                var keyValue = parameter.Split('=', 2);
+                switch (keyValue[0])
+                {
+                    case "sr":
+                        return false;
+                    case "srt":
+                        resourceTypes = keyValue[1];
+                        break;
+                    case "sp":
+                        permissions = keyValue[1];
+                        break;
+                }
             }
-            catch (UnauthorizedAccessException)
-            {
-                // we don't have the permissions to see if the container exists
-            }
+
+            return resourceTypes?.Contains('c') == true && permissions?.Contains('r') == true;
         }
 
         public void Report(long value)
