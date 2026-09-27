@@ -3454,6 +3454,8 @@ namespace Raven.Server
 
         public bool Disposed { get; private set; }
 
+        public Sparrow.Server.Utils.DisposeAudit.Scope DisposeAudit { get; private set; }
+
         internal NamedPipeServerStream AdminConsolePipe { get; set; }
 
         internal NamedPipeServerStream LogStreamPipe { get; set; }
@@ -3470,23 +3472,26 @@ namespace Raven.Server
                     return;
 
                 Disposed = true;
+                using var audit = Sparrow.Server.Utils.DisposeAudit.Begin($"RavenServer {WebUrl}{(DebugTag != null ? $" ({DebugTag})" : string.Empty)}");
+                DisposeAudit = audit;
+
                 var ea = new ExceptionAggregator("Failed to properly close RavenServer");
 
-                ea.Execute(() => _refreshClusterCertificate?.Dispose());
-                ea.Execute(() => AdminConsolePipe?.Dispose());
-                ea.Execute(() => LogStreamPipe?.Dispose());
-                ea.Execute(() => _redirectingWebHost?.Dispose());
-                ea.Execute(() => DisposeWebHost());
-                ea.Execute(() => _tcpContextPool?.Dispose());
+                ea.Execute("cluster certificate refresh", () => _refreshClusterCertificate?.Dispose());
+                ea.Execute("admin console pipe", () => AdminConsolePipe?.Dispose());
+                ea.Execute("log stream pipe", () => LogStreamPipe?.Dispose());
+                ea.Execute("redirecting web host", () => _redirectingWebHost?.Dispose());
+                ea.Execute("web host", () => DisposeWebHost());
+                ea.Execute("TCP context pool", () => _tcpContextPool?.Dispose());
                 if (_tcpListenerStatus != null)
                 {
-                    ea.Execute(() => CloseTcpListeners(_tcpListenerStatus.Listeners));
+                    ea.Execute("TCP listeners", () => CloseTcpListeners(_tcpListenerStatus.Listeners));
                 }
-                ea.Execute(() => PostgresServer?.Dispose());
-                ea.Execute(() => SnmpWatcher?.Dispose());
+                ea.Execute("Postgres server", () => PostgresServer?.Dispose());
+                ea.Execute("SNMP watcher", () => SnmpWatcher?.Dispose());
 
-                ea.Execute(() => ServerStore?.Dispose());
-                ea.Execute(() =>
+                ea.Execute(() => ServerStore?.Dispose()); // audits its own dispose
+                ea.Execute("refresh task", () =>
                 {
                     try
                     {
@@ -3499,15 +3504,15 @@ namespace Raven.Server
                     {
                     }
                 });
-                ea.Execute(() => ServerMaintenanceTimer?.Dispose());
-                ea.Execute(() => _clusterMaintenanceWorker?.Dispose());
-                ea.Execute(() => _cpuCreditsMonitoring?.Join(int.MaxValue));
-                ea.Execute(() => CpuUsageCalculator?.Dispose());
+                ea.Execute("server maintenance timer", () => ServerMaintenanceTimer?.Dispose());
+                ea.Execute("cluster maintenance worker", () => _clusterMaintenanceWorker?.Dispose());
+                ea.Execute("join the CPU credits monitoring thread", () => _cpuCreditsMonitoring?.Join(int.MaxValue));
+                ea.Execute("CPU usage calculator", () => CpuUsageCalculator?.Dispose());
 
                 if (SkipCertificateDispose == false)
-                    ea.Execute(() => Certificate?.Dispose());
+                    ea.Execute("certificate", () => Certificate?.Dispose());
 
-                ea.Execute(() => DiskStatsGetter?.Dispose());
+                ea.Execute("disk stats getter", () => DiskStatsGetter?.Dispose());
                 // this should be last
                 ea.Execute(() => AfterDisposal?.Invoke());
 

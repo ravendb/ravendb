@@ -558,6 +558,8 @@ namespace Voron
             if (_envDispose.IsSet)
                 return; // already disposed
 
+            using var audit = DisposeAudit.BeginOrStep($"StorageEnvironment '{Options.BasePath}'");
+
             _cancellationTokenSource.SafeCancel(_log, $"Disposing {Options}");
             try
             {
@@ -579,7 +581,11 @@ namespace Voron
                             // if we are here, then we didn't get the flush lock, so it is currently being run
                             // we need to wait for it to complete (so we won't be shutting down the db while we
                             // are flushing and maybe access invalid memory.
-                            using (_journal.Applicator.TakeFlushingLock())
+                            IDisposable flushingLock;
+                            using (DisposeAudit.Step("take the flushing lock"))
+                                flushingLock = _journal.Applicator.TakeFlushingLock();
+
+                            using (flushingLock)
                             {
                                 // when we are here, we know that we aren't flushing, and we can dispose,
                                 // any future calls to flush will abort because we are marked as disposed
@@ -610,19 +616,20 @@ namespace Voron
 
                 _options.NullifyHandlers();
 
-                foreach (var disposable in new IDisposable[]
+                foreach (var (name, disposable) in new (string, IDisposable)[]
                 {
-                    _journal,
-                    _headerAccessor,
-                    _scratchBufferPool,
-                    _currentStateRecord?.DataPagerState,
-                    _dataPager,
-                    _options.OwnsPagers ? _options : null,
+                    ("journal", _journal),
+                    ("header accessor", _headerAccessor),
+                    ("scratch buffer pool", _scratchBufferPool),
+                    ("data pager state", _currentStateRecord?.DataPagerState),
+                    ("data pager", _dataPager),
+                    ("options", _options.OwnsPagers ? _options : null),
                 })
                 {
                     try
                     {
-                        disposable?.Dispose();
+                        using (DisposeAudit.Step(name))
+                            disposable?.Dispose();
                     }
                     catch (Exception e)
                     {
@@ -640,7 +647,12 @@ namespace Voron
         private void MoveEnvironmentToDisposeState()
         {
             _envDispose.Signal(); // release the owner count
-            if (_envDispose.Wait(Options.DisposeWaitTime) == false)
+
+            bool disposed;
+            using (DisposeAudit.Step("wait for the active transactions"))
+                disposed = _envDispose.Wait(Options.DisposeWaitTime);
+
+            if (disposed == false)
             {
                 if (_envDispose.TryAddCount(1))
                 // try restore the previous signal, if it failed, the _envDispose is signaled

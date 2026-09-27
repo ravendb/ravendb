@@ -1532,7 +1532,8 @@ namespace Voron.Impl.Journal
                 {
                     // we wait to take the lock here to ensure that all previous sync operations
                     // has completed, and we know that no new ones can start
-                    _fsyncLock.Wait();
+                    using (DisposeAudit.Step("wait for the data file sync"))
+                        _fsyncLock.Wait();
                     try
                     {
                         // now we know that the sync is done
@@ -1548,7 +1549,8 @@ namespace Voron.Impl.Journal
                 {
                     ThrowOnFlushLockEnterWhileWriteTransactionLockIsTaken();
 
-                    Monitor.Enter(_flushingLock);// reacquire the lock
+                    using (DisposeAudit.Step("take the flushing lock back"))
+                        Monitor.Enter(_flushingLock);// reacquire the lock
                 }
             }
 

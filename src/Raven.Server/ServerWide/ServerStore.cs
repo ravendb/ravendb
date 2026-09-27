@@ -3010,6 +3010,8 @@ namespace Raven.Server.ServerWide
 
                     _shutdownNotification.Cancel();
 
+                    using var audit = DisposeAudit.BeginOrStep(nameof(ServerStore));
+
                     if (ContextPool != null)
                     {
                         _server.Statistics.Persist(ContextPool, Logger);
@@ -3019,7 +3021,7 @@ namespace Raven.Server.ServerWide
 
                     var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {nameof(ServerStore)}.");
 
-                    exceptionAggregator.Execute(() =>
+                    exceptionAggregator.Execute("Rachis engine", () =>
                     {
                         try
                         {
@@ -3031,36 +3033,36 @@ namespace Raven.Server.ServerWide
                         }
                     });
 
-                    exceptionAggregator.Execute(() =>
+                    exceptionAggregator.Execute("join the cluster maintenance setup thread", () =>
                     {
                         if (_clusterMaintenanceSetupTask != null && _clusterMaintenanceSetupTask != PoolOfThreads.LongRunningWork.Current)
                             _clusterMaintenanceSetupTask.Join(int.MaxValue);
                     });
 
-                    exceptionAggregator.Execute(() =>
+                    exceptionAggregator.Execute("join the topology change notification thread", () =>
                     {
                         if (_updateTopologyChangeNotification != null && _updateTopologyChangeNotification != PoolOfThreads.LongRunningWork.Current)
                             _updateTopologyChangeNotification.Join(int.MaxValue);
                     });
 
-                    var toDispose = new List<IDisposable>
+                    var toDispose = new List<(string Name, IDisposable Disposable)>
                     {
-                        StorageSpaceMonitor,
-                        ServerLimitsMonitor,
-                        GcThreadContentionDetector,
-                        NotificationCenter,
-                        LicenseManager,
-                        DatabasesLandlord,
-                        _env,
-                        _leaderRequestExecutor,
-                        ContextPool,
-                        ByteStringMemoryCache.Cleaner,
-                        InitializationCompleted,
-                        _fileLocker
+                        (nameof(StorageSpaceMonitor), StorageSpaceMonitor),
+                        (nameof(ServerLimitsMonitor), ServerLimitsMonitor),
+                        (nameof(GcThreadContentionDetector), GcThreadContentionDetector),
+                        (nameof(NotificationCenter), NotificationCenter),
+                        (nameof(LicenseManager), LicenseManager),
+                        (nameof(DatabasesLandlord), DatabasesLandlord),
+                        ("server storage environment", _env),
+                        ("leader request executor", _leaderRequestExecutor),
+                        (nameof(ContextPool), ContextPool),
+                        ("byte string memory cache cleaner", ByteStringMemoryCache.Cleaner),
+                        (nameof(InitializationCompleted), InitializationCompleted),
+                        ("file locker", _fileLocker)
                     };
 
-                    foreach (var disposable in toDispose)
-                        exceptionAggregator.Execute(() =>
+                    foreach (var (name, disposable) in toDispose)
+                        exceptionAggregator.Execute(name, () =>
                         {
                             try
                             {
