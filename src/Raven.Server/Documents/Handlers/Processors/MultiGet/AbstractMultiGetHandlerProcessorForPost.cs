@@ -233,9 +233,8 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
             for (int i = 0; i < headers.Count; i++)
             {
                 headers.GetPropertyByIndex(i, ref prop);
-                BlittableJsonReaderObject.ConvertType(prop.Value, out string value);
 
-                if (string.IsNullOrWhiteSpace(value))
+                if (BlittableJsonReaderObject.ChangeTypeToString(prop.Value, out string value) == false || string.IsNullOrWhiteSpace(value))
                     continue;
 
                 httpContext.Request.Headers[prop.Name] = value;
