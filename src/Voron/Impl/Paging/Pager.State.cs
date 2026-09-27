@@ -32,7 +32,7 @@ public unsafe partial class Pager
             _pageSize = pageSize;
 
             Pager = pager;
-            WeakSelf = new WeakReference<State>(this);
+            WeakSelf = new WeakReference<State>(this, trackResurrection: true);
             NativeMemory.RegisterFileMapping(pager.FileName, new IntPtr(ReadAddress), TotalAllocatedSize, null);
         }
 
@@ -59,11 +59,11 @@ public unsafe partial class Pager
                 if (Disposed)
                     return;
 
+                var rc = Pal.rvn_close_pager(Handle, out var errorCode);
+
                 Disposed = true;
 
                 Pager._states.TryRemove(WeakSelf);
-
-                var rc = Pal.rvn_close_pager(Handle, out var errorCode);
                 NativeMemory.UnregisterFileMapping(Pager.FileName, (nint)ReadAddress, TotalAllocatedSize);
 
                 if (rc != PalFlags.FailCodes.Success)
