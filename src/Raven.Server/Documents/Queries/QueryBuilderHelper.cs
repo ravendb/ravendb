@@ -36,6 +36,29 @@ public static class QueryBuilderHelper
         return expression.IsRangeOperation && expression.Right is ValueExpression;
     }
 
+    /// <summary>
+    /// A between assembled from two comparisons may pair bounds of different kinds, a string with a number or a long with a
+    /// double, and each engine translates a bound differently per kind: a long literal queries the long term of a double
+    /// field, a string one the string term. Such a between goes back to the two comparisons it came from, so each bound keeps
+    /// exactly the meaning it had on its own. A hand-written between never gets here, the parser and the metadata reject
+    /// mixed kinds.
+    /// </summary>
+    internal static bool TryUnfoldBetweenOfMixedKinds(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, BetweenExpression between,
+        out BinaryExpression lower, out BinaryExpression upper)
+    {
+        lower = null;
+        upper = null;
+
+        var (_, minType) = GetValue(query, metadata, parameters, between.Min);
+        var (_, maxType) = GetValue(query, metadata, parameters, between.Max);
+        if (minType == maxType)
+            return false;
+
+        lower = new BinaryExpression(between.Source, between.Min, between.MinInclusive ? OperatorType.GreaterThanEqual : OperatorType.GreaterThan);
+        upper = new BinaryExpression(between.Source, between.Max, between.MaxInclusive ? OperatorType.LessThanEqual : OperatorType.LessThan);
+        return true;
+    }
+
     // the paths must match in full: FieldExpression.Equals ignores the first segment to tolerate an alias,
     // which would make 'Origin.X' and 'Destination.X' the same field
     internal static bool IsSameField(QueryExpression first, QueryExpression second)

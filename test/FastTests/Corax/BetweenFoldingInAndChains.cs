@@ -317,7 +317,8 @@ namespace FastTests.Corax
         }
 
         // a hand-written between must pair values of one kind, but a between assembled from two comparisons may mix a
-        // literal with a parameter or a long with a double, exactly as the two comparisons did
+        // literal with a parameter or a long with a double; the metadata still folds it, and the query builders translate
+        // a between of mixed kinds as the two comparisons it came from, so each bound keeps exactly its own meaning
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
         [RavenData("Amount > $a and Amount < 8", 6, "coins/3", SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("Amount < 8 and Amount > 6.5", 0, "coins/3", SearchEngineMode = RavenSearchEngineMode.All)]
