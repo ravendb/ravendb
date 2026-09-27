@@ -877,7 +877,7 @@ namespace Voron.Impl.Journal
         }
 
         // Scans the whole journal for a valid transaction of ours with an id above the given one, without applying anything
-        internal long? FindTransactionOfOursAbove(StorageEnvironmentOptions options, ref Pager.PagerTransactionState txState, long transactionId)
+        internal (long TransactionId, long LastDurableTxIdAtSubmit)? FindTransactionOfOursAbove(StorageEnvironmentOptions options, ref Pager.PagerTransactionState txState, long transactionId)
         {
             using var _ = options.DisableOnRecoveryErrorHandler();
             using var __ = options.DisableOnIntegrityErrorOfAlreadySyncedDataHandler();
@@ -898,7 +898,7 @@ namespace Voron.Impl.Journal
                          current->TransactionId > transactionId &&
                          MayBeOwnTransaction(current))
                 {
-                    return current->TransactionId;
+                    return (current->TransactionId, current->DurableTxIdDeltaAtSubmit == 0 ? -1 : current->LastDurableTxIdAtSubmit);
                 }
 
                 _readAt4Kb += GetTransactionSizeIn4Kb(current);

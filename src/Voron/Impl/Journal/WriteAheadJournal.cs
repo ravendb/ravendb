@@ -543,12 +543,13 @@ namespace Voron.Impl.Journal
                     {
                         var lastRecoveredTxId = Math.Max(txHeader->TransactionId, logInfo.LastSyncedTransactionId);
                         var laterJournals = FindLaterJournalsWithTransactionsOfOurs(journalNumber, lastJournal.Value, logInfo, currentFileHeader,
-                            lastRecoveredTxId, ref dataPagerState, allocator, out var firstLaterTxId);
+                            lastRecoveredTxId, ref dataPagerState, allocator, out var firstLaterTxId, out var firstLaterLastDurableTxId);
 
-                        if (laterJournals.Count > 0 && firstLaterTxId == lastRecoveredTxId + 1)
+                        var firstMissingTxId = lastRecoveredTxId + 1;
+                        if (laterJournals.Count > 0 &&
+                            (firstLaterTxId == firstMissingTxId || firstLaterLastDurableTxId != -1 && firstLaterLastDurableTxId < firstMissingTxId))
                         {
-                            // our transactions continue right where this journal stopped - written after an earlier recovery ended
-                            // here, or the invalid entry was not ours - so nothing of ours is missing: keep reading as usual
+                            // nothing acknowledged is missing: keep reading as usual, and the next journal's reader checks its own hole
                             partialRecovery = false;
                         }
                         else if (laterJournals.Count > 0)
@@ -797,17 +798,22 @@ namespace Voron.Impl.Journal
         //   K+1: | N | N+1 | ...                   -> our sequence continues (written after an earlier recovery stopped at the
         //                                             same point, or the invalid entry was not ours), keep reading
         //
+        //   K:   | ... | N-1 | <invalid> |
+        //   K+1: | <invalid: N> | N+1 (W=N-1) |    -> N+1 was submitted while N was in flight: a pipelining hole in K+1 (two
+        //                                             crashes in a row), keep reading - the reader of K+1 checks that hole
+        //
         //   K:   | ... | N-1 | <invalid: N> |
         //   K+1: | N+1 | N+2 | ...                 -> K+1 was written after every write to K completed, so N was acknowledged
         //                                             and is lost: partial recovery, and K+1 is kept for investigation
         //
         // Returns the journals after stoppedAtJournal that hold a transaction of ours above lastRecoveredTxId (N-1), and the
-        // first such transaction id.
+        // id and the durability watermark (W, -1 when not recorded) of the first such transaction.
         private List<long> FindLaterJournalsWithTransactionsOfOurs(long stoppedAtJournal, long lastJournal, JournalInfo logInfo, FileHeader currentFileHeader,
-            long lastRecoveredTxId, ref Pager.State dataPagerState, ByteStringContext allocator, out long firstTransactionId)
+            long lastRecoveredTxId, ref Pager.State dataPagerState, ByteStringContext allocator, out long firstTransactionId, out long firstLastDurableTxIdAtSubmit)
         {
             var journals = new List<long>();
             firstTransactionId = -1;
+            firstLastDurableTxIdAtSubmit = -1;
 
             for (var journalNumber = stoppedAtJournal + 1; journalNumber <= lastJournal; journalNumber++)
             {
@@ -820,21 +826,21 @@ namespace Voron.Impl.Journal
                 Pager.PagerTransactionState txState = default;
                 var journalReader = new JournalReader(_env, journalNumber, journalPager, journalPagerState, _env.DataPager, recoveryPager: null, [], logInfo, currentFileHeader,
                     previous: null, allocator);
-                long? transactionId;
+                (long TransactionId, long LastDurableTxIdAtSubmit)? found;
                 try
                 {
-                    transactionId = journalReader.FindTransactionOfOursAbove(_env.Options, ref txState, lastRecoveredTxId);
+                    found = journalReader.FindTransactionOfOursAbove(_env.Options, ref txState, lastRecoveredTxId);
                 }
                 finally
                 {
                     journalReader.Complete(ref dataPagerState, ref txState);
                 }
 
-                if (transactionId == null)
+                if (found == null)
                     continue;
 
                 if (journals.Count == 0)
-                    firstTransactionId = transactionId.Value;
+                    (firstTransactionId, firstLastDurableTxIdAtSubmit) = found.Value;
 
                 journals.Add(journalNumber);
             }
