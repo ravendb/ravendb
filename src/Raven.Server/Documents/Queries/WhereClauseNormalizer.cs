@@ -131,7 +131,9 @@ public static class WhereClauseNormalizer
         return changed;
     }
 
-    // 'Foo > 1 and Foo > 2' is 'Foo > 2'; only literals can be compared here, parameters are left to the query builders
+    // 'Foo > 1 and Foo > 2' is 'Foo > 2'. Only numeric literals can be compared here: a parameter's value is not known
+    // until the query is built, and the order of two string literals in the index depends on the analyzer and on whether
+    // the field holds dates, which only the query builders know. Both are left to them.
     private static bool MergeLiteralBoundsInTheSameDirection(List<QueryExpression> operands)
     {
         var changed = false;
@@ -230,6 +232,8 @@ public static class WhereClauseNormalizer
         return QueryBuilderHelper.IsSameField(first.Left, second.Left);
     }
 
+    // two longs compare as longs: past 2^53 a double cannot tell neighbouring values apart, and a tick count is that large;
+    // a long against a double, or two doubles, compare as doubles
     private static bool TryCompareNumericLiterals(ValueExpression first, ValueExpression second, out int comparison)
     {
         comparison = 0;
