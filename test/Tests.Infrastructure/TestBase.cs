@@ -914,19 +914,23 @@ namespace FastTests
                 var task = Task.Run(server.Dispose);
 
                 if (await amre.WaitAsync(timeout) == false)
-                    await ThrowCouldNotDisposeServerExceptionAsync(url, debugTag, timeout);
+                    await ThrowCouldNotDisposeServerExceptionAsync(url, debugTag, timeout, server.DisposeAudit?.Snapshot());
 
                 await task;
             }
         }
 
-        private static async Task ThrowCouldNotDisposeServerExceptionAsync(string url, string debugTag, TimeSpan timeout)
+        private static async Task ThrowCouldNotDisposeServerExceptionAsync(string url, string debugTag, TimeSpan timeout, string disposeAudit)
         {
             using (var process = Process.GetCurrentProcess())
             using (var ms = new MemoryStream())
             using (var outputWriter = new StreamWriter(ms, leaveOpen: true))
             {
                 var sb = new StringBuilder($"Could not dispose server with URL '{url}' and DebugTag: '{debugTag}' in '{timeout}'.");
+
+                // where the dispose is stuck and what it waits for, straight in the failure
+                if (disposeAudit != null)
+                    sb.Append($"{Environment.NewLine}{disposeAudit}{Environment.NewLine}");
 
                 try
                 {

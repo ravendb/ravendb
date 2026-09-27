@@ -31,6 +31,7 @@ using Raven.Server.Exceptions.Attachments;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Tests.Infrastructure;
@@ -355,10 +356,16 @@ namespace FastTests
                         }
                         catch (Exception e)
                         {
-                            if (realException != null)
-                                throw new AggregateException(realException, e);
+                            var disposes = DisposeAudit.SnapshotAll();
+                            var error = disposes == null ? e : new InvalidOperationException($"{e.Message}{Environment.NewLine}Disposes still running:{Environment.NewLine}{disposes}", e);
 
-                            throw;
+                            if (realException != null)
+                                throw new AggregateException(realException, error);
+
+                            if (disposes == null)
+                                throw;
+
+                            throw error;
                         }
                     };
 
