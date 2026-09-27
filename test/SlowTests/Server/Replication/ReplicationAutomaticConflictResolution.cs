@@ -374,10 +374,11 @@ return out;
                 using (var session = master.OpenSession())
                 {
 
+                    // anchored so that a sharded database keeps the marker on users/1's shard, or the wait proves nothing
                     session.Store(new
                     {
                         Foo = "marker"
-                    }, "marker");
+                    }, "marker$users/1");
 
                     session.SaveChanges();
                 }
@@ -387,7 +388,7 @@ return out;
                 await SetReplicationConflictResolutionAsync(slave, StraightforwardConflictResolution.ResolveToLatest);
                 await SetupReplicationAsync(master, slave);
 
-                Assert.True(WaitForDocument(slave, "marker"));
+                Assert.True(WaitForDocument(slave, "marker$users/1"));
 
                 using (var session = slave.OpenSession())
                 {
