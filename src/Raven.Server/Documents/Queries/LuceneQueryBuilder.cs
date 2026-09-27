@@ -298,6 +298,14 @@ namespace Raven.Server.Documents.Queries
 
             if (expression is BetweenExpression be)
             {
+                if (QueryBuilderHelper.TryUnfoldBetweenOfMixedKinds(query, metadata, parameters, be, out var lower, out var upper))
+                {
+                    buildSteps?.Add($"Between of mixed value kinds, translated as the two comparisons it came from: {be}");
+
+                    return ToLuceneQuery(serverContext, documentsContext, query, new BinaryExpression(lower, upper, OperatorType.And), metadata, index, parameters,
+                        analyzer, factories, exact, secondary: secondary, buildSteps: buildSteps);
+                }
+
                 buildSteps?.Add($"Between: {expression.Type} - {be}");
 
                 return TranslateBetweenQuery(query, metadata, index, parameters, exact, be, secondary);
@@ -459,14 +467,9 @@ namespace Raven.Server.Documents.Queries
         {
             var fieldName = ExtractIndexFieldName(query, parameters, be.Source, metadata);
             var (valueFirst, valueFirstType) = QueryBuilderHelper.GetValue(query, metadata, parameters, be.Min);
-            var (valueSecond, valueSecondType) = QueryBuilderHelper.GetValue(query, metadata, parameters, be.Max);
+            var (valueSecond, _) = QueryBuilderHelper.GetValue(query, metadata, parameters, be.Max);
 
-            // a between assembled from 'Foo > 1 and Foo < 2.5' mixes a long with a double; both bounds then query the double field
-            var valueType = valueFirstType == ValueTokenType.Long && valueSecondType == ValueTokenType.Double
-                ? ValueTokenType.Double
-                : valueFirstType;
-
-            var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueType);
+            var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueFirstType);
 
             Lucene.Net.Search.Query betweenQuery;
             switch (fieldType)

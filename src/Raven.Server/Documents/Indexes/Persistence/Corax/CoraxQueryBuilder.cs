@@ -547,6 +547,13 @@ public static class CoraxQueryBuilder
 
         if (expression is BetweenExpression be)
         {
+            if (QueryBuilderHelper.TryUnfoldBetweenOfMixedKinds(metadata.Query, metadata, queryParameters, be, out var lower, out var upper))
+            {
+                builderParameters.BuildSteps?.Add($"Between of mixed value kinds, translated as the two comparisons it came from: {be}");
+
+                return ToCoraxQuery(builderParameters, new BinaryExpression(lower, upper, OperatorType.And), ref leftOnlyOptimization, exact);
+            }
+
             builderParameters.BuildSteps?.Add($"Between: {expression.Type} - {be}");
 
             return TranslateBetweenQuery(builderParameters, be, exact);
