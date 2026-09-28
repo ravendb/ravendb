@@ -1221,7 +1221,7 @@ namespace Raven.Server.Documents.ETL
             TCS connection = null;
 
             var relationalTestScript = testScript as TestRelationalDatabaseEtlScript<TCS, TC>;
-            var connectionStringRequiredForTesting = relationalTestScript != null || typeof(TC) == typeof(GenAiConfiguration);
+            var connectionStringRequiredForTesting = relationalTestScript != null || typeof(TC) == typeof(GenAiConfiguration) || typeof(TC) == typeof(EmbeddingsGenerationConfiguration);
 
             if (connectionStringRequiredForTesting)
             {
