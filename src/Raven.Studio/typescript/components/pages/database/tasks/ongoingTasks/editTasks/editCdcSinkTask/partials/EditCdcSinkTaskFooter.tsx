@@ -1,4 +1,4 @@
-import { Icon } from "components/common/Icon";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import EditCdcSinkTaskVerificationAlert from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskVerificationAlert";
 import EditCdcSinkTaskVerifyButton from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskVerifyButton";
 import Button from "react-bootstrap/Button";
@@ -7,6 +7,7 @@ import { EditCdcSinkTaskVerification } from "components/pages/database/tasks/ong
 interface EditCdcSinkTaskFooterProps {
     asyncVerify: EditCdcSinkTaskVerification;
     isDirty: boolean;
+    isSubmitting: boolean;
     isDisabled: boolean;
     onCancel: () => void;
 }
@@ -14,6 +15,7 @@ interface EditCdcSinkTaskFooterProps {
 export default function EditCdcSinkTaskFooter({
     asyncVerify,
     isDirty,
+    isSubmitting,
     isDisabled,
     onCancel,
 }: EditCdcSinkTaskFooterProps) {
@@ -26,15 +28,16 @@ export default function EditCdcSinkTaskFooter({
                 </Button>
                 <div className="hstack gap-2">
                     <EditCdcSinkTaskVerifyButton asyncVerify={asyncVerify} isDisabled={isDisabled} />
-                    <Button
+                    <ButtonWithSpinner
                         type="submit"
                         variant="primary"
                         className="rounded-pill"
                         disabled={!isDirty || isDisabled || asyncVerify.loading}
+                        isSpinning={isSubmitting}
+                        icon="save"
                     >
-                        <Icon icon="save" />
                         Save task configuration
-                    </Button>
+                    </ButtonWithSpinner>
                 </div>
             </div>
         </>
