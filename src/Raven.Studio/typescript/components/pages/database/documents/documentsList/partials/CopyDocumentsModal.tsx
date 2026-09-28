@@ -28,15 +28,11 @@ export default function CopyDocumentsModal({ title, text, close }: CopyDocuments
                 </pre>
             </Modal.Body>
             <Modal.Footer>
-                <Button type="button" variant="secondary" onClick={close}>
+                <Button variant="secondary" onClick={close}>
                     <Icon icon="close" />
                     Close
                 </Button>
-                <Button
-                    type="button"
-                    variant="primary"
-                    onClick={() => copyToClipboard.copy(text, "Copied to clipboard")}
-                >
+                <Button variant="primary" onClick={() => copyToClipboard.copy(text, "Copied to clipboard")}>
                     <Icon icon="copy" />
                     Copy to Clipboard
                 </Button>

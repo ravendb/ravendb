@@ -13,31 +13,25 @@ export interface LazyRow<T> {
     item: T;
 }
 
-export interface LazyRowsLoaderOptions<T, TResult extends pagedResultWithToken<T> = pagedResultWithToken<T>> {
+interface LazyRowsLoaderOptions<T, TResult extends pagedResultWithToken<T>> {
     fetchData: LazyFetchData<T, TResult>;
     fetchMode: LazyFetchMode;
     minFetchCount: number;
-    // called only with the results that are applied, the ones fetched before a reset are dropped
     onResult?: (result: TResult) => void;
 }
 
-export interface LazyRowsSnapshot {
+interface LazyRowsSnapshot {
     range: RowRange;
     allowSkip: boolean;
-    // bumps whenever the cached items change
     version: number;
-    // bumps on every hard reset
     resetId: number;
     totalCount: number | null;
-    // rows loaded one after another from the first one (continuationToken mode)
     loadedCount: number;
     hasMore: boolean;
     isFetching: boolean;
-    error: unknown;
 }
 
 export interface SetRangeOptions {
-    // continuationToken mode: rows beyond the sequentially loaded ones may be fetched by skip (pagination)
     allowSkip?: boolean;
 }
 
@@ -57,11 +51,9 @@ const initialSnapshot: LazyRowsSnapshot = {
     loadedCount: 0,
     hasMore: true,
     isFetching: false,
-    error: null,
 };
 
 export class LazyRowsLoader<T, TResult extends pagedResultWithToken<T> = pagedResultWithToken<T>> {
-    private options: LazyRowsLoaderOptions<T, TResult>;
     private items = new Map<number, T>();
     private continuationToken: string | undefined;
     private generation = 0;
@@ -69,9 +61,7 @@ export class LazyRowsLoader<T, TResult extends pagedResultWithToken<T> = pagedRe
     private snapshot = initialSnapshot;
     private listeners = new Set<() => void>();
 
-    constructor(options: LazyRowsLoaderOptions<T, TResult>) {
-        this.options = options;
-    }
+    constructor(private options: LazyRowsLoaderOptions<T, TResult>) {}
 
     setOptions(options: LazyRowsLoaderOptions<T, TResult>) {
         this.options = options;
@@ -119,18 +109,17 @@ export class LazyRowsLoader<T, TResult extends pagedResultWithToken<T> = pagedRe
         this.continuationToken = undefined;
         this.isStarted = true;
 
-        const { range, version, resetId, totalCount } = this.snapshot;
+        const { range, version, resetId } = this.snapshot;
 
         this.update({
             version: version + 1,
             loadedCount: 0,
             hasMore: true,
             isFetching: false,
-            error: null,
-            totalCount: isHard ? null : totalCount,
             ...(isHard && {
                 range: { start: 0, end: range.end - range.start },
                 resetId: resetId + 1,
+                totalCount: null,
             }),
         });
 
@@ -153,14 +142,14 @@ export class LazyRowsLoader<T, TResult extends pagedResultWithToken<T> = pagedRe
         }
 
         const generation = this.generation;
-        this.update({ isFetching: true, error: null });
+        this.update({ isFetching: true });
 
         let result: TResult;
         try {
             result = await this.options.fetchData(request.skip, request.take, request.continuationToken);
-        } catch (error) {
+        } catch {
             if (generation === this.generation) {
-                this.update({ isFetching: false, error });
+                this.update({ isFetching: false });
             }
             return;
         }
@@ -215,10 +204,7 @@ export class LazyRowsLoader<T, TResult extends pagedResultWithToken<T> = pagedRe
         result.items.forEach((item, i) => this.items.set(skip + i, item));
 
         const loadedEnd = skip + result.items.length;
-        const reportedTotal =
-            typeof result.totalResultCount === "number" && result.totalResultCount >= 0
-                ? result.totalResultCount
-                : null;
+        const reportedTotal = result.totalResultCount >= 0 ? result.totalResultCount : null;
         const version = this.snapshot.version + 1;
 
         if (isSequential) {

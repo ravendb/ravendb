@@ -7,7 +7,6 @@ export interface ColumnMeta {
     headerTitle: string;
     canHide: boolean;
     canPin: boolean;
-    // set for the columns defined by the user, they can be edited and removed
     customColumn?: CustomColumnDefinition;
 }
 

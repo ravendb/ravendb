@@ -1,6 +1,6 @@
 import { Icon } from "components/common/Icon";
 import Select, { SelectOption } from "components/common/select/Select";
-import { ChangeEvent, useEffect, useState } from "react";
+import { ChangeEvent, ReactNode, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import "./LazyVirtualTablePaginationBar.scss";
@@ -25,15 +25,6 @@ interface LazyVirtualTablePaginationBarProps {
 export default function LazyVirtualTablePaginationBar({ pagination }: LazyVirtualTablePaginationBarProps) {
     const { page, totalPages, firstRowNumber, lastRowNumber, totalCount, pageSize, pageSizeOptions } = pagination;
 
-    const pageSizeSelectOptions: SelectOption<number>[] = pageSizeOptions.map((x) => ({
-        value: x,
-        label: x.toLocaleString(),
-    }));
-    const selectedPageSizeOption = pageSizeSelectOptions.find((x) => x.value === pageSize) ?? {
-        value: pageSize,
-        label: pageSize.toLocaleString(),
-    };
-
     const rowsRange =
         firstRowNumber === 0 ? "No rows" : `${firstRowNumber.toLocaleString()}-${lastRowNumber.toLocaleString()}`;
 
@@ -50,8 +41,8 @@ export default function LazyVirtualTablePaginationBar({ pagination }: LazyVirtua
                     <Select
                         className="page-size-select"
                         aria-label="Rows per page"
-                        options={pageSizeSelectOptions}
-                        value={selectedPageSizeOption}
+                        options={pageSizeOptions.map(toPageSizeOption)}
+                        value={toPageSizeOption(pageSize)}
                         onChange={(option) => pagination.onPageSizeChange(option.value)}
                         isSearchable={false}
                         menuPlacement="top"
@@ -107,7 +98,7 @@ interface PageButtonProps {
     title: string;
     isDisabled: boolean;
     onClick: () => void;
-    children: React.ReactNode;
+    children: ReactNode;
 }
 
 function PageButton({ title, isDisabled, onClick, children }: PageButtonProps) {
@@ -134,10 +125,12 @@ interface PageInputProps {
 
 function PageInput({ page, totalPages, onPageChange }: PageInputProps) {
     const [value, setValue] = useState(String(page));
+    const [prevPage, setPrevPage] = useState(page);
 
-    useEffect(() => {
+    if (page !== prevPage) {
+        setPrevPage(page);
         setValue(String(page));
-    }, [page]);
+    }
 
     const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
         setValue(event.target.value);
@@ -164,4 +157,8 @@ function PageInput({ page, totalPages, onPageChange }: PageInputProps) {
             onBlur={() => setValue(String(page))}
         />
     );
+}
+
+function toPageSizeOption(pageSize: number): SelectOption<number> {
+    return { value: pageSize, label: pageSize.toLocaleString() };
 }

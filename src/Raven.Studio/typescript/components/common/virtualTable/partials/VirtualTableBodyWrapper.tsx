@@ -1,25 +1,25 @@
-import { PropsWithChildren, ReactNode } from "react";
+import { PropsWithChildren, ReactNode, useState } from "react";
 import { virtualTableUtils } from "../utils/virtualTableUtils";
 import VirtualTableHead from "./VirtualTableHead";
-import VirtualTableScrollToTopButton from "./VirtualTableScrollToTopButton";
 import { VirtualTableState } from "./VirtualTableState";
 import classNames from "classnames";
+import Button from "react-bootstrap/Button";
 import Table from "react-bootstrap/Table";
 import { Table as TanstackTable } from "@tanstack/react-table";
+import { Icon } from "components/common/Icon";
 import { ClassNameProps } from "../../../models/common";
 
 export interface VirtualTableBodyWrapperProps<T> {
     table: TanstackTable<T>;
     heightInPx: number;
     isLoading?: boolean;
-    // overrides the default "no rows in the table" check, e.g. when rows are fetched lazily
     isEmpty?: boolean;
     emptyMessage?: ReactNode;
     tableContainerRef: React.MutableRefObject<HTMLDivElement>;
+    onScroll?: () => void;
     isCompact?: boolean;
     isRoundingDisabled?: boolean;
     isPaddingDisabled?: boolean;
-    // rendered on top of the scrollable area (e.g. a banner)
     overlay?: ReactNode;
 }
 
@@ -27,6 +27,7 @@ export default function VirtualTableBodyWrapper<T>({
     table,
     className,
     tableContainerRef,
+    onScroll,
     isLoading,
     isEmpty,
     emptyMessage,
@@ -37,6 +38,8 @@ export default function VirtualTableBodyWrapper<T>({
     overlay,
     children,
 }: PropsWithChildren<VirtualTableBodyWrapperProps<T>> & ClassNameProps) {
+    const [isScrolledFromTop, setIsScrolledFromTop] = useState(false);
+
     const tableHeightInPx = virtualTableUtils.getTableContainerHeightInPx(heightInPx, isPaddingDisabled);
 
     return (
@@ -59,6 +62,10 @@ export default function VirtualTableBodyWrapper<T>({
                     ref={tableContainerRef}
                     className={classNames("table-container", { "rounded-0": isRoundingDisabled })}
                     style={{ height: tableHeightInPx }}
+                    onScroll={(e) => {
+                        setIsScrolledFromTop(e.currentTarget.scrollTop > 0);
+                        onScroll?.();
+                    }}
                 >
                     <Table className="m-0" borderless>
                         <VirtualTableHead table={table} isCompact={isCompact} />
@@ -66,7 +73,18 @@ export default function VirtualTableBodyWrapper<T>({
                     </Table>
                 </div>
                 {overlay}
-                <VirtualTableScrollToTopButton tableContainerRef={tableContainerRef} />
+                {isScrolledFromTop && (
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        className="scroll-to-top rounded-pill floating-bar"
+                        title="Scroll to top"
+                        aria-label="Scroll to top"
+                        onClick={() => tableContainerRef.current.scrollTo({ top: 0, behavior: "instant" })}
+                    >
+                        <Icon icon="arrow-thin-top" margin="m-0" />
+                    </Button>
+                )}
             </div>
         </div>
     );

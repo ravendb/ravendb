@@ -10,7 +10,6 @@ const maxRowsInDom = maxBodyHeightInPx / defaultRowHeightInPx;
 const totalCount = 100_000_001;
 // picked so that the fitting page size divides maxRowsInDom
 const tableHeightInPx = 480;
-// rows that fit into the table when paginated
 const pageSize = Math.floor((tableHeightInPx - paddingInPx - headerHeightInPx) / defaultRowHeightInPx);
 const viewportHeightInPx = 400;
 

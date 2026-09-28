@@ -12,18 +12,14 @@ import { useEventsCollector } from "components/hooks/useEventsCollector";
 import ExportDocumentsDropdown from "components/pages/database/documents/documentsList/partials/ExportDocumentsDropdown";
 import { useAppSelector } from "components/store";
 import queryCriteria from "models/database/query/queryCriteria";
-import { MouseEvent } from "react";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Dropdown from "react-bootstrap/Dropdown";
-import router from "plugins/router";
 
 interface DocumentsListToolbarProps {
-    // null means all documents
     collectionName: string | null;
     isPaginated: boolean;
     onIsPaginatedChange: (isPaginated: boolean) => void;
-    // the columns come from the layout saved by the user instead of the defaults
     isCustomLayout: boolean;
     onOpenColumnSettings: () => void;
     getVisibleColumnFields: () => string[];
@@ -45,17 +41,6 @@ export default function DocumentsListToolbar({
     const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
     const { appUrl } = useAppUrls();
     const { reportEvent } = useEventsCollector();
-
-    const navigateToNewDocument = (e: MouseEvent, collection: string | null) => {
-        reportEvent("document", collection ? "new-in-collection" : "new");
-
-        const url = appUrl.forNewDoc(databaseName, collection);
-        if (e.ctrlKey) {
-            window.open(url);
-        } else {
-            router.navigate(url);
-        }
-    };
 
     const navigateToQuery = () => {
         const collectionNameForQuery = collectionName ?? "@all_docs";
@@ -79,7 +64,8 @@ export default function DocumentsListToolbar({
                 <Dropdown as={ButtonGroup}>
                     <Button
                         variant="primary"
-                        onClick={(e) => navigateToNewDocument(e, null)}
+                        href={appUrl.forNewDoc(databaseName)}
+                        onClick={() => reportEvent("document", "new")}
                         disabled={!hasDatabaseWriteAccess}
                     >
                         <Icon icon="new-document" />
@@ -94,7 +80,10 @@ export default function DocumentsListToolbar({
                                 title="More options"
                             />
                             <Dropdown.Menu>
-                                <Dropdown.Item onClick={(e) => navigateToNewDocument(e, collectionName)}>
+                                <Dropdown.Item
+                                    href={appUrl.forNewDoc(databaseName, collectionName)}
+                                    onClick={() => reportEvent("document", "new-in-collection")}
+                                >
                                     <Icon icon="new-document" />
                                     New document in current collection
                                 </Dropdown.Item>
