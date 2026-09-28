@@ -26,7 +26,7 @@ import { virtualTableUtils } from "components/common/virtualTable/utils/virtualT
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { FullDocumentProvider } from "components/pages/database/documents/documentsList/hooks/useFullDocumentProvider";
 import { documentsColumnLayoutStorage } from "components/pages/database/documents/documentsList/utils/documentsColumnLayoutStorage";
-import { uniq } from "lodash";
+import { sumBy, uniq } from "lodash";
 import document from "models/database/documents/document";
 import { useMemo, useState } from "react";
 
@@ -81,7 +81,7 @@ export function useDocumentsColumns({
     fullDocumentProvider,
 }: UseDocumentsColumnsProps): DocumentsColumns {
     const { appUrl } = useAppUrls();
-    const { getPropertyPreviewResolver, getCustomColumnPreviewResolver } = fullDocumentProvider;
+    const { getPropertyPreviewResolver } = fullDocumentProvider;
     const isAllDocuments = collectionName === null;
 
     const [appliedLayout, setAppliedLayout] = useState<AppliedColumnLayout | null>(() =>
@@ -93,15 +93,15 @@ export function useDocumentsColumns({
 
     const customColumns = appliedLayout?.customColumns ?? noCustomColumns;
 
+    const fullBindings = useMemo(() => (appliedLayout ? getFullBindings(appliedLayout) : noColumns), [appliedLayout]);
+
     // without an applied layout the server picks the previewed properties itself
     const previewBindings = useMemo(
-        () => (appliedLayout ? getPreviewBindings(appliedLayout, isAllDocuments) : noColumns),
-        [appliedLayout, isAllDocuments]
-    );
-
-    const fullBindings = useMemo(
-        () => uniq(customColumns.flatMap((x) => getCustomColumnProperties(x.expression))),
-        [customColumns]
+        () =>
+            appliedLayout
+                ? getPreviewBindings(appliedLayout, isAllDocuments).filter((x) => !fullBindings.includes(x))
+                : noColumns,
+        [appliedLayout, isAllDocuments, fullBindings]
     );
 
     const collectionColumns = useDocumentColumnsProvider({
@@ -115,8 +115,8 @@ export function useDocumentsColumns({
     });
 
     const customColumnDefs = useMemo(
-        () => customColumns.map((column) => createCustomColumn(column, databaseName, getCustomColumnPreviewResolver)),
-        [customColumns, databaseName, getCustomColumnPreviewResolver]
+        () => customColumns.map((column) => createCustomColumn(column, databaseName)),
+        [customColumns, databaseName]
     );
 
     const { columnDefs, defaultColumnVisibility } = useMemo(() => {
@@ -176,12 +176,17 @@ export function useDocumentsColumns({
         [appliedLayout, savedVisibility, defaultColumnVisibility]
     );
 
+    const fittedColumnDefs = useMemo(
+        () => fitVisibleColumnsToWidth(columnDefs, tableState.columnVisibility, tableBodyWidthInPx),
+        [columnDefs, tableState.columnVisibility, tableBodyWidthInPx]
+    );
+
     const defaultVisibleColumnIds = columnDefs
         .map((column) => column.id)
         .filter((id) => defaultColumnVisibility[id] !== false);
 
     return {
-        columnDefs,
+        columnDefs: fittedColumnDefs,
         tableState,
         previewBindings,
         fullBindings,
@@ -229,6 +234,38 @@ function getPreviewBindings(layout: AppliedColumnLayout, isAllDocuments: boolean
     return layout.visibleColumnIds.filter((id) => !nonPropertyColumnIds.has(id));
 }
 
+function getFullBindings(layout: AppliedColumnLayout): string[] {
+    const visibleCustomColumns = layout.customColumns.filter((column) => layout.visibleColumnIds.includes(column.id));
+
+    return uniq(visibleCustomColumns.flatMap((column) => getCustomColumnProperties(column.expression)));
+}
+
+function fitVisibleColumnsToWidth(
+    columnDefs: ColumnDef<document>[],
+    columnVisibility: VisibilityState,
+    availableWidth: number
+): ColumnDef<document>[] {
+    const getSize = (column: ColumnDef<document>) => column.size ?? propertyColumnWidth;
+    const isFixed = (column: ColumnDef<document>) =>
+        column.id === columnCheckbox.id || column.id === columnDocumentFlags.id;
+
+    const visibleColumns = columnDefs.filter((column) => columnVisibility[column.id] !== false);
+    const stretchedColumns = visibleColumns.filter((column) => !isFixed(column));
+
+    if (stretchedColumns.length === 0) {
+        return columnDefs;
+    }
+
+    const fixedWidth = sumBy(visibleColumns.filter(isFixed), getSize);
+    const scale = (availableWidth - fixedWidth) / sumBy(stretchedColumns, getSize);
+
+    return columnDefs.map((column) =>
+        stretchedColumns.includes(column)
+            ? { ...column, size: Math.max(propertyColumnWidth, Math.floor(getSize(column) * scale)) }
+            : column
+    );
+}
+
 // every fetch reports only the columns of the documents it returned, so the columns seen so far are kept
 // and the newly discovered ones are appended, otherwise scrolling would drop the columns already in the table
 function mergeColumnNames(previous: string[] | null, next: string[]): string[] {
@@ -273,26 +310,14 @@ function createPropertyColumn(
     };
 }
 
-function createCustomColumn(
-    column: CustomColumnDefinition,
-    databaseName: string,
-    getPreviewValueResolver: FullDocumentProvider["getCustomColumnPreviewResolver"]
-): ColumnDef<document> {
+function createCustomColumn(column: CustomColumnDefinition, databaseName: string): ColumnDef<document> {
     const getValue = createCustomColumnAccessor(column.expression);
-    const properties = getCustomColumnProperties(column.expression);
 
     return {
         id: column.id,
         header: column.header,
         accessorFn: (doc) => getValue(doc),
-        cell: ({ getValue, row }) => (
-            <CellDocumentValue
-                value={getValue()}
-                databaseName={databaseName}
-                hasHyperlinkForIds
-                resolvePreviewValue={getPreviewValueResolver(row.original, properties, getValue)}
-            />
-        ),
+        cell: ({ getValue }) => <CellDocumentValue value={getValue()} databaseName={databaseName} hasHyperlinkForIds />,
         size: customColumnWidth,
         meta: { customColumn: column },
     };
