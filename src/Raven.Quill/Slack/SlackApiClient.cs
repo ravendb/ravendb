@@ -6,47 +6,16 @@ namespace Raven.Quill.Slack;
 
 internal sealed class SlackApiClient(SlackSdk sdk) : ISlackClient
 {
-    public async Task<(SlackAuthInfo? Info, string? Error, bool SlackResponded)> AuthTestAsync(
-        string botToken, CancellationToken ct)
+    public async Task<SlackAuthInfo> AuthTestAsync(string botToken, CancellationToken ct)
     {
-        try
-        {
-            var payload = await CallAsync(() => Api(botToken).Auth.Test(ct), "auth.test", ct);
-
-            if (string.IsNullOrEmpty(payload?.TeamId) || string.IsNullOrEmpty(payload.UserId))
-                return (null, "slack returned an unrecognized auth.test payload", true);
-
-            return (new SlackAuthInfo(
-                payload.TeamId,
-                payload.Team ?? "",
-                payload.UserId,
-                payload.User ?? ""), null, true);
-        }
-        catch (SlackApiException e)
-        {
-            if (e.Error == SlackApiException.RateLimitedError)
-                return (null, "slack is rate-limiting the token check; try again shortly", false);
-
-            if (e.SlackResponded == false || e.Error is null)
-                return (null, e.Message, e.SlackResponded);
-
-            return (null, e.Error is "invalid_auth" or "token_revoked" or "account_inactive"
-                ? "slack rejected the bot token; copy the xoxb- token from the app's OAuth page and try again"
-                : $"slack refused the token check: {e.Error}", true);
-        }
+        var payload = await CallAsync(() => Api(botToken).Auth.Test(ct), "auth.test", ct);
+        return new SlackAuthInfo(payload.TeamId, payload.Team ?? "", payload.UserId, payload.User ?? "");
     }
 
     public async Task<string> OpenSocketAsync(string appToken, CancellationToken ct)
     {
         var payload = await CallAsync(
             () => Api(appToken).AppsConnectionsApi.Open(ct), "apps.connections.open", ct);
-
-        if (string.IsNullOrEmpty(payload?.Url) ||
-            Uri.TryCreate(payload.Url, UriKind.Absolute, out var url) == false ||
-            url.Scheme is not ("wss" or "ws"))
-            throw new SlackApiException(
-                "slack returned an apps.connections.open payload without a websocket url", slackResponded: true);
-
         return payload.Url;
     }
 
@@ -61,10 +30,6 @@ internal sealed class SlackApiClient(SlackSdk sdk) : ISlackClient
             Blocks = [new MarkdownBlock { Text = markdown }],
         };
         var payload = await CallAsync(() => Api(botToken).Chat.PostMessage(message, ct), "chat.postMessage", ct);
-
-        if (string.IsNullOrEmpty(payload?.Ts))
-            throw new SlackApiException("slack returned a chat.postMessage payload without a message ts");
-
         return payload.Ts;
     }
 
@@ -101,11 +66,7 @@ internal sealed class SlackApiClient(SlackSdk sdk) : ISlackClient
         }
         catch (Exception e) when (ct.IsCancellationRequested == false)
         {
-            var translated = SlackApiErrors.Translate(e, method);
-            if (translated is null)
-                throw;
-
-            throw translated;
+            throw SlackApiErrors.Translate(e, method) ?? e;
         }
     }
 }

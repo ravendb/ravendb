@@ -50,9 +50,17 @@ public static class SlackEndpoints
         {
             if (health.TryGetFreshTokenCheck(app.Database, channel.ShortId, out var tokenValid, out var tokenError) == false)
             {
-                var (info, error, slackResponded) = await slackClient.AuthTestAsync(channel.Slack!.BotToken, ct);
-                tokenValid = info is not null ? true : slackResponded ? false : null;
-                tokenError = info is null ? error : null;
+                try
+                {
+                    await slackClient.AuthTestAsync(channel.Slack!.BotToken, ct);
+                    tokenValid = true;
+                    tokenError = null;
+                }
+                catch (SlackApiException e)
+                {
+                    tokenValid = e.SlackResponded && e.Error != SlackApiException.RateLimitedError ? false : null;
+                    tokenError = SlackApiErrors.DescribeBotTokenError(e);
+                }
                 health.StoreTokenCheck(app.Database, channel.ShortId, tokenValid, tokenError);
             }
 
