@@ -141,8 +141,8 @@ builder.Services.AddOptions<ApplianceOptions>()
     .Validate(o => o.Slack.RequestTimeout > TimeSpan.Zero, "Slack RequestTimeout must be positive")
     .Validate(o => o.Slack.MessageLimit > 0 &&
                    o.Slack.MessageLimit <= SlackOptions.MarkdownBlockLimit &&
-                   o.Slack.MessageLimit <= SlackOptions.ApiMessageLimit / SlackText.MaxEscapeExpansion,
-        $"Slack MessageLimit must be between 1 and {Math.Min(SlackOptions.MarkdownBlockLimit, SlackOptions.ApiMessageLimit / SlackText.MaxEscapeExpansion)}, " +
+                   o.Slack.MessageLimit <= SlackOptions.ApiMessageLimit / SlackApiClient.MaxEscapeExpansion,
+        $"Slack MessageLimit must be between 1 and {Math.Min(SlackOptions.MarkdownBlockLimit, SlackOptions.ApiMessageLimit / SlackApiClient.MaxEscapeExpansion)}, " +
         "so the markdown block and the worst-case escaped fallback text both stay within Slack's caps")
     .Validate(o => o.Slack.EditDebounce > TimeSpan.Zero, "Slack EditDebounce must be positive")
     .Validate(o => o.Slack.SenderQueueCapacity > 0, "Slack SenderQueueCapacity must be positive")
