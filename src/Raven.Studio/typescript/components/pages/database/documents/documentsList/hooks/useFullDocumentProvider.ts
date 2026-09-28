@@ -1,31 +1,11 @@
-import { hasIncompletePreviewValue } from "components/common/virtualTable/utils/documentPreviewStubs";
+import getDocumentsPreviewCommand from "commands/database/documents/getDocumentsPreviewCommand";
 import { useServices } from "components/hooks/useServices";
 import document from "models/database/documents/document";
 import { useCallback, useRef } from "react";
 
-// The preview rows hold stubs for nested values and trimmed strings, this provides the full documents on demand
-// (fetched once per id until the cache is cleared) so the cell previews can show the whole value.
 export function useFullDocumentProvider(databaseName: string) {
     const { databasesService } = useServices();
     const cacheRef = useRef(new Map<string, Promise<document>>());
-
-    const getFullDocument = useCallback(
-        (id: string): Promise<document> => {
-            const cached = cacheRef.current.get(id);
-            if (cached) {
-                return cached;
-            }
-
-            const fetched = databasesService.getDocumentWithMetadata(id, databaseName, true).catch((error) => {
-                cacheRef.current.delete(id);
-                throw error;
-            });
-            cacheRef.current.set(id, fetched);
-
-            return fetched;
-        },
-        [databasesService, databaseName]
-    );
 
     const getPropertyPreviewResolver = useCallback(
         (doc: document, property: string): (() => Promise<unknown>) | undefined => {
@@ -33,16 +13,34 @@ export function useFullDocumentProvider(databaseName: string) {
                 return undefined;
             }
 
-            return () => getFullDocument(doc.getId()).then((fullDocument) => fullDocument.getValue(property));
+            return async () => {
+                const id = doc.getId();
+
+                if (!cacheRef.current.has(id)) {
+                    const fetched = databasesService.getDocumentWithMetadata(id, databaseName, true);
+                    fetched.catch(() => cacheRef.current.delete(id));
+                    cacheRef.current.set(id, fetched);
+                }
+
+                const fullDocument = await cacheRef.current.get(id);
+                return fullDocument.getValue(property);
+            };
         },
-        [getFullDocument]
+        [databasesService, databaseName]
     );
 
-    const clearCache = useCallback(() => {
-        cacheRef.current.clear();
-    }, []);
+    return { getPropertyPreviewResolver, clearCache: () => cacheRef.current.clear() };
+}
 
-    return { getPropertyPreviewResolver, clearCache };
+function hasIncompletePreviewValue(doc: document, property: string): boolean {
+    const metadata = doc.__metadata as unknown as Record<string, object | undefined>;
+    const { ObjectStubsKey, ArrayStubsKey, TrimmedValueKey } = getDocumentsPreviewCommand;
+
+    return (
+        property in (metadata[ObjectStubsKey] ?? {}) ||
+        property in (metadata[ArrayStubsKey] ?? {}) ||
+        ((metadata[TrimmedValueKey] as string[]) ?? []).includes(property)
+    );
 }
 
 export type FullDocumentProvider = ReturnType<typeof useFullDocumentProvider>;

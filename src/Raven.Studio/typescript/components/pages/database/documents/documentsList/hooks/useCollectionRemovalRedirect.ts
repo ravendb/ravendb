@@ -5,57 +5,43 @@ import { useAppSelector } from "components/store";
 import router from "plugins/router";
 import { useEffect, useRef } from "react";
 
-interface UseCollectionRemovalRedirectProps {
-    databaseName: string;
-    // null means all documents
-    collectionName: string | null;
-}
-
-// Redirects to all documents once the shown collection disappears from the collections stats.
-// The user is warned unless the removal was started from this view (deleting the whole collection).
-export function useCollectionRemovalRedirect({ databaseName, collectionName }: UseCollectionRemovalRedirectProps) {
+export function useCollectionRemovalRedirect(databaseName: string, collectionName: string | null) {
     const collectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
 
-    const seenCollectionRef = useRef<string>(null);
-    const expectedRemovalRef = useRef<string>(null);
+    const wasCollectionSeenRef = useRef(false);
+    const isRemovalExpectedRef = useRef(false);
 
+    // Navigates to all documents once the collection disappears from the collection stats
     useEffect(() => {
         if (collectionName === null || collectionNames.length === 0) {
             return;
         }
 
         if (collectionNames.includes(collectionName)) {
-            seenCollectionRef.current = collectionName;
+            wasCollectionSeenRef.current = true;
             return;
         }
 
-        const isExpectedRemoval = expectedRemovalRef.current === collectionName;
-        if (isExpectedRemoval) {
-            expectedRemovalRef.current = null;
-        } else if (seenCollectionRef.current === collectionName) {
+        if (wasCollectionSeenRef.current && !isRemovalExpectedRef.current) {
             messagePublisher.reportWarning(`${collectionName} was removed`);
         }
 
         redirectToAllDocuments(databaseName);
     }, [collectionName, collectionNames, databaseName]);
 
-    const onCollectionDeletionStarted = (deletedCollectionName: string) => {
-        expectedRemovalRef.current = deletedCollectionName;
+    return {
+        onCollectionDeletionStarted: () => {
+            isRemovalExpectedRef.current = true;
+        },
+        onCollectionDeletionFailed: () => {
+            isRemovalExpectedRef.current = false;
+        },
+        onEntireCollectionDeleted: (deletedCollectionName: string) => {
+            if (deletedCollectionName === collectionName) {
+                redirectToAllDocuments(databaseName);
+            }
+        },
     };
-
-    const onCollectionDeletionFailed = (deletedCollectionName: string) => {
-        if (expectedRemovalRef.current === deletedCollectionName) {
-            expectedRemovalRef.current = null;
-        }
-    };
-
-    const onEntireCollectionDeleted = (deletedCollectionName: string) => {
-        if (deletedCollectionName === collectionName) {
-            redirectToAllDocuments(databaseName);
-        }
-    };
-
-    return { onCollectionDeletionStarted, onCollectionDeletionFailed, onEntireCollectionDeleted };
 }
 
 function redirectToAllDocuments(databaseName: string) {

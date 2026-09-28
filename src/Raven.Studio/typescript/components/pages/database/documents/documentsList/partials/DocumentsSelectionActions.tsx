@@ -24,19 +24,16 @@ import Dropdown from "react-bootstrap/Dropdown";
 import DeleteDocumentsModal from "viewmodels/database/documents/DeleteDocumentsModal";
 
 interface DocumentsSelectionActionsProps {
-    // null means all documents
     collectionName: string | null;
-    collectionDocumentCount: number | null;
+    collectionDocumentCount: number | undefined;
     selection: LazyTableSelection<document>;
     collectionDeletionCallbacks: CollectionDeletionCallbacks;
     onSelectionDeleted: () => void;
 }
 
-// copying re-fetches the full documents and renders them all in a modal, so the selection size is capped
 const copyLimit = 100;
 const actionButtonClassName = "text-reset text-decoration-none";
 
-// floating bar with the actions for the selected documents, rendered at the bottom of the table
 export default function DocumentsSelectionActions({
     collectionName,
     collectionDocumentCount,
@@ -115,7 +112,6 @@ export default function DocumentsSelectionActions({
     const asyncCopyDocuments = useAsyncCallback(async () => {
         reportEvent("documents", "copy");
 
-        // the preview may contain incomplete values, so the documents are fetched again
         const ids = await getSelectedIds();
         const documents = await databasesService.getDocumentsWithMetadata(ids, databaseName);
 

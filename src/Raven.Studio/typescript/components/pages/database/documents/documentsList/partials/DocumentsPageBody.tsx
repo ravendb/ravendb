@@ -20,7 +20,6 @@ import document from "models/database/documents/document";
 import { useRef, useState } from "react";
 
 interface DocumentsPageBodyProps {
-    // null means all documents
     collectionName: string | null;
 }
 
@@ -28,16 +27,15 @@ const getDocumentId = (doc: document) => doc.getId();
 
 export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyProps) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const isSharded = useAppSelector(databaseSelectors.activeDatabase)?.isSharded ?? false;
-    const collectionDocumentCount =
-        useAppSelector(
-            collectionsTrackerSelectors.collectionByName(collectionName ?? systemCollectionNames.allDocuments)
-        )?.documentCount ?? null;
+    const isSharded = useAppSelector(databaseSelectors.activeDatabase)?.isSharded;
+    const collectionDocumentCount = useAppSelector(
+        collectionsTrackerSelectors.collectionByName(collectionName ?? systemCollectionNames.allDocuments)
+    )?.documentCount;
     const { databasesService } = useServices();
 
     const { isDataChanged, trackResultEtag, reset: resetDataChanged } = useDocumentsDataChanged(collectionName);
     const { getPropertyPreviewResolver, clearCache: clearFullDocumentCache } = useFullDocumentProvider(databaseName);
-    const collectionDeletionCallbacks = useCollectionRemovalRedirect({ databaseName, collectionName });
+    const collectionDeletionCallbacks = useCollectionRemovalRedirect(databaseName, collectionName);
 
     const bodyRef = useRef<HTMLDivElement>(null);
     const { width: bodyWidthInPx } = useResizeObserver({ ref: bodyRef });
@@ -45,7 +43,7 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
     const columns = useDocumentsColumns({
         databaseName,
         collectionName,
-        tableBodyWidthInPx: virtualTableUtils.getTableBodyWidth(bodyWidthInPx ?? 0),
+        tableBodyWidthInPx: virtualTableUtils.getTableBodyWidth(bodyWidthInPx),
         getPropertyPreviewResolver,
     });
 
@@ -65,7 +63,6 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
             columns.onPreviewResult(result);
             trackResultEtag(result.resultEtag);
         },
-        // the bindings decide which values the rows hold, so the table starts over when they change
         reloadDependencies: [columns.previewBindings, columns.fullBindings],
     });
 
@@ -85,7 +82,6 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
         getRowId: getDocumentId,
         meta: { lazySelection: selection },
         state: { rowSelection: selection.rowSelection, ...columns.tableState },
-        enableRowSelection: true,
         getCoreRowModel: getCoreRowModel(),
     });
 

@@ -41,16 +41,12 @@ export interface AppliedColumnLayout {
 
 export interface RestoreDefaultsSettings {
     visibleColumnIds: string[];
-    // called instead of onApplied when the applied layout is the default one
     onRestore: () => void;
 }
 
 export interface TableDisplaySettingsOptions {
-    // when provided, the sheet lets the user add, edit and remove columns defined by a JavaScript expression
     customColumns?: CustomColumnDefinition[];
-    // called with the layout after it is applied to the table, e.g. to persist it
     onApplied?: (layout: AppliedColumnLayout) => void;
-    // when provided, "Restart to default" resets the sheet to the default layout instead of its initial state
     restoreDefaults?: RestoreDefaultsSettings;
 }
 
@@ -61,21 +57,14 @@ interface TableDisplaySettingsProps<T> extends ClassNameProps, TableDisplaySetti
 export function useTableDisplaySettingsSheet<T>(table: TanstackTable<T>, options: TableDisplaySettingsOptions = {}) {
     const { customColumns, onApplied, restoreDefaults } = options;
     const { open } = useViewSheet();
-    const {
-        columnMetas,
-        allColumnIds,
-        getInitialColumnOrder,
-        getInitialPinnedIds,
-        getInitialSelectedIds,
-        applySettings,
-    } = useTableDisplaySettings(table);
+    const { columnMetas, getInitialColumnOrder, getInitialPinnedIds, getInitialSelectedIds, applySettings } =
+        useTableDisplaySettings(table);
 
     const openSheet = () => {
         open({
             component: (
                 <TableDisplaySettingsSheet
                     columnMetas={columnMetas}
-                    allColumnIds={allColumnIds}
                     initialSelectedIds={getInitialSelectedIds()}
                     initialColumnOrder={getInitialColumnOrder()}
                     initialPinnedIds={getInitialPinnedIds()}
@@ -112,7 +101,6 @@ export default function TableDisplaySettings<T>({ table, className, ...options }
 
 interface TableDisplaySettingsSheetProps {
     columnMetas: ColumnMeta[];
-    allColumnIds: string[];
     initialSelectedIds: string[];
     initialColumnOrder: string[];
     initialPinnedIds: string[];
@@ -123,7 +111,6 @@ interface TableDisplaySettingsSheetProps {
 
 function TableDisplaySettingsSheet({
     columnMetas,
-    allColumnIds,
     initialSelectedIds,
     initialColumnOrder,
     initialPinnedIds,
@@ -145,9 +132,6 @@ function TableDisplaySettingsSheet({
 
     const sensors = useSensors(useSensor(PointerSensor));
 
-    const customColumnIds = customColumnList.map((x) => x.id);
-    const removedCustomColumnIds = initialCustomColumns.map((x) => x.id).filter((id) => !customColumnIds.includes(id));
-
     const metaById: Record<string, ColumnMeta> = {
         ...Object.fromEntries(columnMetas.map((m) => [m.id, m])),
         ...Object.fromEntries(
@@ -158,9 +142,7 @@ function TableDisplaySettingsSheet({
         ),
     };
 
-    const availableColumnIds = [...allColumnIds, ...customColumnIds.filter((id) => !allColumnIds.includes(id))].filter(
-        (id) => !removedCustomColumnIds.includes(id)
-    );
+    const availableColumnIds = [...defaultColumnOrder, ...customColumnList.map((x) => x.id)];
 
     const hideableIds = availableColumnIds.filter((id) => metaById[id].canHide);
     const selectionState = genUtils.getSelectionState(

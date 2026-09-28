@@ -2,9 +2,6 @@ import { systemCollectionNames, collectionsTrackerSelectors } from "components/c
 import { useAppSelector } from "components/store";
 import { useEffect, useRef, useState } from "react";
 
-// The preview endpoint returns an ETag built as "<change vector>/<document count>" of the previewed collection
-// (the database change vector for all documents). The data is considered changed when the ETag differs between
-// the fetches of the same load, or when the collection stats notification brings a state other than the loaded one.
 export function useDocumentsDataChanged(collectionName: string | null) {
     const collection = useAppSelector(
         collectionsTrackerSelectors.collectionByName(collectionName ?? systemCollectionNames.allDocuments)
@@ -17,17 +14,14 @@ export function useDocumentsDataChanged(collectionName: string | null) {
     const [isDataChanged, setIsDataChanged] = useState(false);
     const resultEtagRef = useRef<string>(null);
 
+    // Flags the loaded rows as stale when a collection stats notification brings a different ETag
     useEffect(() => {
         if (resultEtagRef.current !== null && expectedEtag !== resultEtagRef.current) {
             setIsDataChanged(true);
         }
     }, [expectedEtag]);
 
-    const trackResultEtag = (resultEtag: string | undefined) => {
-        if (!resultEtag) {
-            return;
-        }
-
+    const trackResultEtag = (resultEtag: string) => {
         if (resultEtagRef.current !== null && resultEtagRef.current !== resultEtag) {
             setIsDataChanged(true);
         }

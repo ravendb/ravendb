@@ -1,6 +1,8 @@
 import { RowData, RowSelectionState } from "@tanstack/react-table";
+import genUtils from "common/generalUtils";
 import { LazyRows } from "components/common/virtualTable/hooks/useLazyRows";
 import { SelectionState } from "components/models/common";
+import { range } from "lodash";
 import { useState } from "react";
 
 export type LazyTableSelectionState =
@@ -12,7 +14,6 @@ export interface LazyTableSelection<T> {
     selectionState: SelectionState;
     selectedCount: number;
     rowSelection: RowSelectionState;
-    // absolute index of the row toggled last, a shift-click selects the range between it and the clicked row
     anchorRowIndex: number | null;
     canSelectRangeTo: (rowIndex: number) => boolean;
     toggleRow: (item: T, isRangeSelection: boolean) => void;
@@ -23,7 +24,6 @@ export interface LazyTableSelection<T> {
 interface UseLazyTableSelectionProps<T> {
     lazyRows: Pick<LazyRows<T>, "rows" | "getItem">;
     getId: (item: T) => string;
-    // selecting all in scroll mode counts every row, not only the loaded ones
     totalCount: number | null;
     isPaginated: boolean;
 }
@@ -39,7 +39,7 @@ const emptySelection: LazyTableSelectionState = { mode: "inclusive", selectedIds
 const allSelection: LazyTableSelectionState = { mode: "exclusive", excludedIds: [] };
 
 export function useLazyTableSelection<T>({
-    lazyRows,
+    lazyRows: { rows, getItem },
     getId,
     totalCount,
     isPaginated,
@@ -47,38 +47,32 @@ export function useLazyTableSelection<T>({
     const [state, setState] = useState<LazyTableSelectionState>(emptySelection);
     const [anchorRowIndex, setAnchorRowIndex] = useState<number>(null);
 
-    const { rows, getItem } = lazyRows;
-
     const isSelected = createIsSelected(state);
-    const selectedIds = rows.map((x) => getId(x.item)).filter(isSelected);
+    const rowIds = rows.map((x) => getId(x.item));
+    const selectedRowIds = rowIds.filter(isSelected);
 
-    const selectionState = isPaginated
-        ? getPageSelectionState(selectedIds.length, rows.length)
-        : getSelectionState(state);
+    const getItemsInRange = (rowIndex: number) => {
+        const items = range(Math.min(anchorRowIndex, rowIndex), Math.max(anchorRowIndex, rowIndex) + 1).map(getItem);
+        return items.includes(undefined) ? null : items;
+    };
 
-    const canSelectRangeTo = (rowIndex: number) =>
-        anchorRowIndex !== null && isRangeLoaded(anchorRowIndex, rowIndex, getItem);
+    const canSelectRangeTo = (rowIndex: number) => anchorRowIndex !== null && getItemsInRange(rowIndex) !== null;
 
     const toggleRow = (item: T, isRangeSelection: boolean) => {
-        const rowIndex = rows.find((x) => x.item === item)?.index;
-        if (rowIndex == null) {
-            return;
-        }
-
+        const rowIndex = rows.find((x) => x.item === item).index;
         const id = getId(item);
-        const ids =
-            isRangeSelection && canSelectRangeTo(rowIndex)
-                ? getIdsInRange(anchorRowIndex, rowIndex, getItem, getId)
-                : [id];
+        const rangeItems = isRangeSelection && anchorRowIndex !== null ? getItemsInRange(rowIndex) : null;
+        const ids = rangeItems ? rangeItems.map(getId) : [id];
 
         setState(withSelected(state, ids, !isSelected(id)));
         setAnchorRowIndex(rowIndex);
     };
 
+    const selectionState = isPaginated ? genUtils.getSelectionState(rowIds, selectedRowIds) : getSelectionState(state);
+
     const toggleAll = () => {
         if (isPaginated) {
-            const pageIds = rows.map((x) => getId(x.item));
-            setState(withSelected(state, pageIds, selectionState !== "AllSelected"));
+            setState(withSelected(state, rowIds, selectionState !== "AllSelected"));
         } else {
             setState(selectionState === "Empty" ? allSelection : emptySelection);
         }
@@ -91,41 +85,20 @@ export function useLazyTableSelection<T>({
         setAnchorRowIndex(null);
     };
 
-    const selectedCount =
-        state.mode === "inclusive"
-            ? state.selectedIds.length
-            : Math.max(0, (totalCount ?? 0) - state.excludedIds.length);
-
     return {
         state,
         selectionState,
-        selectedCount,
-        rowSelection: Object.fromEntries(selectedIds.map((id) => [id, true])),
+        selectedCount:
+            state.mode === "inclusive"
+                ? state.selectedIds.length
+                : Math.max(0, (totalCount ?? 0) - state.excludedIds.length),
+        rowSelection: Object.fromEntries(selectedRowIds.map((id) => [id, true])),
         anchorRowIndex,
         canSelectRangeTo,
         toggleRow,
         toggleAll,
         clear,
     };
-}
-
-function getRowIndexesInRange(fromRowIndex: number, toRowIndex: number) {
-    const start = Math.min(fromRowIndex, toRowIndex);
-    const end = Math.max(fromRowIndex, toRowIndex);
-    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
-}
-
-function isRangeLoaded<T>(fromRowIndex: number, toRowIndex: number, getItem: (rowIndex: number) => T | undefined) {
-    return getRowIndexesInRange(fromRowIndex, toRowIndex).every((i) => getItem(i) !== undefined);
-}
-
-function getIdsInRange<T>(
-    fromRowIndex: number,
-    toRowIndex: number,
-    getItem: (rowIndex: number) => T | undefined,
-    getId: (item: T) => string
-) {
-    return getRowIndexesInRange(fromRowIndex, toRowIndex).map((i) => getId(getItem(i)));
 }
 
 function createIsSelected(state: LazyTableSelectionState) {
@@ -156,12 +129,4 @@ function getSelectionState(state: LazyTableSelectionState): SelectionState {
     }
 
     return state.selectedIds.length > 0 ? "SomeSelected" : "Empty";
-}
-
-function getPageSelectionState(selectedCount: number, pageSize: number): SelectionState {
-    if (selectedCount === 0) {
-        return "Empty";
-    }
-
-    return selectedCount === pageSize ? "AllSelected" : "SomeSelected";
 }

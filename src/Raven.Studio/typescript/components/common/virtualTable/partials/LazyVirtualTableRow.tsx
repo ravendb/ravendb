@@ -2,24 +2,23 @@ import { Row } from "@tanstack/react-table";
 import classNames from "classnames";
 import { memo } from "react";
 import VirtualTableCells from "./VirtualTableCells";
+import { virtualTableConstants } from "../utils/virtualTableConstants";
 
 interface LazyVirtualTableRowProps<T> {
     row: Row<T>;
     rowIndex: number;
-    firstRowIndex: number;
-    rowHeightInPx: number;
-    isCompact?: boolean;
+    positionInPage: number;
     isSelected: boolean;
     isSelectionPreview: boolean;
     renderDependencies: unknown[];
 }
 
+const { defaultRowHeightInPx } = virtualTableConstants;
+
 function LazyVirtualTableRow<T>({
     row,
     rowIndex,
-    firstRowIndex,
-    rowHeightInPx,
-    isCompact,
+    positionInPage,
     isSelected,
     isSelectionPreview,
 }: LazyVirtualTableRowProps<T>) {
@@ -27,8 +26,8 @@ function LazyVirtualTableRow<T>({
         <tr
             data-row-index={rowIndex}
             style={{
-                height: rowHeightInPx,
-                transform: `translateY(${(rowIndex - firstRowIndex) * rowHeightInPx}px)`,
+                height: defaultRowHeightInPx,
+                transform: `translateY(${positionInPage * defaultRowHeightInPx}px)`,
             }}
             className={classNames({
                 "is-odd": rowIndex % 2 !== 0,
@@ -36,7 +35,7 @@ function LazyVirtualTableRow<T>({
                 "selection-preview": isSelectionPreview,
             })}
         >
-            <VirtualTableCells row={row} isCompact={isCompact} />
+            <VirtualTableCells row={row} />
         </tr>
     );
 }
@@ -45,12 +44,9 @@ function areRowPropsEqual<T>(prev: LazyVirtualTableRowProps<T>, next: LazyVirtua
     return (
         prev.row.original === next.row.original &&
         prev.rowIndex === next.rowIndex &&
-        prev.firstRowIndex === next.firstRowIndex &&
-        prev.rowHeightInPx === next.rowHeightInPx &&
-        prev.isCompact === next.isCompact &&
+        prev.positionInPage === next.positionInPage &&
         prev.isSelected === next.isSelected &&
         prev.isSelectionPreview === next.isSelectionPreview &&
-        prev.renderDependencies.length === next.renderDependencies.length &&
         prev.renderDependencies.every((dependency, i) => dependency === next.renderDependencies[i])
     );
 }
