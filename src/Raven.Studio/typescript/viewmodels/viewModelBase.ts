@@ -172,8 +172,7 @@ abstract class viewModelBase {
         const confirmation = this.confirmationMessage("Unsaved changes", "You have unsaved changes. How do you want to proceed?", {
             buttons: [discard, stay],
             defaultOption: stay,
-            forceRejectWithResolve: true,
-            isCancelHidden: true
+            forceRejectWithResolve: true
         });
 
         confirmation.done((result: confirmDialogResult) => {
