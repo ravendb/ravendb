@@ -298,6 +298,32 @@ describe("DocumentsPage", () => {
         expect(within(getSelectionActions(screen)).getByText("69")).toBeInTheDocument();
     });
 
+    it("toggles only the clicked document with shift when the range has rows that were not loaded", async () => {
+        const { screen, container } = rtlRender(
+            <DocumentsListStory collection="Orders" isSharded={false} totalCount={1000} />
+        );
+
+        expect(await screen.findByText("orders/3-A")).toBeInTheDocument();
+
+        fireEvent.click(getRowCheckbox(screen, "orders/3-A"));
+
+        const scrollContainer = container.querySelector<HTMLDivElement>(".table-container");
+        fireEvent.scroll(scrollContainer, { target: { scrollTop: 24000 } });
+        await flushFetches();
+
+        const row = container.querySelector("tbody tr");
+        const documentId = within(row as HTMLElement).getByText(/^orders\/\d+-A$/).textContent;
+
+        fireEvent.mouseMove(row, { shiftKey: true });
+
+        expect(row).not.toHaveClass("selection-preview");
+
+        fireEvent.click(getRowCheckbox(screen, documentId), { shiftKey: true });
+
+        expect(getRowCheckbox(screen, documentId)).toBeChecked();
+        expect(within(getSelectionActions(screen)).getByText("2")).toBeInTheDocument();
+    });
+
     it("can toggle pagination from the display dropdown", async () => {
         const { screen } = rtlRender(<DocumentsListStory collection="Orders" isSharded={false} totalCount={5} />);
 

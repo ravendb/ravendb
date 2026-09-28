@@ -4,12 +4,18 @@ import { RowRange } from "../utils/lazyTableUtils";
 interface UseSelectionPreviewRangeProps {
     // absolute index of the row toggled last, a shift-click selects the range between it and the hovered row
     anchorRowIndex: number | null;
+    canSelectRangeTo: (rowIndex: number) => boolean;
     // scrollable table container, rows are recognized by the data-row-index attribute
     containerRef: RefObject<HTMLElement>;
 }
 
 // rows (end exclusive) that would be selected by a shift-click on the hovered row, null when shift is not held
-export function useSelectionPreviewRange({ anchorRowIndex, containerRef }: UseSelectionPreviewRangeProps) {
+// or some rows of the range are not loaded
+export function useSelectionPreviewRange({
+    anchorRowIndex,
+    canSelectRangeTo,
+    containerRef,
+}: UseSelectionPreviewRangeProps) {
     const [hoveredRowIndex, setHoveredRowIndex] = useState<number>(null);
     const [isShiftPressed, setIsShiftPressed] = useState(false);
 
@@ -43,7 +49,7 @@ export function useSelectionPreviewRange({ anchorRowIndex, containerRef }: UseSe
         };
     }, [anchorRowIndex, containerRef]);
 
-    if (anchorRowIndex === null || hoveredRowIndex === null || !isShiftPressed) {
+    if (anchorRowIndex === null || hoveredRowIndex === null || !isShiftPressed || !canSelectRangeTo(hoveredRowIndex)) {
         return null;
     }
 
