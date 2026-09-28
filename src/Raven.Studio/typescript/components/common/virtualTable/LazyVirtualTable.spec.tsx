@@ -90,7 +90,7 @@ describe("LazyVirtualTable", () => {
             ).toBeInTheDocument();
 
             const expectedPage = maxRowsInDom / pageSize + 1;
-            expect(screen.getByRole("textbox", { name: "Page" })).toHaveValue(String(expectedPage));
+            expect(screen.getByRole("spinbutton", { name: "Page" })).toHaveValue(expectedPage);
 
             fireEvent.click(screen.getByRole("button", { name: "Turn off pagination" }));
 
@@ -151,9 +151,8 @@ describe("LazyVirtualTable", () => {
             height: `${100 * defaultRowHeightInPx}px`,
         });
 
-        const pageInput = screen.getByRole("textbox", { name: "Page" });
+        const pageInput = screen.getByRole("spinbutton", { name: "Page" });
         fireEvent.change(pageInput, { target: { value: "3" } });
-        fireEvent.keyDown(pageInput, { key: "Enter" });
 
         expect(await screen.findByText("Item 200")).toBeInTheDocument();
         expect(screen.getByText(`201-300 of ${totalCount.toLocaleString()}`)).toBeInTheDocument();
@@ -162,7 +161,7 @@ describe("LazyVirtualTable", () => {
 
         const totalPages = Math.ceil(totalCount / 100);
         expect(await screen.findByText(`Item ${totalCount - 1}`)).toBeInTheDocument();
-        expect(pageInput).toHaveValue(String(totalPages));
+        expect(pageInput).toHaveValue(totalPages);
         expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled();
     });
 });
