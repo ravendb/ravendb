@@ -208,7 +208,7 @@ public unsafe class RavenDB_27533_FixedSizeTree(ITestOutputHelper output) : Stor
     [RavenTheory(RavenTestCategory.Voron)]
     [InlineData(true)]
     [InlineData(false)]
-    public void MergingBranchesMustKeepTheCollapsedLevelsOfTheFreedPage(bool markedPageShrinks)
+    public void BranchesThatOweDifferentLevelsMustNotMerge(bool markedPageShrinks)
     {
         Slice.From(Allocator, "entries", out Slice treeName);
         var model = new SortedSet<long>();
@@ -226,7 +226,7 @@ public unsafe class RavenDB_27533_FixedSizeTree(ITestOutputHelper output) : Stor
             }
         }
 
-        long rootPage, survivorPage, markedPage;
+        long rootPage, unmarkedPage, markedPage;
         int rootEntries;
         using (var tx = Env.ReadTransaction())
         {
@@ -234,18 +234,19 @@ public unsafe class RavenDB_27533_FixedSizeTree(ITestOutputHelper output) : Stor
             rootPage = RootPage(fst);
             var children = ChildrenOf(fst, rootPage);
             rootEntries = children.Length;
-            survivorPage = children[0];
+            unmarkedPage = children[0];
             markedPage = children[1];
         }
 
-        long triggerPage = markedPageShrinks ? markedPage : survivorPage;
-        long otherPage = markedPageShrinks ? survivorPage : markedPage;
+        long triggerPage = markedPageShrinks ? markedPage : unmarkedPage;
+        long otherPage = markedPageShrinks ? unmarkedPage : markedPage;
         int halfAPage = Constants.Storage.PageSize / FixedSizeTree.BranchEntrySize / 2;
+        int quarterAPage = halfAPage / 2;
         RemoveLastLeavesOf(treeName, model, otherPage, fst => fst.GetReadOnlyPage(otherPage).NumberOfEntries <= halfAPage);
 
         SetCollapsedLevels(treeName, markedPage, 1);
 
-        RemoveLastLeavesOf(treeName, model, triggerPage, fst => fst.GetReadOnlyPage(rootPage).NumberOfEntries < rootEntries);
+        RemoveLastLeavesOf(treeName, model, triggerPage, fst => fst.GetReadOnlyPage(rootPage).NumberOfEntries < rootEntries || fst.GetReadOnlyPage(triggerPage).NumberOfEntries <= quarterAPage);
 
         using (var tx = Env.ReadTransaction())
         {
@@ -253,9 +254,10 @@ public unsafe class RavenDB_27533_FixedSizeTree(ITestOutputHelper output) : Stor
             fst.ValidateTree_Forced();
 
             var children = ChildrenOf(fst, rootPage);
-            Assert.DoesNotContain(markedPage, children);
-            Assert.Contains(survivorPage, children);
-            Assert.Equal(1, fst.GetReadOnlyPage(survivorPage).CollapsedLevels);
+            Assert.Contains(markedPage, children);
+            Assert.Contains(unmarkedPage, children);
+            Assert.Equal(1, fst.GetReadOnlyPage(markedPage).CollapsedLevels);
+            Assert.Equal(0, fst.GetReadOnlyPage(unmarkedPage).CollapsedLevels);
         }
 
         AssertContents(treeName, model);

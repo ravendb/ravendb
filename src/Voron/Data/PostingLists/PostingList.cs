@@ -547,8 +547,8 @@ namespace Voron.Data.PostingLists
             (_, siblingPageNum) = gp.GetByIndex(siblingIdx);
             var siblingPage = _llt.GetPage(siblingPageNum);
             var siblingHeader = (PostingListLeafPageHeader*)siblingPage.Pointer;
-            if (siblingHeader->PageType != ExtendedPageType.PostingListBranch)
-                return;// cannot merge leaf & branch
+            if (siblingHeader->PageType != ExtendedPageType.PostingListBranch || siblingHeader->CollapsedLevels != current.Header->CollapsedLevels)
+                return;// cannot merge leaf & branch, or branches of different heights
             
             var sibling = new PostingListBranchPage(siblingPage);
             if (sibling.Header->NumberOfEntries + current.Header->NumberOfEntries > PostingListBranchPage.MinNumberOfValuesBeforeMerge * 2)

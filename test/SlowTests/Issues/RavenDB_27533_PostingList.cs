@@ -191,7 +191,7 @@ public unsafe class RavenDB_27533_PostingList(ITestOutputHelper output) : Storag
     }
 
     [RavenFact(RavenTestCategory.Voron)]
-    public void MergingBranchesMustKeepTheCollapsedLevelsOfTheSibling()
+    public void BranchesThatOweDifferentLevelsMustNotMerge()
     {
         const long step = 1L << 20;
         var model = new SortedSet<long>();
@@ -237,12 +237,13 @@ public unsafe class RavenDB_27533_PostingList(ITestOutputHelper output) : Storag
         SetCollapsedLevels(siblingPage, 1);
 
         int numberOfRootChildren = RootChildren().Length;
-        while (RootChildren().Length == numberOfRootChildren)
+        while (RootChildren().Length == numberOfRootChildren && BranchEntryCount(currentPage) > PostingListBranchPage.MinNumberOfValuesBeforeMerge)
             RemoveLastLeafFromBranch(currentPage, model);
 
-        Assert.DoesNotContain(RootChildren(), child => child.Page == siblingPage);
+        Assert.Contains(RootChildren(), child => child.Page == siblingPage);
         Assert.Contains(RootChildren(), child => child.Page == currentPage);
-        Assert.Equal(1, CollapsedLevelsOf(currentPage));
+        Assert.Equal(1, CollapsedLevelsOf(siblingPage));
+        Assert.Equal(0, CollapsedLevelsOf(currentPage));
         AssertContents(model);
     }
 
