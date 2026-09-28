@@ -80,14 +80,9 @@ export function useTableDisplaySettingsSheet<T>(table: TanstackTable<T>, options
                     initialColumnOrder={getInitialColumnOrder()}
                     initialPinnedIds={getInitialPinnedIds()}
                     customColumns={customColumns}
-                    onApply={(selectedIds, columnOrder, pinnedIds, customColumnList) => {
-                        applySettings(selectedIds, columnOrder, pinnedIds);
-                        onApplied?.({
-                            visibleColumnIds: selectedIds,
-                            columnOrder,
-                            pinnedColumnIds: pinnedIds,
-                            customColumns: customColumnList,
-                        });
+                    onApply={(layout) => {
+                        applySettings(layout.visibleColumnIds, layout.columnOrder, layout.pinnedColumnIds);
+                        onApplied?.(layout);
                     }}
                     restoreDefaults={restoreDefaults}
                 />
@@ -122,12 +117,7 @@ interface TableDisplaySettingsSheetProps {
     initialColumnOrder: string[];
     initialPinnedIds: string[];
     customColumns?: CustomColumnDefinition[];
-    onApply: (
-        selectedIds: string[],
-        columnOrder: string[],
-        pinnedIds: string[],
-        customColumns: CustomColumnDefinition[]
-    ) => void;
+    onApply: (layout: AppliedColumnLayout) => void;
     restoreDefaults?: RestoreDefaultsSettings;
 }
 
@@ -216,17 +206,22 @@ function TableDisplaySettingsSheet({
 
     const getHideableSelection = (ids: string[]) => ids.filter((id) => hideableIds.includes(id));
 
-    const isDefaultLayout = (defaultVisibleColumnIds: string[]) =>
+    const isDefaultLayout = () =>
         customColumnList.length === 0 &&
         pinnedIds.length === 0 &&
         isEqual(orderedIds, defaultColumnOrder) &&
-        xor(getHideableSelection(selectedIds), getHideableSelection(defaultVisibleColumnIds)).length === 0;
+        xor(getHideableSelection(selectedIds), getHideableSelection(restoreDefaults.visibleColumnIds)).length === 0;
 
     const handleApply = () => {
-        if (restoreDefaults && isDefaultLayout(restoreDefaults.visibleColumnIds)) {
+        if (restoreDefaults && isDefaultLayout()) {
             restoreDefaults.onRestore();
         } else {
-            onApply(selectedIds, columnOrder, pinnedIds, customColumnList);
+            onApply({
+                visibleColumnIds: selectedIds,
+                columnOrder,
+                pinnedColumnIds: pinnedIds,
+                customColumns: customColumnList,
+            });
         }
 
         close();

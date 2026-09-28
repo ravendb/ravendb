@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
     LazyFetchData,
     LazyFetchMode,
@@ -26,14 +26,11 @@ export interface LazyRows<T> {
     hasMore: boolean;
     fetchMode: LazyFetchMode;
     isFetching: boolean;
-    error: unknown;
     resetId: number;
     getItem: (rowIndex: number) => T | undefined;
     setRange: (range: RowRange, options?: SetRangeOptions) => void;
     // fetches the rows again keeping the total count and the position
     reload: () => void;
-    // clears everything and goes back to the first row
-    reset: () => void;
 }
 
 export function useLazyRows<T, TResult extends pagedResultWithToken<T> = pagedResultWithToken<T>>({
@@ -62,10 +59,7 @@ export function useLazyRows<T, TResult extends pagedResultWithToken<T> = pagedRe
     );
     const data = useMemo(() => rows.map((x) => x.item), [rows]);
 
-    const { reload, reset } = useMemo(
-        () => ({ reload: () => loader.reset(false), reset: () => loader.reset(true) }),
-        [loader]
-    );
+    const reload = useCallback(() => loader.reset(false), [loader]);
 
     return {
         data,
@@ -75,11 +69,9 @@ export function useLazyRows<T, TResult extends pagedResultWithToken<T> = pagedRe
         hasMore: snapshot.hasMore,
         fetchMode,
         isFetching: snapshot.isFetching,
-        error: snapshot.error,
         resetId: snapshot.resetId,
         getItem: loader.getItem,
         setRange: loader.setRange,
         reload,
-        reset,
     };
 }

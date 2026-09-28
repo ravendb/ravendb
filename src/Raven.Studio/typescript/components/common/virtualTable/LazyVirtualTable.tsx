@@ -88,19 +88,10 @@ export default function LazyVirtualTable<T>({
                         (viewport.isDomLimitBannerVisible || bottomOverlay) && (
                             <div className="floating-bars-container">
                                 {viewport.isDomLimitBannerVisible && (
-                                    <div className="floating-bar text-nowrap" data-testid="dom-limit-banner">
-                                        <span>
-                                            It looks like you&apos;ve reached the end of the DOM.{" "}
-                                            <Button
-                                                variant="link"
-                                                className="p-0 align-baseline"
-                                                onClick={viewport.turnOnPagination}
-                                            >
-                                                Turn on pagination
-                                            </Button>{" "}
-                                            to fetch more {itemsName}
-                                        </span>
-                                    </div>
+                                    <DomLimitBanner
+                                        itemsName={itemsName}
+                                        onTurnOnPagination={viewport.turnOnPagination}
+                                    />
                                 )}
                                 {bottomOverlay}
                             </div>
@@ -131,6 +122,25 @@ export default function LazyVirtualTable<T>({
                 </VirtualTableBodyWrapper>
             </div>
             {viewport.pagination && <LazyVirtualTablePaginationBar pagination={viewport.pagination} />}
+        </div>
+    );
+}
+
+interface DomLimitBannerProps {
+    itemsName: string;
+    onTurnOnPagination: () => void;
+}
+
+function DomLimitBanner({ itemsName, onTurnOnPagination }: DomLimitBannerProps) {
+    return (
+        <div className="floating-bar text-nowrap" data-testid="dom-limit-banner">
+            <span>
+                It looks like you&apos;ve reached the end of the DOM.{" "}
+                <Button variant="link" className="p-0 align-baseline" onClick={onTurnOnPagination}>
+                    Turn on pagination
+                </Button>{" "}
+                to fetch more {itemsName}
+            </span>
         </div>
     );
 }

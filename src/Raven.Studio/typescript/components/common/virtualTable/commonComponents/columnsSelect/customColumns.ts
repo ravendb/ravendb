@@ -19,9 +19,15 @@ export function createCustomColumnId() {
     return `custom-column-${genUtils.generateUUID()}`;
 }
 
+type CompiledExpression = (this: unknown) => unknown;
+
+function compileExpression(expression: string): CompiledExpression {
+    return new Function(`return (${expression})`) as CompiledExpression;
+}
+
 export function getCustomColumnExpressionError(expression: string): string | null {
     try {
-        new Function(`return (${expression})`);
+        compileExpression(expression);
         return null;
     } catch (e) {
         return (e as Error).message;
@@ -29,10 +35,10 @@ export function getCustomColumnExpressionError(expression: string): string | nul
 }
 
 export function createCustomColumnAccessor(expression: string): (item: unknown) => unknown {
-    let evaluate: (this: unknown) => unknown;
+    let evaluate: CompiledExpression;
 
     try {
-        evaluate = new Function(`return (${expression})`) as typeof evaluate;
+        evaluate = compileExpression(expression);
     } catch (e) {
         return () => `Unable to parse the expression: ${(e as Error).message}`;
     }
