@@ -27,8 +27,8 @@ namespace Sparrow.Server
     /// loop would devolve into a cache-line storm at high reader counts.
     /// The counter can briefly bump above zero during an aborted acquire, but
     /// the aborting reader decrements before doing protected work, so the
-    /// writer's exclusivity is intact. The writer's drain decision is anchored
-    /// on the count snapshot Interlocked.Or observes when publishing the flag.
+    /// writer's exclusivity is intact. The writer re-reads the count after
+    /// every drain signal, since a signal can arrive from an earlier writer.
     ///
     /// Usage:
     ///   Stack RAII:    using var h = lock.EnterRead(token);
@@ -49,9 +49,9 @@ namespace Sparrow.Server
 
         private long _state;
 
-        // Set when no readers are active or no writer is pending. The writer
-        // waits on this; readers signal it on the 1->0 transition while a
-        // writer is pending.
+        // Wakeup hint for a draining writer, signaled on the 1->0 transition
+        // while a writer is pending. The signal is not atomic with the count,
+        // so it can land during a later writer's drain; waiters re-read the count.
         private readonly ManualResetEventSlim _drained = new ManualResetEventSlim(initialState: true, spinCount: 0);
 
         // Set when no writer is pending. Readers wait on this in the slow
@@ -108,6 +108,12 @@ namespace Sparrow.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal bool HasWriterPendingForTesting() => (Volatile.Read(ref _state) & WriterPendingBit) != 0;
 
+#if DEBUG
+        // Runs between a releasing reader's zero-crossing decision and its
+        // drain signal, so tests can hold the signal across a writer generation.
+        internal Action OnZeroCrossingForTesting;
+#endif
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryEnterRead(out ReadHandle handle)
         {
@@ -153,7 +159,12 @@ namespace Sparrow.Server
             if (s < 0)
                 ThrowReleaseUnderflow();
             if (s == WriterPendingBit)
+            {
+#if DEBUG
+                OnZeroCrossingForTesting?.Invoke();
+#endif
                 _drained.Set();
+            }
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -186,15 +197,13 @@ namespace Sparrow.Server
                 // undoes before doing protected work.
                 long s = Interlocked.Or(ref _state, WriterPendingBit);
 
-                // Any non-flag bit set means readers are still active.
-                if ((s & ~WriterPendingBit) != 0)
+                // Any non-flag bit set means readers are still active. Reset
+                // before re-reading so a release after the read signals again.
+                while ((s & ~WriterPendingBit) != 0)
                 {
-                    // Note: count may transiently bump above zero here from
-                    // racing readers in inspect-and-undo. Those readers see
-                    // WriterPending and roll back before doing protected work,
-                    // so exclusivity is preserved without waiting for the
-                    // count to settle.
                     _drained.Wait(token);
+                    _drained.Reset();
+                    s = Volatile.Read(ref _state);
                 }
                 return new WriteHandle(this);
             }
