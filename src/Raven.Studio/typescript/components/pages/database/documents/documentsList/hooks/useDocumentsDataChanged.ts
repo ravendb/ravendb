@@ -15,19 +15,9 @@ export function useDocumentsDataChanged(collectionName: string | null) {
     const expectedEtag = collection ? `${changeVector}/${collection.documentCount}` : null;
 
     const [isDataChanged, setIsDataChanged] = useState(false);
-
-    const expectedEtagRef = useRef(expectedEtag);
-    expectedEtagRef.current = expectedEtag;
-    const trackedEtagRef = useRef(expectedEtag);
     const resultEtagRef = useRef<string>(null);
 
     useEffect(() => {
-        if (expectedEtag === trackedEtagRef.current) {
-            return;
-        }
-
-        trackedEtagRef.current = expectedEtag;
-
         if (resultEtagRef.current !== null && expectedEtag !== resultEtagRef.current) {
             setIsDataChanged(true);
         }
@@ -46,7 +36,6 @@ export function useDocumentsDataChanged(collectionName: string | null) {
     };
 
     const reset = () => {
-        trackedEtagRef.current = expectedEtagRef.current;
         resultEtagRef.current = null;
         setIsDataChanged(false);
     };

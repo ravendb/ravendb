@@ -36,7 +36,7 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
     const { databasesService } = useServices();
 
     const { isDataChanged, trackResultEtag, reset: resetDataChanged } = useDocumentsDataChanged(collectionName);
-    const fullDocumentProvider = useFullDocumentProvider(databaseName);
+    const { getPropertyPreviewResolver, clearCache: clearFullDocumentCache } = useFullDocumentProvider(databaseName);
     const collectionDeletionCallbacks = useCollectionRemovalRedirect({ databaseName, collectionName });
 
     const bodyRef = useRef<HTMLDivElement>(null);
@@ -46,7 +46,7 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
         databaseName,
         collectionName,
         tableBodyWidthInPx: virtualTableUtils.getTableBodyWidth(bodyWidthInPx ?? 0),
-        fullDocumentProvider,
+        getPropertyPreviewResolver,
     });
 
     const lazyRows = useLazyRows<document, pagedResultWithAvailableColumns<document>>({
@@ -57,8 +57,8 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
                 skip,
                 take,
                 collectionName ?? undefined,
-                columns.previewBindings.length > 0 ? columns.previewBindings : undefined,
-                columns.fullBindings.length > 0 ? columns.fullBindings : undefined,
+                columns.previewBindings,
+                columns.fullBindings,
                 continuationToken
             ),
         onResult: (result) => {
@@ -92,7 +92,7 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
     const { openSheet: openColumnSettings } = useTableDisplaySettingsSheet(table, columns.settingsOptions);
 
     const refresh = () => {
-        fullDocumentProvider.clearCache();
+        clearFullDocumentCache();
         resetDataChanged();
         lazyRows.reload();
     };
@@ -107,8 +107,8 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
             <DocumentsListToolbar
                 collectionName={collectionName}
                 isPaginated={isPaginated}
+                onIsPaginatedChange={changePagination}
                 isCustomLayout={columns.isCustomLayout}
-                onPaginationToggle={() => changePagination(!isPaginated)}
                 onOpenColumnSettings={openColumnSettings}
                 getVisibleColumnFields={() => columns.getExportFields(table)}
                 isDataChanged={isDataChanged}

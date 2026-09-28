@@ -35,8 +35,8 @@ interface UseDocumentsColumnsProps {
     // null means all documents
     collectionName: string | null;
     tableBodyWidthInPx: number;
-    // provides the full values for the cell previews, the rows hold trimmed and stubbed ones
-    fullDocumentProvider: FullDocumentProvider;
+    // the rows hold trimmed and stubbed values, this fetches the full ones for the cell previews
+    getPropertyPreviewResolver: FullDocumentProvider["getPropertyPreviewResolver"];
 }
 
 export interface DocumentsColumns {
@@ -72,24 +72,26 @@ const selectionColumn = createLazySelectionColumn<document>({
     selectRowLabel: "Select document",
 });
 
+const flagsColumn: ColumnDef<document> = { ...columnDocumentFlags, size: flagsColumnWidth };
+
 type AppUrl = ReturnType<typeof useAppUrls>["appUrl"];
 
 export function useDocumentsColumns({
     databaseName,
     collectionName,
     tableBodyWidthInPx,
-    fullDocumentProvider,
+    getPropertyPreviewResolver,
 }: UseDocumentsColumnsProps): DocumentsColumns {
     const { appUrl } = useAppUrls();
-    const { getPropertyPreviewResolver } = fullDocumentProvider;
     const isAllDocuments = collectionName === null;
+    const propertyColumnsWidthInPx = tableBodyWidthInPx - columnCheckbox.size - flagsColumnWidth;
 
     const [appliedLayout, setAppliedLayout] = useState<AppliedColumnLayout | null>(() =>
         documentsColumnLayoutStorage.load(databaseName, collectionName)
     );
-    const [availableColumns, setAvailableColumns] = useState<string[]>(null);
+    const [availableColumns, setAvailableColumns] = useState<string[]>([]);
     // the properties the preview sent values for, without bindings the server sends only some of the available ones
-    const [previewedColumns, setPreviewedColumns] = useState<string[]>(null);
+    const [previewedColumns, setPreviewedColumns] = useState<string[]>([]);
 
     const customColumns = appliedLayout?.customColumns ?? noCustomColumns;
 
@@ -104,54 +106,36 @@ export function useDocumentsColumns({
         [appliedLayout, isAllDocuments, fullBindings]
     );
 
-    const collectionColumns = useDocumentColumnsProvider({
-        columnNames: isAllDocuments ? noColumns : (availableColumns ?? noColumns),
-        availableWidth: tableBodyWidthInPx,
-        columnsWithValues: previewedColumns ?? noColumns,
+    const propertyColumnNames = useMemo(
+        () => (isAllDocuments ? availableColumns.filter((x) => x !== metadataColumnName) : availableColumns),
+        [isAllDocuments, availableColumns]
+    );
+
+    const propertyColumns = useDocumentColumnsProvider({
+        columnNames: propertyColumnNames,
+        availableWidth: propertyColumnsWidthInPx,
+        // in all documents the metadata columns describe every document, the properties are available on demand
+        columnsWithValues: isAllDocuments ? noColumns : previewedColumns,
         databaseName,
-        hasCheckbox: true,
-        hasFlags: true,
         getPreviewValueResolver: getPropertyPreviewResolver,
     });
+    const defaultColumnVisibility = propertyColumns.initialColumnVisibility;
 
     const customColumnDefs = useMemo(
         () => customColumns.map((column) => createCustomColumn(column, databaseName)),
         [customColumns, databaseName]
     );
 
-    const { columnDefs, defaultColumnVisibility } = useMemo(() => {
-        if (!isAllDocuments) {
-            return {
-                columnDefs: withColumnsBeforeFlags(
-                    collectionColumns.columnDefs.map((column) =>
-                        column.id === columnCheckbox.id ? selectionColumn : column
-                    ),
-                    customColumnDefs
-                ),
-                defaultColumnVisibility: collectionColumns.initialColumnVisibility,
-            };
-        }
-
-        const propertyColumnNames = (availableColumns ?? noColumns).filter((x) => x !== metadataColumnName);
-
-        return {
-            columnDefs: withColumnsBeforeFlags(createAllDocumentsColumns(databaseName, tableBodyWidthInPx, appUrl), [
-                ...propertyColumnNames.map((x) => createPropertyColumn(x, databaseName, getPropertyPreviewResolver)),
-                ...customColumnDefs,
-            ]),
-            // the metadata columns describe every document, the properties are available on demand
-            defaultColumnVisibility: Object.fromEntries(propertyColumnNames.map((x) => [x, false])),
-        };
-    }, [
-        isAllDocuments,
-        databaseName,
-        availableColumns,
-        tableBodyWidthInPx,
-        appUrl,
-        collectionColumns,
-        customColumnDefs,
-        getPropertyPreviewResolver,
-    ]);
+    const columnDefs = useMemo(
+        () => [
+            selectionColumn,
+            ...(isAllDocuments ? createMetadataColumns(databaseName, propertyColumnsWidthInPx, appUrl) : []),
+            ...propertyColumns.columnDefs,
+            ...customColumnDefs,
+            flagsColumn,
+        ],
+        [isAllDocuments, databaseName, propertyColumnsWidthInPx, appUrl, propertyColumns.columnDefs, customColumnDefs]
+    );
 
     // columns unknown to the saved layout (e.g. added to the documents later) stay hidden
     const savedVisibility = useMemo(
@@ -209,14 +193,11 @@ export function useDocumentsColumns({
                 },
             },
         },
-        getExportFields: (table) => {
-            const propertyNames = (availableColumns ?? noColumns).filter((x) => x !== metadataColumnName);
-
-            return table
+        getExportFields: (table) =>
+            table
                 .getVisibleLeafColumns()
                 .map((column) => column.id)
-                .filter((id) => id === idColumnName || propertyNames.includes(id));
-        },
+                .filter((id) => id === idColumnName || availableColumns.includes(id)),
     };
 }
 
@@ -268,46 +249,10 @@ function fitVisibleColumnsToWidth(
 
 // every fetch reports only the columns of the documents it returned, so the columns seen so far are kept
 // and the newly discovered ones are appended, otherwise scrolling would drop the columns already in the table
-function mergeColumnNames(previous: string[] | null, next: string[]): string[] {
-    if (previous === null) {
-        return next;
-    }
-
+function mergeColumnNames(previous: string[], next: string[]): string[] {
     const addedColumnNames = next.filter((name) => !previous.includes(name));
 
     return addedColumnNames.length === 0 ? previous : [...previous, ...addedColumnNames];
-}
-
-function withColumnsBeforeFlags(columnDefs: ColumnDef<document>[], columnsToInsert: ColumnDef<document>[]) {
-    if (columnsToInsert.length === 0) {
-        return columnDefs;
-    }
-
-    const flagsIndex = columnDefs.findIndex((x) => x.id === columnDocumentFlags.id);
-    const insertIndex = flagsIndex === -1 ? columnDefs.length : flagsIndex;
-
-    return [...columnDefs.slice(0, insertIndex), ...columnsToInsert, ...columnDefs.slice(insertIndex)];
-}
-
-function createPropertyColumn(
-    columnName: string,
-    databaseName: string,
-    getPreviewValueResolver: FullDocumentProvider["getPropertyPreviewResolver"]
-): ColumnDef<document> {
-    return {
-        id: columnName,
-        header: columnName,
-        accessorFn: (doc) => doc.getValue(columnName),
-        cell: ({ getValue, row }) => (
-            <CellDocumentValue
-                value={getValue()}
-                databaseName={databaseName}
-                hasHyperlinkForIds
-                resolvePreviewValue={getPreviewValueResolver(row.original, columnName)}
-            />
-        ),
-        size: propertyColumnWidth,
-    };
 }
 
 function createCustomColumn(column: CustomColumnDefinition, databaseName: string): ColumnDef<document> {
@@ -323,15 +268,10 @@ function createCustomColumn(column: CustomColumnDefinition, databaseName: string
     };
 }
 
-function createAllDocumentsColumns(
-    databaseName: string,
-    tableBodyWidthInPx: number,
-    appUrl: AppUrl
-): ColumnDef<document>[] {
-    const getSize = virtualTableUtils.getCellSizeProvider(tableBodyWidthInPx - columnCheckbox.size - flagsColumnWidth);
+function createMetadataColumns(databaseName: string, widthInPx: number, appUrl: AppUrl): ColumnDef<document>[] {
+    const getSize = virtualTableUtils.getCellSizeProvider(widthInPx);
 
     return [
-        selectionColumn,
         {
             id: idColumnName,
             header: "Id",
@@ -387,6 +327,5 @@ function createAllDocumentsColumns(
             },
             size: getSize(25),
         },
-        { ...columnDocumentFlags, size: flagsColumnWidth },
     ];
 }

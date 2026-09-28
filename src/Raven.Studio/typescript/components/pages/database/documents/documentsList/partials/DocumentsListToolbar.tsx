@@ -22,9 +22,9 @@ interface DocumentsListToolbarProps {
     // null means all documents
     collectionName: string | null;
     isPaginated: boolean;
+    onIsPaginatedChange: (isPaginated: boolean) => void;
     // the columns come from the layout saved by the user instead of the defaults
     isCustomLayout: boolean;
-    onPaginationToggle: () => void;
     onOpenColumnSettings: () => void;
     getVisibleColumnFields: () => string[];
     isDataChanged: boolean;
@@ -34,8 +34,8 @@ interface DocumentsListToolbarProps {
 export default function DocumentsListToolbar({
     collectionName,
     isPaginated,
+    onIsPaginatedChange,
     isCustomLayout,
-    onPaginationToggle,
     onOpenColumnSettings,
     getVisibleColumnFields,
     isDataChanged,
@@ -146,7 +146,7 @@ export default function DocumentsListToolbar({
                         <Dropdown.ItemText>
                             <Switch
                                 selected={isPaginated}
-                                toggleSelection={onPaginationToggle}
+                                toggleSelection={() => onIsPaginatedChange(!isPaginated)}
                                 color="primary"
                                 title="Show the documents page by page instead of scrolling"
                             >

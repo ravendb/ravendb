@@ -36,7 +36,7 @@ export function useCollectionRemovalRedirect({ databaseName, collectionName }: U
             messagePublisher.reportWarning(`${collectionName} was removed`);
         }
 
-        router.navigate(appUrl.forDocuments(null, databaseName));
+        redirectToAllDocuments(databaseName);
     }, [collectionName, collectionNames, databaseName]);
 
     const onCollectionDeletionStarted = (deletedCollectionName: string) => {
@@ -51,11 +51,15 @@ export function useCollectionRemovalRedirect({ databaseName, collectionName }: U
 
     const onEntireCollectionDeleted = (deletedCollectionName: string) => {
         if (deletedCollectionName === collectionName) {
-            router.navigate(appUrl.forDocuments(null, databaseName));
+            redirectToAllDocuments(databaseName);
         }
     };
 
     return { onCollectionDeletionStarted, onCollectionDeletionFailed, onEntireCollectionDeleted };
+}
+
+function redirectToAllDocuments(databaseName: string) {
+    router.navigate(appUrl.forDocuments(null, databaseName));
 }
 
 export type CollectionDeletionCallbacks = ReturnType<typeof useCollectionRemovalRedirect>;
