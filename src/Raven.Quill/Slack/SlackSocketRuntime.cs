@@ -103,7 +103,7 @@ internal sealed class SlackSocketRuntime
         }
 
         if (++_disconnectedPasses >= PassesBeforeConnectionLost)
-            Exit(null, TimeSpan.Zero);
+            ReplaceQuietly();
     }
 
     public async Task StopAsync()
@@ -173,25 +173,36 @@ internal sealed class SlackSocketRuntime
         _ = Task.Run(_client.DisconnectAsync);
     }
 
-    private void Exit(string? error, TimeSpan restartDelay)
+    private void ReplaceQuietly()
+    {
+        if (MarkExited(TimeSpan.Zero) == false)
+            return;
+
+        _health.RecordSocketDisconnected(_database, _shortChannelId, error: null);
+        if (_logger.IsInfoEnabled)
+            _logger.Info($"Slack socket for channel {_shortChannelId} stayed down; replacing it");
+    }
+
+    private void Exit(string error, TimeSpan restartDelay)
+    {
+        if (MarkExited(restartDelay) == false)
+            return;
+
+        _health.RecordSocketDisconnected(_database, _shortChannelId, error);
+        if (_logger.IsWarnEnabled)
+            _logger.Warn($"Slack socket for channel {_shortChannelId} exited: {error}");
+    }
+
+    private bool MarkExited(TimeSpan restartDelay)
     {
         lock (_exitLock)
         {
             if (_exitedAtTicks != 0)
-                return;
+                return false;
 
             _restartDelay = restartDelay;
             Interlocked.Exchange(ref _exitedAtTicks, DateTime.UtcNow.Ticks);
+            return true;
         }
-
-        _health.RecordSocketDisconnected(_database, _shortChannelId, error);
-
-        if (error is null)
-        {
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Slack socket for channel {_shortChannelId} stayed down; replacing it");
-        }
-        else if (_logger.IsWarnEnabled)
-            _logger.Warn($"Slack socket for channel {_shortChannelId} exited: {error}");
     }
 }
