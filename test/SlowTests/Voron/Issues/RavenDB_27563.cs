@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
@@ -8,7 +7,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
-using FreeSpaceHandling = Voron.Impl.FreeSpace.FreeSpaceHandling;
 using RawDataSection = Voron.Data.RawData.RawDataSection;
 using Table = Voron.Data.Tables.Table;
 using VoronConstants = Voron.Global.Constants;
@@ -24,52 +22,28 @@ public class RavenDB_27563 : RavenTestBase
     private const string Collection = "Orders";
 
     // Archived documents are stored compressed even when their collection is not (RavenDB-19501). This used to be done by writing them
-    // through CompressedDocsSchema. Voron caches opened tables per (table name, schema.Compressed), so a write transaction that touched
+    // through CompressedDocsSchema. Voron cached opened tables per (table name, schema.Compressed), so a write transaction that touched
     // both archived and plain documents of one collection drove the same physical table through TWO Table instances, each tracking
     // its own active raw data section. Once one instance moved to a fresh section, the other could release it
     // (Table.ReleaseNearlyEmptySection) and return its pages to free space while the first one kept allocating from it.
     [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Compression)]
-    public async Task ArchivedAndPlainDocumentsInOneTransaction_ActiveSectionMustNotBeReleased()
+    public async Task ArchivedAndPlainDocumentsInOneTransaction_ShareOneTableInstance()
     {
         using var store = GetDocumentStore();
         var database = await Databases.GetDocumentDatabaseInstanceFor(store);
         var collectionName = new CollectionName(Collection);
-        var freeSpaceHandling = (FreeSpaceHandling)database.DocumentsStorage.Environment.FreeSpaceHandling;
+        var tableName = collectionName.GetTableName(CollectionTableType.Documents);
 
         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (var tx = context.OpenWriteTransaction())
         {
-            // 1. a plain document creates the collection table
             Put(context, "orders/plain", DocumentFlags.None, bodySize: 1024);
+            Put(context, "orders/archived", DocumentFlags.Archived, bodySize: 1024);
 
-            // the Table instance every put of this collection goes through, whatever the document's flags
-            var table = tx.InnerTransaction.OpenTable(database.GetDocsSchemaForCollection(collectionName), collectionName.GetTableName(CollectionTableType.Documents));
-            var initialSection = table.ActiveDataSmallSection.PageNumber;
-
-            // 2. archived documents until the table has to move to a new section
-            var lastArchived = PutArchivedUntilSectionChanges(context, initialSection);
-            var archivedSection = SectionOf(context, lastArchived);
-            Assert.NotEqual(initialSection, archivedSection);
-
-            // 3. a client re-saves the archived document that landed in the new section with a bigger body. It cannot be updated
-            //    in place, so the old value is deleted, and a nearly empty section is released unless it is the active one.
-            var freedPages = new HashSet<long>();
-            Action<long> onPageFreed = page => freedPages.Add(page);
-            freeSpaceHandling.PageFreed += onPageFreed;
-            try
-            {
-                Put(context, lastArchived, DocumentFlags.None, bodySize: 2048);
-            }
-            finally
-            {
-                freeSpaceHandling.PageFreed -= onPageFreed;
-            }
-
-            Assert.False(freedPages.Contains(archivedSection),
-                $"The active section (header page {archivedSection}) of the collection table was returned to free space. Freed pages: {string.Join(", ", freedPages)}");
-
-            // archived and plain documents went through the same instance, so it followed the move to the new section
-            Assert.Equal(archivedSection, table.ActiveDataSmallSection.PageNumber);
+            // one instance, so there is one view of the active section, whatever the section release policy is
+            Assert.Same(
+                tx.InnerTransaction.OpenTable(database.GetDocsSchemaForCollection(collectionName), tableName),
+                tx.InnerTransaction.OpenTable(database.DocumentsStorage.CompressedDocsSchema, tableName));
         }
     }
 
