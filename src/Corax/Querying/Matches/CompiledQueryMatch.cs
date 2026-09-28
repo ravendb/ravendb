@@ -157,6 +157,8 @@ public class CompiledQueryMatch(
     {
         foreach (var it in ResolvedMatches ?? [])
         {
+            if (it is IPostFilterMatch { IsPostFilter: true }) // the PostFilterMatch around this one scores it
+                continue;
             it?.Score(matches, scores, boostFactor);
         }
     }
@@ -165,6 +167,8 @@ public class CompiledQueryMatch(
     {
         foreach (var it in ResolvedMatches ?? [])
         {
+            if (it is IPostFilterMatch { IsPostFilter: true })
+                continue;
             it?.ScoreSorted(matches, scores, boostFactor);
         }
     }
