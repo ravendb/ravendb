@@ -52,14 +52,14 @@ function VerificationErrorItem({ error }: { error: string }) {
             <EditCdcSinkTaskWarningMessage message={formattedError.message} />
             {formattedError.details && (
                 <>
-                    <Button variant="link" size="sm" className="p-0" onClick={toggleDetails}>
-                        {isDetailsShown ? "Hide details" : "Show details"}
-                    </Button>
                     {isDetailsShown && (
                         <pre className="small text-break mb-0 mt-1" style={{ whiteSpace: "pre-wrap" }}>
                             {formattedError.details}
                         </pre>
                     )}
+                    <Button variant="link" size="sm" className="p-0" onClick={toggleDetails}>
+                        {isDetailsShown ? "Hide details" : "Show details"}
+                    </Button>
                 </>
             )}
         </div>
