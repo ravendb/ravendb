@@ -499,6 +499,9 @@ namespace Voron.Data.Fixed
 
         private bool ShouldPromotePage(FixedSizeTreePage<TVal> page, FixedSizeTreePage<TVal> parentPage)
         {
+            System.Diagnostics.Debug.Assert(parentPage.GetEntry(parentPage.LastSearchPosition)->PageNumber == page.PageNumber, 
+                "the parent is not positioned at the page being split");
+
             if (page.CollapsedLevels > 0)
                 return true;
 

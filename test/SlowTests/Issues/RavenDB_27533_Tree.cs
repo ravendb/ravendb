@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO.Compression;
 using System.Linq;
 using FastTests.Voron;
 using Tests.Infrastructure;
@@ -510,6 +511,31 @@ public unsafe class RavenDB_27533_Tree(ITestOutputHelper output) : StorageTest(o
         }
     }
 
+    [RavenFact(RavenTestCategory.Voron)]
+    public void WrappingTheRightPageOfASplitMustNotTakeTheSlotOfTheLeftPage()
+    {
+        RequireFileBasedPager();
+
+        // written by Voron 24 (before RavenDB-27533): a collapse left an unmarked leaf in the root next to a branch, then its splits filled the root with leaves
+        using (var stream = typeof(RavenDB_27533_Tree).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_27533.unmarked-leaves-next-to-branch.zip"))
+            ZipFile.ExtractToDirectory(stream, DataDir);
+        using (var tx = Env.ReadTransaction())
+        {
+            var tree = tx.ReadTree(TreeName);
+            Assert.True(tree.TryRead(SizedKey(1020, 1000), out _), $"key does not exists in raw data");
+        }
+
+        using (var tx = Env.WriteTransaction())
+        {
+            var tree = tx.ReadTree(TreeName);
+            long leftPage = RootChildren(tree)[5];
+
+            tree.Add(SizedKey(1021, 2025), new byte[4052]);
+
+            Assert.True(tree.TryRead(SizedKey(1020, 1000), out _), $"key 1020 is lost, the wrap of the right page took the slot of page {leftPage}");
+        }
+    }
+
     private Slice Key(long value)
     {
         Slice.From(Allocator, $"entries/{value:D10}", out Slice key);
@@ -521,6 +547,14 @@ public unsafe class RavenDB_27533_Tree(ITestOutputHelper output) : StorageTest(o
         Slice.From(Allocator, $"entries/{value:D10}/" + new string('x', 1980), out Slice key);
         return key;
     }
+
+    private Slice SizedKey(long value, int size)
+    {
+        Slice.From(Allocator, SizedKeyString(value, size), out Slice key);
+        return key;
+    }
+
+    private static string SizedKeyString(long value, int size) => $"entries/{value:D10}/".PadRight(size, 'x');
 
     private static long ParseKey(string key) => long.Parse(key.AsSpan("entries/".Length, 10));
 
