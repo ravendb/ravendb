@@ -124,8 +124,8 @@ namespace Voron.Data.BTrees
                 var sibling = SetupMoveOrMerge(page, parentPage);
                 Debug.Assert(sibling.PageNumber != page.PageNumber);
 
-                if (page.PageType != sibling.PageType)
-                    return null;
+                if (page.PageType != sibling.PageType || (page.IsBranch && page.CollapsedLevels != sibling.CollapsedLevels))
+                    return null; // leaf & branch, or branches of different heights (sibling leaves always sit at the same depth)
 
                 if (sibling.IsCompressed)
                     return null;

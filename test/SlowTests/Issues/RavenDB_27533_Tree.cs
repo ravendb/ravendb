@@ -399,6 +399,51 @@ public unsafe class RavenDB_27533_Tree(ITestOutputHelper output) : StorageTest(o
     }
     
     [RavenFact(RavenTestCategory.Voron)]
+    public void RebalancingABranchThatOwesALevelMustNotPushLeavesBelowTheTreeDepth()
+    {
+        var model = new SortedSet<long>();
+        using (var tx = Env.WriteTransaction())
+        {
+            var tree = tx.CreateTree(TreeName);
+            long next = 0;
+            while (tree.State.Header.Depth < 4)
+            {
+                tree.Add(PaddedKey(next), Value);
+                model.Add(next);
+                next++;
+            }
+
+            long rightBranch = RootChildren(tree)[1];
+            long promotedBranch = ChildrenOf(tree, rightBranch)[0];
+            long firstKeyOfSibling = KeyOf(tree.GetReadOnlyTreePage(rightBranch), 1);
+            while (RootChildren(tree)[1] == rightBranch)
+            {
+                long key = model.GetViewBetween(long.MinValue, firstKeyOfSibling - 1).Max;
+                tree.Delete(PaddedKey(key));
+                model.Remove(key);
+            }
+
+            Assert.Equal(promotedBranch, RootChildren(tree)[1]);
+            Assert.Equal(1, tree.GetReadOnlyTreePage(promotedBranch).CollapsedLevels);
+
+            while (ChildrenOf(tree, promotedBranch).Length > 2 && ChildrenOf(tree, promotedBranch).All(child => tree.GetReadOnlyTreePage(child).IsLeaf))
+            {
+                tree.Delete(PaddedKey(model.Max));
+                model.Remove(model.Max);
+            }
+
+            while (RootChildren(tree)[1] == promotedBranch)
+            {
+                tree.Add(PaddedKey(next), Value);
+                next++;
+            }
+
+            int maxLeafDepth = MaxLeafDepth(tree, tree.State.Header.RootPageNumber);
+            Assert.True(maxLeafDepth <= tree.State.Header.Depth, $"a leaf sits at depth {maxLeafDepth}, but the tree depth is {tree.State.Header.Depth}");
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
     public void SplitOfACachedDecompressionMustSeeTheLevelsMarkedAfterItWasCached()
     {
         var model = new SortedSet<long>();
@@ -523,6 +568,12 @@ public unsafe class RavenDB_27533_Tree(ITestOutputHelper output) : StorageTest(o
         for (int i = 0; i < children.Length; i++)
             children[i] = page.GetNode(i)->PageNumber;
         return children;
+    }
+
+    private static int MaxLeafDepth(Tree tree, long pageNumber)
+    {
+        long[] children = ChildrenOf(tree, pageNumber);
+        return children.Length == 0 ? 1 : 1 + children.Max(child => MaxLeafDepth(tree, child));
     }
 
     private static List<TreePage> AllPages(Tree tree)

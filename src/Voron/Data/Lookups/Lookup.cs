@@ -555,8 +555,9 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             Page = _llt.ModifyPage(siblingPage)
         };
 
-        if (sourceState.Header->IsBranch != destinationState.Header->IsBranch)
-            return false; // cannot merge leaf & branch pages
+        if (sourceState.Header->IsBranch != destinationState.Header->IsBranch 
+        || (destinationState.Header->IsBranch && sourceState.Header->CollapsedLevels != destinationState.Header->CollapsedLevels))
+            return false; // cannot merge leaf & branch pages, or branches of different heights (sibling leaves always sit at the same depth)
 
         int combinedFreeSpace = sourceState.Header->FreeSpace + destinationState.Header->FreeSpace;
         if (combinedFreeSpace <= Constants.Storage.PageSize)
