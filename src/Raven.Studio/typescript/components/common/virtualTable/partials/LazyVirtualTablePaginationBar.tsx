@@ -1,6 +1,6 @@
 import { Icon } from "components/common/Icon";
 import Select, { SelectOption } from "components/common/select/Select";
-import { KeyboardEvent, useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import "./LazyVirtualTablePaginationBar.scss";
@@ -139,38 +139,29 @@ function PageInput({ page, totalPages, onPageChange }: PageInputProps) {
         setValue(String(page));
     }, [page]);
 
-    const commit = () => {
-        const parsedPage = parseInt(value, 10);
+    const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+        setValue(event.target.value);
 
-        if (Number.isNaN(parsedPage)) {
-            setValue(String(page));
-            return;
-        }
+        const parsedPage = Number(event.target.value);
+        const isValidPage = Number.isInteger(parsedPage) && parsedPage >= 1 && parsedPage <= totalPages;
 
-        const nextPage = Math.min(Math.max(1, parsedPage), totalPages);
-        setValue(String(nextPage));
-
-        if (nextPage !== page) {
-            onPageChange(nextPage);
-        }
-    };
-
-    const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-        if (event.key === "Enter") {
-            commit();
+        if (isValidPage && parsedPage !== page) {
+            onPageChange(parsedPage);
         }
     };
 
     return (
         <Form.Control
+            type="number"
             size="sm"
             className="page-input text-center"
             aria-label="Page"
-            inputMode="numeric"
+            min={1}
+            max={totalPages}
             value={value}
-            onChange={(event) => setValue(event.target.value)}
-            onBlur={commit}
-            onKeyDown={handleKeyDown}
+            onChange={handleChange}
+            onFocus={(event) => event.target.select()}
+            onBlur={() => setValue(String(page))}
         />
     );
 }
