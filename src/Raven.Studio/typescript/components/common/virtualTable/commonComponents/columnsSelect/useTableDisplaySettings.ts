@@ -62,6 +62,7 @@ export function useTableDisplaySettings<T>(table: TanstackTable<T>) {
         });
         table.setColumnOrder([...fixedLeadingColumnIds, ...columnOrder]);
         table.setColumnPinning({ left: [...fixedLeadingColumnIds, ...pinnedIds] });
+        table.resetColumnSizing();
     };
 
     return {
