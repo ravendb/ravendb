@@ -226,8 +226,6 @@ function createItems(skip: number, take: number): Item[] {
     }));
 }
 
-// mocked fetcher supporting both (skip, take) and continuation token requests
-// the continuation token encodes the index of the next item to fetch
 function createLazyLoadingFetcher(totalCount: number, delayInMs: number) {
     return (skip: number, take: number, continuationToken?: string): Promise<pagedResultWithToken<Item>> => {
         const start = continuationToken ? Number(continuationToken) : skip;

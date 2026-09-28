@@ -13,7 +13,6 @@ import Dropdown from "react-bootstrap/Dropdown";
 
 interface ExportDocumentsDropdownProps {
     collectionName: string;
-    // fields of the columns shown in the table, exported instead of all the fields when chosen
     getVisibleColumnFields: () => string[];
 }
 
@@ -42,7 +41,6 @@ export default function ExportDocumentsDropdown({
     const [isOpen, setIsOpen] = useState(false);
 
     const formRef = useRef<HTMLFormElement>(null);
-    const exportOptionsRef = useRef<HTMLInputElement>(null);
 
     const handleExport = () => {
         reportEvent("query", "export-csv");
@@ -52,7 +50,6 @@ export default function ExportDocumentsDropdown({
             field: columns === "all" ? undefined : getVisibleColumnFields(),
         };
 
-        exportOptionsRef.current.value = JSON.stringify({ Query: `from '${collectionName}'` });
         formRef.current.action =
             appUrl.forDatabaseQuery(databaseName) +
             endpoints.databases.streaming.streamsQueries +
@@ -91,7 +88,11 @@ export default function ExportDocumentsDropdown({
                 </Dropdown.Menu>
             </Dropdown>
             <form ref={formRef} method="post" target="hidden-form" className="d-none" data-testid="export-form">
-                <input ref={exportOptionsRef} type="hidden" name="ExportOptions" />
+                <input
+                    type="hidden"
+                    name="ExportOptions"
+                    value={JSON.stringify({ Query: `from '${collectionName}'` })}
+                />
             </form>
         </>
     );

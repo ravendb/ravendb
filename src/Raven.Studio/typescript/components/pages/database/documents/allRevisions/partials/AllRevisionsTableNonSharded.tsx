@@ -8,7 +8,7 @@ import { useServices } from "components/hooks/useServices";
 import { AllRevisionsTableProps } from "components/pages/database/documents/allRevisions/common/allRevisionsTypes";
 import { useAllRevisionsColumns } from "components/pages/database/documents/allRevisions/hooks/useAllRevisionsColumns";
 import { useAppSelector } from "components/store";
-import { useImperativeHandle } from "react";
+import { useImperativeHandle, useState } from "react";
 
 export default function AllRevisionsTableNonSharded({
     width,
@@ -34,6 +34,8 @@ export default function AllRevisionsTableNonSharded({
         reloadDependencies: [databaseName, selectedType, selectedCollectionName],
     });
 
+    const [isPaginated, setIsPaginated] = useState(false);
+
     const columns = useAllRevisionsColumns(databaseName, false, width, selectedRows, setSelectedRows);
 
     useImperativeHandle(fetcherRef, () => ({
@@ -49,7 +51,13 @@ export default function AllRevisionsTableNonSharded({
 
     return (
         <div className="d-flex flex-column" style={{ height }}>
-            <LazyVirtualTable table={table} lazyRows={lazyRows} itemsName="revisions" />
+            <LazyVirtualTable
+                table={table}
+                lazyRows={lazyRows}
+                isPaginated={isPaginated}
+                onIsPaginatedChange={setIsPaginated}
+                itemsName="revisions"
+            />
         </div>
     );
 }

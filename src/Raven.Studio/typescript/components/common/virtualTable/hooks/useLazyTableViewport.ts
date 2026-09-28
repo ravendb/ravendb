@@ -1,26 +1,29 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import useTimeout from "components/hooks/useTimeout";
 import { useResizeObserver } from "components/hooks/useResizeObserver";
 import { LazyRows } from "components/common/virtualTable/hooks/useLazyRows";
 import { LazyVirtualTablePagination } from "components/common/virtualTable/partials/LazyVirtualTablePaginationBar";
 import { virtualTableConstants } from "components/common/virtualTable/utils/virtualTableConstants";
-import {
-    getFitPageSize,
-    getPageSizeOptions,
-    isSameRange,
-    RowRange,
-    snapDown,
-    snapUp,
-} from "components/common/virtualTable/utils/lazyTableUtils";
+import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
+import { isSameRange, RowRange } from "components/common/virtualTable/utils/lazyTableUtils";
 
 interface UseLazyTableViewportProps<T> {
     lazyRows: LazyRows<T>;
     isPaginated: boolean;
     setIsPaginated: (isPaginated: boolean) => void;
     fixedHeightInPx?: number;
-    isCompact: boolean;
-    overscan: number;
 }
 
+const {
+    defaultRowHeightInPx: rowHeightInPx,
+    headerHeightInPx,
+    maxBodyHeightInPx,
+    defaultTableHeightInPx,
+} = virtualTableConstants;
+const maxRowsInDom = Math.floor(maxBodyHeightInPx / rowHeightInPx);
+const overscanInRows = 20;
+const windowStepInRows = 10;
+const pageSizeOptions = [25, 50, 100];
 const loadingIndicatorDelayInMs = 150;
 
 export function useLazyTableViewport<T>({
@@ -28,183 +31,86 @@ export function useLazyTableViewport<T>({
     isPaginated,
     setIsPaginated,
     fixedHeightInPx,
-    isCompact,
-    overscan,
 }: UseLazyTableViewportProps<T>) {
     const { rows, totalCount, loadedCount, hasMore, fetchMode, isFetching, resetId, setRange } = lazyRows;
 
     const areaRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    // the scroll position before pagination shrank the body, the browser may have clamped the live one already
     const lastScrollTopRef = useRef(0);
-    const scrollTopToRestoreRef = useRef<number>(null);
-    const lastResetIdRef = useRef(resetId);
 
     const measuredArea = useResizeObserver({ ref: areaRef });
-    const heightInPx = fixedHeightInPx ?? measuredArea.height ?? virtualTableConstants.defaultTableHeightInPx;
-
-    const rowHeightInPx = isCompact
-        ? virtualTableConstants.compactRowHeightInPx
-        : virtualTableConstants.defaultRowHeightInPx;
-    const maxRowsInDom = Math.floor(virtualTableConstants.maxBodyHeightInPx / rowHeightInPx);
-    // the window moves in steps, so scrolling by a single row does not re-render the table
-    const windowSnapInRows = Math.max(1, Math.floor(overscan / 2));
-
-    const getScrollRange = useCallback(
-        (scrollTop: number, clientHeight: number): RowRange => {
-            const firstVisibleRow = Math.floor(scrollTop / rowHeightInPx);
-            const lastVisibleRow = Math.ceil((scrollTop + clientHeight) / rowHeightInPx);
-
-            return {
-                start: Math.max(0, snapDown(firstVisibleRow - overscan, windowSnapInRows)),
-                end: snapUp(lastVisibleRow + overscan, windowSnapInRows),
-            };
-        },
-        [rowHeightInPx, overscan, windowSnapInRows]
-    );
+    const heightInPx = fixedHeightInPx ?? measuredArea.height ?? defaultTableHeightInPx;
 
     const [scrollRange, setScrollRange] = useState(() => getScrollRange(0, 0));
     const [isAtBottom, setIsAtBottom] = useState(false);
-    // null until a page is chosen, the first row (not the page number) is kept so a page size change keeps it on the page
     const [pageFirstRowIndex, setPageFirstRowIndex] = useState<number>(null);
     const [selectedPageSize, setSelectedPageSize] = useState<number>(null);
     const [isPaginationFromBanner, setIsPaginationFromBanner] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isFetchingLong, setIsFetchingLong] = useState(false);
 
     const isSkipTake = fetchMode === "skipTake";
-
-    const fitPageSize = getFitPageSize(heightInPx, rowHeightInPx, isCompact);
-    const defaultPageSize = Math.max(1, Math.min(fitPageSize, totalCount ?? Infinity));
+    const defaultPageSize = Math.min(getFitPageSize(heightInPx), totalCount || Infinity);
     const pageSize = selectedPageSize ?? defaultPageSize;
-    const page = pageFirstRowIndex === null ? 1 : Math.floor(pageFirstRowIndex / pageSize) + 1;
+    const page = Math.floor((pageFirstRowIndex ?? 0) / pageSize) + 1;
     const pageStart = (page - 1) * pageSize;
-
-    const scrollableRowCount = Math.min(isSkipTake ? (totalCount ?? 0) : loadedCount, maxRowsInDom);
     const pageRowCount = totalCount === null ? rows.length : Math.max(0, Math.min(pageSize, totalCount - pageStart));
+    const scrollableRowCount = Math.min(isSkipTake ? (totalCount ?? 0) : loadedCount, maxRowsInDom);
     const bodyHeightInPx = (isPaginated ? pageRowCount : scrollableRowCount) * rowHeightInPx;
-
-    const range: RowRange = isPaginated
-        ? { start: pageStart, end: pageStart + pageSize }
-        : { start: scrollRange.start, end: Math.min(scrollRange.end, maxRowsInDom) };
+    const range = isPaginated ? { start: pageStart, end: pageStart + pageSize } : scrollRange;
 
     const updateScrollState = useCallback(() => {
-        const element = containerRef.current;
-        if (!element || isPaginated) {
+        if (isPaginated) {
             return;
         }
 
-        lastScrollTopRef.current = element.scrollTop;
+        const { scrollTop, clientHeight, scrollHeight } = containerRef.current;
+        lastScrollTopRef.current = scrollTop;
 
-        const nextRange = getScrollRange(element.scrollTop, element.clientHeight);
+        const nextRange = getScrollRange(scrollTop, clientHeight);
         setScrollRange((prev) => (isSameRange(prev, nextRange) ? prev : nextRange));
-        setIsAtBottom(element.scrollTop + element.clientHeight >= element.scrollHeight - 1);
-    }, [isPaginated, getScrollRange]);
+        setIsAtBottom(scrollTop + clientHeight >= scrollHeight - 1);
+    }, [isPaginated]);
 
-    useEffect(() => {
-        const element = containerRef.current;
-        if (!element) {
-            return;
-        }
-
-        element.addEventListener("scroll", updateScrollState, { passive: true });
-
-        const resizeObserver = new ResizeObserver(updateScrollState);
-        resizeObserver.observe(element);
-
-        return () => {
-            element.removeEventListener("scroll", updateScrollState);
-            resizeObserver.disconnect();
-        };
-    }, [updateScrollState]);
-
+    // Keeps the same rows on the screen when switching between the scrolled and the paginated view.
+    // The last scroll position is used, because the browser clamps the current one when the body shrinks.
     useLayoutEffect(() => {
         if (isPaginated) {
-            if (pageFirstRowIndex === null) {
-                setPageFirstRowIndex(Math.floor(lastScrollTopRef.current / rowHeightInPx));
-            }
-            return;
-        }
-
-        if (pageFirstRowIndex !== null) {
-            scrollTopToRestoreRef.current = Math.min(pageStart, Math.max(0, scrollableRowCount - 1)) * rowHeightInPx;
+            setPageFirstRowIndex(Math.floor(lastScrollTopRef.current / rowHeightInPx));
+        } else if (pageFirstRowIndex !== null) {
+            containerRef.current.scrollTop = Math.min(pageStart, scrollableRowCount - 1) * rowHeightInPx;
             setPageFirstRowIndex(null);
             setIsPaginationFromBanner(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isPaginated]);
 
+    // Reloaded rows are shown from the first one
     useLayoutEffect(() => {
-        if (containerRef.current && scrollTopToRestoreRef.current !== null) {
-            containerRef.current.scrollTop = scrollTopToRestoreRef.current;
-            scrollTopToRestoreRef.current = null;
-        }
+        containerRef.current.scrollTop = 0;
+        setPageFirstRowIndex((prev) => (prev === null ? null : 0));
+    }, [resetId]);
 
+    // Resizing the container or its body changes the visible rows without a scroll event
+    useLayoutEffect(() => {
         updateScrollState();
-    }, [bodyHeightInPx, isPaginated, updateScrollState]);
+    }, [heightInPx, bodyHeightInPx, updateScrollState]);
 
+    // Fetches the rows of the visible range, the page is fetched once it is picked from the scroll position
     useLayoutEffect(() => {
-        if (lastResetIdRef.current === resetId) {
-            return;
+        if (!isPaginated || pageFirstRowIndex !== null) {
+            setRange(range, { allowSkip: isPaginated });
         }
-        lastResetIdRef.current = resetId;
-
-        if (containerRef.current) {
-            containerRef.current.scrollTop = 0;
-        }
-
-        updateScrollState();
-
-        if (isPaginated) {
-            setPageFirstRowIndex(0);
-        }
-    }, [resetId, isPaginated, updateScrollState]);
-
-    useLayoutEffect(() => {
-        if (isPaginated && pageFirstRowIndex === null) {
-            return;
-        }
-
-        setRange(range, { allowSkip: isPaginated });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [range.start, range.end, isPaginated, pageFirstRowIndex, setRange]);
 
-    const hasRowsOnScreen = rows.length > 0;
+    useTimeout(() => setIsFetchingLong(true), isFetching ? loadingIndicatorDelayInMs : null);
+    if (!isFetching && isFetchingLong) {
+        setIsFetchingLong(false);
+    }
 
-    useEffect(() => {
-        if (!isFetching) {
-            setIsLoading(false);
-            return;
-        }
-
-        if (!hasRowsOnScreen) {
-            setIsLoading(true);
-            return;
-        }
-
-        const timeout = setTimeout(() => setIsLoading(true), loadingIndicatorDelayInMs);
-        return () => clearTimeout(timeout);
-    }, [isFetching, hasRowsOnScreen]);
-
-    const scrollContainerToTop = () => {
-        if (containerRef.current) {
-            containerRef.current.scrollTop = 0;
-        }
+    const scrollToTop = () => {
+        containerRef.current.scrollTop = 0;
     };
-
-    const goToPage = (nextPage: number) => {
-        scrollContainerToTop();
-        setPageFirstRowIndex((nextPage - 1) * pageSize);
-    };
-
-    const changePageSize = (nextPageSize: number) => {
-        scrollContainerToTop();
-        setSelectedPageSize(nextPageSize === defaultPageSize ? null : nextPageSize);
-    };
-
-    const pageSizeOptions = useMemo(
-        () => getPageSizeOptions(defaultPageSize, totalCount),
-        [defaultPageSize, totalCount]
-    );
 
     const pagination: LazyVirtualTablePagination = isPaginated
         ? {
@@ -214,9 +120,18 @@ export function useLazyTableViewport<T>({
               lastRowNumber: pageStart + pageRowCount,
               totalCount,
               pageSize,
-              pageSizeOptions,
-              onPageChange: goToPage,
-              onPageSizeChange: changePageSize,
+              pageSizeOptions: [
+                  defaultPageSize,
+                  ...pageSizeOptions.filter((x) => x > defaultPageSize && (totalCount === null || x < totalCount)),
+              ],
+              onPageChange: (nextPage) => {
+                  scrollToTop();
+                  setPageFirstRowIndex((nextPage - 1) * pageSize);
+              },
+              onPageSizeChange: (nextPageSize) => {
+                  scrollToTop();
+                  setSelectedPageSize(nextPageSize === defaultPageSize ? null : nextPageSize);
+              },
               turnOff: isPaginationFromBanner ? () => setIsPaginated(false) : null,
           }
         : null;
@@ -231,10 +146,9 @@ export function useLazyTableViewport<T>({
         areaRef,
         containerRef,
         heightInPx,
-        rowHeightInPx,
         bodyHeightInPx,
         firstRowIndex: isPaginated ? pageStart : 0,
-        isLoading,
+        isLoading: isFetching && (rows.length === 0 || isFetchingLong),
         isEmpty,
         isDomLimitBannerVisible: isDomLimitReached && isAtBottom && !isPaginated,
         turnOnPagination: () => {
@@ -242,5 +156,29 @@ export function useLazyTableViewport<T>({
             setIsPaginated(true);
         },
         pagination,
+        onScroll: updateScrollState,
     };
+}
+
+function getScrollRange(scrollTop: number, clientHeight: number): RowRange {
+    const firstVisibleRow = Math.floor(scrollTop / rowHeightInPx);
+    const lastVisibleRow = Math.ceil((scrollTop + clientHeight) / rowHeightInPx);
+
+    return {
+        start: Math.max(0, snapDown(firstVisibleRow - overscanInRows)),
+        end: Math.min(snapUp(lastVisibleRow + overscanInRows), maxRowsInDom),
+    };
+}
+
+function snapDown(rowIndex: number) {
+    return Math.floor(rowIndex / windowStepInRows) * windowStepInRows;
+}
+
+function snapUp(rowIndex: number) {
+    return Math.ceil(rowIndex / windowStepInRows) * windowStepInRows;
+}
+
+function getFitPageSize(heightInPx: number) {
+    const rowsHeightInPx = virtualTableUtils.getTableContainerHeightInPx(heightInPx) - headerHeightInPx;
+    return Math.max(1, Math.floor(rowsHeightInPx / rowHeightInPx));
 }

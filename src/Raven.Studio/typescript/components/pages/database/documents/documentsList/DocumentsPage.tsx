@@ -6,21 +6,21 @@ import { useEffect } from "react";
 
 interface DocumentsListQueryParams {
     collection?: string;
-    // set by the test driver, shows the "continue test" button in the shell
     withStop?: string;
 }
 
 export default function DocumentsPage({ queryParams }: ReactQueryParamsProps<DocumentsListQueryParams>) {
-    const collectionName = queryParams?.collection || null;
+    const collectionName = queryParams.collection || null;
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
+    // Shows the "continue test" button of the shell (Knockout) when opened by the test driver
     useEffect(() => {
         continueTest.default.init({ database: databaseName, ...queryParams });
     }, [queryParams, databaseName]);
 
     return (
         <div className="content-padding vstack h-100">
-            <DocumentsPageBody key={`${databaseName}/${collectionName ?? ""}`} collectionName={collectionName} />
+            <DocumentsPageBody key={`${databaseName}/${collectionName}`} collectionName={collectionName} />
         </div>
     );
 }

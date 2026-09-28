@@ -51,7 +51,6 @@ function getHeightInPx(rowsCount: number, maxHeightInPx: number, rowHeight = def
     return Math.min(calculatedHeightInPx, maxHeightInPx);
 }
 
-// height of the scrollable container, the rest of heightInPx is the padding around the table
 function getTableContainerHeightInPx(heightInPx: number, isPaddingDisabled = false) {
     return Math.max(heightInPx - (isPaddingDisabled ? 0 : paddingInPx), minTableHeightInPx);
 }

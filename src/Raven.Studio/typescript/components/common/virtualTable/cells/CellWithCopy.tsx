@@ -105,11 +105,11 @@ function CellWithCopyResolvedPreview({
     Pick<CellWithCopyProps, "previewLanguage" | "additionalButtons">) {
     const asyncValue = useAsync(resolvePreviewValue, []);
 
-    if (asyncValue.status === "loading" || asyncValue.status === "not-requested") {
-        return <Spinner size="sm" data-testid="preview-loader" />;
+    if (asyncValue.loading) {
+        return <Spinner size="sm" />;
     }
 
-    if (asyncValue.status === "error") {
+    if (asyncValue.error) {
         return <span className="text-danger">Unable to load the value: {asyncValue.error.message}</span>;
     }
 

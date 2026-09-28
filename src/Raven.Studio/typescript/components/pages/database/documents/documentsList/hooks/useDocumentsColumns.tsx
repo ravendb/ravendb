@@ -1,20 +1,11 @@
-import {
-    ColumnDef,
-    ColumnOrderState,
-    ColumnPinningState,
-    Table as TanstackTable,
-    VisibilityState,
-} from "@tanstack/react-table";
+import { ColumnDef, Table as TanstackTable, VisibilityState } from "@tanstack/react-table";
 import changeVectorUtils from "common/changeVectorUtils";
 import { useDocumentColumnsProvider } from "components/common/virtualTable/columnProviders/useDocumentColumnsProvider";
 import CellValue from "components/common/virtualTable/cells/CellValue";
 import { CellWithCopy } from "components/common/virtualTable/cells/CellWithCopy";
 import DateFormatterCell from "components/common/virtualTable/cells/CellDateFormatter";
 import CellDocumentValue from "components/common/virtualTable/cells/CellDocumentValue";
-import {
-    AppliedColumnLayout,
-    TableDisplaySettingsOptions,
-} from "components/common/virtualTable/commonComponents/columnsSelect/TableDisplaySettings";
+import { AppliedColumnLayout } from "components/common/virtualTable/commonComponents/columnsSelect/TableDisplaySettings";
 import {
     createCustomColumnAccessor,
     CustomColumnDefinition,
@@ -32,28 +23,9 @@ import { useMemo, useState } from "react";
 
 interface UseDocumentsColumnsProps {
     databaseName: string;
-    // null means all documents
     collectionName: string | null;
     tableBodyWidthInPx: number;
-    // the rows hold trimmed and stubbed values, this fetches the full ones for the cell previews
     getPropertyPreviewResolver: FullDocumentProvider["getPropertyPreviewResolver"];
-}
-
-export interface DocumentsColumns {
-    columnDefs: ColumnDef<document>[];
-    tableState: {
-        columnVisibility: VisibilityState;
-        columnOrder: ColumnOrderState;
-        columnPinning: ColumnPinningState;
-    };
-    // properties the documents preview has to include, the table reloads whenever they change
-    previewBindings: string[];
-    // properties the custom columns read, they are fetched in full because the preview may trim them
-    fullBindings: string[];
-    onPreviewResult: (result: pagedResultWithAvailableColumns<document>) => void;
-    isCustomLayout: boolean;
-    settingsOptions: TableDisplaySettingsOptions;
-    getExportFields: (table: TanstackTable<document>) => string[];
 }
 
 const noColumns: string[] = [];
@@ -67,10 +39,7 @@ const changeVectorColumnId = "Change Vector";
 const lastModifiedColumnId = "Last Modified";
 const collectionColumnId = "Collection";
 
-const selectionColumn = createLazySelectionColumn<document>({
-    selectAllLabel: "Select all documents",
-    selectRowLabel: "Select document",
-});
+const selectionColumn = createLazySelectionColumn<document>("Select all documents", "Select document");
 
 const flagsColumn: ColumnDef<document> = { ...columnDocumentFlags, size: flagsColumnWidth };
 
@@ -81,23 +50,21 @@ export function useDocumentsColumns({
     collectionName,
     tableBodyWidthInPx,
     getPropertyPreviewResolver,
-}: UseDocumentsColumnsProps): DocumentsColumns {
+}: UseDocumentsColumnsProps) {
     const { appUrl } = useAppUrls();
     const isAllDocuments = collectionName === null;
     const propertyColumnsWidthInPx = tableBodyWidthInPx - columnCheckbox.size - flagsColumnWidth;
 
     const [appliedLayout, setAppliedLayout] = useState<AppliedColumnLayout | null>(() =>
-        documentsColumnLayoutStorage.load(databaseName, collectionName)
+        isAllDocuments ? null : documentsColumnLayoutStorage.load(databaseName, collectionName)
     );
     const [availableColumns, setAvailableColumns] = useState<string[]>([]);
-    // the properties the preview sent values for, without bindings the server sends only some of the available ones
     const [previewedColumns, setPreviewedColumns] = useState<string[]>([]);
 
     const customColumns = appliedLayout?.customColumns ?? noCustomColumns;
 
     const fullBindings = useMemo(() => (appliedLayout ? getFullBindings(appliedLayout) : noColumns), [appliedLayout]);
 
-    // without an applied layout the server picks the previewed properties itself
     const previewBindings = useMemo(
         () =>
             appliedLayout
@@ -114,12 +81,10 @@ export function useDocumentsColumns({
     const propertyColumns = useDocumentColumnsProvider({
         columnNames: propertyColumnNames,
         availableWidth: propertyColumnsWidthInPx,
-        // in all documents the metadata columns describe every document, the properties are available on demand
         columnsWithValues: isAllDocuments ? noColumns : previewedColumns,
         databaseName,
         getPreviewValueResolver: getPropertyPreviewResolver,
     });
-    const defaultColumnVisibility = propertyColumns.initialColumnVisibility;
 
     const customColumnDefs = useMemo(
         () => customColumns.map((column) => createCustomColumn(column, databaseName)),
@@ -137,27 +102,15 @@ export function useDocumentsColumns({
         [isAllDocuments, databaseName, propertyColumnsWidthInPx, appUrl, propertyColumns.columnDefs, customColumnDefs]
     );
 
-    // columns unknown to the saved layout (e.g. added to the documents later) stay hidden
-    const savedVisibility = useMemo(
-        () =>
-            appliedLayout
-                ? Object.fromEntries(
-                      columnDefs
-                          .filter((column) => column.enableHiding !== false)
-                          .map((column) => [column.id, appliedLayout.visibleColumnIds.includes(column.id)])
-                  )
-                : null,
-        [appliedLayout, columnDefs]
-    );
-
-    // the layout is the only source of the table state, the settings sheet changes it through onApplied
     const tableState = useMemo(
         () => ({
-            columnVisibility: savedVisibility ?? defaultColumnVisibility,
+            columnVisibility: appliedLayout
+                ? getLayoutVisibility(columnDefs, appliedLayout)
+                : propertyColumns.initialColumnVisibility,
             columnOrder: appliedLayout?.columnOrder ?? noColumns,
             columnPinning: { left: [columnCheckbox.id, ...(appliedLayout?.pinnedColumnIds ?? noColumns)] },
         }),
-        [appliedLayout, savedVisibility, defaultColumnVisibility]
+        [appliedLayout, columnDefs, propertyColumns.initialColumnVisibility]
     );
 
     const fittedColumnDefs = useMemo(
@@ -167,22 +120,24 @@ export function useDocumentsColumns({
 
     const defaultVisibleColumnIds = columnDefs
         .map((column) => column.id)
-        .filter((id) => defaultColumnVisibility[id] !== false);
+        .filter((id) => propertyColumns.initialColumnVisibility[id] !== false);
 
     return {
         columnDefs: fittedColumnDefs,
         tableState,
         previewBindings,
         fullBindings,
-        onPreviewResult: (result) => {
+        onPreviewResult: (result: pagedResultWithAvailableColumns<document>) => {
             setAvailableColumns((prev) => mergeColumnNames(prev, result.availableColumns));
             setPreviewedColumns((prev) => mergeColumnNames(prev, uniq(result.items.flatMap((x) => Object.keys(x)))));
         },
         isCustomLayout: appliedLayout !== null,
         settingsOptions: {
             customColumns,
-            onApplied: (layout) => {
-                documentsColumnLayoutStorage.save(databaseName, collectionName, layout);
+            onApplied: (layout: AppliedColumnLayout) => {
+                if (!isAllDocuments) {
+                    documentsColumnLayoutStorage.save(databaseName, collectionName, layout);
+                }
                 setAppliedLayout(layout);
             },
             restoreDefaults: {
@@ -193,7 +148,7 @@ export function useDocumentsColumns({
                 },
             },
         },
-        getExportFields: (table) =>
+        getExportFields: (table: TanstackTable<document>) =>
             table
                 .getVisibleLeafColumns()
                 .map((column) => column.id)
@@ -201,8 +156,6 @@ export function useDocumentsColumns({
     };
 }
 
-// the visible property columns whose values the documents preview has to include,
-// the metadata and custom columns are computed on the client (custom columns via the full bindings)
 function getPreviewBindings(layout: AppliedColumnLayout, isAllDocuments: boolean): string[] {
     const nonPropertyColumnIds = new Set<string>([
         columnCheckbox.id,
@@ -247,8 +200,14 @@ function fitVisibleColumnsToWidth(
     );
 }
 
-// every fetch reports only the columns of the documents it returned, so the columns seen so far are kept
-// and the newly discovered ones are appended, otherwise scrolling would drop the columns already in the table
+function getLayoutVisibility(columnDefs: ColumnDef<document>[], layout: AppliedColumnLayout): VisibilityState {
+    return Object.fromEntries(
+        columnDefs
+            .filter((column) => column.enableHiding !== false)
+            .map((column) => [column.id, layout.visibleColumnIds.includes(column.id)])
+    );
+}
+
 function mergeColumnNames(previous: string[], next: string[]): string[] {
     const addedColumnNames = next.filter((name) => !previous.includes(name));
 

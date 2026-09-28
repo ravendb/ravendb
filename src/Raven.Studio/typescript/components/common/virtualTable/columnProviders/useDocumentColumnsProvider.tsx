@@ -10,19 +10,15 @@ import { useMemo } from "react";
 // TODO Add Time Series column
 
 interface UseDocumentColumnsProviderProps {
-    // column names are derived from the documents unless columnNames is provided
     documents?: document[];
     columnNames?: string[];
-    // when provided, the columns that do not fit start hidden and the visible ones are stretched to fill the width
     availableWidth?: number;
-    // when provided, the other columns start hidden, e.g. the ones the documents preview did not send values for
     columnsWithValues?: string[];
     databaseName?: string;
     hasPreview?: boolean;
     hasFlags?: boolean;
     hasCheckbox?: boolean;
     hasHyperlinkForIds?: boolean;
-    // returns a fetch of the full value for the cell preview, undefined when the row already holds the whole value
     getPreviewValueResolver?: (doc: document, columnName: string) => (() => Promise<unknown>) | undefined;
 }
 
@@ -50,7 +46,6 @@ export function useDocumentColumnsProvider(props: UseDocumentColumnsProviderProp
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const databaseName = props.databaseName ?? activeDatabaseName;
 
-    // column defs must keep their identity between renders, otherwise flexRender remounts every cell
     return useMemo(
         () =>
             createColumns({
@@ -177,7 +172,6 @@ function createColumns(options: CreateColumnsOptions) {
     };
 }
 
-// the columns are shown in order as long as they fit at the default size, @id is always shown
 function getVisibleColumnNames(columnNames: string[], propertyColumnsWidth: number | undefined): string[] {
     if (propertyColumnsWidth === undefined) {
         return columnNames;

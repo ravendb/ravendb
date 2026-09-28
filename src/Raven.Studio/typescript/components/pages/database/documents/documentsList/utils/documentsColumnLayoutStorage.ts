@@ -1,54 +1,18 @@
 import storageKeyProvider from "common/storage/storageKeyProvider";
 import { AppliedColumnLayout } from "components/common/virtualTable/commonComponents/columnsSelect/TableDisplaySettings";
 
-const storagePrefix = "documents-columns-";
-
-// the layout is saved per collection, the one of all documents lasts only until the view is left
-function getStorageKey(databaseName: string, collectionName: string | null): string | null {
-    if (collectionName === null) {
-        return null;
-    }
-
-    return storageKeyProvider.storageKeyFor(`${storagePrefix}${databaseName}.[${collectionName}]`);
-}
-
-function isColumnLayout(value: unknown): value is AppliedColumnLayout {
-    if (!value || typeof value !== "object") {
-        return false;
-    }
-
-    const layout = value as Record<string, unknown>;
-    return ["visibleColumnIds", "columnOrder", "pinnedColumnIds", "customColumns"].every((key) =>
-        Array.isArray(layout[key])
-    );
+function getStorageKey(databaseName: string, collectionName: string) {
+    return storageKeyProvider.storageKeyFor(`documents-columns-${databaseName}.[${collectionName}]`);
 }
 
 export const documentsColumnLayoutStorage = {
-    load(databaseName: string, collectionName: string | null): AppliedColumnLayout | null {
-        const key = getStorageKey(databaseName, collectionName);
-        if (!key) {
-            return null;
-        }
-
-        try {
-            const layout: unknown = JSON.parse(localStorage.getItem(key));
-            return isColumnLayout(layout) ? layout : null;
-        } catch {
-            return null;
-        }
+    load(databaseName: string, collectionName: string): AppliedColumnLayout | null {
+        return JSON.parse(localStorage.getItem(getStorageKey(databaseName, collectionName)));
     },
-
-    save(databaseName: string, collectionName: string | null, layout: AppliedColumnLayout) {
-        const key = getStorageKey(databaseName, collectionName);
-        if (key) {
-            localStorage.setItem(key, JSON.stringify(layout));
-        }
+    save(databaseName: string, collectionName: string, layout: AppliedColumnLayout) {
+        localStorage.setItem(getStorageKey(databaseName, collectionName), JSON.stringify(layout));
     },
-
-    clear(databaseName: string, collectionName: string | null) {
-        const key = getStorageKey(databaseName, collectionName);
-        if (key) {
-            localStorage.removeItem(key);
-        }
+    clear(databaseName: string, collectionName: string) {
+        localStorage.removeItem(getStorageKey(databaseName, collectionName));
     },
 };

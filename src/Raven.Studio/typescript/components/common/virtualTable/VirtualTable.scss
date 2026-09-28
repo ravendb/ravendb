@@ -67,7 +67,6 @@ $row-bg-selection-preview: color-mix(in srgb, colors.$primary-var 8%, colors.$ro
         overflow: visible !important;
 
         .form-check-input {
-            // Checkbox size="lg" is too big for table row
             width: 18px;
             height: 18px;
         }

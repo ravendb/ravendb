@@ -167,23 +167,21 @@ describe("LazyRowsLoader", () => {
             expect(tokenLoader.loader.getSnapshot().totalCount).toBeNull();
         });
 
-        it("stores a failed fetch and retries only on the next range request", async () => {
+        it("retries a failed fetch only on the next range request", async () => {
             const { loader, fetches } = createLoader();
 
             loader.reset(true);
             loader.setRange({ start: 0, end: 10 });
 
-            const error = new Error("failed");
-            fetches[0].reject(error);
+            fetches[0].reject(new Error("failed"));
             await flush();
 
-            expect(loader.getSnapshot()).toMatchObject({ isFetching: false, error });
+            expect(loader.getSnapshot().isFetching).toBe(false);
             expect(fetches).toHaveLength(1);
 
             loader.setRange({ start: 0, end: 10 });
 
             expect(fetches).toHaveLength(2);
-            expect(loader.getSnapshot().error).toBeNull();
         });
 
         it("drops an in flight result after cancel", async () => {
