@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -69,6 +69,10 @@ namespace SlowTests.Tools.Issues
             // still free to move journals around until it completes
             Assert.True(await database.DatabaseShutdownCompleted.WaitAsync(TimeSpan.FromMinutes(1)),
                 $"'{database.Name}' was not unloaded, the recovery would run against a directory that is still in use");
+
+            // the unload reports the shutdown as completed even when the dispose failed, and then the files may still be open
+            var disposeError = Record.Exception(database.Dispose);
+            Assert.True(disposeError == null, $"'{database.Name}' failed to dispose: {disposeError}");
 
             var journals = new DirectoryInfo(Path.Combine(dbPath, "Journals")).GetFiles();
 
