@@ -319,9 +319,15 @@ public static class ChannelsEndpoints
         if (ChannelParameterBindings.TryResolve(config, ChannelType.Slack, body.Slack.ParameterBindings, out var bindings, out var paramError) == false)
             return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
 
-        var (auth, authError, _) = await slackClient.AuthTestAsync(botToken, ct);
-        if (auth is null)
-            return Results.BadRequest(new ApiErrorResponse(authError!));
+        SlackAuthInfo auth;
+        try
+        {
+            auth = await slackClient.AuthTestAsync(botToken, ct);
+        }
+        catch (SlackApiException e)
+        {
+            return Results.BadRequest(new ApiErrorResponse(SlackApiErrors.DescribeBotTokenError(e)));
+        }
 
         if (await ValidateSlackAppTokenAsync(slackClient, appToken, ct) is { } appTokenError)
             return Results.BadRequest(new ApiErrorResponse(appTokenError));
@@ -762,9 +768,15 @@ public static class ChannelsEndpoints
                 return Results.BadRequest(new ApiErrorResponse(
                     "slack.botToken must be the bot token (xoxb-) from the Slack app's OAuth page"));
 
-            var (auth, authError, _) = await slackClient.AuthTestAsync(botToken, ct);
-            if (auth is null)
-                return Results.BadRequest(new ApiErrorResponse(authError!));
+            SlackAuthInfo auth;
+            try
+            {
+                auth = await slackClient.AuthTestAsync(botToken, ct);
+            }
+            catch (SlackApiException e)
+            {
+                return Results.BadRequest(new ApiErrorResponse(SlackApiErrors.DescribeBotTokenError(e)));
+            }
 
             if (auth.TeamId != settings.TeamId || auth.BotUserId != settings.BotUserId)
                 return Results.BadRequest(new ApiErrorResponse(

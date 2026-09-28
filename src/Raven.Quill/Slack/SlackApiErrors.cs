@@ -24,6 +24,19 @@ internal static class SlackApiErrors
         _ => null,
     };
 
+    public static string DescribeBotTokenError(SlackApiException e)
+    {
+        if (e.Error == SlackApiException.RateLimitedError)
+            return "slack is rate-limiting the token check; try again shortly";
+
+        if (e.SlackResponded == false || e.Error is null)
+            return e.Message;
+
+        return e.Error is "invalid_auth" or "token_revoked" or "account_inactive"
+            ? "slack rejected the bot token; copy the xoxb- token from the app's OAuth page and try again"
+            : $"slack refused the token check: {e.Error}";
+    }
+
     public static string? DescribeAppTokenError(string? code) => code switch
     {
         "not_allowed_token_type" =>
