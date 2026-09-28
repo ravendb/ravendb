@@ -14,6 +14,7 @@ export interface LazyTableSelection<T> {
     rowSelection: RowSelectionState;
     // absolute index of the row toggled last, a shift-click selects the range between it and the clicked row
     anchorRowIndex: number | null;
+    canSelectRangeTo: (rowIndex: number) => boolean;
     toggleRow: (item: T, isRangeSelection: boolean) => void;
     toggleAll: () => void;
     clear: () => void;
@@ -55,6 +56,9 @@ export function useLazyTableSelection<T>({
         ? getPageSelectionState(selectedIds.length, rows.length)
         : getSelectionState(state);
 
+    const canSelectRangeTo = (rowIndex: number) =>
+        anchorRowIndex !== null && isRangeLoaded(anchorRowIndex, rowIndex, getItem);
+
     const toggleRow = (item: T, isRangeSelection: boolean) => {
         const rowIndex = rows.find((x) => x.item === item)?.index;
         if (rowIndex == null) {
@@ -63,8 +67,8 @@ export function useLazyTableSelection<T>({
 
         const id = getId(item);
         const ids =
-            isRangeSelection && anchorRowIndex !== null
-                ? getLoadedIdsInRange(anchorRowIndex, rowIndex, getItem, getId)
+            isRangeSelection && canSelectRangeTo(rowIndex)
+                ? getIdsInRange(anchorRowIndex, rowIndex, getItem, getId)
                 : [id];
 
         setState(withSelected(state, ids, !isSelected(id)));
@@ -98,29 +102,30 @@ export function useLazyTableSelection<T>({
         selectedCount,
         rowSelection: Object.fromEntries(selectedIds.map((id) => [id, true])),
         anchorRowIndex,
+        canSelectRangeTo,
         toggleRow,
         toggleAll,
         clear,
     };
 }
 
-// rows that were never loaded are skipped
-function getLoadedIdsInRange<T>(
+function getRowIndexesInRange(fromRowIndex: number, toRowIndex: number) {
+    const start = Math.min(fromRowIndex, toRowIndex);
+    const end = Math.max(fromRowIndex, toRowIndex);
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+}
+
+function isRangeLoaded<T>(fromRowIndex: number, toRowIndex: number, getItem: (rowIndex: number) => T | undefined) {
+    return getRowIndexesInRange(fromRowIndex, toRowIndex).every((i) => getItem(i) !== undefined);
+}
+
+function getIdsInRange<T>(
     fromRowIndex: number,
     toRowIndex: number,
     getItem: (rowIndex: number) => T | undefined,
     getId: (item: T) => string
 ) {
-    const ids: string[] = [];
-
-    for (let i = Math.min(fromRowIndex, toRowIndex); i <= Math.max(fromRowIndex, toRowIndex); i++) {
-        const item = getItem(i);
-        if (item !== undefined) {
-            ids.push(getId(item));
-        }
-    }
-
-    return ids;
+    return getRowIndexesInRange(fromRowIndex, toRowIndex).map((i) => getId(getItem(i)));
 }
 
 function createIsSelected(state: LazyTableSelectionState) {

@@ -60,8 +60,10 @@ export default function LazyVirtualTable<T>({
         overscan,
     });
 
+    const lazySelection = table.options.meta?.lazySelection;
     const selectionPreviewRange = useSelectionPreviewRange({
-        anchorRowIndex: table.options.meta?.lazySelection?.anchorRowIndex ?? null,
+        anchorRowIndex: lazySelection?.anchorRowIndex ?? null,
+        canSelectRangeTo: (rowIndex) => lazySelection?.canSelectRangeTo(rowIndex) ?? false,
         containerRef: viewport.containerRef,
     });
 
