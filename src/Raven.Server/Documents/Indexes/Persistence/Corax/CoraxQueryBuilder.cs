@@ -46,7 +46,7 @@ public static partial class CoraxQueryBuilder
         public FieldMetadata CompoundField;
         public bool Forward => SortField.Ascending;
 
-        public StreamingOptimization(IndexSearcher searcher, OrderMetadata[] orderMetadata, bool hasBoosting, bool hasDynamics)
+        public StreamingOptimization(IndexSearcher searcher, OrderMetadata[] orderMetadata, bool hasBoosting, bool dynamicFieldsMayBypassMarker)
         {
             bool hasSpecialSorter = false;
             foreach (var order in orderMetadata ?? Array.Empty<OrderMetadata>())
@@ -58,7 +58,7 @@ public static partial class CoraxQueryBuilder
 
             if (orderMetadata is null or { Length: 0 }
                 || hasSpecialSorter
-                || hasDynamics
+                || dynamicFieldsMayBypassMarker
                 || searcher.HasMultipleTermsInField(orderMetadata[0].Field)
                 || hasBoosting)
             {
@@ -185,7 +185,9 @@ public static partial class CoraxQueryBuilder
             var metadata = builderParameters.Query.Metadata;
             var indexSearcher = builderParameters.IndexSearcher;
             sortMetadata = GetSortMetadata(builderParameters, out var hasEmptySortingMatches);
-            var streamingOptimization = new StreamingOptimization(indexSearcher, sortMetadata, builderParameters.HasBoost, builderParameters.HasDynamics);
+            var dynamicFieldsMayBypassMarker = builderParameters.HasDynamics
+                                               && IndexDefinitionBaseServerSide.IndexVersion.IsPerEntryMultipleTermsMarkerSupported(builderParameters.Index.Definition.Version) == false;
+            var streamingOptimization = new StreamingOptimization(indexSearcher, sortMetadata, builderParameters.HasBoost, dynamicFieldsMayBypassMarker);
             
             if (metadata.Query.Where is not null)
             {
@@ -194,9 +196,8 @@ public static partial class CoraxQueryBuilder
                     ? builderParameters.AllEntries.Replay() 
                     : MaterializeWhenNeeded(builderParameters, coraxQuery, ref streamingOptimization);
             }
-            // CreateField can bypass the multi-term marker; also rules out dynamic sort fields
             else if (sortMetadata is [{ FieldType: MatchCompareFieldType.Floating or MatchCompareFieldType.Integer or MatchCompareFieldType.Sequence } sortBy, ..]
-                     && builderParameters.HasDynamics == false
+                     && dynamicFieldsMayBypassMarker == false
                      && indexSearcher.SortFieldTreeCoversAllEntries(sortBy.Field, sortBy.FieldType))
             {
                 // The cap counts terms, so it may only be applied while every scanned term yields a returned document.
