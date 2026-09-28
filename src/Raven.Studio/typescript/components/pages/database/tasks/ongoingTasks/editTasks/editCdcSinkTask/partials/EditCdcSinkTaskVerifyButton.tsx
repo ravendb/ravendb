@@ -2,24 +2,29 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { RavenButtonVariants } from "react-bootstrap/Button";
 import IconName from "typings/server/icons";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
-import { EditCdcSinkTaskVerification } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/hooks/useEditCdcSinkTaskVerification";
+import { EditCdcSinkTaskWatchedVerification } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/hooks/useEditCdcSinkTaskVerification";
 
 interface EditCdcSinkTaskVerifyButtonProps {
-    asyncVerify: EditCdcSinkTaskVerification;
+    verification: EditCdcSinkTaskWatchedVerification;
+    onVerify: () => void;
     isDisabled: boolean;
 }
 
-export default function EditCdcSinkTaskVerifyButton({ asyncVerify, isDisabled }: EditCdcSinkTaskVerifyButtonProps) {
-    const buttonData = getStatusButtonData(asyncVerify);
+export default function EditCdcSinkTaskVerifyButton({
+    verification,
+    onVerify,
+    isDisabled,
+}: EditCdcSinkTaskVerifyButtonProps) {
+    const buttonData = getStatusButtonData(verification);
 
     return (
-        <PopoverWithHoverWrapper message="Runs the CDC flow once against the source database, reading one row from each configured table without saving anything.">
+        <PopoverWithHoverWrapper message="Runs the CDC flow once against the source database, reading one row from each configured table. Nothing is saved in RavenDB. CDC objects the run needs on the source database are created temporarily and removed afterwards.">
             <ButtonWithSpinner
                 type="button"
                 variant={buttonData.variant}
                 className="rounded-pill"
-                onClick={asyncVerify.execute}
-                isSpinning={asyncVerify.loading}
+                onClick={onVerify}
+                isSpinning={verification.loading}
                 disabled={isDisabled}
                 icon={buttonData.icon}
             >
@@ -29,13 +34,11 @@ export default function EditCdcSinkTaskVerifyButton({ asyncVerify, isDisabled }:
     );
 }
 
-function getStatusButtonData(asyncVerify: EditCdcSinkTaskVerification): {
+function getStatusButtonData({ loading, error, result }: EditCdcSinkTaskWatchedVerification): {
     label: string;
     icon: IconName;
     variant: RavenButtonVariants;
 } {
-    const { loading, error, result } = asyncVerify;
-
     if (loading) {
         return { label: "Verifying tables...", icon: "shield", variant: "outline-info" };
     }

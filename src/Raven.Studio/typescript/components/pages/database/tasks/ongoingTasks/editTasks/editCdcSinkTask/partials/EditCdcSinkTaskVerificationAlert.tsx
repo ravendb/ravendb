@@ -72,10 +72,15 @@ export interface CdcSinkVerificationError {
 }
 
 export function formatDryRunError(error: string): CdcSinkVerificationError {
-    const [firstLine, ...rest] = (error ?? "").split(/\r?\n/);
-    const exceptionTypePrefix = /^[\w.`]+(Exception|Error):\s*/;
-    const message = firstLine?.replace(exceptionTypePrefix, "").trim() || "The CDC dry run failed.";
-    const details = rest.join("\n").trim();
+    const lines = (error ?? "").split(/\r?\n/);
+    const innerExceptionOrStackTraceLine = /^\s*--->|^\s+at /;
+    const detailsStart = lines.findIndex((line) => innerExceptionOrStackTraceLine.test(line));
+    const messageLines = detailsStart === -1 ? lines : lines.slice(0, detailsStart);
+    const detailsLines = detailsStart === -1 ? [] : lines.slice(detailsStart);
+
+    const exceptionTypePrefix = /^[\w.`]+(Exception|Error)( \(0x[0-9A-F]+\))?:\s*/;
+    const message = messageLines.join("\n").replace(exceptionTypePrefix, "").trim() || "The CDC dry run failed.";
+    const details = detailsLines.join("\n").trim();
 
     return details ? { message, details } : { message };
 }

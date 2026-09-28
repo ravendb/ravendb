@@ -317,14 +317,12 @@ describe("Edit CDC Sink task", () => {
         await fillInput(screen.getByLabelText(selectors.taskName), "Renamed task");
         expect(getButtonByText(screen, selectors.tablesVerifiedButton)).toBeInTheDocument();
 
-        await fireClick((await screen.findByText("orders")).closest("button"));
-        await user.click(screen.getByTitle(selectors.tableActions));
-        await user.click(await screen.findByText(selectors.disableTableAction));
+        await disableOrdersTable(screen, user, fireClick);
 
         expect(await screen.findByText(selectors.verifyTablesButton)).toBeInTheDocument();
     });
 
-    it("runs the dry run before saving and saves when it passes", async () => {
+    it("saves without a dry run when the verified inputs are unchanged", async () => {
         const Story = composeStory(stories.EditTask, stories.default);
 
         const { screen, fillInput, fireClick } = rtlRender(<Story />);
@@ -333,6 +331,21 @@ describe("Edit CDC Sink task", () => {
         await screen.findByText(selectors.ordersTable);
 
         await fillInput(screen.getByLabelText(selectors.taskName), "Renamed task");
+        await fireClick(getButtonByText(screen, selectors.saveTaskButton));
+
+        await waitFor(() => expect(mockServices.tasksService.mock.saveCdcSinkTask).toHaveBeenCalled());
+        expect(mockServices.tasksService.mock.verifyCdcSink).not.toHaveBeenCalled();
+    });
+
+    it("runs the dry run before saving and saves when it passes", async () => {
+        const Story = composeStory(stories.EditTask, stories.default);
+
+        const { screen, user, fireClick } = rtlRender(<Story />);
+
+        await screen.findByText(selectors.editTaskTitle);
+        await screen.findByText(selectors.ordersTable);
+
+        await disableOrdersTable(screen, user, fireClick);
         await fireClick(getButtonByText(screen, selectors.saveTaskButton));
 
         await waitFor(() => expect(mockServices.tasksService.mock.saveCdcSinkTask).toHaveBeenCalled());
@@ -346,15 +359,15 @@ describe("Edit CDC Sink task", () => {
     it("reuses the current verification result when saving", async () => {
         const Story = composeStory(stories.EditTask, stories.default);
 
-        const { screen, fillInput, fireClick } = rtlRender(<Story />);
+        const { screen, user, fireClick } = rtlRender(<Story />);
 
         await screen.findByText(selectors.editTaskTitle);
         await screen.findByText(selectors.ordersTable);
 
+        await disableOrdersTable(screen, user, fireClick);
         await fireClick(getButtonByText(screen, selectors.verifyTablesButton));
         expect(await screen.findByText(selectors.tablesVerifiedButton)).toBeInTheDocument();
 
-        await fillInput(screen.getByLabelText(selectors.taskName), "Renamed task");
         await fireClick(getButtonByText(screen, selectors.saveTaskButton));
 
         await waitFor(() => expect(mockServices.tasksService.mock.saveCdcSinkTask).toHaveBeenCalled());
@@ -364,12 +377,12 @@ describe("Edit CDC Sink task", () => {
     it("asks for confirmation before saving when the dry run fails", async () => {
         const Story = composeStory(stories.VerificationFailed, stories.default);
 
-        const { screen, fillInput, fireClick } = rtlRender(<Story />);
+        const { screen, user, fireClick } = rtlRender(<Story />);
 
         await screen.findByText(selectors.editTaskTitle);
         await screen.findByText(selectors.ordersTable);
 
-        await fillInput(screen.getByLabelText(selectors.taskName), "Renamed task");
+        await disableOrdersTable(screen, user, fireClick);
         await fireClick(getButtonByText(screen, selectors.saveTaskButton));
 
         const dialog = await screen.findByRole("dialog");
@@ -393,8 +406,8 @@ describe("Edit CDC Sink task", () => {
         expect(mockServices.tasksService.mock.verifyCdcSink).toHaveBeenCalledTimes(1);
     });
 
-    it("asks for confirmation before saving when the dry run passes with warnings", async () => {
-        const Story = composeStory(stories.VerificationPassedWithWarnings, stories.default);
+    it("asks for confirmation before saving when a failed dry run is current for unchanged inputs", async () => {
+        const Story = composeStory(stories.VerificationFailed, stories.default);
 
         const { screen, fillInput, fireClick } = rtlRender(<Story />);
 
@@ -402,6 +415,29 @@ describe("Edit CDC Sink task", () => {
         await screen.findByText(selectors.ordersTable);
 
         await fillInput(screen.getByLabelText(selectors.taskName), "Renamed task");
+        await fireClick(getButtonByText(screen, selectors.verifyTablesButton));
+        expect(await screen.findByText(selectors.verificationFailedButton)).toBeInTheDocument();
+
+        await fireClick(getButtonByText(screen, selectors.saveTaskButton));
+
+        const dialog = await screen.findByRole("dialog");
+        expect(within(dialog).getByText(selectors.saveAnywayTitle)).toBeInTheDocument();
+
+        await fireClick(within(dialog).getByRole("button", { name: selectors.saveAnywayButton }));
+
+        await waitFor(() => expect(mockServices.tasksService.mock.saveCdcSinkTask).toHaveBeenCalled());
+        expect(mockServices.tasksService.mock.verifyCdcSink).toHaveBeenCalledTimes(1);
+    });
+
+    it("asks for confirmation before saving when the dry run passes with warnings", async () => {
+        const Story = composeStory(stories.VerificationPassedWithWarnings, stories.default);
+
+        const { screen, user, fireClick } = rtlRender(<Story />);
+
+        await screen.findByText(selectors.editTaskTitle);
+        await screen.findByText(selectors.ordersTable);
+
+        await disableOrdersTable(screen, user, fireClick);
         await fireClick(getButtonByText(screen, selectors.saveTaskButton));
 
         const dialog = await screen.findByRole("dialog");
@@ -414,28 +450,28 @@ describe("Edit CDC Sink task", () => {
         await waitFor(() => expect(mockServices.tasksService.mock.saveCdcSinkTask).toHaveBeenCalled());
     });
 
-    it("offers to save anyway when the dry run request fails", async () => {
+    it("retries a failed dry run request on save and offers to save anyway", async () => {
         const Story = composeStory(stories.VerificationRequestFailed, stories.default);
 
-        const { screen, fillInput, fireClick } = rtlRender(<Story />);
+        const { screen, user, fireClick } = rtlRender(<Story />);
 
         await screen.findByText(selectors.editTaskTitle);
         await screen.findByText(selectors.ordersTable);
 
+        await disableOrdersTable(screen, user, fireClick);
         await fireClick(getButtonByText(screen, selectors.verifyTablesButton));
         expect(await screen.findByText(selectors.verificationFailedButton)).toBeInTheDocument();
         expect(screen.getByText(selectors.verificationRequestFailedMessage)).toBeInTheDocument();
 
-        await fillInput(screen.getByLabelText(selectors.taskName), "Renamed task");
         await fireClick(getButtonByText(screen, selectors.saveTaskButton));
 
         const dialog = await screen.findByRole("dialog");
         expect(within(dialog).getByText(selectors.verificationRequestFailedMessage)).toBeInTheDocument();
+        expect(mockServices.tasksService.mock.verifyCdcSink).toHaveBeenCalledTimes(2);
 
         await fireClick(within(dialog).getByRole("button", { name: selectors.saveAnywayButton }));
 
         await waitFor(() => expect(mockServices.tasksService.mock.saveCdcSinkTask).toHaveBeenCalled());
-        expect(mockServices.tasksService.mock.verifyCdcSink).toHaveBeenCalledTimes(1);
     });
 
     it("saves the edited raw configuration", async () => {
@@ -560,6 +596,16 @@ async function updateRawConfig(
     update: (config: Raven.Client.Documents.Operations.CdcSink.CdcSinkConfiguration) => object
 ) {
     await setRawConfig(JSON.stringify(update(JSON.parse(getRawConfigEditor().getValue()))));
+}
+
+async function disableOrdersTable(
+    screen: ReturnType<typeof rtlRender>["screen"],
+    user: ReturnType<typeof rtlRender>["user"],
+    fireClick: ReturnType<typeof rtlRender>["fireClick"]
+) {
+    await fireClick((await screen.findByText("orders")).closest("button"));
+    await user.click(screen.getByTitle(selectors.tableActions));
+    await user.click(await screen.findByText(selectors.disableTableAction));
 }
 
 function getButtonByText(screen: ReturnType<typeof rtlRender>["screen"], text: string | RegExp) {
