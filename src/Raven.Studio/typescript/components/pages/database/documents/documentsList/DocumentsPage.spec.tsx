@@ -558,7 +558,7 @@ describe("DocumentsPage", () => {
         const scrollToTopButton = await screen.findByRole("button", { name: "Scroll to top" });
         fireEvent.click(scrollToTopButton);
 
-        expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+        expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "instant" });
         expect(scrollContainer.scrollTop).toBe(0);
         fireEvent.scroll(scrollContainer, { target: { scrollTop: 0 } });
         expect(screen.queryByRole("button", { name: "Scroll to top" })).not.toBeInTheDocument();
