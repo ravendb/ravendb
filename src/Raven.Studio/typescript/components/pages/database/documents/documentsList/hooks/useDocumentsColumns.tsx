@@ -58,7 +58,6 @@ export interface DocumentsColumns {
 
 const noColumns: string[] = [];
 const noCustomColumns: CustomColumnDefinition[] = [];
-const noPinning: ColumnPinningState = {};
 const flagsColumnWidth = 130;
 const propertyColumnWidth = 150;
 const customColumnWidth = 200;
@@ -172,7 +171,7 @@ export function useDocumentsColumns({
         () => ({
             columnVisibility: savedVisibility ?? defaultColumnVisibility,
             columnOrder: appliedLayout?.columnOrder ?? noColumns,
-            columnPinning: appliedLayout ? { left: appliedLayout.pinnedColumnIds } : noPinning,
+            columnPinning: { left: [columnCheckbox.id, ...(appliedLayout?.pinnedColumnIds ?? noColumns)] },
         }),
         [appliedLayout, savedVisibility, defaultColumnVisibility]
     );

@@ -106,7 +106,6 @@ $row-bg-selection-preview: color-mix(in srgb, colors.$primary-var 8%, colors.$ro
             &.col-pinned {
                 position: sticky !important;
                 background-color: colors.$panel-bg-2-var;
-                box-shadow: inset -2px 0 0 colors.$border-color-var;
                 z-index: 3;
             }
         }
@@ -197,7 +196,6 @@ $row-bg-selection-preview: color-mix(in srgb, colors.$primary-var 8%, colors.$ro
                 }
 
                 &.col-pinned {
-                    box-shadow: inset -2px 0 0 colors.$border-color-var;
                     z-index: 1;
                     background-color: colors.$row-even-bg-var !important;
                 }

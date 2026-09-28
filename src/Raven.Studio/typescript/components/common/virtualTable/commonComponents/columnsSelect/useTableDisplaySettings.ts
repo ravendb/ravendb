@@ -1,5 +1,6 @@
 import { Column, Table as TanstackTable } from "@tanstack/react-table";
 import { CustomColumnDefinition } from "components/common/virtualTable/commonComponents/columnsSelect/customColumns";
+import { columnCheckbox } from "components/common/virtualTable/utils/commonColumnDefs";
 
 export interface ColumnMeta {
     id: string;
@@ -22,7 +23,9 @@ function getColumnHeaderTitle<T>(column: Column<T, unknown>): string {
 }
 
 export function useTableDisplaySettings<T>(table: TanstackTable<T>) {
-    const allColumns = table.getAllColumns();
+    const tableColumns = table.getAllColumns();
+    const fixedLeadingColumnIds = tableColumns.map((x) => x.id).filter((id) => id === columnCheckbox.id);
+    const allColumns = tableColumns.filter((column) => !fixedLeadingColumnIds.includes(column.id));
 
     const columnMetas: ColumnMeta[] = allColumns.map((column) => ({
         id: column.id,
@@ -35,7 +38,7 @@ export function useTableDisplaySettings<T>(table: TanstackTable<T>) {
     const allColumnIds = allColumns.map((x) => x.id);
 
     const getInitialColumnOrder = (): string[] => {
-        const order = table.getState().columnOrder;
+        const order = table.getState().columnOrder?.filter((id) => allColumnIds.includes(id));
         if (order && order.length > 0) {
             // Fill in any columns not yet in the order (e.g. first open)
             const missing = allColumnIds.filter((id) => !order.includes(id));
@@ -46,7 +49,7 @@ export function useTableDisplaySettings<T>(table: TanstackTable<T>) {
 
     const getInitialPinnedIds = (): string[] => {
         const pinning = table.getState().columnPinning;
-        return pinning?.left ?? [];
+        return (pinning?.left ?? []).filter((id) => allColumnIds.includes(id));
     };
 
     const getInitialSelectedIds = (): string[] => allColumns.filter((column) => column.getIsVisible()).map((x) => x.id);
@@ -57,8 +60,8 @@ export function useTableDisplaySettings<T>(table: TanstackTable<T>) {
                 column.toggleVisibility(selectedIds.includes(column.id));
             }
         });
-        table.setColumnOrder(columnOrder);
-        table.setColumnPinning({ left: pinnedIds });
+        table.setColumnOrder([...fixedLeadingColumnIds, ...columnOrder]);
+        table.setColumnPinning({ left: [...fixedLeadingColumnIds, ...pinnedIds] });
     };
 
     return {
