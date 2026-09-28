@@ -96,7 +96,7 @@ export function EmbedLinkApiDocs({ slug, channelId, parameters }: EmbedLinkApiDo
         },
         {
             name: "maxInvocations",
-            description: `Chats allowed before the link stops, ${MIN_INVOCATIONS}–${MAX_INVOCATIONS.toLocaleString()} (default ${DEFAULT_MAX_INVOCATIONS}).`,
+            description: `Prompts accepted before the link stops, ${MIN_INVOCATIONS}–${MAX_INVOCATIONS.toLocaleString()} (default ${DEFAULT_MAX_INVOCATIONS}).`,
         },
         ...(hasParameters
             ? [
