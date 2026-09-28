@@ -28,8 +28,7 @@ internal sealed class SlackApiException(
 
 internal interface ISlackClient
 {
-    Task<(SlackAuthInfo? Info, string? Error, bool SlackResponded)> AuthTestAsync(
-        string botToken, CancellationToken ct);
+    Task<SlackAuthInfo> AuthTestAsync(string botToken, CancellationToken ct);
 
     Task<string> OpenSocketAsync(string appToken, CancellationToken ct);
 
