@@ -1,5 +1,6 @@
 import { Column, flexRender, Table as TanstackTable } from "@tanstack/react-table";
 import classNames from "classnames";
+import { Icon } from "components/common/Icon";
 import "./VirtualTableHead.scss";
 import ColumnSettings from "components/common/virtualTable/partials/VirtualTableColumnSettings";
 import { virtualTableConstants } from "../utils/virtualTableConstants";
@@ -41,6 +42,9 @@ export default function VirtualTableHead<T>({ table, isCompact }: VirtualTableHe
                                     title={getHeaderTitle(header.column)}
                                 >
                                     <span className="text-truncate w-100">
+                                        {isPinned && header.column.getCanPin() && (
+                                            <Icon icon="pinned" title="Pinned column" />
+                                        )}
                                         {flexRender(header.column.columnDef.header, header.getContext())}
                                     </span>
 
