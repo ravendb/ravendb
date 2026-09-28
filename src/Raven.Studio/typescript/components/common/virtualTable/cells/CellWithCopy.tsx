@@ -17,7 +17,6 @@ interface CellWithCopyProps extends PropsWithChildren {
     previewCode?: string;
     previewLanguage?: CodeLanguage;
     popoverMaxWidth?: string;
-    // fetches the value shown in the preview when the cell holds an incomplete one (e.g. a trimmed preview)
     resolvePreviewValue?: () => Promise<unknown>;
 }
 
