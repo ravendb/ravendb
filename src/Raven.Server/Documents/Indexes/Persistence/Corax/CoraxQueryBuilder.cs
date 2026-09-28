@@ -46,7 +46,7 @@ public static partial class CoraxQueryBuilder
         public FieldMetadata CompoundField;
         public bool Forward => SortField.Ascending;
 
-        public StreamingOptimization(IndexSearcher searcher, OrderMetadata[] orderMetadata, bool hasBoosting)
+        public StreamingOptimization(IndexSearcher searcher, OrderMetadata[] orderMetadata, bool hasBoosting, bool hasDynamics)
         {
             bool hasSpecialSorter = false;
             foreach (var order in orderMetadata ?? Array.Empty<OrderMetadata>())
@@ -58,6 +58,7 @@ public static partial class CoraxQueryBuilder
 
             if (orderMetadata is null or { Length: 0 }
                 || hasSpecialSorter
+                || hasDynamics
                 || searcher.HasMultipleTermsInField(orderMetadata[0].Field)
                 || hasBoosting)
             {
@@ -184,7 +185,7 @@ public static partial class CoraxQueryBuilder
             var metadata = builderParameters.Query.Metadata;
             var indexSearcher = builderParameters.IndexSearcher;
             sortMetadata = GetSortMetadata(builderParameters, out var hasEmptySortingMatches);
-            var streamingOptimization = new StreamingOptimization(indexSearcher, sortMetadata, builderParameters.HasBoost);
+            var streamingOptimization = new StreamingOptimization(indexSearcher, sortMetadata, builderParameters.HasBoost, builderParameters.HasDynamics);
             
             if (metadata.Query.Where is not null)
             {
