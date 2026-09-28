@@ -33,7 +33,7 @@ export default function CellDocumentValue({
                 extractedCollectionName.startsWith(collection.toLowerCase())
             );
 
-            return appUrl.forEditDoc(cellValue, databaseName, matchedCollection);
+            return matchedCollection ? appUrl.forEditDoc(cellValue, databaseName, matchedCollection) : null;
         }
 
         return null;
