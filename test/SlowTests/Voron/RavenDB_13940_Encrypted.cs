@@ -38,6 +38,9 @@ namespace SlowTests.Voron
             options.MaxScratchBufferSize = 1 * 1024 * 1024 * 1024;
             options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = true;
             options.Encryption.MasterKey = _masterKey.ToArray();
+
+            // the corruption offsets below assume every transaction is LZ4-compressed into about one 4KB block 
+            options.ForTestingPurposesOnly().ForceMeasuredDeviceClass = DeviceWriteBudget.DeviceClass.Unknown;
         }
 
         [RavenFact(RavenTestCategory.Voron)]

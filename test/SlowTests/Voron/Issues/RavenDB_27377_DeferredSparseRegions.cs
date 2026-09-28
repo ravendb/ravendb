@@ -36,6 +36,8 @@ public class RavenDB_27377_DeferredSparseRegions : StorageTest
 
         Env.FlushLogToDataFile();
 
+        Env.DataPager.Sync(Env.CurrentStateRecord.DataPagerState, totalUnsynced: 0);
+
         (long allocatedBefore, long physicalBefore) = Env.DataPager.GetFileSize(Env.CurrentStateRecord.DataPagerState);
 
         using (var syncOperation = new WriteAheadJournal.JournalApplicator.SyncOperation(Env.Journal.Applicator))
