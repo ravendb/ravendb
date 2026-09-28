@@ -65,7 +65,6 @@ export function useLazyTableViewport<T>({
 
     const [scrollRange, setScrollRange] = useState(() => getScrollRange(0, 0));
     const [isAtBottom, setIsAtBottom] = useState(false);
-    const [isScrolledFromTop, setIsScrolledFromTop] = useState(false);
     // null until a page is chosen, the first row (not the page number) is kept so a page size change keeps it on the page
     const [pageFirstRowIndex, setPageFirstRowIndex] = useState<number>(null);
     const [selectedPageSize, setSelectedPageSize] = useState<number>(null);
@@ -99,7 +98,6 @@ export function useLazyTableViewport<T>({
         const nextRange = getScrollRange(element.scrollTop, element.clientHeight);
         setScrollRange((prev) => (isSameRange(prev, nextRange) ? prev : nextRange));
         setIsAtBottom(element.scrollTop + element.clientHeight >= element.scrollHeight - 1);
-        setIsScrolledFromTop(element.scrollTop > 0);
     }, [isPaginated, getScrollRange]);
 
     useEffect(() => {
@@ -239,12 +237,10 @@ export function useLazyTableViewport<T>({
         isLoading,
         isEmpty,
         isDomLimitBannerVisible: isDomLimitReached && isAtBottom && !isPaginated,
-        isScrollToTopVisible: isScrolledFromTop && !isPaginated,
         turnOnPagination: () => {
             setIsPaginationFromBanner(true);
             setIsPaginated(true);
         },
-        scrollToTop: () => containerRef.current?.scrollTo({ top: 0, behavior: "smooth" }),
         pagination,
     };
 }

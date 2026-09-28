@@ -1,6 +1,7 @@
 import { PropsWithChildren, ReactNode } from "react";
 import { virtualTableUtils } from "../utils/virtualTableUtils";
 import VirtualTableHead from "./VirtualTableHead";
+import VirtualTableScrollToTopButton from "./VirtualTableScrollToTopButton";
 import { VirtualTableState } from "./VirtualTableState";
 import classNames from "classnames";
 import Table from "react-bootstrap/Table";
@@ -65,6 +66,7 @@ export default function VirtualTableBodyWrapper<T>({
                     </Table>
                 </div>
                 {overlay}
+                <VirtualTableScrollToTopButton tableContainerRef={tableContainerRef} />
             </div>
         </div>
     );
