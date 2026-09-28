@@ -1,5 +1,6 @@
 import { EntityState, PayloadAction, createEntityAdapter, createSelector, createSlice } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
+import { StringWithAutocomplete } from "components/utils/common";
 
 export const systemCollectionNames = {
     allDocuments: "All Documents",
@@ -9,9 +10,7 @@ export const systemCollectionNames = {
     empty: "@empty",
 } as const;
 
-type CollectionName =
-    | (typeof systemCollectionNames)[keyof typeof systemCollectionNames]
-    | (string & NonNullable<unknown>);
+type CollectionName = StringWithAutocomplete<(typeof systemCollectionNames)[keyof typeof systemCollectionNames]>;
 
 export interface Collection {
     name: CollectionName;
