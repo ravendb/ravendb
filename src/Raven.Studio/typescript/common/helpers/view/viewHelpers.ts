@@ -13,15 +13,14 @@ class viewHelpers {
             forceRejectWithResolve: false,
             html: false,
             buttons: ["No", "Yes"],
-            wideDialog: false,
-            isCancelHidden: false
+            wideDialog: false
         } as confirmationDialogOptions, options);
         
         if (!options.html) {
             confirmationMessage = generalUtils.escapeHtml(confirmationMessage);
         }
 
-        app.showBootstrapDialog(new confirmationDialog(confirmationMessage, title, options.buttons, options.wideDialog, options.isCancelHidden))
+        app.showBootstrapDialog(new confirmationDialog(confirmationMessage, title, options.buttons, options.wideDialog))
             .done((answer) => {
                 const isConfirmed = answer === _.last(options.buttons);
                 if (isConfirmed) {

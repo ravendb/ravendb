@@ -17,15 +17,12 @@ class confirmationDialog extends dialogViewModelBase {
 
     private wideDialog: boolean;
 
-    private isCancelHidden: boolean;
-
-    constructor(confirmationMessageAsHtml: string, title: string, buttonOptions: string[], wideDialog: boolean, isCancelHidden = false) {
+    constructor(confirmationMessageAsHtml: string, title: string, buttonOptions: string[], wideDialog: boolean) {
         super();
         this.wideDialog = wideDialog;
         this.buttonOptions = buttonOptions;
         this.title = title;
         this.confirmationMessageAsHtml = confirmationMessageAsHtml;
-        this.isCancelHidden = isCancelHidden;
     }
 
     onOptionClicked(option: string) {
