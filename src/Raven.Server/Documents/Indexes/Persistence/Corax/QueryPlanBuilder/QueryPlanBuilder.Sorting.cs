@@ -197,14 +197,14 @@ internal static partial class QueryPlanBuilder
         if (pinned == 0)
             return orderBy;
 
-        var kept = new List<OrderByField>(orderBy.Length);
-        for (int i = 0; i < orderBy.Length; i++)
+        var kept = new OrderByField[orderBy.Length - BitOperations.PopCount(pinned)];
+        for (int i = 0, k = 0; i < orderBy.Length; i++)
         {
             if ((pinned & (1 << i)) == 0)
-                kept.Add(orderBy[i]);
+                kept[k++] = orderBy[i];
         }
 
-        return kept.ToArray();
+        return kept;
     }
 
     // A value is indexed under several representations (text, long, double) and an equality matches exactly one, so
