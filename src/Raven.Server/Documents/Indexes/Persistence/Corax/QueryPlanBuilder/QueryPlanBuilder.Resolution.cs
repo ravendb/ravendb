@@ -20,6 +20,7 @@ using Sparrow.Server;
 using Voron;
 using Voron.Impl;
 using Constants = Corax.Constants;
+using EntryIdPaginationSupportStatus = Corax.EntryIdPaginationSupportStatus;
 using RavenConstants = Raven.Client.Constants;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 
@@ -743,8 +744,15 @@ internal static partial class QueryPlanBuilder
 
     // Compute how many results a direct scan needs to provide. Ideally, we can stoke at Take items, but we may
     // have a filter post query, or need to provide the total result count, etc - that requires more work on our part.
-    private static int ResolveSortedScanTake(QueryBuilderParameters builderParams)
+    private static int ResolveSortedScanTake(QueryBuilderParameters builderParams, long knownTotal = -1)
     {
+        // The take counts entries, so it bounds the page only while every entry is a distinct document (RavenDB-27564)
+        if (builderParams?.IndexSearcher.EntryIdPaginationSupportStatus is not EntryIdPaginationSupportStatus.Supported)
+            return Constants.IndexSearcher.TakeAll;
+
+        if (knownTotal >= 0)
+            return builderParams.Take;
+
         if (HasServerSideFilter(builderParams) || ConsumesExactTotal(builderParams))
             return Constants.IndexSearcher.TakeAll;
 
@@ -795,6 +803,7 @@ internal static partial class QueryPlanBuilder
     {
         return builderParams switch
         {
+            { IndexSearcher.EntryIdPaginationSupportStatus: not EntryIdPaginationSupportStatus.Supported } => "index emits several entries per document",
             { Metadata.Query.Filter: not null } => "post-filter present", 
             { Query.IsCountQuery: true } => "count query",
             { Query.SkipStatistics: false } => "statistics requested (SkipStatistics=false, requires count)",
