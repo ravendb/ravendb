@@ -38,26 +38,11 @@ export function useFullDocumentProvider(databaseName: string) {
         [getFullDocument]
     );
 
-    const getCustomColumnPreviewResolver = useCallback(
-        (
-            doc: document,
-            properties: string[],
-            evaluate: (doc: document) => unknown
-        ): (() => Promise<unknown>) | undefined => {
-            if (!properties.some((property) => hasIncompletePreviewValue(doc, property))) {
-                return undefined;
-            }
-
-            return () => getFullDocument(doc.getId()).then(evaluate);
-        },
-        [getFullDocument]
-    );
-
     const clearCache = useCallback(() => {
         cacheRef.current.clear();
     }, []);
 
-    return { getPropertyPreviewResolver, getCustomColumnPreviewResolver, clearCache };
+    return { getPropertyPreviewResolver, clearCache };
 }
 
 export type FullDocumentProvider = ReturnType<typeof useFullDocumentProvider>;
