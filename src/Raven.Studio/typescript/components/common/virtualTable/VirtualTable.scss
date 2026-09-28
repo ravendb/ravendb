@@ -197,7 +197,6 @@ $row-bg-selection-preview: color-mix(in srgb, colors.$primary-var 8%, colors.$ro
 
                 &.col-pinned {
                     z-index: 1;
-                    background-color: colors.$row-even-bg-var !important;
                 }
 
                 .value-string {
@@ -223,10 +222,6 @@ $row-bg-selection-preview: color-mix(in srgb, colors.$primary-var 8%, colors.$ro
 
                 td {
                     background-color: colors.$row-bg-var;
-
-                    &.col-pinned {
-                        background-color: colors.$row-bg-var !important;
-                    }
                 }
             }
 
