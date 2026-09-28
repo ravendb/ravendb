@@ -134,6 +134,8 @@ namespace Voron.Data.BTrees
 
                     _cursor.Update(_cursor.Pages, _parentPage);
 
+                    ParentPageAction.EnsureValidLastSearchPosition(_parentPage, _page.PageNumber, _parentPage.LastSearchPosition);
+
                     if (ShouldPromotePage())
                         WrapPageInBranch();
                 }
@@ -248,6 +250,8 @@ namespace Voron.Data.BTrees
 
         private bool ShouldPromotePage()
         {
+            Debug.Assert(_parentPage.GetNode(_parentPage.LastSearchPosition)->PageNumber == _page.PageNumber, "the parent is not positioned at the page being split");
+
             if (_page.CollapsedLevels > 0)
                 return true;
 

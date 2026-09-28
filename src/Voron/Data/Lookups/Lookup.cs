@@ -1162,6 +1162,9 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         Debug.Assert(_internalCursor._pos > 0);
 
         ref var state = ref _internalCursor._stk[_internalCursor._pos];
+        ref var parent = ref _internalCursor._stk[_internalCursor._pos - 1];
+        Debug.Assert(GetValue(ref parent, parent.LastSearchPosition) == state.Page.PageNumber, "the parent is not positioned at the page being split");
+
         if (state.Header->CollapsedLevels > 0)
             return true;
 
@@ -1170,7 +1173,6 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         if (state.Header->IsBranch)
             return false; // we cannot tell from a branch without the flag
 
-        ref var parent = ref _internalCursor._stk[_internalCursor._pos - 1];
         int position = parent.LastSearchPosition;
 
         // heuristics - we probe the left & right siblings

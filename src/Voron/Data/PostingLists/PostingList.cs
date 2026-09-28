@@ -613,6 +613,8 @@ namespace Voron.Data.PostingLists
             var parent = new PostingListBranchPage(state.Page);
             if (parent.TryAdd(_llt, separator, newPage))
             {
+                // the next extras page is probed and wrapped against the page we push, keep the parent positioned at it
+                (_, state.LastSearchPosition, state.LastMatch) = parent.SearchPage(separator);
                 PushPage(newPage);
                 return;
             }
@@ -683,6 +685,8 @@ namespace Voron.Data.PostingLists
         private bool ShouldPromotePage()
         {
             ref var state = ref _stk[_pos];
+            Debug.Assert(_pos == 0 || new PostingListBranchPage(_stk[_pos - 1].Page).GetByIndex(_stk[_pos - 1].LastSearchPosition).Item2 == state.Page.PageNumber, "the parent is not positioned at the page being split");
+
             // both page headers keep the counter at the same offset, so this works for a branch too
             if (state.LeafHeader->CollapsedLevels > 0)
                 return true;
