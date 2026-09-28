@@ -9,7 +9,6 @@ interface CellDocumentValueProps {
     value: unknown;
     databaseName: string;
     hasHyperlinkForIds: boolean;
-    // fetches the full value for the preview when the cell holds a trimmed or stubbed one
     resolvePreviewValue?: () => Promise<unknown>;
 }
 
