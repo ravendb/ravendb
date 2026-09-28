@@ -63,6 +63,24 @@ $row-bg-selection-preview: color-mix(in srgb, colors.$primary-var 8%, colors.$ro
         z-index: 1;
     }
 
+    .selection-checkbox {
+        overflow: visible !important;
+
+        .form-check-input {
+            // Checkbox size="lg" is too big for table row
+            width: 18px;
+            height: 18px;
+        }
+    }
+
+    th,
+    td {
+        &:has(.selection-checkbox) {
+            padding-left: sizes.$gutter-xxs;
+            padding-right: sizes.$gutter-xxs;
+        }
+    }
+
     thead {
         background-color: colors.$panel-bg-2-var;
         z-index: 2;

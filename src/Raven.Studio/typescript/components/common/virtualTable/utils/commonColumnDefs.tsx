@@ -14,8 +14,6 @@ export const columnPreview: ColumnDef<unknown> = {
     enableColumnFilter: false,
 };
 
-// TODO Selecting many rows when holding shift
-
 export const columnCheckbox: ColumnDef<unknown> = {
     id: "Checkbox",
     header: ({ table }) => (
@@ -29,6 +27,7 @@ export const columnCheckbox: ColumnDef<unknown> = {
                 }
                 table.toggleAllRowsSelected(e.target.checked);
             }}
+            className="selection-checkbox"
         />
     ),
     accessorFn: (x) => x,
@@ -38,11 +37,12 @@ export const columnCheckbox: ColumnDef<unknown> = {
                 selected={row.getIsSelected()}
                 toggleSelection={row.getToggleSelectedHandler()}
                 disabled={!row.getCanSelect()}
+                className="selection-checkbox"
             />
         );
     },
-    size: 38,
-    minSize: 38,
+    size: 33,
+    minSize: 33,
     enableSorting: false,
     enableHiding: false,
     enableColumnFilter: false,
@@ -77,6 +77,7 @@ export function createLazySelectionColumn<T>({
                     indeterminate={selectionState === "SomeSelected"}
                     toggleSelection={toggleAll}
                     aria-label={selectAllLabel}
+                    className="selection-checkbox"
                 />
             );
         },
@@ -85,6 +86,7 @@ export function createLazySelectionColumn<T>({
                 selected={row.getIsSelected()}
                 toggleSelection={(e) => table.options.meta.lazySelection.toggleRow(row.original, isShiftKeyPressed(e))}
                 aria-label={selectRowLabel}
+                className="selection-checkbox"
             />
         ),
     };
