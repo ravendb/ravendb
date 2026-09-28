@@ -365,7 +365,7 @@ namespace Raven.Server.ServerWide.Maintenance
             report.LastCompletedClusterTransaction = dbInstance.LastCompletedClusterTransaction;
         }
 
-        private static void FillIndexInfo(Index index, QueryOperationContext context, DateTime now, DatabaseStatusReport report)
+        internal static void FillIndexInfo(Index index, QueryOperationContext context, DateTime now, DatabaseStatusReport report)
         {
             var stats = index.GetIndexingState(context);
             var lastQueried = GetLastQueryInfo(index);
@@ -384,7 +384,7 @@ namespace Raven.Server.ServerWide.Maintenance
             };
         }
 
-        private static TimeSpan GetLastQueryInfo(Index index)
+        private static TimeSpan? GetLastQueryInfo(Index index)
         {
             return index.GetElapsedTimeFromLastQuery();
         }

@@ -18,7 +18,9 @@ namespace TypingsGenerator
         public override IEnumerable<FieldInfo> GetFields(TypeInfo type)
         {
             return base.GetFields(type)
-                .Where(f => f.GetCustomAttribute<JsonIgnoreAttribute>() == null && f.GetCustomAttribute<Sparrow.Json.JsonDeserializationIgnoreAttribute>() == null);
+                .Where(f => f.GetCustomAttribute<JsonIgnoreAttribute>() == null
+                            && f.GetCustomAttribute<Sparrow.Json.JsonDeserializationIgnoreAttribute>() == null
+                            && !IsUnmanagedReference(f.FieldType));
         }
 
         public override IEnumerable<PropertyInfo> GetProperties(TypeInfo type)
@@ -27,7 +29,14 @@ namespace TypingsGenerator
                 p.GetCustomAttribute<JsonIgnoreAttribute>() == null
                 && p.GetCustomAttribute<Sparrow.Json.JsonDeserializationIgnoreAttribute>() == null
                 && !IsDictionaryIndexer(p)
-                && !IsFunctionProperty(p));
+                && !IsFunctionProperty(p)
+                && !IsUnmanagedReference(p.PropertyType));
+        }
+
+        // pointers and by-refs have no JSON representation, so they never reach the frontend
+        private static bool IsUnmanagedReference(Type type)
+        {
+            return type.IsPointer || type.IsByRef;
         }
 
         private Boolean IsFunctionProperty(PropertyInfo propertyInfo)

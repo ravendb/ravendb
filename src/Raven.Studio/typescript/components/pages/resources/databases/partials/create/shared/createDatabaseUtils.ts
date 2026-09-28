@@ -91,9 +91,12 @@ function mapToStepItem<T extends FormData>(step: CreateDatabaseStep<T>): StepIte
     };
 }
 
+const encryptionKeyNotSavedMessage = "Confirm that you have saved the encryption key";
+
 export const createDatabaseUtils = {
     getEncryptionData,
     getStepValidation,
     getStepInRangeValidation,
     mapToStepItem,
+    encryptionKeyNotSavedMessage,
 };

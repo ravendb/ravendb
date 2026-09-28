@@ -14,7 +14,8 @@ export function AppChannels() {
                         Channels
                     </Heading>
                     <Text variant="muted" className="max-w-prose">
-                        Channels are the surfaces end users reach your agents through.
+                        Create and manage the channels that carry conversations between your users and this app&rsquo;s
+                        agents.
                     </Text>
                 </div>
                 <AddChannelMenu slug={slug} label="New channel" variant="default" />

@@ -58,6 +58,14 @@ namespace Sparrow.Server.Platform.Posix
                     : 4096);            
         }
 
+        public sealed class MmapFlags
+        {
+            public static Posix.MmapFlags MAP_ANONYMOUS = (Posix.MmapFlags)(
+                PlatformDetails.RunningOnMacOsx
+                    ? 0x1000 // MAP_ANON on macOS, 0x20 is MAP_RENAME there
+                    : 0x20);
+        }
+
         public sealed class SysconfNames
         {
             public static int _SC_PAGESIZE =

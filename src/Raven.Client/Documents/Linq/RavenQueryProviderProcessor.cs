@@ -2173,11 +2173,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         VisitExpression(expression.Arguments[0]);
                         if (expression.Arguments.Count == 2)
-                        {
-                            if (_chainedWhere)
-                                DocumentQuery.AndAlso();
-                            VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
-                        }
+                            VisitChainedPredicate(expression);
 
                         if (expression.Method.Name == "First")
                         {
@@ -2195,12 +2191,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         VisitExpression(expression.Arguments[0]);
                         if (expression.Arguments.Count == 2)
-                        {
-                            if (_chainedWhere)
-                                DocumentQuery.AndAlso();
-
-                            VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
-                        }
+                            VisitChainedPredicate(expression);
 
                         if (expression.Method.Name == "Single")
                         {
@@ -2242,11 +2233,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         VisitExpression(expression.Arguments[0]);
                         if (expression.Arguments.Count == 2)
-                        {
-                            if (_chainedWhere)
-                                DocumentQuery.AndAlso();
-                            VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
-                        }
+                            VisitChainedPredicate(expression);
 
                         VisitCount();
                         break;
@@ -2255,11 +2242,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         VisitExpression(expression.Arguments[0]);
                         if (expression.Arguments.Count == 2)
-                        {
-                            if (_chainedWhere)
-                                DocumentQuery.AndAlso();
-                            VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
-                        }
+                            VisitChainedPredicate(expression);
 
                         VisitLongCount();
                         break;
@@ -4157,6 +4140,20 @@ The recommended method is to use full text search (mark the field as Analyzed an
         private void VisitAll(Expression<Func<T, bool>> predicateExpression)
         {
             throw new NotSupportedException("All() is not supported for linq queries");
+        }
+        
+        private void VisitChainedPredicate(MethodCallExpression expression)
+        {
+            if (_chainedWhere)
+            {
+                DocumentQuery.AndAlso();
+                _subClauseDepth++;
+            }
+
+            VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+
+            if (_chainedWhere)
+                _subClauseDepth--;
         }
 
         private void VisitAny()

@@ -80,7 +80,6 @@ interface IndexErrorPerDocument {
     IndexName: string;
     Timestamp: string;
     LocalTime: string;
-    RelativeTime: string;
 }
 
 interface revisionTimeSeriesDto {

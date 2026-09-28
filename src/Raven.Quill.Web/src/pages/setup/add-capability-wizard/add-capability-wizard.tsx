@@ -6,18 +6,23 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import { appRoutes } from "@/lib/app-routes";
 import { FormWizard } from "@/components/form/wizard/form-wizard";
-import { agentSchema, type AgentFormData } from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
+import {
+    createAgentSchema,
+    type AgentFormData,
+} from "@/pages/setup/add-capability-wizard/capability-wizard-validation";
 import { emptyAgentConfiguration } from "@/pages/setup/add-capability-wizard/agent-config-form";
 import { CAPABILITY_FLOW, useCapabilitySteps } from "@/pages/setup/add-capability-wizard/capability-wizard-flow";
 import { useCapabilityWizardStore } from "@/pages/setup/add-capability-wizard/capability-wizard-store";
+import { useExistingAgents } from "@/pages/setup/add-capability-wizard/use-existing-agents";
 import { preventEnterKeySubmission } from "@/lib/form-utils";
 
 export function AddCapabilityWizard() {
     const resetStore = useCapabilityWizardStore((state) => state.reset);
+    const existingAgents = useExistingAgents();
 
     const form = useForm<AgentFormData>({
         mode: "onChange",
-        resolver: zodResolver(agentSchema),
+        resolver: zodResolver(createAgentSchema(existingAgents)),
         defaultValues: getDefaultValues(),
     });
 

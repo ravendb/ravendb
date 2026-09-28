@@ -81,6 +81,11 @@ public class RavenDB_26838 : RavenTestBase
             Assert.Equal((long)TaskErrorStep.Transformation, itemErrors[0].Step);
             Assert.Equal("script error", itemErrors[0].Error);
 
+            Assert.Equal(now, processErrors[0].CreatedAt);
+            Assert.Equal(DateTimeKind.Utc, processErrors[0].CreatedAt.Kind);
+            Assert.Equal(now, itemErrors[0].CreatedAt);
+            Assert.Equal(DateTimeKind.Utc, itemErrors[0].CreatedAt.Kind);
+
             // Errors stored under CdcSink must not leak into the Etl / Ai categories (separate Voron tables).
             Assert.Empty(database.TaskErrorsStorage.ReadProcessErrorsOfTask(TaskCategory.Etl, taskName));
             Assert.Empty(database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Etl, taskName));

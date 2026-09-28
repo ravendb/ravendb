@@ -1,5 +1,6 @@
 
 import moment = require("moment");
+import generalUtils = require("common/generalUtils");
 
 class databaseOverviewItem implements databaseAndNodeAwareStats {
     database: string;
@@ -145,7 +146,7 @@ class databaseOverviewItem implements databaseAndNodeAwareStats {
         
         return [{
             title: "Backup was created",
-            text: moment.utc(this.backupInfo.LastBackup).local().fromNow(),
+            text: generalUtils.formatDurationByDate(moment.utc(this.backupInfo.LastBackup), true),
             iconClass: "icon-check",
             textClass: "text-success"
         }];

@@ -58,7 +58,10 @@ public abstract class AbstractIndexCreateController
         var databaseConfiguration = GetDatabaseConfiguration();
         // pre-compile it and validate
         var instance = IndexCompilationCache.GetIndexInstance(definition, databaseConfiguration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
-        
+
+        if (instance is AbstractJavaScriptIndex javaScriptIndex)
+            javaScriptIndex.ValidateFieldsOfMapAndReduceFunctions();
+
         if (definition.Type == IndexType.MapReduce)
         {
             await MapReduceIndex.ValidateReduceResultsCollectionNameAsync(

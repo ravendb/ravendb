@@ -42,6 +42,8 @@ internal sealed class LicenseStatsProvider : ILicenseStatsProvider
         }, token);
 
         var usage = await _ravendb.DeserializeAsync<QuillUsageResponse>(r.Content, token);
+        if (usage is null)
+            return new QuillUsageResponse([], []);
 
         // The license server reports one row per period; the UI wants one row per database.
         var perApplicationUsages = (usage.PerApplication ?? [])

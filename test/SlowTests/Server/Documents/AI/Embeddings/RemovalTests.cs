@@ -8,7 +8,7 @@ namespace SlowTests.Server.Documents.AI.Embeddings;
 
 public class RemovalTests(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
-    [RavenMultiplatformFact(RavenTestCategory.Ai | RavenTestCategory.Etl, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai | RavenTestCategory.Etl)]
     public async Task TaskRemoveEmbeddingsDocumentOfRemovedDocument()
     {
         using var store = GetDocumentStore();

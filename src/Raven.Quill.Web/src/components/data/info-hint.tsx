@@ -8,10 +8,13 @@ export function InfoHint({ content }: { content: string }) {
                 <TooltipTrigger asChild>
                     {/* Faded rather than muted, so the hint reads as secondary to whatever colour
                         the label beside it already has. */}
-                    <span className="inline-flex opacity-[0.66]">
+                    <button
+                        type="button"
+                        className="inline-flex cursor-help rounded-sm opacity-[0.66] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                        aria-label="More information"
+                    >
                         <CircleQuestionMark className="size-3.5" aria-hidden="true" />
-                        <span className="sr-only">{content}</span>
-                    </span>
+                    </button>
                 </TooltipTrigger>
                 <TooltipContent>{content}</TooltipContent>
             </Tooltip>

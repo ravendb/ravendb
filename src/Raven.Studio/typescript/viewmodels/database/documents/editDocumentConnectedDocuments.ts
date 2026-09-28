@@ -464,12 +464,15 @@ class connectedDocuments {
             Type: "Revision"
         };
 
-        const url = endpoints.databases.attachment.attachments + appUrl.urlEncodeArgs(file);
+        const url = appUrl.forDatabaseQuery(this.db) + endpoints.databases.attachment.attachments + appUrl.urlEncodeArgs(file);
 
-        $form.attr("action", appUrl.forDatabaseQuery(this.db) + url);
-        
-        $changeVector.val(JSON.stringify(payload));
-        $form.submit();
+        downloader.canDownload(url, { method: "POST", body: JSON.stringify(payload) }).then((canDownload) => {
+            if (canDownload) {
+                $form.attr("action", url);
+                $changeVector.val(JSON.stringify(payload));
+                $form.submit();
+            }
+        });
     }
 
     private afterUpload() {

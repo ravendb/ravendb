@@ -426,7 +426,7 @@ class appUrl {
     }
 
     static forTombstonesState(db: database): string {
-        return "#databases/advanced/tombstonesState?" + appUrl.getEncodedDbPart(db);
+        return "#databases/status/tombstonesState?" + appUrl.getEncodedDbPart(db);
     }
 
     static forRevisions(db: database): string {

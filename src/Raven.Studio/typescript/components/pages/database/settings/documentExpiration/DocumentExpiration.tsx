@@ -1,11 +1,12 @@
 import React, { useEffect } from "react";
 import Card from "react-bootstrap/Card";
+import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
-import { FormInput, FormSwitch } from "components/common/Form";
+import { FormDurationPicker, FormInput, FormSwitch } from "components/common/Form";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
@@ -32,6 +33,7 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import RichAlert from "components/common/RichAlert";
 
 export const defaultItemsToProcess = 65536;
+const defaultDeleteFrequencyInSec = 60;
 
 export default function DocumentExpiration() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -65,12 +67,23 @@ export default function DocumentExpiration() {
         ],
     });
 
-    const deleteFrequencyInHours = moment.duration(formValues.deleteFrequency, "seconds").asHours();
+    const defaultDeleteFrequency =
+        minPeriodForExpirationInHours > 0
+            ? moment.duration(minPeriodForExpirationInHours, "hours").asSeconds()
+            : defaultDeleteFrequencyInSec;
+
+    const effectiveDeleteFrequencyInSec = formValues.isDeleteFrequencyEnabled
+        ? formValues.deleteFrequency
+        : defaultDeleteFrequencyInSec;
+
+    const deleteFrequencyInHours = moment.duration(effectiveDeleteFrequencyInSec, "seconds").asHours();
 
     const isLimitWarningVisible =
         minPeriodForExpirationInHours > 0 &&
-        formValues.isDeleteFrequencyEnabled &&
+        formValues.isDocumentExpirationEnabled &&
         deleteFrequencyInHours < minPeriodForExpirationInHours;
+
+    const deleteFrequencyPlaceholder = getDeleteFrequencyPlaceholder(defaultDeleteFrequency);
 
     useEffect(() => {
         const { unsubscribe } = watch((values, { name }) => {
@@ -78,6 +91,10 @@ export default function DocumentExpiration() {
                 case "isDocumentExpirationEnabled": {
                     if (values.isDocumentExpirationEnabled) {
                         setValue("isLimitMaxItemsToProcessEnabled", true, { shouldValidate: true });
+
+                        if (minPeriodForExpirationInHours > 0) {
+                            setValue("isDeleteFrequencyEnabled", true, { shouldValidate: true });
+                        }
                     } else {
                         setValue("isLimitMaxItemsToProcessEnabled", false, { shouldValidate: true });
                         setValue("isDeleteFrequencyEnabled", false, { shouldValidate: true });
@@ -93,7 +110,11 @@ export default function DocumentExpiration() {
                     break;
                 }
                 case "isDeleteFrequencyEnabled": {
-                    if (!values.isDeleteFrequencyEnabled) {
+                    if (values.isDeleteFrequencyEnabled) {
+                        if (values.deleteFrequency == null) {
+                            setValue("deleteFrequency", defaultDeleteFrequency, { shouldValidate: true });
+                        }
+                    } else {
                         setValue("deleteFrequency", null, { shouldValidate: true });
                     }
                     break;
@@ -101,7 +122,7 @@ export default function DocumentExpiration() {
             }
         });
         return () => unsubscribe();
-    }, [setValue, watch]);
+    }, [defaultDeleteFrequency, minPeriodForExpirationInHours, setValue, watch]);
 
     const onSave: SubmitHandler<DocumentExpirationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -161,7 +182,6 @@ export default function DocumentExpiration() {
                                                 <FormSwitch
                                                     name="isDeleteFrequencyEnabled"
                                                     control={control}
-                                                    className="mb-3"
                                                     disabled={
                                                         formState.isSubmitting ||
                                                         !formValues.isDocumentExpirationEnabled
@@ -169,30 +189,26 @@ export default function DocumentExpiration() {
                                                 >
                                                     Set custom expiration frequency
                                                 </FormSwitch>
-                                                <FormInput
-                                                    name="deleteFrequency"
-                                                    control={control}
-                                                    type="number"
-                                                    disabled={
-                                                        formState.isSubmitting || !formValues.isDeleteFrequencyEnabled
-                                                    }
-                                                    placeholder={
-                                                        minPeriodForExpirationInHours > 0
-                                                            ? `Default (${moment
-                                                                  .duration(minPeriodForExpirationInHours, "hours")
-                                                                  .asSeconds()})`
-                                                            : "Default (60)"
-                                                    }
-                                                    addon="seconds"
-                                                />
+                                                <Collapse appear in={formValues.isDeleteFrequencyEnabled}>
+                                                    <div className="pt-3">
+                                                        <div data-testid="deleteFrequencyDurationPicker">
+                                                            <FormDurationPicker
+                                                                name="deleteFrequency"
+                                                                control={control}
+                                                                disabled={
+                                                                    formState.isSubmitting ||
+                                                                    !formValues.isDeleteFrequencyEnabled
+                                                                }
+                                                                placeholder={deleteFrequencyPlaceholder}
+                                                                showSeconds
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </Collapse>
                                                 {isLimitWarningVisible && (
                                                     <RichAlert variant="warning" className="mt-3">
-                                                        Your current license does not allow a frequency higher than{" "}
-                                                        {minPeriodForExpirationInHours} hours (
-                                                        {moment
-                                                            .duration(minPeriodForExpirationInHours, "hours")
-                                                            .asSeconds()}{" "}
-                                                        seconds)
+                                                        Your current license does not allow an expiration frequency
+                                                        below {minPeriodForExpirationInHours} hours.
                                                     </RichAlert>
                                                 )}
                                             </div>
@@ -261,6 +277,16 @@ export default function DocumentExpiration() {
             </Col>
         </div>
     );
+}
+
+function getDeleteFrequencyPlaceholder(totalSeconds: number) {
+    const duration = moment.duration(totalSeconds, "seconds");
+
+    return {
+        hours: `Default (${Math.floor(duration.asHours())})`,
+        minutes: `Default (${duration.minutes()})`,
+        seconds: `Default (${duration.seconds()})`,
+    };
 }
 
 function mapToFormData(dto: ServerExpirationConfiguration): DocumentExpirationFormData {

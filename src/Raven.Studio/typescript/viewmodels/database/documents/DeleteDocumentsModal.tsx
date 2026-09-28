@@ -1,6 +1,6 @@
 import Modal from "components/common/Modal";
 import { Icon } from "components/common/Icon";
-import React, { useState } from "react";
+import React from "react";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import { useAsync } from "react-async-hook";
@@ -16,6 +16,7 @@ import studioSettings from "common/settings/studioSettings";
 import { Switch } from "components/common/Checkbox";
 import useBoolean from "hooks/useBoolean";
 import { useIsMounted } from "components/hooks/useIsMounted";
+import useDeleteConfirmation from "hooks/useDeleteConfirmation";
 
 interface DeleteDocumentsModalProps {
     close: () => void;
@@ -124,20 +125,6 @@ export default function DeleteDocumentsModal({
             </Modal.Footer>
         </Modal>
     );
-}
-
-function useDeleteConfirmation(isRequireTypedConfirm: boolean) {
-    const [confirmText, setConfirmText] = useState("");
-
-    const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setConfirmText(e.target.value.trim());
-    };
-
-    return {
-        confirmText,
-        handleTextChange,
-        isConfirmed: isRequireTypedConfirm ? confirmText === "DELETE" : true,
-    };
 }
 
 function useDeleteCollection({

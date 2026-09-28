@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using Acornima;
+using Acornima.Ast;
 using Jint;
 using Jint.Native;
 using Jint.Native.Function;
@@ -13,6 +14,7 @@ using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.AI.Embeddings;
@@ -263,10 +265,15 @@ function map(name, lambda) {
                 ProcessMaps(definitions, resolver, maps, mapReferencedCollections, out var collectionFunctions);
                 AssertVectorFieldForMapReduceIndexes(mapReferencedCollections);
 
-                
+                _mapOperations = collectionFunctions.SelectMany(x => x.Value).SelectMany(x => x.Value).ToList();
+
                 ProcessReduce(definition, definitions, resolver, indexVersion);
 
                 ProcessFields(definition, collectionFunctions);
+                
+                HasDynamicFields |= maps.Concat(definition.AdditionalSources?.Values ?? Enumerable.Empty<string>())
+                    .Append(definition.Reduce)
+                    .Any(CallsCreateField);
             }
 
             _javaScriptUtils = new JavaScriptUtils(null, _engine);
@@ -351,6 +358,70 @@ function map(name, lambda) {
             OutputFields = fields.ToArray();
         }
 
+        internal void ValidateFieldsOfMapAndReduceFunctions()
+        {
+            if (ReduceOperation == null)
+                return;
+
+            JavaScriptMapOperation baseline = null;
+
+            foreach (var operation in _mapOperations)
+            {
+                if (operation.HasDynamicReturns || operation.Fields.Count == 0)
+                    continue;
+
+                if (baseline == null)
+                {
+                    baseline = operation;
+                    continue;
+                }
+
+                if (baseline.Fields.SetEquals(operation.Fields) == false)
+                    ThrowFieldsMismatch(baseline.MapString, baseline.Fields, operation.MapString, operation.Fields);
+            }
+
+            if (baseline == null)
+                return;
+
+            foreach (var reduceFields in ReduceOperation.GetStaticallyKnownOutputFields())
+            {
+                if (baseline.Fields.IsSubsetOf(reduceFields) == false)
+                    ThrowReduceMissingFields(baseline.MapString, baseline.Fields, ReduceOperation.ReduceString, reduceFields);
+            }
+
+            foreach (var groupByField in GroupByFields)
+            {
+                if (baseline.Fields.Contains(groupByField.Name) == false)
+                    ThrowIndexCreationException($"is grouping by field '{groupByField.Name}' which is not returned by its map functions. Map fields: {string.Join(", ", baseline.Fields)}");
+            }
+        }
+
+        [DoesNotReturn]
+        private void ThrowFieldsMismatch(string baselineFunction, HashSet<string> baselineFields, string nonMatchingFunction, ICollection<string> nonMatchingFields)
+        {
+            ThrowIndexCreationException($"""
+                                         must return identical fields in all its Map functions.
+                                         Baseline function: {baselineFunction}
+                                         Non matching function: {nonMatchingFunction}
+
+                                         Common fields: {string.Join(", ", baselineFields.Intersect(nonMatchingFields))}
+                                         Missing fields: {string.Join(", ", baselineFields.Except(nonMatchingFields))}
+                                         Additional fields: {string.Join(", ", nonMatchingFields.Except(baselineFields))}
+                                         """);
+        }
+
+        [DoesNotReturn]
+        private void ThrowReduceMissingFields(string mapFunction, HashSet<string> mapFields, string reduceFunction, ICollection<string> reduceFields)
+        {
+            ThrowIndexCreationException($"""
+                                         must return all fields of its Map functions in the Reduce function.
+                                         Map function: {mapFunction}
+                                         Reduce function: {reduceFunction}
+
+                                         Missing fields: {string.Join(", ", mapFields.Except(reduceFields))}
+                                         """);
+        }
+
         private void ProcessReduce(IndexDefinition definition, ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, long indexVersion)
         {
             var reduceObj = definitions.GetOwnProperty(ReduceProperty)?.Value;
@@ -382,6 +453,10 @@ function map(name, lambda) {
         }
 
         private static readonly ParserOptions DefaultParserOptions = new() { Tolerant = true };
+
+        private static bool CallsCreateField(string code) =>
+            string.IsNullOrEmpty(code) == false &&
+            new Parser(DefaultParserOptions).ParseScript(code).DescendantNodes().Any(n => n is CallExpression { Callee: Identifier { Name: "createField" }, Arguments.Count: 3 });
 
         private MapMetadata ExecuteCodeAndCollectReferencedCollections(string code, string additionalSources)
         {
@@ -440,15 +515,31 @@ function map(name, lambda) {
 
             var mapReferencedCollections = new List<MapMetadata>();
             var additionalSources = sb.ToString();
-            foreach (var map in maps)
+            for (var i = 0; i < maps.Count; i++)
             {
-                var result = ExecuteCodeAndCollectReferencedCollections(map, additionalSources);
-                mapReferencedCollections.Add(result);
+                try
+                {
+                    var result = ExecuteCodeAndCollectReferencedCollections(maps[i], additionalSources);
+                    mapReferencedCollections.Add(result);
+                }
+                catch (Exception e)
+                {
+                    IndexCompilationException.ThrowFor(Definition.Name,
+                        $"{e.Message} The map was compiled as JavaScript because it does not start with 'from', 'docs', 'timeSeries' or 'counters'; a C# map must start its enumeration from one of these sources.",
+                        e, nameof(IndexDefinition.Maps), definition.Maps.ElementAt(i));
+                }
             }
 
             if (definition.Reduce != null)
             {
-                _engine.ExecuteWithReset(definition.Reduce);
+                try
+                {
+                    _engine.ExecuteWithReset(definition.Reduce);
+                }
+                catch (Exception e)
+                {
+                    IndexCompilationException.ThrowFor(Definition.Name, e.Message, e, nameof(IndexDefinition.Reduce), definition.Reduce);
+                }
             }
 
             return mapReferencedCollections;
@@ -638,6 +729,7 @@ function loadVector(pathToEmbedding, aiTaskIdentifier, embeddingSourceDocumentId
         protected readonly IndexDefinition Definition;
         internal readonly Engine _engine;
         protected readonly JavaScriptUtils _javaScriptUtils;
+        private readonly List<JavaScriptMapOperation> _mapOperations;
 
         public JavaScriptReduceOperation ReduceOperation { get; private set; }
 

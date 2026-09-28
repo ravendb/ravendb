@@ -83,10 +83,6 @@ builder.Services.AddOpenApi(options =>
     });
 });
 
-// NLog backs RavenLogManager, the way Raven.Server does it in its own Program.Main. The configuration
-// itself is applied after the host is built, once ApplianceOptions.Logs can be read.
-RavenLogManager.Set(RavenNLogLogManager.Instance);
-
 // Nothing bridges ILogger to NLog - everything Quill logs goes through QuillLogger - so the framework's
 // own Microsoft.* and System.* output has nowhere to go. Clearing the providers is what stops the default
 // console one writing it out separately, in its own format, alongside what NLog renders.
@@ -449,4 +445,12 @@ static string GetJsonPropertyName(System.Reflection.PropertyInfo property)
     return JsonNamingPolicy.CamelCase.ConvertName(property.Name);
 }
 
-public partial class Program;
+public partial class Program
+{
+    // RavenLogManager is process-wide, so this runs once per process the way Raven.Server and the test
+    // base do it - as a top-level statement it would re-run on every WebApplicationFactory host boot.
+    static Program()
+    {
+        RavenLogManager.Set(RavenNLogLogManager.Instance);
+    }
+}

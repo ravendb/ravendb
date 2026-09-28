@@ -1,6 +1,7 @@
 import { yupObjectSchema } from "components/utils/yupUtils";
 import {
     AmazonDestination,
+    AzureAuthType,
     AzureDestination,
     BackupConfigurationScript,
     FormDestinationDataBase,
@@ -133,6 +134,17 @@ export const s3Schema = yupObjectSchema<WithoutAmazonAndBase<S3Destination>>({
     .concat(destinationBaseSchema)
     .concat(amazonSchema);
 
+function yupRequiredStringForAzureAuthType(authType: AzureAuthType) {
+    return yup
+        .string()
+        .nullable()
+        .when(["isEnabled", "config", "authType"], {
+            is: (isEnabled: boolean, config: BackupConfigurationScript, selectedAuthType: AzureAuthType) =>
+                isEnabled && !config.isOverrideConfig && selectedAuthType === authType,
+            then: (schema) => schema.required(),
+        });
+}
+
 export const azureSchema = yupObjectSchema<WithoutBase<AzureDestination>>({
     storageContainer: yup
         .string()
@@ -155,8 +167,9 @@ export const azureSchema = yupObjectSchema<WithoutBase<AzureDestination>>({
         }),
     remoteFolderName: yup.string().nullable(),
     accountName: yupRequiredStringForEnabled,
-    accountKey: yupRequiredStringForEnabled,
-    sasToken: yup.string().nullable(),
+    authType: yup.string<AzureAuthType>(),
+    accountKey: yupRequiredStringForAzureAuthType("accountKey"),
+    sasToken: yupRequiredStringForAzureAuthType("sasToken"),
 }).concat(destinationBaseSchema);
 
 const googleCloudSchema = yupObjectSchema<WithoutBase<GoogleCloudDestination>>({

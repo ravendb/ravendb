@@ -30,7 +30,7 @@ export const DefaultDocumentSchema: StoryObj<DefaultDocumentSchemaArgs> = {
         const { databases, accessManager, collectionsTracker, license } = mockStore;
         const { databasesService } = mockServices;
 
-        const db = databases.withActiveDatabase_NonSharded_SingleNode();
+        databases.withActiveDatabase_NonSharded_SingleNode();
         collectionsTracker.with_Collections();
         license.with_License({
             HasSchemaValidation: args.hasLicense,

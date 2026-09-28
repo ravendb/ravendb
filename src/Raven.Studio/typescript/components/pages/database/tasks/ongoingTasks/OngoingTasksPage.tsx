@@ -138,7 +138,6 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps = {
     const { result: taskErrorsResult } = useDatabaseWideAsync(getTaskErrors);
 
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
-    const { forCurrentDatabase } = useAppUrls();
     const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
 
     const fetchTasks = useCallback(

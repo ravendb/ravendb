@@ -22,5 +22,7 @@ public sealed class DiscordOptions
 
     public TimeSpan GatewayRestartDelay { get; set; } = TimeSpan.FromMinutes(5);
 
+    public TimeSpan GatewayStopTimeout { get; set; } = TimeSpan.FromSeconds(10);
+
     public int MaxGatewayFrameBytes { get; set; } = 1024 * 1024;
 }

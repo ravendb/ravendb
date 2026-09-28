@@ -13,6 +13,37 @@ import { mockJQueryError } from "test/mocks/utils";
 import { ServerWideConnectionStringDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsFromDto";
 import TaskErrors = Raven.Server.Documents.TasksErrors.TaskErrors;
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
+import OngoingTaskPullReplicationAsHub = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub;
+
+function handlerIdForLocation(handlerId: string, location: databaseLocationSpecifier) {
+    return [handlerId, location.nodeTag, location.shardNumber].filter((x) => x != null).join("-");
+}
+
+function withLocationSpecificHubHandlerIds(dto: OngoingTasksResult, location: databaseLocationSpecifier) {
+    const result = structuredClone(dto);
+    result.OngoingTasks.forEach((task) => {
+        if (task.TaskType === "PullReplicationAsHub") {
+            const hub = task as OngoingTaskPullReplicationAsHub;
+            hub.HandlerId = handlerIdForLocation(hub.HandlerId, location);
+        }
+    });
+    return result;
+}
+
+function withLocationSpecificProgressHandlerIds(
+    dto: resultsDto<ReplicationTaskProgress>,
+    location: databaseLocationSpecifier
+) {
+    const result = structuredClone(dto);
+    result.Results.forEach((taskProgress) => {
+        taskProgress.ProcessesProgress.forEach((processProgress) => {
+            if (processProgress.HandlerId) {
+                processProgress.HandlerId = handlerIdForLocation(processProgress.HandlerId, location);
+            }
+        });
+    });
+    return result;
+}
 
 export default class MockTasksService extends AutoMockService<TasksService> {
     constructor() {
@@ -20,7 +51,10 @@ export default class MockTasksService extends AutoMockService<TasksService> {
     }
 
     withGetTasks(dto?: MockedValue<OngoingTasksResult>) {
-        return this.mockResolvedValue(this.mocks.getOngoingTasks, dto, TasksStubs.getTasksList());
+        const mockedValue = this.createValue(dto, TasksStubs.getTasksList());
+        return this.mocks.getOngoingTasks.mockImplementation(async (_, location) =>
+            withLocationSpecificHubHandlerIds(mockedValue, location)
+        );
     }
 
     withGetTasksPerLocation(
@@ -33,7 +67,7 @@ export default class MockTasksService extends AutoMockService<TasksService> {
             }
             const dto = TasksStubs.getTasksList();
             customize(dto, location);
-            return dto;
+            return withLocationSpecificHubHandlerIds(dto, location);
         });
     }
 
@@ -46,7 +80,7 @@ export default class MockTasksService extends AutoMockService<TasksService> {
             if (shouldThrow(db, location)) {
                 throw mockJQueryError("This is error message");
             } else {
-                return mockedValue;
+                return withLocationSpecificHubHandlerIds(mockedValue, location);
             }
         });
     }
@@ -56,10 +90,9 @@ export default class MockTasksService extends AutoMockService<TasksService> {
     }
 
     withGetExternalReplicationProgress(dto?: MockedValue<resultsDto<ReplicationTaskProgress>>) {
-        return this.mockResolvedValue(
-            this.mocks.getReplicationProgress,
-            dto,
-            TasksStubs.getExternalReplicationTasksProgress()
+        const mockedValue = this.createValue(dto, TasksStubs.getExternalReplicationTasksProgress());
+        return this.mocks.getReplicationProgress.mockImplementation(async (_, location) =>
+            withLocationSpecificProgressHandlerIds(mockedValue, location)
         );
     }
 
