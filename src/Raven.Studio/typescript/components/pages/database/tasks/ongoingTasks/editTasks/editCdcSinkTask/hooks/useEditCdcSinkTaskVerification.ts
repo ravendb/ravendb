@@ -13,7 +13,7 @@ import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
 import { useRef } from "react";
 import { useAsyncCallback } from "react-async-hook";
-import { UseFormReturn, useWatch } from "react-hook-form";
+import { UseFormReturn, useFormContext, useWatch } from "react-hook-form";
 import CdcTestResult = Raven.Client.Documents.Operations.CdcSink.Test.CdcTestResult;
 
 const verifiedFields = ["connectionStringName", "postgresPublicationName", "postgresSlotName", "tables"] as const;
@@ -29,7 +29,12 @@ export interface EditCdcSinkTaskVerification {
     execute: () => Promise<CdcTestResult>;
     verify: (formData: EditCdcSinkTaskFormData) => Promise<CdcTestResult>;
     getCurrentResult: (formData: EditCdcSinkTaskFormData) => CdcTestResult;
+    isVerificationRequired: (formData: EditCdcSinkTaskFormData) => boolean;
+    getStatus: (inputs: VerifiedInputs) => EditCdcSinkTaskVerificationStatus;
     loading: boolean;
+}
+
+export interface EditCdcSinkTaskVerificationStatus {
     error: Error;
     result: CdcTestResult;
 }
@@ -52,7 +57,7 @@ export function useEditCdcSinkTaskVerification(
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const taskId = useAppSelector(editCdcSinkTaskSelectors.taskId);
     const sqlConnections = useAppSelector(connectionStringSelectors.connectionsByType("Sql"));
-    const { control, getValues, trigger } = editForm;
+    const { formState, getValues, trigger } = editForm;
     const { applyRawViewContent, revealValidationErrors } = useEditCdcSinkTaskRawViewSync(editForm);
 
     const lastVerification = useRef<Verification>(null);
@@ -105,17 +110,42 @@ export function useEditCdcSinkTaskVerification(
     const isCurrent = (inputs: VerifiedInputs) =>
         lastVerification.current != null && isEqual(lastVerification.current.inputs, inputs);
 
-    const getCurrentResult = (formData: EditCdcSinkTaskFormData): CdcTestResult =>
-        isCurrent(pickVerifiedInputs(formData)) ? lastVerification.current.result : null;
+    const getStatus = (inputs: VerifiedInputs): EditCdcSinkTaskVerificationStatus =>
+        isCurrent(inputs)
+            ? { error: asyncVerify.error, result: lastVerification.current.result }
+            : { error: null, result: null };
 
-    const isWatchedCurrent = isCurrent(useWatch({ control, name: verifiedFields }));
+    const getCurrentResult = (formData: EditCdcSinkTaskFormData): CdcTestResult => {
+        const { result } = getStatus(pickVerifiedInputs(formData));
+        return result === requestFailedResult ? null : result;
+    };
+
+    const isVerificationRequired = (formData: EditCdcSinkTaskFormData): boolean => {
+        const isNewTask = taskId == null;
+        const savedInputs = pickVerifiedInputs(formState.defaultValues as EditCdcSinkTaskFormData);
+
+        return isNewTask || !isEqual(pickVerifiedInputs(formData), savedInputs);
+    };
 
     return {
         execute,
         verify: asyncVerify.execute,
         getCurrentResult,
+        isVerificationRequired,
+        getStatus,
         loading: asyncVerify.loading,
-        error: isWatchedCurrent ? asyncVerify.error : null,
-        result: isWatchedCurrent ? lastVerification.current.result : null,
     };
+}
+
+export interface EditCdcSinkTaskWatchedVerification extends EditCdcSinkTaskVerificationStatus {
+    loading: boolean;
+}
+
+export function useEditCdcSinkTaskWatchedVerification(
+    asyncVerify: EditCdcSinkTaskVerification
+): EditCdcSinkTaskWatchedVerification {
+    const { control } = useFormContext<EditCdcSinkTaskFormData>();
+    const status = asyncVerify.getStatus(useWatch({ control, name: verifiedFields }));
+
+    return { loading: asyncVerify.loading, ...status };
 }

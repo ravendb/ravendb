@@ -92,28 +92,38 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
         router.navigate(appUrl.forOngoingTasks(databaseName));
     };
 
+    const isSaveAllowedByVerification = async (formData: EditCdcSinkTaskFormData): Promise<boolean> => {
+        const currentResult = asyncVerify.getCurrentResult(formData);
+
+        if (!currentResult && !asyncVerify.isVerificationRequired(formData)) {
+            return true;
+        }
+
+        const result = currentResult ?? (await asyncVerify.verify(formData));
+
+        if (!result) {
+            return false;
+        }
+
+        if (result.Success && result.Warnings.length === 0) {
+            return true;
+        }
+
+        return await confirm({
+            title: "Save the task configuration anyway?",
+            message: <EditCdcSinkTaskVerificationAlert result={result} />,
+            icon: result.Success ? "warning" : "danger",
+            actionColor: result.Success ? "warning" : "danger",
+            confirmText: "Save anyway",
+            confirmIcon: "save",
+            size: "lg",
+        });
+    };
+
     const handleSubmit: SubmitHandler<EditCdcSinkTaskFormData> = (formData) => {
         return tryHandleSubmit(async () => {
-            const result = asyncVerify.getCurrentResult(formData) ?? (await asyncVerify.verify(formData));
-
-            if (!result) {
+            if (!(await isSaveAllowedByVerification(formData))) {
                 return;
-            }
-
-            if (!result.Success || result.Warnings.length > 0) {
-                const isConfirmed = await confirm({
-                    title: "Save the task configuration anyway?",
-                    message: <EditCdcSinkTaskVerificationAlert result={result} />,
-                    icon: result.Success ? "warning" : "danger",
-                    actionColor: result.Success ? "warning" : "danger",
-                    confirmText: "Save anyway",
-                    confirmIcon: "save",
-                    size: "lg",
-                });
-
-                if (!isConfirmed) {
-                    return;
-                }
             }
 
             await tasksService.saveCdcSinkTask(databaseName, editCdcSinkTaskUtils.mapToDto(formData, taskId));
