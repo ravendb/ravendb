@@ -1331,8 +1331,8 @@ namespace Voron.Data.Fixed
                 // from the one on the right
                 var siblingNum = parentPage.GetEntry(1)->PageNumber;
                 var siblingPage = GetReadOnlyPage(siblingNum);
-                if (siblingPage.PageType != page.PageType)
-                    return null; // we cannot steal from a leaf sibling if we are branch, or vice versa
+                if (siblingPage.PageType != page.PageType || (page.IsBranch && siblingPage.CollapsedLevels != page.CollapsedLevels))
+                    return null; // we cannot steal from a leaf sibling if we are branch, or vice versa, or from a branch of a different height (sibling leaves always sit at the same depth)
 
                 siblingPage = ModifyPage(siblingPage);
 
@@ -1400,8 +1400,8 @@ namespace Voron.Data.Fixed
                 var siblingNum = parentPage.GetEntry(parentPage.LastSearchPosition - 1)->PageNumber;
                 var siblingPage = GetReadOnlyPage(siblingNum);
                 siblingPage = ModifyPage(siblingPage);
-                if (siblingPage.PageType != page.PageType)
-                    return null; // we cannot steal from a leaf sibling if we are branch, or vice versa
+                if (siblingPage.PageType != page.PageType || (page.IsBranch && siblingPage.CollapsedLevels != page.CollapsedLevels))
+                    return null; // we cannot steal from a leaf sibling if we are branch, or vice versa, or from a branch of a different height (sibling leaves always sit at the same depth)
 
                 if (siblingPage.NumberOfEntries <= minNumberOfEntriesBeforeRebalance * 2)
                 {
