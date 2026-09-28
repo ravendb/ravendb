@@ -174,6 +174,7 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
                 <EditCdcSinkTaskFooter
                     asyncVerify={asyncVerify}
                     isDirty={isDirty}
+                    isSubmitting={editForm.formState.isSubmitting}
                     isDisabled={!hasCdcSink}
                     onCancel={cancel}
                 />
