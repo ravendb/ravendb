@@ -1,6 +1,5 @@
 import React, { useEffect } from "react";
 import Card from "react-bootstrap/Card";
-import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
@@ -68,10 +67,7 @@ export default function DocumentExpiration() {
         ],
     });
 
-    const defaultDeleteFrequency =
-        minPeriodForExpirationInHours > 0
-            ? moment.duration(minPeriodForExpirationInHours, "hours").asSeconds()
-            : defaultDeleteFrequencyInSec;
+    const licenseMinDeleteFrequencyInSec = moment.duration(minPeriodForExpirationInHours, "hours").asSeconds();
 
     const effectiveDeleteFrequencyInSec = formValues.isDeleteFrequencyEnabled
         ? formValues.deleteFrequency
@@ -83,8 +79,6 @@ export default function DocumentExpiration() {
         minPeriodForExpirationInHours > 0 &&
         formValues.isDocumentExpirationEnabled &&
         deleteFrequencyInHours < minPeriodForExpirationInHours;
-
-    const deleteFrequencyPlaceholder = getDeleteFrequencyPlaceholder(defaultDeleteFrequency);
 
     useEffect(() => {
         const { unsubscribe } = watch((values, { name }) => {
@@ -112,8 +106,8 @@ export default function DocumentExpiration() {
                 }
                 case "isDeleteFrequencyEnabled": {
                     if (values.isDeleteFrequencyEnabled) {
-                        if (values.deleteFrequency == null) {
-                            setValue("deleteFrequency", defaultDeleteFrequency, { shouldValidate: true });
+                        if (values.deleteFrequency == null && minPeriodForExpirationInHours > 0) {
+                            setValue("deleteFrequency", licenseMinDeleteFrequencyInSec, { shouldValidate: true });
                         }
                     } else {
                         setValue("deleteFrequency", null, { shouldValidate: true });
@@ -123,7 +117,7 @@ export default function DocumentExpiration() {
             }
         });
         return () => unsubscribe();
-    }, [defaultDeleteFrequency, minPeriodForExpirationInHours, setValue, watch]);
+    }, [licenseMinDeleteFrequencyInSec, minPeriodForExpirationInHours, setValue, watch]);
 
     const onSave: SubmitHandler<DocumentExpirationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -180,32 +174,27 @@ export default function DocumentExpiration() {
                                                 Enable Document Expiration
                                             </FormSwitch>
                                             <div>
-                                                <FormSwitch
-                                                    name="isDeleteFrequencyEnabled"
+                                                <OverridableField
                                                     control={control}
+                                                    overrideName="isDeleteFrequencyEnabled"
+                                                    label="Expiration frequency"
                                                     disabled={
                                                         formState.isSubmitting ||
                                                         !formValues.isDocumentExpirationEnabled
                                                     }
                                                 >
-                                                    Set custom expiration frequency
-                                                </FormSwitch>
-                                                <Collapse appear in={formValues.isDeleteFrequencyEnabled}>
-                                                    <div className="pt-3">
+                                                    {({ isDisabled }) => (
                                                         <div data-testid="deleteFrequencyDurationPicker">
                                                             <FormDurationPicker
                                                                 name="deleteFrequency"
                                                                 control={control}
-                                                                disabled={
-                                                                    formState.isSubmitting ||
-                                                                    !formValues.isDeleteFrequencyEnabled
-                                                                }
+                                                                disabled={isDisabled}
                                                                 placeholder={deleteFrequencyPlaceholder}
                                                                 showSeconds
                                                             />
                                                         </div>
-                                                    </div>
-                                                </Collapse>
+                                                    )}
+                                                </OverridableField>
                                                 {isLimitWarningVisible && (
                                                     <RichAlert variant="warning" className="mt-3">
                                                         Your current license does not allow an expiration frequency
@@ -213,28 +202,25 @@ export default function DocumentExpiration() {
                                                     </RichAlert>
                                                 )}
                                             </div>
-                                            <div>
-                                                <OverridableField
-                                                    control={control}
-                                                    overrideName="isLimitMaxItemsToProcessEnabled"
-                                                    label="Max number of documents to process in a single run"
-                                                    disabled={
-                                                        formState.isSubmitting ||
-                                                        !formValues.isDocumentExpirationEnabled
-                                                    }
-                                                    marginClass="mb-0"
-                                                >
-                                                    {({ isOverridden }) => (
-                                                        <FormInput
-                                                            name="maxItemsToProcess"
-                                                            control={control}
-                                                            type="number"
-                                                            disabled={formState.isSubmitting || !isOverridden}
-                                                            addon="items"
-                                                        />
-                                                    )}
-                                                </OverridableField>
-                                            </div>
+                                            <OverridableField
+                                                control={control}
+                                                overrideName="isLimitMaxItemsToProcessEnabled"
+                                                label="Max number of documents to process in a single run"
+                                                disabled={
+                                                    formState.isSubmitting || !formValues.isDocumentExpirationEnabled
+                                                }
+                                            >
+                                                {({ isDisabled }) => (
+                                                    <FormInput
+                                                        name="maxItemsToProcess"
+                                                        control={control}
+                                                        type="number"
+                                                        placeholder="Default (unlimited)"
+                                                        disabled={isDisabled}
+                                                        addon="items"
+                                                    />
+                                                )}
+                                            </OverridableField>
                                         </div>
                                     </Card.Body>
                                 </Card>
@@ -278,6 +264,8 @@ export default function DocumentExpiration() {
         </div>
     );
 }
+
+const deleteFrequencyPlaceholder = getDeleteFrequencyPlaceholder(defaultDeleteFrequencyInSec);
 
 function getDeleteFrequencyPlaceholder(totalSeconds: number) {
     const duration = moment.duration(totalSeconds, "seconds");

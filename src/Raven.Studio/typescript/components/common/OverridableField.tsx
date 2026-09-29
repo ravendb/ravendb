@@ -1,15 +1,22 @@
 import { ReactNode } from "react";
 import { Control, FieldPath, FieldValues, PathValue, UseFormSetValue, useWatch } from "react-hook-form";
-import { FormGroup, FormLabel, FormSwitch } from "components/common/Form";
-import { Icon } from "components/common/Icon";
-import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import Form from "react-bootstrap/Form";
+import { FormSwitch } from "components/common/Form";
+import FieldLabel from "components/common/FieldLabel";
 import { PopoverWithHoverProps } from "components/common/PopoverWithHover";
 import useUniqueId from "components/hooks/useUniqueId";
+import "./OverridableField.scss";
 
 interface ResetOnDisable<TFieldValues extends FieldValues, TValueName extends FieldPath<TFieldValues>> {
     setValue: UseFormSetValue<TFieldValues>;
     valueName: TValueName;
     resetValueTo?: PathValue<TFieldValues, TValueName>;
+}
+
+export interface OverridableFieldRenderState {
+    isOverridden: boolean;
+    isDisabled: boolean;
+    controlId: string;
 }
 
 interface OverridableFieldProps<
@@ -22,10 +29,8 @@ interface OverridableFieldProps<
     label: ReactNode;
     tooltip?: ReactNode;
     tooltipPlacement?: PopoverWithHoverProps["placement"];
-    switchLabel?: ReactNode;
     disabled?: boolean;
-    marginClass?: string;
-    children: (state: { isOverridden: boolean }) => ReactNode;
+    children: (state: OverridableFieldRenderState) => ReactNode;
     resetOnDisable?: ResetOnDisable<TFieldValues, TValueName>;
 }
 
@@ -39,47 +44,45 @@ export default function OverridableField<
     label,
     tooltip,
     tooltipPlacement,
-    switchLabel = "Override",
     disabled,
-    marginClass,
     children,
     resetOnDisable,
 }: OverridableFieldProps<TFieldValues, TOverrideName, TValueName>) {
     const isOverridden = !!useWatch({ control, name: overrideName });
+    const controlId = useUniqueId("overridable-field-control-");
     const labelId = useUniqueId("overridable-field-label-");
+    const switchLabelId = useUniqueId("overridable-field-switch-label-");
 
     return (
-        <FormGroup marginClass={marginClass}>
-            <FormLabel id={labelId}>
+        <Form.Group controlId={controlId}>
+            <FieldLabel id={labelId} tooltip={tooltip} tooltipPlacement={tooltipPlacement}>
                 {label}
-                {tooltip && (
-                    <PopoverWithHoverWrapper message={tooltip} placement={tooltipPlacement}>
-                        <Icon icon="info-new" margin="ms-1" />
-                    </PopoverWithHoverWrapper>
-                )}
-            </FormLabel>
-            <div className="d-flex flex-wrap align-items-center">
-                {children({ isOverridden })}
-                <FormSwitch
-                    control={control}
-                    name={overrideName}
-                    className="ms-2"
-                    disabled={disabled}
-                    aria-labelledby={labelId}
-                    afterChange={(isChecked) => {
-                        if (!isChecked && resetOnDisable) {
-                            const {
-                                setValue,
-                                valueName,
-                                resetValueTo = null as PathValue<TFieldValues, TValueName>,
-                            } = resetOnDisable;
-                            setValue(valueName, resetValueTo, { shouldValidate: true });
-                        }
-                    }}
-                >
-                    {switchLabel}
-                </FormSwitch>
+            </FieldLabel>
+            <div className="d-flex flex-wrap align-items-start gap-2">
+                <div className="overridable-field-control">
+                    {children({ isOverridden, isDisabled: disabled || !isOverridden, controlId })}
+                </div>
+                <div className="overridable-field-switch">
+                    <FormSwitch
+                        control={control}
+                        name={overrideName}
+                        disabled={disabled}
+                        aria-labelledby={`${switchLabelId} ${labelId}`}
+                        afterChange={(isChecked) => {
+                            if (!isChecked && resetOnDisable) {
+                                const {
+                                    setValue,
+                                    valueName,
+                                    resetValueTo = null as PathValue<TFieldValues, TValueName>,
+                                } = resetOnDisable;
+                                setValue(valueName, resetValueTo, { shouldValidate: true });
+                            }
+                        }}
+                    >
+                        <span id={switchLabelId}>Override</span>
+                    </FormSwitch>
+                </div>
             </div>
-        </FormGroup>
+        </Form.Group>
     );
 }

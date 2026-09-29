@@ -166,49 +166,40 @@ export default function DataArchival() {
                                             >
                                                 Enable Data Archival
                                             </FormSwitch>
-                                            <div>
-                                                <OverridableField
-                                                    control={control}
-                                                    overrideName="isArchiveFrequencyEnabled"
-                                                    label="Custom archive frequency"
-                                                    disabled={
-                                                        formState.isSubmitting || !formValues.isDataArchivalEnabled
-                                                    }
-                                                    marginClass="mb-0"
-                                                >
-                                                    {({ isOverridden }) => (
-                                                        <FormInput
-                                                            name="archiveFrequency"
-                                                            control={control}
-                                                            type="number"
-                                                            disabled={formState.isSubmitting || !isOverridden}
-                                                            placeholder="Default (60)"
-                                                            addon="seconds"
-                                                        />
-                                                    )}
-                                                </OverridableField>
-                                            </div>
-                                            <div>
-                                                <OverridableField
-                                                    control={control}
-                                                    overrideName="isLimitMaxItemsToProcessEnabled"
-                                                    label="Max number of documents to process in a single run"
-                                                    disabled={
-                                                        formState.isSubmitting || !formValues.isDataArchivalEnabled
-                                                    }
-                                                    marginClass="mb-0"
-                                                >
-                                                    {({ isOverridden }) => (
-                                                        <FormInput
-                                                            name="maxItemsToProcess"
-                                                            control={control}
-                                                            type="number"
-                                                            disabled={formState.isSubmitting || !isOverridden}
-                                                            addon="items"
-                                                        />
-                                                    )}
-                                                </OverridableField>
-                                            </div>
+                                            <OverridableField
+                                                control={control}
+                                                overrideName="isArchiveFrequencyEnabled"
+                                                label="Archive frequency"
+                                                disabled={formState.isSubmitting || !formValues.isDataArchivalEnabled}
+                                            >
+                                                {({ isDisabled }) => (
+                                                    <FormInput
+                                                        name="archiveFrequency"
+                                                        control={control}
+                                                        type="number"
+                                                        disabled={isDisabled}
+                                                        placeholder="Default (60)"
+                                                        addon="seconds"
+                                                    />
+                                                )}
+                                            </OverridableField>
+                                            <OverridableField
+                                                control={control}
+                                                overrideName="isLimitMaxItemsToProcessEnabled"
+                                                label="Max number of documents to process in a single run"
+                                                disabled={formState.isSubmitting || !formValues.isDataArchivalEnabled}
+                                            >
+                                                {({ isDisabled }) => (
+                                                    <FormInput
+                                                        name="maxItemsToProcess"
+                                                        control={control}
+                                                        type="number"
+                                                        placeholder="Default (unlimited)"
+                                                        disabled={isDisabled}
+                                                        addon="items"
+                                                    />
+                                                )}
+                                            </OverridableField>
                                         </div>
                                     </Card.Body>
                                 </Card>
