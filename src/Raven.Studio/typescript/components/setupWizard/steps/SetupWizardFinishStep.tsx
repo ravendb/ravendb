@@ -681,7 +681,10 @@ function useSetupWizardFinishUtils() {
             Addresses: node.ipAddress.map((x) => x.ipAddress),
             Port: getHttpPort(node.httpPort),
             TcpPort: getTcpPort(node.tcpPort),
-            PublicServerUrl: getServerUrl(node.dnsName, node.httpPort),
+            PublicServerUrl:
+                securityStep.securityOption === "ownCertificate" && !selfSignedCertificateStep.isWildcardCertificate
+                    ? getServerUrl(node)
+                    : null,
             PublicTcpServerUrl: null,
             ExternalIpAddress: node.hasExternalConfig ? node.externalIpAddress : null,
             ExternalPort: node.hasExternalConfig ? node.externalHttpPort : null,
@@ -815,12 +818,14 @@ function useSetupWizardFinishUtils() {
         return port && port !== 443 ? ":" + port : "";
     };
 
-    const getServerUrl = (dnsName: string, port: number) => {
-        if (!dnsName) {
+    const getServerUrl = (node: SetupWizardFormData["nodeAddressStep"]["nodes"][number]) => {
+        if (!node.dnsName) {
             return null;
         }
 
-        let serverUrl = "https://" + dnsName;
+        const port = node.hasExternalConfig && node.externalHttpPort ? node.externalHttpPort : node.httpPort;
+
+        let serverUrl = "https://" + node.dnsName;
         if (port && port !== 443) {
             serverUrl += ":" + port;
         }
@@ -873,7 +878,7 @@ function useSetupWizardFinishUtils() {
                 return "https://" + domain + getPortPart();
             }
 
-            return getServerUrl(localNode.dnsName, localNode.httpPort);
+            return getServerUrl(localNode);
         }
 
         return null;
