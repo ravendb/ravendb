@@ -76,8 +76,7 @@ export default function VirtualTableBodyWrapper<T>({
                 {isScrolledFromTop && (
                     <Button
                         variant="secondary"
-                        size="sm"
-                        className="scroll-to-top rounded-pill floating-bar"
+                        className="scroll-to-top rounded-pill"
                         title="Scroll to top"
                         aria-label="Scroll to top"
                         onClick={() => tableContainerRef.current.scrollTo({ top: 0, behavior: "instant" })}
