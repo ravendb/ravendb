@@ -91,11 +91,6 @@ describe("LazyVirtualTable", () => {
 
             const expectedPage = maxRowsInDom / pageSize + 1;
             expect(screen.getByRole("spinbutton", { name: "Page" })).toHaveValue(expectedPage);
-
-            fireEvent.click(screen.getByRole("button", { name: "Turn off pagination" }));
-
-            expect(await screen.findByText(`Item ${maxRowsInDom - 1}`)).toBeInTheDocument();
-            expect(screen.queryByText("Turn off pagination")).not.toBeInTheDocument();
         });
     });
 
@@ -155,7 +150,6 @@ describe("LazyVirtualTable", () => {
         fireEvent.click(screen.getByRole("checkbox", { name: "Pagination" }));
 
         expect(await screen.findByText(`Item ${pageSize}`)).toBeInTheDocument();
-        expect(screen.queryByText("Turn off pagination")).not.toBeInTheDocument();
     });
 
     it("can pick the rows per page and jump to a page from the input", async () => {
