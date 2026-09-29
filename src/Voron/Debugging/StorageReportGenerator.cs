@@ -330,25 +330,15 @@ namespace Voron.Debugging
 
         public static List<TempBufferReport> GenerateTempBuffersReport(VoronPathSetting tempPath, VoronPathSetting journalPath)
         {
-            var tempFiles = GetFiles(tempPath.FullPath, $"*{StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.BuffersFileExtension}").Select(filePath =>
-            {
-                try
-                {
-                    var file = new FileInfo(filePath);
+            var tempFiles = GetTempBufferReports(tempPath.FullPath,
+                $"*{StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.BuffersFileExtension}", TempBufferType.Scratch);
 
-                    return new TempBufferReport
-                    {
-                        Name = file.Name,
-                        AllocatedSpaceInBytes = file.Length,
-                        Type = TempBufferType.Scratch
-                    };
-                }
-                catch (FileNotFoundException)
-                {
-                    // could be deleted meanwhile
-                    return null;
-                }
-            }).Where(x => x != null).ToList();
+            if (journalPath != null)
+            {
+                var journals = GetTempBufferReports(journalPath.FullPath,
+                    $"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}.*", TempBufferType.RecyclableJournal);
+                tempFiles.AddRange(journals);
+            }
 
             return tempFiles;
 
@@ -362,6 +352,29 @@ namespace Voron.Debugging
                 {
                     return Enumerable.Empty<string>();
                 }
+            }
+
+            List<TempBufferReport> GetTempBufferReports(string path, string searchPattern, TempBufferType type)
+            {
+                return GetFiles(path, searchPattern).Select(filePath =>
+                {
+                    try
+                    {
+                        var file = new FileInfo(filePath);
+
+                        return new TempBufferReport
+                        {
+                            Name = file.Name,
+                            AllocatedSpaceInBytes = file.Length,
+                            Type = type
+                        };
+                    }
+                    catch (FileNotFoundException)
+                    {
+                        // could be deleted meanwhile
+                        return null;
+                    }
+                }).Where(x => x != null).ToList();
             }
         }
 

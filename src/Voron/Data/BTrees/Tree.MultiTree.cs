@@ -235,7 +235,7 @@ namespace Voron.Data.BTrees
             }
 
             var page = FindPageFor(key, out _);
-            if (page == null || page.LastMatch != 0)
+            if (page.IsValid == false || page.LastMatch != 0)
             {
                 MultiAddOnNewValue(key, value, Constants.Tree.NodeMaxSize);
                 return;
@@ -443,7 +443,7 @@ namespace Voron.Data.BTrees
         public void MultiDelete(Slice key, Slice value)
         {
             var page = FindPageFor(key, out TreeNodeHeader* _);
-            if (page == null || page.LastMatch != 0)
+            if (page.IsValid == false || page.LastMatch != 0)
             {
                 return; //nothing to delete - key not found
             }
@@ -510,7 +510,7 @@ namespace Voron.Data.BTrees
         public long MultiCount(Slice key)
         {
             var page = FindPageFor(key, out TreeNodeHeader* node);
-            if (page == null || page.LastMatch != 0)
+            if (page.IsValid == false || page.LastMatch != 0)
                 return 0;
 
             Debug.Assert(node != null);
@@ -538,7 +538,7 @@ namespace Voron.Data.BTrees
         public IIterator MultiRead(Slice key)
         {
             var page = FindPageFor(key, out TreeNodeHeader* node);
-            if (page == null || page.LastMatch != 0)
+            if (page.IsValid == false || page.LastMatch != 0)
                 return new EmptyIterator();
 
             Debug.Assert(node != null);

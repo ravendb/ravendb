@@ -191,7 +191,7 @@ namespace FastTests.Voron.ScratchBuffer
                 txw.Commit();
             }
 
-            var count = Env.WriteTransactionPool.ScratchPagesInUse.Count;
+            var count = Env.CurrentStateRecord.ScratchPagesTable.Count;
 
             Assert.True(count > 100, $"expected the committed pages to still be in the scratch pages table, but it holds {count} of them");
 

@@ -6,6 +6,7 @@
 
 #include <sys/param.h>
 #include <sys/mount.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <string.h>
@@ -96,6 +97,39 @@ rvn_sync_pager(void *handle,
     return SUCCESS;
 }
 
+PRIVATE int32_t
+_writeback_supported(struct handle *handle_ptr)
+{
+    /* msync needs a mapping; the F_FULLFSYNC barrier is unaffected either way */
+    return handle_ptr->read_address != NULL || handle_ptr->write_address != NULL;
+}
+
+PRIVATE int32_t
+_writeback_range_start(struct handle *handle_ptr, int64_t offset, int64_t length, int32_t *detailed_error_code)
+{
+    if ((uint64_t)offset >= handle_ptr->allocation_size)
+        return SUCCESS;
+    length = rvn_min(length, (int64_t)handle_ptr->allocation_size - offset);
+    char *address = (char *)(handle_ptr->write_address != NULL ? handle_ptr->write_address : handle_ptr->read_address) + offset;
+    if (msync(address, (size_t)length, MS_ASYNC))
+    {
+        *detailed_error_code = errno;
+        return FAIL_SYNC_FILE;
+    }
+    return SUCCESS;
+}
+
+PRIVATE int32_t
+_writeback_range_complete(struct handle *handle_ptr, int64_t offset, int64_t length, int32_t *detailed_error_code)
+{
+    /* MS_ASYNC has no completion to wait on */
+    (void)handle_ptr;
+    (void)offset;
+    (void)length;
+    (void)detailed_error_code;
+    return SUCCESS;
+}
+
 int32_t
 rvn_one_time_init(int32_t *detailed_error_code)
 {
@@ -117,8 +151,9 @@ rvn_writer rvn_get_writer(void *handle)
 }
 
 EXPORT int32_t
-rvn_write_journal(void *handle, struct journal_entry *buffer, int64_t count_of_entries, int64_t offset, int32_t *detailed_error_code)
+rvn_write_journal(void *handle, void *context, struct journal_entry *buffer, int64_t count_of_entries, int64_t offset, int32_t *detailed_error_code)
 {
+    (void)context; // context is unused in posix
     struct journal_handle *jfh = (struct journal_handle *)handle;
     for (size_t i = 0; i < count_of_entries; i++)
     {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -188,9 +188,9 @@ namespace Raven.Server.NotificationCenter
             if (table == null)
                 yield break;
 
-            foreach (var tvr in table.SeekForwardFrom(Documents.Schemas.Notifications.Current.Indexes[Documents.Schemas.Notifications.ByCreatedAt], Slices.BeforeAllKeys, 0))
+            foreach (var tvr in table.SeekForwardFrom(Raven.Server.Documents.Schemas.Notifications.ByCreatedAtIndex, Slices.BeforeAllKeys, 0))
             {
-                yield return Read(context, ref tvr.Result.Reader);
+                yield return Read(context, tvr.Result);
             }
         }
 
@@ -207,9 +207,9 @@ namespace Raven.Server.NotificationCenter
             
             using (Slice.External(context.Transaction.InnerTransaction.Allocator, (byte*)&notificationTypeSwapped, sizeof(long), out Slice typeSlice))
             {
-                foreach (var tvr in table.SeekForwardFrom(Documents.Schemas.Notifications.Current.Indexes[Documents.Schemas.Notifications.ByType], typeSlice, 0))
+                foreach (var tvr in table.SeekForwardFrom(Raven.Server.Documents.Schemas.Notifications.ByTypeIndex, typeSlice, 0))
                 {
-                    var notification = Read(context, ref tvr.Result.Reader);
+                    var notification = Read(context, tvr.Result);
                     
                     if (notification.Type != notificationTypeSwapped)
                         break;
@@ -240,9 +240,9 @@ namespace Raven.Server.NotificationCenter
             if (table == null)
                 yield break;
 
-            foreach (var tvr in table.SeekForwardFrom(Documents.Schemas.Notifications.Current.Indexes[Documents.Schemas.Notifications.ByPostponedUntil], Slices.BeforeAllKeys, 0))
+            foreach (var tvr in table.SeekForwardFrom(Raven.Server.Documents.Schemas.Notifications.ByPostponedUntilIndex, Slices.BeforeAllKeys, 0))
             {
-                var action = Read(context, ref tvr.Result.Reader);
+                var action = Read(context, tvr.Result);
 
                 if (action.PostponedUntil == null)
                 {
@@ -277,7 +277,7 @@ namespace Raven.Server.NotificationCenter
                 if (table.ReadByKey(slice, out TableValueReader tvr) == false)
                     return null;
 
-                return Read(context, ref tvr);
+                return Read(context, tvr);
             }
         }
 
@@ -289,7 +289,7 @@ namespace Raven.Server.NotificationCenter
             {
                 foreach (var notification in table.SeekByPrimaryKeyPrefix(prefixSlice, prefixSlice, skip: 0))
                 {
-                    yield return Read(context, ref notification.Value.Reader);
+                    yield return Read(context, notification.Value);
                 }
             }
         }
@@ -365,7 +365,7 @@ namespace Raven.Server.NotificationCenter
             return count;
         }
 
-        private NotificationTableValue Read(JsonOperationContext context, ref TableValueReader reader)
+        private NotificationTableValue Read(JsonOperationContext context, in TableValueReader reader)
         {
             var createdAt = new DateTime(Bits.SwapBytes(*(long*)reader.Read(Documents.Schemas.Notifications.NotificationsTable.CreatedAtIndex, out _)));
 

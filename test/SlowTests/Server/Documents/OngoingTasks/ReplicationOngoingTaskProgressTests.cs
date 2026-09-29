@@ -530,6 +530,10 @@ namespace SlowTests.Server.Documents.OngoingTasks
                 if (result.ProcessesProgress[0].DestinationChangeVector == null)
                     return false;
 
+                // asserted below - the progress record publishes it separately, so wait for it too
+                if (result.ProcessesProgress[0].SourceChangeVector == null)
+                    return false;
+
                 return true;
             }, true);
 

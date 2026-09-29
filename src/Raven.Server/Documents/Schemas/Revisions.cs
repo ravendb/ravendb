@@ -1,4 +1,4 @@
-﻿using Raven.Server.Documents.Revisions;
+using Raven.Server.Documents.Revisions;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
@@ -63,6 +63,16 @@ namespace Raven.Server.Documents.Schemas
             FullChangeVector = 12,
         }
 
+        internal static readonly TableSchema.FixedSizeKeyIndexDef AllRevisionsEtagsIndex;
+
+        // one instance per logical index, shared by the base, compressed and sharding variants, so that
+        // the call sites can reference it directly instead of hashing the name out of the schema
+        internal static readonly TableSchema.IndexDef IdAndEtagIndex;
+        internal static readonly TableSchema.IndexDef DeleteRevisionEtagIndex;
+        internal static readonly TableSchema.IndexDef ResolvedFlagByEtagIndex;
+        internal static readonly TableSchema.DynamicKeyIndexDef RevisionsBucketAndEtagIndex;
+        internal static readonly TableSchema.FixedSizeKeyIndexDef CollectionRevisionsEtagsIndex;
+
         static Revisions()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -78,6 +88,52 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, RevisionsTombstones, ByteStringType.Immutable, out RevisionsTombstonesSlice);
                 Slice.From(ctx, CollectionName.GetTablePrefix(CollectionTableType.Revisions), ByteStringType.Immutable, out RevisionsPrefix);
 
+                AllRevisionsEtagsIndex = new TableSchema.FixedSizeKeyIndexDef
+                {
+                    StartIndex = (int)RevisionsTable.Etag,
+                    Name = AllRevisionsEtagsSlice,
+                    IsGlobal = true
+                };
+
+                CollectionRevisionsEtagsIndex = new TableSchema.FixedSizeKeyIndexDef
+                {
+                    StartIndex = (int)RevisionsTable.Etag,
+                    Name = CollectionRevisionsEtagsSlice
+                };
+
+            IdAndEtagIndex = new TableSchema.IndexDef
+            {
+                StartIndex = (int)RevisionsTable.LowerId,
+                Count = 3,
+                Name = IdAndEtagSlice,
+                IsGlobal = true
+            };
+
+            DeleteRevisionEtagIndex = new TableSchema.IndexDef
+            {
+                StartIndex = (int)RevisionsTable.DeletedEtag,
+                Count = 1,
+                Name = DeleteRevisionEtagSlice,
+                IsGlobal = true
+            };
+
+            ResolvedFlagByEtagIndex = new TableSchema.IndexDef
+            {
+                StartIndex = (int)RevisionsTable.Resolved,
+                Count = 2,
+                Name = ResolvedFlagByEtagSlice,
+                IsGlobal = true
+            };
+
+            RevisionsBucketAndEtagIndex = new TableSchema.DynamicKeyIndexDef
+            {
+                GenerateKey = RevisionsStorage.GenerateBucketAndEtagIndexKeyForRevisions,
+                OnEntryChanged = RevisionsStorage.UpdateBucketStatsForRevisions,
+                IsGlobal = true,
+                Name = RevisionsBucketAndEtagSlice
+            };
+
+
                 DefineIndexesForRevisionsSchema(RevisionsSchemaBase, changeVectorSlice);
                 DefineIndexesForRevisionsSchema(CompressedRevisionsSchemaBase, changeVectorSlice);
 
@@ -85,14 +141,14 @@ namespace Raven.Server.Documents.Schemas
                 DefineIndexesForShardingRevisionsSchemaBase(ShardingCompressedRevisionsSchemaBase, changeVectorSlice);
 
                 RevisionsSchemaBase.CompressValues(
-                    RevisionsSchemaBase.FixedSizeIndexes[CollectionRevisionsEtagsSlice], compress: false);
+                    CollectionRevisionsEtagsIndex, compress: false);
                 CompressedRevisionsSchemaBase.CompressValues(
-                    CompressedRevisionsSchemaBase.FixedSizeIndexes[CollectionRevisionsEtagsSlice], compress: true);
+                    CollectionRevisionsEtagsIndex, compress: true);
 
                 ShardingRevisionsSchemaBase.CompressValues(
-                    ShardingRevisionsSchemaBase.FixedSizeIndexes[CollectionRevisionsEtagsSlice], compress: false);
+                    CollectionRevisionsEtagsIndex, compress: false);
                 ShardingCompressedRevisionsSchemaBase.CompressValues(
-                    ShardingCompressedRevisionsSchemaBase.FixedSizeIndexes[CollectionRevisionsEtagsSlice], compress: true);
+                    CollectionRevisionsEtagsIndex, compress: true);
 
             }
         }
@@ -106,51 +162,18 @@ namespace Raven.Server.Documents.Schemas
                 Name = changeVectorSlice,
                 IsGlobal = true
             });
-            revisionsSchema.DefineIndex(new TableSchema.IndexDef
-            {
-                StartIndex = (int)RevisionsTable.LowerId,
-                Count = 3,
-                Name = IdAndEtagSlice,
-                IsGlobal = true
-            });
-            revisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-            {
-                StartIndex = (int)RevisionsTable.Etag,
-                Name = AllRevisionsEtagsSlice,
-                IsGlobal = true
-            });
-            revisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-            {
-                StartIndex = (int)RevisionsTable.Etag,
-                Name = CollectionRevisionsEtagsSlice
-            });
-            revisionsSchema.DefineIndex(new TableSchema.IndexDef
-            {
-                StartIndex = (int)RevisionsTable.DeletedEtag,
-                Count = 1,
-                Name = DeleteRevisionEtagSlice,
-                IsGlobal = true
-            });
-            revisionsSchema.DefineIndex(new TableSchema.IndexDef
-            {
-                StartIndex = (int)RevisionsTable.Resolved,
-                Count = 2,
-                Name = ResolvedFlagByEtagSlice,
-                IsGlobal = true
-            });
+            revisionsSchema.DefineIndex(IdAndEtagIndex);
+            revisionsSchema.DefineFixedSizeIndex(AllRevisionsEtagsIndex);
+            revisionsSchema.DefineFixedSizeIndex(CollectionRevisionsEtagsIndex);
+            revisionsSchema.DefineIndex(DeleteRevisionEtagIndex);
+            revisionsSchema.DefineIndex(ResolvedFlagByEtagIndex);
         }
 
         private static void DefineIndexesForShardingRevisionsSchemaBase(TableSchema schema, Slice changeVectorSlice)
         {
             DefineIndexesForRevisionsSchema(schema, changeVectorSlice);
 
-            schema.DefineIndex(new TableSchema.DynamicKeyIndexDef
-            {
-                GenerateKey = RevisionsStorage.GenerateBucketAndEtagIndexKeyForRevisions,
-                OnEntryChanged = RevisionsStorage.UpdateBucketStatsForRevisions,
-                IsGlobal = true,
-                Name = RevisionsBucketAndEtagSlice
-            });
+            schema.DefineIndex(RevisionsBucketAndEtagIndex);
         }
     }
 }

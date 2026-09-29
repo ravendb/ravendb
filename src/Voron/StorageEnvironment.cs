@@ -41,6 +41,7 @@ using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
 using Voron.Logging;
+using Sparrow.Server.Platform;
 using Voron.Schema;
 using Voron.Util;
 using Voron.Util.Conversion;
@@ -93,6 +94,8 @@ namespace Voron
         private readonly StorageEnvironmentOptions _options;
 
         public readonly ActiveTransactions ActiveTransactions = new ActiveTransactions();
+
+        internal ScratchPagesTable ScratchPagesTable { get; }
 
         private readonly Pager _dataPager;
 
@@ -152,6 +155,8 @@ namespace Voron
                 SelfReference.WeekReference = new WeakReference<StorageEnvironment>(this);
                 _log = RavenLogManager.Instance.GetLoggerForVoron<StorageEnvironment>(options, options.BasePath.FullPath);
                 _options = options;
+                WriteFlow = new WriteFlowPolicy(options);
+                ScratchPagesTable = new ScratchPagesTable(ActiveTransactions);
                 (_dataPager, var dataPagerState) = options.InitializeDataPager();
                 _freeSpaceHandling = new FreeSpaceHandling(options.DisableSparseRegions);
                 _headerAccessor = new HeaderAccessor(this);
@@ -161,10 +166,11 @@ namespace Voron
                     dataPagerState,
                     0,
                     -1,
-                    ImmutableDictionary<long, PageFromScratchBuffer>.Empty, 
-                    default(TreeRootHeader), 
+                    ScratchPagesSnapshot.Empty,
+                    default(TreeRootHeader),
                     -1,
                     (-1, -1),
+                    [],
                     null,
                     null);
                 
@@ -266,6 +272,8 @@ namespace Voron
                             GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(env);
                         else if (env.Journal.Applicator.ShouldSync)
                             env.SuggestSyncDataFile();
+                        else if (env.HasBeenIdleLongEnoughToPunchSparseRegions())
+                            env.Journal.Applicator.PunchPendingSparseRegionsOnIdle();
 
                         return true;
                     }
@@ -319,6 +327,8 @@ namespace Voron
             if (hadIntegrityIssues)
             {
                 var message = _journal.Files.Count == 0 ? "Unrecoverable database" : "Database recovered partially. Some data was lost.";
+                if (_journal.PartialRecoveryDetails != null)
+                    message += " " + _journal.PartialRecoveryDetails;
 
                 _options.InvokeRecoveryError(this, message, null);
             }
@@ -339,6 +349,7 @@ namespace Voron
                 NextPageNumber = nextPageNumber,
                 FlushedToJournal = lastJournalNumber
             };
+            _durableTransactionId = _currentStateRecord.TransactionId;
             var transactionPersistentContext = new TransactionPersistentContext(true);
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             using (var writeTx = new Transaction(tx))
@@ -536,6 +547,8 @@ namespace Voron
 
         public long NextPageNumber => _currentStateRecord.NextPageNumber;
 
+        internal Action DurableCommitAcknowledged;
+
         public StorageEnvironmentOptions Options => _options;
 
         public WriteAheadJournal Journal => _journal;
@@ -544,6 +557,8 @@ namespace Voron
         {
             if (_envDispose.IsSet)
                 return; // already disposed
+
+            using var audit = DisposeAudit.BeginOrStep($"StorageEnvironment '{Options.BasePath}'");
 
             _cancellationTokenSource.SafeCancel(_log, $"Disposing {Options}");
             try
@@ -566,7 +581,11 @@ namespace Voron
                             // if we are here, then we didn't get the flush lock, so it is currently being run
                             // we need to wait for it to complete (so we won't be shutting down the db while we
                             // are flushing and maybe access invalid memory.
-                            using (_journal.Applicator.TakeFlushingLock())
+                            IDisposable flushingLock;
+                            using (DisposeAudit.Step("take the flushing lock"))
+                                flushingLock = _journal.Applicator.TakeFlushingLock();
+
+                            using (flushingLock)
                             {
                                 // when we are here, we know that we aren't flushing, and we can dispose,
                                 // any future calls to flush will abort because we are marked as disposed
@@ -597,19 +616,20 @@ namespace Voron
 
                 _options.NullifyHandlers();
 
-                foreach (var disposable in new IDisposable[]
+                foreach (var (name, disposable) in new (string, IDisposable)[]
                 {
-                    _journal,
-                    _headerAccessor,
-                    _scratchBufferPool,
-                    _currentStateRecord?.DataPagerState,
-                    _dataPager,
-                    _options.OwnsPagers ? _options : null,
+                    ("journal", _journal),
+                    ("header accessor", _headerAccessor),
+                    ("scratch buffer pool", _scratchBufferPool),
+                    ("data pager state", _currentStateRecord?.DataPagerState),
+                    ("data pager", _dataPager),
+                    ("options", _options.OwnsPagers ? _options : null),
                 })
                 {
                     try
                     {
-                        disposable?.Dispose();
+                        using (DisposeAudit.Step(name))
+                            disposable?.Dispose();
                     }
                     catch (Exception e)
                     {
@@ -627,7 +647,12 @@ namespace Voron
         private void MoveEnvironmentToDisposeState()
         {
             _envDispose.Signal(); // release the owner count
-            if (_envDispose.Wait(Options.DisposeWaitTime) == false)
+
+            bool disposed;
+            using (DisposeAudit.Step("wait for the active transactions"))
+                disposed = _envDispose.Wait(Options.DisposeWaitTime);
+
+            if (disposed == false)
             {
                 if (_envDispose.TryAddCount(1))
                 // try restore the previous signal, if it failed, the _envDispose is signaled
@@ -675,8 +700,6 @@ namespace Voron
                 _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
                 LowLevelTransaction tx = new(previous.LowLevelTransaction, transactionPersistentContext, context);
-
-                ActiveTransactions.Add(tx);
 
                 return new Transaction(tx);
             }
@@ -753,8 +776,6 @@ namespace Voron
                 tx.CurrentTransactionIdHolder = flags == TransactionFlags.ReadWrite ? 
                     _currentWriteTransactionIdHolder : 
                     Environment.CurrentManagedThreadId;
-
-                ActiveTransactions.Add(tx);
 
                 InvokeNewTransactionCreated(tx);
 
@@ -902,13 +923,8 @@ namespace Voron
         {
             if (tx.WrittenToJournalNumber >= 0)
             {
-                var totalPages = 0;
-                foreach (var page in tx.GetTransactionPages())
-                {
-                    totalPages += page.NumberOfPages;
-                }
-
-                Interlocked.Add(ref Journal.Applicator.TotalCommittedSinceLastFlushPages, totalPages);
+                tx.VerifyPagesCountIncludingAllOverflowPages();
+                Interlocked.Add(ref Journal.Applicator.TotalCommittedSinceLastFlushPages, tx.PagesCountIncludingAllOverflowPages);
 
                 GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
             }
@@ -942,6 +958,7 @@ namespace Voron
             }
 
             long tempBuffers = 0;
+            long tempRecyclableJournals = 0;
 
             if (includeTempBuffers)
             {
@@ -954,6 +971,9 @@ namespace Voron
                     {
                         case TempBufferType.Scratch:
                             tempBuffers += file.AllocatedSpaceInBytes;
+                            break;
+                        case TempBufferType.RecyclableJournal:
+                            tempRecyclableJournals += file.AllocatedSpaceInBytes;
                             break;
                         default:
                             throw new InvalidOperationException($"Unknown temp file type: {file.Type}");
@@ -968,6 +988,7 @@ namespace Voron
                 JournalsInBytes = journalsSize,
                 HardLinkedJournalsInBytes = hardLinkedJournalsSize,
                 TempBuffersInBytes = tempBuffers,
+                TempRecyclableJournalsInBytes = tempRecyclableJournals,
             };
         }
 
@@ -1494,7 +1515,7 @@ namespace Voron
             }
         }
 
-        private InMemoryStorageState.ScratchTableDetails GetScratchTableSummary(ImmutableDictionary<long, PageFromScratchBuffer> scratchTable)
+        private InMemoryStorageState.ScratchTableDetails GetScratchTableSummary(ScratchPagesSnapshot scratchTable)
         {
             var maxAllocatedInTransaction = long.MinValue;
             var minAllocatedInTransaction = long.MaxValue;
@@ -1551,6 +1572,9 @@ namespace Voron
                 };
             }
         }
+
+        public WriteFlowPolicy WriteFlow { get; }
+
 
         internal void BackgroundFlushWritesToDataFile()
         {
@@ -1702,10 +1726,32 @@ namespace Voron
             return Hashing.Streamed.XXHash64.End(ref ctx);
         }
 
-        public void Cleanup()
+        public void Cleanup(bool tryCleanupRecycledJournals = false)
         {
             Journal.TryReduceSizeOfCompressionBufferIfNeeded();
             ScratchBufferPool.Cleanup();
+            CleanupScratchPagesTable();
+
+            if (tryCleanupRecycledJournals)
+                Options.TryCleanupRecycledJournals();
+        }
+
+        private void CleanupScratchPagesTable()
+        {
+            if (ScratchPagesTable.RacyIdleCleanupRequired() == false)
+                return;
+
+            try
+            {
+                using (var txw = NewLowLevelTransaction(new TransactionPersistentContext(), TransactionFlags.ReadWrite, timeout: TimeSpan.Zero))
+                {
+                    ScratchPagesTable.IdleCleanup();
+                    txw.Commit();
+                }
+            }
+            catch (TimeoutException)
+            {
+            }
         }
 
         public override string ToString()
@@ -1721,6 +1767,16 @@ namespace Voron
         public void ResetLastWorkTime()
         {
             LastWorkTime = DateTime.MinValue;
+        }
+
+        internal bool HasBeenIdleLongEnoughToPunchSparseRegions()
+        {
+            // Idle fires within seconds of last write, which is too soon for expensive FSCTL hole punch on Windows. 
+            // We need to wait for a longer period to be sure that we can run this without impacting theperformance in an observable manner.
+            if (Options.PunchSparseRegionsOnIdleOnly == false)
+                return true;
+
+            return DateTime.UtcNow - LastWorkTime >= Options.TimeToPunchSparseRegionsAfterIdle;
         }
 
         [DoesNotReturn]
@@ -1770,15 +1826,20 @@ namespace Voron
         {
             // we must be running under the write lock
             Debug.Assert(tx.Flags is TransactionFlags.ReadWrite,"tx.Flags is TransactionFlags.ReadWrite");
-            Debug.Assert(tx.ModifiedPagesInTransaction != null, "tx.ModifiedPagesInTransaction != null");
+            Debug.Assert(tx.ScratchTableSnapshot.IsValid, "tx.ScratchTableSnapshot.IsValid");
             EnvironmentStateRecord currentStateRecord = tx.CurrentStateRecord;
+
+            // we may want to update the state of the transaction (scratch table, data pager state, etc)
+            // without incrementing the transaction id, since we didn't commit a transaction to the journal
+            var publishedTransactionId = tx.WrittenToJournalNumber == -1 ? currentStateRecord.TransactionId - 1 : currentStateRecord.TransactionId;
+            Debug.Assert(tx.ScratchTableSnapshot.VisibleAsOfSeq > currentStateRecord.ScratchPagesTable.VisibleAsOfSeq,
+                "Every published record must carry a strictly higher scratch publish sequence than its predecessor");
             var updatedState = currentStateRecord with
             {
-                // we may want to update the state of the transaction (scratch table, data pager state, etc)
-                // without incrementing the transaction id, since we didn't commit a transaction to the journal
-                TransactionId = tx.WrittenToJournalNumber == -1 ? currentStateRecord.TransactionId-1 : currentStateRecord.TransactionId,
+                TransactionId = publishedTransactionId,
                 FlushedToJournal = tx.WrittenToJournalNumber == -1 ? currentStateRecord.FlushedToJournal : tx.WrittenToJournalNumber,
-                ScratchPagesTable = tx.ModifiedPagesInTransaction,
+                ScratchPagesTable = tx.ScratchTableSnapshot,
+                PagesAllocatedInTransaction = tx.WrittenToJournalNumber == -1 ? [] : tx.GetTransactionPages(),
                 NextPageNumber = tx.GetNextPageNumber(),
                 Root = tx.RootObjects.ReadHeader(),
                 DataPagerState = tx.DataPagerState,
@@ -1794,6 +1855,78 @@ namespace Voron
                 _transactionsToFlush.Enqueue(updatedState);
             }
         }
+
+        private readonly object _durabilityLock = new();
+        private long _durableTransactionId;
+        private long _submittedJournalTransactionId = -1;
+        private int _durabilityWaiters;
+        private ExceptionDispatchInfo _durabilityFailure;
+
+        internal long DurableTransactionId => Volatile.Read(ref _durableTransactionId);
+
+        internal void RecordJournalWriteSubmitted(long transactionId) =>
+            ThreadingHelper.InterlockedExchangeMax(ref _submittedJournalTransactionId, transactionId);
+
+        internal void MarkJournalWriteDurable(long transactionId)
+        {
+            if (ThreadingHelper.InterlockedExchangeMax(ref _durableTransactionId, transactionId) == false)
+                return; // a later transaction is already durable, so there is nothing to announce
+
+            // paired with the increment in WaitForCommitDurabilityBlocking - each side fences between publishing
+            // its own value and reading the other's, so we cannot both miss and leave a waiter parked
+            if (Volatile.Read(ref _durabilityWaiters) == 0)
+                return;
+
+            lock (_durabilityLock)
+                Monitor.PulseAll(_durabilityLock);
+        }
+
+        internal void MarkJournalWriteFailed(ExceptionDispatchInfo error)
+        {
+            lock (_durabilityLock)
+            {
+                _durabilityFailure ??= error;
+
+                Monitor.PulseAll(_durabilityLock);
+            }
+        }
+
+        internal void WaitForCommitDurability(long gateTransactionId)
+        {
+            // by far the common case - the journal write covering this transaction is already on disk
+            if (Volatile.Read(ref _durableTransactionId) >= gateTransactionId)
+                return;
+
+            WaitForCommitDurabilityBlocking(gateTransactionId);
+        }
+
+        private void WaitForCommitDurabilityBlocking(long gateTransactionId)
+        {
+            Interlocked.Increment(ref _durabilityWaiters);
+            try
+            {
+                lock (_durabilityLock)
+                {
+                    while (IsCommitDurable(gateTransactionId) == false)
+                    {
+                        _durabilityFailure?.Throw();
+
+                        Monitor.Wait(_durabilityLock);
+                    }
+
+                    if (Volatile.Read(ref _durableTransactionId) < gateTransactionId)
+                        _durabilityFailure?.Throw();
+                }
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _durabilityWaiters);
+            }
+        }
+
+        private bool IsCommitDurable(long gateTransactionId) =>
+            Volatile.Read(ref _durableTransactionId) >= gateTransactionId ||
+            Volatile.Read(ref _submittedJournalTransactionId) < gateTransactionId;
 
         private readonly List<PageFromScratchBuffer> _cachedScratchBuffers = [];
         private EnvironmentStateRecord _lastPeekedRecord = null;
@@ -1858,10 +1991,10 @@ namespace Voron
                     sparseRegions.AddRange(record.SparseRegions);
                 }
 
-                foreach (var (_, pageFromScratch) in record.ScratchPagesTable)
+                foreach (var pageFromScratch in record.PagesAllocatedInTransaction)
                 {
-                    if (pageFromScratch.AllocatedInTransaction != record.TransactionId)
-                        continue;
+                    Debug.Assert(pageFromScratch.AllocatedInTransaction == record.TransactionId,
+                        "pageFromScratch.AllocatedInTransaction == record.TransactionId");
                     scratchBuffers.Add(pageFromScratch);
                 }
 

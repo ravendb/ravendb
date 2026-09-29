@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -98,7 +98,7 @@ namespace SlowTests.Issues
                 var table = new Table(revisionsStorage.RevisionsSchema, context.Transaction.InnerTransaction);
                 var voronIndex = revisionsStorage.RevisionsSchema.FixedSizeIndexes[Revisions.AllRevisionsEtagsSlice];
                 var tvhs = table.SeekBackwardFrom(voronIndex, endEtag);
-                var revisions = tvhs.Select(tvh => RevisionsStorage.TableValueToRevision(context, ref tvh.Reader, DocumentFields.ChangeVector)).ToList();
+                var revisions = tvhs.Select(tvh => RevisionsStorage.TableValueToRevision(context, tvh, DocumentFields.ChangeVector)).ToList();
 
                 if (empty)
                 {
@@ -131,7 +131,7 @@ namespace SlowTests.Issues
                 var table = new Table(revisionsStorage.RevisionsSchema, context.Transaction.InnerTransaction);
                 var voronIndex = revisionsStorage.RevisionsSchema.Indexes[Revisions.IdAndEtagSlice];
                 var trvs = table.SeekBackwardFrom(voronIndex, prefixSlice, compoundPrefix, 0);
-                var revisions = trvs.Select(tvr => RevisionsStorage.TableValueToRevision(context, ref tvr.Result.Reader, DocumentFields.ChangeVector)).ToList();
+                var revisions = trvs.Select(tvr => RevisionsStorage.TableValueToRevision(context, tvr.Result, DocumentFields.ChangeVector)).ToList();
 
                 if (empty)
                 {
@@ -163,7 +163,7 @@ namespace SlowTests.Issues
                 var table = new Table(revisionsStorage.RevisionsSchema, context.Transaction.InnerTransaction);
                 var voronIndex = revisionsStorage.RevisionsSchema.Indexes[Revisions.IdAndEtagSlice];
                 var trvs = table.SeekBackwardFrom(voronIndex, prefixSlice, Slices.AfterAllKeys, 0);
-                var revisions = trvs.Select(tvr => RevisionsStorage.TableValueToRevision(context, ref tvr.Result.Reader, DocumentFields.ChangeVector)).ToList();
+                var revisions = trvs.Select(tvr => RevisionsStorage.TableValueToRevision(context, tvr.Result, DocumentFields.ChangeVector)).ToList();
 
                 if (empty)
                 {

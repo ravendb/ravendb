@@ -318,7 +318,7 @@ namespace Raven.Server.Documents
         {
             foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixes.HashComposite, Slices.Empty, 0))
             {
-                Attachment attachment = TableValueToAttachment(context, ref sr.Value.Reader);
+                Attachment attachment = TableValueToAttachment(context, sr.Value);
                 if (attachment != null)
                     yield return attachment;
             }
@@ -328,7 +328,7 @@ namespace Raven.Server.Documents
 
             foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixes.RawComposite, Slices.Empty, 0))
             {
-                Attachment attachment = TableValueToAttachment(context, ref sr.Value.Reader);
+                Attachment attachment = TableValueToAttachment(context, sr.Value);
                 if (attachment != null)
                     yield return attachment;
             }
@@ -371,7 +371,7 @@ namespace Raven.Server.Documents
             Table table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             if (TryReadRevisionAttachmentByKey(table, in pair, out TableValueReader tvr) == false)
                 return null;
-            return TableValueToAttachment(context, ref tvr);
+            return TableValueToAttachment(context, tvr);
         }
 
         internal Tombstone GetRevisionAttachmentTombstoneByPair(DocumentsOperationContext context, in RevisionAttachmentKey pair)
@@ -379,7 +379,7 @@ namespace Raven.Server.Documents
             Table tombstoneTable = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.DocumentsStorage.TombstonesSchema, AttachmentsTombstonesSlice);
             if (TryReadRevisionAttachmentTombstoneByKey(tombstoneTable, in pair, out TableValueReader tvr) == false)
                 return null;
-            Tombstone tombstone = TableValueToTombstone(context, ref tvr);
+            Tombstone tombstone = TableValueToTombstone(context, tvr);
             Debug.Assert(tombstone.Type == Tombstone.TombstoneType.Attachment, "Tombstone must be of type attachment");
             return tombstone;
         }
@@ -471,7 +471,7 @@ namespace Raven.Server.Documents
                 long attachmentEtag;
                 if (TryReadRevisionAttachmentTombstoneByKey(tombstoneTable, in pair, out TableValueReader existingTombstone))
                 {
-                    attachmentEtag = TableValueToEtag((int)TombstoneTable.Etag, ref existingTombstone);
+                    attachmentEtag = TableValueToEtag((int)TombstoneTable.Etag, existingTombstone);
                     tombstoneTable.Delete(existingTombstone.Id);
                 }
                 else
@@ -483,10 +483,10 @@ namespace Raven.Server.Documents
                 return;
             }
 
-            string currentChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref tvr);
-            long etag = TableValueToEtag((int)AttachmentsTable.Etag, ref tvr);
+            string currentChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, tvr);
+            long etag = TableValueToEtag((int)AttachmentsTable.Etag, tvr);
 
-            using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out Slice hash))
+            using (TableValueToSlice(context, (int)AttachmentsTable.Hash, tvr, out Slice hash))
             {
                 if (expectedChangeVector != null && ChangeVector.CompareVersion(currentChangeVector, expectedChangeVector, context) != 0)
                 {

@@ -7,6 +7,7 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments
 {
@@ -16,6 +17,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         {
         }
 
+        [AsyncMethodBuilder(typeof(PoolingAsyncValueTaskMethodBuilder))]
         protected override async ValueTask PutAttachmentsAsync(DocumentsOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector,
             RemoteAttachmentParameters remoteAttachmentParameters, CancellationToken token)
         {

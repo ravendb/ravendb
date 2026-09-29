@@ -37,11 +37,11 @@ namespace FastTests.Voron.ScratchBuffer
                     var p3 = file.Allocate(tx.LowLevelTransaction, 1, 1, 11, default);
                     var p4 = file.Allocate(tx.LowLevelTransaction, 1, 1, 12, default);
 
-                    file.Free(tx.LowLevelTransaction, 1, p0.PositionInScratchBuffer);
-                    file.Free(tx.LowLevelTransaction, 3, p1.PositionInScratchBuffer);
-                    file.Free(tx.LowLevelTransaction, 4, p2.PositionInScratchBuffer);
-                    file.Free(tx.LowLevelTransaction, 7, p3.PositionInScratchBuffer);
-                    file.Free(tx.LowLevelTransaction, 9, p4.PositionInScratchBuffer);
+                    file.Free(tx.LowLevelTransaction, 1, p0);
+                    file.Free(tx.LowLevelTransaction, 3, p1);
+                    file.Free(tx.LowLevelTransaction, 4, p2);
+                    file.Free(tx.LowLevelTransaction, 7, p3);
+                    file.Free(tx.LowLevelTransaction, 9, p4);
 
                     for (int i = 0; i <= 9; i++)
                     {

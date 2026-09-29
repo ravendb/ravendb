@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -15,6 +15,8 @@ namespace Raven.Client.Documents.Operations.ETL
         internal const string AddAttachment = "addAttachment";
 
         internal const string AttachmentMarker = "$attachment/";
+
+        internal static ReadOnlySpan<byte> AttachmentMarkerAsSpan => "$attachment/"u8;
 
         internal const string GenericDeleteDocumentsBehaviorFunctionKey = "$deleteDocumentsBehavior<>";
 

@@ -22,6 +22,9 @@ public class RavenDB_26036 : StorageTest
         options.ManualFlushing = true;
         options.ManualSyncing = true;
         options.MaxLogFileSize = 10 * Constants.Storage.PageSize;
+        // +4KB for the journal header record that opens every journal file (RavenDB-27397), the
+        // choreography below must fill the first journal exactly
+        options.InitialLogFileSize = 68 * Constants.Size.Kilobyte;
     }
 
     [RavenFact(RavenTestCategory.Voron)]

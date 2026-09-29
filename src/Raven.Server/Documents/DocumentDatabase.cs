@@ -975,11 +975,19 @@ namespace Raven.Server.Documents
             _disposeOnce.Dispose();
         }
 
+        private void DisposeProgress(string step)
+        {
+            DisposeAudit.Progress(step);
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, step);
+        }
+
         internal bool IsDisposed => _disposeOnce.DisposedRequested;
 
         private unsafe void DisposeInternal()
         {
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Starting dispose");
+            using var audit = DisposeAudit.BeginOrStep($"database '{Name}'");
+
+            DisposeProgress("Starting dispose");
 
             _databaseShutdown.SafeCancel(_logger, $"{nameof(DocumentDatabase)}: {Name}");
 
@@ -990,12 +998,12 @@ namespace Raven.Server.Documents
             //before we dispose of the database we take its latest info to be displayed in the studio
             try
             {
-                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info");
+                DisposeProgress("Generating offline database info");
 
                 var databaseInfo = GenerateOfflineDatabaseInfo();
                 if (databaseInfo != null)
                 {
-                    ForTestingPurposes?.DisposeLog?.Invoke(Name, "Inserting offline database info");
+                    DisposeProgress("Inserting offline database info");
                     DatabaseInfoCache?.InsertDatabaseInfo(databaseInfo, Name);
                 }
             }
@@ -1005,7 +1013,7 @@ namespace Raven.Server.Documents
             }
             catch (Exception e)
             {
-                ForTestingPurposes?.DisposeLog?.Invoke(Name, $"Generating offline database info failed: {e}");
+                DisposeProgress($"Generating offline database info failed: {e}");
                 // if we encountered a catastrophic failure we might not be able to retrieve database info
 
                 if (_logger.IsInfoEnabled)
@@ -1014,7 +1022,7 @@ namespace Raven.Server.Documents
 
             if (ForTestingPurposes == null || ForTestingPurposes.SkipDrainAllRequests == false)
             {
-                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Draining all requests");
+                DisposeProgress("Draining all requests");
 
                 // we'll wait for 1 minute to drain all the requests
                 // from the database
@@ -1028,28 +1036,28 @@ namespace Raven.Server.Documents
                         _waitForUsagesOnDisposal.Reset();
                 }
 
-                ForTestingPurposes?.DisposeLog?.Invoke(Name, $"Drained all requests. Took: {sp.Elapsed}");
+                DisposeProgress($"Drained all requests. Took: {sp.Elapsed}");
             }
 
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring cluster lock");
+            DisposeProgress("Acquiring cluster lock");
 
             var lockTaken = _databaseStateChange.Locker.Wait(TimeSpan.FromSeconds(5));
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, $"Acquired the update database record lock. Taken: {lockTaken}");
+            DisposeProgress($"Acquired the update database record lock. Taken: {lockTaken}");
 
             if (lockTaken == false && _logger.IsWarnEnabled)
                 _logger.Warn("Failed to acquire lock during database dispose for cluster notifications. Will dispose rudely...");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Unsubscribing from storage space monitor");
+            DisposeProgress("Unsubscribing from storage space monitor");
             exceptionAggregator.Execute(() =>
             {
                 _serverStore.StorageSpaceMonitor.Unsubscribe(this);
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Unsubscribed from storage space monitor");
+            DisposeProgress("Unsubscribed from storage space monitor");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing all running TCP connections");
+            DisposeProgress("Disposing all running TCP connections");
             foreach (var connection in RunningTcpConnections)
             {
                 exceptionAggregator.Execute(() =>
@@ -1057,35 +1065,35 @@ namespace Raven.Server.Documents
                     connection.Dispose();
                 });
             }
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed all running TCP connections");
+            DisposeProgress("Disposed all running TCP connections");
 
             // must acquire the lock in order to prevent concurrent access to index files
             if (lockTaken == false)
             {
-                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring the update database record lock");
+                DisposeProgress("Acquiring the update database record lock");
                 // ReSharper disable once MethodSupportsCancellation
                 _databaseStateChange.Locker.Wait();
-                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquired the update database record lock");
+                DisposeProgress("Acquired the update database record lock");
             }
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing the update database record lock");
+            DisposeProgress("Disposing the update database record lock");
             exceptionAggregator.Execute(() => _databaseStateChange.Locker.Dispose());
 
             // To avoid potential deadlocks, it's vital to maintain a consistent lock acquisition order,
             // especially considering the nested locks involved.
             // Specifically, we need to acquire the 'update database record' lock
             // BEFORE obtaining the 'update values' lock.
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring the update values lock");
+            DisposeProgress("Acquiring the update values lock");
             // ReSharper disable once MethodSupportsCancellation
             _updateValuesLocker.Wait();
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing the update values lock");
+            DisposeProgress("Disposing the update values lock");
             exceptionAggregator.Execute(() => _updateValuesLocker.Dispose());
 
             var indexStoreTask = _indexStoreTask;
             if (indexStoreTask != null)
             {
-                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Waiting for index store task to complete");
+                DisposeProgress("Waiting for index store task to complete");
                 exceptionAggregator.Execute(() =>
                 {
                     // we need to wait here for the task to complete
@@ -1096,19 +1104,19 @@ namespace Raven.Server.Documents
                     // if the cancellation is requested during index store initialization
                     indexStoreTask.Wait();
                 });
-                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Finished waiting for index store task to complete");
+                DisposeProgress("Finished waiting for index store task to complete");
             }
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing IndexStore");
+            DisposeProgress("Disposing IndexStore");
             exceptionAggregator.Execute(() =>
             {
                 IndexStore?.Dispose();
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed IndexStore");
+            DisposeProgress("Disposed IndexStore");
 
             DisposeBackgroundWorkers(exceptionAggregator);
             
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing TxMerger");
+            DisposeProgress("Disposing TxMerger");
             exceptionAggregator.Execute(() =>
             {
                 // Note that we want to dispose the TxMerger *after* we disposed
@@ -1117,37 +1125,37 @@ namespace Raven.Server.Documents
                 // and write to the database journal
                 TxMerger?.Dispose();
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed TxMerger");
+            DisposeProgress("Disposed TxMerger");
 
             ForTestingPurposes?.AfterTxMergerDispose?.Invoke();
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing ReplicationLoader");
+            DisposeProgress("Disposing ReplicationLoader");
             exceptionAggregator.Execute(() =>
             {
                 ReplicationLoader?.Dispose();
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed ReplicationLoader");
+            DisposeProgress("Disposed ReplicationLoader");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing EtlLoader");
+            DisposeProgress("Disposing EtlLoader");
             exceptionAggregator.Execute(() =>
             {
                 EtlLoader?.Dispose();
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed EtlLoader");
+            DisposeProgress("Disposed EtlLoader");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing QueueSinkLoader");
+            DisposeProgress("Disposing QueueSinkLoader");
             exceptionAggregator.Execute(() =>
             {
                 QueueSinkLoader?.Dispose();
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed QueueSinkLoader");
+            DisposeProgress("Disposed QueueSinkLoader");
 
             exceptionAggregator.Execute(() =>
             {
                 CdcSinkLoader?.Dispose();
             });
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing AI Integrations");
+            DisposeProgress("Disposing AI Integrations");
             exceptionAggregator.Execute(() =>
             {
                 EmbeddingsGeneratorQueries?.Dispose();
@@ -1156,51 +1164,51 @@ namespace Raven.Server.Documents
             {
                EmbeddingsGeneratorEtl?.Dispose();
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed AI Integrations");
+            DisposeProgress("Disposed AI Integrations");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing Operations");
+            DisposeProgress("Disposing Operations");
             exceptionAggregator.Execute(() =>
             {
                 Operations?.Dispose(exceptionAggregator);
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed Operations");
+            DisposeProgress("Disposed Operations");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing HugeDocuments");
+            DisposeProgress("Disposing HugeDocuments");
             exceptionAggregator.Execute(() =>
             {
                 HugeDocuments?.Dispose();
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed HugeDocuments");
+            DisposeProgress("Disposed HugeDocuments");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing NotificationCenter");
+            DisposeProgress("Disposing NotificationCenter");
             exceptionAggregator.Execute(() =>
             {
                 NotificationCenter?.Dispose();
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed NotificationCenter");
+            DisposeProgress("Disposed NotificationCenter");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing SubscriptionStorage");
+            DisposeProgress("Disposing SubscriptionStorage");
             exceptionAggregator.Execute(() =>
             {
                 SubscriptionStorage?.Dispose();
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed SubscriptionStorage");
+            DisposeProgress("Disposed SubscriptionStorage");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing ConfigurationStorage");
+            DisposeProgress("Disposing ConfigurationStorage");
             exceptionAggregator.Execute(() =>
             {
                 ConfigurationStorage?.Dispose();
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed ConfigurationStorage");
+            DisposeProgress("Disposed ConfigurationStorage");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing DocumentsStorage");
+            DisposeProgress("Disposing DocumentsStorage");
             exceptionAggregator.Execute(() =>
             {
                 DocumentsStorage?.Dispose();
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed DocumentsStorage");
+            DisposeProgress("Disposed DocumentsStorage");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Waiting for cluster transactions executor task to complete");
+            DisposeProgress("Waiting for cluster transactions executor task to complete");
             exceptionAggregator.Execute(() =>
             {
                 var clusterTransactions = _clusterTransactionsThread;
@@ -1209,14 +1217,14 @@ namespace Raven.Server.Documents
                 if (clusterTransactions != null && PoolOfThreads.LongRunningWork.Current != clusterTransactions)
                     clusterTransactions.Join(int.MaxValue);
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Finished waiting for cluster transactions executor task to complete");
+            DisposeProgress("Finished waiting for cluster transactions executor task to complete");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing _databaseShutdown");
+            DisposeProgress("Disposing _databaseShutdown");
             exceptionAggregator.Execute(() =>
             {
                 _databaseShutdown.Dispose();
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed _databaseShutdown");
+            DisposeProgress("Disposed _databaseShutdown");
 
             exceptionAggregator.Execute(() =>
             {
@@ -1231,7 +1239,7 @@ namespace Raven.Server.Documents
                 IoChanges.OnIoChange -= CheckWriteRateAndNotifyIfNecessary;
             });
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing MasterKey");
+            DisposeProgress("Disposing MasterKey");
             exceptionAggregator.Execute(() =>
             {
                 if (MasterKey == null)
@@ -1241,67 +1249,67 @@ namespace Raven.Server.Documents
                     Sodium.sodium_memzero(pKey, (UIntPtr)MasterKey.Length);
                 }
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed MasterKey");
+            DisposeProgress("Disposed MasterKey");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing _fileLocker");
+            DisposeProgress("Disposing _fileLocker");
             exceptionAggregator.Execute(() => _fileLocker.Dispose());
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed _fileLocker");
+            DisposeProgress("Disposed _fileLocker");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing RachisLogIndexNotifications");
+            DisposeProgress("Disposing RachisLogIndexNotifications");
             exceptionAggregator.Execute(RachisLogIndexNotifications);
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed RachisLogIndexNotifications");
+            DisposeProgress("Disposed RachisLogIndexNotifications");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing _hasClusterTransaction");
+            DisposeProgress("Disposing _hasClusterTransaction");
             exceptionAggregator.Execute(_hasClusterTransaction);
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed _hasClusterTransaction");
+            DisposeProgress("Disposed _hasClusterTransaction");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing _proxyRequestExecutor");
+            DisposeProgress("Disposing _proxyRequestExecutor");
             exceptionAggregator.Execute(() =>
             {
                 if (_proxyRequestExecutor?.IsValueCreated == true)
                     _proxyRequestExecutor.Value.Dispose();
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed _proxyRequestExecutor");
+            DisposeProgress("Disposed _proxyRequestExecutor");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Finished dispose");
+            DisposeProgress("Finished dispose");
 
             exceptionAggregator.ThrowIfNeeded();
         }
 
         private void DisposeBackgroundWorkers(ExceptionAggregator exceptionAggregator)
         {
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing ExpiredDocumentsCleaner");
+            DisposeProgress("Disposing ExpiredDocumentsCleaner");
             exceptionAggregator.Execute(() =>
             {
                 ExpiredDocumentsCleaner?.Dispose();
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed ExpiredDocumentsCleaner");
+            DisposeProgress("Disposed ExpiredDocumentsCleaner");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing PeriodicBackupRunner");
+            DisposeProgress("Disposing PeriodicBackupRunner");
             exceptionAggregator.Execute(() =>
             {
                 PeriodicBackupRunner?.Dispose();
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed PeriodicBackupRunner");
+            DisposeProgress("Disposed PeriodicBackupRunner");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing SchemaValidatorCache");
+            DisposeProgress("Disposing SchemaValidatorCache");
             exceptionAggregator.Execute(() =>
             {
                 SchemaValidatorCache?.Dispose();
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed SchemaValidatorCache");
+            DisposeProgress("Disposed SchemaValidatorCache");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing TombstoneCleaner");
+            DisposeProgress("Disposing TombstoneCleaner");
             exceptionAggregator.Execute(() =>
             {
                 TombstoneCleaner?.Dispose();
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing RevisionsBinCleaner");
+            DisposeProgress("Disposing RevisionsBinCleaner");
             exceptionAggregator.Execute(() =>
             {
                 RevisionsBinCleaner?.Dispose();
             });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed TombstoneCleaner");
+            DisposeProgress("Disposed TombstoneCleaner");
         }
 
         public DynamicJsonValue GenerateOfflineDatabaseInfo()
@@ -1310,33 +1318,33 @@ namespace Raven.Server.Documents
             if (envs.Count == 0 || envs.Any(x => x.Environment == null))
                 return null;
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: sizeOnDisk.");
+            DisposeProgress("Generating offline database info: sizeOnDisk.");
             var sizeOnDisk = GetSizeOnDisk();
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: indexingErrors.");
+            DisposeProgress("Generating offline database info: indexingErrors.");
             var indexingErrors = IndexStore.GetIndexes().Sum(index => index.GetErrorCount());
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: alertCount.");
+            DisposeProgress("Generating offline database info: alertCount.");
             var alertCount = NotificationCenter.GetAlertCount();
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: performanceHints.");
+            DisposeProgress("Generating offline database info: performanceHints.");
             var performanceHints = NotificationCenter.GetPerformanceHintCount();
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: backupInfo.");
+            DisposeProgress("Generating offline database info: backupInfo.");
             var backupInfo = PeriodicBackupRunner?.GetBackupInfo();
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: mountPointsUsage.");
+            DisposeProgress("Generating offline database info: mountPointsUsage.");
             var mountPointsUsage = GetMountPointsUsage(includeTempBuffers: false)
                 .Select(x => x.ToJson())
                 .ToList();
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: documentsCount.");
+            DisposeProgress("Generating offline database info: documentsCount.");
             var documentsCount = DocumentsStorage.GetNumberOfDocuments();
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: indexesCount.");
+            DisposeProgress("Generating offline database info: indexesCount.");
             var indexesCount = IndexStore.GetIndexes().Count();
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: indexesStatus.");
+            DisposeProgress("Generating offline database info: indexesStatus.");
             var indexesStatus = IndexStore.Status.ToString();
 
             var databaseInfo = new DynamicJsonValue

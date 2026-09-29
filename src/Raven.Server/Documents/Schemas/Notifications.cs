@@ -1,4 +1,4 @@
-﻿using Sparrow.Server;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 
@@ -15,6 +15,10 @@ public static class Notifications
     public static readonly Slice ByPostponedUntil;
     
     public static readonly Slice ByType;
+
+    public static readonly TableSchema.IndexDef ByCreatedAtIndex;
+    public static readonly TableSchema.IndexDef ByPostponedUntilIndex;
+    public static readonly TableSchema.IndexDef ByTypeIndex;
 
     public const string NotificationsTree = "Notifications";
 
@@ -38,6 +42,22 @@ public static class Notifications
             Slice.From(ctx, "ByPostponedUntil", ByteStringType.Immutable, out ByPostponedUntil);
             Slice.From(ctx, "ByType", ByteStringType.Immutable, out ByType);
         }
+        ByCreatedAtIndex = new TableSchema.IndexDef // might be the same ticks, so duplicates are allowed - cannot use fixed size index
+        {
+            StartIndex = NotificationsTable.CreatedAtIndex,
+            Name = ByCreatedAt
+        };
+        ByPostponedUntilIndex = new TableSchema.IndexDef // might be the same ticks, so duplicates are allowed - cannot use fixed size index
+        {
+            StartIndex = NotificationsTable.PostponedUntilIndex,
+            Name = ByPostponedUntil
+        };
+        ByTypeIndex = new TableSchema.IndexDef
+        {
+            StartIndex = NotificationsTable.TypeIndex,
+            Name = ByType
+        };
+
 
         NotificationsSchemaBase.DefineKey(new TableSchema.IndexDef
         {
@@ -45,22 +65,10 @@ public static class Notifications
             Count = 1
         });
 
-        NotificationsSchemaBase.DefineIndex(new TableSchema.IndexDef // might be the same ticks, so duplicates are allowed - cannot use fixed size index
-        {
-            StartIndex = NotificationsTable.CreatedAtIndex,
-            Name = ByCreatedAt
-        });
+        NotificationsSchemaBase.DefineIndex(ByCreatedAtIndex);
 
-        NotificationsSchemaBase.DefineIndex(new TableSchema.IndexDef // might be the same ticks, so duplicates are allowed - cannot use fixed size index
-        {
-            StartIndex = NotificationsTable.PostponedUntilIndex,
-            Name = ByPostponedUntil
-        });
+        NotificationsSchemaBase.DefineIndex(ByPostponedUntilIndex);
         
-        NotificationsSchemaBase.DefineIndex(new TableSchema.IndexDef
-        {
-            StartIndex = NotificationsTable.TypeIndex,
-            Name = ByType
-        });
+        NotificationsSchemaBase.DefineIndex(ByTypeIndex);
     }
 }

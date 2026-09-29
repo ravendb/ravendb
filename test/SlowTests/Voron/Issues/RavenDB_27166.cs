@@ -8,14 +8,12 @@ using Xunit;
 
 namespace SlowTests.Voron.Issues;
 
-// RavenDB-27166: a write transaction that piggybacks a pending journal flush-state update (freeing the flushed
-// scratch pages, including tx.ForgetAboutScratchPage) and then fails to commit rolls back to its tx-start scratch
-// snapshot, restoring those freed entries. The flush thread's retry cannot repair it - the free buffer entries
-// were nulled (RavenDB-23264), so ForgetAboutScratchPage never runs again - so the environment would keep a scratch
-// mapping onto positions that are back on the free list, and reads would follow the stale mapping to the wrong page
-// once those positions get reused. The data file and journal are intact, so such a rollback marks the environment
-// as catastrophically failed (the restored in-memory scratch state cannot be trusted) and a restart recovers all
-// the committed data.
+// RavenDB-27166: a write transaction that piggybacks a pending journal flush-state update frees the flushed
+// scratch pages in the pool (a side effect that is not undone by a rollback) and removes their entries from the
+// scratch table. If the transaction then fails to commit, the two halves must stay together: the scratch table
+// removals survive the rollback (ScratchPagesTable.RemoveFlushed), so the table never resurrects mappings onto
+// positions that are back on the free list. The environment stays fully consistent - the flush thread's retry
+// completes the journal state update, reads keep working, and no restart is required.
 public class RavenDB_27166 : StorageTest
 {
     public RavenDB_27166(ITestOutputHelper output) : base(output)
@@ -31,11 +29,11 @@ public class RavenDB_27166 : StorageTest
     }
 
     // This is RavenDB_23264's scenario (a piggybacking tx applies the flush action and fails to commit), continued
-    // past the rollback: the environment must be poisoned and a restart must bring back every committed value.
+    // past the rollback: the environment must keep serving every committed value, with no restart.
     [RavenFact(RavenTestCategory.Voron)]
     public void PiggybackedFlushFailure_MustNotLeaveEnvironmentServingCorruptedData()
     {
-        RequireFileBasedPager(); // the restart below must build fresh options - the catastrophic-failure mark lives on the options instance
+        RequireFileBasedPager();
 
         var values = new Dictionary<string, string>();
 
@@ -71,7 +69,7 @@ public class RavenDB_27166 : StorageTest
         // hold the write lock so the flush thread has to park _updateJournalStateAfterFlush
         var txBlocker = Env.WriteTransaction();
 
-        // throw after the journal write succeeded but before Committed is set, so the transaction rolls back having
+        // throw after the flush action ran but before Committed is set, so the transaction rolls back having
         // already applied the flush action
         txBlocker.LowLevelTransaction.BeforeCommitFinalization += _ => throw new InvalidOperationException("Simulated failure after flush action completed");
 
@@ -96,7 +94,7 @@ public class RavenDB_27166 : StorageTest
             Assert.True(actionSetEvent.Wait(TimeSpan.FromSeconds(30)), "Timed out waiting for flush to set _updateJournalStateAfterFlush");
 
             Assert.Throws<InvalidOperationException>(() => txBlocker.Commit());
-            txBlocker.Dispose(); // -> Rollback -> would restore the freed scratch entries -> poisons the environment
+            txBlocker.Dispose(); // -> rollback - the flush action's removals survive it
 
             Assert.True(flushThread.Join(TimeSpan.FromSeconds(30)), "flush thread did not complete");
         }
@@ -105,19 +103,26 @@ public class RavenDB_27166 : StorageTest
             Env.Journal.Applicator.ForTestingPurposesOnly().OnWaitForJournalStateToBeUpdated_AfterAssigning_updateJournalStateAfterFlush = null;
         }
 
-        Assert.True(Env.Options.IsCatastrophicFailureSet, "the rollback did not mark the environment as catastrophically failed");
-        Assert.NotNull(flushException); // the flush retry is refused on the poisoned environment
+        Assert.Null(flushException); // the flush retry completes the journal state update
+        Assert.False(Env.Options.IsCatastrophicFailureSet, "the rollback of the piggybacking tx must not poison the environment");
 
-        // the data was never lost on disk - the forced restart recovers every committed value
-        RestartDatabase();
+        // every committed value is served correctly right away, with no restart
+        AssertAllValuesReadable(values);
 
-        using (var rtx = Env.ReadTransaction())
+        using (var txw = Env.WriteTransaction())
         {
-            var tree = rtx.ReadTree("tree");
-            Assert.NotNull(tree);
-            foreach (var (key, expected) in values)
-                Assert.Equal(expected, tree.Read(key).Reader.ToStringValue());
+            var tree = txw.CreateTree("tree");
+            var key = "key-0000";
+            var value = "v3-post-rollback";
+            tree.Add(key, value);
+            values[key] = value;
+            txw.Commit();
         }
+        Env.FlushLogToDataFile();
+        AssertAllValuesReadable(values);
+
+        RestartDatabase();
+        AssertAllValuesReadable(values);
     }
 
     private const string V0 = "v0-baseline";
@@ -125,12 +130,12 @@ public class RavenDB_27166 : StorageTest
     private const string V2 = "v2-rolled-back";
 
     // The failing tx itself modified "p", whose prior committed version (V1) is NOT covered by the parked flush
-    // (a read transaction pins the flush horizon below it). V1 exists only in scratch and the journal - the data
-    // file does not have it - so the recovery after the poisoning rollback must bring it back.
+    // (a read transaction pins the flush horizon below it). V1 exists only in scratch - the rollback must restore
+    // it while keeping the flush action's removals, and it must be readable immediately.
     [RavenFact(RavenTestCategory.Voron)]
     public void FailedPiggybackingTx_ModifiedPage_PriorVersionNotCoveredByFlush_MustKeepItReadable()
     {
-        RequireFileBasedPager(); // the restart below must build fresh options - the catastrophic-failure mark lives on the options instance
+        RequireFileBasedPager();
 
         // "p" = V0, flushed to the data file
         using (var txw = Env.WriteTransaction())
@@ -166,25 +171,24 @@ public class RavenDB_27166 : StorageTest
             }
 
             RunPiggybackingTxThatModifiesPageAndFails();
+
+            AssertRead("p", V1);
         }
+
+        AssertRead("p", V1);
 
         RestartDatabase();
 
-        using (var rtx = Env.ReadTransaction())
-        {
-            var read = rtx.ReadTree("tree").Read("p");
-            Assert.True(read != null, "'p' is unreadable after recovery");
-            Assert.Equal(V1, read.Reader.ToStringValue()); // the committed-but-unflushed version must survive; the doomed V2 never reached the journal
-        }
+        AssertRead("p", V1); // the committed-but-unflushed version survives recovery too; the doomed V2 never reached the journal
     }
 
     // The failing tx itself modified "p", whose prior committed version (V1) IS covered by the parked flush:
-    // the flush wrote V1 to the data file and freed its scratch entry. After the poisoning rollback the forced
-    // restart must bring "p" back as V1.
+    // the flush wrote V1 to the data file and freed its scratch entry. The surviving removal must resolve "p"
+    // correctly for both old and new readers, immediately and after a restart.
     [RavenFact(RavenTestCategory.Voron)]
     public void FailedPiggybackingTx_ModifiedPage_PriorVersionCoveredByFlush_MustKeepItReadable()
     {
-        RequireFileBasedPager(); // the restart below must build fresh options - the catastrophic-failure mark lives on the options instance
+        RequireFileBasedPager();
 
         // "p" = V0, flushed to the data file
         using (var txw = Env.WriteTransaction())
@@ -203,19 +207,37 @@ public class RavenDB_27166 : StorageTest
 
         RunPiggybackingTxThatModifiesPageAndFails();
 
+        AssertRead("p", V1); // written to the data file by the parked flush
+
         RestartDatabase();
 
+        AssertRead("p", V1);
+    }
+
+    private void AssertRead(string key, string expected)
+    {
         using (var rtx = Env.ReadTransaction())
         {
-            var read = rtx.ReadTree("tree").Read("p");
-            Assert.True(read != null, "'p' is unreadable after recovery");
-            Assert.Equal(V1, read.Reader.ToStringValue()); // written to the data file by the parked flush
+            var read = rtx.ReadTree("tree").Read(key);
+            Assert.True(read != null, $"'{key}' is unreadable");
+            Assert.Equal(expected, read.Reader.ToStringValue());
+        }
+    }
+
+    private void AssertAllValuesReadable(Dictionary<string, string> values)
+    {
+        using (var rtx = Env.ReadTransaction())
+        {
+            var tree = rtx.ReadTree("tree");
+            Assert.NotNull(tree);
+            foreach (var (key, expected) in values)
+                Assert.Equal(expected, tree.Read(key).Reader.ToStringValue());
         }
     }
 
     // Opens a write tx that updates "p" to V2, lets the parked flush install its journal-state update so the tx
-    // piggybacks it in CommitStage1, and fails the commit just before the journal write. The rollback would restore
-    // the scratch entries the flush action freed, so it must poison the environment.
+    // piggybacks it in CommitStage1, and fails the commit just before the journal write. The rollback restores the
+    // transaction's own changes but keeps the flush action's removals - matching the pool frees that also survive.
     private void RunPiggybackingTxThatModifiesPageAndFails()
     {
         var armed = 1;
@@ -255,14 +277,14 @@ public class RavenDB_27166 : StorageTest
             }
             finally
             {
-                txBlocker.Dispose(); // -> Rollback -> poisons the environment
+                txBlocker.Dispose(); // -> rollback - the flush action's removals survive it
 
                 Assert.True(flushThread.Join(TimeSpan.FromSeconds(30)), "flush thread did not complete");
                 Env.Journal.Applicator.ForTestingPurposesOnly().OnWaitForJournalStateToBeUpdated_AfterAssigning_updateJournalStateAfterFlush = null;
             }
 
-            Assert.True(Env.Options.IsCatastrophicFailureSet, "the rollback did not mark the environment as catastrophically failed");
-            Assert.NotNull(flushException); // the flush retry is refused on the poisoned environment
+            Assert.Null(flushException); // the flush retry completes the journal state update
+            Assert.False(Env.Options.IsCatastrophicFailureSet, "the rollback of the piggybacking tx must not poison the environment");
         }
         finally
         {

@@ -8,28 +8,6 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents
 {
-    public sealed class CollectionNameComparer : IEqualityComparer<CollectionName>
-    {
-        public static readonly CollectionNameComparer Instance = new CollectionNameComparer();
-
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Equals(CollectionName x, CollectionName y)
-        {
-            if (x == y)
-                return true;
-            if (x == null || y == null)
-                return false;
-            return string.Equals(x.Name, y.Name, StringComparison.OrdinalIgnoreCase);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetHashCode(CollectionName obj)
-        {
-            return obj.Name != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Name) : 0;
-        }
-    }
-
     public sealed class CollectionName
     {
         public const string HiLoCollection = "@hilo";
@@ -77,6 +55,8 @@ namespace Raven.Server.Documents
             _timeSeriesStats = GetName(CollectionTableType.TimeSeriesStats);
 
         }
+
+        public int Index = -1;
 
         public bool IsHiLo => (bool)(_isHiLo ?? (_isHiLo = IsHiLoCollection(Name)));
 

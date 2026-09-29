@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Voron.Impl;
 
 namespace Voron.Data.Compression
@@ -8,14 +9,15 @@ namespace Voron.Data.Compression
     {
         public const int Size = 4;
 
-        private readonly DecompressedLeafPage[] _cache;
+        [InlineArray(Size)]
+        private struct Cache
+        {
+            private DecompressedLeafPage _page;
+        }
+
+        private Cache _cache;
 
         private int _current = 0;
-
-        public DecompressedPagesCache()
-        {
-            _cache = new DecompressedLeafPage[Size];
-        }
 
         public bool TryGet(long pageNumber, DecompressionUsage usage, out DecompressedLeafPage decompressed)
         {
@@ -84,7 +86,7 @@ namespace Voron.Data.Compression
                 position--;
             }
 
-            _current = ++_current % Size;
+            _current = (_current + 1) % Size;
 
             old = _cache[_current];
 
@@ -99,9 +101,19 @@ namespace Voron.Data.Compression
             _cache[_current] = decompressed;
         }
 
+        public void MarkInvalidated(long pageNumber, DecompressionUsage usage)
+        {
+            for (int i = 0; i < Size; i++)
+            {
+                var cached = _cache[i];
+                if (cached != null && cached.PageNumber == pageNumber && cached.Usage == usage)
+                    cached.Invalidate(); // mark the page as invalidated, but don't dispose it yet, the instance may be held elsewhere still
+            }
+        }
+
         public void Invalidate(long pageNumber, DecompressionUsage usage)
         {
-            for (int i = 0; i < _cache.Length; i++)
+            for (int i = 0; i < Size; i++)
             {
                 var cached = _cache[i];
                 if (cached != null && cached.PageNumber == pageNumber && cached.Usage == usage)
@@ -118,7 +130,7 @@ namespace Voron.Data.Compression
 
         public void Dispose()
         {
-            for (var i = 0; i < _cache.Length; i++)
+            for (var i = 0; i < Size; i++)
             {
                 var item = _cache[i];
 

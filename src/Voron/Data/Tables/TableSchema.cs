@@ -1,3 +1,4 @@
+using System.IO;
 using Sparrow;
 using System;
 using System.Collections.Generic;
@@ -89,6 +90,7 @@ namespace Voron.Data.Tables
         {
             index.Validate();
 
+            AssignTreeIndexPosition(index);
             _commonIndexes[index.Name] = index;
 
             return this;
@@ -99,16 +101,49 @@ namespace Voron.Data.Tables
         {
             index.Validate();
 
+            AssignTreeIndexPosition(index);
             _dynamicKeyIndexes[index.Name] = index;
 
             return this;
         }
+
+        private void AssignTreeIndexPosition(AbstractTreeIndexDef index)
+        {
+            if (index.CachePosition == -1)
+            {
+                index.CachePosition = TreeIndexCount;
+            }
+            else if (index.CachePosition != TreeIndexCount)
+            {
+                // without this, a schema that defines a shared definition in a different order would put
+                // two distinct indexes on the same position, and the table would resolve one tree for both
+                throw new InvalidOperationException(
+                    "Tree index " + index.Name + " was registered at position " + index.CachePosition +
+                    " by another schema, but would be at " + TreeIndexCount + " here. A definition instance " +
+                    "shared between schemas must be defined in the same order in all of them (or use a distinct instance).");
+            }
+
+            TreeIndexCount++;
+        }
+
+        public int TreeIndexCount; // pk index & all the secondaries tree share the same numbering
 
         public TableSchema DefineFixedSizeIndex(FixedSizeKeyIndexDef index)
         {
             if (!index.Name.HasValue || SliceComparer.Equals(Slices.Empty, index.Name))
                 throw new ArgumentException("Fixed size index name must be non-empty", nameof(index));
 
+            if (index.CachePosition == -1)
+            {
+                index.CachePosition = _fixedSizeIndexes.Count;
+            }
+            else if (index.CachePosition != _fixedSizeIndexes.Count)
+            {
+                throw new InvalidOperationException(
+                    "Fixed size index " + index.Name + " was registered at position " + index.CachePosition +
+                    " by another schema, but would be at " + _fixedSizeIndexes.Count + " here. A definition instance " +
+                    "shared between schemas must occupy the same position in all of them (or use a distinct instance).");
+            }
             _fixedSizeIndexes[index.Name] = index;
 
             return this;
@@ -127,6 +162,7 @@ namespace Voron.Data.Tables
             if (index.Count > 1)
                 throw new InvalidOperationException("Primary key must be a single field");
 
+            AssignTreeIndexPosition(index);
             _primaryKey = index;
 
             return this;
@@ -345,7 +381,7 @@ namespace Voron.Data.Tables
             {
                 currentPtr = input.Read(currentIndex++, out currentSize);
                 var tvr = new TableValueReader(currentPtr, currentSize);
-                var pk = IndexDef.ReadFrom(context, ref tvr);
+                var pk = IndexDef.ReadFrom(context, tvr);
                 schema.DefineKey(pk);
             }
 
@@ -382,7 +418,10 @@ namespace Voron.Data.Tables
                 if (*(int*)currentPtr != 0)
                 {
                     currentPtr = input.Read(currentIndex, out currentSize);
-                    schema.CompressedEtagSourceIndex = FixedSizeKeyIndexDef.ReadFrom(context, currentPtr, currentSize);
+                    var etagSource = FixedSizeKeyIndexDef.ReadFrom(context, currentPtr, currentSize);
+                    if (schema._fixedSizeIndexes.TryGetValue(etagSource.Name, out var defined) == false)
+                        throw new InvalidDataException($"The compressed etag source index '{etagSource.Name}' is not one of the schema's fixed size indexes");
+                    schema.CompressedEtagSourceIndex = defined;
                 }
             }
 
@@ -398,13 +437,13 @@ namespace Voron.Data.Tables
             {
                 case TreeIndexType.Default:
                 {
-                    var index = IndexDef.ReadFrom(context, ref reader);
+                    var index = IndexDef.ReadFrom(context, reader);
                     schema.DefineIndex(index);
                     break;
                 }
                 case TreeIndexType.DynamicKeyValues:
                 {
-                    var index = DynamicKeyIndexDef.ReadFrom(context, ref reader);
+                    var index = DynamicKeyIndexDef.ReadFrom(context, reader);
                     schema.DefineIndex(index);
                     break;
                 }

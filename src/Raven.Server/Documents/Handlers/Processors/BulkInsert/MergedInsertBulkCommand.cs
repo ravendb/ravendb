@@ -58,7 +58,7 @@ public sealed class MergedInsertBulkCommand : DocumentMergedTransactionCommand
                             }
                         }
 
-                        Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document);
+                        Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document, knownCollectionName: cmd.CollectionName, knownMetadata: cmd.Metadata);
                     }
                     catch (VoronConcurrencyErrorException e)
                     {
