@@ -1,5 +1,6 @@
 import { globalDispatch } from "components/storeCompat";
 import { Collection, collectionsTrackerActions } from "components/common/shell/collectionsTrackerSlice";
+import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 const defaultCollections: Collection[] = [
     {
@@ -53,20 +54,24 @@ const defaultCollections: Collection[] = [
 ];
 
 export class MockCollectionsTracker {
-    with_Collections(overrides: Partial<Collection>[] = []) {
+    with_Collections(
+        overrides: Partial<Collection>[] = [],
+        databaseName = DatabasesStubs.nonShardedSingleNodeDatabase().name
+    ) {
         const collections = defaultCollections.map((collection) => ({
             ...collection,
             ...overrides.find((x) => x.name === collection.name),
         }));
 
-        globalDispatch(collectionsTrackerActions.collectionsLoaded(collections));
+        globalDispatch(collectionsTrackerActions.collectionsLoaded({ databaseName, collections }));
     }
 
-    with_CollectionsExcept(removedNames: string[]) {
+    with_CollectionsExcept(removedNames: string[], databaseName = DatabasesStubs.nonShardedSingleNodeDatabase().name) {
         globalDispatch(
-            collectionsTrackerActions.collectionsLoaded(
-                defaultCollections.filter((x) => !removedNames.includes(x.name))
-            )
+            collectionsTrackerActions.collectionsLoaded({
+                databaseName,
+                collections: defaultCollections.filter((x) => !removedNames.includes(x.name)),
+            })
         );
     }
 }

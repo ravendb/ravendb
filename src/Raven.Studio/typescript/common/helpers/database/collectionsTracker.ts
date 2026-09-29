@@ -88,7 +88,14 @@ class collectionsTracker {
         this.collections([allDocsCollection].concat(collections));
 
         this.conflictsCount(collectionsStats.numberOfConflicts);
-        storeCompat.globalDispatch(collectionsTrackerSlice.collectionsTrackerActions.collectionsLoaded(this.collections().map((x) => x.toCollectionState())));
+        this.dispatchCollectionsLoaded();
+    }
+
+    private dispatchCollectionsLoaded() {
+        storeCompat.globalDispatch(collectionsTrackerSlice.collectionsTrackerActions.collectionsLoaded({
+            databaseName: this.db.name,
+            collections: this.collections().map((x) => x.toCollectionState()),
+        }));
     }
 
     getCollectionCount(collectionName: string) {
@@ -138,7 +145,7 @@ class collectionsTracker {
         });
         
         this.conflictsCount(notification.CountOfConflicts);
-        storeCompat.globalDispatch(collectionsTrackerSlice.collectionsTrackerActions.collectionsLoaded(this.collections().map((x) => x.toCollectionState())));
+        this.dispatchCollectionsLoaded();
         storeCompat.globalDispatch(collectionsTrackerSlice.collectionsTrackerActions.globalChangeVectorUpdated(notification.GlobalChangeVector));
     }
 

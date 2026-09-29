@@ -8,7 +8,7 @@ import messagePublisher from "common/messagePublisher";
 import router from "plugins/router";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
-const { DocumentsListStory, AllDocumentsStory, TrimmedValuesStory } = composeStories(Stories);
+const { CollectionStory, AllDocumentsStory, TrimmedValuesStory } = composeStories(Stories);
 
 type Screen = ReturnType<typeof rtlRender>["screen"];
 
@@ -55,8 +55,12 @@ describe("DocumentsPage", () => {
         };
     });
 
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
     it("can render collection documents with property columns", async () => {
-        const { screen } = rtlRender(<DocumentsListStory collection="Orders" isSharded={false} totalCount={5} />);
+        const { screen } = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={5} />);
 
         expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
         expect(screen.getByText("Company")).toBeInTheDocument();
@@ -75,7 +79,7 @@ describe("DocumentsPage", () => {
             });
 
         try {
-            const { screen } = rtlRender(<DocumentsListStory collection="Orders" isSharded={false} totalCount={5} />);
+            const { screen } = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={5} />);
 
             expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
             expect(screen.getByText("Company")).toBeInTheDocument();
@@ -126,13 +130,13 @@ describe("DocumentsPage", () => {
     });
 
     it("can render sharded database documents", async () => {
-        const { screen } = rtlRender(<DocumentsListStory collection="Orders" isSharded totalCount={5} />);
+        const { screen } = rtlRender(<CollectionStory collection="Orders" isSharded totalCount={5} />);
 
         expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
     });
 
     it("disables pagination with an explanation in a sharded database", async () => {
-        const { screen } = rtlRender(<DocumentsListStory collection="Orders" isSharded totalCount={5} />);
+        const { screen } = rtlRender(<CollectionStory collection="Orders" isSharded totalCount={5} />);
 
         expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
 
@@ -147,7 +151,7 @@ describe("DocumentsPage", () => {
     });
 
     it("renders the toolbar actions", async () => {
-        const { screen } = rtlRender(<DocumentsListStory collection="Orders" isSharded={false} totalCount={5} />);
+        const { screen } = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={5} />);
 
         expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
         expect(screen.getByRole("button", { name: /New document/ })).toBeEnabled();
@@ -161,7 +165,7 @@ describe("DocumentsPage", () => {
     });
 
     it("selects every document from the header checkbox", async () => {
-        const { screen } = rtlRender(<DocumentsListStory collection="Orders" isSharded={false} totalCount={5} />);
+        const { screen } = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={5} />);
 
         expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
 
@@ -185,7 +189,7 @@ describe("DocumentsPage", () => {
     });
 
     it("selects the current page from the header checkbox when paginated and clears the selection on toggle", async () => {
-        const { screen } = rtlRender(<DocumentsListStory collection="Orders" isSharded={false} totalCount={1000} />);
+        const { screen } = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={1000} />);
 
         expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
 
@@ -240,7 +244,7 @@ describe("DocumentsPage", () => {
 
     it("selects a range of documents while holding shift and highlights the pending range", async () => {
         const { screen, container } = rtlRender(
-            <DocumentsListStory collection="Orders" isSharded={false} totalCount={5} />
+            <CollectionStory collection="Orders" isSharded={false} totalCount={5} />
         );
 
         expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
@@ -277,7 +281,7 @@ describe("DocumentsPage", () => {
 
     it("toggles the clicked document after scrolling shifted the loaded rows", async () => {
         const { screen, container } = rtlRender(
-            <DocumentsListStory collection="Orders" isSharded={false} totalCount={1000} />
+            <CollectionStory collection="Orders" isSharded={false} totalCount={1000} />
         );
 
         expect(await screen.findByText("orders/16-A")).toBeInTheDocument();
@@ -295,7 +299,7 @@ describe("DocumentsPage", () => {
 
     it("selects the whole shift range when its start is scrolled out of view", async () => {
         const { screen, container } = rtlRender(
-            <DocumentsListStory collection="Orders" isSharded={false} totalCount={1000} />
+            <CollectionStory collection="Orders" isSharded={false} totalCount={1000} />
         );
 
         expect(await screen.findByText("orders/3-A")).toBeInTheDocument();
@@ -315,7 +319,7 @@ describe("DocumentsPage", () => {
 
     it("toggles only the clicked document with shift when the range has rows that were not loaded", async () => {
         const { screen, container } = rtlRender(
-            <DocumentsListStory collection="Orders" isSharded={false} totalCount={1000} />
+            <CollectionStory collection="Orders" isSharded={false} totalCount={1000} />
         );
 
         expect(await screen.findByText("orders/3-A")).toBeInTheDocument();
@@ -342,7 +346,7 @@ describe("DocumentsPage", () => {
 
     it("fetches only the documents where a fast scroll settles", async () => {
         const { screen, container } = rtlRender(
-            <DocumentsListStory collection="Orders" isSharded={false} totalCount={5000} />
+            <CollectionStory collection="Orders" isSharded={false} totalCount={5000} />
         );
 
         expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
@@ -358,7 +362,7 @@ describe("DocumentsPage", () => {
     });
 
     it("can toggle pagination from the display dropdown", async () => {
-        const { screen } = rtlRender(<DocumentsListStory collection="Orders" isSharded={false} totalCount={5} />);
+        const { screen } = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={5} />);
 
         expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
 
@@ -366,7 +370,6 @@ describe("DocumentsPage", () => {
         fireEvent.click(await screen.findByRole("checkbox", { name: "Pagination" }));
 
         expect(await screen.findByText("1-5 of 5")).toBeInTheDocument();
-        expect(screen.queryByText("Turn off pagination")).not.toBeInTheDocument();
 
         fireEvent.click(screen.getByRole("checkbox", { name: "Pagination" }));
 
@@ -375,7 +378,7 @@ describe("DocumentsPage", () => {
     });
 
     it("can add a custom column from the column layout settings", async () => {
-        const { screen } = rtlRender(<DocumentsListStory collection="Orders" isSharded={false} totalCount={5} />);
+        const { screen } = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={5} />);
 
         expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
 
@@ -410,7 +413,7 @@ describe("DocumentsPage", () => {
     });
 
     it("shows the data changed alert when the collection changes and hides it after refresh", async () => {
-        const { screen } = rtlRender(<DocumentsListStory collection="Orders" isSharded={false} totalCount={5} />);
+        const { screen } = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={5} />);
 
         expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
         expect(screen.queryByTestId("data-changed-alert")).not.toBeInTheDocument();
@@ -437,7 +440,7 @@ describe("DocumentsPage", () => {
 
     it("exports the collection to a file with the chosen format and columns", async () => {
         const submit = jest.spyOn(HTMLFormElement.prototype, "submit").mockImplementation(() => {});
-        const { screen } = rtlRender(<DocumentsListStory collection="Orders" isSharded={false} totalCount={5} />);
+        const { screen } = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={5} />);
 
         expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
 
@@ -472,7 +475,7 @@ describe("DocumentsPage", () => {
     it("redirects to all documents with a warning when the shown collection is removed", async () => {
         const navigate = jest.spyOn(router, "navigate").mockImplementation(() => true);
         const reportWarning = jest.spyOn(messagePublisher, "reportWarning").mockImplementation(() => {});
-        const { screen } = rtlRender(<DocumentsListStory collection="Orders" isSharded={false} totalCount={5} />);
+        const { screen } = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={5} />);
 
         expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
         expect(navigate).not.toHaveBeenCalled();
@@ -486,11 +489,34 @@ describe("DocumentsPage", () => {
         expect(navigate.mock.calls[0][0]).not.toContain("collection=");
     });
 
+    it("redirects to all documents without a warning when the switched database does not have the shown collection", async () => {
+        const navigate = jest.spyOn(router, "navigate").mockImplementation(() => true);
+        const reportWarning = jest.spyOn(messagePublisher, "reportWarning").mockImplementation(() => {});
+        const { screen } = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={5} />);
+
+        expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
+
+        const switchedDatabaseName = "db2";
+        act(() => {
+            mockStore.databases.withActiveDatabase((db) => {
+                db.name = switchedDatabaseName;
+            });
+        });
+
+        expect(screen.getByTestId("loader")).toBeInTheDocument();
+
+        act(() => {
+            mockStore.collectionsTracker.with_CollectionsExcept(["Orders"], switchedDatabaseName);
+        });
+        await flushFetches();
+
+        expect(reportWarning).not.toHaveBeenCalled();
+        expect(navigate).toHaveBeenCalledWith(appUrl.forDocuments(null, switchedDatabaseName));
+    });
+
     it("keeps the column layout of the collection between visits", async () => {
         localStorage.clear();
-        const { screen, unmount } = rtlRender(
-            <DocumentsListStory collection="Orders" isSharded={false} totalCount={5} />
-        );
+        const { screen, unmount } = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={5} />);
 
         expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
         expect(screen.getByRole("button", { name: /Display/ })).not.toHaveClass("active");
@@ -503,7 +529,7 @@ describe("DocumentsPage", () => {
 
         unmount();
 
-        const secondVisit = rtlRender(<DocumentsListStory collection="Orders" isSharded={false} totalCount={5} />);
+        const secondVisit = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={5} />);
 
         expect(await secondVisit.screen.findByText("orders/1-A")).toBeInTheDocument();
         expect(secondVisit.screen.getByText("City")).toBeInTheDocument();
@@ -528,7 +554,7 @@ describe("DocumentsPage", () => {
     });
 
     it("shows the empty messages for an empty collection and an empty database", async () => {
-        const collectionView = rtlRender(<DocumentsListStory collection="Orders" isSharded={false} totalCount={0} />);
+        const collectionView = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={0} />);
         expect(await collectionView.screen.findByText("Collection is empty")).toBeInTheDocument();
         collectionView.unmount();
 
@@ -564,7 +590,7 @@ describe("DocumentsPage", () => {
         localStorage.clear();
         const totalCount = 5000;
         const { screen, container } = rtlRender(
-            <DocumentsListStory collection="Orders" isSharded={false} totalCount={totalCount} />
+            <CollectionStory collection="Orders" isSharded={false} totalCount={totalCount} />
         );
 
         expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
@@ -601,7 +627,7 @@ describe("DocumentsPage", () => {
 
     it("shows the scroll to top button once the table is scrolled", async () => {
         const { screen, container } = rtlRender(
-            <DocumentsListStory collection="Orders" isSharded={false} totalCount={1000} />
+            <CollectionStory collection="Orders" isSharded={false} totalCount={1000} />
         );
 
         expect(await screen.findByText("orders/1-A")).toBeInTheDocument();

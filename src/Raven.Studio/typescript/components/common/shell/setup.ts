@@ -7,7 +7,6 @@ import * as yup from "yup";
 import { ClusterNode, clusterActions } from "components/common/shell/clusterSlice";
 import licenseModel from "models/auth/licenseModel";
 import { licenseActions } from "./licenseSlice";
-import collectionsTracker from "common/helpers/database/collectionsTracker";
 import { collectionsTrackerActions } from "./collectionsTrackerSlice";
 import changesContext from "common/changesContext";
 import { services } from "hooks/useServices";
@@ -59,7 +58,7 @@ function initRedux() {
         );
 
         if (!db) {
-            globalDispatch(collectionsTrackerActions.collectionsLoaded([]));
+            globalDispatch(collectionsTrackerActions.collectionsLoaded({ databaseName: null, collections: [] }));
         }
     });
 
@@ -106,10 +105,6 @@ function initRedux() {
     licenseModel.supportCoverage.subscribe((supportCoverage) => {
         globalDispatch(licenseActions.supportLoaded(supportCoverage));
     });
-
-    collectionsTracker.default.collections.subscribe((collections) =>
-        globalDispatch(collectionsTrackerActions.collectionsLoaded(collections.map((x) => x.toCollectionState())))
-    );
 
     changesContext.default.connectServerWideNotificationCenter();
 
