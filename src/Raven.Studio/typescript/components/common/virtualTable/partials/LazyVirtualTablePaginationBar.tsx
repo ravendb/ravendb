@@ -15,7 +15,6 @@ export interface LazyVirtualTablePagination {
     pageSizeOptions: number[];
     onPageChange: (page: number) => void;
     onPageSizeChange: (pageSize: number) => void;
-    turnOff: (() => void) | null;
 }
 
 interface LazyVirtualTablePaginationBarProps {
@@ -49,46 +48,36 @@ export default function LazyVirtualTablePaginationBar({ pagination }: LazyVirtua
                     />
                 </label>
             </div>
-            <div className="d-flex align-items-center gap-3">
-                <div className="d-flex align-items-center gap-1">
-                    <PageButton title="First page" isDisabled={page <= 1} onClick={() => pagination.onPageChange(1)}>
-                        <Icon icon="chevron-left" margin="m-0" />
-                        <Icon icon="chevron-left" margin="m-0" className="double-chevron" />
-                    </PageButton>
-                    <PageButton
-                        title="Previous page"
-                        isDisabled={page <= 1}
-                        onClick={() => pagination.onPageChange(page - 1)}
-                    >
-                        <Icon icon="chevron-left" margin="m-0" />
-                    </PageButton>
-                    <small className="text-muted ms-1">Page</small>
-                    <PageInput page={page} totalPages={totalPages} onPageChange={pagination.onPageChange} />
-                    <small className="text-muted me-1 text-nowrap">of {totalPages.toLocaleString()}</small>
-                    <PageButton
-                        title="Next page"
-                        isDisabled={page >= totalPages}
-                        onClick={() => pagination.onPageChange(page + 1)}
-                    >
-                        <Icon icon="chevron-right" margin="m-0" />
-                    </PageButton>
-                    <PageButton
-                        title="Last page"
-                        isDisabled={page >= totalPages}
-                        onClick={() => pagination.onPageChange(totalPages)}
-                    >
-                        <Icon icon="chevron-right" margin="m-0" />
-                        <Icon icon="chevron-right" margin="m-0" className="double-chevron" />
-                    </PageButton>
-                </div>
-                {pagination.turnOff && (
-                    <>
-                        <div className="vr" />
-                        <Button variant="link" size="sm" className="p-0 text-nowrap" onClick={pagination.turnOff}>
-                            Turn off pagination
-                        </Button>
-                    </>
-                )}
+            <div className="d-flex align-items-center gap-1">
+                <PageButton title="First page" isDisabled={page <= 1} onClick={() => pagination.onPageChange(1)}>
+                    <Icon icon="chevron-left" margin="m-0" />
+                    <Icon icon="chevron-left" margin="m-0" className="double-chevron" />
+                </PageButton>
+                <PageButton
+                    title="Previous page"
+                    isDisabled={page <= 1}
+                    onClick={() => pagination.onPageChange(page - 1)}
+                >
+                    <Icon icon="chevron-left" margin="m-0" />
+                </PageButton>
+                <small className="text-muted ms-1">Page</small>
+                <PageInput page={page} totalPages={totalPages} onPageChange={pagination.onPageChange} />
+                <small className="text-muted me-1 text-nowrap">of {totalPages.toLocaleString()}</small>
+                <PageButton
+                    title="Next page"
+                    isDisabled={page >= totalPages}
+                    onClick={() => pagination.onPageChange(page + 1)}
+                >
+                    <Icon icon="chevron-right" margin="m-0" />
+                </PageButton>
+                <PageButton
+                    title="Last page"
+                    isDisabled={page >= totalPages}
+                    onClick={() => pagination.onPageChange(totalPages)}
+                >
+                    <Icon icon="chevron-right" margin="m-0" />
+                    <Icon icon="chevron-right" margin="m-0" className="double-chevron" />
+                </PageButton>
             </div>
         </div>
     );
@@ -151,6 +140,7 @@ function PageInput({ page, totalPages, onPageChange }: PageInputProps) {
             aria-label="Page"
             min={1}
             max={totalPages}
+            style={{ width: `calc(${String(totalPages).length}ch + 2.5em)` }}
             value={value}
             onChange={handleChange}
             onFocus={(event) => event.target.select()}
