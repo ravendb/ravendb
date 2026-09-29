@@ -1,5 +1,10 @@
 import { Meta, StoryObj } from "@storybook/react-webpack5";
-import { withStorybookContexts, withBootstrap5, databaseAccessArgType } from "test/storybookTestUtils";
+import {
+    withStorybookContexts,
+    withBootstrap5,
+    databaseAccessArgType,
+    withForceRerender,
+} from "test/storybookTestUtils";
 import DocumentsPage from "./DocumentsPage";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
@@ -7,43 +12,9 @@ import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import document from "models/database/documents/document";
 
 export default {
-    title: "Pages/Database/Documents/DocumentsPage",
-    decorators: [withStorybookContexts, withBootstrap5],
+    title: "Pages/Documents/DocumentsPage",
+    decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
 } satisfies Meta;
-
-interface DocumentsListStoryArgs {
-    collection: string;
-    isSharded: boolean;
-    totalCount: number;
-    databaseAccess: databaseAccessLevel;
-}
-
-export const DocumentsListStory: StoryObj<DocumentsListStoryArgs> = {
-    name: "Documents List",
-    render: ({ collection, isSharded, totalCount, databaseAccess }) => {
-        const { name } = isSharded
-            ? mockStore.databases.withActiveDatabase_Sharded()
-            : mockStore.databases.withActiveDatabase();
-        mockStore.accessManager.with_databaseAccess({ [name]: databaseAccess });
-        mockStore.collectionsTracker.with_Collections();
-        mockServices.databasesService.withGeneratedDocumentsPreview(totalCount);
-
-        return (
-            <div style={{ height: "600px" }}>
-                <DocumentsPage queryParams={{ collection: collection || undefined }} />
-            </div>
-        );
-    },
-    args: {
-        collection: "Orders",
-        isSharded: false,
-        totalCount: 10_000_000,
-        databaseAccess: "DatabaseAdmin",
-    },
-    argTypes: {
-        databaseAccess: databaseAccessArgType,
-    },
-};
 
 interface AllDocumentsStoryArgs {
     isEmpty: boolean;
@@ -69,6 +40,40 @@ export const AllDocumentsStory: StoryObj<AllDocumentsStoryArgs> = {
     },
     args: {
         isEmpty: false,
+    },
+};
+
+interface CollectionStoryArgs {
+    collection: string;
+    isSharded: boolean;
+    totalCount: number;
+    databaseAccess: databaseAccessLevel;
+}
+
+export const CollectionStory: StoryObj<CollectionStoryArgs> = {
+    name: "Collection",
+    render: ({ collection, isSharded, totalCount, databaseAccess }) => {
+        const { name } = isSharded
+            ? mockStore.databases.withActiveDatabase_Sharded()
+            : mockStore.databases.withActiveDatabase();
+        mockStore.accessManager.with_databaseAccess({ [name]: databaseAccess });
+        mockStore.collectionsTracker.with_Collections([], name);
+        mockServices.databasesService.withGeneratedDocumentsPreview(totalCount);
+
+        return (
+            <div style={{ height: "600px" }}>
+                <DocumentsPage queryParams={{ collection: collection || undefined }} />
+            </div>
+        );
+    },
+    args: {
+        collection: "Orders",
+        isSharded: false,
+        totalCount: 10_000_000,
+        databaseAccess: "DatabaseAdmin",
+    },
+    argTypes: {
+        databaseAccess: databaseAccessArgType,
     },
 };
 

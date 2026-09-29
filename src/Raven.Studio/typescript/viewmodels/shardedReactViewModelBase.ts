@@ -44,6 +44,7 @@ abstract class shardedReactViewModelBase extends shardViewModelBase {
             props,
             dirtyFlag,
             isPageView: true,
+            databaseName: this.db.name,
         }));
     }
 }

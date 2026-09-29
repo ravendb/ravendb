@@ -22,8 +22,14 @@ export interface Collection {
 }
 
 interface CollectionsTrackerState {
+    databaseName: string | null;
     collections: EntityState<Collection, CollectionName>;
     globalChangeVector: string | null;
+}
+
+interface CollectionsLoadedPayload {
+    databaseName: string | null;
+    collections: Collection[];
 }
 
 const collectionsAdapter = createEntityAdapter<Collection, CollectionName>({
@@ -33,6 +39,7 @@ const collectionsAdapter = createEntityAdapter<Collection, CollectionName>({
 const collectionsSelectors = collectionsAdapter.getSelectors();
 
 const initialState: CollectionsTrackerState = {
+    databaseName: null,
     collections: collectionsAdapter.getInitialState(),
     globalChangeVector: null,
 };
@@ -41,8 +48,9 @@ export const collectionsTrackerSlice = createSlice({
     initialState,
     name: "collectionsTracker",
     reducers: {
-        collectionsLoaded: (state, { payload: collections }: PayloadAction<Collection[]>) => {
-            collectionsAdapter.setAll(state.collections, collections);
+        collectionsLoaded: (state, { payload }: PayloadAction<CollectionsLoadedPayload>) => {
+            state.databaseName = payload.databaseName;
+            collectionsAdapter.setAll(state.collections, payload.collections);
         },
         globalChangeVectorUpdated: (state, { payload: changeVector }: PayloadAction<string | null>) => {
             state.globalChangeVector = changeVector;
@@ -62,6 +70,7 @@ const selectUserCollectionNames = createSelector(selectCollectionNames, (collect
 );
 
 export const collectionsTrackerSelectors = {
+    databaseName: (store: RootState) => store.collectionsTracker.databaseName,
     collections: (store: RootState) => collectionsSelectors.selectAll(store.collectionsTracker.collections),
     collectionByName: (name: CollectionName) => (store: RootState) =>
         collectionsSelectors.selectById(store.collectionsTracker.collections, name) ?? null,

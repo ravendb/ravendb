@@ -13,7 +13,7 @@ export function useCollectionRemovalRedirect(databaseName: string, collectionNam
 
     // Navigates to all documents once the collection disappears from the collection stats
     useEffect(() => {
-        if (collectionName === null || collectionNames.length === 0) {
+        if (collectionName === null) {
             return;
         }
 
