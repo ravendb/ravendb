@@ -6,6 +6,7 @@ using Corax.Querying.Matches;
 using Corax.Utils;
 using FastTests.Voron;
 using Tests.Infrastructure;
+using Voron.Data.PostingLists;
 using Xunit;
 
 namespace SlowTests.Corax.Bugs;
@@ -76,6 +77,42 @@ public class TermMatchTests : StorageTest
             var matches = ((long[])[24L, 1111L, 1589L, 2024L]).AsSpan();
             var result = termMatch.AndWith(matches, 4);
             Assert.Equal(result, 0);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Corax)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AndWithMustFindTheFirstEntryOfTheSecondLeaf(bool useAccelerated)
+    {
+        // the term is in every other document
+        long entryId = 0;
+        while (true)
+        {
+            using (var wtx = Env.WriteTransaction())
+            {
+                var list = wtx.OpenPostingList("test");
+                for (int i = 0; i < 16 * 1024; i++)
+                    list.Add(EntryIdEncodings.Encode(entryId += 2, 1, TermIdMask.Single));
+                wtx.Commit();
+            }
+
+            using (var rtx = Env.ReadTransaction())
+            {
+                if (rtx.OpenPostingList("test").State.Depth > 1)
+                    break;
+            }
+        }
+
+        using (var rtx = Env.ReadTransaction())
+        {
+            using var indexSearcher = new IndexSearcher(rtx, null);
+            var list = rtx.OpenPostingList("test");
+            var root = new PostingListBranchPage(list.Llt.GetPage(list.State.RootPage));
+            long firstOfSecondLeaf = (long)EntryIdEncodings.DecodeAndDiscardFrequency(root.GetByIndex(1).Key);
+
+            var termMatch = TermMatch.YieldSet(indexSearcher, rtx.LowLevelTransaction.Allocator, list, 1, false, useAccelerated);
+            Assert.Equal(1, termMatch.AndWith([firstOfSecondLeaf], 1));
         }
     }
 }
