@@ -35,8 +35,8 @@ declare module "@tanstack/react-table" {
     }
 }
 
-const emptySelection: LazyTableSelectionState = { mode: "inclusive", selectedIds: [] };
-const allSelection: LazyTableSelectionState = { mode: "exclusive", excludedIds: [] };
+const EMPTY_SELECTION: LazyTableSelectionState = { mode: "inclusive", selectedIds: [] };
+const ALL_SELECTION: LazyTableSelectionState = { mode: "exclusive", excludedIds: [] };
 
 export function useLazyTableSelection<T>({
     lazyRows: { rows, getItem },
@@ -44,7 +44,7 @@ export function useLazyTableSelection<T>({
     totalCount,
     isPaginated,
 }: UseLazyTableSelectionProps<T>): LazyTableSelection<T> {
-    const [state, setState] = useState<LazyTableSelectionState>(emptySelection);
+    const [state, setState] = useState<LazyTableSelectionState>(EMPTY_SELECTION);
     const [anchorRowIndex, setAnchorRowIndex] = useState<number>(null);
 
     const isSelected = createIsSelected(state);
@@ -74,14 +74,14 @@ export function useLazyTableSelection<T>({
         if (isPaginated) {
             setState(withSelected(state, rowIds, selectionState !== "AllSelected"));
         } else {
-            setState(selectionState === "Empty" ? allSelection : emptySelection);
+            setState(selectionState === "Empty" ? ALL_SELECTION : EMPTY_SELECTION);
         }
 
         setAnchorRowIndex(null);
     };
 
     const clear = () => {
-        setState(emptySelection);
+        setState(EMPTY_SELECTION);
         setAnchorRowIndex(null);
     };
 

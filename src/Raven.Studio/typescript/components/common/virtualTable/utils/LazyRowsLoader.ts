@@ -42,7 +42,7 @@ interface FetchRequest {
     isSequential: boolean;
 }
 
-const initialSnapshot: LazyRowsSnapshot = {
+const INITIAL_SNAPSHOT: LazyRowsSnapshot = {
     range: { start: 0, end: 0 },
     allowSkip: false,
     version: 0,
@@ -58,7 +58,7 @@ export class LazyRowsLoader<T, TResult extends pagedResultWithToken<T> = pagedRe
     private continuationToken: string | undefined;
     private generation = 0;
     private isStarted = false;
-    private snapshot = initialSnapshot;
+    private snapshot = INITIAL_SNAPSHOT;
     private listeners = new Set<() => void>();
 
     constructor(private options: LazyRowsLoaderOptions<T, TResult>) {}
