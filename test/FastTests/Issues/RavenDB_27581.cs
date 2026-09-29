@@ -74,13 +74,19 @@ namespace FastTests.Issues
             if (PlatformDetails.RunningOnPosix)
             {
                 command = "bash";
-                File.WriteAllText(scriptPath, $"#!/bin/bash\r\necho '{settingsString}'");
+                File.WriteAllText(scriptPath, "#!/bin/bash\r\n" +
+                    "printf 'backup-script entered pid=%s utc=%s bash=%s\\n' \"$$\" \"${EPOCHREALTIME:-unknown}\" \"$BASH_VERSION\" >&2\n" +
+                    $"echo '{settingsString}'\n" +
+                    "printf 'backup-script echo-returned pid=%s utc=%s\\n' \"$$\" \"${EPOCHREALTIME:-unknown}\" >&2");
                 Process.Start("chmod", $"700 {scriptPath}")?.WaitForExit();
             }
             else
             {
                 command = "powershell";
-                File.WriteAllText(scriptPath, $"echo '{settingsString}'");
+                File.WriteAllText(scriptPath,
+                    "[Console]::Error.WriteLine(\"backup-script entered pid=$PID utc=$([DateTime]::UtcNow.ToString('O')) version=$($PSVersionTable.PSVersion)\")\n" +
+                    $"echo '{settingsString}'\n" +
+                    "[Console]::Error.WriteLine(\"backup-script echo-returned pid=$PID utc=$([DateTime]::UtcNow.ToString('O'))\")");
             }
 
             return scriptPath;
