@@ -3,19 +3,31 @@
 One concept, one word, on every surface. These are the product's terms — use them in
 every label, heading, menu item, description, toast, `aria-label` and page title.
 
-| Term                  | Means                                        | Never                              |
-| --------------------- | -------------------------------------------- | ---------------------------------- |
-| **App**               | a configured application                     | "Application"                      |
-| **Data source**       | the source database and its ingestion        | "CDC" as a product noun            |
-| **Dashboard API key** | the single dashboard credential              | "operator API key", "operator key" |
-| **Prompt**            | one message a person sent to an agent        | "Message" for the counted metric   |
-| **Quill**             | the deployment                               | "appliance", "this Quill instance" |
-| **Sync**              | the running pipeline (performance, progress) | "CDC performance", "CDC feed"      |
+| Term                      | Means                                        | Never                              |
+| ------------------------- | -------------------------------------------- | ---------------------------------- |
+| **App**                   | a configured application                     | "Application"                      |
+| **Chat widget**           | the UI embedded in a website or application  | "web widget"                       |
+| **Chat widget preview**   | Quill's built-in preview of the chat widget  | "web widget preview"               |
+| **Data source**           | the source database and its ingestion        | "CDC" as a product noun            |
+| **Dashboard API key**     | the single dashboard credential              | "operator API key", "operator key" |
+| **Embedded chat**         | the channel type                             | "Web widget"                       |
+| **Embedded chat channel** | a configured channel instance                | "web widget channel"               |
+| **Prompt**                | one message a person sent to an agent        | "Message" for the counted metric   |
+| **Quill**                 | the deployment                               | "appliance", "this Quill instance" |
+| **Sync**                  | the running pipeline (performance, progress) | "CDC performance", "CDC feed"      |
+| **Telegram**              | the Telegram channel type                    | "Telegram bot" for the type        |
 
 **Dashboard API key** is the term when naming the dashboard credential in prose. Bare
 "API key" is fine in a field-level message sitting beneath a correctly labelled
 "Dashboard API key" field, and it is the correct term for a third-party provider's key
 (OpenAI, Azure, Google, Hugging Face, Mistral) — those are never the dashboard credential.
+
+**Chat widget** is the term when naming the interface in prose. Bare "widget" is fine where
+the chat widget is already the subject ("The widget only loads on these origins"), and "bot"
+is correct when naming the bot itself ("Connect a Telegram bot"), never the channel type.
+
+The customer's own software is a "website or application", never "app", which always means
+a Quill **App**.
 
 New and changed labels should use sentence case ("IP configuration", "Data source").
 **Quill** is a proper noun and stays capitalised.

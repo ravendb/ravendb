@@ -16,26 +16,23 @@ import { FormStringList } from "@/components/form/form-string-list";
 import { useFormUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { withNestedSubmit } from "@/lib/form-utils";
 import { invalidateChannelQueries } from "@/lib/query-invalidation";
+import type { FixedAgent } from "@/pages/apps/channels/channel-form-types";
 
-const webWidgetChannelSchema = z.object({
+const embeddedChatChannelSchema = z.object({
     agentId: z.string().min(1, "Select an agent to route conversations to"),
     displayName: z.string().trim().min(1, "Channel name is required"),
     allowedOrigins: z.array(z.object({ value: z.string().trim() })),
 });
 
-type WebWidgetChannelFormData = z.infer<typeof webWidgetChannelSchema>;
+type EmbeddedChatChannelFormData = z.infer<typeof embeddedChatChannelSchema>;
 
-const DEFAULT_VALUES: WebWidgetChannelFormData = {
+const DEFAULT_VALUES: EmbeddedChatChannelFormData = {
     agentId: "",
     displayName: "",
     allowedOrigins: [],
 };
 
-// The agent the channel routes to, when the caller has already chosen it (e.g. the capability
-// wizard just created it). When omitted, the operator picks from the app's agents.
-export type FixedAgent = { agentId: string; name: string };
-
-export function WebWidgetChannelForm({
+export function EmbeddedChatChannelForm({
     slug,
     agent,
     onCreated,
@@ -48,16 +45,16 @@ export function WebWidgetChannelForm({
     // With a fixed agent there's nothing to pick, so skip loading the list.
     const agentsQuery = useQuery({ ...api.queries.agents.list(slug), enabled: !agent });
 
-    const form = useForm<WebWidgetChannelFormData>({
+    const form = useForm<EmbeddedChatChannelFormData>({
         mode: "onChange",
-        resolver: zodResolver(webWidgetChannelSchema),
+        resolver: zodResolver(embeddedChatChannelSchema),
         defaultValues: { ...DEFAULT_VALUES, agentId: agent?.agentId ?? "" },
     });
 
     const unsavedChanges = useFormUnsavedChanges(form);
 
     const createMutation = useMutation({
-        mutationFn: (values: WebWidgetChannelFormData) =>
+        mutationFn: (values: EmbeddedChatChannelFormData) =>
             api.services.channels.create(slug, {
                 type: "IFrame",
                 agentId: values.agentId,
@@ -67,7 +64,7 @@ export function WebWidgetChannelForm({
         onSuccess: async () => {
             unsavedChanges.markSaved();
             await invalidateChannelQueries(queryClient, slug, "IFrame");
-            toast.success("Web widget channel created");
+            toast.success("Embedded chat channel created");
             onCreated();
         },
     });
@@ -123,9 +120,9 @@ export function WebWidgetChannelForm({
                                 control={form.control}
                                 name="allowedOrigins"
                                 label="Allowed origins"
-                                description="The widget only loads on these origins. Leave empty to allow any site."
+                                description="The widget only loads on these origins. Leave empty to allow any origin."
                                 addButtonLabel="Add origin"
-                                emptyLabel="No origins — the widget can be embedded on any site."
+                                emptyLabel="No origins — the widget can be embedded anywhere."
                                 defaultValue={{ value: "" }}
                                 fieldName={(index) => `allowedOrigins.${index}.value`}
                                 itemLabel={(index) => `Origin ${index + 1}`}

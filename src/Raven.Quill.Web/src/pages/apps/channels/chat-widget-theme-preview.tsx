@@ -20,7 +20,7 @@ export type PreviewAppearance = "Light" | "Dark";
  *  live, or the canned conversation that exercises bubbles, tables and code. */
 export type PreviewView = "Welcome" | "Conversation";
 
-type WebWidgetThemePreviewProps = {
+type ChatWidgetThemePreviewProps = {
     theme: WidgetTheme;
     /** The scheme to preview - the editor passes the one whose colors are being edited. */
     appearance: PreviewAppearance;
@@ -28,7 +28,7 @@ type WebWidgetThemePreviewProps = {
     className?: string;
 };
 
-export function WebWidgetThemePreview({ theme, appearance, view, className }: WebWidgetThemePreviewProps) {
+export function ChatWidgetThemePreview({ theme, appearance, view, className }: ChatWidgetThemePreviewProps) {
     const iframeRef = useRef<HTMLIFrameElement>(null);
     // Counts `ready` envelopes rather than latching a boolean: a reloaded iframe posts a fresh `ready`,
     // and the bump re-runs the push effect so the new document gets the current theme. Pushes to a window
@@ -71,7 +71,7 @@ export function WebWidgetThemePreview({ theme, appearance, view, className }: We
         <div className={cn("overflow-hidden rounded-xl border bg-background shadow-sm", className)}>
             <iframe
                 ref={iframeRef}
-                title="Web widget preview"
+                title="Chat widget preview"
                 src={PREVIEW_SRC}
                 className="h-[640px] w-full border-0"
             />

@@ -6,21 +6,21 @@ import { DetailHeader } from "@/components/data/detail-header";
 import { FormFieldsSkeleton } from "@/components/data/loading-skeletons";
 import { Alert } from "@/components/shadcn/ui/alert";
 import { appRoutes } from "@/lib/app-routes";
-import { useWebWidgetThemeSave } from "@/pages/apps/channels/use-web-widget-theme-save";
-import { WebWidgetThemeEditor } from "@/pages/apps/channels/web-widget-theme-editor";
+import { useChatWidgetThemeSave } from "@/pages/apps/channels/use-chat-widget-theme-save";
+import { ChatWidgetThemeEditor } from "@/pages/apps/channels/chat-widget-theme-editor";
 
-export function AppWebWidgetDefaultCustomize() {
+export function AppChatWidgetDefaultCustomize() {
     const { slug = "" } = useParams();
 
-    const defaultQuery = useQuery(api.queries.webWidget.defaultTheme(slug));
+    const defaultQuery = useQuery(api.queries.chatWidget.defaultTheme(slug));
 
-    const saveMutation = useWebWidgetThemeSave({
+    const saveMutation = useChatWidgetThemeSave({
         save: (theme) => api.services.iframe.updateDefaultTheme(slug, { theme }),
         invalidateKeys: [
-            api.queries.webWidget.defaultTheme(slug).queryKey,
+            api.queries.chatWidget.defaultTheme(slug).queryKey,
             // Each widget's theme response embeds this default as its fallback (defaultTheme), so the saved
             // default must also refresh their cached responses, not just this page's query.
-            api.queries.webWidget.themesKey(slug),
+            api.queries.chatWidget.themesKey(slug),
         ],
         successMessage: "Default theme saved",
     });
@@ -28,9 +28,9 @@ export function AppWebWidgetDefaultCustomize() {
     return (
         <div className="flex h-full min-h-0 flex-col gap-5">
             <DetailHeader
-                title="Default web widget appearance"
+                title="Default chat widget appearance"
                 backTo={{ to: appRoutes.app(slug, "channels"), label: "Channels" }}
-                meta="This theme applies to every web widget that doesn't have one of its own."
+                meta="This theme applies to every embedded chat channel that doesn't have one of its own."
             />
 
             <div className="-mx-2 min-h-0 flex-1 overflow-y-auto px-2">
@@ -44,7 +44,7 @@ export function AppWebWidgetDefaultCustomize() {
                 >
                     <div className="grid gap-5">
                         {defaultQuery.data && (
-                            <WebWidgetThemeEditor
+                            <ChatWidgetThemeEditor
                                 theme={defaultQuery.data.theme}
                                 defaultTheme={defaultQuery.data.theme}
                                 fontOptions={defaultQuery.data.fontOptions}

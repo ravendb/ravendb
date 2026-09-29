@@ -7,16 +7,16 @@ import {
     SAMPLE_DEFAULT_THEME,
     SAMPLE_FONT_OPTIONS,
 } from "@/mocks/iframe-mocks";
-import { WebWidgetAppearanceTab } from "./web-widget-appearance-tab";
+import { ChatWidgetAppearanceTab } from "./chat-widget-appearance-tab";
 
 const meta = {
-    title: "Apps/Channels/Web widget appearance tab",
-    component: WebWidgetAppearanceTab,
+    title: "Apps/Channels/Chat widget appearance tab",
+    component: ChatWidgetAppearanceTab,
     args: {
         slug: "demo",
         channelId: SAMPLE_CHANNEL_ID,
     },
-} satisfies Meta<typeof WebWidgetAppearanceTab>;
+} satisfies Meta<typeof ChatWidgetAppearanceTab>;
 
 export default meta;
 

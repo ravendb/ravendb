@@ -30,7 +30,7 @@ type ChannelGroupConfig = {
 
 // Order and icons mirror the "Add channel" menu so the page reads the same way channels are created.
 const CHANNEL_GROUPS: ChannelGroupConfig[] = [
-    { type: "IFrame", label: "Web widgets", icon: CodeXml },
+    { type: "IFrame", label: "Embedded chat", icon: CodeXml },
     { type: "Telegram", label: "Telegram", icon: Send },
     { type: "WhatsApp", label: "WhatsApp", icon: MessageCircle },
     { type: "Slack", label: "Slack", icon: SlackIcon },
@@ -125,9 +125,9 @@ export function ChannelGroups({ slug }: { slug: string }) {
                                             <group.icon className="size-4 text-muted-foreground" aria-hidden="true" />
                                             <Heading variant="label">{group.label}</Heading>
                                             <CountBadge>{group.channels.length}</CountBadge>
-                                            {group.label === "Web widgets" && (
+                                            {group.label === "Embedded chat" && (
                                                 <Button asChild variant="outline">
-                                                    <Link to={appRoutes.app(slug, "web-widget/default-customize")}>
+                                                    <Link to={appRoutes.app(slug, "chat-widget/default-customize")}>
                                                         <Palette aria-hidden="true" />
                                                         Customize default appearance
                                                     </Link>
