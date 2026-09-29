@@ -1,6 +1,7 @@
 import { ColumnDef, Table as TanstackTable, VisibilityState } from "@tanstack/react-table";
 import changeVectorUtils from "common/changeVectorUtils";
 import { useDocumentColumnsProvider } from "components/common/virtualTable/columnProviders/useDocumentColumnsProvider";
+import CellDocumentId from "components/common/virtualTable/cells/CellDocumentId";
 import CellValue from "components/common/virtualTable/cells/CellValue";
 import { CellWithCopy } from "components/common/virtualTable/cells/CellWithCopy";
 import DateFormatterCell from "components/common/virtualTable/cells/CellDateFormatter";
@@ -238,15 +239,14 @@ function createMetadataColumns(databaseName: string, widthInPx: number, appUrl: 
             id: ID_COLUMN_NAME,
             header: "Id",
             accessorFn: (doc) => doc.getId(),
-            cell: ({ getValue }) => {
-                const id = getValue<string>();
-
-                return (
-                    <CellWithCopy value={id}>
-                        <a href={appUrl.forEditDoc(id, databaseName)}>{id}</a>
-                    </CellWithCopy>
-                );
-            },
+            cell: ({ getValue, row }) => (
+                <CellDocumentId
+                    id={getValue<string>()}
+                    collection={row.original.getCollection()}
+                    databaseName={databaseName}
+                    hasHyperlink
+                />
+            ),
             size: getSize(30),
             enableHiding: false,
         },
