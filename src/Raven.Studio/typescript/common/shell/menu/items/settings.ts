@@ -126,7 +126,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             search: {
                 innerActions: [
                     { name: "Enable Document Refresh" },
-                    { name: "Custom refresh frequency" },
+                    { name: "Refresh frequency" },
                 ],
             },
         }),
@@ -142,7 +142,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             search: {
                 innerActions: [
                     { name: "Enable Document Expiration" },
-                    { name: "Set custom expiration frequency" },
+                    { name: "Expiration frequency" },
                 ],
             },
         }),
@@ -237,7 +237,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             search: {
                 innerActions: [
                     { name: "Enable Data Archival" },
-                    { name: "Custom archival frequency" },
+                    { name: "Archive frequency" },
                 ],
             },
         }),

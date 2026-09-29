@@ -6,8 +6,16 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { FormGroup, FormInput, FormLabel, FormRadioToggleWithIcon, FormSelect } from "components/common/Form";
+import { FormGroup, FormInput, FormRadioToggleWithIcon, FormSelect } from "components/common/Form";
 import OverridableField from "components/common/OverridableField";
+import FieldLabel from "components/common/FieldLabel";
+import {
+    IdentityPartsSeparatorTooltip,
+    LoadBalanceBehaviorTooltip,
+    LoadBalancerSeedTooltip,
+    MaximumNumberOfRequestsTooltip,
+    ReadBalanceBehaviorTooltip,
+} from "components/common/clientConfiguration/ClientConfigurationTooltips";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
@@ -35,7 +43,6 @@ import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUti
 import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 export default function ClientDatabaseConfiguration() {
@@ -199,59 +206,36 @@ export default function ClientDatabaseConfiguration() {
                                                 "item-disabled": canEditDatabaseConfig,
                                             })}
                                         >
-                                            <div className="p-4">
-                                                <FormGroup marginClass="mb-3">
-                                                    <FormLabel>
+                                            <div className="p-4 vstack gap-3">
+                                                <FormGroup marginClass="">
+                                                    <FieldLabel
+                                                        tooltip={<IdentityPartsSeparatorTooltip />}
+                                                        tooltipPlacement="right"
+                                                    >
                                                         Identity parts separator
-                                                        <PopoverWithHoverWrapper
-                                                            placement="right"
-                                                            message={
-                                                                <>
-                                                                    Set the default separator for automatically
-                                                                    generated document IDs (<i>Identity</i>, <i>HiLo</i>
-                                                                    , and <i>Server-side</i>).
-                                                                    <br />
-                                                                    Use any character except <code>
-                                                                        &apos;|&apos;
-                                                                    </code>{" "}
-                                                                    (pipe).
-                                                                </>
-                                                            }
-                                                        >
-                                                            <Icon icon="info-new" margin="ms-1" />
-                                                        </PopoverWithHoverWrapper>
-                                                    </FormLabel>
+                                                    </FieldLabel>
                                                     <Form.Control
                                                         defaultValue={globalConfig.identityPartsSeparatorValue}
                                                         disabled
                                                         placeholder={
-                                                            globalConfig.identityPartsSeparatorValue || "'/' (default)"
+                                                            globalConfig.identityPartsSeparatorValue || "Default ('/')"
                                                         }
                                                     />
                                                 </FormGroup>
-                                                <FormGroup marginClass="mb-0">
-                                                    <FormLabel>
+                                                <FormGroup marginClass="">
+                                                    <FieldLabel
+                                                        tooltip={<MaximumNumberOfRequestsTooltip />}
+                                                        tooltipPlacement="right"
+                                                    >
                                                         Maximum number of requests per session
-                                                        <PopoverWithHoverWrapper
-                                                            placement="right"
-                                                            message={
-                                                                <>
-                                                                    Set this number to restrict the number of requests (
-                                                                    <code>Reads</code> & <code>Writes</code>) per
-                                                                    session in the client API.
-                                                                </>
-                                                            }
-                                                        >
-                                                            <Icon icon="info-new" margin="ms-1" />
-                                                        </PopoverWithHoverWrapper>
-                                                    </FormLabel>
+                                                    </FieldLabel>
                                                     <Form.Control
                                                         defaultValue={globalConfig.maximumNumberOfRequestsValue}
                                                         disabled
                                                         placeholder={
                                                             globalConfig.maximumNumberOfRequestsValue
                                                                 ? globalConfig.maximumNumberOfRequestsValue.toLocaleString()
-                                                                : "30 (default)"
+                                                                : "Default (30)"
                                                         }
                                                     />
                                                 </FormGroup>
@@ -269,30 +253,22 @@ export default function ClientDatabaseConfiguration() {
                                             "item-disabled": !canEditDatabaseConfig,
                                         })}
                                     >
-                                        <div className="p-4">
+                                        <div className="p-4 vstack gap-3">
                                             <OverridableField
                                                 control={control}
                                                 overrideName="identityPartsSeparatorEnabled"
                                                 tooltipPlacement="right"
                                                 label="Identity parts separator"
-                                                tooltip={
-                                                    <>
-                                                        Set the default separator for automatically generated document
-                                                        IDs (<i>Identity</i>, <i>HiLo</i>, and <i>Server-side</i>).
-                                                        <br />
-                                                        Use any character except <code>&apos;|&apos;</code> (pipe).
-                                                    </>
-                                                }
+                                                tooltip={<IdentityPartsSeparatorTooltip />}
                                                 disabled={!canEditDatabaseConfig}
-                                                marginClass="mb-3"
                                             >
-                                                {({ isOverridden }) => (
+                                                {({ isDisabled }) => (
                                                     <FormInput
                                                         type="text"
                                                         control={control}
                                                         name="identityPartsSeparatorValue"
-                                                        placeholder="'/' (default)"
-                                                        disabled={!isOverridden || !canEditDatabaseConfig}
+                                                        placeholder="Default ('/')"
+                                                        disabled={isDisabled}
                                                     />
                                                 )}
                                             </OverridableField>
@@ -301,23 +277,16 @@ export default function ClientDatabaseConfiguration() {
                                                 overrideName="maximumNumberOfRequestsEnabled"
                                                 tooltipPlacement="right"
                                                 label="Maximum number of requests per session"
-                                                tooltip={
-                                                    <>
-                                                        Set this number to restrict the number of requests (
-                                                        <code>Reads</code> & <code>Writes</code>) per session in the
-                                                        client API.
-                                                    </>
-                                                }
+                                                tooltip={<MaximumNumberOfRequestsTooltip />}
                                                 disabled={!canEditDatabaseConfig}
-                                                marginClass="mb-0"
                                             >
-                                                {({ isOverridden }) => (
+                                                {({ isDisabled }) => (
                                                     <FormInput
                                                         type="number"
                                                         control={control}
                                                         name="maximumNumberOfRequestsValue"
-                                                        placeholder="30 (default)"
-                                                        disabled={!isOverridden || !canEditDatabaseConfig}
+                                                        placeholder="Default (30)"
+                                                        disabled={isDisabled}
                                                     />
                                                 )}
                                             </OverridableField>
@@ -345,52 +314,17 @@ export default function ClientDatabaseConfiguration() {
                                 {globalConfig && (
                                     <Col className="d-flex flex-column">
                                         <Card
-                                            className={classNames("p-4", "flex-grow-1", {
+                                            className={classNames("p-4 vstack gap-3", "flex-grow-1", {
                                                 "item-disabled": canEditDatabaseConfig,
                                             })}
                                         >
-                                            <FormGroup marginClass="mb-3">
-                                                <FormLabel>
+                                            <FormGroup marginClass="">
+                                                <FieldLabel
+                                                    tooltip={<LoadBalanceBehaviorTooltip />}
+                                                    tooltipPlacement="right"
+                                                >
                                                     Load Balance Behavior
-                                                    <PopoverWithHoverWrapper
-                                                        message={
-                                                            <>
-                                                                <span className="d-inline-block mb-1">
-                                                                    Set the Load balance method for{" "}
-                                                                    <strong>Read</strong> & <strong>Write</strong>{" "}
-                                                                    requests.
-                                                                </span>
-                                                                <ul>
-                                                                    <li className="mb-1">
-                                                                        <code>None</code>
-                                                                        <br />
-                                                                        <strong>Read</strong> requests - the node the
-                                                                        client will target will be based on Read balance
-                                                                        behavior configuration.
-                                                                        <br />
-                                                                        <strong>Write</strong> requests - will be sent
-                                                                        to the preferred node.
-                                                                    </li>
-                                                                    <li className="mb-1">
-                                                                        <code>Use session context</code>
-                                                                        <br />
-                                                                        Sessions that are assigned the same context will
-                                                                        have all their <strong>
-                                                                            Read & Write
-                                                                        </strong>{" "}
-                                                                        requests routed to the same node.
-                                                                        <br />
-                                                                        The session context is hashed from a context
-                                                                        string (given by the client) and an optional
-                                                                        seed.
-                                                                    </li>
-                                                                </ul>
-                                                            </>
-                                                        }
-                                                    >
-                                                        <Icon icon="info-new" margin="ms-1" />
-                                                    </PopoverWithHoverWrapper>
-                                                </FormLabel>
+                                                </FieldLabel>
                                                 <Form.Control
                                                     defaultValue={globalConfig.loadBalancerValue}
                                                     disabled
@@ -399,47 +333,27 @@ export default function ClientDatabaseConfiguration() {
                                             </FormGroup>
                                             {(globalConfig?.loadBalancerSeedValue ||
                                                 formValues.loadBalancerValue === "UseSessionContext") && (
-                                                <FormGroup marginClass="mb-3">
-                                                    <FormLabel>
+                                                <FormGroup marginClass="">
+                                                    <FieldLabel
+                                                        tooltip={<LoadBalancerSeedTooltip />}
+                                                        tooltipPlacement="right"
+                                                    >
                                                         Seed
-                                                        <PopoverWithHoverWrapper
-                                                            placement="right"
-                                                            message={
-                                                                <>
-                                                                    An optional seed number.
-                                                                    <br />
-                                                                    Used when hashing the session context.
-                                                                </>
-                                                            }
-                                                        >
-                                                            <Icon icon="info-new" margin="ms-1" />
-                                                        </PopoverWithHoverWrapper>
-                                                    </FormLabel>
+                                                    </FieldLabel>
                                                     <Form.Control
                                                         defaultValue={globalConfig.loadBalancerSeedValue}
                                                         disabled
-                                                        placeholder="0 (default)"
+                                                        placeholder="Default (0)"
                                                     />
                                                 </FormGroup>
                                             )}
-                                            <FormGroup marginClass="mb-0">
-                                                <FormLabel>
+                                            <FormGroup marginClass="">
+                                                <FieldLabel
+                                                    tooltip={<ReadBalanceBehaviorTooltip />}
+                                                    tooltipPlacement="right"
+                                                >
                                                     Read Balance Behavior
-                                                    <PopoverWithHoverWrapper
-                                                        placement="right"
-                                                        message={
-                                                            <>
-                                                                Set the Read balance method the client will use when
-                                                                accessing a node with <code>Read</code> requests.
-                                                                <br />
-                                                                <code>Write</code> requests are sent to the preferred
-                                                                node.
-                                                            </>
-                                                        }
-                                                    >
-                                                        <Icon icon="info-new" margin="ms-1" />
-                                                    </PopoverWithHoverWrapper>
-                                                </FormLabel>
+                                                </FieldLabel>
                                                 <Form.Control
                                                     defaultValue={globalConfig.readBalanceBehaviorValue}
                                                     placeholder="None"
@@ -451,7 +365,7 @@ export default function ClientDatabaseConfiguration() {
                                 )}
                                 <Col className="d-flex flex-column">
                                     <Card
-                                        className={classNames("p-4", "flex-grow-1", {
+                                        className={classNames("p-4 vstack gap-3", "flex-grow-1", {
                                             "item-disabled": !canEditDatabaseConfig,
                                         })}
                                     >
@@ -460,43 +374,15 @@ export default function ClientDatabaseConfiguration() {
                                             overrideName="loadBalancerEnabled"
                                             tooltipPlacement="right"
                                             label="Load Balance Behavior"
-                                            tooltip={
-                                                <>
-                                                    <span className="d-inline-block mb-1">
-                                                        Set the Load balance method for <strong>Read</strong> &{" "}
-                                                        <strong>Write</strong> requests.
-                                                    </span>
-                                                    <ul>
-                                                        <li className="mb-1">
-                                                            <code>None</code>
-                                                            <br />
-                                                            <strong>Read</strong> requests - the node the client will
-                                                            target will be based on Read balance behavior configuration.
-                                                            <br />
-                                                            <strong>Write</strong> requests - will be sent to the
-                                                            preferred node.
-                                                        </li>
-                                                        <li className="mb-1">
-                                                            <code>Use session context</code>
-                                                            <br />
-                                                            Sessions that are assigned the same context will have all
-                                                            their <strong>Read & Write</strong> requests routed to the
-                                                            same node.
-                                                            <br />
-                                                            The session context is hashed from a context string (given
-                                                            by the client) and an optional seed.
-                                                        </li>
-                                                    </ul>
-                                                </>
-                                            }
+                                            tooltip={<LoadBalanceBehaviorTooltip />}
                                             disabled={!canEditDatabaseConfig}
-                                            marginClass="mb-3"
                                         >
-                                            {({ isOverridden }) => (
+                                            {({ isDisabled, controlId }) => (
                                                 <FormSelect
                                                     control={control}
                                                     name="loadBalancerValue"
-                                                    isDisabled={!isOverridden || !canEditDatabaseConfig}
+                                                    isDisabled={isDisabled}
+                                                    inputId={controlId}
                                                     options={ClientConfigurationUtils.getLoadBalanceBehaviorOptions()}
                                                     isSearchable={false}
                                                 />
@@ -509,26 +395,19 @@ export default function ClientDatabaseConfiguration() {
                                                 overrideName="loadBalancerSeedEnabled"
                                                 tooltipPlacement="right"
                                                 label="Seed"
-                                                tooltip={
-                                                    <>
-                                                        An optional seed number.
-                                                        <br />
-                                                        Used when hashing the session context.
-                                                    </>
-                                                }
+                                                tooltip={<LoadBalancerSeedTooltip />}
                                                 disabled={
                                                     formValues.loadBalancerValue !== "UseSessionContext" ||
                                                     !canEditDatabaseConfig
                                                 }
-                                                marginClass="mb-3"
                                             >
-                                                {({ isOverridden }) => (
+                                                {({ isDisabled }) => (
                                                     <FormInput
                                                         type="number"
                                                         control={control}
                                                         name="loadBalancerSeedValue"
-                                                        placeholder="0 (default)"
-                                                        disabled={!isOverridden || !canEditDatabaseConfig}
+                                                        placeholder="Default (0)"
+                                                        disabled={isDisabled}
                                                     />
                                                 )}
                                             </OverridableField>
@@ -538,22 +417,15 @@ export default function ClientDatabaseConfiguration() {
                                             overrideName="readBalanceBehaviorEnabled"
                                             tooltipPlacement="right"
                                             label="Read Balance Behavior"
-                                            tooltip={
-                                                <>
-                                                    Set the Read balance method the client will use when accessing a
-                                                    node with <code>Read</code> requests.
-                                                    <br />
-                                                    <code>Write</code> requests are sent to the preferred node.
-                                                </>
-                                            }
+                                            tooltip={<ReadBalanceBehaviorTooltip />}
                                             disabled={!canEditDatabaseConfig}
-                                            marginClass="mb-0"
                                         >
-                                            {({ isOverridden }) => (
+                                            {({ isDisabled, controlId }) => (
                                                 <FormSelect
                                                     control={control}
                                                     name="readBalanceBehaviorValue"
-                                                    isDisabled={!isOverridden || !canEditDatabaseConfig}
+                                                    isDisabled={isDisabled}
+                                                    inputId={controlId}
                                                     options={ClientConfigurationUtils.getReadBalanceBehaviorOptions()}
                                                     isSearchable={false}
                                                 />

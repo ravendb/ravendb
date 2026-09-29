@@ -159,18 +159,17 @@ export default function DocumentRefresh() {
                                                 <OverridableField
                                                     control={control}
                                                     overrideName="isRefreshFrequencyEnabled"
-                                                    label="Custom refresh frequency"
+                                                    label="Refresh frequency"
                                                     disabled={
                                                         formState.isSubmitting || !formValues.isDocumentRefreshEnabled
                                                     }
-                                                    marginClass="mb-0"
                                                 >
-                                                    {({ isOverridden }) => (
+                                                    {({ isDisabled }) => (
                                                         <FormInput
                                                             name="refreshFrequency"
                                                             control={control}
                                                             type="number"
-                                                            disabled={formState.isSubmitting || !isOverridden}
+                                                            disabled={isDisabled}
                                                             placeholder={
                                                                 minPeriodForRefreshInHours > 0
                                                                     ? `Default (${moment
@@ -193,27 +192,25 @@ export default function DocumentRefresh() {
                                                     </RichAlert>
                                                 )}
                                             </div>
-                                            <div>
-                                                <OverridableField
-                                                    control={control}
-                                                    overrideName="isLimitMaxItemsToProcessEnabled"
-                                                    label="Max number of documents to process in a single run"
-                                                    disabled={
-                                                        formState.isSubmitting || !formValues.isDocumentRefreshEnabled
-                                                    }
-                                                    marginClass="mb-0"
-                                                >
-                                                    {({ isOverridden }) => (
-                                                        <FormInput
-                                                            name="maxItemsToProcess"
-                                                            control={control}
-                                                            type="number"
-                                                            disabled={formState.isSubmitting || !isOverridden}
-                                                            addon="items"
-                                                        />
-                                                    )}
-                                                </OverridableField>
-                                            </div>
+                                            <OverridableField
+                                                control={control}
+                                                overrideName="isLimitMaxItemsToProcessEnabled"
+                                                label="Max number of documents to process in a single run"
+                                                disabled={
+                                                    formState.isSubmitting || !formValues.isDocumentRefreshEnabled
+                                                }
+                                            >
+                                                {({ isDisabled }) => (
+                                                    <FormInput
+                                                        name="maxItemsToProcess"
+                                                        control={control}
+                                                        type="number"
+                                                        placeholder="Default (unlimited)"
+                                                        disabled={isDisabled}
+                                                        addon="items"
+                                                    />
+                                                )}
+                                            </OverridableField>
                                         </div>
                                     </Card.Body>
                                 </Card>
