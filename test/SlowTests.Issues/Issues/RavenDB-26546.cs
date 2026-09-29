@@ -72,6 +72,84 @@ public class RavenDB_26546 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Setup)]
+    public void Explicit_PublicServerUrl_is_kept_and_external_tcp_port_applies()
+    {
+        using var cert = CreateCert(SharedCertSans);
+        var setupInfo = CreateSetupInfo("sink1");
+        setupInfo.NodeSetupInfos["A"].PublicServerUrl = "https://a.sink1.test.local:443";
+        setupInfo.NodeSetupInfos["A"].ExternalPort = 8443;
+        setupInfo.NodeSetupInfos["A"].ExternalTcpPort = 38999;
+
+        var url = CertificateUtils.GetServerUrlFromCertificate(cert, setupInfo, "A", 443, 38888, out var tcpUrl, out _);
+
+        Assert.Equal("https://a.sink1.test.local:443", url);
+        Assert.Equal("tcp://a.sink1.test.local:38999", tcpUrl);
+    }
+
+    [RavenFact(RavenTestCategory.Setup)]
+    public void Explicit_PublicServerUrl_under_wildcard_san_is_accepted()
+    {
+        using var cert = CreateCert(["*.sink1.test.local"]);
+        var setupInfo = CreateSetupInfo("sink1");
+        setupInfo.NodeSetupInfos["A"].PublicServerUrl = "https://Node-A.sink1.test.local";
+
+        var url = CertificateUtils.GetServerUrlFromCertificate(cert, setupInfo, "A", 443, 38888, out var tcpUrl, out var domain);
+
+        Assert.Equal("https://Node-A.sink1.test.local", url);
+        Assert.Equal("tcp://node-a.sink1.test.local:38888", tcpUrl);
+        Assert.Equal("node-a.sink1.test.local", domain);
+    }
+
+    [RavenFact(RavenTestCategory.Setup)]
+    public void Explicit_PublicServerUrl_host_not_covered_by_certificate_throws()
+    {
+        using var cert = CreateCert(["*.sink1.test.local"]);
+        var setupInfo = CreateSetupInfo("sink1");
+        setupInfo.NodeSetupInfos["B"].PublicServerUrl = "https://sink1.test.local";
+
+        var e = Assert.Throws<InvalidOperationException>(() =>
+            CertificateUtils.GetServerUrlFromCertificate(cert, setupInfo, "B", 443, 38888, out _, out _));
+
+        Assert.Contains("'B'", e.Message);
+        Assert.Contains("sink1.test.local", e.Message);
+        Assert.Contains("not covered by the certificate", e.Message);
+    }
+
+    [RavenTheory(RavenTestCategory.Setup)]
+    [InlineData("a.sink1.test.local")]
+    [InlineData("http://a.sink1.test.local")]
+    [InlineData("https://")]
+    public void Malformed_PublicServerUrl_throws_with_node_tag(string publicServerUrl)
+    {
+        using var cert = CreateCert(SharedCertSans);
+        var setupInfo = CreateSetupInfo("sink1");
+        setupInfo.NodeSetupInfos["A"].PublicServerUrl = publicServerUrl;
+
+        var e = Assert.Throws<InvalidOperationException>(() =>
+            CertificateUtils.GetServerUrlFromCertificate(cert, setupInfo, "A", 443, 38888, out _, out _));
+
+        Assert.Contains("PublicServerUrl", e.Message);
+        Assert.Contains("'A'", e.Message);
+    }
+
+    [RavenTheory(RavenTestCategory.Setup)]
+    [InlineData("a.sink1.test.local:38888")]
+    [InlineData("https://a.sink1.test.local:38888")]
+    public void Malformed_PublicTcpServerUrl_throws_with_node_tag(string publicTcpServerUrl)
+    {
+        using var cert = CreateCert(SharedCertSans);
+        var setupInfo = CreateSetupInfo("sink1");
+        setupInfo.NodeSetupInfos["A"].PublicServerUrl = "https://a.sink1.test.local";
+        setupInfo.NodeSetupInfos["A"].PublicTcpServerUrl = publicTcpServerUrl;
+
+        var e = Assert.Throws<InvalidOperationException>(() =>
+            CertificateUtils.GetServerUrlFromCertificate(cert, setupInfo, "A", 443, 38888, out _, out _));
+
+        Assert.Contains("PublicTcpServerUrl", e.Message);
+        Assert.Contains("'A'", e.Message);
+    }
+
+    [RavenFact(RavenTestCategory.Setup)]
     public void Without_Domain_first_matching_san_is_used()
     {
         using var cert = CreateCert(SharedCertSans);
