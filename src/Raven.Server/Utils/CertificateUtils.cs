@@ -648,12 +648,23 @@ namespace Raven.Server.Utils
         public static string GetServerUrlFromCertificate(X509Certificate2 cert, SetupInfo setupInfo, string nodeTag, int port, int tcpPort, out string publicTcpUrl, out string domain)
         {
             var node = setupInfo.NodeSetupInfos[nodeTag];
-            var lowerTag = nodeTag.ToLower();
+            var lowerTag = nodeTag.ToLowerInvariant();
             var subjectAlternativeNames = GetCertificateAlternativeNames(cert).ToList();
 
             if (string.IsNullOrEmpty(node.PublicServerUrl) == false)
             {
-                var providedHost = new Uri(node.PublicServerUrl).Host;
+                var providedHost = ParseProvidedUrl(node.PublicServerUrl, "https", nameof(node.PublicServerUrl), nodeTag).Host;
+                var certificateNames = subjectAlternativeNames.Count > 0
+                    ? subjectAlternativeNames
+                    : new List<string> { cert.GetNameInfo(X509NameType.SimpleName, false) };
+
+                if (IsHostCoveredByCertificate(providedHost, certificateNames) == false)
+                    throw new InvalidOperationException(
+                        $"{nameof(node.PublicServerUrl)} '{node.PublicServerUrl}' of node '{nodeTag}' points to host '{providedHost}' which is not covered by the certificate. Certificate names: {string.Join(", ", certificateNames)}");
+
+                if (string.IsNullOrEmpty(node.PublicTcpServerUrl) == false)
+                    ParseProvidedUrl(node.PublicTcpServerUrl, "tcp", nameof(node.PublicTcpServerUrl), nodeTag);
+
                 domain = GetDomainForHost(providedHost, lowerTag, subjectAlternativeNames);
                 publicTcpUrl = string.IsNullOrEmpty(node.PublicTcpServerUrl)
                     ? BuildTcpUrl(providedHost, node, tcpPort)
@@ -679,13 +690,42 @@ namespace Raven.Server.Utils
             return url;
         }
 
+        private static Uri ParseProvidedUrl(string value, string expectedScheme, string fieldName, string nodeTag)
+        {
+            if (Uri.TryCreate(value, UriKind.Absolute, out var uri) == false || string.IsNullOrEmpty(uri.Host))
+                throw new InvalidOperationException($"{fieldName} '{value}' of node '{nodeTag}' is not a valid absolute URL. Expected format: {expectedScheme}://host[:port]");
+
+            if (string.Equals(uri.Scheme, expectedScheme, StringComparison.OrdinalIgnoreCase) == false)
+                throw new InvalidOperationException($"{fieldName} '{value}' of node '{nodeTag}' must use the '{expectedScheme}' scheme.");
+
+            return uri;
+        }
+
+        private static bool IsHostCoveredByCertificate(string host, List<string> certificateNames)
+        {
+            foreach (var name in certificateNames)
+            {
+                if (string.Equals(name, host, StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+                if (name.StartsWith("*.", StringComparison.Ordinal) == false)
+                    continue;
+
+                var dot = host.IndexOf('.');
+                if (dot > 0 && string.Equals(host.Substring(dot + 1), name.Substring(2), StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
+        }
+
         private static string SelectHostFromCertificate(X509Certificate2 cert, SetupInfo setupInfo, string lowerTag, List<string> subjectAlternativeNames)
         {
             if (string.IsNullOrEmpty(setupInfo.Domain) == false)
             {
                 var expectedSuffix = string.IsNullOrEmpty(setupInfo.RootDomain)
-                    ? setupInfo.Domain.ToLower()
-                    : $"{setupInfo.Domain}.{setupInfo.RootDomain}".ToLower();
+                    ? setupInfo.Domain.ToLowerInvariant()
+                    : $"{setupInfo.Domain}.{setupInfo.RootDomain}".ToLowerInvariant();
                 var expectedHost = $"{lowerTag}.{expectedSuffix}";
 
                 if (subjectAlternativeNames.Any(san => string.Equals(san, expectedHost, StringComparison.OrdinalIgnoreCase)))
