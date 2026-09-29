@@ -31,8 +31,8 @@ interface DocumentsSelectionActionsProps {
     onSelectionDeleted: () => void;
 }
 
-const copyLimit = 100;
-const actionButtonClassName = "text-reset text-decoration-none";
+const COPY_LIMIT = 100;
+const ACTION_BUTTON_CLASS_NAME = "text-reset text-decoration-none";
 
 export default function DocumentsSelectionActions({
     collectionName,
@@ -99,14 +99,14 @@ export default function DocumentsSelectionActions({
         const preview = await databasesService.getDocumentsPreview(
             databaseName,
             0,
-            copyLimit + state.excludedIds.length,
+            COPY_LIMIT + state.excludedIds.length,
             collectionName ?? undefined
         );
 
         return preview.items
             .map((x) => x.getId())
             .filter((id) => !state.excludedIds.includes(id))
-            .slice(0, copyLimit);
+            .slice(0, COPY_LIMIT);
     };
 
     const asyncCopyDocuments = useAsyncCallback(async () => {
@@ -132,7 +132,7 @@ export default function DocumentsSelectionActions({
         });
     });
 
-    const isCopyLimitExceeded = selectedCount > copyLimit;
+    const isCopyLimitExceeded = selectedCount > COPY_LIMIT;
     const isCopyDisabled = isCopyLimitExceeded || asyncCopyDocuments.loading || asyncCopyIds.loading;
 
     if (selectedCount === 0) {
@@ -149,13 +149,13 @@ export default function DocumentsSelectionActions({
                 <ConditionalPopover
                     conditions={{
                         isActive: isCopyLimitExceeded,
-                        message: `You can only copy up to ${copyLimit} documents`,
+                        message: `You can only copy up to ${COPY_LIMIT} documents`,
                     }}
                 >
                     <Dropdown as={ButtonGroup}>
                         <ButtonWithSpinner
                             variant="link"
-                            className={actionButtonClassName}
+                            className={ACTION_BUTTON_CLASS_NAME}
                             icon="copy"
                             onClick={asyncCopyDocuments.execute}
                             isSpinning={asyncCopyDocuments.loading}
@@ -166,7 +166,7 @@ export default function DocumentsSelectionActions({
                         <Dropdown.Toggle
                             variant="link"
                             as={CustomDropdownToggle}
-                            className={actionButtonClassName}
+                            className={ACTION_BUTTON_CLASS_NAME}
                             disabled={isCopyDisabled}
                             title="More copy options"
                         />
@@ -179,7 +179,7 @@ export default function DocumentsSelectionActions({
                 <AccessPopover accessRequired="DatabaseReadWrite">
                     <ButtonWithSpinner
                         variant="link"
-                        className={actionButtonClassName}
+                        className={ACTION_BUTTON_CLASS_NAME}
                         icon="trash"
                         onClick={handleDelete}
                         isSpinning={asyncDeleteSelectedIds.loading}
@@ -189,7 +189,7 @@ export default function DocumentsSelectionActions({
                     </ButtonWithSpinner>
                 </AccessPopover>
                 <div className="vr" />
-                <Button variant="link" className={actionButtonClassName} onClick={clear}>
+                <Button variant="link" className={ACTION_BUTTON_CLASS_NAME} onClick={clear}>
                     Clear selection
                 </Button>
             </div>

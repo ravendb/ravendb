@@ -2,7 +2,7 @@ import { globalDispatch } from "components/storeCompat";
 import { Collection, collectionsTrackerActions } from "components/common/shell/collectionsTrackerSlice";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
-const defaultCollections: Collection[] = [
+const DEFAULT_COLLECTIONS: Collection[] = [
     {
         name: "All Documents",
         countPrefix: "116",
@@ -58,7 +58,7 @@ export class MockCollectionsTracker {
         overrides: Partial<Collection>[] = [],
         databaseName = DatabasesStubs.nonShardedSingleNodeDatabase().name
     ) {
-        const collections = defaultCollections.map((collection) => ({
+        const collections = DEFAULT_COLLECTIONS.map((collection) => ({
             ...collection,
             ...overrides.find((x) => x.name === collection.name),
         }));
@@ -70,7 +70,7 @@ export class MockCollectionsTracker {
         globalDispatch(
             collectionsTrackerActions.collectionsLoaded({
                 databaseName,
-                collections: defaultCollections.filter((x) => !removedNames.includes(x.name)),
+                collections: DEFAULT_COLLECTIONS.filter((x) => !removedNames.includes(x.name)),
             })
         );
     }
