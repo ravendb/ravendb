@@ -131,6 +131,21 @@ describe("DocumentsPage", () => {
         expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
     });
 
+    it("disables pagination with an explanation in a sharded database", async () => {
+        const { screen } = rtlRender(<DocumentsListStory collection="Orders" isSharded totalCount={5} />);
+
+        expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
+
+        openDisplayDropdown(screen);
+
+        const paginationSwitch = await screen.findByRole("checkbox", { name: "Pagination" });
+        expect(paginationSwitch).toBeDisabled();
+
+        fireEvent.mouseEnter(paginationSwitch.closest(".w-fit-content"));
+
+        expect(await screen.findByText("Pagination is not available in a sharded database")).toBeInTheDocument();
+    });
+
     it("renders the toolbar actions", async () => {
         const { screen } = rtlRender(<DocumentsListStory collection="Orders" isSharded={false} totalCount={5} />);
 
