@@ -1,5 +1,6 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import CellDocumentId from "components/common/virtualTable/cells/CellDocumentId";
 import CellDocumentValue from "components/common/virtualTable/cells/CellDocumentValue";
 import { columnCheckbox, columnPreview } from "components/common/virtualTable/utils/commonColumnDefs";
 import { columnDocumentFlags } from "components/common/virtualTable/utils/documentColumnDefs";
@@ -136,11 +137,12 @@ function createColumns(options: CreateColumnsOptions) {
                 id: "@id",
                 header: "@id",
                 accessorFn: (x) => x?.getId(),
-                cell: ({ getValue }) => (
-                    <CellDocumentValue
-                        value={getValue()}
+                cell: ({ getValue, row }) => (
+                    <CellDocumentId
+                        id={getValue<string>()}
+                        collection={row.original?.getCollection()}
                         databaseName={databaseName}
-                        hasHyperlinkForIds={hasHyperlinkForIds}
+                        hasHyperlink={hasHyperlinkForIds}
                     />
                 ),
                 size: propertyColumnSize,
