@@ -170,8 +170,6 @@ $row-bg-selection-preview: color-mix(in srgb, colors.$primary-var 8%, colors.$ro
     }
 
     tbody {
-        border-radius: sizes.$gutter-xxs;
-        overflow: hidden;
         position: relative;
         background-color: colors.$row-bg-var;
 
@@ -288,6 +286,11 @@ $row-bg-selection-preview: color-mix(in srgb, colors.$primary-var 8%, colors.$ro
     flex-direction: column;
     flex: 1 1 auto;
     min-height: 0;
+
+    // Firefox ignores the height of an empty table body, so the scroll position resets while the rows are loading
+    tbody {
+        display: block;
+    }
 
     .lazy-virtual-table-area {
         flex: 1 1 auto;
