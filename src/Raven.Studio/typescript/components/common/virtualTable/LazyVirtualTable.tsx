@@ -2,10 +2,10 @@ import "./VirtualTable.scss";
 import VirtualTableBodyWrapper from "./partials/VirtualTableBodyWrapper";
 import LazyVirtualTableRow from "./partials/LazyVirtualTableRow";
 import LazyVirtualTablePaginationBar from "./partials/LazyVirtualTablePaginationBar";
+import LazyVirtualTableDomLimitBanner from "./partials/LazyVirtualTableDomLimitBanner";
 import { LazyRows } from "./hooks/useLazyRows";
 import { useLazyTableViewport } from "./hooks/useLazyTableViewport";
 import { useSelectionPreview } from "./hooks/useSelectionPreview";
-import Button from "react-bootstrap/Button";
 import { ReactNode } from "react";
 import { Table as TanstackTable } from "@tanstack/react-table";
 
@@ -56,19 +56,10 @@ export default function LazyVirtualTable<T>({
                         (viewport.isDomLimitBannerVisible || bottomOverlay) && (
                             <div className="floating-bars-container">
                                 {viewport.isDomLimitBannerVisible && (
-                                    <div className="floating-bar text-nowrap" data-testid="dom-limit-banner">
-                                        <span>
-                                            It looks like you&apos;ve reached the end of the DOM.{" "}
-                                            <Button
-                                                variant="link"
-                                                className="p-0 align-baseline"
-                                                onClick={viewport.turnOnPagination}
-                                            >
-                                                Turn on pagination
-                                            </Button>{" "}
-                                            to fetch more {itemsName}
-                                        </span>
-                                    </div>
+                                    <LazyVirtualTableDomLimitBanner
+                                        itemsName={itemsName}
+                                        onTurnOnPagination={viewport.turnOnPagination}
+                                    />
                                 )}
                                 {bottomOverlay}
                             </div>

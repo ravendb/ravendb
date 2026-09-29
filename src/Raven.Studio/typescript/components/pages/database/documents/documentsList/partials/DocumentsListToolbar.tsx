@@ -2,6 +2,7 @@ import queryUtil from "common/queryUtil";
 import savedQueriesStorage from "common/storage/savedQueriesStorage";
 import { AccessPopover } from "components/common/AccessPopover";
 import { Switch } from "components/common/Checkbox";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { CustomDropdownToggle } from "components/common/Dropdown";
 import { Icon } from "components/common/Icon";
 import RichAlert from "components/common/RichAlert";
@@ -38,6 +39,7 @@ export default function DocumentsListToolbar({
     onDataChangedRefresh,
 }: DocumentsListToolbarProps) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isSharded = useAppSelector(databaseSelectors.activeDatabase)?.isSharded;
     const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
     const { appUrl } = useAppUrls();
     const { reportEvent } = useEventsCollector();
@@ -133,14 +135,22 @@ export default function DocumentsListToolbar({
                         </Dropdown.Item>
                         <Dropdown.Divider />
                         <Dropdown.ItemText>
-                            <Switch
-                                selected={isPaginated}
-                                toggleSelection={() => onIsPaginatedChange(!isPaginated)}
-                                color="primary"
-                                title="Show the documents page by page instead of scrolling"
+                            <ConditionalPopover
+                                conditions={{
+                                    isActive: isSharded,
+                                    message: "Pagination is not available in a sharded database",
+                                }}
                             >
-                                Pagination
-                            </Switch>
+                                <Switch
+                                    selected={isPaginated}
+                                    toggleSelection={() => onIsPaginatedChange(!isPaginated)}
+                                    color="primary"
+                                    title={isSharded ? null : "Show the documents page by page instead of scrolling"}
+                                    disabled={isSharded}
+                                >
+                                    Pagination
+                                </Switch>
+                            </ConditionalPopover>
                         </Dropdown.ItemText>
                     </Dropdown.Menu>
                 </Dropdown>

@@ -1,7 +1,8 @@
-import { rtlRender, fireEvent } from "test/rtlTestUtils";
+import { rtlRender, fireEvent, act } from "test/rtlTestUtils";
 import { composeStories } from "@storybook/react-webpack5";
 import * as Stories from "./VirtualTable.stories";
 import { virtualTableConstants } from "./utils/virtualTableConstants";
+import { mockStore } from "test/mocks/store/MockStore";
 
 const { LazyVirtualTableStory } = composeStories(Stories);
 
@@ -96,6 +97,39 @@ describe("LazyVirtualTable", () => {
             expect(await screen.findByText(`Item ${maxRowsInDom - 1}`)).toBeInTheDocument();
             expect(screen.queryByText("Turn off pagination")).not.toBeInTheDocument();
         });
+    });
+
+    it("suggests a query instead of pagination at the end of DOM in a sharded database", async () => {
+        const minFetchCount = maxRowsInDom / 4;
+
+        const { screen, container } = rtlRender(
+            <LazyVirtualTableStory
+                totalCount={totalCount}
+                fetchMode="continuationToken"
+                fetchDelayInMs={0}
+                minFetchCount={minFetchCount}
+                heightInPx={tableHeightInPx}
+            />
+        );
+
+        act(() => {
+            mockStore.databases.withActiveDatabase_Sharded();
+        });
+
+        expect(await screen.findByText("Item 0")).toBeInTheDocument();
+
+        const scrollContainer = getScrollContainer(container);
+        mockLayout(scrollContainer);
+
+        for (let loaded = minFetchCount; loaded < maxRowsInDom; loaded += minFetchCount) {
+            scrollTo(scrollContainer, loaded * defaultRowHeightInPx);
+            expect(await screen.findByText(`Item ${loaded}`)).toBeInTheDocument();
+        }
+
+        scrollTo(scrollContainer, maxBodyHeightInPx);
+
+        expect(await screen.findByTestId("dom-limit-banner")).toHaveTextContent("Use a query to find more items");
+        expect(screen.queryByRole("button", { name: "Turn on pagination" })).not.toBeInTheDocument();
     });
 
     it("can toggle pagination with the switch and fits the page into the table height", async () => {
