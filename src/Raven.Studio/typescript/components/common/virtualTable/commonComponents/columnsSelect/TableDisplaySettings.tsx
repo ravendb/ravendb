@@ -14,7 +14,10 @@ import {
 import { ClassNameProps } from "components/models/common";
 import classNames from "classnames";
 import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+import { FormGroup, FormInput, FormLabel } from "components/common/Form";
+import { SubmitHandler, useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
 import { useViewSheet, ViewSheet } from "components/common/splitView/ViewSheet";
 import {
     closestCenter,
@@ -361,6 +364,7 @@ function TableDisplaySettingsSheet({
                     <div className="mt-3">
                         {editedCustomColumn ? (
                             <CustomColumnForm
+                                key={editedCustomColumn.id}
                                 column={editedCustomColumn}
                                 onSave={handleSaveCustomColumn}
                                 onCancel={() => setEditedCustomColumn(null)}
@@ -403,73 +407,61 @@ interface CustomColumnFormProps {
 }
 
 function CustomColumnForm({ column, onSave, onCancel }: CustomColumnFormProps) {
-    const [expression, setExpression] = useState(column.expression);
-    const [header, setHeader] = useState(column.header);
-    const [isSubmitted, setIsSubmitted] = useState(false);
+    const { control, handleSubmit } = useForm<CustomColumnFormData>({
+        defaultValues: { expression: column.expression, header: column.header },
+        resolver: yupResolver(customColumnSchema),
+    });
 
-    const expressionError = expression.trim()
-        ? getCustomColumnExpressionError(expression)
-        : "The binding expression is required";
-    const headerError = header.trim() ? null : "The alias is required";
-
-    const handleSave = () => {
-        setIsSubmitted(true);
-
-        if (expressionError || headerError) {
-            return;
-        }
-
-        onSave({ id: column.id, header: header.trim(), expression: expression.trim() });
+    const handleSave: SubmitHandler<CustomColumnFormData> = (formData) => {
+        onSave({ id: column.id, header: formData.header, expression: formData.expression });
     };
 
     return (
-        <Card className="bg-black p-2 vstack gap-2" data-testid="custom-column-form">
-            <Form.Group>
-                <Form.Label htmlFor="custom-column-expression" className="mb-1">
-                    Binding expression
-                </Form.Label>
-                <Form.Control
-                    id="custom-column-expression"
-                    size="sm"
-                    placeholder="e.g. this.ShipTo.City"
-                    value={expression}
-                    autoFocus
-                    isInvalid={isSubmitted && !!expressionError}
-                    onChange={(e) => setExpression(e.target.value)}
-                />
-                {isSubmitted && expressionError && (
-                    <Form.Control.Feedback type="invalid">{expressionError}</Form.Control.Feedback>
-                )}
-            </Form.Group>
-            <Form.Group>
-                <Form.Label htmlFor="custom-column-alias" className="mb-1">
-                    Alias
-                </Form.Label>
-                <Form.Control
-                    id="custom-column-alias"
-                    size="sm"
-                    placeholder="Column name"
-                    value={header}
-                    isInvalid={isSubmitted && !!headerError}
-                    onChange={(e) => setHeader(e.target.value)}
-                />
-                {isSubmitted && headerError && (
-                    <Form.Control.Feedback type="invalid">{headerError}</Form.Control.Feedback>
-                )}
-            </Form.Group>
-            <div className="d-flex gap-2 justify-content-end">
-                <Button variant="secondary" size="sm" onClick={onCancel}>
-                    <Icon icon="cancel" />
-                    Cancel
-                </Button>
-                <Button variant="success" size="sm" onClick={handleSave}>
-                    <Icon icon="check" />
-                    Save column
-                </Button>
-            </div>
-        </Card>
+        <form onSubmit={handleSubmit(handleSave)}>
+            <Card className="bg-black p-2 vstack gap-2" data-testid="custom-column-form">
+                <FormGroup marginClass="m-0">
+                    <FormLabel className="mb-1">Binding expression</FormLabel>
+                    <FormInput
+                        type="text"
+                        control={control}
+                        name="expression"
+                        size="sm"
+                        placeholder="e.g. this.ShipTo.City"
+                        autoFocus
+                    />
+                </FormGroup>
+                <FormGroup marginClass="m-0">
+                    <FormLabel className="mb-1">Alias</FormLabel>
+                    <FormInput type="text" control={control} name="header" size="sm" placeholder="Column name" />
+                </FormGroup>
+                <div className="d-flex gap-2 justify-content-end">
+                    <Button variant="secondary" size="sm" onClick={onCancel}>
+                        <Icon icon="cancel" />
+                        Cancel
+                    </Button>
+                    <Button type="submit" variant="success" size="sm">
+                        <Icon icon="check" />
+                        Save column
+                    </Button>
+                </div>
+            </Card>
+        </form>
     );
 }
+
+const customColumnSchema = yup.object({
+    expression: yup
+        .string()
+        .trim()
+        .required("The binding expression is required")
+        .test("custom-column-expression", function (value) {
+            const error = value ? getCustomColumnExpressionError(value) : null;
+            return error ? this.createError({ message: error }) : true;
+        }),
+    header: yup.string().trim().required("The alias is required"),
+});
+
+type CustomColumnFormData = yup.InferType<typeof customColumnSchema>;
 
 interface ColumnRowProps {
     id: string;

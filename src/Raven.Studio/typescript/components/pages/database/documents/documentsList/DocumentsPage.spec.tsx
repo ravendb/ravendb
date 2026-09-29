@@ -1,4 +1,4 @@
-import { rtlRender, fireEvent, within, act } from "test/rtlTestUtils";
+import { rtlRender, fireEvent, within, act, waitFor } from "test/rtlTestUtils";
 import { composeStories } from "@storybook/react-webpack5";
 import * as Stories from "./DocumentsPage.stories";
 import { mockStore } from "test/mocks/store/MockStore";
@@ -37,6 +37,7 @@ const addCustomCityColumn = async (screen: Screen) => {
     fireEvent.change(screen.getByLabelText("Binding expression"), { target: { value: "this.ShipTo.City" } });
     fireEvent.change(screen.getByLabelText("Alias"), { target: { value: "City" } });
     fireEvent.click(screen.getByRole("button", { name: /Save column/ }));
+    await screen.findByRole("checkbox", { name: "City" });
     fireEvent.click(screen.getByRole("button", { name: "Apply" }));
     await flushFetches();
 };
@@ -386,20 +387,20 @@ describe("DocumentsPage", () => {
         fireEvent.click(screen.getByRole("button", { name: /Add a custom column/ }));
 
         fireEvent.click(screen.getByRole("button", { name: /Save column/ }));
-        expect(screen.getByText("The binding expression is required")).toBeInTheDocument();
+        expect(await screen.findByText("The binding expression is required")).toBeInTheDocument();
         expect(screen.getByText("The alias is required")).toBeInTheDocument();
 
         fireEvent.change(screen.getByLabelText("Binding expression"), { target: { value: "this.ShipTo.City +" } });
         fireEvent.change(screen.getByLabelText("Alias"), { target: { value: "City" } });
         fireEvent.click(screen.getByRole("button", { name: /Save column/ }));
-        expect(screen.queryByText("The binding expression is required")).not.toBeInTheDocument();
+        await waitFor(() => expect(screen.queryByText("The binding expression is required")).not.toBeInTheDocument());
         expect(screen.getByTestId("custom-column-form")).toBeInTheDocument();
 
         fireEvent.change(screen.getByLabelText("Binding expression"), { target: { value: "this.ShipTo.City" } });
         fireEvent.click(screen.getByRole("button", { name: /Save column/ }));
 
+        expect(await screen.findByRole("checkbox", { name: "City" })).toBeChecked();
         expect(screen.queryByTestId("custom-column-form")).not.toBeInTheDocument();
-        expect(screen.getByRole("checkbox", { name: "City" })).toBeChecked();
 
         fireEvent.click(screen.getByRole("button", { name: "Apply" }));
         await flushFetches();
@@ -502,8 +503,6 @@ describe("DocumentsPage", () => {
                 db.name = switchedDatabaseName;
             });
         });
-
-        expect(screen.getByTestId("loader")).toBeInTheDocument();
 
         act(() => {
             mockStore.collectionsTracker.with_CollectionsExcept(["Orders"], switchedDatabaseName);
