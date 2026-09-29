@@ -31,22 +31,23 @@ public class DirectUploadBackupTask : BackupTask
 
                 return new AwsS3DirectUploadStream(GetDirectUploadParameters(
                     progress => new RavenAwsS3Client(s3Settings, Database.Configuration.Backup, progress, TaskCancelToken.Token),
-                    s3Settings.RemoteFolderName, folderName, fileName));
+                    s3Settings.RemoteFolderName, folderName, fileName, BackupResult.S3Backup));
 
             case BackupConfiguration.BackupDestination.Azure:
                 var azureSettings = GetBackupConfigurationFromScript(Configuration.AzureSettings, x => JsonDeserializationServer.AzureSettings(x),
                     settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForAzure(settings, Database.Name));
 
                 return new AzureDirectUploadStream(GetDirectUploadParameters(
-                    progress => RavenAzureClient.Create(azureSettings, Database.Configuration.Backup, progress, TaskCancelToken.Token), 
-                    azureSettings.RemoteFolderName, folderName, fileName));
+                    progress => RavenAzureClient.Create(azureSettings, Database.Configuration.Backup, progress, TaskCancelToken.Token),
+                    azureSettings.RemoteFolderName, folderName, fileName, BackupResult.AzureBackup));
 
             default:
                 throw new ArgumentOutOfRangeException($"Missing implementation for direct upload destination '{_destination}'");
         }
     }
 
-    private DirectUploadStream<T>.Parameters GetDirectUploadParameters<T>(Func<Progress, T> clientFactory, string remoteFolderName, string folderName, string fileName) where T : IDirectUploader
+    private DirectUploadStream<T>.Parameters GetDirectUploadParameters<T>(Func<Progress, T> clientFactory, string remoteFolderName, string folderName, string fileName,
+        CloudUploadStatus cloudUploadStatus) where T : IDirectUploader
     {
         return new DirectUploadStream<T>.Parameters
         {
@@ -58,8 +59,8 @@ public class DirectUploadBackupTask : BackupTask
             },
             IsFullBackup = _isFullBackup,
             RetentionPolicyParameters = RetentionPolicyParameters,
-            CloudUploadStatus = BackupResult.S3Backup,
-            OnBackupException = OnBackupException,
+            CloudUploadStatus = cloudUploadStatus,
+            RegisterOnBackupException = RegisterOnBackupException,
             OnProgress = AddInfo
         };
     }

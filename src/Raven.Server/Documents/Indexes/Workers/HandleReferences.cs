@@ -11,6 +11,7 @@ using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
@@ -133,6 +134,8 @@ namespace Raven.Server.Documents.Indexes.Workers
             Dictionary<string, long> lastIndexedEtagsByCollection = null;
 
             var totalProcessedCount = 0;
+            var totalSeenItemsCount = 0;
+            var lastCheckedSeenItemsCount = 0L;
             foreach (var collection in _index.Collections)
             {
                 if (TryGetReferencedCollectionsFor(collection, out var referencedCollections) == false)
@@ -219,6 +222,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 foreach (var referencedItem in references)
                                 {
                                     hasChanges = true;
+                                    totalSeenItemsCount++;
 
                                     using (referencedItem)
                                     {
@@ -267,14 +271,16 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                                 lastIndexedParentEtag = current.Etag;
                                                 totalProcessedCount++;
+                                                totalSeenItemsCount++;
                                                 collectionStats.RecordMapReferenceAttempt();
                                                 stats.RecordDocumentSize(current.Size);
 
                                                 numberOfReferencedItemLoad++;
 
+                                                var numberOfResults = 0;
                                                 try
                                                 {
-                                                    var numberOfResults = _index.HandleMap(current, mapResults, writeOperation, indexContext, collectionStats);
+                                                    numberOfResults = _index.HandleMap(current, mapResults, writeOperation, indexContext, collectionStats);
 
                                                     resultsCount += numberOfResults;
                                                     collectionStats.RecordMapReferenceSuccess();
@@ -292,6 +298,10 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                     collectionStats.AddMapReferenceError(current.Id,
                                                         $"Failed to execute mapping function on {current.Id}. Exception: {e}");
                                                 }
+
+                                                totalSeenItemsCount += numberOfResults - (numberOfResults > 0).ToInt32();
+                                                totalSeenItemsCount += CurrentIndexingScope.Current.LoadedItemsCount;
+                                                CurrentIndexingScope.Current.LoadedItemsCount = 0;
 
                                                 _index.UpdateThreadAllocations(indexContext, writeOperation, stats, IndexingWorkType.References);
                                             }
@@ -319,9 +329,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 bool CanContinueReferenceBatch()
                                 {
                                     var parameters = new CanContinueBatchParameters(stats, IndexingWorkType.References, queryContext, indexContext, writeOperation,
-                                        lastEtag, lastCollectionEtag, totalProcessedCount, sw);
+                                        lastEtag, lastCollectionEtag, totalProcessedCount, totalSeenItemsCount, sw);
 
-                                    batchContinuationResult = _index.CanContinueBatch(in parameters, ref maxTimeForDocumentTransactionToRemainOpen);
+                                    batchContinuationResult = _index.CanContinueBatch(in parameters, ref maxTimeForDocumentTransactionToRemainOpen, ref lastCheckedSeenItemsCount);
                                     if (batchContinuationResult != Index.CanContinueBatchResult.True)
                                     {
                                         keepRunning = batchContinuationResult == Index.CanContinueBatchResult.RenewTransaction;

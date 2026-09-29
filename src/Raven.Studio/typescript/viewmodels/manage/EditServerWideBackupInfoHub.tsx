@@ -4,10 +4,10 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "components/hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper, {FeatureAvailabilityData} from "components/common/FeatureAvailabilitySummary";
-import {
-    useLimitedFeatureAvailability
-} from "components/utils/licenseLimitsUtils";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
+import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditServerWideBackupInfoHub() {
     const hasServerWideBackups = useAppSelector(licenseSelectors.statusValue("HasServerWideBackups"));
@@ -23,7 +23,7 @@ export function EditServerWideBackupInfoHub() {
             {
                 featureName: defaultFeatureAvailability[1].featureName,
                 value: hasSnapshotBackups,
-            }
+            },
         ],
     });
 
@@ -86,12 +86,13 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         featureIcon: "server-wide-backup",
         community: { value: false },
         professional: { value: true },
-        enterprise: { value: true }
-    },{
+        enterprise: { value: true },
+    },
+    {
         featureName: "Snapshot Backups",
         featureIcon: "snapshot-backup",
         community: { value: false },
         professional: { value: false },
-        enterprise: { value: true }
-    }
+        enterprise: { value: true },
+    },
 ];

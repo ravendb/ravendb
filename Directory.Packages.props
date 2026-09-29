@@ -4,9 +4,9 @@
     <CentralPackageTransitivePinningEnabled>True</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.Core" Version="4.0.101" />
-    <PackageVersion Include="AWSSDK.Glacier" Version="4.0.100.8" />
-    <PackageVersion Include="AWSSDK.S3" Version="4.0.102.1" />
+    <PackageVersion Include="AWSSDK.Core" Version="4.0.102.5" />
+    <PackageVersion Include="AWSSDK.Glacier" Version="4.0.100.13" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.103.1" />
     <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.0.2" />
     <PackageVersion Include="Azure.Identity" Version="1.17.1" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.27.0" />
@@ -26,7 +26,7 @@
     <PackageVersion Include="FubarDev.FtpServer" Version="3.1.2" />
     <PackageVersion Include="FubarDev.FtpServer.FileSystem.DotNet" Version="3.1.2" />
     <PackageVersion Include="FubarDev.FtpServer.FileSystem.InMemory" Version="3.1.2" />
-    <PackageVersion Include="Google.Api.Gax.Rest" Version="4.14.0" />
+    <PackageVersion Include="Google.Api.Gax.Rest" Version="4.15.0" />
     <PackageVersion Include="Google.Cloud.Storage.V1" Version="4.15.0" />
     <PackageVersion Include="Hl7.Fhir.R4" Version="5.12.2" />
     <PackageVersion Include="JetBrains.Annotations" Version="2026.2.0" />
@@ -38,7 +38,7 @@
     <PackageVersion Include="Lucene.Net" Version="3.0.60018" />
     <PackageVersion Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.60018" />
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="5.1.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.JsonPatch" Version="8.0.30" />
+    <PackageVersion Include="Microsoft.AspNetCore.JsonPatch" Version="8.0.31" />
     <PackageVersion Include="Microsoft.Azure.DocumentDB.Core" Version="2.22.0" />
     <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
@@ -56,7 +56,7 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.1" />
     <PackageVersion Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.1" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.0" />
     <PackageVersion Include="Microsoft.NETCore.Jit" Version="2.0.8" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Win32.Registry" Version="5.0.0" />

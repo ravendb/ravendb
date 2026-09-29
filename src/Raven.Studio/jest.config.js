@@ -12,7 +12,7 @@ module.exports = {
     ],
     "testRegex": [ "(/__tests__/.*|(\\.|/)(spec))\\.[jt]sx?$" ],
     'transform': {
-        '.*\.tsx?$': 'ts-jest',
+        '.*\.tsx?$': '@swc/jest',
         "^.+\\.html?$": "<rootDir>/typescript/test/htmlLoader.js"
     },
     "setupFiles": [

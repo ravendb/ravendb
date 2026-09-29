@@ -157,6 +157,7 @@ namespace Raven.Client.Documents.Operations.Backups
                     _sw.Restart();
                     break;
                 case UploadState.Done:
+                case UploadState.Aborted:
                     _sw.Stop();
                     break;
             }
@@ -201,7 +202,8 @@ namespace Raven.Client.Documents.Operations.Backups
         PendingUpload,
         Uploading,
         PendingResponse,
-        Done
+        Done,
+        Aborted
     }
 
     public enum UploadType

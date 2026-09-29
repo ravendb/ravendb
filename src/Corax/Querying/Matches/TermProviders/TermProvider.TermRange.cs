@@ -53,8 +53,33 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider, I
         _skipRangeCheck = _isForward
             ? _high.Options is SliceOptions.AfterAllKeys
             : _low.Options is SliceOptions.BeforeAllKeys;
+
+        // Same collapse as in TermNumericRangeProvider - PrepareKeys would put the stop term behind the start one.
+        if (IsEmptyRange())
+        {
+            _isEmpty = true;
+            return;
+        }
+
         PrepareKeys();
         Reset();
+    }
+
+    private bool IsEmptyRange()
+    {
+        // BeforeAllKeys sorts below every term, AfterAllKeys above it - and the mirrored forms are contradictory.
+        if (_low.Options is SliceOptions.BeforeAllKeys || _high.Options is SliceOptions.AfterAllKeys)
+            return false;
+
+        if (_low.Options is SliceOptions.AfterAllKeys || _high.Options is SliceOptions.BeforeAllKeys)
+            return true;
+
+        var cmp = _low.AsSpan().SequenceCompareTo(_high.AsSpan());
+        if (cmp > 0)
+            return true;
+
+        // <x, x> holds x; (x, x>, <x, x) and (x, x) are empty.
+        return cmp == 0 && (typeof(TLow) == typeof(Range.Exclusive) || typeof(THigh) == typeof(Range.Exclusive));
     }
 
 

@@ -552,9 +552,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 }
 
                                 var nonPersistentFlags = GetNonPersistentDocumentFlags();
-                                if (doc.Flags.Contain(DocumentFlags.Revision))
+                                if (doc.Flags.Contain(DocumentFlags.DeleteRevision))
                                 {
-                                    database.DocumentsStorage.RevisionsStorage.Put(
+                                    database.DocumentsStorage.RevisionsStorage.Delete(
                                         context,
                                         doc.Id,
                                         document,
@@ -565,9 +565,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     continue;
                                 }
 
-                                if (doc.Flags.Contain(DocumentFlags.DeleteRevision))
+                                if (doc.Flags.Contain(DocumentFlags.Revision))
                                 {
-                                    database.DocumentsStorage.RevisionsStorage.Delete(
+                                    database.DocumentsStorage.RevisionsStorage.Put(
                                         context,
                                         doc.Id,
                                         document,

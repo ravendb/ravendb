@@ -45,7 +45,7 @@ public class RavenDB_24649(ITestOutputHelper output) : RavenTestBase(output)
         var index = db.IndexStore.GetIndex(autoIndexName);
 
         // Wait that elapsed time will be increased.
-        var elapsed1 = index.GetElapsedTimeFromLastQuery();
+        var elapsed1 = index.GetElapsedTimeFromLastQuery()!.Value;
         var elapsed2 = await WaitAndAssertForGreaterThanAsync(async () => await GetElapsedTimeFromLastQuery(), elapsed1, timeout: Timeout, interval: Interval);
 
         using (var session = store.OpenAsyncSession())
@@ -73,7 +73,7 @@ public class RavenDB_24649(ITestOutputHelper output) : RavenTestBase(output)
         index = db.IndexStore.GetIndex(autoIndexName);
         db.Configuration.Indexing.ElapsedSinceQueriedPersistInterval = new TimeSetting(2, TimeUnit.Seconds);
         await store.Maintenance.ForDatabase(dbName).SendAsync(new EnableIndexOperation(autoIndexName));
-        var elapsedOnInit = index.GetElapsedTimeFromLastQuery();
+        var elapsedOnInit = index.GetElapsedTimeFromLastQuery()!.Value;
         
         await GetElapsedTimeFromLastQuery(); // force update the index. 
         await Indexes.WaitForIndexingAsync(store, dbName);
@@ -90,7 +90,7 @@ public class RavenDB_24649(ITestOutputHelper output) : RavenTestBase(output)
             await session.StoreAsync(new Orders.Order());
             await session.SaveChangesAsync();
             await Indexes.WaitForIndexingAsync(store, dbName);
-            return index.GetElapsedTimeFromLastQuery();
+            return index.GetElapsedTimeFromLastQuery()!.Value;
         }
     }
 

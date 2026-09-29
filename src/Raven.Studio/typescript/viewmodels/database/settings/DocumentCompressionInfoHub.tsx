@@ -4,13 +4,13 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
-import {useRavenLink} from "hooks/useRavenLink";
+import { useRavenLink } from "hooks/useRavenLink";
 import { useEnterpriseLicenseAvailability } from "components/utils/licenseLimitsUtils";
 
 export function DocumentCompressionInfoHub() {
     const isFeatureInLicense = useAppSelector(licenseSelectors.statusValue("HasDocumentsCompression"));
     const featureAvailability = useEnterpriseLicenseAvailability(isFeatureInLicense);
-    
+
     const compressionDocsLink = useRavenLink({ hash: "E2WX16" });
 
     return (
@@ -22,9 +22,7 @@ export function DocumentCompressionInfoHub() {
                 heading="About this view"
                 description="Get additional info on this feature"
             >
-                <p>
-                    Reduce the database storage space by enabling document compression from this view.
-                </p>
+                <p>Reduce the database storage space by enabling document compression from this view.</p>
                 <div>
                     Document compression can be set for:
                     <ul>
@@ -33,8 +31,8 @@ export function DocumentCompressionInfoHub() {
                     </ul>
                 </div>
                 <p>
-                    Compression is not applied to attachments, counters, and time series data,
-                    only to the content of documents and revisions.
+                    Compression is not applied to attachments, counters, and time series data, only to the content of
+                    documents and revisions.
                 </p>
                 <div>
                     When enabled, compression will be triggered by the server when either of the following occurs for
@@ -42,7 +40,9 @@ export function DocumentCompressionInfoHub() {
                     <ul>
                         <li>Storing new documents.</li>
                         <li>Modifying & saving existing documents.</li>
-                        <li>When a compact operation is initiated by the Client API, existing documents will be compressed.
+                        <li>
+                            When a compact operation is initiated by the Client API, existing documents will be
+                            compressed.
                         </li>
                     </ul>
                 </div>
@@ -52,10 +52,7 @@ export function DocumentCompressionInfoHub() {
                     <Icon icon="newtab" /> Docs - Document Compression
                 </a>
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper
-                isUnlimited={isFeatureInLicense}
-                data={featureAvailability}
-            />
+            <FeatureAvailabilitySummaryWrapper isUnlimited={isFeatureInLicense} data={featureAvailability} />
         </AboutViewFloating>
     );
 }

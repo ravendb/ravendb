@@ -120,16 +120,47 @@ public abstract class AbstractNotificationCenter : NotificationsBase
         }
     }
 
-    public IDisposable GetStored(out IEnumerable<NotificationTableValue> actions, bool postponed = true)
+    public IDisposable GetStored(out IEnumerable<NotificationTableValue> actions, bool postponed = true, JsonOperationContext context = null, Func<BlittableJsonReaderObject, bool> shouldInclude = null)
     {
+        if (shouldInclude != null && context == null)
+            throw new ArgumentException($"Filtering the notifications is only supported when they are cloned, '{nameof(context)}' must be provided as well", nameof(shouldInclude));
+
         var scope = Storage.ReadActionsOrderedByCreationDate(out actions);
 
-        if (postponed)
+        if (postponed == false)
+            actions = Filter(actions);
+
+        if (context == null)
             return scope;
 
-        actions = Filter(actions);
+        using (scope)
+        {
+            var notifications = new List<NotificationTableValue>();
 
-        return scope;
+            foreach (var action in actions)
+            {
+                using (action)
+                {
+                    if (shouldInclude != null && shouldInclude(action.Json) == false)
+                        continue;
+
+                    notifications.Add(new NotificationTableValue
+                    {
+                        CreatedAt = action.CreatedAt,
+                        PostponedUntil = action.PostponedUntil,
+                        Json = action.Json.Clone(context)
+                    });
+                }
+            }
+
+            actions = notifications;
+
+            return new DisposableAction(() =>
+            {
+                foreach (var notification in notifications)
+                    notification.Dispose();
+            });
+        }
 
         static IEnumerable<NotificationTableValue> Filter(IEnumerable<NotificationTableValue> actions)
         {

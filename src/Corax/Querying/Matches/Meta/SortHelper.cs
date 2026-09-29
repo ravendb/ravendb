@@ -99,6 +99,10 @@ internal sealed unsafe class SortHelper
                     leftPtr++;
                     *rightPtr++ |= ~long.MaxValue; // mark it as used for the *next* time
                 }
+                else
+                {
+                    leftPtr++;
+                }
             }
 
             return (int)(dstPtr - dst);

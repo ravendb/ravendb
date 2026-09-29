@@ -4,7 +4,9 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditOlapEtlInfoHub() {
@@ -32,13 +34,13 @@ export function EditOlapEtlInfoHub() {
             >
                 <p>
                     An <strong>OLAP ETL</strong> ongoing-task is an ETL (Extract, Transform & Load) process that
-                    converts documents&apos; data from this RavenDB database to the Apache Parquet file format, and sends
-                    it to the specified destinations.
+                    converts documents&apos; data from this RavenDB database to the Apache Parquet file format, and
+                    sends it to the specified destinations.
                 </p>
                 <ul>
                     <li>
                         Data is extracted from documents only.
-                        <br/>
+                        <br />
                         Attachments, Counters, Time series, and Revisions are not sent.
                     </li>
                     <li className="margin-top-xxs">
@@ -58,14 +60,15 @@ export function EditOlapEtlInfoHub() {
                         task to the destination.
                     </li>
                 </ul>
-                <hr/>
+                <hr />
                 <div>
                     Task definition includes:
                     <ul>
                         <li>The frequency at which scripts will execute.</li>
                         <li>A connection string specifying the storage destinations.</li>
                         <li>The transformation scripts definitions.</li>
-                        <li>Optional - a column name that will override the default ID column name in the generated
+                        <li>
+                            Optional - a column name that will override the default ID column name in the generated
                             Parquet file.
                         </li>
                         <li>A responsible node to handle this task can be set.</li>
@@ -77,10 +80,7 @@ export function EditOlapEtlInfoHub() {
                     <Icon icon="newtab" /> Docs - OLAP ETL
                 </a>
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper
-                isUnlimited={hasOlapEtl}
-                data={featureAvailability}
-            />
+            <FeatureAvailabilitySummaryWrapper isUnlimited={hasOlapEtl} data={featureAvailability} />
         </AboutViewFloating>
     );
 }

@@ -85,7 +85,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                         Database replication provides benefits such as improved data availability, increased
                         scalability, and enhanced disaster recovery capabilities.
                     </p>
-                    <p>
+                    <div className="mb-3">
                         <span>
                             <PopoverWithHoverWrapper
                                 message={
@@ -118,7 +118,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                             </PopoverWithHoverWrapper>{" "}
                             What is sharding?
                         </span>
-                    </p>
+                    </div>
                 </Col>
             </Row>
 

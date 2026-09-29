@@ -3,9 +3,11 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
-import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
-import {useRavenLink} from "hooks/useRavenLink";
+import { useRavenLink } from "hooks/useRavenLink";
 
 export function EditExternalReplicationInfoHub() {
     const hasExternalReplication = useAppSelector(licenseSelectors.statusValue("HasExternalReplication"));
@@ -41,20 +43,22 @@ export function EditExternalReplicationInfoHub() {
                 <div>
                     What is replicated:
                     <ul className="margin-top-xxs">
-                        <li>Documents and their related data (attachments, revisions,
-                            counters,
-                            time series) will be replicated.
+                        <li>
+                            Documents and their related data (attachments, revisions, counters, time series) will be
+                            replicated.
                         </li>
-                        <li>Server and cluster-level items (e.g. indexes, identities,
-                            compare-exchange items, ongoing tasks definitions, etc.) are Not replicated.
+                        <li>
+                            Server and cluster-level items (e.g. indexes, identities, compare-exchange items, ongoing
+                            tasks definitions, etc.) are Not replicated.
                         </li>
                     </ul>
                 </div>
                 <div>
                     Task definition includes:
-                    <ul  className="margin-top-xxs">
-                        <li>A connection string to the destination database containing the URLs of
-                            the target cluster&apos;s servers.
+                    <ul className="margin-top-xxs">
+                        <li>
+                            A connection string to the destination database containing the URLs of the target
+                            cluster&apos;s servers.
                         </li>
                         <li>An optional delay time for data replication.</li>
                         <li>A responsible node to handle this task can be set.</li>
@@ -66,10 +70,7 @@ export function EditExternalReplicationInfoHub() {
                     <Icon icon="newtab" /> Docs - External Replication
                 </a>
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper
-                isUnlimited={hasExternalReplication}
-                data={featureAvailability}
-            />
+            <FeatureAvailabilitySummaryWrapper isUnlimited={hasExternalReplication} data={featureAvailability} />
         </AboutViewFloating>
     );
 }

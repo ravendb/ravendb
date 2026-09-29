@@ -6,6 +6,7 @@ using Raven.Client.Util;
 using Raven.Server.Background;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Collections;
+using Sparrow.Json;
 using Sparrow.Server;
 
 namespace Raven.Server.NotificationCenter.BackgroundWork
@@ -54,16 +55,16 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             _event.Reset(true);
             notifications = GetPostponedNotifications(int.MaxValue, SystemTime.UtcNow);
 
-            while (notifications.Count > 0)
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                if (CancellationToken.IsCancellationRequested)
-                    return;
-
-                var next = notifications.Dequeue();
-
-                using (_notificationsStorage.Read(next.Id, out NotificationTableValue notification))
+                while (notifications.Count > 0)
                 {
-                    using (notification)
+                    if (CancellationToken.IsCancellationRequested)
+                        return;
+
+                    var next = notifications.Dequeue();
+
+                    using (_notificationsStorage.Read(next.Id, out NotificationTableValue notification, context))
                     {
                         if (notification == null) // could be deleted meanwhile
                             continue;

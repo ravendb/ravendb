@@ -4,7 +4,9 @@ import { useAppSelector } from "components/store";
 import React from "react";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "hooks/useRavenLink";
-import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditReplicationSinkInfoHub() {
@@ -37,31 +39,34 @@ export function EditReplicationSinkInfoHub() {
                         <li>The connection to the Hub is always initiated by the Sink.</li>
                         <li>Multiple Sinks can connect to the same Replication Hub.</li>
                         <li>Data replication can be bi-directional.</li>
-                        <li>Only documents and their related data (attachments, revisions, counters & time series) will
+                        <li>
+                            Only documents and their related data (attachments, revisions, counters & time series) will
                             be replicated.
                         </li>
                     </ul>
                 </div>
-                <hr/>
+                <hr />
                 <div>
                     When running with a SECURE server:
                     <ul>
-                        <li className="margin-top-xxs"><strong>Replication Access</strong>:
-                            <br/>
-                            Set up a Replication Access definition on the Sink task with
-                            a certificate that will be used by the Sink task to authenticate and
-                            establish a connection with the Replication Hub.
+                        <li className="margin-top-xxs">
+                            <strong>Replication Access</strong>:
+                            <br />
+                            Set up a Replication Access definition on the Sink task with a certificate that will be used
+                            by the Sink task to authenticate and establish a connection with the Replication Hub.
                         </li>
-                        <li className="margin-top-xxs"><strong>Filtered Replication</strong>:
-                            <br/>
-                            Within the Access definition, you can filter the documents that will be replicated by their ID paths.
+                        <li className="margin-top-xxs">
+                            <strong>Filtered Replication</strong>:
+                            <br />
+                            Within the Access definition, you can filter the documents that will be replicated by their
+                            ID paths.
                         </li>
                         <li className="margin-top-xxs">
                             <strong>Sink to Hub Replication</strong> is only available with a secure server.
                         </li>
                     </ul>
                 </div>
-                <hr/>
+                <hr />
                 <div>
                     Task definition includes:
                     <ul className="margin-top-xxs">
@@ -77,10 +82,7 @@ export function EditReplicationSinkInfoHub() {
                     <Icon icon="newtab" /> Docs - Replication Sink
                 </a>
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper
-                isUnlimited={hasPullReplicationAsSink}
-                data={featureAvailability}
-            />
+            <FeatureAvailabilitySummaryWrapper isUnlimited={hasPullReplicationAsSink} data={featureAvailability} />
         </AboutViewFloating>
     );
 }

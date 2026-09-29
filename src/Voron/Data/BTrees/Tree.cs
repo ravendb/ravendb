@@ -460,13 +460,15 @@ namespace Voron.Data.BTrees
             byte* dataPos;
             if (page.HasSpaceFor(_llt, key, len) == false)
             {
-                if (IsLeafCompressionSupported == false || TryCompressPageNodes(key, len, page) == false)
+                DecompressedLeafPage decompressedPageToSplit = null;
+
+                if (IsLeafCompressionSupported == false || TryCompressPageNodes(key, len, page, out decompressedPageToSplit) == false)
                 {
                     using (var cursor = cursorConstructor.Build(key))
                     {
                         cursor.Update(cursor.Pages, page);
 
-                        var pageSplitter = new TreePageSplitter(_llt, this, key, len, pageNumber, nodeType, cursor);
+                        var pageSplitter = new TreePageSplitter(_llt, this, key, len, pageNumber, nodeType, cursor, pageDecompressed: decompressedPageToSplit);
                         dataPos = pageSplitter.Execute();
                     }
 
