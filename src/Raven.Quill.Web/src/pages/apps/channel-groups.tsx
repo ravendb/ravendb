@@ -31,7 +31,7 @@ type ChannelGroupConfig = {
 // Order and icons mirror the "Add channel" menu so the page reads the same way channels are created.
 const CHANNEL_GROUPS: ChannelGroupConfig[] = [
     { type: "IFrame", label: "Web widgets", icon: CodeXml },
-    { type: "Telegram", label: "Telegram bots", icon: Send },
+    { type: "Telegram", label: "Telegram", icon: Send },
     { type: "WhatsApp", label: "WhatsApp", icon: MessageCircle },
     { type: "Slack", label: "Slack", icon: SlackIcon },
     { type: "Discord", label: "Discord", icon: DiscordIcon },

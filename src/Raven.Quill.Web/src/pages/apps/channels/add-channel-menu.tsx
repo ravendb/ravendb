@@ -36,7 +36,7 @@ const CHANNEL_OPTIONS: ChannelOption[] = [
     },
     {
         id: "telegram",
-        label: "Telegram bot",
+        label: "Telegram",
         description: "Connect a bot via @BotFather",
         icon: Send,
         enabled: true,
@@ -132,7 +132,7 @@ export function AddChannelMenu({
                     {openOption === "telegram" ? (
                         <>
                             <SheetHeader className="border-b">
-                                <SheetTitle>New Telegram bot channel</SheetTitle>
+                                <SheetTitle>New Telegram channel</SheetTitle>
                                 <SheetDescription>
                                     {agent
                                         ? `Connect a Telegram bot, routed to “${agent.name}”.`

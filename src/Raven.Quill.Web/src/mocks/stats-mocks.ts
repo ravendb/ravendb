@@ -232,7 +232,7 @@ export const sampleConversations: ConversationDto[] = [
     {
         id: "cv_a1xTk",
         appId: "demo",
-        channelName: "Telegram bot",
+        channelName: "Telegram",
         agentName: "Support",
         agentInitials: "S",
         params: [
@@ -403,7 +403,7 @@ export const sampleConversations: ConversationDto[] = [
     {
         id: "cv_d4aWn",
         appId: "demo",
-        channelName: "Telegram bot",
+        channelName: "Telegram",
         agentName: "Billing",
         agentInitials: "B",
         params: [
