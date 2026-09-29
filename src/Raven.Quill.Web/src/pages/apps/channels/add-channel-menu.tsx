@@ -11,13 +11,14 @@ import {
 import { SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/shadcn/ui/sheet";
 import { GuardedSheet } from "@/components/form/unsaved-changes/guarded-overlays";
 import { DiscordIcon, SlackIcon } from "@/pages/apps/channels/channel-brand-icons";
+import type { FixedAgent } from "@/pages/apps/channels/channel-form-types";
 import { DiscordChannelForm } from "@/pages/apps/channels/discord-channel-form";
 import { SlackChannelForm } from "@/pages/apps/channels/slack-channel-form";
 import { TelegramChannelForm } from "@/pages/apps/channels/telegram-channel-form";
-import { WebWidgetChannelForm, type FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
+import { EmbeddedChatChannelForm } from "@/pages/apps/channels/embedded-chat-channel-form";
 import { Text } from "@/components/typography";
 
-type ChannelOptionId = "web-widget" | "telegram" | "slack" | "discord";
+type ChannelOptionId = "embedded-chat" | "telegram" | "slack" | "discord";
 
 type ChannelOption = {
     label: string;
@@ -25,12 +26,12 @@ type ChannelOption = {
     icon: ComponentType<SVGProps<SVGSVGElement>>;
 } & ({ id: ChannelOptionId; enabled: true } | { id: string; enabled: false });
 
-// The web widget, Telegram, Slack, and Discord are backed by the channels API today; the rest are previewed as disabled.
+// Embedded chat, Telegram, Slack, and Discord are backed by the channels API today; the rest are previewed as disabled.
 const CHANNEL_OPTIONS: ChannelOption[] = [
     {
-        id: "web-widget",
-        label: "Web widget",
-        description: "Embed a chat widget on your site",
+        id: "embedded-chat",
+        label: "Embedded chat",
+        description: "Embed a chat widget in your website or application",
         icon: CodeXml,
         enabled: true,
     },
@@ -168,14 +169,14 @@ export function AddChannelMenu({
                     ) : (
                         <>
                             <SheetHeader className="border-b">
-                                <SheetTitle>New web widget channel</SheetTitle>
+                                <SheetTitle>New embedded chat channel</SheetTitle>
                                 <SheetDescription>
                                     {agent
-                                        ? `Embed a chat widget on your site, routed to “${agent.name}”.`
-                                        : "Embed a chat widget on your site and route it to an agent."}
+                                        ? `Embed a chat widget in your website or application, routed to “${agent.name}”.`
+                                        : "Embed a chat widget in your website or application and route it to an agent."}
                                 </SheetDescription>
                             </SheetHeader>
-                            <WebWidgetChannelForm slug={slug} agent={agent} onCreated={() => setOpenOption(null)} />
+                            <EmbeddedChatChannelForm slug={slug} agent={agent} onCreated={() => setOpenOption(null)} />
                         </>
                     )}
                 </SheetContent>

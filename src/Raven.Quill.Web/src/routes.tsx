@@ -23,7 +23,7 @@ import { AppAgentEdit } from "@/pages/apps/app-agent-edit";
 import { AppAgents } from "@/pages/apps/app-agents";
 import { AppChannelDetail } from "@/pages/apps/app-channel-detail";
 import { AppChannels } from "@/pages/apps/app-channels";
-import { AppWebWidgetDefaultCustomize } from "@/pages/apps/app-web-widget-default-customize";
+import { AppChatWidgetDefaultCustomize } from "@/pages/apps/app-chat-widget-default-customize";
 import { AppConversations } from "@/pages/apps/app-conversations";
 import { AppDataSource } from "@/pages/apps/app-data-source";
 import { AppOverview } from "@/pages/apps/app-overview";
@@ -255,11 +255,11 @@ const appPages: AppRouteDefinition[] = [
         element: <AppChannelDetail />,
     },
     {
-        // App-level default web-widget styling. Reached from the Channels list.
-        path: "web-widget/default-customize",
-        title: "Default web widget appearance",
+        // App-level default chat widget styling. Reached from the Channels list.
+        path: "chat-widget/default-customize",
+        title: "Default chat widget appearance",
         isPageTitleHidden: true,
-        element: <AppWebWidgetDefaultCustomize />,
+        element: <AppChatWidgetDefaultCustomize />,
     },
     {
         path: "analytics",

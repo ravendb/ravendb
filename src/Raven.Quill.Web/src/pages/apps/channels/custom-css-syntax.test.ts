@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { findCssSyntaxError } from "@/pages/apps/channels/custom-css-syntax";
-import { widgetThemeSchema, type WidgetThemeFormData } from "@/pages/apps/channels/web-widget-theme-schema";
+import { widgetThemeSchema, type WidgetThemeFormData } from "@/pages/apps/channels/chat-widget-theme-schema";
 
 function validFormData(customCss: string): WidgetThemeFormData {
     return {

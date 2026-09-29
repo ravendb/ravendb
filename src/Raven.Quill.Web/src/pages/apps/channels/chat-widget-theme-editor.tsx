@@ -34,12 +34,12 @@ import {
     widgetThemeSchema,
     type WidgetThemeFormData,
     type WidgetThemeFormOutput,
-} from "@/pages/apps/channels/web-widget-theme-schema";
+} from "@/pages/apps/channels/chat-widget-theme-schema";
 import {
-    WebWidgetThemePreview,
+    ChatWidgetThemePreview,
     type PreviewAppearance,
     type PreviewView,
-} from "@/pages/apps/channels/web-widget-theme-preview";
+} from "@/pages/apps/channels/chat-widget-theme-preview";
 import { InlineCode } from "@/components/data/inline-code";
 
 const APPEARANCE_OPTIONS = [
@@ -61,7 +61,7 @@ const SECTION_FIELDS = {
     customCss: ["customCss"],
 } as const satisfies Record<string, readonly FieldPath<WidgetThemeFormData>[]>;
 
-type WebWidgetThemeEditorProps = {
+type ChatWidgetThemeEditorProps = {
     /** The saved theme. Null means "follow the app default", which only the per-widget editor offers. */
     theme: WidgetTheme | null;
     /** The resolved app default, edited directly by the app-level editor and followed by the per-widget one. */
@@ -110,14 +110,14 @@ function Section({
     );
 }
 
-export function WebWidgetThemeEditor({
+export function ChatWidgetThemeEditor({
     theme,
     defaultTheme,
     fontOptions,
     canFollowAppDefault = false,
     isSaving,
     onSave,
-}: WebWidgetThemeEditorProps) {
+}: ChatWidgetThemeEditorProps) {
     const isFollowingAppDefault = canFollowAppDefault && theme === null;
 
     const savedTheme = theme ?? defaultTheme;
@@ -434,7 +434,7 @@ export function WebWidgetThemeEditor({
                             </ToggleGroup>
                         </div>
                     </div>
-                    <WebWidgetThemePreview theme={previewTheme} appearance={previewAppearance} view={previewView} />
+                    <ChatWidgetThemePreview theme={previewTheme} appearance={previewAppearance} view={previewView} />
                 </div>
             </div>
         </form>

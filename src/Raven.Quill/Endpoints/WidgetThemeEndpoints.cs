@@ -10,7 +10,7 @@ using Raven.Quill.Logging;
 
 namespace Raven.Quill.Endpoints;
 
-public static class IFrameCustomizationEndpoints
+public static class WidgetThemeEndpoints
 {
     public static void Map(WebApplication app)
     {
@@ -18,13 +18,13 @@ public static class IFrameCustomizationEndpoints
 
         group.MapGet("/{channelId}/theme", GetThemeAsync)
             .WithName("iframe.getTheme")
-            .WithDescription("Returns a web-widget channel's own theme plus the resolved app default, for the theme editor. A null theme means the channel follows the app default.")
+            .WithDescription("Returns an embedded chat channel's own theme plus the resolved app default, for the theme editor. A null theme means the channel follows the app default.")
             .Produces<WidgetThemeResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         group.MapPut("/{channelId}/theme", UpdateThemeAsync)
             .WithName("iframe.updateTheme")
-            .WithDescription("Saves a web-widget channel's theme. A null theme clears the channel's choice so it follows the app default.")
+            .WithDescription("Saves an embedded chat channel's theme. A null theme clears the channel's choice so it follows the app default.")
             .Accepts<UpdateWidgetThemeRequest>("application/json")
             .Produces<WidgetThemeResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
@@ -32,13 +32,13 @@ public static class IFrameCustomizationEndpoints
 
         group.MapGet("/default-theme", GetDefaultThemeAsync)
             .WithName("iframe.getDefaultTheme")
-            .WithDescription("Returns the app-level default web-widget theme applied to channels that make no choice of their own.")
+            .WithDescription("Returns the app-level default chat widget theme applied to channels that make no choice of their own.")
             .Produces<WidgetDefaultThemeResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
 
         group.MapPut("/default-theme", UpdateDefaultThemeAsync)
             .WithName("iframe.updateDefaultTheme")
-            .WithDescription("Saves the app-level default web-widget theme. A null theme resets it to the built-in default.")
+            .WithDescription("Saves the app-level default chat widget theme. A null theme resets it to the built-in default.")
             .Accepts<UpdateWidgetThemeRequest>("application/json")
             .Produces<WidgetDefaultThemeResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
@@ -58,7 +58,7 @@ public static class IFrameCustomizationEndpoints
         using var session = store.OpenAsyncSession(app.Database);
         var channel = await LoadIFrameChannelAsync(session, channelId, ct);
         if (channel is null)
-            return Results.NotFound(new ApiErrorResponse($"no iFrame channel '{channelId}' in app '{slug}'"));
+            return Results.NotFound(new ApiErrorResponse($"no embedded chat channel '{channelId}' in app '{slug}'"));
 
         var defaults = await session.LoadAsync<WidgetThemeDefaults>(WidgetThemeDefaults.DocumentId, ct);
         return Results.Ok(BuildThemeResponse(channel, defaults));
@@ -69,7 +69,7 @@ public static class IFrameCustomizationEndpoints
         string channelId,
         UpdateWidgetThemeRequest body,
         IDocumentStore store,
-        QuillLogger<IFrameCustomizationLogger> logger,
+        QuillLogger<WidgetThemeLogger> logger,
         CancellationToken ct)
     {
         if (body is null)
@@ -85,7 +85,7 @@ public static class IFrameCustomizationEndpoints
         using var session = store.OpenAsyncSession(app.Database);
         var channel = await LoadIFrameChannelAsync(session, channelId, ct);
         if (channel is null)
-            return Results.NotFound(new ApiErrorResponse($"no iFrame channel '{channelId}' in app '{slug}'"));
+            return Results.NotFound(new ApiErrorResponse($"no embedded chat channel '{channelId}' in app '{slug}'"));
 
         channel.Theme = theme;
         await session.SaveChangesAsync(ct);
@@ -93,7 +93,7 @@ public static class IFrameCustomizationEndpoints
         var defaults = await session.LoadAsync<WidgetThemeDefaults>(WidgetThemeDefaults.DocumentId, ct);
         if (logger.IsInfoEnabled)
             logger.Info(
-                $"Updated web widget theme slug={app.Slug} channelId={channelId} follows={theme is null}");
+                $"Updated chat widget theme slug={app.Slug} channelId={channelId} follows={theme is null}");
         return Results.Ok(BuildThemeResponse(channel, defaults));
     }
 
@@ -115,7 +115,7 @@ public static class IFrameCustomizationEndpoints
         string slug,
         UpdateWidgetThemeRequest body,
         IDocumentStore store,
-        QuillLogger<IFrameCustomizationLogger> logger,
+        QuillLogger<WidgetThemeLogger> logger,
         CancellationToken ct)
     {
         if (body is null)
@@ -143,7 +143,7 @@ public static class IFrameCustomizationEndpoints
         await session.SaveChangesAsync(ct);
 
         if (logger.IsInfoEnabled)
-            logger.Info($"Updated default web widget theme slug={app.Slug}");
+            logger.Info($"Updated default chat widget theme slug={app.Slug}");
         return Results.Ok(new WidgetDefaultThemeResponse(defaults.Theme, WidgetFonts.Curated));
     }
 
@@ -178,5 +178,5 @@ public static class IFrameCustomizationEndpoints
         return channel is { Type: ChannelType.IFrame } ? channel : null;
     }
 
-    internal sealed class IFrameCustomizationLogger;
+    internal sealed class WidgetThemeLogger;
 }

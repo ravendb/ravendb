@@ -4,7 +4,7 @@ import {
     MAX_SUGGESTED_PROMPTS,
     widgetThemeSchema,
     toFormData,
-} from "@/pages/apps/channels/web-widget-theme-schema";
+} from "@/pages/apps/channels/chat-widget-theme-schema";
 import type { WidgetTheme } from "@/api/generated/server-api";
 
 const theme: WidgetTheme = {

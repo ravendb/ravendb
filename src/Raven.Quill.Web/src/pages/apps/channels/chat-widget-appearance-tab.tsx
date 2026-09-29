@@ -4,24 +4,24 @@ import { api } from "@/api/api";
 import { ApiState } from "@/components/data/api-state";
 import { FormFieldsSkeleton } from "@/components/data/loading-skeletons";
 import { Alert } from "@/components/shadcn/ui/alert";
-import { useWebWidgetThemeSave } from "@/pages/apps/channels/use-web-widget-theme-save";
-import { WebWidgetThemeEditor } from "@/pages/apps/channels/web-widget-theme-editor";
+import { useChatWidgetThemeSave } from "@/pages/apps/channels/use-chat-widget-theme-save";
+import { ChatWidgetThemeEditor } from "@/pages/apps/channels/chat-widget-theme-editor";
 
-// The web-widget theme editor, rendered inside the channel detail's "Customize appearance" tab.
-// Only mounted for web-widget (IFrame) channels, whose theme endpoints exist.
-export function WebWidgetAppearanceTab({ slug, channelId }: { slug: string; channelId: string }) {
-    const themeQuery = useQuery(api.queries.webWidget.theme(slug, channelId));
+// The chat widget theme editor, rendered inside the channel detail's "Customize appearance" tab.
+// Only mounted for embedded chat (IFrame) channels, whose theme endpoints exist.
+export function ChatWidgetAppearanceTab({ slug, channelId }: { slug: string; channelId: string }) {
+    const themeQuery = useQuery(api.queries.chatWidget.theme(slug, channelId));
 
-    const saveMutation = useWebWidgetThemeSave({
+    const saveMutation = useChatWidgetThemeSave({
         save: (theme) => api.services.iframe.updateTheme(slug, channelId, { theme }),
-        invalidateKeys: [api.queries.webWidget.theme(slug, channelId).queryKey],
+        invalidateKeys: [api.queries.chatWidget.theme(slug, channelId).queryKey],
         successMessage: "Theme saved",
     });
 
     return (
         <div className="grid gap-5">
             <Text variant="muted">
-                Choose how this web widget looks and reads. Pick an accent color and the rest of the palette is derived
+                Choose how this chat widget looks and reads. Pick an accent color and the rest of the palette is derived
                 from it, so light and dark both stay coherent.
             </Text>
 
@@ -34,7 +34,7 @@ export function WebWidgetAppearanceTab({ slug, channelId }: { slug: string; chan
                 skeleton={<FormFieldsSkeleton count={4} />}
             >
                 {themeQuery.data && (
-                    <WebWidgetThemeEditor
+                    <ChatWidgetThemeEditor
                         theme={themeQuery.data.theme}
                         defaultTheme={themeQuery.data.defaultTheme}
                         fontOptions={themeQuery.data.fontOptions}

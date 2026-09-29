@@ -1,18 +1,18 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { iframeHandlers, iframeMocks, SAMPLE_CHANNEL_THEME, SAMPLE_FONT_OPTIONS } from "@/mocks/iframe-mocks";
-import { AppWebWidgetDefaultCustomize } from "./app-web-widget-default-customize";
+import { AppChatWidgetDefaultCustomize } from "./app-chat-widget-default-customize";
 
 const meta = {
-    title: "Apps/Default web widget appearance",
-    component: AppWebWidgetDefaultCustomize,
+    title: "Apps/Default chat widget appearance",
+    component: AppChatWidgetDefaultCustomize,
     parameters: {
-        page: { title: "Default web widget appearance" },
+        page: { title: "Default chat widget appearance" },
         router: {
-            initialPath: "/apps/demo/web-widget/default-customize",
-            path: "/apps/:slug/web-widget/default-customize",
+            initialPath: "/apps/demo/chat-widget/default-customize",
+            path: "/apps/:slug/chat-widget/default-customize",
         },
     },
-} satisfies Meta<typeof AppWebWidgetDefaultCustomize>;
+} satisfies Meta<typeof AppChatWidgetDefaultCustomize>;
 
 export default meta;
 

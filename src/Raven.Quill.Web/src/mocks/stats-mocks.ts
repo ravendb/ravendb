@@ -90,7 +90,7 @@ export const sampleDashboardApps: ApplianceAppResponse[] = [
         channelsCount: 3,
         adaptersCount: 0,
         agentsCount: 3,
-        channelsLabel: "Web widget, Telegram, WhatsApp, Slack, Discord",
+        channelsLabel: "Embedded chat, Telegram, WhatsApp, Slack, Discord",
         statusSubtitle: null,
         createdAt: "2026-05-02T10:00:00Z",
         updatedAt: "2026-06-25T09:00:00Z",
@@ -107,7 +107,7 @@ export const sampleDashboardApps: ApplianceAppResponse[] = [
         channelsCount: 1,
         adaptersCount: 0,
         agentsCount: 2,
-        channelsLabel: "iframe",
+        channelsLabel: "Embedded chat",
         statusSubtitle: "Replication lag: 42 min",
         createdAt: "2026-05-14T08:30:00Z",
         updatedAt: "2026-06-25T08:18:00Z",
@@ -280,7 +280,7 @@ export const sampleConversations: ConversationDto[] = [
     {
         id: "cv_b2yUl",
         appId: "demo",
-        channelName: "Web widget",
+        channelName: "Embedded chat",
         agentName: "Support",
         agentInitials: "S",
         params: [
@@ -330,7 +330,7 @@ export const sampleConversations: ConversationDto[] = [
     {
         id: "cv_c3zVm",
         appId: "demo",
-        channelName: "Web widget",
+        channelName: "Embedded chat",
         agentName: "Support",
         agentInitials: "S",
         params: [
@@ -426,7 +426,7 @@ export const sampleConversations: ConversationDto[] = [
     {
         id: "cv_5kPq2",
         appId: "demo",
-        channelName: "Web widget",
+        channelName: "Embedded chat",
         agentName: "Sales",
         agentInitials: "SA",
         params: [
@@ -573,7 +573,7 @@ export const sampleAppUsage: AppUsageResponse = {
     ),
     conversationsByChannel: buildSeries(
         [
-            { key: "web", label: "Web widget" },
+            { key: "web", label: "Embedded chat" },
             { key: "telegram", label: "Telegram" },
         ],
         [320, 200],

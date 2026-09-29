@@ -169,7 +169,7 @@ public static class ChannelsEndpoints
 
         if (logger.IsInfoEnabled)
             logger.Info(
-                $"Provisioned iFrame channel slug={app.Slug} channelId={channelId} " +
+                $"Provisioned embedded chat channel slug={app.Slug} channelId={channelId} " +
                 $"agentId={config.Identifier}");
 
         if (logger.AuditEnabled)
@@ -576,7 +576,7 @@ public static class ChannelsEndpoints
 
         if (logger.IsInfoEnabled)
             logger.Info(
-                $"Updated iFrame channel slug={slug} channelId={channelId} enabled={channel.Enabled}");
+                $"Updated embedded chat channel slug={slug} channelId={channelId} enabled={channel.Enabled}");
 
         if (logger.AuditEnabled)
             logger.Audit("PUT",
@@ -918,7 +918,7 @@ public static class ChannelsEndpoints
         await session.SaveChangesAsync(ct);
 
         if (logger.IsInfoEnabled)
-            logger.Info($"Deleted iFrame channel slug={slug} channelId={channelId}");
+            logger.Info($"Deleted embedded chat channel slug={slug} channelId={channelId}");
         if (logger.AuditEnabled)
             logger.Audit("DELETE", $"Channel '{channelId}' in App '{slug}'", ctx);
 

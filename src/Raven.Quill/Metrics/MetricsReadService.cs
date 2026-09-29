@@ -396,7 +396,7 @@ internal static class MetricsReadService
 
     private static string ChannelTypeLabel(ChannelType type) => type switch
     {
-        ChannelType.IFrame => "Web widget",
+        ChannelType.IFrame => "Embedded chat",
         _ => type.ToString(),
     };
 
