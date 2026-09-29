@@ -47,7 +47,6 @@ export function useLazyTableViewport<T>({
     const [isAtBottom, setIsAtBottom] = useState(false);
     const [pageFirstRowIndex, setPageFirstRowIndex] = useState<number>(null);
     const [selectedPageSize, setSelectedPageSize] = useState<number>(null);
-    const [isPaginationFromBanner, setIsPaginationFromBanner] = useState(false);
     const [isFetchingLong, setIsFetchingLong] = useState(false);
 
     const isSkipTake = fetchMode === "skipTake";
@@ -96,7 +95,6 @@ export function useLazyTableViewport<T>({
         } else if (pageFirstRowIndex !== null) {
             containerRef.current.scrollTop = Math.min(pageStart, scrollableRowCount - 1) * rowHeightInPx;
             setPageFirstRowIndex(null);
-            setIsPaginationFromBanner(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isPaginated]);
@@ -149,7 +147,6 @@ export function useLazyTableViewport<T>({
                   scrollToTop();
                   setSelectedPageSize(nextPageSize === defaultPageSize ? null : nextPageSize);
               },
-              turnOff: isPaginationFromBanner ? () => setIsPaginated(false) : null,
           }
         : null;
 
@@ -168,10 +165,7 @@ export function useLazyTableViewport<T>({
         isLoading: isFetching && (rows.length === 0 || isFetchingLong),
         isEmpty,
         isDomLimitBannerVisible: isDomLimitReached && isAtBottom && !isPaginated,
-        turnOnPagination: () => {
-            setIsPaginationFromBanner(true);
-            setIsPaginated(true);
-        },
+        turnOnPagination: () => setIsPaginated(true),
         pagination,
         onScroll: updateScrollState,
     };
