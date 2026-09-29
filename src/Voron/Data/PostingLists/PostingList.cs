@@ -277,12 +277,21 @@ namespace Voron.Data.PostingLists
             /// </returns>
             public bool Seek(long from = long.MinValue)
             {
-                _parent.FindPageFor(from);
-                ref var state = ref _parent._stk[_parent._pos];
-                var leafPage = new PostingListLeafPage(state.Page);
+                while (true)
+                {
+                    _parent.FindPageFor(from);
+                    ref var state = ref _parent._stk[_parent._pos];
+                    var leafPage = new PostingListLeafPage(state.Page);
 
-                leafPage.SetIterator(ref _it);
-                return _it.SkipHint(from);
+                    leafPage.SetIterator(ref _it);
+                    if (_it.SkipHint(from))
+                        return true;
+
+                    // nothing at or above `from` in this leaf, every value of the next leaves is at or above their separator
+                    from = _parent.NextParentLimit();
+                    if (from == long.MaxValue)
+                        return false;
+                }
             }
 
             public bool Fill(Span<long> matches, out int total, long pruneGreaterThanOptimization = long.MaxValue)
