@@ -33,6 +33,7 @@ const noCustomColumns: CustomColumnDefinition[] = [];
 const flagsColumnWidth = 130;
 const propertyColumnWidth = 150;
 const customColumnWidth = 200;
+const lastModifiedColumnWidth = 250;
 const metadataColumnName = "__metadata";
 const idColumnName = "@id";
 const changeVectorColumnId = "Change Vector";
@@ -181,7 +182,7 @@ function fitVisibleColumnsToWidth(
 ): ColumnDef<document>[] {
     const getSize = (column: ColumnDef<document>) => column.size ?? propertyColumnWidth;
     const isFixed = (column: ColumnDef<document>) =>
-        column.id === columnCheckbox.id || column.id === columnDocumentFlags.id;
+        column.id === columnCheckbox.id || column.id === columnDocumentFlags.id || column.id === lastModifiedColumnId;
 
     const visibleColumns = columnDefs.filter((column) => columnVisibility[column.id] !== false);
     const stretchedColumns = visibleColumns.filter((column) => !isFixed(column));
@@ -269,7 +270,7 @@ function createMetadataColumns(databaseName: string, widthInPx: number, appUrl: 
             header: "Last Modified",
             accessorFn: (doc) => doc.__metadata.lastModified(),
             cell: DateFormatterCell,
-            size: getSize(25),
+            size: lastModifiedColumnWidth,
         },
         {
             id: collectionColumnId,
