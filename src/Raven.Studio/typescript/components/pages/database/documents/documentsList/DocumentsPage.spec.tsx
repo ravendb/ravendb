@@ -309,7 +309,8 @@ describe("DocumentsPage", () => {
 
         const scrollContainer = container.querySelector<HTMLDivElement>(".table-container");
         fireEvent.scroll(scrollContainer, { target: { scrollTop: 24000 } });
-        await flushFetches();
+
+        expect(await screen.findByText("orders/601-A")).toBeInTheDocument();
 
         const row = container.querySelector("tbody tr");
         const documentId = within(row as HTMLElement).getByText(/^orders\/\d+-A$/).textContent;
@@ -322,6 +323,23 @@ describe("DocumentsPage", () => {
 
         expect(getRowCheckbox(screen, documentId)).toBeChecked();
         expect(within(getSelectionActions(screen)).getByText("2")).toBeInTheDocument();
+    });
+
+    it("fetches only the documents where a fast scroll settles", async () => {
+        const { screen, container } = rtlRender(
+            <DocumentsListStory collection="Orders" isSharded={false} totalCount={5000} />
+        );
+
+        expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
+
+        const scrollContainer = container.querySelector<HTMLDivElement>(".table-container");
+        fireEvent.scroll(scrollContainer, { target: { scrollTop: 40_000 } });
+        fireEvent.scroll(scrollContainer, { target: { scrollTop: 80_000 } });
+
+        expect(await screen.findByText("orders/2001-A")).toBeInTheDocument();
+
+        const fetchedSkips = mockServices.databasesService.getMock("getDocumentsPreview").mock.calls.map((x) => x[1]);
+        expect(fetchedSkips).not.toContain(980);
     });
 
     it("can toggle pagination from the display dropdown", async () => {
@@ -561,8 +579,8 @@ describe("DocumentsPage", () => {
         const scrollContainer = container.querySelector<HTMLDivElement>(".table-container");
         fireEvent.scroll(scrollContainer, { target: { scrollTop: 40_000 } });
         fireEvent.scroll(scrollContainer, { target: { scrollTop: 199_500 } });
-        await flushFetches();
 
+        expect(await screen.findByText("orders/4988-A")).toBeInTheDocument();
         expect(screen.getByText("Freight")).toBeInTheDocument();
     });
 

@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import useTimeout from "components/hooks/useTimeout";
 import { useResizeObserver } from "components/hooks/useResizeObserver";
 import { LazyRows } from "components/common/virtualTable/hooks/useLazyRows";
@@ -25,6 +25,7 @@ const overscanInRows = 20;
 const windowStepInRows = 10;
 const pageSizeOptions = [25, 50, 100];
 const loadingIndicatorDelayInMs = 150;
+const scrollSettleDelayInMs = 100;
 
 export function useLazyTableViewport<T>({
     lazyRows,
@@ -32,11 +33,12 @@ export function useLazyTableViewport<T>({
     setIsPaginated,
     fixedHeightInPx,
 }: UseLazyTableViewportProps<T>) {
-    const { rows, totalCount, loadedCount, hasMore, fetchMode, isFetching, resetId, setRange } = lazyRows;
+    const { rows, totalCount, loadedCount, hasMore, fetchMode, isFetching, resetId, getItem, setRange } = lazyRows;
 
     const areaRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const lastScrollTopRef = useRef(0);
+    const scrollSettleTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
 
     const measuredArea = useResizeObserver({ ref: areaRef });
     const heightInPx = fixedHeightInPx ?? measuredArea.height ?? defaultTableHeightInPx;
@@ -59,17 +61,32 @@ export function useLazyTableViewport<T>({
     const range = isPaginated ? { start: pageStart, end: pageStart + pageSize } : scrollRange;
 
     const updateScrollState = useCallback(() => {
+        clearTimeout(scrollSettleTimeoutRef.current);
+
         if (isPaginated) {
             return;
         }
 
         const { scrollTop, clientHeight, scrollHeight } = containerRef.current;
+        const isJumpToMissingRows =
+            Math.abs(scrollTop - lastScrollTopRef.current) > overscanInRows * rowHeightInPx &&
+            getItem(Math.floor(scrollTop / rowHeightInPx)) === undefined;
+
         lastScrollTopRef.current = scrollTop;
+        setIsAtBottom(scrollTop + clientHeight >= scrollHeight - 1);
+
+        // Rows passed by a fast scroll (e.g. dragging the scrollbar) are neither fetched nor rendered,
+        // only the ones where the scrolling settles
+        if (isJumpToMissingRows) {
+            scrollSettleTimeoutRef.current = setTimeout(updateScrollState, scrollSettleDelayInMs);
+            return;
+        }
 
         const nextRange = getScrollRange(scrollTop, clientHeight);
         setScrollRange((prev) => (isSameRange(prev, nextRange) ? prev : nextRange));
-        setIsAtBottom(scrollTop + clientHeight >= scrollHeight - 1);
-    }, [isPaginated]);
+    }, [isPaginated, getItem]);
+
+    useEffect(() => () => clearTimeout(scrollSettleTimeoutRef.current), []);
 
     // Keeps the same rows on the screen when switching between the scrolled and the paginated view.
     // The last scroll position is used, because the browser clamps the current one when the body shrinks.
