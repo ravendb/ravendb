@@ -240,14 +240,16 @@ function RemoteAttachmentsSettingsCard() {
     const { control, formState } = useFormContext<RemoteAttachmentsFormData>();
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const formValues = useWatch({ control });
+    const isSettingsDisabled =
+        !hasDatabaseAdminAccess || formState.isSubmitting || !formValues.isRemoteAttachmentsEnabled;
+
     return (
         <Card>
-            <Card.Body>
+            <Card.Body className="vstack gap-3">
                 <FormSwitch
                     name="isRemoteAttachmentsEnabled"
                     control={control}
                     color="primary"
-                    className="mb-3"
                     disabled={!hasDatabaseAdminAccess || formState.isSubmitting}
                 >
                     Enable Remote Attachments
@@ -256,23 +258,16 @@ function RemoteAttachmentsSettingsCard() {
                     control={control}
                     overrideName="isCheckFrequencyInSecEnabled"
                     label="Interval between remote attachments task runs"
-                    disabled={
-                        !hasDatabaseAdminAccess || formState.isSubmitting || !formValues.isRemoteAttachmentsEnabled
-                    }
+                    disabled={isSettingsDisabled}
                 >
-                    {({ isOverridden }) => (
+                    {({ isDisabled }) => (
                         <FormInput
                             name="checkFrequencyInSec"
                             type="number"
                             control={control}
                             addon="seconds"
                             placeholder="Default (60)"
-                            disabled={
-                                !hasDatabaseAdminAccess ||
-                                formState.isSubmitting ||
-                                !isOverridden ||
-                                !formValues.isRemoteAttachmentsEnabled
-                            }
+                            disabled={isDisabled}
                         />
                     )}
                 </OverridableField>
@@ -280,22 +275,15 @@ function RemoteAttachmentsSettingsCard() {
                     control={control}
                     overrideName="isMaxItemsToProcessEnabled"
                     label="Max number of attachments to process in a single run"
-                    disabled={
-                        !hasDatabaseAdminAccess || formState.isSubmitting || !formValues.isRemoteAttachmentsEnabled
-                    }
+                    disabled={isSettingsDisabled}
                 >
-                    {({ isOverridden }) => (
+                    {({ isDisabled }) => (
                         <FormInput
                             name="maxItemsToProcess"
                             control={control}
                             type="number"
                             placeholder="Default (unlimited)"
-                            disabled={
-                                !hasDatabaseAdminAccess ||
-                                formState.isSubmitting ||
-                                !formValues.isRemoteAttachmentsEnabled ||
-                                !isOverridden
-                            }
+                            disabled={isDisabled}
                             addon="attachments"
                         />
                     )}
@@ -304,22 +292,14 @@ function RemoteAttachmentsSettingsCard() {
                     control={control}
                     overrideName="isConcurrentUploadsEnabled"
                     label="Max number of concurrent uploads"
-                    disabled={
-                        !hasDatabaseAdminAccess || formState.isSubmitting || !formValues.isRemoteAttachmentsEnabled
-                    }
-                    marginClass="mb-0"
+                    disabled={isSettingsDisabled}
                 >
-                    {({ isOverridden }) => (
+                    {({ isDisabled }) => (
                         <FormInput
                             name="concurrentUploads"
                             control={control}
                             type="number"
-                            disabled={
-                                !hasDatabaseAdminAccess ||
-                                formState.isSubmitting ||
-                                !formValues.isRemoteAttachmentsEnabled ||
-                                !isOverridden
-                            }
+                            disabled={isDisabled}
                             placeholder="Default (8)"
                             addon="attachments"
                         />

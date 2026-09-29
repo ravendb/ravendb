@@ -38,11 +38,12 @@ describe("DataArchival", () => {
         const enableButton = await screen.findByRole("checkbox", { name: "Enable Data Archival" });
 
         expect(enableButton).not.toBeChecked();
+        expect(screen.getByName("maxItemsToProcess")).toHaveAttribute("placeholder", "Default (unlimited)");
 
         await fireClick(enableButton);
 
         const setMaxNumberOfDocumentToProcessCheckbox = await screen.findByRole("checkbox", {
-            name: "Max number of documents to process in a single run",
+            name: "Override Max number of documents to process in a single run",
         });
         expect(setMaxNumberOfDocumentToProcessCheckbox).toBeChecked();
         expect(await screen.findByName("maxItemsToProcess")).toHaveValue(65536);
