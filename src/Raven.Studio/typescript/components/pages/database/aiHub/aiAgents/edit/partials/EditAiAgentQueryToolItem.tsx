@@ -176,41 +176,44 @@ export default function EditAiAgentQueryToolItem({ index, remove, save, edit }: 
                     ></Accordion.Header>
                     <Accordion.Body className="pt-0">
                         <hr className="my-0 mb-2" />
-                        <OverridableField
-                            control={control}
-                            overrideName={`queries.${index}.isAllowModelQueriesOverride`}
-                            resetOnDisable={{ setValue, valueName: `queries.${index}.isAllowModelQueries` }}
-                            label="Allow model queries"
-                            tooltip={<AllowModelQueriesTooltip />}
-                        >
-                            {({ isOverridden }) => (
-                                <FormSelect
-                                    control={control}
-                                    name={`queries.${index}.isAllowModelQueries`}
-                                    options={isAllowModelQueriesOptions}
-                                    isDisabled={!isOverridden}
-                                    placeholder={isOverridden ? "Select True or False" : "Default"}
-                                />
-                            )}
-                        </OverridableField>
-                        <OverridableField
-                            control={control}
-                            overrideName={`queries.${index}.isAddToInitialContextOverride`}
-                            resetOnDisable={{ setValue, valueName: `queries.${index}.isAddToInitialContext` }}
-                            label="Add to initial context"
-                            tooltip={<AddToInitialContextTooltip />}
-                            marginClass="mb-0"
-                        >
-                            {({ isOverridden }) => (
-                                <FormSelect
-                                    control={control}
-                                    name={`queries.${index}.isAddToInitialContext`}
-                                    options={isAddToInitialContextOptions}
-                                    isDisabled={!isOverridden}
-                                    placeholder={isOverridden ? "Select True or False" : "Default"}
-                                />
-                            )}
-                        </OverridableField>
+                        <div className="vstack gap-3">
+                            <OverridableField
+                                control={control}
+                                overrideName={`queries.${index}.isAllowModelQueriesOverride`}
+                                resetOnDisable={{ setValue, valueName: `queries.${index}.isAllowModelQueries` }}
+                                label="Allow model queries"
+                                tooltip={<AllowModelQueriesTooltip />}
+                            >
+                                {({ isOverridden, isDisabled, controlId }) => (
+                                    <FormSelect
+                                        control={control}
+                                        name={`queries.${index}.isAllowModelQueries`}
+                                        options={isAllowModelQueriesOptions}
+                                        isDisabled={isDisabled}
+                                        inputId={controlId}
+                                        placeholder={isOverridden ? "Select True or False" : "Default (True)"}
+                                    />
+                                )}
+                            </OverridableField>
+                            <OverridableField
+                                control={control}
+                                overrideName={`queries.${index}.isAddToInitialContextOverride`}
+                                resetOnDisable={{ setValue, valueName: `queries.${index}.isAddToInitialContext` }}
+                                label="Add to initial context"
+                                tooltip={<AddToInitialContextTooltip />}
+                            >
+                                {({ isOverridden, isDisabled, controlId }) => (
+                                    <FormSelect
+                                        control={control}
+                                        name={`queries.${index}.isAddToInitialContext`}
+                                        options={isAddToInitialContextOptions}
+                                        isDisabled={isDisabled}
+                                        inputId={controlId}
+                                        placeholder={isOverridden ? "Select True or False" : "Default (False)"}
+                                    />
+                                )}
+                            </OverridableField>
+                        </div>
                     </Accordion.Body>
                 </Accordion.Item>
             </Accordion>
@@ -227,7 +230,7 @@ function AllowModelQueriesTooltip() {
             When False, the model cannot call this query (unless executed as part of initial context).
             <br />
             <br />
-            When Default, server default is applied.
+            When Default, True is applied.
         </>
     );
 }
@@ -242,7 +245,7 @@ function AddToInitialContextTooltip() {
             When False, the query will not be executed for the initial context.
             <br />
             <br />
-            When Default, server default is applied.
+            When Default, False is applied.
         </>
     );
 }

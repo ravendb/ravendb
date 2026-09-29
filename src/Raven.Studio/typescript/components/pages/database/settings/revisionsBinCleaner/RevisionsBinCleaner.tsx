@@ -161,25 +161,19 @@ export default function RevisionsBinCleaner() {
                                         <OverridableField
                                             control={control}
                                             overrideName="isCleanerFrequencyInSecEnabled"
-                                            label="Custom cleaner frequency"
+                                            label="Cleaner frequency"
                                             disabled={
                                                 !hasDatabaseAdminAccess ||
                                                 formState.isSubmitting ||
                                                 !formValues.isRevisionsBinCleanerEnabled
                                             }
-                                            marginClass="mb-0"
                                         >
-                                            {({ isOverridden }) => (
+                                            {({ isDisabled }) => (
                                                 <FormInput
                                                     name="cleanerFrequencyInSec"
                                                     control={control}
                                                     type="number"
-                                                    disabled={
-                                                        !hasDatabaseAdminAccess ||
-                                                        formState.isSubmitting ||
-                                                        !formValues.isRevisionsBinCleanerEnabled ||
-                                                        !isOverridden
-                                                    }
+                                                    disabled={isDisabled}
                                                     placeholder="Default (300)"
                                                     addon="seconds"
                                                 />

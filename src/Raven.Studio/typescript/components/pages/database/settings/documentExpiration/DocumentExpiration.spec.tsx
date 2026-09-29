@@ -51,14 +51,37 @@ describe("DocumentExpiration", () => {
         const enableButton = await screen.findByRole("checkbox", { name: "Enable Document Expiration" });
 
         expect(enableButton).not.toBeChecked();
+        expect(screen.getByName("maxItemsToProcess")).toHaveAttribute("placeholder", "Default (unlimited)");
 
         await fireClick(enableButton);
 
         const setMaxNumberOfDocumentToProcessCheckbox = await screen.findByRole("checkbox", {
-            name: "Max number of documents to process in a single run",
+            name: "Override Max number of documents to process in a single run",
         });
         expect(setMaxNumberOfDocumentToProcessCheckbox).toBeChecked();
         expect(await screen.findByName("maxItemsToProcess")).toHaveValue(65536);
+    });
+
+    it("shows the default expiration frequency and does not prefill it when overriding", async () => {
+        const { screen, fireClick } = rtlRender(<InitialDocumentExpiration />);
+
+        await fireClick(await screen.findByRole("checkbox", { name: "Enable Document Expiration" }));
+
+        const inputsBefore = getDeleteFrequencyInputs(screen.getByTestId("deleteFrequencyDurationPicker"));
+        inputsBefore.forEach((input) => expect(input).toBeDisabled());
+        expect(inputsBefore.map((input) => input.getAttribute("placeholder"))).toEqual([
+            "Default (0)",
+            "Default (1)",
+            "Default (0)",
+        ]);
+
+        await fireClick(screen.getByRole("checkbox", { name: "Override Expiration frequency" }));
+
+        const inputsAfter = getDeleteFrequencyInputs(screen.getByTestId("deleteFrequencyDurationPicker"));
+        inputsAfter.forEach((input) => {
+            expect(input).toBeEnabled();
+            expect(input).toHaveValue(null);
+        });
     });
 
     it("is license restricted", async () => {
@@ -87,10 +110,10 @@ describe("DocumentExpiration", () => {
         const documentExpirationSwitch = await screen.findByRole("checkbox", { name: "Enable Document Expiration" });
 
         await fireClick(documentExpirationSwitch);
-        expect(screen.getByRole("checkbox", { name: "Set custom expiration frequency" })).not.toBeChecked();
+        expect(screen.getByRole("checkbox", { name: "Override Expiration frequency" })).not.toBeChecked();
 
         await fireClick(documentExpirationSwitch);
-        expect(screen.getByRole("checkbox", { name: "Set custom expiration frequency" })).toBeChecked();
+        expect(screen.getByRole("checkbox", { name: "Override Expiration frequency" })).toBeChecked();
 
         const deleteFrequency = getDeleteFrequencyInputs(screen.getByTestId("deleteFrequencyDurationPicker"));
         deleteFrequency.forEach((input, index) => {
@@ -103,9 +126,9 @@ describe("DocumentExpiration", () => {
     it("blocks saving when the frequency falls back to the server default on a limited license", async () => {
         const { screen, fireClick } = rtlRender(<LicenseRestricted />);
 
-        await fireClick(await screen.findByRole("checkbox", { name: "Set custom expiration frequency" }));
+        await fireClick(await screen.findByRole("checkbox", { name: "Override Expiration frequency" }));
 
-        expect(screen.getByRole("checkbox", { name: "Set custom expiration frequency" })).not.toBeChecked();
+        expect(screen.getByRole("checkbox", { name: "Override Expiration frequency" })).not.toBeChecked();
         expect(screen.getByText(licenseLimitWarning)).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
     });
