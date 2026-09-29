@@ -20,12 +20,12 @@ const {
     maxBodyHeightInPx,
     defaultTableHeightInPx,
 } = virtualTableConstants;
-const maxRowsInDom = Math.floor(maxBodyHeightInPx / rowHeightInPx);
-const overscanInRows = 20;
-const windowStepInRows = 10;
-const pageSizeOptions = [25, 50, 100];
-const loadingIndicatorDelayInMs = 150;
-const scrollSettleDelayInMs = 100;
+const MAX_ROWS_IN_DOM = Math.floor(maxBodyHeightInPx / rowHeightInPx);
+const OVERSCAN_IN_ROWS = 25;
+const WINDOW_STEP_IN_ROWS = 10;
+const PAGE_SIZE_OPTIONS = [25, 50, 100];
+const LOADING_INDICATOR_DELAY_IN_MS = 300;
+const SCROLL_SETTLE_DELAY_IN_MS = 100;
 
 export function useLazyTableViewport<T>({
     lazyRows,
@@ -55,7 +55,7 @@ export function useLazyTableViewport<T>({
     const page = Math.floor((pageFirstRowIndex ?? 0) / pageSize) + 1;
     const pageStart = (page - 1) * pageSize;
     const pageRowCount = totalCount === null ? rows.length : Math.max(0, Math.min(pageSize, totalCount - pageStart));
-    const scrollableRowCount = Math.min(isSkipTake ? (totalCount ?? 0) : loadedCount, maxRowsInDom);
+    const scrollableRowCount = Math.min(isSkipTake ? (totalCount ?? 0) : loadedCount, MAX_ROWS_IN_DOM);
     const bodyHeightInPx = (isPaginated ? pageRowCount : scrollableRowCount) * rowHeightInPx;
     const range = isPaginated ? { start: pageStart, end: pageStart + pageSize } : scrollRange;
 
@@ -68,7 +68,7 @@ export function useLazyTableViewport<T>({
 
         const { scrollTop, clientHeight, scrollHeight } = containerRef.current;
         const isJumpToMissingRows =
-            Math.abs(scrollTop - lastScrollTopRef.current) > overscanInRows * rowHeightInPx &&
+            Math.abs(scrollTop - lastScrollTopRef.current) > OVERSCAN_IN_ROWS * rowHeightInPx &&
             getItem(Math.floor(scrollTop / rowHeightInPx)) === undefined;
 
         lastScrollTopRef.current = scrollTop;
@@ -77,7 +77,7 @@ export function useLazyTableViewport<T>({
         // Rows passed by a fast scroll (e.g. dragging the scrollbar) are neither fetched nor rendered,
         // only the ones where the scrolling settles
         if (isJumpToMissingRows) {
-            scrollSettleTimeoutRef.current = setTimeout(updateScrollState, scrollSettleDelayInMs);
+            scrollSettleTimeoutRef.current = setTimeout(updateScrollState, SCROLL_SETTLE_DELAY_IN_MS);
             return;
         }
 
@@ -118,7 +118,7 @@ export function useLazyTableViewport<T>({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [range.start, range.end, isPaginated, pageFirstRowIndex, setRange]);
 
-    useTimeout(() => setIsFetchingLong(true), isFetching ? loadingIndicatorDelayInMs : null);
+    useTimeout(() => setIsFetchingLong(true), isFetching ? LOADING_INDICATOR_DELAY_IN_MS : null);
     if (!isFetching && isFetchingLong) {
         setIsFetchingLong(false);
     }
@@ -137,7 +137,7 @@ export function useLazyTableViewport<T>({
               pageSize,
               pageSizeOptions: [
                   defaultPageSize,
-                  ...pageSizeOptions.filter((x) => x > defaultPageSize && (totalCount === null || x < totalCount)),
+                  ...PAGE_SIZE_OPTIONS.filter((x) => x > defaultPageSize && (totalCount === null || x < totalCount)),
               ],
               onPageChange: (nextPage) => {
                   scrollToTop();
@@ -150,7 +150,7 @@ export function useLazyTableViewport<T>({
           }
         : null;
 
-    const isDomLimitReached = isSkipTake ? totalCount > maxRowsInDom : loadedCount >= maxRowsInDom && hasMore;
+    const isDomLimitReached = isSkipTake ? totalCount > MAX_ROWS_IN_DOM : loadedCount >= MAX_ROWS_IN_DOM && hasMore;
 
     const isEmpty =
         !isFetching &&
@@ -176,17 +176,17 @@ function getScrollRange(scrollTop: number, clientHeight: number): RowRange {
     const lastVisibleRow = Math.ceil((scrollTop + clientHeight) / rowHeightInPx);
 
     return {
-        start: Math.max(0, snapDown(firstVisibleRow - overscanInRows)),
-        end: Math.min(snapUp(lastVisibleRow + overscanInRows), maxRowsInDom),
+        start: Math.max(0, snapDown(firstVisibleRow - OVERSCAN_IN_ROWS)),
+        end: Math.min(snapUp(lastVisibleRow + OVERSCAN_IN_ROWS), MAX_ROWS_IN_DOM),
     };
 }
 
 function snapDown(rowIndex: number) {
-    return Math.floor(rowIndex / windowStepInRows) * windowStepInRows;
+    return Math.floor(rowIndex / WINDOW_STEP_IN_ROWS) * WINDOW_STEP_IN_ROWS;
 }
 
 function snapUp(rowIndex: number) {
-    return Math.ceil(rowIndex / windowStepInRows) * windowStepInRows;
+    return Math.ceil(rowIndex / WINDOW_STEP_IN_ROWS) * WINDOW_STEP_IN_ROWS;
 }
 
 function getFitPageSize(heightInPx: number) {

@@ -28,21 +28,21 @@ interface UseDocumentsColumnsProps {
     getPropertyPreviewResolver: FullDocumentProvider["getPropertyPreviewResolver"];
 }
 
-const noColumns: string[] = [];
-const noCustomColumns: CustomColumnDefinition[] = [];
-const flagsColumnWidth = 130;
-const propertyColumnWidth = 150;
-const customColumnWidth = 200;
-const lastModifiedColumnWidth = 250;
-const metadataColumnName = "__metadata";
-const idColumnName = "@id";
-const changeVectorColumnId = "Change Vector";
-const lastModifiedColumnId = "Last Modified";
-const collectionColumnId = "Collection";
+const NO_COLUMNS: string[] = [];
+const NO_CUSTOM_COLUMNS: CustomColumnDefinition[] = [];
+const FLAGS_COLUMN_WIDTH = 130;
+const PROPERTY_COLUMN_WIDTH = 150;
+const CUSTOM_COLUMN_WIDTH = 200;
+const LAST_MODIFIED_COLUMN_WIDTH = 250;
+const METADATA_COLUMN_NAME = "__metadata";
+const ID_COLUMN_NAME = "@id";
+const CHANGE_VECTOR_COLUMN_ID = "Change Vector";
+const LAST_MODIFIED_COLUMN_ID = "Last Modified";
+const COLLECTION_COLUMN_ID = "Collection";
 
 const selectionColumn = createLazySelectionColumn<document>("Select all documents", "Select document");
 
-const flagsColumn: ColumnDef<document> = { ...columnDocumentFlags, size: flagsColumnWidth };
+const flagsColumn: ColumnDef<document> = { ...columnDocumentFlags, size: FLAGS_COLUMN_WIDTH };
 
 type AppUrl = ReturnType<typeof useAppUrls>["appUrl"];
 
@@ -54,7 +54,7 @@ export function useDocumentsColumns({
 }: UseDocumentsColumnsProps) {
     const { appUrl } = useAppUrls();
     const isAllDocuments = collectionName === null;
-    const propertyColumnsWidthInPx = tableBodyWidthInPx - columnCheckbox.size - flagsColumnWidth;
+    const propertyColumnsWidthInPx = tableBodyWidthInPx - columnCheckbox.size - FLAGS_COLUMN_WIDTH;
 
     const [appliedLayout, setAppliedLayout] = useState<AppliedColumnLayout | null>(() =>
         isAllDocuments ? null : documentsColumnLayoutStorage.load(databaseName, collectionName)
@@ -62,27 +62,27 @@ export function useDocumentsColumns({
     const [availableColumns, setAvailableColumns] = useState<string[]>([]);
     const [previewedColumns, setPreviewedColumns] = useState<string[]>([]);
 
-    const customColumns = appliedLayout?.customColumns ?? noCustomColumns;
+    const customColumns = appliedLayout?.customColumns ?? NO_CUSTOM_COLUMNS;
 
-    const fullBindings = useMemo(() => (appliedLayout ? getFullBindings(appliedLayout) : noColumns), [appliedLayout]);
+    const fullBindings = useMemo(() => (appliedLayout ? getFullBindings(appliedLayout) : NO_COLUMNS), [appliedLayout]);
 
     const previewBindings = useMemo(
         () =>
             appliedLayout
                 ? getPreviewBindings(appliedLayout, isAllDocuments).filter((x) => !fullBindings.includes(x))
-                : noColumns,
+                : NO_COLUMNS,
         [appliedLayout, isAllDocuments, fullBindings]
     );
 
     const propertyColumnNames = useMemo(
-        () => (isAllDocuments ? availableColumns.filter((x) => x !== metadataColumnName) : availableColumns),
+        () => (isAllDocuments ? availableColumns.filter((x) => x !== METADATA_COLUMN_NAME) : availableColumns),
         [isAllDocuments, availableColumns]
     );
 
     const propertyColumns = useDocumentColumnsProvider({
         columnNames: propertyColumnNames,
         availableWidth: propertyColumnsWidthInPx,
-        columnsWithValues: isAllDocuments ? noColumns : previewedColumns,
+        columnsWithValues: isAllDocuments ? NO_COLUMNS : previewedColumns,
         databaseName,
         getPreviewValueResolver: getPropertyPreviewResolver,
     });
@@ -108,8 +108,8 @@ export function useDocumentsColumns({
             columnVisibility: appliedLayout
                 ? getLayoutVisibility(columnDefs, appliedLayout)
                 : propertyColumns.initialColumnVisibility,
-            columnOrder: appliedLayout?.columnOrder ?? noColumns,
-            columnPinning: { left: [columnCheckbox.id, ...(appliedLayout?.pinnedColumnIds ?? noColumns)] },
+            columnOrder: appliedLayout?.columnOrder ?? NO_COLUMNS,
+            columnPinning: { left: [columnCheckbox.id, ...(appliedLayout?.pinnedColumnIds ?? NO_COLUMNS)] },
         }),
         [appliedLayout, columnDefs, propertyColumns.initialColumnVisibility]
     );
@@ -153,16 +153,16 @@ export function useDocumentsColumns({
             table
                 .getVisibleLeafColumns()
                 .map((column) => column.id)
-                .filter((id) => id === idColumnName || availableColumns.includes(id)),
+                .filter((id) => id === ID_COLUMN_NAME || availableColumns.includes(id)),
     };
 }
 
 function getPreviewBindings(layout: AppliedColumnLayout, isAllDocuments: boolean): string[] {
     const nonPropertyColumnIds = new Set<string>([
         columnCheckbox.id,
-        idColumnName,
+        ID_COLUMN_NAME,
         columnDocumentFlags.id,
-        ...(isAllDocuments ? [changeVectorColumnId, lastModifiedColumnId, collectionColumnId] : []),
+        ...(isAllDocuments ? [CHANGE_VECTOR_COLUMN_ID, LAST_MODIFIED_COLUMN_ID, COLLECTION_COLUMN_ID] : []),
         ...layout.customColumns.map((column) => column.id),
     ]);
 
@@ -180,9 +180,11 @@ function fitVisibleColumnsToWidth(
     columnVisibility: VisibilityState,
     availableWidth: number
 ): ColumnDef<document>[] {
-    const getSize = (column: ColumnDef<document>) => column.size ?? propertyColumnWidth;
+    const getSize = (column: ColumnDef<document>) => column.size ?? PROPERTY_COLUMN_WIDTH;
     const isFixed = (column: ColumnDef<document>) =>
-        column.id === columnCheckbox.id || column.id === columnDocumentFlags.id || column.id === lastModifiedColumnId;
+        column.id === columnCheckbox.id ||
+        column.id === columnDocumentFlags.id ||
+        column.id === LAST_MODIFIED_COLUMN_ID;
 
     const visibleColumns = columnDefs.filter((column) => columnVisibility[column.id] !== false);
     const stretchedColumns = visibleColumns.filter((column) => !isFixed(column));
@@ -196,7 +198,7 @@ function fitVisibleColumnsToWidth(
 
     return columnDefs.map((column) =>
         stretchedColumns.includes(column)
-            ? { ...column, size: Math.max(propertyColumnWidth, Math.floor(getSize(column) * scale)) }
+            ? { ...column, size: Math.max(PROPERTY_COLUMN_WIDTH, Math.floor(getSize(column) * scale)) }
             : column
     );
 }
@@ -223,7 +225,7 @@ function createCustomColumn(column: CustomColumnDefinition, databaseName: string
         header: column.header,
         accessorFn: (doc) => getValue(doc),
         cell: ({ getValue }) => <CellDocumentValue value={getValue()} databaseName={databaseName} hasHyperlinkForIds />,
-        size: customColumnWidth,
+        size: CUSTOM_COLUMN_WIDTH,
         meta: { customColumn: column },
     };
 }
@@ -233,7 +235,7 @@ function createMetadataColumns(databaseName: string, widthInPx: number, appUrl: 
 
     return [
         {
-            id: idColumnName,
+            id: ID_COLUMN_NAME,
             header: "Id",
             accessorFn: (doc) => doc.getId(),
             cell: ({ getValue }) => {
@@ -249,7 +251,7 @@ function createMetadataColumns(databaseName: string, widthInPx: number, appUrl: 
             enableHiding: false,
         },
         {
-            id: changeVectorColumnId,
+            id: CHANGE_VECTOR_COLUMN_ID,
             header: "Change Vector",
             accessorFn: (doc) => doc.__metadata.changeVector(),
             cell: ({ getValue }) => {
@@ -266,14 +268,14 @@ function createMetadataColumns(databaseName: string, widthInPx: number, appUrl: 
             size: getSize(20),
         },
         {
-            id: lastModifiedColumnId,
+            id: LAST_MODIFIED_COLUMN_ID,
             header: "Last Modified",
             accessorFn: (doc) => doc.__metadata.lastModified(),
             cell: DateFormatterCell,
-            size: lastModifiedColumnWidth,
+            size: LAST_MODIFIED_COLUMN_WIDTH,
         },
         {
-            id: collectionColumnId,
+            id: COLLECTION_COLUMN_ID,
             header: "Collection",
             accessorFn: (doc) => doc.getCollection(),
             cell: ({ getValue }) => {

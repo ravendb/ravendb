@@ -19,12 +19,12 @@ interface ExportDocumentsDropdownProps {
 type ExportFormat = "csv" | "json";
 type ExportColumns = "all" | "visible";
 
-const formatItems: InputItem<ExportFormat>[] = [
+const FORMAT_ITEMS: InputItem<ExportFormat>[] = [
     { label: "CSV", value: "csv" },
     { label: "JSON", value: "json" },
 ];
 
-const columnsItems: InputItem<ExportColumns>[] = [
+const COLUMNS_ITEMS: InputItem<ExportColumns>[] = [
     { label: "All", value: "all" },
     { label: "Visible", value: "visible" },
 ];
@@ -70,13 +70,13 @@ export default function ExportDocumentsDropdown({
                     <div className="vstack gap-3">
                         <MultiRadioToggle<ExportFormat>
                             label="Format"
-                            inputItems={formatItems}
+                            inputItems={FORMAT_ITEMS}
                             selectedItem={format}
                             setSelectedItem={setFormat}
                         />
                         <MultiRadioToggle<ExportColumns>
                             label="Columns"
-                            inputItems={columnsItems}
+                            inputItems={COLUMNS_ITEMS}
                             selectedItem={columns}
                             setSelectedItem={setColumns}
                         />
