@@ -89,7 +89,7 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         {
             var parameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, null, null, query, _index,
                 query.QueryParameters, _queryBuilderFactories, _fieldMappings, null, null, -1,
-                deduplicationDisabled: true, token: token);
+                deduplicationDisabled: true, token: token, allowImplicitScoreOrdering: false);
             var baseQuery = CoraxQueryBuilder.BuildQuery(parameters, out _);
             queryTimings?.SetQueryPlan(baseQuery.Inspect());
             var maxMatchingIds = _indexSearcher.MaxMemoizationSizeInBytes / sizeof(long);
@@ -285,7 +285,7 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         else
         {
             var parameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, null, null, query, _index, query.QueryParameters, _queryBuilderFactories,
-                _fieldMappings, null, null, -1, deduplicationDisabled: false, token: token, queryTime: queryTime);
+                _fieldMappings, null, null, -1, deduplicationDisabled: false, token: token, queryTime: queryTime, allowImplicitScoreOrdering: false);
             var baseQuery = CoraxQueryBuilder.BuildQuery(parameters, out _);
             queryTimings?.SetQueryPlan(baseQuery.Inspect());
 
