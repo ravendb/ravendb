@@ -89,7 +89,6 @@ class connectedDocuments {
         component: AddAttachmentModal.default,
         props: {
             document: this.document,
-            db: this.db,
             onUploaded: () => this.afterUpload(),
             onClose: () => this.isAddAttachmentModalVisible(false)
         }
@@ -100,7 +99,6 @@ class connectedDocuments {
         component: AddAttachmentWithRemoteParametersModal.default,
         props: {
             document: this.document,
-            db: this.db,
             onUploaded: () => this.afterUpload(),
             onClose: () => this.isAddAttachmentWithRemoteParametersModalVisible(false)
         }

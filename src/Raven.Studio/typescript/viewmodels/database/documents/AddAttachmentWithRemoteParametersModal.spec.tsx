@@ -1,7 +1,6 @@
 import React from "react";
 import { act, rtlRender, RtlScreen, waitFor, within } from "test/rtlTestUtils";
 import { mockServices } from "test/mocks/services/MockServices";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import document from "models/database/documents/document";
 import editDocumentUploader = require("viewmodels/database/documents/editDocumentUploader");
 import AddAttachmentWithRemoteParametersModal from "./AddAttachmentWithRemoteParametersModal";
@@ -38,7 +37,6 @@ function rowOf(screen: RtlScreen, fileName: string) {
 }
 
 describe("AddAttachmentWithRemoteParametersModal", () => {
-    const db = DatabasesStubs.nonShardedSingleNodeDatabase();
     const doc = ko.observable(new document({ "@metadata": { "@id": "users/1" } } as documentDto));
     const fileA = new File(["aaaa"], "a.txt");
     const fileB = new File(["bb"], "b.txt");
@@ -55,7 +53,7 @@ describe("AddAttachmentWithRemoteParametersModal", () => {
 
     function renderModal(onClose = jest.fn()) {
         return rtlRender(
-            <AddAttachmentWithRemoteParametersModal document={doc} db={db} onUploaded={jest.fn()} onClose={onClose} />
+            <AddAttachmentWithRemoteParametersModal document={doc} onUploaded={jest.fn()} onClose={onClose} />
         );
     }
 

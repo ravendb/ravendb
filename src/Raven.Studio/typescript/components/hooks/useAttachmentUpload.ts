@@ -2,7 +2,6 @@ import { useState } from "react";
 import { FileUploadItem } from "components/common/FileUploadList";
 import editDocumentUploader = require("viewmodels/database/documents/editDocumentUploader");
 import document = require("models/database/documents/document");
-import database = require("models/resources/database");
 import RemoteAttachmentParameters = Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters;
 
 type FileUploadState = Omit<FileUploadItem, "file">;
@@ -16,10 +15,10 @@ interface UseAttachmentUploadResult {
 
 export default function useAttachmentUpload(
     document: KnockoutObservable<document>,
-    db: database,
+    databaseName: string,
     onUploaded: () => void
 ): UseAttachmentUploadResult {
-    const [uploader] = useState(() => new editDocumentUploader(document, db, onUploaded));
+    const [uploader] = useState(() => new editDocumentUploader(document, databaseName, onUploaded));
     const [batchProgress, setBatchProgress] = useState<attachmentUploadProgress>(null);
     const [uploadStates, setUploadStates] = useState<Record<string, FileUploadState>>({});
 
