@@ -375,7 +375,7 @@ namespace Raven.Server.Documents.Patch
                 get => _value;
                 set
                 {
-                    if (Equals(_value, value))
+                    if (Equals(_value, value) || _value.IsUndefined() && value.IsUndefined())
                         return;
                     _value = value;
                     _parent.MarkChanged();
