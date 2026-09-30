@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { sampleTopologyIds, settingsMocks } from "@/mocks/settings-mocks";
-import { SYSTEM_GROUP_LABEL } from "@/pages/dashboard/usage-groups";
 import { DashboardUsage } from "./usage";
 
 const meta = {
@@ -46,56 +45,31 @@ export const Empty: Story = {
     },
 };
 
-// The config database is reported once per appliance, so a licence covering several of them reports
-// many rows sharing its name. They collapse into one labelled, counted group at the bottom, and
-// expanding identifies each by topology id - the only thing that tells them apart.
-export const SystemRowsCollapseIntoOneCountedGroup: Story = {
-    tags: ["!dev"],
-    play: async ({ canvasElement }) => {
-        const canvas = within(canvasElement);
-
-        const system = await waitFor(() => canvas.getByRole("button", { name: SYSTEM_GROUP_LABEL }));
-
-        // Collapsed: the group carries the combined usage of its three rows and none of their ids.
-        expect(system).toHaveAttribute("aria-expanded", "false");
-        expect(rowFor(system)).toHaveTextContent("7,600");
-        expect(canvas.queryByText(TOPOLOGY_ID)).not.toBeInTheDocument();
-
-        // Sorted last, behind every app.
-        const names = canvas.getAllByRole("row").map((row) => row.textContent);
-        expect(names.at(-1)).toContain(SYSTEM_GROUP_LABEL);
-
-        await userEvent.click(system);
-        expect(system).toHaveAttribute("aria-expanded", "true");
-
-        // Expanded: one row per database, heaviest first, each named by its id rather than by the
-        // name all three share.
-        const ids = canvas.getAllByText(TOPOLOGY_ID).map((cell) => cell.textContent);
-        expect(ids).toEqual([
-            sampleTopologyIds.systemBusiest,
-            sampleTopologyIds.system,
-            sampleTopologyIds.systemQuietest,
-        ]);
-        expect(canvas.queryByText("quill-config")).not.toBeInTheDocument();
-
-        await userEvent.click(system);
-        expect(canvas.queryByText(TOPOLOGY_ID)).not.toBeInTheDocument();
-    },
-};
-
-// Same treatment for apps: two appliances can both run an app called "huetopia", and as bare rows
-// they are indistinguishable.
-export const SameNamedAppsCollapseToo: Story = {
+// Two appliances under one licence can both run an app called "huetopia", and as bare rows they
+// are indistinguishable. They collapse into one counted group, and expanding identifies each by
+// topology id - the only thing that tells them apart.
+export const SameNamedAppsCollapseIntoOneCountedGroup: Story = {
     tags: ["!dev"],
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
 
         const huetopia = await waitFor(() => canvas.getByRole("button", { name: "huetopia" }));
+
+        // Collapsed: the group carries the combined usage of its two rows and none of their ids.
+        expect(huetopia).toHaveAttribute("aria-expanded", "false");
         expect(rowFor(huetopia)).toHaveTextContent("1,940,000");
+        expect(canvas.queryByText(TOPOLOGY_ID)).not.toBeInTheDocument();
 
         await userEvent.click(huetopia);
-        expect(canvas.getByText(sampleTopologyIds.huetopiaBusiest)).toBeInTheDocument();
-        expect(canvas.getByText(sampleTopologyIds.huetopia)).toBeInTheDocument();
+        expect(huetopia).toHaveAttribute("aria-expanded", "true");
+
+        // Expanded: one row per database, heaviest first, each named by its id rather than by the
+        // name both share.
+        const ids = canvas.getAllByText(TOPOLOGY_ID).map((cell) => cell.textContent);
+        expect(ids).toEqual([sampleTopologyIds.huetopiaBusiest, sampleTopologyIds.huetopia]);
+
+        await userEvent.click(huetopia);
+        expect(canvas.queryByText(TOPOLOGY_ID)).not.toBeInTheDocument();
     },
 };
 
@@ -110,22 +84,18 @@ export const UniquelyNamedAppStaysAPlainRow: Story = {
     },
 };
 
-// The label is a small target in a wide row, so the whole row toggles - while the hint inside it
-// explains the group without collapsing it again.
+// The label is a small target in a wide row, so the whole row toggles.
 export const ClickingAnywhereInTheRowToggles: Story = {
     tags: ["!dev"],
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
 
-        const trigger = await waitFor(() => canvas.getByRole("button", { name: SYSTEM_GROUP_LABEL }));
+        const trigger = await waitFor(() => canvas.getByRole("button", { name: "huetopia" }));
         const row = rowFor(trigger);
 
         await userEvent.click(lastCell(row)); // the usage figure, well away from the label
         expect(trigger).toHaveAttribute("aria-expanded", "true");
-        expect(canvas.getByText(sampleTopologyIds.systemBusiest)).toBeInTheDocument();
-
-        await userEvent.click(within(row).getByText(/count toward your total/i));
-        expect(trigger).toHaveAttribute("aria-expanded", "true");
+        expect(canvas.getByText(sampleTopologyIds.huetopiaBusiest)).toBeInTheDocument();
     },
 };
 
@@ -136,7 +106,7 @@ export const UsageFiguresAreEndAligned: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
 
-        await userEvent.click(await waitFor(() => canvas.getByRole("button", { name: SYSTEM_GROUP_LABEL })));
+        await userEvent.click(await waitFor(() => canvas.getByRole("button", { name: "huetopia" })));
 
         // Measured rather than asserted against a CSS property: the column has been laid out with
         // text-align and with flex, and what the eye checks is where the digits end.

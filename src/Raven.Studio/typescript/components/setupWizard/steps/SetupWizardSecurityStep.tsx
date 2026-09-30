@@ -26,7 +26,7 @@ export function SetupWizardSecurityStep() {
     } = useWatch({ control });
 
     const isLetsEncryptDisabled = !key;
-    const isSecureRecommended = !!key && licenseInfo?.licenseType !== "Developer";
+    const isSecureRecommended = !!key && licenseInfo?.licenseStatus?.Type !== "Developer";
 
     const handleGoToGenerateLicense = (licenseType: LicenseTypeToGenerate) => {
         reportEvent(setupWizardGA4Prefixes.securityStep, "go-to-generate-license", licenseType);

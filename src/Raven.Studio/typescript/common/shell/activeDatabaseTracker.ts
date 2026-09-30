@@ -15,7 +15,7 @@ class activeDatabaseTracker {
 
     constructor() {
         ko.postbox.subscribe(EVENTS.Database.Disconnect, (e: databaseDisconnectedEventArgs) => {
-            if (e.databaseName === this.database().name) {
+            if (e.cause !== "ChangingDatabase" && e.databaseName === this.database().name) {
                 this.database(null);
             }
 

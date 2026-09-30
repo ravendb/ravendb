@@ -36,7 +36,8 @@ class revertRevisionsDetails extends abstractOperationDetails {
         super.initObservables();
         
         this.progress = ko.pureComputed(() => {
-            return (this.op.progress() || this.op.result()) as Raven.Client.Documents.Operations.Revisions.RevertResult
+            const progressResults = this.op.status() === "Completed" ? this.op.result() : this.op.progress();
+            return progressResults as Raven.Client.Documents.Operations.Revisions.RevertResult;
         });
     }
 

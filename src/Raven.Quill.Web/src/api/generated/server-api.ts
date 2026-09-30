@@ -1097,12 +1097,24 @@ export interface components {
         };
         AiConnectionStringDeleteConflictResponse: {
             error: string;
-            referencingAgentIds: string[];
+            usedBy: components["schemas"]["AiConnectionStringUsage"][];
+        };
+        AiConnectionStringResponse: {
+            connectionString: components["schemas"]["AiConnectionString"];
+            usedBy: components["schemas"]["AiConnectionStringUsage"][];
         };
         AiConnectionStringTestResponse: {
             success: boolean;
             error?: null | string;
         };
+        AiConnectionStringUsage: {
+            kind: components["schemas"]["AiConnectionStringUsageKind"];
+            identifier: null | string;
+            name: null | string;
+            databaseName: null | string;
+        };
+        /** @enum {unknown} */
+        AiConnectionStringUsageKind: "AiAgent" | "GenAi" | "EmbeddingsGeneration";
         /** @enum {unknown} */
         AiConnectorType: "None" | "OpenAi" | "AzureOpenAi" | "Ollama" | "Embedded" | "Google" | "HuggingFace" | "MistralAi" | "Vertex";
         AiConversationMessage: {
@@ -1207,6 +1219,7 @@ export interface components {
         AppSource: {
             type: string;
             connectionString: string;
+            database: string;
         };
         AppTokens: {
             slug: string;
@@ -1669,12 +1682,10 @@ export interface components {
             /** Format: int32 */
             embeddingsMaxConcurrentBatches?: null | number;
         };
-        /** @enum {unknown} */
-        OpenAiReasoningEffort: "Minimal" | "Low" | "Medium" | "High" | null;
         OpenAiSettings: {
             organizationId?: null | string;
             projectId?: null | string;
-            reasoningEffort?: null | components["schemas"]["OpenAiReasoningEffort"];
+            reasoningEffort?: null | string;
             /** Format: int32 */
             seed?: null | number;
             apiKey?: null | string;
@@ -1728,8 +1739,6 @@ export interface components {
             to: string;
             /** Format: int64 */
             usage: number;
-            /** @default false */
-            isSystem: boolean;
         };
         QuillPeriodUsage: {
             /** Format: date-time */
@@ -3334,7 +3343,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AiConnectionString"][];
+                    "application/json": components["schemas"]["AiConnectionStringResponse"][];
                 };
             };
             /** @description Not Found */
@@ -3440,7 +3449,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AiConnectionString"];
+                    "application/json": components["schemas"]["AiConnectionStringResponse"];
                 };
             };
             /** @description Not Found */
@@ -4417,7 +4426,10 @@ export type AiAgentToolSubAgent = components["schemas"]["AiAgentToolSubAgent"];
 export type AiConnectionString = components["schemas"]["AiConnectionString"];
 export type AiConnectionStringCreatedResponse = components["schemas"]["AiConnectionStringCreatedResponse"];
 export type AiConnectionStringDeleteConflictResponse = components["schemas"]["AiConnectionStringDeleteConflictResponse"];
+export type AiConnectionStringResponse = components["schemas"]["AiConnectionStringResponse"];
 export type AiConnectionStringTestResponse = components["schemas"]["AiConnectionStringTestResponse"];
+export type AiConnectionStringUsage = components["schemas"]["AiConnectionStringUsage"];
+export type AiConnectionStringUsageKind = components["schemas"]["AiConnectionStringUsageKind"];
 export type AiConnectorType = components["schemas"]["AiConnectorType"];
 export type AiConversationMessage = components["schemas"]["AiConversationMessage"];
 export type AiHelperStatus = components["schemas"]["AiHelperStatus"];
@@ -4498,7 +4510,6 @@ export type MintEmbedLinkRequest = components["schemas"]["MintEmbedLinkRequest"]
 export type MintEmbedLinkResponse = components["schemas"]["MintEmbedLinkResponse"];
 export type MistralAiSettings = components["schemas"]["MistralAiSettings"];
 export type OllamaSettings = components["schemas"]["OllamaSettings"];
-export type OpenAiReasoningEffort = components["schemas"]["OpenAiReasoningEffort"];
 export type OpenAiSettings = components["schemas"]["OpenAiSettings"];
 export type ProblemDetails = components["schemas"]["ProblemDetails"];
 export type ProvisionAgentResponse = components["schemas"]["ProvisionAgentResponse"];
@@ -4673,8 +4684,8 @@ export function createServerApi(client: ApiClient) {
         aiConnectionStrings: {
             create: (request: AiConnectionString) => client.post<AiConnectionStringCreatedResponse, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.create, request),
             delete: (name: string) => client.delete<void, ApiErrorResponse | AiConnectionStringDeleteConflictResponse>(API_ENDPOINTS.aiConnectionStrings.delete(name)),
-            detail: (name: string) => client.get<AiConnectionString, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.detail(name)),
-            list: () => client.get<AiConnectionString[], ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.list),
+            detail: (name: string) => client.get<AiConnectionStringResponse, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.detail(name)),
+            list: () => client.get<AiConnectionStringResponse[], ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.list),
             test: (request: AiConnectionString) => client.post<AiConnectionStringTestResponse, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.test, request),
         },
         aiModels: {

@@ -2,6 +2,8 @@
 
 [assembly: Xunit.TestCaseOrderer(typeof(Tests.Infrastructure.AlphabeticTestsOrderer))]
 [assembly: Xunit.TestCollectionOrderer(typeof(Tests.Infrastructure.AlphabeticTestsOrderer))]
+[assembly: Xunit.TestClassOrderer(typeof(Tests.Infrastructure.AlphabeticTestsOrderer))]
+[assembly: Xunit.TestMethodOrderer(typeof(Tests.Infrastructure.AlphabeticTestsOrderer))]
 
 #endif
 
@@ -11,6 +13,8 @@
 
     [assembly: Xunit.TestCaseOrderer(typeof(Tests.Infrastructure.AlphabeticTestsOrderer))]
     [assembly: Xunit.TestCollectionOrderer(typeof(Tests.Infrastructure.AlphabeticTestsOrderer))]
+    [assembly: Xunit.TestClassOrderer(typeof(Tests.Infrastructure.AlphabeticTestsOrderer))]
+    [assembly: Xunit.TestMethodOrderer(typeof(Tests.Infrastructure.AlphabeticTestsOrderer))]
 
 #endif
 

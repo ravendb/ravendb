@@ -438,6 +438,7 @@ function mapAiFromSingleDto(
             model: d.OpenAiSettings?.Model,
             organizationId: d.OpenAiSettings?.OrganizationId,
             projectId: d.OpenAiSettings?.ProjectId,
+            reasoningEffort: d.OpenAiSettings?.ReasoningEffort,
             dimensions: d.OpenAiSettings?.Dimensions,
             embeddingsMaxConcurrentBatches: d.OpenAiSettings?.EmbeddingsMaxConcurrentBatches,
             enablePromptCache: d.OpenAiSettings?.EnablePromptCache,

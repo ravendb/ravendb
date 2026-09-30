@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,7 +27,7 @@ namespace Micro.Benchmark.Benchmarks
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core80,
+                        Runtime = CoreRuntime.Core10_0,
                         Platform = Platform.X64,
                         Jit = Jit.RyuJit,
                     }

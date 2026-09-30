@@ -1,3 +1,5 @@
+import { LicenseStubs } from "test/stubs/LicenseStubs";
+
 export class SetupWizardStubs {
     static eula() {
         return eula;
@@ -13,7 +15,7 @@ export class SetupWizardStubs {
         ];
     }
 
-    static registrationInfoCommunity(): Raven.Server.Commercial.UserDomainsAndLicenseInfo {
+    static registrationInfoCommunity(): UserDomainsAndLicenseInfo {
         return {
             UserDomainsWithIps: {
                 Emails: ["damian@ravendb.net"],
@@ -27,8 +29,13 @@ export class SetupWizardStubs {
                     ],
                 },
             },
-            MaxClusterSize: 3,
-            LicenseType: "Community",
+            LicenseStatus: {
+                ...LicenseStubs.getStatusLimited(),
+                Type: "Community",
+                MaxClusterSize: 3,
+                HasStudioConfiguration: false,
+                HasPostgreSqlIntegration: false,
+            },
         };
     }
 

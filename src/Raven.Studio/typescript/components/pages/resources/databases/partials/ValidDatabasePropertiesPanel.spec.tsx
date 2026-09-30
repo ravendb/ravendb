@@ -159,7 +159,7 @@ describe("ValidDatabasePropertiesPanel", () => {
                 });
                 expect(getLocalGeneralInfo(dbStates, "B").backupStatus).toEqual({
                     color: "success",
-                    text: "Backed up a minute ago",
+                    text: "Backed up 1 minute ago",
                 });
             });
         });
@@ -245,7 +245,7 @@ describe("ValidDatabasePropertiesPanel", () => {
 
                 expect(getLocalGeneralInfo(dbStates, "A").backupStatus).toEqual({
                     color: "success",
-                    text: "Backed up a minute ago",
+                    text: "Backed up 1 minute ago",
                 });
             });
         });

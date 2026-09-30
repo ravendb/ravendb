@@ -74,6 +74,10 @@ export default function useConnectionStringsLicense(): ConnectionStringsLicense 
                 featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "amazon-sqs-etl").featureName,
                 value: hasQueueEtl,
             },
+            {
+                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "azure-service-bus").featureName,
+                value: hasQueueEtl,
+            },
         ],
     });
 
@@ -169,6 +173,14 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "Amazon SQS ETL",
         featureIcon: "amazon-sqs-etl",
+        community: { value: false },
+        professional: { value: false },
+        enterprise: { value: true },
+        quill: { value: true },
+    },
+    {
+        featureName: "Azure Service Bus ETL",
+        featureIcon: "azure-service-bus",
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },

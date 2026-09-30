@@ -219,7 +219,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : QuillTestBase
     public async Task Channel_endpoint_returns_404_for_unknown_slug(string agentId)
     {
         var ex = await Assert.ThrowsAsync<QuillHttpException>(() => Host.ProvisionChannelAsync("nonexistent", 
-            new ProvisionChannelRequest(ChannelType.IFrame, agentId, new[] { "http://localhost" })));
+            new ProvisionChannelRequest(ChannelType.IFrame, agentId, new[] { "http://localhost" }, "Storefront widget")));
 
         Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
     }
@@ -231,7 +231,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : QuillTestBase
         await SeedDemoAgentAsync(app);
 
         var provisioned = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://localhost" }));
+            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://localhost" }, "Storefront widget"));
         var channelId = provisioned.ChannelId;
         Assert.False(string.IsNullOrEmpty(channelId), "channelId was empty");
         // Guid "N": 32 hex chars, 128 bits of entropy, no prefix
@@ -269,7 +269,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : QuillTestBase
 
         // pass AllowedOrigins null
         var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", null)));
+            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", null, "Storefront widget")));
 
         Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
     }
@@ -322,7 +322,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : QuillTestBase
         await using var app = await NewAppAsync();
         await SeedDemoAgentAsync(app);
 
-        await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { supplied }));
+        await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { supplied }, "Storefront widget"));
 
         await app.WaitForIndexingAsync();
 
@@ -343,7 +343,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : QuillTestBase
         await SeedDemoAgentAsync(app);
 
         var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { badOrigin })));
+            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { badOrigin }, "Storefront widget")));
 
         Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
     }
@@ -360,7 +360,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : QuillTestBase
         await SeedDemoAgentAsync(app);
 
         var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { badOrigin })));
+            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { badOrigin }, "Storefront widget")));
 
         Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
     }
@@ -374,7 +374,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : QuillTestBase
         var tooMany = Enumerable.Range(0, 33).Select(i => $"http://example{i}.com").ToArray();
 
         var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", tooMany)));
+            new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", tooMany, "Storefront widget")));
 
         Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
     }
@@ -411,7 +411,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : QuillTestBase
         await using var app = await NewAppAsync();
         await SeedDemoAgentAsync(app);
 
-        await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://localhost" }));
+        await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", new[] { "http://localhost" }, "Storefront widget"));
 
         await app.WaitForIndexingAsync();
 
@@ -427,7 +427,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : QuillTestBase
         await using var app = await NewAppAsync();
         await SeedDemoAgentAsync(app);
 
-        await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "Demo-Agent", new[] { "http://localhost" }));
+        await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "Demo-Agent", new[] { "http://localhost" }, "Storefront widget"));
 
         await app.WaitForIndexingAsync();
 
@@ -459,7 +459,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : QuillTestBase
             ],
         });
 
-        await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "order-support", new[] { "http://localhost" }));
+        await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "order-support", new[] { "http://localhost" }, "Storefront widget"));
 
         await app.WaitForIndexingAsync();
 
@@ -480,7 +480,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : QuillTestBase
         await using var app = await NewAppAsync();
 
         var ex = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, "ghost-agent", new[] { "http://localhost" })));
+            new ProvisionChannelRequest(ChannelType.IFrame, "ghost-agent", new[] { "http://localhost" }, "Storefront widget")));
 
         Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
     }

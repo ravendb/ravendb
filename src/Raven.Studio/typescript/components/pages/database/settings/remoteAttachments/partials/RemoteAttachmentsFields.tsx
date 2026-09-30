@@ -9,6 +9,7 @@ import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import Badge from "react-bootstrap/Badge";
 import { availableS3Regions, storageClassOptions } from "components/utils/common";
 import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
+import AzureAuthTypeToggle from "components/common/formDestinations/AzureAuthTypeToggle";
 
 interface RemoteAttachmentsDestinationFieldsProps {
     asyncTest: UseAsyncReturn<Raven.Server.Web.System.NodeConnectionTestResult, []>;
@@ -189,6 +190,7 @@ function ConnectionPill({ asyncTest }: ConnectionPillProps) {
 
 export function RemoteAttachmentsAzureFields({ asyncTest }: RemoteAttachmentsDestinationFieldsProps) {
     const { control } = useFormContext<RemoteAttachmentsDestinationFormData>();
+    const authType = useWatch({ control, name: "azure.authType" });
 
     return (
         <div className="mt-3">
@@ -241,15 +243,28 @@ export function RemoteAttachmentsAzureFields({ asyncTest }: RemoteAttachmentsDes
             </FormGroup>
 
             <FormGroup>
-                <FormLabel>Account key</FormLabel>
-                <FormInput
-                    name="azure.accountKey"
-                    control={control}
-                    placeholder="Enter an account key"
-                    type="password"
-                    passwordPreview
-                    autoComplete="off"
-                />
+                <AzureAuthTypeToggle control={control} name="azure.authType" className="mb-2" />
+                {authType === "sasToken" ? (
+                    <FormInput
+                        key="sasToken"
+                        name="azure.sasToken"
+                        control={control}
+                        placeholder="Enter a SAS token"
+                        type="password"
+                        passwordPreview
+                        autoComplete="off"
+                    />
+                ) : (
+                    <FormInput
+                        key="accountKey"
+                        name="azure.accountKey"
+                        control={control}
+                        placeholder="Enter an account key"
+                        type="password"
+                        passwordPreview
+                        autoComplete="off"
+                    />
+                )}
             </FormGroup>
 
             {asyncTest.result?.Error && (

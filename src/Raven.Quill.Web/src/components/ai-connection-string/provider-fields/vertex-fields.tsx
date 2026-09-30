@@ -4,6 +4,7 @@ import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { FormTextarea } from "@/components/form/form-textarea";
 import type { ConnectionStringFormData } from "@/components/ai-connection-string/ai-connection-string-utils";
+import { useIsModelLocked } from "@/components/ai-connection-string/model-lock-context";
 import { AdvancedFields } from "@/components/ai-connection-string/provider-fields/advanced-fields";
 import { EmbeddingsMaxConcurrentBatchesField } from "@/components/ai-connection-string/provider-fields/shared-fields";
 
@@ -16,6 +17,7 @@ const AI_VERSION_OPTIONS: FormSelectOption<ConnectionStringFormData["vertexSetti
 
 export function VertexFields() {
     const { control, getValues } = useFormContext<ConnectionStringFormData>();
+    const isModelLocked = useIsModelLocked();
 
     const settings = getValues("vertexSettings");
     const hasAdvancedValues = Boolean(settings.aiVersion || settings.embeddingsMaxConcurrentBatches != null);
@@ -36,12 +38,14 @@ export function VertexFields() {
                 label="Model"
                 placeholder="gemini-embedding-001"
                 options={MODELS}
+                disabled={isModelLocked}
             />
             <FormInput
                 control={control}
                 name="vertexSettings.location"
                 label="Location"
                 placeholder="us-central1"
+                disabled={isModelLocked}
                 description="The Google Cloud region where your Vertex AI resource is deployed."
             />
             <AdvancedFields defaultOpen={hasAdvancedValues}>
@@ -51,6 +55,7 @@ export function VertexFields() {
                     label="AI Version (optional)"
                     placeholder="Default"
                     options={AI_VERSION_OPTIONS}
+                    disabled={isModelLocked}
                 />
                 <EmbeddingsMaxConcurrentBatchesField baseName="vertexSettings" />
             </AdvancedFields>

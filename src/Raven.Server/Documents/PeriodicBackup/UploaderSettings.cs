@@ -29,7 +29,7 @@ public sealed class UploaderSettings
     public string TaskName;
 
     public BackupType? BackupType;
-    public Action OnBackupException;
+    public Action<Action> RegisterOnBackupException;
     internal BackupConfiguration.BackupDestination Destination;
     public static UploaderSettings GenerateUploaderSettingsForOlap(DocumentDatabase database, string taskName, S3Settings s3Settings, AzureSettings azureSettings, GlacierSettings glacierSettings, GoogleCloudSettings googleCloudSettings, FtpSettings ftpSettings)
     {
@@ -68,26 +68,26 @@ public sealed class UploaderSettings
     }
 
     public static UploaderSettings GenerateUploaderSettingsForBackup(DocumentDatabase database, BackupConfiguration configuration, string taskName, bool isServerWide, bool backupToLocalFolder,
-        Action backupException)
+        Action<Action> registerOnBackupException)
     {
         var destination = BackupConfigurationHelper.GetBackupDestinationForDirectUpload(backupToLocalFolder, configuration, database.Configuration.Backup);
         return new UploaderSettings(database.Configuration.Backup)
         {
             S3Settings = BackupTask.GetBackupConfigurationFromScript(configuration.S3Settings, x => JsonDeserializationServer.S3Settings(x),
-                database, settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForS3(configuration.S3Settings, database.Name), isServerWide),
+                database, settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForS3(settings, database.Name), isServerWide),
             AzureSettings = BackupTask.GetBackupConfigurationFromScript(configuration.AzureSettings, x => JsonDeserializationServer.AzureSettings(x),
-                database, settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForAzure(configuration.AzureSettings, database.Name), isServerWide),
+                database, settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForAzure(settings, database.Name), isServerWide),
             GlacierSettings = BackupTask.GetBackupConfigurationFromScript(configuration.GlacierSettings, x => JsonDeserializationServer.GlacierSettings(x),
-                database, settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForGlacier(configuration.GlacierSettings, database.Name), isServerWide),
+                database, settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForGlacier(settings, database.Name), isServerWide),
             GoogleCloudSettings = BackupTask.GetBackupConfigurationFromScript(configuration.GoogleCloudSettings, x => JsonDeserializationServer.GoogleCloudSettings(x),
-                database, settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForGoogleCloud(configuration.GoogleCloudSettings, database.Name), isServerWide),
+                database, settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForGoogleCloud(settings, database.Name), isServerWide),
             FtpSettings = BackupTask.GetBackupConfigurationFromScript(configuration.FtpSettings, x => JsonDeserializationServer.FtpSettings(x),
-                database, settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForFtp(configuration.FtpSettings, database.Name), isServerWide),
+                database, settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForFtp(settings, database.Name), isServerWide),
             DatabaseName = database.Name,
             TaskName = taskName,
             BackupType = configuration.BackupType,
             Destination = destination,
-            OnBackupException = backupException
+            RegisterOnBackupException = registerOnBackupException
         };
     }
 }

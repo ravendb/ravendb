@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.CdcSink.Test
             // whether the table is enabled for import, so a disabled table must still be resolvable here.
             var docProcessor = new CdcSinkDocumentProcessor(configuration, defaultSchema, includeDisabledTables: true);
             var tableSchema = string.IsNullOrEmpty(targetTable.SourceTableSchema) ? defaultSchema : targetTable.SourceTableSchema;
-            var processor = docProcessor.GetProcessor(tableSchema, targetTable.SourceTableName);
+            var processor = docProcessor.GetPrimaryProcessor(tableSchema, targetTable.SourceTableName);
             if (processor == null)
             {
                 result.Errors.Add($"Target table '{tableSchema}.{targetTable.SourceTableName}' is not registered in the document processor.");

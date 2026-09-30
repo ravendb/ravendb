@@ -26,7 +26,7 @@ public class DashboardAppsEndpointTests(ITestOutputHelper output, QuillCollectio
             Identifier = "support", Name = "Support", SystemPrompt = "You help.",
             ConnectionStringName = app.Host.ConnectionStringName,
         });
-        await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "support", Array.Empty<string>()));
+        await app.ProvisionChannelAsync(new ProvisionChannelRequest(ChannelType.IFrame, "support", Array.Empty<string>(), "Storefront widget"));
 
         var appResp = (await Host.GetDashboardAppsAsync()).Single(a => a.Slug == app.Slug);
 

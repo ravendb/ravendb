@@ -77,7 +77,7 @@ const docsHashes: Record<string, StringWithAutocomplete<"MISSING_DOCS">> = {
     "databases/indexes/indexErrors": "MISSING_DOCS",
     "databases/settings/connectionStrings": "MISSING_DOCS",
     "databases/advanced/databaseIDs": "MISSING_DOCS",
-    "databases/advanced/tombstonesState": "MISSING_DOCS",
+    "databases/status/tombstonesState": "MISSING_DOCS",
     "databases/status": "MISSING_DOCS",
     "databases/status/ioStats": "MISSING_DOCS",
     "admin/settings/adminLogs": "MISSING_DOCS",

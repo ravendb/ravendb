@@ -1981,7 +1981,7 @@ namespace Raven.Server.Documents
 
                 var flags = GetFlagsFromOldDocumentForDelete(newFlags, doc.Flags, nonPersistentFlags);
 
-                var table = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName, flags), collectionName.GetTableName(CollectionTableType.Documents));
+                var table = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName), collectionName.GetTableName(CollectionTableType.Documents));
 
                 long etag;
                 using (Slice.From(context.Allocator, doc.LowerId, out Slice tombstoneId))

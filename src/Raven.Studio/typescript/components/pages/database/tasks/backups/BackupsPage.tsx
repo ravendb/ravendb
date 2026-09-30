@@ -340,15 +340,13 @@ export function BackupsPage() {
                     <HrHeader
                         right={
                             canNavigateToServerWideTasks && (
-                                <Button
-                                    size="xs"
-                                    target="_blank"
-                                    variant="link"
+                                <a
+                                    className="btn btn-link btn-xs"
                                     title="Navigate to the Server-Wide Tasks View"
                                     href={serverWideTasksUrl}
                                 >
                                     Go to Server-Wide Tasks View
-                                </Button>
+                                </a>
                             )
                         }
                     >

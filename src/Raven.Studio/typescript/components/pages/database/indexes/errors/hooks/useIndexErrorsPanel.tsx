@@ -2,36 +2,34 @@ import { useServices } from "hooks/useServices";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import useBoolean from "hooks/useBoolean";
-import useConfirm from "components/common/ConfirmDialog";
 import { useAsync, useAsyncCallback } from "react-async-hook";
-import { Icon } from "components/common/Icon";
-import React, { useState } from "react";
+import { useState } from "react";
 import { IndexErrorsPanelProps } from "components/pages/database/indexes/errors/IndexErrorsPanel";
 import messagePublisher from "common/messagePublisher";
 import { indexErrorsUtils } from "components/pages/database/indexes/errors/IndexErrorsUtils";
 import { ColumnFilter } from "@tanstack/react-table";
-import RichAlert from "components/common/RichAlert";
 import genUtils from "common/generalUtils";
 
 export function useIndexErrorsPanel({ errorItem, table, asyncFetchAllErrorCount }: IndexErrorsPanelProps) {
     const { indexesService } = useServices();
     const dbName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { value: panelCollapsed, toggle: togglePanelCollapsed } = useBoolean(true);
+    const { value: isDeleteModalOpen, setTrue: openDeleteModal, setFalse: closeDeleteModal } = useBoolean(false);
     const [mappedIndexErrors, setMappedIndexErrors] = useState<IndexErrorPerDocument[]>();
-    const confirm = useConfirm();
 
     const selectedIndexes: ColumnFilter | undefined = table.getState().columnFilters.find((x) => x.id === "IndexName");
     const selectedErrors = (selectedIndexes?.value as string[] | undefined) ?? [];
 
     const hasErrors = errorItem.totalErrorCount > 0;
 
-    const handleClearSelectedIndexErrorsForNode = useAsyncCallback(
+    const asyncClearSelectedIndexErrors = useAsyncCallback(
         async () => indexesService.clearIndexErrors(selectedErrors, dbName, errorItem.location),
         {
             onSuccess: async () => {
                 messagePublisher.reportSuccess(
                     `Successfully cleared index errors for ${genUtils.formatLocation(errorItem.location)}!`
                 );
+                closeDeleteModal();
                 await asyncFetchAllErrorCount.execute();
             },
         }
@@ -47,29 +45,12 @@ export function useIndexErrorsPanel({ errorItem, table, asyncFetchAllErrorCount 
 
     const newestDate = indexErrorsUtils.findNearestTimestamp(asyncFetchErrorDetails.result ?? []);
 
-    const handleClearErrors: () => Promise<void> = async () => {
-        const isConfirmed = await confirm({
-            title: (
-                <IndexErrorsModalTitle
-                    nodeTag={errorItem.location.nodeTag}
-                    shardNumber={errorItem.location.shardNumber}
-                />
-            ),
-            message: <IndexErrorsModalBody selectedErrors={selectedErrors} />,
-            actionColor: "warning",
-            icon: "trash",
-            confirmText: "Delete errors",
-        });
-
-        if (!isConfirmed) {
-            return null;
-        }
-
-        await handleClearSelectedIndexErrorsForNode.execute();
-    };
-
     return {
-        handleClearErrors,
+        selectedErrors,
+        isDeleteModalOpen,
+        openDeleteModal,
+        closeDeleteModal,
+        asyncClearSelectedIndexErrors,
         mappedIndexErrors,
         hasErrors,
         asyncFetchErrorDetails,
@@ -77,61 +58,4 @@ export function useIndexErrorsPanel({ errorItem, table, asyncFetchAllErrorCount 
         panelCollapsed,
         togglePanelCollapsed,
     };
-}
-
-interface IndexErrorsModalTitleProps {
-    shardNumber?: number;
-    nodeTag: string;
-}
-
-function IndexErrorsModalTitle({ shardNumber, nodeTag }: IndexErrorsModalTitleProps) {
-    return (
-        <span>
-            Delete errors for <Icon icon="node" color="node" margin="m-0" /> <strong>{nodeTag}</strong>{" "}
-            {shardNumber != null && (
-                <>
-                    <Icon icon="shard" color="shard" margin="m-0" /> <strong>#{shardNumber}</strong>
-                </>
-            )}
-        </span>
-    );
-}
-
-interface IndexErrorsModalBodyProps {
-    selectedErrors: string[];
-}
-
-function IndexErrorsModalBody({ selectedErrors }: IndexErrorsModalBodyProps) {
-    return (
-        <div>
-            {selectedErrors.length === 0 ? (
-                <>
-                    <span>
-                        Errors will be deleted for <strong>ALL</strong> indexes. <br />
-                    </span>
-                    {selectedErrors.length === 0 && (
-                        <span>
-                            To delete errors for <b>specific indexes</b>, select them in the dropdown.
-                        </span>
-                    )}
-                </>
-            ) : (
-                <>
-                    You&#39;re deleting errors for <b>{selectedErrors.length}</b>{" "}
-                    {selectedErrors.length === 1 ? "index" : "indexes"}:
-                    <ul>
-                        {selectedErrors.map((error) => (
-                            <li title={error} className="text-truncate">
-                                <b>{error}</b>
-                            </li>
-                        ))}
-                    </ul>
-                </>
-            )}
-            <RichAlert variant="info" className="mt-3">
-                While the current indexing errors will be cleared, an index in an <b>Error state</b> will not be set
-                back to the <b>Normal</b> state.
-            </RichAlert>
-        </div>
-    );
 }

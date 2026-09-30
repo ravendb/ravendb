@@ -300,7 +300,7 @@ namespace Raven.Server.Commercial
         }
     }
 
-    public sealed class SubDomainAndIps
+    public sealed class SubDomainAndIps : IDynamicJson
     {
         public string SubDomain { get; set; }
         public List<string> Ips { get; set; }
@@ -316,23 +316,6 @@ namespace Raven.Server.Commercial
             {
                 [nameof(SubDomain)] = SubDomain,
                 [nameof(Ips)] = new DynamicJsonArray(Ips)
-            };
-        }
-    }
-
-    public sealed class UserDomainsAndLicenseInfo
-    {
-        public UserDomainsWithIps UserDomainsWithIps { get; set; }
-        public int MaxClusterSize { get; set; }
-        public LicenseType LicenseType { get; set; }
-
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(UserDomainsWithIps)] = UserDomainsWithIps.ToJson(),
-                [nameof(MaxClusterSize)] = MaxClusterSize,
-                [nameof(LicenseType)] = LicenseType
             };
         }
     }

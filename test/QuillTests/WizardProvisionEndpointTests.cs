@@ -66,6 +66,20 @@ public class WizardProvisionEndpointTests(ITestOutputHelper output, QuillCollect
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Provision_on_an_existing_slug_updates_the_source_connection_string()
+    {
+        var slug = "rehost-" + Guid.NewGuid().ToString("N");
+        await SeedWizardMapAsync(Host.Config, slug, connectionString: "Host=10.0.0.1;Database=src");
+        await Host.ProvisionAsync(new ProvisionRequest("App", slug));
+
+        await SeedWizardMapAsync(Host.Config, slug, connectionString: "Host=10.0.0.2;Database=src");
+        await Host.ProvisionAsync(new ProvisionRequest("App", slug));
+
+        var cdc = await Host.GetCdcAsync(slug);
+        Assert.Equal("Host=10.0.0.2;Database=src", cdc.ConnectionString);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Provision_normalizes_explicit_slug_before_looking_for_an_existing_app()
     {
         var suffix = Guid.NewGuid().ToString("N");
@@ -134,7 +148,11 @@ public class WizardProvisionEndpointTests(ITestOutputHelper output, QuillCollect
 
     private static string UniqueAppName() => "App " + Guid.NewGuid().ToString("N");
 
-    private static async Task SeedWizardMapAsync(IDocumentStore store, string slug, string? collection = null)
+    private static async Task SeedWizardMapAsync(
+        IDocumentStore store,
+        string slug,
+        string? collection = null,
+        string connectionString = "Host=localhost;Database=src")
     {
         var cdc = AiHelperSamples.BuildCdcConfig();
         cdc.Name = $"{slug}-cdc";
@@ -148,7 +166,7 @@ public class WizardProvisionEndpointTests(ITestOutputHelper output, QuillCollect
             new WizardState
             {
                 Provider = "Npgsql",
-                SourceConnectionString = "Host=localhost;Database=src",
+                SourceConnectionString = connectionString,
                 LastMapConfiguration = cdc,
             },
             WizardState.DocumentIdFor(slug));

@@ -1,7 +1,8 @@
 import { useId, type ReactNode } from "react";
 import { type FieldPath, type FieldValues, type UseControllerProps, useController } from "react-hook-form";
+import { FormFieldLabel } from "@/components/form/form-field-label";
 import { Badge } from "@/components/shadcn/ui/badge";
-import { Field, FieldDescription, FieldLabel } from "@/components/shadcn/ui/field";
+import { Field, FieldDescription } from "@/components/shadcn/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/shadcn/ui/select";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ type FormSelectProps<TFieldValues extends FieldValues, TName extends FieldPath<T
     description?: ReactNode;
     disabled?: boolean;
     label?: ReactNode;
+    labelAddon?: ReactNode;
     options: readonly FormSelectOption<TFieldValues[TName]>[];
     placeholder?: string;
     triggerClassName?: string;
@@ -33,6 +35,7 @@ export function FormSelect<TFieldValues extends FieldValues, TName extends Field
     description,
     disabled,
     label,
+    labelAddon,
     name,
     options,
     placeholder,
@@ -52,7 +55,7 @@ export function FormSelect<TFieldValues extends FieldValues, TName extends Field
 
     return (
         <Field className={className} data-invalid={invalid}>
-            {label != null && <FieldLabel htmlFor={generatedId}>{label}</FieldLabel>}
+            <FormFieldLabel htmlFor={generatedId} label={label} addon={labelAddon} />
             <div className="flex items-center gap-2">
                 <Select
                     value={typeof value === "string" ? value : ""}

@@ -482,6 +482,7 @@ public class RavenDB_21192 : RavenTestBase
             }
 
             await WaitForEtlStatsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1), stats => stats.TransformationErrors == 5);
+            await WaitForPersistedItemErrorsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1), 5);
 
             AddEtlTask(src, dest, etlName2, connectionStringName2, [transformationName2, transformationName3], [script2, script3], collections2);
 
@@ -606,6 +607,7 @@ public class RavenDB_21192 : RavenTestBase
             }
 
             await WaitForEtlStatsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1), stats => stats.TransformationErrors == 5, shardNumber);
+            await WaitForPersistedItemErrorsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1), 5, shardNumber);
 
             AddEtlTask(src, dest, etlName2, connectionStringName2, [transformationName2, transformationName3], [script2, script3], collections2);
 
@@ -693,6 +695,9 @@ public class RavenDB_21192 : RavenTestBase
 
             await WaitForEtlStatsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1), stats => stats.TransformationErrors == 5);
             await WaitForEtlStatsAsync(src, EtlProcess.GetProcessName(etlName2, transformationName2), stats => stats.TransformationErrors == 5);
+
+            await WaitForPersistedItemErrorsAsync(src, EtlProcess.GetProcessName(etlName1, transformationName1), 5);
+            await WaitForPersistedItemErrorsAsync(src, EtlProcess.GetProcessName(etlName2, transformationName2), 5);
 
             using (var commands = src.Commands())
             {
@@ -1818,24 +1823,33 @@ public class RavenDB_21192 : RavenTestBase
         }
     }
 
-    private async Task<EtlProcessStatistics> GetEtlStatsAsync(DocumentStore store, string etlName, int shardNumber = 0)
+    private async Task<DocumentDatabase> GetEtlDatabaseAsync(DocumentStore store, int shardNumber)
     {
         var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
 
-        DocumentDatabase database;
         if (record.IsSharded)
         {
             var bucket = await Sharding.GetBucketAsync(store, shardNumber.ToString());
-            database = await Sharding.GetShardedDocumentDatabaseForBucketAsync(store.Database, bucket);
+            return await Sharding.GetShardedDocumentDatabaseForBucketAsync(store.Database, bucket);
         }
-        else
-        {
-            database = await GetDatabase(store.Database);
-        }
-        
+
+        return await GetDatabase(store.Database);
+    }
+
+    private async Task<EtlProcessStatistics> GetEtlStatsAsync(DocumentStore store, string etlName, int shardNumber = 0)
+    {
+        var database = await GetEtlDatabaseAsync(store, shardNumber);
         var etl = database.EtlLoader.Processes.Single(x => x.Name == etlName);
 
         return etl.Statistics;
+    }
+
+    private async Task WaitForPersistedItemErrorsAsync(DocumentStore store, string etlName, int expectedCount, int shardNumber = 0)
+    {
+        var database = await GetEtlDatabaseAsync(store, shardNumber);
+        var etl = database.EtlLoader.Processes.Single(x => x.Name == etlName);
+
+        await AssertWaitForValueAsync(() => Task.FromResult(database.TaskErrorsStorage.ReadItemErrorsOfTask(etl.TaskCategory, etlName).Count), expectedCount);
     }
 
     private async Task WaitForEtlStatsAsync(DocumentStore store, string etlName, Func<EtlProcessStatistics, bool> predicate = null, int shardNumber = 0, int timeout = 10_000, int interval = 500)

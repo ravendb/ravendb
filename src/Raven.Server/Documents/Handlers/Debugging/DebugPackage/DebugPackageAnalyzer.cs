@@ -173,19 +173,53 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
             }
         }
 
-        var clusterWideIssues = DetectClusterWideIssues(nodeReports);
+        var unreachableNodes = isClusterPackage ? GetUnreachableNodes(nodeReports) : new();
+
+        var clusterWideIssues = DetectClusterWideIssues(nodeReports, unreachableNodes);
         var databaseGroupsIssues = DetectDatabaseGroupsIssues(nodeReports);
 
-        return new DebugPackageReport(nodeReports.ToArray(), new DebugPackageAnalysisIssues
+        return new DebugPackageReport(nodeReports.ToArray(), unreachableNodes, new DebugPackageAnalysisIssues
         {
             ClusterIssues = clusterWideIssues,
             DatabaseIssues = databaseGroupsIssues
         });
     }
 
-    private List<DetectedIssue> DetectClusterWideIssues(List<DebugPackageNodeReport> reports)
+    // the collecting node writes one zip per node it could reach, so topology nodes without a report were unreachable
+    private static Dictionary<string, string> GetUnreachableNodes(List<DebugPackageNodeReport> reports)
+    {
+        var reportedNodes = reports.Select(x => x.NodeTag).ToHashSet();
+        var unreachableNodes = new Dictionary<string, string>();
+
+        foreach (var report in reports)
+        {
+            var allNodes = report.ClusterNode?.NodeStateInfo?.Topology?.Topology?.AllNodes;
+            if (allNodes == null)
+                continue;
+
+            foreach (var (nodeTag, url) in allNodes)
+            {
+                if (reportedNodes.Contains(nodeTag) == false)
+                    unreachableNodes[nodeTag] = url;
+            }
+        }
+
+        return unreachableNodes;
+    }
+
+    private List<DetectedIssue> DetectClusterWideIssues(List<DebugPackageNodeReport> reports, Dictionary<string, string> unreachableNodes)
     {
         var clusterWideIssues = new List<DetectedIssue>();
+
+        foreach (var (nodeTag, url) in unreachableNodes)
+        {
+            clusterWideIssues.Add(new DetectedIssue("Node was unreachable when the debug package was created",
+                $"Node {nodeTag} ({url}) could not be reached by the node that created the cluster-wide debug package. The analysis does not include it.",
+                IssueSeverity.Warning, IssueCategory.Cluster)
+            {
+                RecommendedAction = $"Please check that node {nodeTag} is running and reachable, then create the debug package again to include it"
+            });
+        }
 
         var customElectionTimeoutDetected = false;
         

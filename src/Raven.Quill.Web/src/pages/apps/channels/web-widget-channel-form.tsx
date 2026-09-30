@@ -19,7 +19,7 @@ import { invalidateChannelQueries } from "@/lib/query-invalidation";
 
 const webWidgetChannelSchema = z.object({
     agentId: z.string().min(1, "Select an agent to route conversations to"),
-    displayName: z.string().trim(),
+    displayName: z.string().trim().min(1, "Channel name is required"),
     allowedOrigins: z.array(z.object({ value: z.string().trim() })),
 });
 
@@ -61,7 +61,7 @@ export function WebWidgetChannelForm({
             api.services.channels.create(slug, {
                 type: "IFrame",
                 agentId: values.agentId,
-                displayName: values.displayName.trim() || null,
+                displayName: values.displayName.trim(),
                 allowedOrigins: values.allowedOrigins.map((origin) => origin.value.trim()).filter(Boolean),
             }),
         onSuccess: async () => {
@@ -117,7 +117,7 @@ export function WebWidgetChannelForm({
                                 name="displayName"
                                 label="Channel name"
                                 placeholder="e.g. Storefront help"
-                                description="Shown in the channels list. Optional."
+                                description="Shown in the channels list."
                             />
                             <FormStringList
                                 control={form.control}

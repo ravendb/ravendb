@@ -190,13 +190,13 @@ export const ChooseDataSource: Story = {
 
 export const ConnectSource: Story = {
     render: () => <AppWizardAtStep initialStep="externalConnection" />,
-    // Switching the database type leaves the connection details untouched.
+    // Switching the database type applies its default port and leaves the other details untouched.
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
 
         await userEvent.click(canvas.getByRole("button", { name: /sql server/i }));
 
-        expect(canvas.getByLabelText(/port/i)).toHaveValue(5432);
+        expect(canvas.getByLabelText(/port/i)).toHaveValue(1433);
         expect(canvas.getByLabelText(/host/i)).toHaveValue("localhost");
     },
 };

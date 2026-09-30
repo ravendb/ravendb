@@ -9,7 +9,7 @@ namespace SlowTests.Voron.Storage
         {
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
+        [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.X64)]
         public void AsyncCommitTransactionInheritsImmutableExternalStateFromCommittingTransaction()
         {
             // DocumentsStorage stores its per-commit cache in ImmutableExternalState during

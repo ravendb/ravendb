@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -24,7 +24,7 @@ namespace Micro.Benchmark.Benchmarks.Sorting
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core80,
+                        Runtime = CoreRuntime.Core10_0,
                         Platform = Platform.X64,
                         Jit = Jit.RyuJit,
                     },

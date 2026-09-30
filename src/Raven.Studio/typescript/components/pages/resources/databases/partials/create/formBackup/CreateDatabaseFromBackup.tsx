@@ -37,6 +37,7 @@ import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { useCreateDatabaseShortcuts } from "../shared/useCreateDatabaseShortcuts";
 import Button from "react-bootstrap/Button";
 import Modal from "components/common/Modal";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 interface CreateDatabaseFromBackupProps {
     closeModal: () => void;
@@ -122,6 +123,8 @@ export default function CreateDatabaseFromBackup({
         await nextStepWithValidation(validateToTargetStep(currentStep));
     }, [currentStep, nextStepWithValidation, validateToTargetStep]);
 
+    const isNextDisabled = activeSteps[currentStep].id === "encryptionStep" && !formValues.encryptionStep.isKeySaved;
+
     useCreateDatabaseShortcuts({
         submit: handleSubmit(onFinish),
         handleGoNext,
@@ -170,9 +173,23 @@ export default function CreateDatabaseFromBackup({
                             Finish
                         </ButtonWithSpinner>
                     ) : (
-                        <Button type="button" variant="primary" className="rounded-pill" onClick={handleGoNext}>
-                            Next <Icon icon="arrow-thin-right" margin="ms-1" />
-                        </Button>
+                        <ConditionalPopover
+                            conditions={{
+                                isActive: isNextDisabled,
+                                message: createDatabaseUtils.encryptionKeyNotSavedMessage,
+                            }}
+                            popoverPlacement="top"
+                        >
+                            <Button
+                                type="button"
+                                variant="primary"
+                                className="rounded-pill"
+                                onClick={handleGoNext}
+                                disabled={isNextDisabled}
+                            >
+                                Next <Icon icon="arrow-thin-right" margin="ms-1" />
+                            </Button>
+                        </ConditionalPopover>
                     )}
                 </Modal.Footer>
             </Form>

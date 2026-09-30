@@ -71,6 +71,24 @@ export const Default: StoryObj<ReplicationSinkProps> = {
     },
 };
 
+function longChangeVector(etagBase: number): string {
+    return Array.from(
+        { length: 13 },
+        (_, i) => `${String.fromCharCode(65 + i)}:${etagBase + i}-${String.fromCharCode(97 + i).repeat(22)}`
+    ).join(", ");
+}
+
+export const LongCursors: StoryObj<ReplicationSinkProps> = {
+    ...Default,
+    args: {
+        ...Default.args,
+        customizeTask: (x) => {
+            x.HubCursor = longChangeVector(100);
+            x.SinkCursor = longChangeVector(200);
+        },
+    },
+};
+
 export const Disabled = {
     ...Default,
     args: {
