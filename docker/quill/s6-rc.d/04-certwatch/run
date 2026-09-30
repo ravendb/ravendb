@@ -1,0 +1,60 @@
+#!/command/with-contenv sh
+set -e
+
+exec 2>&1
+
+CERT_DIR=/var/lib/quill/certs
+PROXY_DIR=/var/lib/quill/proxy
+
+while [ -z "$(ls "$CERT_DIR"/cluster.server.certificate.*.pfx 2>/dev/null)" ]; do
+    sleep 10
+done
+
+pfx_serial() {
+    openssl pkcs12 -in "$1" -nokeys -clcerts -passin pass: 2>/dev/null | openssl x509 -noout -serial 2>/dev/null
+}
+
+pem_serial() {
+    openssl x509 -in "$PROXY_DIR/leaf.pem" -noout -serial 2>/dev/null
+}
+
+chain_ok() {
+    if [ -s "$PROXY_DIR/chain.pem" ]; then
+        openssl verify -untrusted "$PROXY_DIR/chain.pem" "$PROXY_DIR/leaf.pem" >/dev/null 2>&1
+    else
+        openssl verify "$PROXY_DIR/leaf.pem" >/dev/null 2>&1
+    fi
+}
+
+rebuild() {
+    s6-setuidgid quill proxy-certs
+    s6-svc -h /run/service/03-proxy
+    echo "04-certwatch: $1; nginx reloaded."
+}
+
+unreadable=""
+retry=0
+
+while sleep 60; do
+    PFX="$(ls "$CERT_DIR"/cluster.server.certificate.*.pfx 2>/dev/null | head -n1)"
+
+    if ! serial="$(pfx_serial "$PFX")" || [ -z "$serial" ]; then
+        [ -n "$unreadable" ] || echo "04-certwatch: cannot read a serial from '$PFX'; renewal detection is paused." >&2
+        unreadable=yes
+        continue
+    fi
+    unreadable=""
+
+    if [ "$serial" != "$(pem_serial)" ]; then
+        rebuild "certificate renewed"
+        retry=0
+    elif chain_ok; then
+        retry=0
+    elif [ "$retry" -gt 0 ]; then
+        # An unreachable CA would otherwise refetch every minute.
+        retry=$((retry - 1))
+    else
+        rebuild "chain was incomplete, rebuilt"
+        retry=30
+    fi
+done

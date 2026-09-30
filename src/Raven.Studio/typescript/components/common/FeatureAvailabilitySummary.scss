@@ -42,6 +42,10 @@
         --license-color: var(--license-enterprise-ai);
         --decoration-color: var(--license-color);
     }
+    .quill {
+        --license-color: var(--license-quill);
+        --decoration-color: var(--license-color);
+    }
     .current {
         color: var(--license-color) !important;
     }

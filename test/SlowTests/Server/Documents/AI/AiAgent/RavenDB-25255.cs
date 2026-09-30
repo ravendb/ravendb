@@ -25,7 +25,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanUseQueryToolWithSecuredServer(Options options, GenAiConfiguration config)
         {
             var dbName = GetDatabaseName();
@@ -95,7 +95,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanUseQueryToolsInGenAiTaskSecured(Options options, GenAiConfiguration config)
         {
             var dbName = GetDatabaseName();
@@ -193,7 +193,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 session.SaveChanges();
             }
 
-            await Etl.AssertEtlDoneAsync(etlDone, TimeSpan.FromSeconds(120), store.Database, config);
+            await Etl.AssertEtlDoneAsync(etlDone, TimeSpan.FromSeconds(360), store.Database, config);
 
             using (var session = store.OpenSession())
             {

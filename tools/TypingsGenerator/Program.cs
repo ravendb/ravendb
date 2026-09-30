@@ -67,6 +67,7 @@ using Raven.Server.Dashboard.Cluster;
 using Raven.Server.Dashboard.Cluster.Notifications;
 using Raven.Server.Dashboard.Cluster.Notifications.DatabaseNotifications;
 using Raven.Server.Documents;
+using Raven.Server.Documents.AI;
 using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Stats;
@@ -698,6 +699,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(TrafficWatchTcpChange));
 
             scripter.AddType(typeof(NodeConnectionTestResult));
+            scripter.AddType(typeof(AiConnectionTestResult));
             scripter.AddType(typeof(ClientCertificateGenerationResult));
 
             // request with POST parameters

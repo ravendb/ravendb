@@ -1,0 +1,5 @@
+pnpm-lock.yaml
+packages/widget/dist
+src/api/generated/server-api.ts
+.storybook/public/mockServiceWorker.js
+obj/

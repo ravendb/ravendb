@@ -31,7 +31,7 @@ public class AiAgentClientApiHandleActionCalls : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanHandleToolCall(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -63,9 +63,12 @@ public class AiAgentClientApiHandleActionCalls : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, 
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single,
         Data = [AiHandleErrorStrategy.SendErrorsToModel])]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, 
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single,
+        Data = [AiHandleErrorStrategy.SendErrorsToModel],
+        Skip = "Flaky on Ollama: after a tool error the local model can exhaust its 8K context window while reasoning and return finish_reason = 'length'.")]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single,
         Data = [AiHandleErrorStrategy.RaiseImmediately])]
     public async Task CanHandleToolCallWithException(Options options, GenAiConfiguration config, AiHandleErrorStrategy strategy)
     {
@@ -105,7 +108,7 @@ public class AiAgentClientApiHandleActionCalls : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanHandleToolCallWithArgs(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -162,7 +165,7 @@ Deviation from these rules is not allowed.");
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CantCreateNewConversationWithSameId(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -211,7 +214,7 @@ Deviation from these rules is not allowed.");
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanHandleAsyncToolCallReturningList(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);

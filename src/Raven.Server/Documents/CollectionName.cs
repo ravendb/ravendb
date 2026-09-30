@@ -150,6 +150,11 @@ namespace Raven.Server.Documents
             return string.Equals(name, HiLoCollection, StringComparison.OrdinalIgnoreCase);
         }
 
+        public static bool IsEmptyCollection(string name)
+        {
+            return string.Equals(name, Constants.Documents.Collections.EmptyCollection, StringComparison.OrdinalIgnoreCase);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe bool IsHiLoCollection(LazyStringValue name)
         {

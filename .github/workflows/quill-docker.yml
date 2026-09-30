@@ -1,0 +1,205 @@
+name: quill/docker-healthcheck
+
+permissions:
+  contents: read
+
+on:
+  # Packaging paths only - the code the image bundles is checked by compile.yml,
+  # studioConventions.yml and StudioTests.yml.
+  push:
+    branches:
+      - feature/*
+      - release/**
+      - 'v[4-9]+.[0-9]+'
+    paths:
+      - 'docker/quill/**'
+      - '.github/workflows/quill-docker.yml'
+  pull_request:
+    branches:
+      - feature/*
+      - release/**
+      - 'v[4-9]+.[0-9]+'
+    paths:
+      - 'docker/quill/**'
+      - '.github/workflows/quill-docker.yml'
+
+  # Nightly full matrix: schedule ignores path filters, so it also covers the server and
+  # studio stages the paths above miss. Dormant until this file reaches the default
+  # branch (v7.2) - GitHub registers cron and workflow_dispatch only from there.
+  schedule:
+    - cron: '15 3 * * *'
+
+  workflow_dispatch:
+
+# Cancel superseded PR runs; long-lived-branch builds each keep a result.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build & smoke (${{ matrix.arch }})
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runs-on: ubuntu-latest
+          - arch: arm64v8
+            platform: linux/arm64
+            runs-on: ubuntu-24.04-arm
+      fail-fast: false
+    runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          package_json_file: src/Raven.Quill.Web/package.json
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: src/Raven.Quill.Web/pnpm-lock.yaml
+
+      - name: Set up buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - name: Build Quill payload
+        shell: pwsh
+        run: |
+          if ("${{ matrix.arch }}" -eq "arm64v8") { ./build.ps1 -Quill -LinuxArm64 } else { ./build.ps1 -Quill }
+
+      - name: Assemble image (two tags — verifies build.sh multi-tag accumulation)
+        run: |
+          ./docker/quill/scripts/build.sh \
+            --tag "ravendb/quill:pr-check-${{ matrix.arch }}" \
+            --tag "ravendb/quill:multi-tag-check-${{ matrix.arch }}" \
+            --platform "${{ matrix.platform }}"
+
+      - name: Verify both tags attached (regression guard for RavenDB-26659 --tag fix)
+        run: |
+          docker image inspect "ravendb/quill:pr-check-${{ matrix.arch }}"        > /dev/null
+          docker image inspect "ravendb/quill:multi-tag-check-${{ matrix.arch }}" > /dev/null
+
+      - name: Report image size
+        run: docker images "ravendb/quill:pr-check-${{ matrix.arch }}" --format "{{.Repository}}:{{.Tag}} - {{.Size}}"
+
+      - name: Seed a fake setup package
+        run: |
+          set -eu
+          mkdir -p fakepkg/A
+          openssl req -x509 -newkey rsa:2048 -nodes -days 2 \
+            -subj "/CN=*.test.myquill.ai" \
+            -addext "subjectAltName=DNS:*.test.myquill.ai" \
+            -addext "keyUsage=digitalSignature,keyEncipherment" \
+            -addext "extendedKeyUsage=serverAuth,clientAuth" \
+            -keyout sk.pem -out sc.pem
+
+          openssl pkcs12 -export -inkey sk.pem -in sc.pem -passout pass: \
+            -out fakepkg/A/cluster.server.certificate.test.pfx
+
+
+          openssl req -x509 -newkey rsa:2048 -nodes -days 2 \
+            -subj "/CN=admin.test" \
+            -addext "keyUsage=digitalSignature,keyEncipherment" \
+            -addext "extendedKeyUsage=clientAuth" \
+            -keyout ak.pem -out ac.pem
+
+          openssl pkcs12 -export -inkey ak.pem -in ac.pem -passout pass: \
+            -out fakepkg/admin.client.certificate.test.pfx
+
+          openssl x509 -in ac.pem -noout -fingerprint -sha1 | sed 's/.*=//; s/://g' > fakepkg/admin-thumbprint
+
+          printf '%s\n' \
+            '{' \
+            '  "Setup.Mode": "Secured",' \
+            '  "Security.Certificate.Path": "cluster.server.certificate.test.pfx",' \
+            '  "ServerUrl": "https://127.0.0.1",' \
+            '  "ServerUrl.Tcp": "tcp://127.0.0.1:38888",' \
+            '  "PublicServerUrl": "https://a.test.myquill.ai:443",' \
+            '  "PublicServerUrl.Tcp": "tcp://a.test.myquill.ai:38888"' \
+            '}' > fakepkg/A/settings.json
+
+          docker volume create quill-pr-check-data
+          docker run --rm -v quill-pr-check-data:/v -v "$PWD/fakepkg:/pkg:ro" busybox \
+            sh -c 'mkdir -p /v/setup && cp -r /pkg/. /v/setup/'
+
+      - name: Start container
+        # no license --> activation skips --> the seeded package boots ravendb, the web app and nginx.
+        run: |
+          docker run -d --name quill-pr-check \
+            -v quill-pr-check-data:/var/lib/quill \
+            "ravendb/quill:pr-check-${{ matrix.arch }}"
+
+      - name: Verify the privilege drops
+        run: |
+          set -eu
+          c=quill-pr-check
+          fail() { echo "::error::$1"; docker logs --tail 50 "$c"; exit 1; }
+
+          daemons() {
+            docker exec "$c" sh -c 'for s in /proc/[0-9]*/status; do
+                printf "uid=%s %s\n" "$(awk "/^Uid:/{print \$2}" "$s")" "$(tr "\0" " " <"${s%status}cmdline")"
+              done' 2>/dev/null \
+              | grep -E "Raven.Server.dll|Raven.Quill.dll|nginx: master" | grep -v s6-setuidgid | sort -u
+          }
+
+          for _ in $(seq 1 90); do
+            [ "$(docker inspect -f '{{.State.Running}}' "$c")" = true ] || fail "container exited during startup"
+            [ "$(daemons | grep -c .)" = 3 ] && break
+            sleep 2
+          done
+
+          uids=$(daemons); echo "$uids"
+          [ "$(echo "$uids" | grep -c '^uid=999 ')" = 3 ] || fail "the 3 daemons are not all running as uid 999"
+          # 443 == 0x01BB in /proc/net/tcp's local_address column
+          docker exec "$c" sh -c 'awk "{print \$2}" /proc/net/tcp | grep -qi ":01BB$"' || fail "nginx did not bind :443"
+          [ "$(docker exec "$c" stat -c '%U' /var/lib/quill/proxy/privkey.pem)" = quill ] || fail "proxy key not owned by quill"
+
+          for d in certs proxy; do
+            m=$(docker exec "$c" stat -c '%a' "/var/lib/quill/$d")
+            [ "$m" = 700 ] || fail "/var/lib/quill/$d is mode $m, expected 700"
+          done
+          echo "ok: 3 daemons uid=999, :443 bound, proxy key owned by quill, key dirs 0700"
+
+      - name: Probe /healthz through nginx :443
+        run: |
+          set -eu
+          for i in $(seq 1 60); do
+            CODE=$(docker exec quill-pr-check curl -sk -o /dev/null -w "%{http_code}" https://127.0.0.1/healthz 2>/dev/null || true)
+            case "$CODE" in
+              200|503) echo "healthz responded HTTP $CODE via :443 - OK"; exit 0 ;;
+              000|"")  echo "attempt $i: not yet"; sleep 2 ;;
+              *)       echo "::error::healthz returned unexpected HTTP $CODE"; docker logs --tail 50 quill-pr-check; exit 1 ;;
+            esac
+          done
+          echo "::error::healthz never responded via :443"
+          docker logs --tail 50 quill-pr-check
+          exit 1
+
+      - name: Verify access-log token masking
+        run: |
+          set -eu
+          c=quill-pr-check
+          T=aabbccddeeff00112233445566778899
+          docker exec "$c" curl -sk -o /dev/null "https://127.0.0.1/apps/acme/embed/$T" || true
+          docker exec "$c" curl -sk -o /dev/null "https://127.0.0.1/APPS/acme/EMBED/$T" || true
+          sleep 1
+          log=$(docker exec "$c" cat /var/lib/quill/proxy/access.log 2>/dev/null || true)
+          echo "$log" | grep -i embed || true
+          echo "$log" | grep -q "aabbcc\*\*\*" || { echo "::error::masked token not found in access log"; exit 1; }
+          if echo "$log" | grep -q "$T"; then echo "::error::raw token leaked into the access log"; exit 1; fi
+          echo "ok: access-log tokens masked (normal + mixed case)"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker rm -f quill-pr-check || true
+          docker volume rm quill-pr-check-data || true

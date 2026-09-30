@@ -1,14 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Npgsql;
 using Raven.Client;
 using Raven.Server.Config;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Server.Documents;
 using Raven.Server.Documents.CdcSink;
 using Raven.Server.Documents.CdcSink.Commands;
 using Raven.Server.ServerWide.Context;
@@ -1010,6 +1014,93 @@ namespace SlowTests.Server.Documents.CdcSink
                 // The checkpoint was not persisted.
                 Assert.Null(database.DocumentsStorage.Get(readCtx, CdcSinkTaskState.GetDocumentId("test-config")));
             }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks)]
+        public async Task FullyFailedBatch_StillRaisesBatchCompletedForLiveStats()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var badConfig = CreateRootTableConfig("Products", patch: "throw new Error('intentional failure');");
+            var sinkConfig = new CdcSinkConfiguration
+            {
+                Name = "test-config",
+                Tables = new List<CdcSinkTableConfig> { badConfig }
+            };
+
+            using var process = new SubmitBatchTestProcess(sinkConfig, database);
+            var processor = process.GetTableProcessor(badConfig.SourceTableSchema, badConfig.SourceTableName);
+            SetSourceColumnNamesFromConfig(processor, badConfig.Columns);
+
+            var batchCompletedRaised = false;
+            Action<(string ConfigurationName, string TableName, CdcSinkProcessStatistics Statistics)> onBatchCompleted =
+                change => batchCompletedRaised |= change.ConfigurationName == sinkConfig.Name;
+            database.CdcSinkLoader.BatchCompleted += onBatchCompleted;
+            try
+            {
+                var badData = new DynamicJsonValue
+                {
+                    ["ProductId"] = 99,
+                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    {
+                        [Constants.Documents.Metadata.Collection] = "Products"
+                    }
+                };
+                var ops = new List<CdcSinkDocumentOp> { CreatePutOp("Products/99", badData, processor: processor) };
+
+                var e = await Assert.ThrowsAnyAsync<Exception>(() => process.SubmitBatchForTest(ops, "0/16B3748"));
+                Assert.Contains("could not be applied", e.ToString());
+                
+                Assert.True(batchCompletedRaised);
+
+                var latest = process.GetLatestPerformanceStats();
+                Assert.NotNull(latest);
+                Assert.True(latest.Completed);
+
+                var perf = latest.ToPerformanceLiveStatsWithDetails();
+                Assert.NotNull(perf.Completed);
+                Assert.Equal(1, perf.ScriptProcessingErrorCount);
+                Assert.False(perf.SuccessfullyProcessed);
+            }
+            finally
+            {
+                database.CdcSinkLoader.BatchCompleted -= onBatchCompleted;
+            }
+        }
+
+        private sealed class SubmitBatchTestProcess : CdcSinkProcess
+        {
+            public SubmitBatchTestProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
+                : base(configuration, database, "public")
+            {
+            }
+
+            public CdcSinkTableProcessor GetTableProcessor(string schema, string table) => DocumentProcessor.GetProcessor(schema, table);
+
+            public Task<(string Checkpoint, int Rows)> SubmitBatchForTest(List<CdcSinkDocumentOp> ops, string checkpoint) => SubmitBatch(ops, checkpoint);
+
+            public override bool IsHealthy(out string issue)
+            {
+                issue = null;
+                return true;
+            }
+
+            protected override Task RunInternalAsync(CancellationToken ct) => Task.CompletedTask;
+
+            protected override IAsyncEnumerable<CdcEvent> GetCdcEvents(CancellationToken ct) => throw new NotSupportedException();
+
+            protected override string GetDefaultSchema() => "public";
+
+            protected override Task<DbConnection> OpenInitialLoadConnection(CancellationToken ct) => throw new NotSupportedException();
+
+            protected override Task<List<string>> ResolveInitialLoadKeyColumnsAsync(DbConnection conn, string schema, string table, CancellationToken ct) => throw new NotSupportedException();
+
+            protected override Task BindKeysetParameters(DbCommand cmd, CdcSinkConfiguration.TableInfo tableInfo, List<string> keyColumns, string[] lastKeys, CancellationToken ct) => throw new NotSupportedException();
+
+            protected override object ConvertInitialLoadValue(DbDataReader reader, int ordinal, CdcSinkConfiguration.TableInfo tableInfo) => throw new NotSupportedException();
+
+            protected override DbCommandBuilder CommandBuilder { get; } = new NpgsqlCommandBuilder();
         }
 
         [RavenFact(RavenTestCategory.Sinks)]

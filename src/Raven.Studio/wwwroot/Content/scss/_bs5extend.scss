@@ -401,6 +401,10 @@ select {
         background-color: var(--faded-enterprise-ai) !important;
         color: var(--license-enterprise-ai);
     }
+    &.quill {
+        background-color: var(--faded-enterprise-ai) !important;
+        color: var(--license-enterprise-ai);
+    }
 }
 
 .cursor-pointer {

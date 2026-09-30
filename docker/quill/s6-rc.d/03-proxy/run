@@ -1,0 +1,43 @@
+#!/command/with-contenv sh
+set -e
+
+exec 2>&1
+
+# nginx :443 SNI front (Phase 1). It terminates TLS for the web subdomains with the wildcard cert
+# 01-ravendb/run places on the volume, which only exists post-activation. Wait for it; pre-activation
+# there is no cert yet, and the web app binds loopback only (127.0.0.1:5000), so nothing is exposed
+# until activation completes. db.*/a.* are TLS-passthrough.
+
+CERT_DIR=/var/lib/quill/certs
+PROXY_DIR=/var/lib/quill/proxy
+# proxy/ (and /run/quill for the pid) are created by 00-prepare, a dependency of this service.
+
+RAVENDB_PORT="${RAVEN_QUILL_RAVENDB_INTERNAL_PORT:-8443}"
+RAVENDB_PROXY_PORT="${RAVEN_QUILL_RAVENDB_PROXY_PORT:-8447}"
+
+for port in $RAVENDB_PORT 8444 8445 8446 5000; do
+    if [ "$RAVENDB_PROXY_PORT" = "$port" ]; then
+        echo "03-proxy: RAVEN_QUILL_RAVENDB_PROXY_PORT ($RAVENDB_PROXY_PORT) is already in use; pick another." >&2
+        exit 1
+    fi
+done
+
+i=0
+while [ -z "$(ls "$CERT_DIR"/cluster.server.certificate.*.pfx 2>/dev/null)" ]; do
+    i=$((i + 1))
+    if [ "$i" -ge 600 ]; then
+        echo "03-proxy: wildcard cert not present at $CERT_DIR after 600s; aborting." >&2
+        exit 1
+    fi
+    sleep 1
+done
+
+s6-setuidgid quill proxy-certs
+
+DEST_CONF="$PROXY_DIR/nginx.conf"
+[ -h "$DEST_CONF" ] && rm -f "$DEST_CONF"
+cp --remove-destination /etc/nginx/nginx.conf "$DEST_CONF"
+sed -i "s|__RAVENDB_PORT__|$RAVENDB_PORT|g"             "$DEST_CONF"
+sed -i "s|__RAVENDB_PROXY_PORT__|$RAVENDB_PROXY_PORT|g" "$DEST_CONF"
+
+exec s6-setuidgid quill nginx -c "$PROXY_DIR/nginx.conf" -e stderr -g 'daemon off;'

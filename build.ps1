@@ -12,6 +12,7 @@ param(
     [switch]$DontBuildStudio,
     [switch]$JustStudio,
     [switch]$JustNuget,
+    [switch]$Quill,
     [switch]$Debug,
     [switch]$NoBundling,
     [switch]$DryRunSign = $false,
@@ -38,6 +39,7 @@ $ErrorActionPreference = "Stop"
 . '.\scripts\archive.ps1'
 . '.\scripts\package.ps1'
 . '.\scripts\buildProjects.ps1'
+. '.\scripts\buildQuill.ps1'
 . '.\scripts\getScriptDirectory.ps1'
 . '.\scripts\copyAssets.ps1'
 . '.\scripts\validateAssembly.ps1'
@@ -131,6 +133,10 @@ if ([string]::IsNullOrEmpty($Target) -eq $false) {
     }
 }
 
+if ($Quill -and ($null -eq $Target)) {
+    $Target = @( "linux-x64" )
+}
+
 $targets = GetBuildTargets $Target
 
 if ($targets.Count -eq 0) {
@@ -167,7 +173,7 @@ UpdateSourceWithBuildInfo $PROJECT_DIR $buildNumber $version
 InitGlobals $Debug $NoBundling
 DownloadDependencies
 
-if ($JustStudio -eq $False) {
+if ($JustStudio -eq $False -and (-not $Quill)) {
     BuildSparrow $SPARROW_SRC_DIR
     BuildClient $CLIENT_SRC_DIR
     BuildTestDriver $TESTDRIVER_SRC_DIR
@@ -185,7 +191,7 @@ if (ShouldBuildStudio $STUDIO_OUT_DIR $DontRebuildStudio $DontBuildStudio) {
 }
 
 $IsPosix = $IsWindows -eq $False
-if (($JustStudio -eq $False) -and ($IsPosix -eq $False)) {
+if (($JustStudio -eq $False) -and ($IsPosix -eq $False) -and (-not $Quill)) {
     $studioZipPath = [io.path]::combine($STUDIO_OUT_DIR, "Raven.Studio.zip")
     BuildEmbeddedNuget $PROJECT_DIR $OUT_DIR $SERVER_SRC_DIR $studioZipPath
     $embeddedDir = [io.path]::combine($OUT_DIR, "RavenDB.Embedded")
@@ -211,6 +217,14 @@ if ($JustStudio) {
 Foreach ($target in $targets) {
     $specOutDir = [io.path]::combine($OUT_DIR, $target.Name)
     CleanDir $specOutDir
+
+    if ($Quill) {
+        $studioZip = [io.path]::combine($STUDIO_OUT_DIR, "Raven.Studio.zip")
+        $quillStaging = [io.path]::combine($OUT_DIR, "quill-$($target.Name)")
+        BuildQuill $PROJECT_DIR $target $studioZip $quillStaging
+        CreateQuillPackage $RELEASE_DIR $version $target $quillStaging
+        continue
+    }
 
     BuildServer $SERVER_SRC_DIR $specOutDir $target
     BuildTool rvn $RVN_SRC_DIR $specOutDir $target $true

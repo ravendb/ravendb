@@ -21,7 +21,7 @@ const ravendbLogo = require("Content/img/ravendb_logo.svg");
 
 export type AvailabilityValue = boolean | number | string;
 
-type LicenseTextType = Exclude<Raven.Server.Commercial.LicenseType, "None" | "Reserved"> | "Free" | "Production";
+type LicenseTextType = Exclude<Raven.Server.Commercial.LicenseType, "None"> | "Free" | "Production";
 
 export interface FeatureAvailabilityValueData {
     value: AvailabilityValue;
@@ -36,6 +36,7 @@ export interface FeatureAvailabilityData {
     professional: FeatureAvailabilityValueData;
     enterprise: FeatureAvailabilityValueData;
     enterpriseAi?: FeatureAvailabilityValueData; // if not set, use enterprise value
+    quill: FeatureAvailabilityValueData;
 }
 
 interface FeatureAvailabilitySummaryProps {
@@ -47,6 +48,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
 
     const currentLicense = useAppSelector(licenseSelectors.licenseType);
     const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
+    const isQuill = currentLicense === "Quill";
     const buyLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
 
     const { allLicenseTextTypes, getIsCurrent, getLicenseTypeClass } = useLicenseTextTypes();
@@ -136,49 +138,55 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                         </div>
                                     )}
                                 </th>
-                                <td
-                                    className={classNames("community", {
-                                        "current ":
-                                            currentLicense === "Community" ||
-                                            currentLicense === "Essential" ||
-                                            currentLicense === "None",
-                                    })}
-                                >
-                                    {formatAvailabilityValue(data.community)}
-                                </td>
-                                {!isCloud && (
-                                    <td
-                                        className={classNames("professional", {
-                                            "current ": currentLicense === "Professional",
-                                        })}
-                                    >
-                                        {formatAvailabilityValue(data.professional)}
-                                    </td>
-                                )}
-                                <td
-                                    className={classNames("enterprise", {
-                                        "current ": currentLicense === "Enterprise",
-                                    })}
-                                >
-                                    {formatAvailabilityValue(data.enterprise, isCloud)}
-                                </td>
-                                {!isCloud && (
-                                    <td
-                                        className={classNames("enterprise-ai", {
-                                            current: currentLicense === "EnterpriseAi",
-                                        })}
-                                    >
-                                        {formatAvailabilityValue(data.enterpriseAi ?? data.enterprise, isCloud)}
-                                    </td>
-                                )}
-                                {currentLicense === "Developer" && (
-                                    <td
-                                        className={classNames("developer", {
-                                            current: currentLicense === "Developer",
-                                        })}
-                                    >
-                                        {formatAvailabilityValue(data.enterpriseAi ?? data.enterprise, isCloud)}
-                                    </td>
+                                {isQuill ? (
+                                    <td className="quill current">{formatAvailabilityValue(data.quill)}</td>
+                                ) : (
+                                    <>
+                                        <td
+                                            className={classNames("community", {
+                                                "current ":
+                                                    currentLicense === "Community" ||
+                                                    currentLicense === "Essential" ||
+                                                    currentLicense === "None",
+                                            })}
+                                        >
+                                            {formatAvailabilityValue(data.community)}
+                                        </td>
+                                        {!isCloud && (
+                                            <td
+                                                className={classNames("professional", {
+                                                    "current ": currentLicense === "Professional",
+                                                })}
+                                            >
+                                                {formatAvailabilityValue(data.professional)}
+                                            </td>
+                                        )}
+                                        <td
+                                            className={classNames("enterprise", {
+                                                "current ": currentLicense === "Enterprise",
+                                            })}
+                                        >
+                                            {formatAvailabilityValue(data.enterprise, isCloud)}
+                                        </td>
+                                        {!isCloud && (
+                                            <td
+                                                className={classNames("enterprise-ai", {
+                                                    current: currentLicense === "EnterpriseAi",
+                                                })}
+                                            >
+                                                {formatAvailabilityValue(data.enterpriseAi ?? data.enterprise, isCloud)}
+                                            </td>
+                                        )}
+                                        {currentLicense === "Developer" && (
+                                            <td
+                                                className={classNames("developer", {
+                                                    current: currentLicense === "Developer",
+                                                })}
+                                            >
+                                                {formatAvailabilityValue(data.enterpriseAi ?? data.enterprise, isCloud)}
+                                            </td>
+                                        )}
+                                    </>
                                 )}
                             </tr>
                         ))}
@@ -276,6 +284,7 @@ export default function FeatureAvailabilitySummaryWrapper({
     isOpenedByDefault = !isUnlimited,
 }: FeatureAvailabilitySummaryProps & { isUnlimited: boolean; isOpenedByDefault?: boolean }) {
     const { value: isOpen, toggle: toggleIsOpen } = useBoolean(isOpenedByDefault);
+    const isQuill = useAppSelector(licenseSelectors.licenseType) === "Quill";
 
     return (
         <>
@@ -297,7 +306,9 @@ export default function FeatureAvailabilitySummaryWrapper({
                                 <h4 className="m-0">Licensing</h4>
                             </div>
                             <small className="description">
-                                See which plans include this feature and other exciting features
+                                {isQuill
+                                    ? "See what features are included in this license"
+                                    : "See which plans include this feature and other exciting features"}
                             </small>
                         </div>
                     </button>
@@ -313,6 +324,7 @@ function FeatureAvailabilitySummaryModal({
     toggleIsOpen,
 }: FeatureAvailabilitySummaryProps & { toggleIsOpen: () => void }) {
     const licenseType = useAppSelector(licenseSelectors.licenseType);
+    const isQuill = licenseType === "Quill";
 
     return (
         <Modal size="lg" show onHide={toggleIsOpen} contentClassName="modal-border bulge-primary">
@@ -320,9 +332,9 @@ function FeatureAvailabilitySummaryModal({
                 <div>
                     <h3>
                         <Icon icon="license" color="primary" />
-                        License comparison
+                        {isQuill ? "License features" : "License comparison"}
                     </h3>
-                    {licenseType !== "Developer" && (
+                    {licenseType !== "Developer" && licenseType !== "Quill" && (
                         <>
                             <br />
                             <div>
@@ -351,6 +363,11 @@ function FeatureAvailabilitySummaryModal({
 function UpgradeLinkButton() {
     const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
     const cloudPricingLink = "https://cloud.ravendb.net/pricing";
+    const isQuill = useAppSelector(licenseSelectors.licenseType) === "Quill";
+
+    if (isQuill) {
+        return null;
+    }
 
     if (isCloud) {
         return (
@@ -429,10 +446,6 @@ function useLicenseTextTypes() {
         throw new Error("Not expected empty license");
     }
 
-    if (currentLicense === "Reserved") {
-        throw new Error("Not expected Reserved license");
-    }
-
     const getAllLicenseTextTypes = () => {
         let licenseTextTypes: LicenseTextType[] = [];
 
@@ -440,6 +453,8 @@ function useLicenseTextTypes() {
             licenseTextTypes = ["Free", "Production"];
         } else if (isIsv) {
             licenseTextTypes = ["Essential", "Professional", "Enterprise", "EnterpriseAi"];
+        } else if (currentLicense === "Quill") {
+            licenseTextTypes = ["Quill"];
         } else {
             licenseTextTypes = ["Community", "Professional", "Enterprise", "EnterpriseAi"];
         }

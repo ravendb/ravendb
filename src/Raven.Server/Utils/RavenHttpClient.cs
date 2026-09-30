@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Globalization;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using Raven.Server.ServerWide;
@@ -18,6 +19,7 @@ public sealed class RavenHttpClient : HttpClient
 
     public RavenHttpClient()
     {
+        Timeout = TimeSpan.FromMinutes(5);
         AddUserAgentHeader();
     }
 

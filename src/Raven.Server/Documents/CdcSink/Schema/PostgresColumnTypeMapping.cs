@@ -27,7 +27,9 @@ namespace Raven.Server.Documents.CdcSink.Schema
                 1700 => PostgresTypeCategory.Numeric,               // numeric/decimal
                 16 => PostgresTypeCategory.Boolean,                 // bool
                 1082 => PostgresTypeCategory.DateOnly,              // date
-                1114 or 1184 => PostgresTypeCategory.DateTime,      // timestamp, timestamptz
+                1083 => PostgresTypeCategory.TimeOnly,              // time
+                1114 => PostgresTypeCategory.DateTime,              // timestamp
+                1184 => PostgresTypeCategory.DateTimeTz,            // timestamptz
                 2950 => PostgresTypeCategory.Uuid,                  // uuid
                 17 => PostgresTypeCategory.Bytea,                   // bytea
                 114 or 3802 => PostgresTypeCategory.Json,           // json, jsonb
@@ -62,7 +64,9 @@ namespace Raven.Server.Documents.CdcSink.Schema
         Numeric,
         Boolean,
         DateOnly,
+        TimeOnly,
         DateTime,
+        DateTimeTz,
         Uuid,
         Bytea,
         Json,

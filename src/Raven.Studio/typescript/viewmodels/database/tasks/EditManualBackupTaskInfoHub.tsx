@@ -75,18 +75,21 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         featureIcon: "encryption",
         community: { value: false },
         professional: { value: true },
-        enterprise: { value: true }
+        enterprise: { value: true },
+        quill: { value: true },
     },{
         featureName: "Remote destinations",
         featureIcon: "cloud",
         community: { value: false },
         professional: { value: true },
-        enterprise: { value: true }
+        enterprise: { value: true },
+        quill: { value: true },
     },{
         featureName: "Snapshot backups",
         featureIcon: "snapshot-backup",
         community: { value: false },
         professional: { value: false },
-        enterprise: { value: true }
+        enterprise: { value: true },
+        quill: { value: true },
     },
 ];

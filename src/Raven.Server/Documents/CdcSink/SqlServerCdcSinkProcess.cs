@@ -51,6 +51,9 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
     // every reconnect; reset when the Agent becomes visible so a later regression re-reports.
     private bool _agentAdvisoryRecorded;
 
+    protected bool _enabledDatabaseCdc;
+    protected readonly List<CdcSinkConfiguration.TableInfo> _enabledCaptureTables = new();
+
     public SqlServerCdcSinkProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
         : base(configuration, database, "dbo")
     {
@@ -113,6 +116,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 await using var cmd = conn.CreateCommand();
                 cmd.CommandText = "EXEC sys.sp_cdc_enable_db";
                 await cmd.ExecuteNonQueryAsync(ct);
+                _enabledDatabaseCdc = true;
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -165,6 +169,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 AddParameter(cmd, "@schema", tableInfo.Schema);
                 AddParameter(cmd, "@table", tableInfo.TableName);
                 await cmd.ExecuteNonQueryAsync(ct);
+                _enabledCaptureTables.Add(tableInfo);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -741,7 +746,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         return ConvertSqlServerValue(reader.GetValue(ordinal));
     }
 
-    private async Task<DbConnection> OpenConnectionAsync(CancellationToken ct)
+    protected async Task<DbConnection> OpenConnectionAsync(CancellationToken ct)
     {
         var factory = DbProviderFactories.GetFactory(_factoryName);
         var conn = factory.CreateConnection();

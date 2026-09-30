@@ -97,7 +97,7 @@ function mockTestResults(isSuccess: boolean) {
     tasksService.withTestElasticSearchNodeConnection(
         isSuccess ? undefined : SharedStubs.nodeConnectionTestErrorResult()
     );
-    tasksService.withTestAiConnectionString(isSuccess ? undefined : SharedStubs.nodeConnectionTestErrorResult());
+    tasksService.withTestAiConnectionString(isSuccess ? undefined : SharedStubs.aiConnectionTestErrorResult());
     manageServerService.withTestPeriodicBackupCredentials(
         isSuccess ? undefined : SharedStubs.nodeConnectionTestErrorResult()
     );

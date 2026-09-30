@@ -86,6 +86,7 @@ export const licenseArgType = {
     },
     options: [
         "None",
+        "Quill",
         "Community",
         "Essential",
         "Professional",
