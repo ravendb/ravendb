@@ -1278,7 +1278,7 @@ public static partial class CoraxQueryBuilder
 
         if (orderByFields == null)
         {
-            if (builderParameters.HasBoost && (
+            if (builderParameters.HasBoost && builderParameters.AllowImplicitScoreOrdering && (
                     index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved 
                     || index.Configuration.CoraxVectorSearchOrderByScoreAutomatically))
             {
