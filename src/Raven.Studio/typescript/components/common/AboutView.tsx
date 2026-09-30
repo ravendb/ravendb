@@ -122,7 +122,7 @@ interface AccordionItemWrapperProps {
 }
 
 const AccordionItemWrapper = (props: AccordionItemWrapperProps) => {
-    const { t } = useStudioTranslation("aboutView");
+    const t = useStudioTranslation("aboutView");
     const {
         icon,
         color,

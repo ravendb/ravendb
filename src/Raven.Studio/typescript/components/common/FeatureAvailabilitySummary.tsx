@@ -286,7 +286,7 @@ export default function FeatureAvailabilitySummaryWrapper({
 }: FeatureAvailabilitySummaryProps & { isUnlimited: boolean; isOpenedByDefault?: boolean }) {
     const { value: isOpen, toggle: toggleIsOpen } = useBoolean(isOpenedByDefault);
     const isQuill = useAppSelector(licenseSelectors.licenseType) === "Quill";
-    const { t } = useStudioTranslation("featureAvailabilitySummary");
+    const t = useStudioTranslation("featureAvailabilitySummary");
 
     return (
         <>

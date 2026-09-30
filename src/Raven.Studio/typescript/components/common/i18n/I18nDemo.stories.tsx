@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { Meta, StoryObj } from "@storybook/react-webpack5";
+import { expect } from "storybook/test";
 import { I18nextProvider } from "react-i18next";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
-import { i18n } from "common/i18n/i18n";
+import { i18n, loadLanguage } from "common/i18n/i18n";
 import { languageNames, StudioLanguage } from "common/i18n/resources";
 import DocumentRefresh from "components/pages/database/settings/documentRefresh/DocumentRefresh";
 
@@ -25,6 +26,7 @@ function FixedLanguage({ language, children }: FixedLanguageProps) {
 
 export const SideBySide: StoryObj = {
     name: "Side by side (EN / PL)",
+    loaders: [() => loadLanguage("pl")],
     render: () => {
         mockServices.databasesService.withRefreshConfiguration();
         mockStore.databases.withActiveDatabase_NonSharded_SingleNode();
@@ -42,5 +44,9 @@ export const SideBySide: StoryObj = {
                 ))}
             </div>
         );
+    },
+    play: async ({ canvas }) => {
+        await expect(await canvas.findByText("Enable Document Refresh")).toBeInTheDocument();
+        await expect(await canvas.findByText("Włącz odświeżanie dokumentów")).toBeInTheDocument();
     },
 };

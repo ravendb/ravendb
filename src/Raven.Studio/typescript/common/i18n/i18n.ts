@@ -1,5 +1,14 @@
 import i18next, { i18n as I18nInstance, TOptions } from "i18next";
-import { defaultNS, namespaces, resources, supportedLanguages, TranslationKey } from "./resources";
+import {
+    defaultNS,
+    en,
+    languageLoaders,
+    namespaces,
+    StudioLanguage,
+    StudioTranslate,
+    supportedLanguages,
+    TranslationNamespace,
+} from "./resources";
 
 export type MissingKeyBehavior = "warn" | "throw";
 
@@ -24,12 +33,9 @@ export function initI18n(options?: InitI18nOptions): I18nInstance {
         supportedLngs: supportedLanguages,
         ns: namespaces,
         defaultNS,
-        resources,
+        resources: { en },
         initAsync: false,
         returnNull: false,
-        interpolation: {
-            escapeValue: false,
-        },
         parseMissingKeyHandler: (key: string) => {
             const message = `[i18n] Missing translation key: ${key}`;
             if (onMissingKey === "throw") {
@@ -43,10 +49,26 @@ export function initI18n(options?: InitI18nOptions): I18nInstance {
     return i18n;
 }
 
+export async function loadLanguage(language: StudioLanguage): Promise<void> {
+    if (language === "en" || i18n.hasResourceBundle(language, defaultNS)) {
+        return;
+    }
+
+    const resources = await languageLoaders[language]();
+    Object.entries(resources).forEach(([ns, bundle]) => i18n.addResourceBundle(language, ns, bundle));
+}
+
+export async function changeLanguage(language: StudioLanguage): Promise<void> {
+    await loadLanguage(language);
+    await i18n.changeLanguage(language);
+}
+
 /**
- * Typed translation for non-React code (Knockout viewmodels, helpers, commands).
+ * Translator bound to a namespace for non-React code (Knockout viewmodels, helpers, commands).
+ * Interpolated values are HTML-escaped, so the result is safe for `html:` bindings and toasts.
  * React components use the `useStudioTranslation` hook instead.
  */
-export function translate(key: TranslationKey, options?: TranslateOptions): string {
-    return i18n.t(key, options) as string;
+export function createTranslator<Ns extends TranslationNamespace>(ns: Ns): StudioTranslate<Ns> {
+    const fixedT = i18n.getFixedT(null, ns);
+    return ((key: string, options?: TranslateOptions) => fixedT(key, options) as string) as StudioTranslate<Ns>;
 }

@@ -23,6 +23,8 @@ import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import database = require("models/resources/database");
 import i18nModule = require("common/i18n/i18n");
 
+const t = i18nModule.createTranslator("conflicts");
+
 class conflictItem {
     
     private static readonly dateFormat = "DD/MM/YYYY HH:mm:ss";
@@ -52,7 +54,7 @@ class conflictItem {
                 const textSize: number = generalUtils.getSizeInBytesAsUTF8(this.originalValue());
                 return generalUtils.formatBytesToSize(textSize);
             } catch (e) {
-                return i18nModule.translate("conflicts:documentSizeUnknown");
+                return t("documentSizeUnknown");
             }
         });
     }
@@ -99,8 +101,8 @@ class conflicts extends shardViewModelBase {
             required: true,
             aceValidation: true,
             validation: [{
-                validator: (val: string) => conflictTokens.every(t => !val.includes(t)),
-                message: i18nModule.translate("conflicts:conflictMarkersPresent")
+                validator: (val: string) => conflictTokens.every(token => !val.includes(token)),
+                message: t("conflictMarkersPresent")
             }]
         });
     }
@@ -121,16 +123,16 @@ class conflicts extends shardViewModelBase {
         const grid = this.gridController();
         grid.headerVisible(true);
 
-        const documentColumn = new hyperlinkColumn<replicationConflictListItemDto>(grid, x => x.Id, x => appUrl.forConflicts(this.db, x.Id), i18nModule.translate("conflicts:columns.document"), "40%",
+        const documentColumn = new hyperlinkColumn<replicationConflictListItemDto>(grid, x => x.Id, x => appUrl.forConflicts(this.db, x.Id), t("columns.document"), "40%",
             {
                 handler: (item, event) => this.handleLoadAction(item, event)
             });
         const conflictsPerDocumentColumn = new textColumn<replicationConflictListItemDto>(grid, x => x.ConflictsPerDocument, "#", "10%", {
-            headerTitle: i18nModule.translate("conflicts:columns.conflictsPerDocument")
+            headerTitle: t("columns.conflictsPerDocument")
         });
-        const lastModifiedColumn = new textColumn<replicationConflictListItemDto>(grid, x => x.LastModified, i18nModule.translate("conflicts:columns.lastModified"), "45%");
+        const lastModifiedColumn = new textColumn<replicationConflictListItemDto>(grid, x => x.LastModified, t("columns.lastModified"), "45%");
 
-        grid.init((s, t) => this.fetchConflicts(t), () => [documentColumn, conflictsPerDocumentColumn, lastModifiedColumn]);
+        grid.init((skip, take) => this.fetchConflicts(take), () => [documentColumn, conflictsPerDocumentColumn, lastModifiedColumn]);
 
         this.columnPreview.install(".conflicts-grid", ".js-conflict-details-tooltip",
             (details: replicationConflictListItemDto, column: virtualColumn, e: JQuery.TriggeredEvent,
@@ -247,9 +249,9 @@ class conflicts extends shardViewModelBase {
             .execute()
             .fail((xhr: JQueryXHR) => {
                 if (xhr.status === 404) {
-                    messagePublisher.reportError(i18nModule.translate("conflicts:documentNotFound", { documentId }));
+                    messagePublisher.reportError(t("documentNotFound", { documentId }));
                 } else {
-                    messagePublisher.reportError(i18nModule.translate("conflicts:loadFailed"), xhr.responseText, xhr.statusText);
+                    messagePublisher.reportError(t("loadFailed"), xhr.responseText, xhr.statusText);
                 }
             });
     }
@@ -312,7 +314,7 @@ class conflicts extends shardViewModelBase {
     }
 
     copyThis(itemToCopy: conflictItem) {
-        copyToClipboard.copy(itemToCopy.originalValue(), i18nModule.translate("conflicts:documentCopied"));
+        copyToClipboard.copy(itemToCopy.originalValue(), t("documentCopied"));
 }
 }
 

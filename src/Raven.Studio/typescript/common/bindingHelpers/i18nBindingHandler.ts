@@ -61,14 +61,18 @@ class i18nBindingHandler {
         const unwrapped = ko.unwrap(value);
 
         if (typeof unwrapped === "string") {
-            return i18nModule.i18n.t(unwrapped) as string;
+            return i18nBindingHandler.translate(unwrapped);
         }
 
         const key = ko.unwrap(unwrapped.key);
         const rawOptions = ko.unwrap(unwrapped.options);
         const options = rawOptions ? _.mapValues(rawOptions, (option: unknown) => ko.unwrap(option)) : undefined;
 
-        return i18nModule.i18n.t(key, options as i18nModule.TranslateOptions) as string;
+        return i18nBindingHandler.translate(key, options);
+    }
+
+    private static translate(key: string, options?: i18nKeyOptions): string {
+        return i18nModule.i18n.t(key, { ...options, interpolation: { escapeValue: false } }) as string;
     }
 }
 

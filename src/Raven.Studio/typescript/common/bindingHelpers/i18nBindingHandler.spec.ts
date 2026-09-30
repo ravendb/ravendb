@@ -1,7 +1,7 @@
 import i18nBindingHandler = require("common/bindingHelpers/i18nBindingHandler");
 import i18nModule = require("common/i18n/i18n");
 
-const { i18n, initI18n } = i18nModule;
+const { changeLanguage, i18n, initI18n } = i18nModule;
 
 describe("i18nBindingHandler", () => {
     beforeAll(() => {
@@ -68,7 +68,7 @@ describe("i18nBindingHandler", () => {
         const text = bind(`<span data-bind="i18n: 'common:save'"></span>`);
         const attr = bind(`<button data-bind="i18nAttr: { title: 'common:cancel' }"></button>`);
 
-        await i18n.changeLanguage("pl");
+        await changeLanguage("pl");
 
         expect(text.textContent).toBe("Zapisz");
         expect(attr.getAttribute("title")).toBe("Anuluj");
@@ -78,6 +78,12 @@ describe("i18nBindingHandler", () => {
         i18n.addResourceBundle("en", "spec", { html: "<b>bold</b>" }, true, true);
         const element = bind(`<span data-bind="i18n: 'spec:html'"></span>`);
         expect(element.textContent).toBe("<b>bold</b>");
+        expect(element.children.length).toBe(0);
+    });
+
+    it("writes interpolated values as plain text", () => {
+        const element = bind(`<span data-bind="i18n: { key: 'spec:greeting', options: { name: '<b>Ada</b>' } }"></span>`);
+        expect(element.textContent).toBe("Hello <b>Ada</b>");
         expect(element.children.length).toBe(0);
     });
 });
