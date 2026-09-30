@@ -1,7 +1,6 @@
 {
     "title": "Konfiguracja Studio",
     "loadError": "Nie można wczytać konfiguracji Studio",
-    "language": "Język",
     "environment": {
         "label": "Środowisko serwera",
         "tagInfo": "Nadaj Studio <strong>tag</strong> wskazujący środowisko serwera.",

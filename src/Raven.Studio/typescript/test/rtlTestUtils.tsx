@@ -26,14 +26,14 @@ import { userEvent } from "@testing-library/user-event";
 import { DialogProvider } from "components/common/Dialog";
 import { SplitViewProvider } from "components/common/splitView/SplitView";
 import { I18nextProvider } from "react-i18next";
-import { i18n } from "common/i18n/i18n";
+import { changeLanguage, i18n } from "common/i18n/i18n";
 import { StudioLanguage } from "common/i18n/resources";
 
 let needsTestMock = true;
 
 export async function rtlChangeLanguage(language: StudioLanguage) {
     await act(async () => {
-        await i18n.changeLanguage(language);
+        await changeLanguage(language);
     });
 }
 

@@ -41,20 +41,13 @@ import { CellValueWrapper } from "components/common/virtualTable/cells/CellValue
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import AceEditor from "components/common/ace/AceEditor";
 import studioSettings = require("common/settings/studioSettings");
-import { languageNames, StudioLanguage, supportedLanguages } from "common/i18n/resources";
 import { useStudioTranslation } from "hooks/useStudioTranslation";
 import { StudioTrans } from "components/common/i18n/StudioTrans";
-
-const languageOptions: SelectOption<StudioLanguage>[] = supportedLanguages.map((language) => ({
-    value: language,
-    label: languageNames[language],
-}));
 
 export default function StudioGlobalConfiguration() {
     const [tableHoveredFont, setTableHoveredFont] = useState<string>(null);
     const [codeHoveredFont, setCodeHoveredFont] = useState<string>(null);
-    const { t } = useStudioTranslation("studioGlobalConfiguration");
-    const { t: tCommon } = useStudioTranslation("common");
+    const t = useStudioTranslation("studioGlobalConfiguration");
 
     const asyncGlobalSettings = useAsyncCallback<StudioGlobalConfigurationFormData>(async () => {
         const settings = await studioSettings.default.globalSettings(true);
@@ -66,7 +59,6 @@ export default function StudioGlobalConfiguration() {
             isSendUsageStats: settings.sendUsageStats.getValue(),
             tableFont: settings.tableFont.getValue(),
             monospaceFont: settings.monospaceFont.getValue(),
-            language: settings.language.getValue(),
         };
     });
 
@@ -103,7 +95,6 @@ export default function StudioGlobalConfiguration() {
             settings.sendUsageStats.setValueLazy(formData.isSendUsageStats);
             settings.tableFont.setValue(formData.tableFont);
             settings.monospaceFont.setValue(formData.monospaceFont);
-            settings.language.setValue(formData.language);
 
             await settings.save();
             reset(formData);
@@ -146,22 +137,9 @@ export default function StudioGlobalConfiguration() {
                                 disabled={!formState.isDirty}
                                 isSpinning={formState.isSubmitting}
                             >
-                                {tCommon("save")}
+                                {t("common:save")}
                             </ButtonWithSpinner>
                         </ConditionalPopover>
-                        <Card className="mb-3">
-                            <Card.Body className="vstack gap-3">
-                                <div className="gap-1">
-                                    <FormLabel className="mb-0 md-label">{t("language")}</FormLabel>
-                                    <FormSelect
-                                        control={control}
-                                        name="language"
-                                        options={languageOptions}
-                                        isSearchable={false}
-                                    />
-                                </div>
-                            </Card.Body>
-                        </Card>
                         <div className={hasStudioConfiguration ? null : "item-disabled pe-none"}>
                             <Card>
                                 <Card.Body className="vstack gap-3">
@@ -310,7 +288,7 @@ export default function StudioGlobalConfiguration() {
                                 <li>{t("about.environmentPerDatabase")}</li>
                             </ul>
                             <hr />
-                            <div className="small-label mb-2">{tCommon("usefulLinks")}</div>
+                            <div className="small-label mb-2">{t("common:usefulLinks")}</div>
                             <a href={clientConfigurationDocsLink} target="_blank">
                                 <Icon icon="newtab" /> {t("about.docsLink")}
                             </a>
@@ -428,7 +406,7 @@ const vtPreviewColumns: ColumnDef<VtPreviewRow>[] = [
 ];
 
 function VtTablePreview({ fontFamily }: { fontFamily?: string }) {
-    const { t } = useStudioTranslation("studioGlobalConfiguration");
+    const t = useStudioTranslation("studioGlobalConfiguration");
     const table = useReactTable({
         data: vtPreviewData,
         columns: vtPreviewColumns,
@@ -454,7 +432,7 @@ order by Freight as double
 select Lines[].ProductName as ProductNames, OrderedAt, ShipTo.City`;
 
 function CodePreview({ fontFamily }: { fontFamily?: string }) {
-    const { t } = useStudioTranslation("studioGlobalConfiguration");
+    const t = useStudioTranslation("studioGlobalConfiguration");
 
     return (
         <div

@@ -9,6 +9,8 @@ import messagePublisher = require("common/messagePublisher");
 import fileImporter = require("common/fileImporter");
 import i18nModule = require("common/i18n/i18n");
 
+const t = i18nModule.createTranslator("editCustomSorter");
+
 class editCustomSorter extends viewModelBase {
 
     view = require("views/database/settings/editCustomSorter.html");
@@ -44,7 +46,7 @@ class editCustomSorter extends viewModelBase {
                         this.editedSorter(new customSorter(matchedSorter));
                         this.dirtyFlag = this.editedSorter().dirtyFlag;
                     } else {
-                        messagePublisher.reportWarning(i18nModule.translate("editCustomSorter:notFound", { name: args.name }));
+                        messagePublisher.reportWarning(t("notFound", { name: args.name }));
                         router.navigate(appUrl.forCustomSorters(db));
                         
                         return false;

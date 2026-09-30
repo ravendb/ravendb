@@ -38,8 +38,7 @@ const defaultItemsToProcess = 65536;
 export default function DocumentRefresh() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
-    const { t } = useStudioTranslation("documentRefresh");
-    const { t: tCommon } = useStudioTranslation("common");
+    const t = useStudioTranslation("documentRefresh");
 
     const asyncGetRefreshConfiguration = useAsyncCallback<DocumentRefreshFormData>(async () =>
         mapToFormData(await databasesService.getRefreshConfiguration(databaseName))
@@ -146,7 +145,7 @@ export default function DocumentRefresh() {
                                 disabled={!formState.isDirty || isLimitWarningVisible}
                                 isSpinning={formState.isSubmitting}
                             >
-                                {tCommon("save")}
+                                {t("common:save")}
                             </ButtonWithSpinner>
                             <Col>
                                 <Card>
@@ -252,7 +251,7 @@ export default function DocumentRefresh() {
                                 <p>{t("about.exampleLabel")}</p>
                                 <Code code={codeExample} language="javascript" />
                                 <hr />
-                                <div className="small-label mb-2">{tCommon("usefulLinks")}</div>
+                                <div className="small-label mb-2">{t("common:usefulLinks")}</div>
                                 <a href={documentRefreshDocsLink} target="_blank">
                                     <Icon icon="newtab" /> {t("about.docsLink")}
                                 </a>
