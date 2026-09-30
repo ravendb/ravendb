@@ -381,6 +381,89 @@ namespace SlowTests.Server.Documents.ETL
             Assert.False(s3SettingsAuditJson.Properties.Select(x => x.Name).Contains("AwsAccessKey"));
     }
 
+        [RavenFact(RavenTestCategory.Logging)]
+        public void AzureQueueStorageConnectionStringAuditJsonIncludesSettingsWithoutCredentials()
+        {
+            var entraId = new QueueConnectionString
+            {
+                Name = "aqs-entra",
+                BrokerType = QueueBrokerType.AzureQueueStorage,
+                AzureQueueStorageConnectionSettings = new AzureQueueStorageConnectionSettings
+                {
+                    EntraId = new EntraId { StorageAccountName = "account", TenantId = "tenant", ClientId = "client", ClientSecret = "secret" }
+                }
+            };
+
+            var entraIdAuditJson = (DynamicJsonValue)((DynamicJsonValue)entraId.ToAuditJson()[nameof(AzureQueueStorageConnectionSettings)])[nameof(EntraId)];
+            var entraIdProperties = entraIdAuditJson.Properties.ToDictionary(x => x.Name, x => x.Value);
+
+            Assert.Equal("account", entraIdProperties[nameof(EntraId.StorageAccountName)]);
+            Assert.Equal("tenant", entraIdProperties[nameof(EntraId.TenantId)]);
+            Assert.Equal("client", entraIdProperties[nameof(EntraId.ClientId)]);
+            Assert.False(entraIdProperties.ContainsKey(nameof(EntraId.ClientSecret)));
+
+            var connectionString = new QueueConnectionString
+            {
+                Name = "aqs-connection-string",
+                BrokerType = QueueBrokerType.AzureQueueStorage,
+                AzureQueueStorageConnectionSettings = new AzureQueueStorageConnectionSettings
+                {
+                    ConnectionString = "DefaultEndpointsProtocol=https;AccountName=account;AccountKey=key;EndpointSuffix=core.windows.net"
+                }
+            };
+
+            var connectionStringAuditJson = (DynamicJsonValue)connectionString.ToAuditJson()[nameof(AzureQueueStorageConnectionSettings)];
+
+            Assert.Equal("<Contains-Secrets>", connectionStringAuditJson[nameof(AzureQueueStorageConnectionSettings.ConnectionString)]);
+
+            var passwordless = new QueueConnectionString
+            {
+                Name = "aqs-passwordless",
+                BrokerType = QueueBrokerType.AzureQueueStorage,
+                AzureQueueStorageConnectionSettings = new AzureQueueStorageConnectionSettings
+                {
+                    Passwordless = new Passwordless { StorageAccountName = "account" }
+                }
+            };
+
+            var passwordlessAuditJson = (DynamicJsonValue)((DynamicJsonValue)passwordless.ToAuditJson()[nameof(AzureQueueStorageConnectionSettings)])[nameof(Passwordless)];
+
+            Assert.Equal("account", passwordlessAuditJson[nameof(Passwordless.StorageAccountName)]);
+        }
+
+        [RavenFact(RavenTestCategory.Logging)]
+        public void AmazonSqsConnectionStringAuditJsonIncludesSettingsWithoutCredentials()
+        {
+            var basic = new QueueConnectionString
+            {
+                Name = "sqs-basic",
+                BrokerType = QueueBrokerType.AmazonSqs,
+                AmazonSqsConnectionSettings = new AmazonSqsConnectionSettings
+                {
+                    Basic = new AmazonSqsCredentials { AccessKey = "access", SecretKey = "secret", RegionName = "eu-central-1" }
+                }
+            };
+
+            var basicAuditJson = (DynamicJsonValue)((DynamicJsonValue)basic.ToAuditJson()[nameof(AmazonSqsConnectionSettings)])[nameof(AmazonSqsConnectionSettings.Basic)];
+            var basicProperties = basicAuditJson.Properties.ToDictionary(x => x.Name, x => x.Value);
+
+            Assert.Equal("eu-central-1", basicProperties[nameof(AmazonSqsCredentials.RegionName)]);
+            Assert.False(basicProperties.ContainsKey(nameof(AmazonSqsCredentials.AccessKey)));
+            Assert.False(basicProperties.ContainsKey(nameof(AmazonSqsCredentials.SecretKey)));
+
+            var passwordless = new QueueConnectionString
+            {
+                Name = "sqs-passwordless",
+                BrokerType = QueueBrokerType.AmazonSqs,
+                AmazonSqsConnectionSettings = new AmazonSqsConnectionSettings { Passwordless = true }
+            };
+
+            var passwordlessAuditJson = (DynamicJsonValue)passwordless.ToAuditJson()[nameof(AmazonSqsConnectionSettings)];
+
+            Assert.Equal(true, passwordlessAuditJson[nameof(AmazonSqsConnectionSettings.Passwordless)]);
+            Assert.Null(passwordlessAuditJson[nameof(AmazonSqsConnectionSettings.Basic)]);
+        }
+
         [RavenFact(RavenTestCategory.Etl)]
         public void CannotRemoveQueueConnectionStringUsedByQueueSinkTask()
         {
