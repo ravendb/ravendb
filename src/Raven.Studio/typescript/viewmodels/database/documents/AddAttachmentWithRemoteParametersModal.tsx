@@ -10,7 +10,6 @@ import messagePublisher from "common/messagePublisher";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import React from "react";
 import document from "models/database/documents/document";
-import database from "models/resources/database";
 import Button from "react-bootstrap/Button";
 import { useAsyncCallback } from "react-async-hook";
 import { useServices } from "hooks/useServices";
@@ -18,12 +17,13 @@ import moment from "moment";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import RichAlert from "components/common/RichAlert";
 import { components, GroupBase, OptionProps } from "react-select";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import RemoteAttachmentParameters = Raven.Client.Documents.Operations.Attachments.RemoteAttachmentParameters;
 
 type AddAttachmentWithRemoteParametersModalProps = {
     document: KnockoutObservable<document>;
-    db: database;
     onUploaded: () => void;
     onClose: () => void;
 };
@@ -31,12 +31,12 @@ type AddAttachmentWithRemoteParametersModalProps = {
 export default function AddAttachmentWithRemoteParametersModal({
     document,
     onClose,
-    db,
     onUploaded,
 }: AddAttachmentWithRemoteParametersModalProps) {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
     const asyncGetRemoteAttachmentParametersConfig = useAsyncCallback(() =>
-        databasesService.getRemoteAttachmentsDestinations(db.name)
+        databasesService.getRemoteAttachmentsDestinations(databaseName)
     );
 
     const form = useForm({
@@ -48,7 +48,11 @@ export default function AddAttachmentWithRemoteParametersModal({
     });
 
     const { control, formState } = form;
-    const { uploadItems, batchProgress, upload, abortCurrent } = useAttachmentUpload(document, db, onUploaded);
+    const { uploadItems, batchProgress, upload, abortCurrent } = useAttachmentUpload(
+        document,
+        databaseName,
+        onUploaded
+    );
 
     const selectedDestination = useWatch({
         control,

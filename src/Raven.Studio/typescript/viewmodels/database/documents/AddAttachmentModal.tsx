@@ -8,19 +8,24 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import useAttachmentUpload from "components/hooks/useAttachmentUpload";
 import messagePublisher from "common/messagePublisher";
 import document from "models/database/documents/document";
-import database from "models/resources/database";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 
 type AddAttachmentModalProps = {
     document: KnockoutObservable<document>;
-    db: database;
     onUploaded: () => void;
     onClose: () => void;
 };
 
-export default function AddAttachmentModal({ document, db, onUploaded, onClose }: AddAttachmentModalProps) {
+export default function AddAttachmentModal({ document, onUploaded, onClose }: AddAttachmentModalProps) {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-    const { uploadItems, batchProgress, upload, abortCurrent } = useAttachmentUpload(document, db, onUploaded);
+    const { uploadItems, batchProgress, upload, abortCurrent } = useAttachmentUpload(
+        document,
+        databaseName,
+        onUploaded
+    );
 
     const asyncUpload = useAsyncCallback(async () => {
         if (await upload(selectedFiles)) {

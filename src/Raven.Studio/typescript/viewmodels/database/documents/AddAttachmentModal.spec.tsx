@@ -1,6 +1,5 @@
 import React from "react";
 import { act, rtlRender, RtlScreen, waitFor, within } from "test/rtlTestUtils";
-import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import document from "models/database/documents/document";
 import editDocumentUploader = require("viewmodels/database/documents/editDocumentUploader");
 import AddAttachmentModal from "./AddAttachmentModal";
@@ -22,7 +21,6 @@ function rowOf(screen: RtlScreen, fileName: string) {
 }
 
 describe("AddAttachmentModal", () => {
-    const db = DatabasesStubs.nonShardedSingleNodeDatabase();
     const doc = ko.observable(new document({ "@metadata": { "@id": "users/1" } } as documentDto));
     const fileA = new File(["aaaa"], "a.txt");
     const fileB = new File(["bb"], "b.txt");
@@ -37,7 +35,7 @@ describe("AddAttachmentModal", () => {
     });
 
     function renderModal(onClose = jest.fn()) {
-        return rtlRender(<AddAttachmentModal document={doc} db={db} onUploaded={jest.fn()} onClose={onClose} />);
+        return rtlRender(<AddAttachmentModal document={doc} onUploaded={jest.fn()} onClose={onClose} />);
     }
 
     async function selectFiles(screen: RtlScreen, user: User, files: File[]) {

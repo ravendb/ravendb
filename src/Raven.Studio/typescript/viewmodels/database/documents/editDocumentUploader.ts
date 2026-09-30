@@ -2,7 +2,6 @@
 
 import uploadAttachmentCommand = require("commands/database/documents/attachments/uploadAttachmentCommand");
 import document = require("models/database/documents/document");
-import database = require("models/resources/database");
 import viewHelpers = require("common/helpers/view/viewHelpers")
 import notificationCenter = require("common/notifications/notificationCenter");
 import attachmentUpload = require("common/notifications/models/attachmentUpload");
@@ -17,7 +16,7 @@ class editDocumentUploader {
     private batchPosition = ko.observable<number>(0);
     private batchSize = ko.observable<number>(0);
 
-    constructor(private document: KnockoutObservable<document>, private db: database, private afterUpload: () => void) {}
+    constructor(private document: KnockoutObservable<document>, private databaseName: string, private afterUpload: () => void) {}
 
     async uploadFiles(files: File[], remoteParameters?: RemoteAttachmentParameters, onProgress?: progressCallback) {
         const filesToUpload = await this.resolveNameConflicts(files);
@@ -71,13 +70,13 @@ class editDocumentUploader {
 
     private async uploadSingle(file: File, remoteParameters?: RemoteAttachmentParameters, onProgress?: progressCallback) {
         const documentId = this.document().getId();
-        const upload = attachmentUpload.forFile(this.db, documentId, file.name);
+        const upload = attachmentUpload.forFile(this.databaseName, documentId, file.name);
         this.currentUpload(upload);
         notificationCenter.instance.monitorAttachmentUpload(upload);
 
         this.report(onProgress, file, "uploading", 0, file.size);
 
-        const command = new uploadAttachmentCommand(file, documentId, this.db, event => {
+        const command = new uploadAttachmentCommand(file, documentId, this.databaseName, event => {
             upload.updateProgress(event);
             if (event.lengthComputable) {
                 this.report(onProgress, file, "uploading", event.loaded, event.total);
