@@ -412,7 +412,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
                 else
                 {
-                    VisitRestElement((RestElement) p);
+                    VisitSpreadElement((SpreadElement) p);
                 }
             }
         }
@@ -738,7 +738,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public virtual void VisitSpreadElement(SpreadElement spreadElement)
         {
-            VisitIdentifier(spreadElement.Argument.As<Identifier>());
+            VisitExpression(spreadElement.Argument);
         }
 
         public virtual void VisitAssignmentPattern(AssignmentPattern assignmentPattern)
