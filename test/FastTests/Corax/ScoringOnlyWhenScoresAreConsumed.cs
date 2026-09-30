@@ -28,6 +28,28 @@ public class ScoringOnlyWhenScoresAreConsumed(ITestOutputHelper output) : RavenT
         Assert.Equal("True", FindTermMatch(scoredPlan).Parameters["IsBoosting"]);
     }
 
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenData("where Tag = 'a' and not Name = 'Maciej' order by score()", 2, SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData("where Tag = 'b' or not Name = 'Maciej' order by score()", 3, SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData("where Name != 'Maciej' order by score()", 3, SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData("where Tag = 'a' and not startsWith(Name, 'maciej2') order by score()", 1, SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData("where Tag = 'a' and not Age between 25 and 35 order by score()", 2, SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void ExcludedSideOfNegationIsNotScored(Options options, string rql, int expectedCount)
+    {
+        using var store = GetStoreWithDocumentBoostedIndex(options);
+        using var session = store.OpenSession();
+
+        var results = Query(session, rql, out var plan);
+
+        Assert.Equal(expectedCount, results.Count);
+        var andNot = Find(plan, "BinaryMatch [AndNot]");
+        Assert.NotNull(andNot);
+        Assert.Equal("False", andNot.Children[1].Parameters["IsBoosting"]);
+
+        Query(session, "where Name = 'Maciej' order by score()", out var positivePlan);
+        Assert.Equal("True", FindTermMatch(positivePlan).Parameters["IsBoosting"]);
+    }
+
     [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     public void IndexScoreIsReturnedOnlyWhenSortingByScore()
     {
@@ -103,12 +125,14 @@ public class ScoringOnlyWhenScoresAreConsumed(ITestOutputHelper output) : RavenT
             yield return value;
     }
 
-    private static QueryInspectionNode FindTermMatch(QueryInspectionNode node)
+    private static QueryInspectionNode FindTermMatch(QueryInspectionNode node) => Find(node, "TermMatch");
+
+    private static QueryInspectionNode Find(QueryInspectionNode node, string operation)
     {
-        if (node.Operation.StartsWith("TermMatch"))
+        if (node.Operation.StartsWith(operation))
             return node;
 
-        return (node.Children ?? new List<QueryInspectionNode>()).Select(FindTermMatch).FirstOrDefault(found => found != null);
+        return (node.Children ?? new List<QueryInspectionNode>()).Select(child => Find(child, operation)).FirstOrDefault(found => found != null);
     }
 
     private class DocsIndex : AbstractIndexCreationTask<Doc>

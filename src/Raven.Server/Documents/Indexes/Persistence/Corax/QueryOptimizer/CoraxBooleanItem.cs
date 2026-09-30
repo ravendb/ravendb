@@ -44,7 +44,8 @@ public struct CoraxBooleanItem : IQueryMatch, ICoraxClause
 
     private CoraxBooleanItem(IndexSearcher indexSearcher, long compoundFieldNumericXorMask, FieldMetadata field, object term, UnaryMatchOperation operation)
     {
-        Field = field;
+        // '!=' is the excluded side of an AndNotMatch, which never scores it
+        Field = operation is UnaryMatchOperation.NotEquals ? field.ChangeScoringMode(false) : field;
         Term = term;
         _compoundFieldNumericXorMask = compoundFieldNumericXorMask;
 
