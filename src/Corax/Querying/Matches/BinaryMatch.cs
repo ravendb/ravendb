@@ -37,6 +37,7 @@ namespace Corax.Querying.Matches
         private GrowableBitArray _innerBitmap;
         private GrowableBitArray _outerBitmap;
         private long _lastReturnedId;
+        private long _returnedMatches;
         private bool _finished;
 
         public SkipSortingResult AttemptToSkipSorting() => _skipSortingResult;
@@ -78,6 +79,7 @@ namespace Corax.Querying.Matches
             _innerBitmap = default;
             _outerBitmap = default;
             _lastReturnedId = 0;
+            _returnedMatches = 0;
             _finished = false;
         }
 
@@ -109,6 +111,38 @@ namespace Corax.Querying.Matches
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Score(Span<long> matches, Span<float> scores, float boostFactor)
         {
+            // Empty match, nothing to score.
+            if (_totalResults == 0 && _confidence == QueryCountConfidence.High)
+                return;
+
+            // The children of an AND might have seen more documents than the AND returned. We must exclude the ones it did not return.
+            if (typeof(TBinaryOperationMarker) == typeof(BinaryMatch.And) && _materialized && IsBoosting)
+            {
+                if (_returnedMatches > 0)
+                {
+                    using var own = new BinaryMatchScoringBuffer(_ctx, (int)Math.Min(matches.Length, _returnedMatches));
+                    for (var i = 0; i < matches.Length; i++)
+                    {
+                        if (IsOwnMatch(matches[i]))
+                            own.Add(matches[i], i);
+                    }
+
+                    ScoreSides(own.Matches, own.Scores, boostFactor);
+                    own.AddScoresTo(scores);
+                }
+
+                _innerBitmap.Dispose();
+                _outerBitmap.Dispose();
+                return;
+            }
+
+            ScoreSides(matches, scores, boostFactor);
+        }
+
+        private bool IsOwnMatch(long id) => _innerBitmap.Contains(id) && _outerBitmap.Contains(id);
+
+        private void ScoreSides(Span<long> matches, Span<float> scores, float boostFactor)
+        {
             // Nothing to do if there is no boosting happening at this level.
             // Remember: When you're sorting by score and primitives can be boosted, those should be true!
             bool innerBoosting = _inner.IsBoosting;
@@ -116,7 +150,7 @@ namespace Corax.Querying.Matches
             if (innerBoosting == false && outerBoosting == false)
                 return;
 
-            // From now on we have boosting happening somewhere in this chain. 
+            // From now on we have boosting happening somewhere in this chain.
 
             // If there are two chains we need to combine them.
             if (innerBoosting == true && outerBoosting == true)
@@ -126,7 +160,7 @@ namespace Corax.Querying.Matches
                 return;
             }
 
-            // From now on, only a single requires score calculations. 
+            // From now on, only a single requires score calculations.
 
             if (innerBoosting == true)
             {
