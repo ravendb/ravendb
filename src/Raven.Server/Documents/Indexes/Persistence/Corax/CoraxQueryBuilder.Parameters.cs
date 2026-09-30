@@ -35,8 +35,9 @@ public partial class CoraxQueryBuilder
         public readonly bool HasDynamics;
         public readonly Lazy<List<string>> DynamicFields;
         public readonly ByteStringContext Allocator;
-        public readonly bool HasBoost;
+        public readonly bool QueryHasBoost;
         public readonly bool AllowImplicitScoreOrdering;
+        internal int NegationDepth;
         public readonly bool DeduplicationDisabled;
         public readonly IndexReadOperationBase IndexReadOperation;
         public StreamingOptimization StreamingDisabled;
@@ -74,7 +75,7 @@ public partial class CoraxQueryBuilder
             AllowImplicitScoreOrdering = allowImplicitScoreOrdering;
 
             // in case when we've implicit boosting we've built primitives with scoring enabled
-            HasBoost = (index.HasBoostedFields
+            QueryHasBoost = (index.HasBoostedFields
                         || query.Metadata.HasBoost
                         || IsVectorSingleClause
                         || (query.Metadata.HasVectorSearch && index.Configuration.CoraxVectorSearchOrderByScoreAutomatically)
@@ -87,6 +88,9 @@ public partial class CoraxQueryBuilder
         
         public bool NeedsScoresBuffer() => HasBoost
             && (Index.Configuration.CoraxIncludeDocumentScore || (IndexReadOperation.IsSharded && Metadata.HasVectorSearch));
+
+        // AndNotMatch never scores its excluded side
+        public bool HasBoost => QueryHasBoost && NegationDepth == 0;
 
         private static bool ScoresAreConsumed(IndexQueryServerSide query, Index index, bool allowImplicitScoreOrdering)
         {
