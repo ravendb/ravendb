@@ -128,6 +128,21 @@ public sealed unsafe class Bm25Relevance : IDisposable
         var innerItems = bm25.Matches;
         var frequencies = bm25.Scores;
 
+        if (innerItems.Length < matches.Length)
+        {
+            for (int idX = 0; idX < innerItems.Length; ++idX)
+            {
+                var idOfMatch = matches.BinarySearch(innerItems[idX]);
+                if (idOfMatch < 0)
+                    continue;
+
+                var weight = frequencies[idX] * boostFactor / ((1 - BFactor) + BFactor * bm25._termRatioToWholeCollection);
+                scores[idOfMatch] += bm25._idf * weight / (K1 + weight);
+            }
+
+            return;
+        }
+
         for (int idX = 0; idX < matches.Length; ++idX)
         {
             var entryId = matches[idX];
