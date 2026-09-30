@@ -493,7 +493,9 @@ public static partial class CoraxQueryBuilder
             }
 
             //e.g. or (not exists(Field))
+            builderParameters.NegationDepth++;
             var inner = ToCoraxQuery(builderParameters, ne.Expression, ref builderParameters.StreamingDisabled, exact);
+            builderParameters.NegationDepth--;
             inner = MaterializeWhenNeeded(builderParameters, inner, ref builderParameters.StreamingDisabled);
             return builderParameters.IndexSearcher.AndNot(builderParameters.IndexSearcher.AllEntries(), inner);
         }
@@ -576,7 +578,9 @@ public static partial class CoraxQueryBuilder
         if (left is CoraxWhenQuery)
             left = builderParameters.AllEntries.Replay();
 
+        builderParameters.NegationDepth++;
         IQueryMatch right = ToCoraxQuery(builderParameters, rightExpr.Expression, ref builderParameters.StreamingDisabled, exact);
+        builderParameters.NegationDepth--;
         Materialize(builderParameters, ref left, ref right, ref builderParameters.StreamingDisabled);
 
         return right is CoraxWhenQuery
