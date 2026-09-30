@@ -38,6 +38,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
     private readonly bool _canContainSourceDocumentId;
     private readonly bool _legacyHandlingOfComplexFields;
+    private readonly bool _charAsString;
     private static ReadOnlySpan<byte> TrueLiteral => "true"u8;
     private static ReadOnlySpan<byte> FalseLiteral => "false"u8;
 
@@ -86,6 +87,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     {
         _canContainSourceDocumentId = canContainSourceDocumentId;
         _legacyHandlingOfComplexFields = _index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.CoraxComplexFieldIndexingBehavior;
+        _charAsString = IndexDefinitionBaseServerSide.IndexVersion.IsCoraxCharAsStringSupported(_index.Definition.Version);
 
         Allocator = new ByteStringContext(SharedMultipleUseFlag.None);
         
@@ -223,6 +225,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 break;
 
             case ValueType.Char:
+                if (_charAsString)
+                    goto case ValueType.Enum;
+
                 unsafe
                 {
                     char item = (char)value;
@@ -654,6 +659,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 AppendLong(l);
                 break;
             case ValueType.Char:
+                if (_charAsString)
+                    goto case ValueType.String;
+
                 unsafe
                 {
                     char value = (char)v;
