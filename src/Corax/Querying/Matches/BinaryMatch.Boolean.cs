@@ -48,6 +48,7 @@ namespace Corax.Querying.Matches
                 }
 
                 int count = match._innerBitmap.FillAnd(in match._outerBitmap, matches, match._lastReturnedId + 1);
+                match._returnedMatches += count;
 
                 if (count == matches.Length)
                 {
@@ -56,8 +57,13 @@ namespace Corax.Querying.Matches
                 else
                 {
                     match._finished = true;
-                    match._innerBitmap.Dispose();
-                    match._outerBitmap.Dispose();
+
+                    // Score needs them to know which matches this AND returned and disposes them then
+                    if (match.IsBoosting == false)
+                    {
+                        match._innerBitmap.Dispose();
+                        match._outerBitmap.Dispose();
+                    }
                 }
 
                 return count;
@@ -189,10 +195,12 @@ namespace Corax.Querying.Matches
                 var innerIsSingleBatch = inner.Confidence == QueryCountConfidence.High &&
                                          inner.Count < Querying.IndexSearcher.BitmapAndFillSingleBatchThreshold;
 
-                viaBitmap = (outerIsAndNot && innerIsSingleBatch) == false &&
-                            searcher.BitmapMemoryFits(bitmaps: 2) &&
-                            (searcher.BitmapSideQualifies(inner.Count, inner.Confidence) ||
-                             searcher.BitmapSideQualifies(outer.Count, outer.Confidence));
+                // A scored AND needs the bitmaps to score only the matches it returned
+                viaBitmap = searcher.BitmapMemoryFits(bitmaps: 2) &&
+                            (inner.IsBoosting || outer.IsBoosting ||
+                             ((outerIsAndNot && innerIsSingleBatch) == false &&
+                              (searcher.BitmapSideQualifies(inner.Count, inner.Confidence) ||
+                               searcher.BitmapSideQualifies(outer.Count, outer.Confidence))));
             }
 
             var duplicates = viaBitmap ? DuplicatesOccurrence.NotPossible : DuplicatesOccurrence.Possible;
