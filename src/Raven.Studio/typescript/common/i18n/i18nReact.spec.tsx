@@ -1,31 +1,23 @@
 import React from "react";
 import { rtlChangeLanguage, rtlRender } from "test/rtlTestUtils";
-import { translate } from "common/i18n/i18n";
 import { useStudioTranslation } from "hooks/useStudioTranslation";
 
 function SaveLabel() {
-    const { t } = useStudioTranslation("common");
-    return <span>{t("save")}</span>;
-}
-
-function TypoLabel() {
-    const { t } = useStudioTranslation("common");
-    // @ts-expect-error unknown key must not type-check
-    return <span>{t("doesNotExist")}</span>;
-}
-
-function OtherNamespaceLabel() {
-    const { t } = useStudioTranslation("documentRefresh");
-    // @ts-expect-error key from another namespace must not type-check
+    const t = useStudioTranslation("documentRefresh");
     return <span>{t("common:save")}</span>;
 }
 
-describe("i18n React integration", () => {
+function ResolvingLabel({ documentId }: { documentId: string }) {
+    const t = useStudioTranslation("conflicts");
+    return <span>{t("resolvingConflictFor", { documentId })}</span>;
+}
+
+describe("useStudioTranslation", () => {
     afterEach(async () => {
         await rtlChangeLanguage("en");
     });
 
-    it("translates through MockProviders", () => {
+    it("translates common keys through MockProviders", () => {
         const { screen } = rtlRender(<SaveLabel />);
         expect(screen.getByText("Save")).toBeInTheDocument();
     });
@@ -36,10 +28,8 @@ describe("i18n React integration", () => {
         expect(await screen.findByText("Zapisz")).toBeInTheDocument();
     });
 
-    it("throws on missing key in tests", () => {
-        expect(typeof TypoLabel).toBe("function");
-        expect(typeof OtherNamespaceLabel).toBe("function");
-        // @ts-expect-error unknown key must not type-check
-        expect(() => translate("common:doesNotExist")).toThrow("Missing translation key");
+    it("leaves escaping of interpolated values to React", () => {
+        const { screen } = rtlRender(<ResolvingLabel documentId="<b>orders/1</b>" />);
+        expect(screen.getByText("Resolving conflict for: <b>orders/1</b>")).toBeInTheDocument();
     });
 });

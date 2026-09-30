@@ -5,7 +5,8 @@ import { throttledUpdateLicenseLimitsUsage } from "../typescript/components/comm
 import { setEffectiveTestStore } from "../typescript/components/storeCompat";
 import { Provider } from "react-redux";
 import React from "react";
-import { i18n } from "../typescript/common/i18n/i18n";
+import { changeLanguage, i18n } from "../typescript/common/i18n/i18n";
+import { StudioLanguage } from "../typescript/common/i18n/resources";
 
 export const StoreDecorator = (Story, context) => {
     useTheme(context.globals.theme);
@@ -30,10 +31,10 @@ export const StoreDecorator = (Story, context) => {
     );
 };
 
-function useLanguage(language: string) {
+function useLanguage(language: StudioLanguage) {
     useEffect(() => {
         if (language && i18n.language !== language) {
-            i18n.changeLanguage(language);
+            changeLanguage(language);
         }
     }, [language]);
 }

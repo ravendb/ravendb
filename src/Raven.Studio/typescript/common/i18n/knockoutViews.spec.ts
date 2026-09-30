@@ -17,30 +17,27 @@ function listHtmlFiles(dir: string): string[] {
 // data-bind attributes that use the i18n / i18nAttr bindings, and 'namespace:key' strings inside them
 const i18nBindingRegex = /data-bind="([^"]*\bi18n(?:Attr)?\s*:[^"]*)"/g;
 const keyRegex = /'([A-Za-z][\w]*:[\w.]+)'/g;
+const contextRegex = /\bcontext\s*:([^,}]*)/g;
+const stringLiteralRegex = /'([^']*)'/g;
 
-function keyExists(fullKey: string): boolean {
-    if (i18n.exists(fullKey)) {
-        return true;
+function contextsOf(binding: string): string[] {
+    return [...binding.matchAll(contextRegex)].flatMap(([, expression]) =>
+        [...expression.matchAll(stringLiteralRegex)].map(([, context]) => context)
+    );
+}
+
+function keyResolves(key: string, contexts: string[]): boolean {
+    if (contexts.length === 0) {
+        return i18n.exists(key);
     }
+    return contexts.every((context) => i18n.exists(key, { context }));
+}
 
-    // context / plural variants ("heading_new", "items_other") have no base key of their own
-    const [ns, key] = fullKey.split(":");
-    const bundle = i18n.getResourceBundle("en", ns) as Record<string, unknown> | undefined;
-    if (!bundle) {
-        return false;
-    }
-
-    const segments = key.split(".");
-    const leaf = segments[segments.length - 1];
-    const parent = segments.slice(0, -1).reduce<unknown>((node, segment) => {
-        return node && typeof node === "object" ? (node as Record<string, unknown>)[segment] : undefined;
-    }, bundle);
-
-    if (!parent || typeof parent !== "object") {
-        return false;
-    }
-
-    return Object.keys(parent).some((candidate) => candidate.startsWith(leaf + "_"));
+function unresolvedKeys(html: string): string[] {
+    return [...html.matchAll(i18nBindingRegex)].flatMap(([, binding]) => {
+        const contexts = contextsOf(binding);
+        return [...binding.matchAll(keyRegex)].map(([, key]) => key).filter((key) => !keyResolves(key, contexts));
+    });
 }
 
 describe("Knockout views i18n keys", () => {
@@ -50,25 +47,25 @@ describe("Knockout views i18n keys", () => {
 
     it("has at least one translated view", () => {
         const translatedViews = listHtmlFiles(viewsRoot).filter((file) =>
-            i18nBindingRegex.test(fs.readFileSync(file, "utf8"))
+            fs.readFileSync(file, "utf8").match(i18nBindingRegex)
         );
         expect(translatedViews.length).toBeGreaterThan(0);
     });
 
-    it("every key used in a view exists in en resources", () => {
-        const missing: string[] = [];
+    it("accepts context variants only for contexts passed in the binding", () => {
+        const withContext = `<h3 data-bind="i18n: { key: 'editCustomSorter:heading', options: { context: isNew() ? 'new' : 'edit' } }"></h3>`;
+        const withoutContext = `<h3 data-bind="i18n: 'editCustomSorter:heading'"></h3>`;
+        const withUnknownContext = `<h3 data-bind="i18n: { key: 'editCustomSorter:heading', options: { context: 'clone' } }"></h3>`;
 
-        for (const file of listHtmlFiles(viewsRoot)) {
-            const html = fs.readFileSync(file, "utf8");
-            for (const binding of html.matchAll(i18nBindingRegex)) {
-                for (const match of binding[1].matchAll(keyRegex)) {
-                    const key = match[1];
-                    if (!keyExists(key)) {
-                        missing.push(`${path.relative(viewsRoot, file)}: ${key}`);
-                    }
-                }
-            }
-        }
+        expect(unresolvedKeys(withContext)).toEqual([]);
+        expect(unresolvedKeys(withoutContext)).toEqual(["editCustomSorter:heading"]);
+        expect(unresolvedKeys(withUnknownContext)).toEqual(["editCustomSorter:heading"]);
+    });
+
+    it("every key used in a view exists in en resources", () => {
+        const missing = listHtmlFiles(viewsRoot).flatMap((file) =>
+            unresolvedKeys(fs.readFileSync(file, "utf8")).map((key) => `${path.relative(viewsRoot, file)}: ${key}`)
+        );
 
         expect(missing).toEqual([]);
     });

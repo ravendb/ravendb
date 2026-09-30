@@ -17,6 +17,8 @@ import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import database = require("models/resources/database");
 import i18nModule = require("common/i18n/i18n");
 
+const t = i18nModule.createTranslator("revisionsBin");
+
 class revisionsBin extends shardViewModelBase {
 
     view = require("views/database/documents/revisionsBin.html");
@@ -118,9 +120,9 @@ class revisionsBin extends shardViewModelBase {
         grid.headerVisible(true);
         
         const checkColumn = new checkedColumn(false);
-        const idColumn = new hyperlinkColumn<document>(grid, x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.db), i18nModule.translate("revisionsBin:columns.id"), "300px");
+        const idColumn = new hyperlinkColumn<document>(grid, x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.db), t("columns.id"), "300px");
         const changeVectorColumn = new textColumn<document>(grid, x => x.__metadata.changeVector(), "Change Vector", "210px");
-        const deletionDateColumn = new textColumn<document>(grid, x => generalUtils.formatUtcDateAsLocal(x.__metadata.lastModified()), i18nModule.translate("revisionsBin:columns.deletionDate"), "300px");
+        const deletionDateColumn = new textColumn<document>(grid, x => generalUtils.formatUtcDateAsLocal(x.__metadata.lastModified()), t("columns.deletionDate"), "300px");
 
         const gridColumns = this.isAdminAccessOrAbove() ? [checkColumn, idColumn, changeVectorColumn, deletionDateColumn] : [idColumn, changeVectorColumn, deletionDateColumn];
         grid.init((s) => this.fetchRevisionsBinEntries(s), () => gridColumns);
@@ -150,10 +152,10 @@ class revisionsBin extends shardViewModelBase {
 
         eventsCollector.default.reportEvent("revisionsBin", "delete-selected");
         
-        this.confirmationMessage(i18nModule.translate("revisionsBin:deleteConfirm.title"),
-            i18nModule.translate("revisionsBin:deleteConfirm.message"),
+        this.confirmationMessage(t("deleteConfirm.title"),
+            t("deleteConfirm.message"),
             {
-                buttons: [i18nModule.translate("common:cancel"), i18nModule.translate("revisionsBin:deleteConfirm.confirmButton")],
+                buttons: [t("common:cancel"), t("deleteConfirm.confirmButton")],
                 html: true
             })
             .done(result => {
