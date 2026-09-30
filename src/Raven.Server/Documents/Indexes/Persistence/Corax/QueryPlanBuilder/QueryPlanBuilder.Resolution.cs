@@ -588,6 +588,12 @@ internal static partial class QueryPlanBuilder
             return false;
         }
 
+        if (ctx.BuilderParams.HasDynamics)
+        {
+            rejectReason = "the index writes dynamic fields, which can give a document values the compound key doesn't hold";
+            return false;
+        }
+
         if (field2Range is null && ctx.OrderByFields is [var sortField])
         {
             if (sortField.MayHaveMissingEntries ||
@@ -671,7 +677,7 @@ internal static partial class QueryPlanBuilder
             }
             if (ctx.OrderByFields[0].MayHaveMissingEntries)
             {
-                rejectReason = "some documents have no value for the sort field (a direct scan can't place them in order)";
+                rejectReason = "the sort field's value tree may not reach every document (a direct scan could drop some)";
                 return false;
             }
             if (ctx.OrderByFields[0].FieldType is not (MatchCompareFieldType.Sequence or MatchCompareFieldType.Integer or MatchCompareFieldType.Floating))
@@ -710,6 +716,12 @@ internal static partial class QueryPlanBuilder
         if (ctx.PlanParams.IndexSearcher.HasMultipleTermsInField(ctx.OrderByFields[0].Field))
         {
             rejectReason = "the sort field holds multiple values per document, so its filter can't be safely skipped during the walk";
+            return false;
+        }
+
+        if (ctx.BuilderParams.HasDynamics)
+        {
+            rejectReason = "the index writes dynamic fields, which can give a document several values of the sort field without marking it multi-valued";
             return false;
         }
 

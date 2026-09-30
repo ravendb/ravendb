@@ -67,6 +67,12 @@ internal static partial class QueryPlanBuilder
             {
                 var execs = exec.Executions;
                 bool isFullScan = execs is not { Count: > 0 };
+                // the strategy is cached with the plan, but what the sort field's tree covers changes with indexing
+                if (forced is null && isFullScan && orderByFields[0].MayHaveMissingEntries)
+                {
+                    exec.StrategyGateReason = "the sort field's value tree may not reach every document (a direct scan could drop some)";
+                    goto default;
+                }
                 string directScanReason = forced is not null ? "forced via $rvn_corax_strategy" : null;
                 bool directScanEffective = forced is not null || DirectScanCostEffective(ref ctx, isFullScan, out directScanReason);
                 exec.StrategyGateReason = directScanReason;
