@@ -45,7 +45,8 @@ internal static partial class QueryPlanBuilder
                 if (orderByFields is null)
                     return (innerMatch, innerMatch);
                 // SortingMatch streams and learns with the plan only over a bitmap
-                var sorted = OrderBy(builderParameters, new LazyOrMatch(ctx.PlanParams.IndexSearcher.Allocator, innerMatch, EmptyQueryMatch.Instance, token), orderByFields);
+                IQueryMatch toSort = orderByFields.Length == 1 ? new LazyOrMatch(ctx.PlanParams.IndexSearcher.Allocator, innerMatch, EmptyQueryMatch.Instance, token) : innerMatch;
+                var sorted = OrderBy(builderParameters, toSort, orderByFields);
                 if (sorted is SortingMatch sortingMatch)
                     sortingMatch.StreamScanInflation = compiledPlan.GetOrCreateStreamScanInflation();
                 return (ApplyForcedSort(sorted, forcedSort), innerMatch);

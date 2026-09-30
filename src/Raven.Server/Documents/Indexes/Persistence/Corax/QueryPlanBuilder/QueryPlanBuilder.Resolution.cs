@@ -549,8 +549,8 @@ internal static partial class QueryPlanBuilder
         if (bytes.Contains((byte)0) || bytes.SequenceEqual(boolTerms.True) || bytes.SequenceEqual(boolTerms.False))
             return false;
 
-        var longTerms = fieldMeta.GetNumericFieldMetadata<long>(indexSearcher.Allocator);
-        return indexSearcher.GetLongTermsFor(longTerms.FieldName) is not { NumberOfEntries: > 0 }; // the writer creates it for text fields too
+        return ctx.BuilderParams.IndexFieldsMapping.TryGetByFieldId(fieldMeta.FieldId, out var binding) &&
+               indexSearcher.GetLongTermsFor(binding.FieldNameLong) is not { NumberOfEntries: > 0 }; // the writer creates it for text fields too
     }
 
     // A bool is indexed as "true"/"false" through the field's own analyzer; fixed per index, so the template caches it
