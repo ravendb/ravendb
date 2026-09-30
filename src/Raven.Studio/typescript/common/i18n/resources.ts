@@ -1,6 +1,6 @@
 import enAboutView from "./locales/en/aboutView.json";
 import enCommon from "./locales/en/common.json";
-import enDocuments from "./locales/en/documents.json";
+import enConflicts from "./locales/en/conflicts.json";
 import enDocumentRefresh from "./locales/en/documentRefresh.json";
 import enEditCustomSorter from "./locales/en/editCustomSorter.json";
 import enFeatureAvailabilitySummary from "./locales/en/featureAvailabilitySummary.json";
@@ -8,7 +8,7 @@ import enRevisionsBin from "./locales/en/revisionsBin.json";
 import enStudioGlobalConfiguration from "./locales/en/studioGlobalConfiguration.json";
 import plAboutView from "./locales/pl/aboutView.json";
 import plCommon from "./locales/pl/common.json";
-import plDocuments from "./locales/pl/documents.json";
+import plConflicts from "./locales/pl/conflicts.json";
 import plDocumentRefresh from "./locales/pl/documentRefresh.json";
 import plEditCustomSorter from "./locales/pl/editCustomSorter.json";
 import plFeatureAvailabilitySummary from "./locales/pl/featureAvailabilitySummary.json";
@@ -29,8 +29,8 @@ export const defaultNS = "common";
 const en = {
     aboutView: enAboutView,
     common: enCommon,
+    conflicts: enConflicts,
     documentRefresh: enDocumentRefresh,
-    documents: enDocuments,
     editCustomSorter: enEditCustomSorter,
     featureAvailabilitySummary: enFeatureAvailabilitySummary,
     revisionsBin: enRevisionsBin,
@@ -40,8 +40,8 @@ const en = {
 const pl: typeof en = {
     aboutView: plAboutView,
     common: plCommon,
+    conflicts: plConflicts,
     documentRefresh: plDocumentRefresh,
-    documents: plDocuments,
     editCustomSorter: plEditCustomSorter,
     featureAvailabilitySummary: plFeatureAvailabilitySummary,
     revisionsBin: plRevisionsBin,
