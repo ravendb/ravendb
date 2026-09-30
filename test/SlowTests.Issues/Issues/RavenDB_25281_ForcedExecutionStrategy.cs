@@ -48,6 +48,7 @@ namespace SlowTests.Issues
                 Map = items => from i in items
                                select new { i.Name, i.City, i.Age };
                 CompoundField(i => i.City, i => i.Age);
+                CompoundField(i => i.City, i => i.Name);
             }
         }
 
@@ -156,12 +157,12 @@ namespace SlowTests.Issues
         public void CompoundKeyLookup_MatchesBitmapBaseline()
         {
             using IDocumentStore store = GetSeededStore();
-            // City = $c AND Age = $a, where (City, Age) is exactly the compound field and together they ARE
+            // City = $c AND Name = $n, where (City, Name) is exactly the compound field and together they ARE
             // the whole query — the two-equality collapse into a single composite-key seek.
             AssertForcedMatchesBitmap(store,
-                "from index 'Items/Compound' where City = $c and Age = $a",
+                "from index 'Items/Compound' where City = $c and Name = $n",
                 "CompoundKeyLookup", ordered: false,
-                q => { q.AddParameter("c", "London"); q.AddParameter("a", 40); });
+                q => { q.AddParameter("c", "London"); q.AddParameter("n", "alice"); });
         }
 
         [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]

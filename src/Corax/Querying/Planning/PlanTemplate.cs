@@ -39,6 +39,8 @@ public sealed class PlanTemplate
     public bool CompoundExactAFirst;
     /// <summary>Pre-built <c>compound({firstField},{secondField})</c> tree name for the compound-exact match.</summary>
     public string CompoundExactName;
+    /// <summary>Per compound-exact component: the field's analyzed "true" / "false"; <c>True</c> is null when they can't be known.</summary>
+    public (byte[] True, byte[] False)[] CompoundExactBoolTerms;
 
     /// <summary>Pre-identified compound-field-match (WHERE Equals + ORDER BY) driving clause  index.</summary>
     public int CompoundFieldDrivingClause = -1;

@@ -503,48 +503,69 @@ internal static partial class QueryPlanBuilder
     private static bool IsNullOrMissingValue(QueryExecution exec, PackedParam packed) =>
         packed.IsNone || (packed.ValueType == PackedParam.TypeString && exec.StringValues[packed.Param1] is null or "");
 
-    private static bool TryCreateCompoundExactMatch(ref InstantiateContext ctx, out string rejectReason)
-    {
-        // The only thing still unknown is value-dependent — a value can resolve to "none" (missing) or to null, neither of which has a composite-key encoding.
-        if (IsNullOrMissingValue(ctx.Exec, ctx.Exec.CompoundExactFirst.PackedParamValue) ||
-            IsNullOrMissingValue(ctx.Exec, ctx.Exec.CompoundExactSecond.PackedParamValue))
-        {
-            rejectReason = "the combined-key lookup needs both values, but one is null or missing";
-            return false;
-        }
-
-        rejectReason = null;
-        return true;
-    }
-
-    private static IQueryMatch ConstructCompoundExact(ref InstantiateContext ctx)
+    private static IQueryMatch ConstructCompoundExact(ref InstantiateContext ctx, ResolutionContext walkerCtx)
     {
         var indexSearcher = ctx.PlanParams.IndexSearcher;
-        var eA = ctx.Exec.CompoundExactFirst;
-        var eB = ctx.Exec.CompoundExactSecond;
+        var (firstExec, secondExec) = ctx.Exec.Plan.Template.CompoundExactAFirst
+            ? (ctx.Exec.CompoundExactFirst, ctx.Exec.CompoundExactSecond)
+            : (ctx.Exec.CompoundExactSecond, ctx.Exec.CompoundExactFirst);
 
-        var (firstField, secondField, firstExec, secondExec) = ctx.Exec.Plan.Template.CompoundExactAFirst
-            ? (eA.Clause.ResolvedFieldName ?? eA.Clause.FieldName, eB.Clause.ResolvedFieldName ?? eB.Clause.FieldName, eA, eB)
-            : (eB.Clause.ResolvedFieldName ?? eB.Clause.FieldName, eA.Clause.ResolvedFieldName ?? eA.Clause.FieldName, eB, eA);
-        
-        if (TryGetCompoundFieldEncoding(ref ctx, firstField, firstExec.PackedParamValue, firstExec.PackedParamValue.Param1, out var enc1) == false || 
-            TryGetCompoundFieldEncoding(ref ctx, secondField, secondExec.PackedParamValue, secondExec.PackedParamValue.Param1, out var enc2) == false)
+        if (firstExec.PackedParamValue.ValueType != PackedParam.TypeString || secondExec.PackedParamValue.ValueType != PackedParam.TypeString)
             return null;
 
-        int totalLen = enc1.Size + enc2.Size + 1;
-        if (totalLen > Constants.Terms.MaxLength) 
+        var boolTerms = ctx.Exec.Plan.Template.CompoundExactBoolTerms ??= [AnalyzeBoolLiterals(ref ctx, firstExec), AnalyzeBoolLiterals(ref ctx, secondExec)];
+        if (TryGetCompoundKeyComponent(ref ctx, walkerCtx, firstExec, boolTerms[0], out var first) == false ||
+            TryGetCompoundKeyComponent(ref ctx, walkerCtx, secondExec, boolTerms[1], out var second) == false)
             return null;
 
+        int totalLen = first.Size + second.Size + 1;
         ctx.PlanParams.Allocator.Allocate(totalLen, out ByteString keyBuf);
         var keySpan = keyBuf.ToSpan();
-        var compoundNumericXorMask = ctx.BuilderParams.CompoundFieldNumericXorMask;
-        WriteCompoundFieldEncoding(keySpan.Slice(0, enc1.Size), enc1, ctx.Exec, compoundNumericXorMask);
-        WriteCompoundFieldEncoding(keySpan.Slice(enc1.Size, enc2.Size), enc2, ctx.Exec, compoundNumericXorMask);
-        keySpan[totalLen - 1] = (byte)enc1.Size;
+        first.AsReadOnlySpan().CopyTo(keySpan);
+        second.AsReadOnlySpan().CopyTo(keySpan.Slice(first.Size));
+        keySpan[totalLen - 1] = (byte)first.Size;
 
         var compoundFieldMeta = indexSearcher.FieldMetadataBuilder(ctx.Exec.Plan.Template.CompoundExactName, hasBoost: false);
 
         return indexSearcher.TermQuery(compoundFieldMeta, new Slice(keyBuf));
+    }
+
+    // The key holds each value in its indexed type (numbers 8 bytes, bool 1 byte, char raw bytes, null/"" nothing), while the equality
+    // also matches other types through their text/-L/-D terms. So only text no other type can match is looked up: 2+ bytes, no 0 byte,
+    // not a bool literal, on an indexed field without numbers. Per execution: null shares the plan with strings, numbers come with docs.
+    private static bool TryGetCompoundKeyComponent(ref InstantiateContext ctx, ResolutionContext walkerCtx, ClauseExecution exec, (byte[] True, byte[] False) boolTerms, out Slice term)
+    {
+        term = default;
+        if (boolTerms.True is null)
+            return false;
+
+        var indexSearcher = ctx.PlanParams.IndexSearcher;
+        var fieldMeta = ResolveFieldMetadata(exec.Clause, walkerCtx); // analyze like the equality, exact() included
+        if (indexSearcher.TryAnalyzeSingleToken(fieldMeta, ctx.Exec.StringValues[exec.PackedParamValue.Param1], out term) == false ||
+            term.Size is < 2 or > byte.MaxValue)
+            return false;
+
+        var bytes = term.AsReadOnlySpan();
+        if (bytes.Contains((byte)0) || bytes.SequenceEqual(boolTerms.True) || bytes.SequenceEqual(boolTerms.False))
+            return false;
+
+        return ctx.BuilderParams.IndexFieldsMapping.TryGetByFieldId(fieldMeta.FieldId, out var binding) &&
+               indexSearcher.GetLongTermsFor(binding.FieldNameLong) is not { NumberOfEntries: > 0 }; // the writer creates it for text fields too
+    }
+
+    // A bool is indexed as "true"/"false" through the field's own analyzer; fixed per index, so the template caches it
+    private static (byte[] True, byte[] False) AnalyzeBoolLiterals(ref InstantiateContext ctx, ClauseExecution exec)
+    {
+        var name = exec.Clause.ResolvedFieldName ?? exec.Clause.FieldName;
+        var indexedMeta = QueryBuilderHelper.GetFieldMetadata(in ctx.BuilderParams, name, hasBoost: false, handleSearch: true);
+        if (indexedMeta.Mode == global::Corax.FieldIndexingMode.No ||
+            (indexedMeta.Mode == global::Corax.FieldIndexingMode.Search && ctx.BuilderParams.Index.Definition.IndexFields.TryGetValue(name, out var field) && field.Analyzer != null)) // the reader may swap a [NotForQuerying] analyzer
+            return default;
+
+        var searcher = ctx.PlanParams.IndexSearcher;
+        return searcher.TryAnalyzeSingleToken(indexedMeta, "true", out var t) && searcher.TryAnalyzeSingleToken(indexedMeta, "false", out var f)
+            ? (t.AsReadOnlySpan().ToArray(), f.AsReadOnlySpan().ToArray())
+            : default;
     }
 
     private static bool TryCreateCompoundFieldMatch(ref InstantiateContext ctx, out string rejectReason)
