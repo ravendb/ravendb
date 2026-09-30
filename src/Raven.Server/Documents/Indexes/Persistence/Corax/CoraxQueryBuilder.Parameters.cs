@@ -74,11 +74,12 @@ public partial class CoraxQueryBuilder
             AllowImplicitScoreOrdering = allowImplicitScoreOrdering;
 
             // in case when we've implicit boosting we've built primitives with scoring enabled
-            HasBoost = index.HasBoostedFields
-                       || query.Metadata.HasBoost
-                       || IsVectorSingleClause
-                       || (query.Metadata.HasVectorSearch && index.Configuration.CoraxVectorSearchOrderByScoreAutomatically)
-                       || HasBoostingAsOrderingType(query.Metadata.OrderBy);
+            HasBoost = (index.HasBoostedFields
+                        || query.Metadata.HasBoost
+                        || IsVectorSingleClause
+                        || (query.Metadata.HasVectorSearch && index.Configuration.CoraxVectorSearchOrderByScoreAutomatically)
+                        || HasBoostingAsOrderingType(query.Metadata.OrderBy))
+                       && (query.Metadata.HasVectorSearch || ScoresAreConsumed(query, index, allowImplicitScoreOrdering));
             Allocator = allocator;
             IndexReadOperation = indexReadOperation;
             DeduplicationDisabled = deduplicationDisabled;
@@ -86,6 +87,18 @@ public partial class CoraxQueryBuilder
         
         public bool NeedsScoresBuffer() => HasBoost
             && (Index.Configuration.CoraxIncludeDocumentScore || (IndexReadOperation.IsSharded && Metadata.HasVectorSearch));
+
+        private static bool ScoresAreConsumed(IndexQueryServerSide query, Index index, bool allowImplicitScoreOrdering)
+        {
+            if (query.PageSize == 0)
+                return false;
+
+            if (query.Metadata.OrderBy is not null)
+                return HasBoostingAsOrderingType(query.Metadata.OrderBy);
+
+            return allowImplicitScoreOrdering
+                   && (index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved || index.Configuration.CoraxVectorSearchOrderByScoreAutomatically);
+        }
 
         private static bool HasBoostingAsOrderingType(OrderByField[] orderBy)
         {
