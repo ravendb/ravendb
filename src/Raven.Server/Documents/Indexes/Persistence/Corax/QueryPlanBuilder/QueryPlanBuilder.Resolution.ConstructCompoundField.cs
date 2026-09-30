@@ -50,7 +50,7 @@ internal static partial class QueryPlanBuilder
 
         // When knownTotal resolves the scan is page-bounded even under statistics, compound sort still requires SortingMultiMatch (and thus full results)
         int take = canElideCompoundSort
-            ? (knownTotal >= 0 ? ctx.BuilderParams.Take : ResolveSortedScanTake(ctx.BuilderParams))
+            ? ResolveSortedScanTake(ctx.BuilderParams, knownTotal)
             : Constants.IndexSearcher.TakeAll;
 
         DirectScanMatchBase directScan;

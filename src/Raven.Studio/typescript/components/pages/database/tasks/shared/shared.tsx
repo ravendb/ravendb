@@ -870,7 +870,7 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     title: "CDC Sink",
                     description:
                         "Consume Change Data Capture streams from relational databases and apply inserts, updates, and deletes to documents in RavenDB.",
-                    iconName: "sql-etl",
+                    iconName: "cdc-sink",
                     target: "CdcSink",
                     variant: "Sink",
                     licenseBadge: "Enterprise",

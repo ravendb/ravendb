@@ -4,6 +4,7 @@ using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
+using Raven.Quill.Contracts;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -213,7 +214,7 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output, QuillCo
         await Host.PostConnectionStringAsync(OpenAiCs("list-ops-llm"));
 
         var list = await Host.GetConnectionStringsAsync();
-        var names = list.Select(c => c.Name).ToArray();
+        var names = list.Select(c => c.ConnectionString.Name).ToArray();
 
         // this class shares one server, so sibling tests' strings may be present too
         Assert.Contains("list-demo-llm", names);
@@ -294,6 +295,35 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output, QuillCo
         Assert.Equal(HttpStatusCode.Conflict, ex.StatusCode);
 
         Assert.Contains(provisioned.AgentId, ex.Body);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task List_reports_agents_using_a_connection_string()
+    {
+        await using var app = await NewAppAsync(Host);
+
+        await Host.PostConnectionStringAsync(OpenAiCs("used-by-llm"));
+
+        var prefixed = ServerWideConnectionString.GetDatabaseRecordConnectionStringName("used-by-llm");
+        var csName = (await app.GetConnectionStringsAsync())
+            .Single(c => c.Name == "used-by-llm" || c.Name == prefixed).Name;
+        var provisioned = await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Name = "Support Bot",
+            SystemPrompt = "You help.",
+            ConnectionStringName = csName,
+        });
+
+        var listed = (await Host.GetConnectionStringsAsync())
+            .Single(c => c.ConnectionString.Name == "used-by-llm");
+
+        var usage = Assert.Single(listed.UsedBy);
+        Assert.Equal(provisioned.AgentId, usage.Identifier);
+        Assert.Equal(app.Store.Database, usage.DatabaseName);
+        Assert.Equal(AiConnectionStringUsageKind.AiAgent, usage.Kind);
+
+        var detail = await Host.GetConnectionStringResponseAsync("used-by-llm");
+        Assert.Equal(provisioned.AgentId, Assert.Single(detail.UsedBy).Identifier);
     }
 
     private static AiConnectionString OpenAiCs(string name) => new()

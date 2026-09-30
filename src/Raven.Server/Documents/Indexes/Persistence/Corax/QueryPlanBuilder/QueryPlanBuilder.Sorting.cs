@@ -13,7 +13,6 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
 using Spatial4n.Shapes;
-using Constants = Corax.Constants;
 using SpatialUnits = Raven.Client.Documents.Indexes.Spatial.SpatialUnits;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax.QueryPlanBuilder;
@@ -129,8 +128,7 @@ internal static partial class QueryPlanBuilder
                 p.HasDynamics, p.DynamicFields, p.IndexFieldsMapping, false);
 
             prebuilt[i] = new OrderMetadata(fieldMetadata, field.Ascending, 
-                GetMatchCompareFieldType(orderingType), GetNullsSortMode(field), 
-                mayHaveMissingEntries: fieldMetadata.FieldId == Constants.IndexWriter.DynamicField);
+                GetMatchCompareFieldType(orderingType), GetNullsSortMode(field));
             patches[i].Kind = SortSlotPatchKind.FieldRuntimeResolve;
             patches[i].FieldName = field.Name;
             anyPatch = true;
@@ -318,7 +316,9 @@ internal static partial class QueryPlanBuilder
                     var p = template.Prebuilt[i];
                     bool mayHaveMissingEntries = p.MayHaveMissingEntries
                         || indexSearcher.GetDistinctTermCountInField(fieldMeta) == 0 // no entries at all
-                        || indexSearcher.HasAnyNonExistingEntries(fieldMeta);         
+                        || indexSearcher.HasAnyNonExistingEntries(fieldMeta)
+                        || builderParameters.HasDynamics
+                        || indexSearcher.SortFieldTreeCoversAllEntries(fieldMeta, p.FieldType) == false;
                     result[target] = new OrderMetadata(fieldMeta, p.Ascending, p.FieldType, p.NullsSortMode, mayHaveMissingEntries);
                     break;
                 }

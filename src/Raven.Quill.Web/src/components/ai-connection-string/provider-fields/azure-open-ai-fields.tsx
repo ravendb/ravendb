@@ -3,6 +3,7 @@ import type { AiModelType } from "@/api/generated/server-api";
 import { FormAutocomplete } from "@/components/form/form-autocomplete";
 import { FormInput } from "@/components/form/form-input";
 import type { ConnectionStringFormData } from "@/components/ai-connection-string/ai-connection-string-utils";
+import { useIsModelLocked } from "@/components/ai-connection-string/model-lock-context";
 import { AdvancedFields } from "@/components/ai-connection-string/provider-fields/advanced-fields";
 import {
     DimensionsField,
@@ -14,6 +15,7 @@ import { useAiModelOptions } from "@/components/ai-connection-string/use-ai-mode
 
 export function AzureOpenAiFields({ modelType }: { modelType: AiModelType }) {
     const { control, getValues } = useFormContext<ConnectionStringFormData>();
+    const isModelLocked = useIsModelLocked();
     const isChat = modelType === "Chat";
 
     const settings = getValues("azureOpenAiSettings");
@@ -60,6 +62,7 @@ export function AzureOpenAiFields({ modelType }: { modelType: AiModelType }) {
                 label="Model"
                 placeholder="Select a model or enter a new one"
                 options={models}
+                disabled={isModelLocked}
                 emptyMessage={
                     trimmedApiKey && trimmedEndpoint
                         ? "No models found."
@@ -71,6 +74,7 @@ export function AzureOpenAiFields({ modelType }: { modelType: AiModelType }) {
                 name="azureOpenAiSettings.deploymentName"
                 label="Deployment Name"
                 placeholder="my-deployment"
+                disabled={isModelLocked}
                 description="The name of the deployed Azure OpenAI model."
             />
             <AdvancedFields defaultOpen={hasAdvancedValues}>

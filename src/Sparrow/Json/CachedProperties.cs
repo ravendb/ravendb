@@ -52,7 +52,7 @@ namespace Sparrow.Json
             _docPropNames.Clear();
             _propertiesSortOrder.Clear();
             _propertyNameToId.Clear();
-            _propertiesNeedSorting = false;
+            _propertiesWithoutSortOrder = 0;
             PropertiesDiscovered = 0;
             _hasDuplicates = false;
             DocumentNumber = 0;
@@ -76,7 +76,15 @@ namespace Sparrow.Json
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int Compare(BlittableJsonDocumentBuilder.PropertyTag x, BlittableJsonDocumentBuilder.PropertyTag y)
             {
-                var compare = x.Property.GlobalSortOrder - y.Property.GlobalSortOrder;
+                var xOrder = x.Property.GlobalSortOrder;
+                var yOrder = y.Property.GlobalSortOrder;
+
+                // names discovered since the last renumbering have no global order yet; comparing the names
+                // directly gives the same order the renumbering would, so we can defer that O(N) pass
+                var compare = xOrder != NoSortOrder && yOrder != NoSortOrder
+                    ? xOrder - yOrder
+                    : x.Property.Comparer.CompareTo(y.Property.Comparer);
+
                 if (compare == 0)
                 {
                     properties._hasDuplicates = true;
@@ -178,7 +186,10 @@ namespace Sparrow.Json
         private readonly FastList<PropertyName> _docPropNames = new FastList<PropertyName>();
         private readonly SortedDictionary<PropertyName, object> _propertiesSortOrder = new SortedDictionary<PropertyName, object>();
         private readonly Dictionary<LazyStringValue, PropertyName> _propertyNameToId = new Dictionary<LazyStringValue, PropertyName>(default(LazyStringValueStructComparer));
-        private bool _propertiesNeedSorting;
+        private const int NoSortOrder = -1;
+
+        // names registered since the last UpdatePropertiesSortOrder, they still have NoSortOrder as their GlobalSortOrder
+        private int _propertiesWithoutSortOrder;
 
         public int PropertiesDiscovered;
 
@@ -217,12 +228,12 @@ namespace Sparrow.Json
 
             // PERF: The hash for the property needs to be a hash code, if its not
             //       we will be paying the cost of hash collisions in the sort checks.
-            var prop = new PropertyName(propName.GetHashCode(), propName, -1, propIndex);
+            var prop = new PropertyName(propName.GetHashCode(), propName, NoSortOrder, propIndex);
 
             _docPropNames.Add(prop);
             _propertiesSortOrder.Add(prop, prop);
             _propertyNameToId[propName] = prop;
-            _propertiesNeedSorting = true;
+            _propertiesWithoutSortOrder++;
             if (_docPropNames.Count > PropertiesDiscovered + 1)
             {
                 prop = SwapPropertyIds(prop);
@@ -260,8 +271,12 @@ namespace Sparrow.Json
         {
             var index = GetPropertiesHashedIndex(properties);
 
-            // Sort object properties metadata by property names
-            if (_propertiesNeedSorting)
+            // Sort object properties metadata by property names.
+            // Renumbering the global sort order walks every name this context has ever seen, so we only do it
+            // once the names without an order are a sizable share of the total (amortized O(1) per new name).
+            // Until then the sorter falls back to comparing those names directly. Documents with many distinct
+            // property names (id-keyed maps) used to trigger the full walk on almost every object close.
+            if (_propertiesWithoutSortOrder * 4 > _docPropNames.Count)
             {
                 UpdatePropertiesSortOrder();
             }
@@ -398,7 +413,7 @@ namespace Sparrow.Json
             {
                 o.Key.GlobalSortOrder = index++;
             }
-            _propertiesNeedSorting = false;
+            _propertiesWithoutSortOrder = 0;
         }
 
         private bool _hasDuplicates;

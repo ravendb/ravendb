@@ -1,7 +1,9 @@
 ﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
+import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 import reactUtils = require("common/reactUtils");
 import StatisticsPage = require("components/pages/database/status/statistics/StatisticsPage");
+import TombstonesState = require("components/pages/database/status/tombstones/TombstonesState");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import shardedDatabase = require("models/resources/shardedDatabase");
 import shard = require("models/resources/shard");
@@ -81,6 +83,23 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
                 innerActions: [
                     { name: "Export Ongoing Task Stats" },
                     { name: "Import Ongoing Task Stats" },
+                ],
+            },
+        }),
+        new separatorMenuItem(),
+        new separatorMenuItem('Advanced'),
+        new leafMenuItem({
+            route: 'databases/status/tombstonesState',
+            moduleId: reactUtils.bridgeToReact(TombstonesState.default, "shardedView"),
+            title: 'Tombstones',
+            nav: true,
+            shardingMode: "singleShard",
+            css: 'icon-tombstones',
+            dynamicHash: appUrls.tombstonesState,
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Force cleanup" },
                 ],
             },
         }),

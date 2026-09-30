@@ -12,7 +12,7 @@ import { Icon } from "components/common/Icon";
 import IndexErrorsSheet from "components/pages/database/indexes/errors/IndexErrorsSheet";
 import { OpenSheetOptions, useViewSheet } from "components/common/splitView/ViewSheet";
 import React from "react";
-import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { CellDateWithRelativeTimeWrapper } from "components/common/virtualTable/cells/CellDateWithRelativeTime";
 
 const indexErrorsSheetConfig: Pick<OpenSheetOptions, "initialWidth" | "minWidth" | "maxWidth"> = {
     initialWidth: "60%",
@@ -68,8 +68,8 @@ export function useIndexErrorsPanelColumns(availableWidth: number) {
             },
             {
                 header: "Date",
-                accessorKey: "LocalTime",
-                cell: CellValueRelativeTimeWrapper,
+                accessorKey: "Timestamp",
+                cell: CellDateWithRelativeTimeWrapper,
                 size: getSize(defaultCellSize),
             },
             {
@@ -146,30 +146,6 @@ const CellValueButtonWrapper = ({ row, table }: CellValueButtonWrapperProps) => 
     );
 };
 
-type CellValueRelativeTimeWrapperProps = CellContext<IndexErrorPerDocument, IndexErrorPerDocument["LocalTime"]>;
-
-const CellValueRelativeTimeWrapper = ({ getValue, row }: CellValueRelativeTimeWrapperProps) => {
-    const rowData = row.original;
-
-    return (
-        <PopoverWithHoverWrapper
-            message={
-                <>
-                    <div className="index-errors-details-tooltip__container">
-                        <b>UTC: </b>
-                        <time>{rowData.Timestamp}</time>
-                    </div>
-                    <div className="index-errors-details-tooltip__container">
-                        <b>Relative: </b>
-                        <time>{rowData.RelativeTime}</time>
-                    </div>
-                </>
-            }
-        >
-            <CellValue value={getValue()} />
-        </PopoverWithHoverWrapper>
-    );
-};
 type IndexErrorsCellWithCopyWrapperProps = CellContext<IndexErrorPerDocument, unknown>;
 
 const IndexErrorsCellWithCopyWrapper = ({ getValue, row, table }: IndexErrorsCellWithCopyWrapperProps) => {

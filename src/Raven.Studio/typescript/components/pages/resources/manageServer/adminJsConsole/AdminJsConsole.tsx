@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
@@ -25,8 +26,56 @@ import RunScriptButton from "components/common/RunScriptButton";
 import useBoolean from "components/hooks/useBoolean";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import RichAlert from "components/common/RichAlert";
+import DatabaseUtils from "components/utils/DatabaseUtils";
+import { DatabaseSharedInfo } from "components/models/databases";
 
-const serverTargetValue = "Server";
+type TargetKind = "server" | "database" | "shard" | "orchestrator";
+
+type TargetOption = SelectOptionWithIconAndSeparator & { kind: TargetKind };
+
+const serverTargetValue = "$server";
+
+const accessibleVariableByKind: Record<TargetKind, string> = {
+    server: "server",
+    database: "database",
+    shard: "database",
+    orchestrator: "orchestratorCtx",
+};
+
+function getDatabaseTargets(db: DatabaseSharedInfo): TargetOption[] {
+    if (!db.isSharded) {
+        return db.currentNode.isRelevant
+            ? [{ value: db.name, label: db.name, icon: "database", kind: "database" }]
+            : [];
+    }
+
+    const shardTargets = db.shards
+        .filter((x) => x.currentNode.isRelevant)
+        .map(
+            (x): TargetOption => ({
+                value: x.name,
+                label: DatabaseUtils.formatName(x.name),
+                icon: "shard",
+                iconColor: "shard",
+                kind: "shard",
+            })
+        );
+
+    if (!db.currentNode.isRelevant) {
+        return shardTargets;
+    }
+
+    return [
+        {
+            value: db.name,
+            label: `${db.name} (orchestrator)`,
+            icon: "orchestrator",
+            iconColor: "orchestrator",
+            kind: "orchestrator",
+        },
+        ...shardTargets,
+    ];
+}
 
 // TODO https://issues.hibernatingrhinos.com/issue/RavenDB-7588
 
@@ -37,21 +86,22 @@ export default function AdminJSConsole() {
     const asyncRunAdminJsScript = useAsyncCallback(manageServerService.runAdminJsScript);
     const allDatabases = useAppSelector(databaseSelectors.allDatabases);
 
-    const allDatabaseNames = allDatabases.flatMap((db) => (db.isSharded ? db.shards.map((x) => x.name) : [db.name]));
-
     const adminJsConsoleDocsLink = useRavenLink({ hash: "IBUJ7M" });
 
-    const allTargets: SelectOptionWithIconAndSeparator[] = [
-        {
-            value: serverTargetValue,
-            label: "Server",
-            icon: "server",
-            horizontalSeparatorLine: allDatabaseNames.length > 0,
-        },
-        ...allDatabaseNames.map(
-            (x) => ({ value: x, label: x, icon: "database" }) satisfies SelectOptionWithIconAndSeparator
-        ),
-    ];
+    const allTargets: TargetOption[] = useMemo(() => {
+        const databaseTargets = allDatabases.flatMap(getDatabaseTargets);
+
+        return [
+            {
+                value: serverTargetValue,
+                label: "Server",
+                icon: "server",
+                kind: "server",
+                horizontalSeparatorLine: databaseTargets.length > 0,
+            },
+            ...databaseTargets,
+        ];
+    }, [allDatabases]);
 
     const { handleSubmit, control, reset, formState, watch } = useForm<AdminJsConsoleFormData>({
         resolver: adminJsConsoleYupResolver,
@@ -68,14 +118,18 @@ export default function AdminJSConsole() {
         reportEvent("console", "execute");
 
         tryHandleSubmit(async () => {
-            const databaseTarget = formData.target !== serverTargetValue ? formData.target : undefined;
+            const databaseTarget = formData.target === serverTargetValue ? undefined : formData.target;
             await asyncRunAdminJsScript.execute(formData.scriptText, databaseTarget);
 
             reset(formData);
         });
     };
 
-    const accessibleVariable = watch("target") === serverTargetValue ? "server" : "database";
+    const selectedTarget = watch("target");
+
+    const selectedTargetKind = allTargets.find((x) => x.value === selectedTarget)?.kind ?? "database";
+
+    const accessibleVariable = accessibleVariableByKind[selectedTargetKind];
 
     return (
         <div className="content-margin">

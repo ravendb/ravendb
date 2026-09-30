@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Icon } from "components/common/Icon";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -16,20 +16,7 @@ import messagePublisher from "common/messagePublisher";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { TaskWithErrors, TransformationWithErrors, TaskCategory } from "../utils/tasksErrorsUtils";
 import footer from "common/shell/footer";
-
-function useDeleteConfirmation(isRequireTypedConfirm: boolean) {
-    const [confirmText, setConfirmText] = useState("");
-
-    const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setConfirmText(e.target.value.trim());
-    };
-
-    return {
-        confirmText,
-        handleTextChange,
-        isConfirmed: isRequireTypedConfirm ? confirmText === "DELETE" : true,
-    };
-}
+import useDeleteConfirmation from "hooks/useDeleteConfirmation";
 
 type DeleteErrorsModalProps =
     | {

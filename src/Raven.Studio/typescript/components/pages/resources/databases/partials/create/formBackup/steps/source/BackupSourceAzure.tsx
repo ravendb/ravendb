@@ -12,9 +12,12 @@ import EncryptionField from "components/pages/resources/databases/partials/creat
 import RestorePointsFields, {
     RestorePointElementProps,
 } from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointsFields";
+import AzureAuthTypeToggle from "components/common/formDestinations/AzureAuthTypeToggle";
+import { mapAzureCredentialsToDto } from "components/common/formDestinations/utils/formDestinationsMapsToDto";
 
 export default function BackupSourceAzure() {
     const { control } = useFormContext<FormData>();
+    const authType = useWatch({ control, name: "sourceStep.sourceData.azure.authType" });
 
     return (
         <div className="mt-2">
@@ -32,19 +35,43 @@ export default function BackupSourceAzure() {
                 </Col>
             </Row>
             <Row className="mt-2">
-                <Col lg="3">
-                    <FormLabel className="col-form-label">Account Key</FormLabel>
-                </Col>
-                <Col>
-                    <FormInput
-                        type="password"
-                        control={control}
-                        name="sourceStep.sourceData.azure.accountKey"
-                        placeholder="Enter Azure Storage Account Key"
-                        passwordPreview
-                    />
+                <Col lg={{ offset: 3 }}>
+                    <AzureAuthTypeToggle control={control} name="sourceStep.sourceData.azure.authType" />
                 </Col>
             </Row>
+            {authType === "sasToken" ? (
+                <Row className="mt-2">
+                    <Col lg="3">
+                        <FormLabel className="col-form-label">SAS Token</FormLabel>
+                    </Col>
+                    <Col>
+                        <FormInput
+                            key="sasToken"
+                            type="password"
+                            control={control}
+                            name="sourceStep.sourceData.azure.sasToken"
+                            placeholder="Enter Azure Storage SAS Token"
+                            passwordPreview
+                        />
+                    </Col>
+                </Row>
+            ) : (
+                <Row className="mt-2">
+                    <Col lg="3">
+                        <FormLabel className="col-form-label">Account Key</FormLabel>
+                    </Col>
+                    <Col>
+                        <FormInput
+                            key="accountKey"
+                            type="password"
+                            control={control}
+                            name="sourceStep.sourceData.azure.accountKey"
+                            placeholder="Enter Azure Storage Account Key"
+                            passwordPreview
+                        />
+                    </Col>
+                </Row>
+            )}
             <Row className="mt-2">
                 <Col lg="3">
                     <FormLabel className="col-form-label">Container</FormLabel>
@@ -95,25 +122,35 @@ function SourceRestorePoint({ index, remove }: RestorePointElementProps) {
     });
 
     const asyncGetRestorePointsOptions = useAsyncDebounce(async () => {
-        if (!azureData.accountName || !azureData.accountKey || !azureData.container) {
+        const credentials = mapAzureCredentialsToDto(azureData);
+        const hasCredentials = !!credentials.AccountKey || !!credentials.SasToken;
+
+        if (!azureData.accountName || !hasCredentials || !azureData.container) {
             return [];
         }
 
         const dto = await resourcesService.getRestorePoints_AzureBackup(
             {
-                AccountKey: azureData.accountKey,
+                ...credentials,
                 AccountName: azureData.accountName,
                 StorageContainer: azureData.container,
                 RemoteFolderName: azureData.remoteFolderName,
                 Disabled: false,
                 GetBackupConfigurationScript: null,
-                SasToken: null,
             },
             true,
             isSharded ? index : undefined
         );
         return mapToSelectOptions(dto);
-    }, [azureData.accountName, azureData.accountKey, azureData.container, azureData.remoteFolderName, isSharded]);
+    }, [
+        azureData.authType,
+        azureData.accountName,
+        azureData.accountKey,
+        azureData.sasToken,
+        azureData.container,
+        azureData.remoteFolderName,
+        isSharded,
+    ]);
 
     return (
         <CreateDatabaseFromBackupRestorePoint

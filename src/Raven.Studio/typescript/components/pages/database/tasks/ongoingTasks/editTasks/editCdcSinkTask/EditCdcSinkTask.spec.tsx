@@ -1,6 +1,6 @@
 import { composeStory } from "@storybook/react-webpack5";
 import * as stories from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/EditCdcSinkTask.stories";
-import { act, rtlRender, waitFor, within } from "test/rtlTestUtils";
+import { rtlRender, waitFor, within } from "test/rtlTestUtils";
 import { mockServices } from "test/mocks/services/MockServices";
 import { TasksStubs } from "test/stubs/TasksStubs";
 
@@ -226,12 +226,8 @@ describe("Edit CDC Sink task", () => {
         expect(await screen.findByText("Test mapping")).toBeInTheDocument();
 
         // Remove the table via its actions menu while the test panel is still open.
-        await act(async () => {
-            await user.click(screen.getByTitle("Table actions"));
-        });
-        await act(async () => {
-            await user.click(await screen.findByText(/^Remove$/));
-        });
+        await user.click(screen.getByTitle("Table actions"));
+        await user.click(await screen.findByText(/^Remove$/));
 
         // The page must not crash, and the orphaned test panel must be closed.
         await waitFor(() => expect(screen.queryByText("Test mapping")).not.toBeInTheDocument());
@@ -261,12 +257,8 @@ async function selectOption(
     input: HTMLElement,
     option: string
 ) {
-    await act(async () => {
-        await user.click(input);
-    });
-    await act(async () => {
-        await user.click(await screen.findByText(option));
-    });
+    await user.click(input);
+    await user.click(await screen.findByText(option));
 }
 
 function getSelectInputByLabel(screen: ReturnType<typeof rtlRender>["screen"], label: string) {

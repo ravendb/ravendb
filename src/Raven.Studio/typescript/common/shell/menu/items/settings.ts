@@ -9,7 +9,6 @@ import DocumentRefresh = require("components/pages/database/settings/documentRef
 import DataArchival = require("components/pages/database/settings/dataArchival/DataArchival");
 import DocumentExpiration = require("components/pages/database/settings/documentExpiration/DocumentExpiration");
 import DocumentRevisions = require("components/pages/database/settings/documentRevisions/DocumentRevisions");
-import TombstonesState = require("components/pages/database/settings/tombstones/TombstonesState");
 import DatabaseCustomSorters = require("components/pages/database/settings/customSorters/DatabaseCustomSorters");
 import DatabaseCustomAnalyzers = require("components/pages/database/settings/customAnalyzers/DatabaseCustomAnalyzers");
 import DocumentCompression = require("components/pages/database/settings/documentCompression/DocumentCompression");
@@ -375,21 +374,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-database-id',
             dynamicHash: appUrls.databaseIDs,
             requiredAccess: "Operator"
-        }),
-        new leafMenuItem({
-            route: 'databases/advanced/tombstonesState',
-            moduleId: reactUtils.bridgeToReact(TombstonesState.default, "shardedView"),
-            title: 'Tombstones',
-            nav: true,
-            shardingMode: "singleShard",
-            css: 'icon-tombstones',
-            dynamicHash: appUrls.tombstonesState,
-            requiredAccess: "Operator",
-            search: {
-                innerActions: [
-                    { name: "Force cleanup" },
-                ],
-            },
         })
     ];
 

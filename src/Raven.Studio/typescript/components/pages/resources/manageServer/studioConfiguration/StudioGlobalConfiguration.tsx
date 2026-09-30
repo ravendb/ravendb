@@ -322,16 +322,15 @@ function FontPreviewOption(props: OptionProps<SelectOption<string>>) {
 
 function getPreviewFontFamily(
     hoveredFont: string | null,
-    selectProps: MenuProps<SelectOption<string>>["selectProps"],
-    defaultFont: string
-): string {
+    selectProps: MenuProps<SelectOption<string>>["selectProps"]
+): string | undefined {
     const fontValue = hoveredFont ?? (selectProps.value as SelectOption<string>)?.value ?? "default";
-    return fontValue === "default" ? defaultFont : `"${fontValue}"`;
+    return fontValue === "default" ? undefined : `"${fontValue}"`;
 }
 
 function TableFontMenu(props: MenuProps<SelectOption<string>>) {
     const { hoveredFont } = useContext(FontHoverContext);
-    const fontFamily = getPreviewFontFamily(hoveredFont, props.selectProps, '"Figtree"');
+    const fontFamily = getPreviewFontFamily(hoveredFont, props.selectProps);
 
     return (
         <rsComponents.Menu {...props}>
@@ -346,7 +345,7 @@ function TableFontMenu(props: MenuProps<SelectOption<string>>) {
 
 function CodeFontMenu(props: MenuProps<SelectOption<string>>) {
     const { hoveredFont } = useContext(FontHoverContext);
-    const fontFamily = getPreviewFontFamily(hoveredFont, props.selectProps, "var(--bs-font-monospace)");
+    const fontFamily = getPreviewFontFamily(hoveredFont, props.selectProps);
 
     return (
         <rsComponents.Menu {...props}>
@@ -401,7 +400,7 @@ const vtPreviewColumns: ColumnDef<VtPreviewRow>[] = [
     },
 ];
 
-function VtTablePreview({ fontFamily }: { fontFamily: string }) {
+function VtTablePreview({ fontFamily }: { fontFamily?: string }) {
     const table = useReactTable({
         data: vtPreviewData,
         columns: vtPreviewColumns,
@@ -426,7 +425,7 @@ where Lines.Count > 4
 order by Freight as double
 select Lines[].ProductName as ProductNames, OrderedAt, ShipTo.City`;
 
-function CodePreview({ fontFamily }: { fontFamily: string }) {
+function CodePreview({ fontFamily }: { fontFamily?: string }) {
     return (
         <div
             className="flex-grow-1 p-2 overflow-hidden"

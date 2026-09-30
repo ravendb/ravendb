@@ -77,7 +77,7 @@ const parameterBindingSchema = z
 
 const discordChannelSchema = z.object({
     agentId: z.string().min(1, "Select an agent to route conversations to"),
-    displayName: z.string().trim(),
+    displayName: z.string().trim().min(1, "Channel name is required"),
     botToken: newTokenField(DISCORD_BOT_TOKEN_FORMAT, "Paste the bot token from the app's Bot page"),
     parameters: z.array(parameterBindingSchema),
 });
@@ -155,7 +155,7 @@ function LoadedDiscordChannelForm({
                 type: "Discord",
                 agentId: values.agentId,
                 allowedOrigins: null,
-                displayName: values.displayName.trim() || null,
+                displayName: values.displayName.trim(),
                 discord: {
                     botToken: values.botToken.trim(),
                     parameterBindings: values.parameters.length > 0 ? toParameterBindings(values.parameters) : null,
@@ -250,8 +250,8 @@ function LoadedDiscordChannelForm({
                             control={form.control}
                             name="displayName"
                             label="Channel name"
-                            placeholder="Defaults to the bot's Discord username"
-                            description="Shown in the channels list. Optional."
+                            placeholder="e.g. Community Discord"
+                            description="Shown in the channels list."
                         />
                         <ParameterBindingFields
                             control={form.control}

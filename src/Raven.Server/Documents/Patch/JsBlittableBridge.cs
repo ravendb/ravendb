@@ -540,7 +540,10 @@ namespace Raven.Server.Documents.Patch
 
             using (var writer = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
             {
+                // the context may have already written other documents (e.g. earlier commands in the same merged
+                // transaction); start a new document so the property names table we write holds only our own names
                 context.CachedProperties.NewDocument();
+
                 writer.Reset(usageMode);
                 writer.StartWriteObjectDocument();
 

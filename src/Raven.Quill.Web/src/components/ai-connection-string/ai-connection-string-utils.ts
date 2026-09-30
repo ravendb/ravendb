@@ -1,6 +1,21 @@
 import { z } from "zod";
-import type { AiConnectionString, AiModelType } from "@/api/generated/server-api";
+import type {
+    AiConnectionString,
+    AiConnectionStringUsage,
+    AiConnectionStringUsageKind,
+    AiModelType,
+} from "@/api/generated/server-api";
 import type { FormSelectOption } from "@/components/form/form-select";
+
+// Only GenAI and embeddings tasks store embeddings that a later change would invalidate; agents
+// simply use the new settings on their next call. RavenDB enforces this for per-database connection
+// strings, but not for the server-wide ones Quill writes, so the lock has to hold here.
+// See model-lock-context.ts for the fields it covers and why.
+const MODEL_LOCKING_USAGE_KINDS: AiConnectionStringUsageKind[] = ["EmbeddingsGeneration", "GenAi"];
+
+export function hasModelLockingUsage(usedBy: AiConnectionStringUsage[]): boolean {
+    return usedBy.some((usage) => MODEL_LOCKING_USAGE_KINDS.includes(usage.kind));
+}
 
 // The form keeps one settings object per provider and switches the active one with `provider`,
 // mirroring how RavenDB's Studio edits AI connection strings. The discriminator value is the
@@ -70,6 +85,7 @@ const connectionStringObject = z.object({
         dimensions: z.number().nullable(),
         embeddingsMaxConcurrentBatches: z.number().nullable(),
         enablePromptCache: z.boolean(),
+        reasoningEffort: z.string(),
         isSetTemperature: z.boolean(),
         temperature: z.number().nullable(),
     }),
@@ -213,6 +229,7 @@ export function getDefaultValues(): ConnectionStringFormData {
             dimensions: null,
             embeddingsMaxConcurrentBatches: null,
             enablePromptCache: true,
+            reasoningEffort: "",
             isSetTemperature: false,
             temperature: null,
         },
@@ -302,6 +319,7 @@ export function mapFormDataToDto(values: ConnectionStringFormData, modelType: Ai
                     ...(isChat
                         ? {
                               enablePromptCache: settings.enablePromptCache,
+                              reasoningEffort: trimOrNull(settings.reasoningEffort),
                               temperature: settings.isSetTemperature ? settings.temperature : null,
                           }
                         : {
@@ -459,6 +477,7 @@ export function mapDtoToFormData(dto: AiConnectionString): ConnectionStringFormD
                 dimensions: settings.dimensions ?? null,
                 embeddingsMaxConcurrentBatches: settings.embeddingsMaxConcurrentBatches ?? null,
                 enablePromptCache: settings.enablePromptCache ?? true,
+                reasoningEffort: text(settings.reasoningEffort),
                 isSetTemperature: settings.temperature != null,
                 temperature: settings.temperature ?? null,
             },

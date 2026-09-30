@@ -34,7 +34,7 @@ public class EmbedPageHistoryTests(ITestOutputHelper output) : QuillTestBase(out
             Identifier = "demo", Name = "Demo", SystemPrompt = "You help.", ConnectionStringName = Host.ConnectionStringName,
         });
         var channel = await app.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.IFrame, "demo", [EmbedOrigin]));
+            new ProvisionChannelRequest(ChannelType.IFrame, "demo", [EmbedOrigin], "Storefront widget"));
 
         var token = (await app.MintEmbedLinkAsync(new MintEmbedLinkRequest(channel.ChannelId))).Token;
 

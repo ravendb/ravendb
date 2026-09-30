@@ -138,7 +138,7 @@ namespace Raven.Server.Documents
 
                 _documentDatabase.SchemaValidatorCache?.Validate(collectionName.Name, document, nonPersistentFlags, context);
 
-                var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.GetDocsSchemaForCollection(collectionName, newFlags), collectionName.GetTableName(CollectionTableType.Documents));
+                var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.GetDocsSchemaForCollection(collectionName), collectionName.GetTableName(CollectionTableType.Documents));
 
                 var oldValue = default(TableValueReader);
                 ChangeVector oldChangeVector = null;
@@ -284,6 +284,9 @@ namespace Raven.Server.Documents
                     tvb.Add(modifiedTicks);
                     tvb.Add((int)newFlags);
                     tvb.Add(context.GetTransactionMarker());
+
+                    if (newFlags.Contain(DocumentFlags.Archived))
+                        tvb.TryCompression(table, _documentsStorage.CompressedDocsSchema);
 
                     if (oldValue.Pointer == null)
                     {

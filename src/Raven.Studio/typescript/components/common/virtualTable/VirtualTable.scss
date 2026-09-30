@@ -109,7 +109,7 @@
     }
 
     .document-id-cell {
-        font-family: var(--table-font, "Figtree");
+        font-family: var(--table-font), var(--bs-font-sans-serif);
     }
 
     tbody {

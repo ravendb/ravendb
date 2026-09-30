@@ -93,7 +93,7 @@ namespace SlowTests.Voron.Storage
             if (StorageEnvironmentOptions.RunningOnPosix)
             {
                 var p = Syscall.mmap64(new IntPtr(dataPagerState.ReadAddress + dataPagerState.TotalAllocatedSize), (UIntPtr)16,
-                    MmapProts.PROT_READ | MmapProts.PROT_WRITE, MmapFlags.MAP_ANONYMOUS, -1, 0L);
+                    MmapProts.PROT_READ | MmapProts.PROT_WRITE, PerPlatformValues.MmapFlags.MAP_ANONYMOUS, -1, 0L);
                 if (p.ToInt64() == -1)
                 {
                     return null;

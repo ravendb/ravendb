@@ -157,7 +157,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
                     // Wait for embeddings generation and storage of embeddings cache documents
                     batch.WaitForGenerationAsync().GetAwaiter().GetResult();
                     storageScope.NumberOfEmbeddingsInCache = batch.CachedEmbeddings;
-                    storageScope.NumberOfGeneratedEmbeddings = embeddingsScriptRun.Additions.Count;
+                    storageScope.NumberOfGeneratedEmbeddings = batch.GeneratedEmbeddings;
                 }
 
                 foreach (var embeddingItem in embeddingsScriptRun.Removals)

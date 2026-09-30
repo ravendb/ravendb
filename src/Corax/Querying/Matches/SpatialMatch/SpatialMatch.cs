@@ -12,7 +12,6 @@ using Spatial4n.Shapes;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.RoaringBitmaps;
-using Voron.Util;
 using SpatialRelation = Spatial4n.Shapes.SpatialRelation;
 
 namespace Corax.Querying.Matches.SpatialMatch;
@@ -46,9 +45,10 @@ public sealed class SpatialMatch<TBoosting> : IPostFilterMatch, ISpatialFilterQu
     private readonly CancellationToken _token;
     private bool _isTermMatch;
     private IDisposable _startsWithDisposeHandler;
-    private HashSet<long> _alreadyReturned;
+    // entry -> distance to the shape centre, -1 when it has no matching point
+    private Dictionary<long, double> _alreadyReturned;
+    private double _maxDistance; // the farthest entry this match returned - the least relevant one, which Score grades against
     private long _fieldRootPage;
-    private SpatialScore _spatialScore;
     private double _xShapeCenter;
     private double _yShapeCenter;
     private IQueryMatch _filterQuery;
@@ -64,10 +64,6 @@ public sealed class SpatialMatch<TBoosting> : IPostFilterMatch, ISpatialFilterQu
         CompactTree tree,
         double errorInPercentage, Utils.Spatial.SpatialRelation spatialRelation, CancellationToken token)
     {
-        _spatialScore = default;
-        if (typeof(TBoosting) == typeof(HasBoosting))
-            _spatialScore.Init(allocator);
-        
         _indexSearcher = indexSearcher;
         _spatialContext = spatialContext ?? throw new ArgumentNullException($"{nameof(spatialContext)} passed to {nameof(SpatialMatch)} is null.");
         _field = field;
@@ -182,7 +178,10 @@ public sealed class SpatialMatch<TBoosting> : IPostFilterMatch, ISpatialFilterQu
 
             if (_isTermMatch)
             {
-                currentIdx += kept; // Cell fully inside the shape: every (surviving) entry is a match.
+                // the cell is entirely inside the shape, so every (surviving) entry is a match; Score still needs a distance for each
+                if (typeof(TBoosting) == typeof(HasBoosting))
+                    RecordDistances(slicedMatches[..kept]);
+                currentIdx += kept;
             }
             else
             {
@@ -205,29 +204,66 @@ public sealed class SpatialMatch<TBoosting> : IPostFilterMatch, ISpatialFilterQu
 
     private bool CheckEntryManually(long id)
     {
-        if (_alreadyReturned?.TryGetValue(id, out _) ?? false)
+        if (_alreadyReturned?.ContainsKey(id) ?? false)
         {
             return false;
         }
-        _alreadyReturned ??= new HashSet<long>();
+        _alreadyReturned ??= new Dictionary<long, double>();
+
+        if (TryGetMatchingPoint(id, out var latitude, out var longitude) == false)
+            return false;
+
+        // the entry is open right here, so keep its distance for Score instead of reading it again there
+        Record(id, typeof(TBoosting) == typeof(HasBoosting) ? DistanceFromCentre(latitude, longitude) : 0);
+        return true;
+    }
+
+    // Every entry this match returns has to reach Score with its distance measured, so an entry taken in bulk is opened
+    // here, once - the read Score would otherwise do for it, minus the repeat for an entry that two cells share.
+    private void RecordDistances(Span<long> ids)
+    {
+        _alreadyReturned ??= new Dictionary<long, double>();
+
+        for (int i = 0; i < ids.Length; ++i)
+        {
+            if (i % 1024 == 0)
+                _token.ThrowIfCancellationRequested();
+
+            var id = ids[i];
+            if (_alreadyReturned.ContainsKey(id))
+                continue;
+
+            Record(id, TryGetMatchingPoint(id, out var latitude, out var longitude) ? DistanceFromCentre(latitude, longitude) : -1);
+        }
+    }
+
+    private void Record(long id, double distance)
+    {
+        _alreadyReturned.Add(id, distance);
+        if (distance > _maxDistance)
+            _maxDistance = distance;
+    }
+
+    private double DistanceFromCentre(double latitude, double longitude)
+        => SpatialUtils.HaverstineDistanceInInternationalNauticalMiles(_yShapeCenter, _xShapeCenter, latitude, longitude);
+
+    // The first point of the entry that satisfies the relation.
+    private bool TryGetMatchingPoint(long id, out double latitude, out double longitude)
+    {
         var termsReader = _indexSearcher.GetEntryTermsReader(id, ref _lastPage);
         while (termsReader.MoveNextSpatial())
         {
-            if(termsReader.FieldRootPage != _fieldRootPage)
+            if (termsReader.FieldRootPage != _fieldRootPage)
                 continue;
             _point.Reset(termsReader.Longitude, termsReader.Latitude);
             if (IsTrue(_point.Relate(_shape)))
             {
-                if (_alreadyReturned.Add(id) && typeof(TBoosting) == typeof(HasBoosting))
-                {
-                    ref var spatialScore = ref _spatialScore;
-                    spatialScore.Push(id, (float)SpatialUtils.HaverstineDistanceInInternationalNauticalMiles(_yShapeCenter, _xShapeCenter, termsReader.Longitude, termsReader.Latitude));
-                }
-                
+                (latitude, longitude) = (termsReader.Latitude, termsReader.Longitude);
                 return true;
             }
         }
-        
+
+        latitude = longitude = default;
         return false;
     }
 
@@ -260,6 +296,15 @@ public sealed class SpatialMatch<TBoosting> : IPostFilterMatch, ISpatialFilterQu
     // Spatial scoring is distance-based per entry, independent of order; no sorted fast path.
     public void ScoreSorted(Span<long> matches, Span<float> scores, float boostFactor) => Score(matches, scores, boostFactor);
 
+    /// <summary>
+    /// Calculates relevance by distance to the center of the figure. When spatial relation is not disjoint, we treat the center as the most relevant point and grant it a score of 1.01 (*boostFactor).
+    /// We take the whole result set as a subset, so the farthest point returned by this query is the least relevant point and gets a score of 0.01 (just not being 0).
+    /// Scores for points in between are just proportions between the center and the farthest.
+    ///
+    /// On the other hand, when the query is DISJOINT, we negate the formula. Now the center is the least relevant, and the farthest is most relevant. In this case center is 0.01
+    /// but for most queries there is impossible go get this (it's possible when center is outside body of figure). This allow us to avoid cases when points are very close to each other but gets
+    /// very different scores.
+    /// </summary>
     public void Score(Span<long> matches, Span<float> scores, float boostFactor)
     {
         // CompiledQueryMatch.Score calls every resolved leaf, negated ones included, and a negated leaf is resolved
@@ -267,8 +312,24 @@ public sealed class SpatialMatch<TBoosting> : IPostFilterMatch, ISpatialFilterQu
         if (typeof(TBoosting) != typeof(HasBoosting))
             return;
 
-        _spatialScore.CalculateScore(matches, scores, boostFactor, _spatialRelation);
-        _spatialScore.Dispose();
+        // Fill and AndWith recorded every entry this match returned together with its distance and kept the farthest one,
+        // so this is a single pass with nothing read and nothing allocated. A miss means the entry came from the other
+        // side of an OR and is not ours.
+        if (_maxDistance == 0) // nothing returned, or every matched point sits at the centre - nothing to grade
+            return;
+
+        const double bias = 0.01;
+        for (int i = 0; i < matches.Length; ++i)
+        {
+            if (_alreadyReturned.TryGetValue(matches[i], out var distance) == false || distance < 0)
+                continue;
+
+            var relativeDistance = bias +
+                                   (_spatialRelation is not Utils.Spatial.SpatialRelation.Disjoint
+                                       ? 1.0 - (distance / _maxDistance)
+                                       : (distance / _maxDistance));
+            scores[i] += (float)relativeDistance * boostFactor;
+        }
     }
 
     public QueryInspectionNode Inspect()
@@ -303,70 +364,5 @@ public sealed class SpatialMatch<TBoosting> : IPostFilterMatch, ISpatialFilterQu
 
         _startsWithDisposeHandler?.Dispose();
         _termGenerator?.Dispose();
-    }
-}
-
-internal struct SpatialScore
-{
-    private ByteStringContext _context;
-    private NativeList<long> _matches;
-    private NativeList<double> _distances;
-    private double _maxDistance;
-
-    public SpatialScore()
-    {
-        _matches = default;
-        _distances = default;
-        _maxDistance = double.MinValue;
-    }
-
-    public void Init(ByteStringContext allocator)
-    {
-        _context = allocator;
-    }
-
-    public void Push(long id, double distance)
-    {
-        _matches.Add(_context, id);
-        _distances.Add(_context, distance);
-        _maxDistance = Math.Max(distance, _maxDistance);
-    }
-
-    public void Dispose()
-    {
-        _matches.Dispose(_context);
-        _distances.Dispose(_context);
-    }
-
-    /// <summary>
-    /// Calculates relevance by distance to the center of the figure. When spatial relation is not disjoint, we treat the center as the most relevant point and grant it a score of 1.01 (*boostFactor). 
-    /// We take the whole result set as a subset, so the farthest point returned by this query is the least relevant point and gets a score of 0.01 (just not being 0). 
-    /// Scores for points in between are just proportions between the center and the farthest.
-    ///
-    /// On the other hand, when the query is DISJOINT, we negate the formula. Now the center is the least relevant, and the farthest is most relevant. In this case center is 0.01
-    /// but for most queries there is impossible go get this (it's possible when center is outside body of figure). This allow us to avoid cases when points are very close to each other but gets
-    /// very different scores.
-    /// </summary>
-    /// <param name="matches">Requires sorted, non-encoded ids</param>
-    public void CalculateScore(Span<long> matches, Span<float> scores, float boostFactor, Utils.Spatial.SpatialRelation spatialRelation)
-    {
-        const double bias = 0.01;
-        if (_maxDistance < double.Epsilon)
-            return;
-        
-        var results = _matches.ToSpan();
-        var distances = _distances.ToSpan();
-        
-        for (int idX = 0; idX < results.Length; ++idX)
-        {
-            var incomingIdx = matches.BinarySearch(results[idX]);
-            if (incomingIdx < 0) continue;
-            
-            var relativeDistance = bias +
-                                   (spatialRelation is not Utils.Spatial.SpatialRelation.Disjoint
-                                       ? 1.0 - (distances[idX] / _maxDistance)
-                                       : (distances[idX] / _maxDistance));
-            scores[incomingIdx] += (float)relativeDistance * boostFactor;
-        }
     }
 }

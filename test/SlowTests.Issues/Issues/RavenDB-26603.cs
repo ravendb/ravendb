@@ -11,7 +11,7 @@ namespace SlowTests.Issues;
 
 public class RavenDB_26603(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public void ChunkPlainTextWithContextPrefixShouldPrependPrefixToEachChunk()
     {
         const string plainTextToChunk =
@@ -40,7 +40,7 @@ public class RavenDB_26603(ITestOutputHelper output) : EmbeddingsGenerationTestB
         Assert.All(withPrefix, c => Assert.StartsWith(prefix, c));
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public void ContextPrefixLargerThanMaxTokensShouldThrow()
     {
         const string prefix = "this prefix has a number of tokens that should not fit within the budget";
@@ -57,7 +57,7 @@ public class RavenDB_26603(ITestOutputHelper output) : EmbeddingsGenerationTestB
         Assert.Contains("ContextPrefix is too long", ex.Message);
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public void OverlapLargerThanEffectiveMaxTokensShouldThrow()
     {
         // MaxTokensPerChunk=10, OverlapTokens=8 is valid by itself (8 <= 10).
@@ -96,7 +96,7 @@ public class RavenDB_26603(ITestOutputHelper output) : EmbeddingsGenerationTestB
         Assert.Contains("ContextPrefix cannot be empty or whitespace-only", exception.Message);
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task TextSplitWithContextPrefixInScript()
     {
         const string plainTextToChunk =
@@ -141,7 +141,7 @@ public class RavenDB_26603(ITestOutputHelper output) : EmbeddingsGenerationTestB
             "ChunkedName", expectedChunks, dto.Id);
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task TextWithContextInScript()
     {
         const string title = "Document title";
@@ -170,7 +170,7 @@ public class RavenDB_26603(ITestOutputHelper output) : EmbeddingsGenerationTestB
             "Field", [prefix + title], dto.Id);
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task TextSplitParagraphsWithOverlapAndContextPrefixInScript()
     {
         const string body =
@@ -217,7 +217,7 @@ public class RavenDB_26603(ITestOutputHelper output) : EmbeddingsGenerationTestB
             "Paragraphs", expectedChunks, dto.Id);
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task ObjectWideContextPrefixOnEmbeddingsGenerate()
     {
         const string body =
@@ -260,7 +260,7 @@ public class RavenDB_26603(ITestOutputHelper output) : EmbeddingsGenerationTestB
             "ChunkedName", expectedChunks, dto.Id);
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task ObjectWideContextPrefixDoesNotOverridePerPropertyPrefix()
     {
         const string body =

@@ -105,7 +105,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             Assert.Contains("'orders/1-A' doesn't exists", ex.InnerException?.Message);
         }
 
-        [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+        [RavenTheory(RavenTestCategory.Ai)]
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task Concurrency_When_Resuming_Same_Conversation(Options options, GenAiConfiguration config)
         {

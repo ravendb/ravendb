@@ -36,7 +36,7 @@ internal static partial class QueryPlanBuilder
         long probeTicks = -1; 
         int probeTerms = 0;
         long knownTotal = hasResidual ? -1 : TryResolveDirectScanKnownTotal(ref ctx, walkerCtx, drivingClause, isFullScan, forward, out probeTicks, out probeTerms);
-        int take = knownTotal >= 0 ? ctx.BuilderParams.Take : ResolveSortedScanTake(ctx.BuilderParams);
+        int take = ResolveSortedScanTake(ctx.BuilderParams, knownTotal);
 
         IQueryMatch drivingMatch = hasTieBreak
             ? BuildSortedDrivingWithTieBreakMatch(ctx, tpm.Provider, tpm.Llt, ctx.BuilderParams.Index.Configuration.NullsSortMode, indexSearcher, nullFirst, take)

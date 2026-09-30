@@ -25,13 +25,19 @@ export type CapabilityWizardState = {
     setPromptResult: (result: PromptResult) => void;
     createdAgent: CreatedAgent | null;
     setCreatedAgent: (agent: CreatedAgent) => void;
+    hasEditedIdentifier: boolean;
+    setHasEditedIdentifier: (hasEdited: boolean) => void;
     reset: () => void;
 };
 
-const initialState: Pick<CapabilityWizardState, "suggestions" | "promptResult" | "createdAgent"> = {
+const initialState: Pick<
+    CapabilityWizardState,
+    "suggestions" | "promptResult" | "createdAgent" | "hasEditedIdentifier"
+> = {
     suggestions: [],
     promptResult: null,
     createdAgent: null,
+    hasEditedIdentifier: false,
 };
 
 export const useCapabilityWizardStore = create<CapabilityWizardState>((set) => ({
@@ -39,5 +45,6 @@ export const useCapabilityWizardStore = create<CapabilityWizardState>((set) => (
     setSuggestions: (suggestions) => set({ suggestions }),
     setPromptResult: (promptResult) => set({ promptResult }),
     setCreatedAgent: (createdAgent) => set({ createdAgent }),
+    setHasEditedIdentifier: (hasEditedIdentifier) => set({ hasEditedIdentifier }),
     reset: () => set(initialState),
 }));

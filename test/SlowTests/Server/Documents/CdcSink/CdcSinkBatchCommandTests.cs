@@ -15,6 +15,7 @@ using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Server.Documents;
 using Raven.Server.Documents.CdcSink;
 using Raven.Server.Documents.CdcSink.Commands;
+using Raven.Server.Documents.CdcSink.Stats;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -812,6 +813,37 @@ namespace SlowTests.Server.Documents.CdcSink
                 Assert.Equal("Gadget", products[0]);
                 Assert.Equal("Widget", products[1]);
             }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks)]
+        public async Task ProcessedMessagesCounter_CountsSourceOperationsNotDocuments()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            DynamicJsonValue Order(int version) => new DynamicJsonValue
+            {
+                ["Version"] = version,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Orders"
+                }
+            };
+
+            var ops = new List<CdcSinkDocumentOp>
+            {
+                CreatePutOp("Orders/1", Order(1)),
+                CreatePutOp("Orders/1", Order(2)),
+                CreatePutOp("Orders/2", Order(1))
+            };
+
+            var runStats = new CdcSinkRunStats();
+            var statsScope = new CdcSinkStatsScope(runStats);
+            var cmd = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, statsScope, null, null);
+            await database.TxMerger.Enqueue(cmd);
+
+            Assert.Equal(3, cmd.ProcessedSuccessfully);
+            Assert.Equal(3, runStats.NumberOfProcessedMessages);
         }
 
         [RavenFact(RavenTestCategory.Sinks)]

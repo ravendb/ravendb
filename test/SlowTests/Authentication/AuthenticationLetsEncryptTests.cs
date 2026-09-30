@@ -301,6 +301,11 @@ namespace SlowTests.Authentication
             // It only works because in the TestBase ctor we do:
             // RequestExecutor.ServerCertificateCustomValidationCallback += (msg, cert, chain, errors) => true;
 
+            // Pebble doesn't backdate NotBefore, so a clock skew between the ACME server and machine running the test can make the cert not yet valid
+            var notYetValidFor = serverCert.NotBefore.ToUniversalTime() - DateTime.UtcNow;
+            if (notYetValidFor > TimeSpan.Zero)
+                await Task.Delay(notYetValidFor + TimeSpan.FromSeconds(1));
+
             var serverCertificateForCommunication = SecretProtection.HasCertificateClientAuthEnhancedKeyUsage(serverCert)
                 ? serverCert
                 : CertificateUtils.CreateClientCertificateFromServerCertificate(serverCert, out _);

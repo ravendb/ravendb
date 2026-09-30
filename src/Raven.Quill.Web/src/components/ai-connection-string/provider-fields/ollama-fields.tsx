@@ -4,6 +4,7 @@ import { FormAutocomplete } from "@/components/form/form-autocomplete";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import type { ConnectionStringFormData } from "@/components/ai-connection-string/ai-connection-string-utils";
+import { useIsModelLocked } from "@/components/ai-connection-string/model-lock-context";
 import { AdvancedFields } from "@/components/ai-connection-string/provider-fields/advanced-fields";
 import { ExperimentalProviderAlert } from "@/components/ai-connection-string/provider-fields/experimental-provider-alert";
 import {
@@ -20,6 +21,7 @@ const THINK_OPTIONS: FormSelectOption<ConnectionStringFormData["ollamaSettings"]
 
 export function OllamaFields({ modelType }: { modelType: AiModelType }) {
     const { control, getValues } = useFormContext<ConnectionStringFormData>();
+    const isModelLocked = useIsModelLocked();
     const isChat = modelType === "Chat";
 
     const settings = getValues("ollamaSettings");
@@ -51,6 +53,7 @@ export function OllamaFields({ modelType }: { modelType: AiModelType }) {
                 label="Model"
                 placeholder="Select a model or enter a new one"
                 options={models}
+                disabled={isModelLocked}
                 emptyMessage={trimmedUri ? "No models found." : "Provide a URI to load available models."}
             />
             <AdvancedFields defaultOpen={hasAdvancedValues}>

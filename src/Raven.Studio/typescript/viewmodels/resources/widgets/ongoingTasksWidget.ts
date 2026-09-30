@@ -113,7 +113,7 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
         },
         "CdcSink": {
             nameForUI: "CDC Sink",
-            icon: "icon-sql-etl",
+            icon: "icon-cdc-sink",
             colorClass: "cdc-sink"
         },
     }

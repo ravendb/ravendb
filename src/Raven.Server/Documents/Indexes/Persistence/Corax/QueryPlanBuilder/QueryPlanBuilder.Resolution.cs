@@ -20,6 +20,7 @@ using Sparrow.Server;
 using Voron;
 using Voron.Impl;
 using Constants = Corax.Constants;
+using EntryIdPaginationSupportStatus = Corax.EntryIdPaginationSupportStatus;
 using RavenConstants = Raven.Client.Constants;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 
@@ -588,6 +589,12 @@ internal static partial class QueryPlanBuilder
             return false;
         }
 
+        if (ctx.BuilderParams.HasDynamics)
+        {
+            rejectReason = "the index writes dynamic fields, which can give a document values the compound key doesn't hold";
+            return false;
+        }
+
         if (field2Range is null && ctx.OrderByFields is [var sortField])
         {
             if (sortField.MayHaveMissingEntries ||
@@ -671,7 +678,7 @@ internal static partial class QueryPlanBuilder
             }
             if (ctx.OrderByFields[0].MayHaveMissingEntries)
             {
-                rejectReason = "some documents have no value for the sort field (a direct scan can't place them in order)";
+                rejectReason = "the sort field's value tree may not reach every document (a direct scan could drop some)";
                 return false;
             }
             if (ctx.OrderByFields[0].FieldType is not (MatchCompareFieldType.Sequence or MatchCompareFieldType.Integer or MatchCompareFieldType.Floating))
@@ -713,6 +720,12 @@ internal static partial class QueryPlanBuilder
             return false;
         }
 
+        if (ctx.BuilderParams.HasDynamics)
+        {
+            rejectReason = "the index writes dynamic fields, which can give a document several values of the sort field without marking it multi-valued";
+            return false;
+        }
+
         if (ctx.Exec.Plan.DirectScanResidualSet is null)
         {
             rejectReason = "a filter can't be checked per-document during the scan";
@@ -731,8 +744,15 @@ internal static partial class QueryPlanBuilder
 
     // Compute how many results a direct scan needs to provide. Ideally, we can stoke at Take items, but we may
     // have a filter post query, or need to provide the total result count, etc - that requires more work on our part.
-    private static int ResolveSortedScanTake(QueryBuilderParameters builderParams)
+    private static int ResolveSortedScanTake(QueryBuilderParameters builderParams, long knownTotal = -1)
     {
+        // The take counts entries, so it bounds the page only while every entry is a distinct document (RavenDB-27564)
+        if (builderParams?.IndexSearcher.EntryIdPaginationSupportStatus is not EntryIdPaginationSupportStatus.Supported)
+            return Constants.IndexSearcher.TakeAll;
+
+        if (knownTotal >= 0)
+            return builderParams.Take;
+
         if (HasServerSideFilter(builderParams) || ConsumesExactTotal(builderParams))
             return Constants.IndexSearcher.TakeAll;
 
@@ -783,6 +803,7 @@ internal static partial class QueryPlanBuilder
     {
         return builderParams switch
         {
+            { IndexSearcher.EntryIdPaginationSupportStatus: not EntryIdPaginationSupportStatus.Supported } => "index emits several entries per document",
             { Metadata.Query.Filter: not null } => "post-filter present", 
             { Query.IsCountQuery: true } => "count query",
             { Query.SkipStatistics: false } => "statistics requested (SkipStatistics=false, requires count)",
