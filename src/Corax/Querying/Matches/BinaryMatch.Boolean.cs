@@ -160,6 +160,13 @@ namespace Corax.Querying.Matches
                     });
             }
 
+            static int FillEmpty(ref BinaryMatch<TInner, TOuter, TBinaryOperationMarker> match, Span<long> matches) => 0;
+
+            static int AndWithEmpty(ref BinaryMatch<TInner, TOuter, TBinaryOperationMarker> match, Span<long> buffer, int matches) => 0;
+
+            if ((inner.Count == 0 && inner.Confidence == QueryCountConfidence.High) || (outer.Count == 0 && outer.Confidence == QueryCountConfidence.High))
+                return new BinaryMatch<TInner, TOuter, TBinaryOperationMarker>(searcher, in inner, in outer, &FillEmpty, &AndWithEmpty, &InspectFunc, 0, QueryCountConfidence.High, SkipSortingResult.ResultsNativelySorted, DuplicatesOccurrence.NotPossible, token);
+
             // Estimate Confidence values.
             QueryCountConfidence confidence;
             if (inner.Count < outer.Count / 2)
