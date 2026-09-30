@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Esprima.Ast;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -103,7 +102,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private void VisitCatchClause(CatchClause catchClause)
         {
-            VisitIdentifier(catchClause.Param.As<Identifier>());
+            if (catchClause.Param != null)
+                VisitBindingTarget(catchClause.Param);
             VisitStatement(catchClause.Body);
         }
 
@@ -133,11 +133,50 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             foreach (var declaration in variableDeclaration.Declarations)
             {
-                VisitIdentifier(declaration.Id.As<Identifier>());
+                VisitBindingTarget(declaration.Id);
                 if (declaration.Init != null)
                 {
                     VisitExpression(declaration.Init);
                 }
+            }
+        }
+
+        private void VisitBindingTarget(Node target)
+        {
+            switch (target)
+            {
+                case ObjectPattern objectPattern:
+                    foreach (var member in objectPattern.Properties)
+                    {
+                        if (member is Property property)
+                        {
+                            if (property.Computed)
+                                VisitExpression(property.Key);
+                            VisitBindingTarget(property.Value);
+                        }
+                        else
+                        {
+                            VisitBindingTarget(member);
+                        }
+                    }
+                    break;
+                case ArrayPattern arrayPattern:
+                    foreach (var element in arrayPattern.Elements)
+                    {
+                        if (element != null)
+                            VisitBindingTarget(element);
+                    }
+                    break;
+                case AssignmentPattern assignmentPattern:
+                    VisitBindingTarget(assignmentPattern.Left);
+                    VisitExpression(assignmentPattern.Right);
+                    break;
+                case RestElement restElement:
+                    VisitBindingTarget(restElement.Argument);
+                    break;
+                default:
+                    Visit(target);
+                    break;
             }
         }
 
@@ -249,10 +288,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public virtual void VisitForInStatement(ForInStatement forInStatement)
         {
-            Identifier identifier = forInStatement.Left.Type == Nodes.VariableDeclaration
-                ? forInStatement.Left.As<VariableDeclaration>().Declarations.First().Id.As<Identifier>()
-                : forInStatement.Left.As<Identifier>();
-            VisitExpression(identifier);
+            VisitBindingTarget(forInStatement.Left);
             VisitExpression(forInStatement.Right);
             VisitStatement(forInStatement.Body);
         }
@@ -783,7 +819,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public virtual void VisitAssignmentExpression(AssignmentExpression assignmentExpression)
         {
-            VisitExpression(assignmentExpression.Left.As<Expression>());
+            VisitBindingTarget(assignmentExpression.Left);
             VisitExpression(assignmentExpression.Right.As<Expression>());
         }
 
