@@ -36,6 +36,7 @@ public partial class CoraxQueryBuilder
         public readonly Lazy<List<string>> DynamicFields;
         public readonly ByteStringContext Allocator;
         public readonly bool HasBoost;
+        public readonly bool AllowImplicitScoreOrdering;
         public readonly bool DeduplicationDisabled;
         public readonly IndexReadOperationBase IndexReadOperation;
         public StreamingOptimization StreamingDisabled;
@@ -45,7 +46,7 @@ public partial class CoraxQueryBuilder
 
         internal Parameters(IndexSearcher searcher, ByteStringContext allocator, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext,
             IndexQueryServerSide query, Index index, BlittableJsonReaderObject queryParameters, QueryBuilderFactories factories, IndexFieldsMapping indexFieldsMapping,
-            FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, bool deduplicationDisabled, IndexReadOperationBase indexReadOperation = null, List<string> buildSteps = null, QueryTimeScope queryTime = null, QueryTimingsScope queryTimings = null, CancellationToken token = default)
+            FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, bool deduplicationDisabled, IndexReadOperationBase indexReadOperation = null, List<string> buildSteps = null, QueryTimeScope queryTime = null, QueryTimingsScope queryTimings = null, CancellationToken token = default, bool allowImplicitScoreOrdering = true)
         {
             QueryTime = queryTime;
             QueryTimings = queryTimings;
@@ -69,6 +70,8 @@ public partial class CoraxQueryBuilder
             DynamicFields = HasDynamics
                 ? new Lazy<List<string>>(() => IndexSearcher.GetFields())
                 : null;
+
+            AllowImplicitScoreOrdering = allowImplicitScoreOrdering;
 
             // in case when we've implicit boosting we've built primitives with scoring enabled
             HasBoost = index.HasBoostedFields
