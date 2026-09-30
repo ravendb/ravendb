@@ -38,6 +38,7 @@ namespace Corax.Querying.Matches
 
         private bool _doNotSortResults;
 
+        private readonly bool _innerIsEmpty;
         private readonly bool _useBitmap;
         private readonly bool _useBitmapForAndWith;
         private readonly long _lastEntryId;
@@ -71,6 +72,7 @@ namespace Corax.Querying.Matches
 
             _context = context;
             _isAndWithBuffer = false;
+            _innerIsEmpty = inner.Count == 0 && inner.Confidence == QueryCountConfidence.High && inner.IsBoosting == false;
             _useBitmap = useBitmap;
             _useBitmapForAndWith = useBitmapForAndWith;
             _lastEntryId = lastEntryId;
@@ -85,6 +87,9 @@ namespace Corax.Querying.Matches
         {
             if (_isAndWithBuffer)
                 throw new InvalidOperationException($"We cannot execute `{nameof(Fill)}` after initiating a `{nameof(AndWith)}` operation.");
+
+            if (_innerIsEmpty)
+                return 0;
 
             if (_useBitmap)
                 return FillViaBitmap(matches);
