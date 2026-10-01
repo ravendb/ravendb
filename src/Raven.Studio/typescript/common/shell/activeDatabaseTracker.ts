@@ -5,6 +5,11 @@ import messagePublisher = require("common/messagePublisher");
 import databaseSettings = require("common/settings/databaseSettings");
 import studioSettings = require("common/settings/studioSettings");
 
+interface databaseActivation {
+    db: database;
+    task: JQueryDeferred<void>;
+}
+
 class activeDatabaseTracker {
 
     static default: activeDatabaseTracker = new activeDatabaseTracker();
@@ -12,6 +17,8 @@ class activeDatabaseTracker {
     database: KnockoutObservable<database> = ko.observable<database>();
     
     settings: KnockoutObservable<databaseSettings> = ko.observable<databaseSettings>();
+
+    private pendingActivation: databaseActivation = null;
 
     constructor() {
         ko.postbox.subscribe(EVENTS.Database.Disconnect, (e: databaseDisconnectedEventArgs) => {
@@ -39,20 +46,42 @@ class activeDatabaseTracker {
         studioSettings.default.init(this.settings);
     }
 
+    getActivationTask(db: database): JQueryPromise<void> | null {
+        if (this.pendingActivation) {
+            return this.pendingActivation.db.name === db.name ? this.pendingActivation.task : null;
+        }
+
+        return this.database()?.name === db.name ? $.Deferred<void>().resolve() : null;
+    }
+
     onActivation(db: database): JQueryPromise<void> {
-        const task = $.Deferred<void>();
+        this.pendingActivation?.task.reject();
+
+        const activation: databaseActivation = { db, task: $.Deferred<void>() };
+        this.pendingActivation = activation;
 
         studioSettings.default.forDatabase(db)
             .done((settings) => {
+                if (this.pendingActivation !== activation) {
+                    return;
+                }
 
+                this.pendingActivation = null;
                 this.settings(settings);
                 // Set the active database
                 this.database(db);
-                task.resolve();
+                activation.task.resolve();
             })
-            .fail(() => task.reject());
+            .fail(() => {
+                if (this.pendingActivation !== activation) {
+                    return;
+                }
 
-        return task;
+                this.pendingActivation = null;
+                activation.task.reject();
+            });
+
+        return activation.task;
     }
 
     private onDatabasesPage() {
