@@ -257,6 +257,8 @@ public struct MultiVectorSearchMatch : IQueryMatch
 
     public long Count { get; private set; }
 
+    internal bool ReturnsResultsByDistance => _singleVectorSearchDoNotSort;
+
     public SkipSortingResult AttemptToSkipSorting()
     {
         return _singleVectorSearchDoNotSort

@@ -171,7 +171,7 @@ public sealed unsafe class Bm25Relevance : IDisposable
     /// Index of the first item not smaller than the value, searched from start. Galloping pays off when the items are dense
     /// relative to the lookups, otherwise a binary search of the remaining items is cheaper.
     /// </summary>
-    private static int FindLowerBound(Span<long> items, int start, long value, bool gallop)
+    internal static int FindLowerBound(Span<long> items, int start, long value, bool gallop)
     {
         if (gallop == false)
         {
