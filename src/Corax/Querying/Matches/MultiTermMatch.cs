@@ -85,7 +85,7 @@ namespace Corax.Querying.Matches
                 _termReader = new MultiTermReader(indexSearcher);
             else
             {
-                var result = _inner.Next(out _currentTerm);
+                var result = NextTerm();
                 if (result == false)
                     _current = QueryMatch.Invalid;
                 else
@@ -334,7 +334,7 @@ namespace Corax.Querying.Matches
                 {
                     _token.ThrowIfCancellationRequested();
                     AddTermToBm25();
-                    if (_inner.Next(out _currentTerm) == false || 
+                    if (NextTerm() == false ||
                         ++_readTerms >= _maxNumberOfTerms)
                     {
                         _current = QueryMatch.Invalid;
@@ -475,7 +475,7 @@ namespace Corax.Querying.Matches
 
             var actualMatches = buffer.Slice(0, matches);
 
-            bool hasData = _inner.Next(out _currentTerm);
+            bool hasData = NextTerm();
             AddTermToBm25();
 
             long totalRead = _currentTerm.Count;
@@ -493,7 +493,7 @@ namespace Corax.Querying.Matches
                     totalRead += _currentTerm.Count;
                 }
 
-                hasData = _inner.Next(out _currentTerm);
+                hasData = NextTerm();
                 AddTermToBm25();
             }
 
@@ -507,6 +507,18 @@ namespace Corax.Querying.Matches
             results[0..totalSize].CopyTo(buffer);
 
             return totalSize;
+        }
+
+        private bool NextTerm()
+        {
+            if (_inner.Next(out var termId, out var termRatioToWholeCollection) == false)
+            {
+                _currentTerm = TermMatch.CreateEmpty(_indexSearcher, _context);
+                return false;
+            }
+
+            _currentTerm = _indexSearcher.TermQuery(termId, termRatioToWholeCollection, isBoosting: _scoringMode == ScoringMode.Bm25);
+            return true;
         }
 
         private void ResetBm25Buffer()

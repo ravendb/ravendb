@@ -14,13 +14,13 @@ namespace Corax.Querying.Matches.TermProviders
     public struct StartsWithTermProvider<TLookupIterator> : ITermProvider
         where TLookupIterator : struct, ILookupIterator
     {
-        private readonly CompactTree _tree;
         private readonly Querying.IndexSearcher _searcher;
         private readonly FieldMetadata _field;
         private readonly CompactKey _startWith;
         private readonly CompactKey _startWithLimit;
         private readonly bool _validatePostfixLen;
         private readonly CancellationToken _token;
+        private readonly double _averageTermLength;
         private bool _firstRun;
 
         private CompactTree.Iterator<TLookupIterator> _iterator;
@@ -29,12 +29,12 @@ namespace Corax.Querying.Matches.TermProviders
         {
             _searcher = searcher;
             _field = field;
+            _averageTermLength = field.HasBoost ? searcher.GetAverageTermLength(field, tree) : 0;
             _iterator = tree.Iterate<TLookupIterator>();
             _startWith = startWith;
             _startWithLimit = seekTerm;
             _validatePostfixLen = validatePostfixLen;
             _token = token;
-            _tree = tree;
 
             Reset();
         }
@@ -59,20 +59,18 @@ namespace Corax.Querying.Matches.TermProviders
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Next(out TermMatch term)
+        public bool Next(out long termId, out double termRatioToWholeCollection)
         {
             ReadOnlySpan<byte> decodedStartsWith = _startWith.Decoded();
+            termRatioToWholeCollection = 1;
 
             using var scope = new CompactKeyCacheScope(_searcher._transaction.LowLevelTransaction);
             CompactKey compactKey = scope.Key;
             ReadOnlySpan<byte> key;
             while (true)
             {
-                if (_iterator.MoveNext(compactKey, out _, out _) == false)
-                {
-                    term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
+                if (_iterator.MoveNext(compactKey, out termId, out _) == false)
                     return false;
-                }
 
                 key = compactKey.Decoded();
                 if (_validatePostfixLen == false  || 
@@ -91,16 +89,13 @@ namespace Corax.Querying.Matches.TermProviders
             if (_firstRun && default(TLookupIterator).IsForward == false && key.StartsWith(decodedStartsWith) == false)
             {
                 _firstRun = false;
-                return Next(out term);
+                return Next(out termId, out termRatioToWholeCollection);
             }
 
             if (key.StartsWith(decodedStartsWith) == false)
-            {
-                term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
                 return false;
-            }
 
-            term = _searcher.TermQuery(_field, compactKey, _tree);
+            termRatioToWholeCollection = Querying.IndexSearcher.GetTermRatioToWholeCollection(compactKey, _averageTermLength);
             return true;
         }
 

@@ -67,20 +67,45 @@ public partial class IndexSearcher
 
     public TermMatch TermQuery(in FieldMetadata field, string term, CompactTree termsTree = null)
     {
+        return TryGetTermId(field, term, out var termId, out var termRatioToWholeCollection, termsTree)
+            ? TermQuery(field, termId, termRatioToWholeCollection)
+            : TermMatch.CreateEmpty(this, Allocator);
+    }
+
+    public TermMatch TermQuery(in FieldMetadata field, Slice term, CompactTree termsTree = null)
+    {
+        return TryGetTermId(field, term, out var termId, out var termRatioToWholeCollection, termsTree)
+            ? TermQuery(field, termId, termRatioToWholeCollection)
+            : TermMatch.CreateEmpty(this, Allocator);
+    }
+
+    public TermMatch TermQuery(in FieldMetadata field, CompactKey term, CompactTree tree)
+    {
+        if (TryGetTermId(field, term, tree, out var termId, out var termRatioToWholeCollection) == false)
+            return TermMatch.CreateEmpty(this, Allocator);
+
+        var matches = TermQuery(field, termId, termRatioToWholeCollection);
+
+        #if DEBUG
+        matches.Term = Encoding.UTF8.GetString(term.Decoded());
+        #endif
+        return matches;
+    }
+
+    internal bool TryGetTermId(in FieldMetadata field, string term, out long termId, out double termRatioToWholeCollection, CompactTree termsTree = null)
+    {
+        termId = -1;
+        termRatioToWholeCollection = 1;
         var terms = termsTree ?? _fieldsTree?.CompactTreeFor(field.FieldName);
         if (terms == null && term != null)
         {
-            // If either the term or the field does not exist the request will be empty. 
-            return TermMatch.CreateEmpty(this, Allocator);
+            // If either the term or the field does not exist the request will be empty.
+            return false;
         }
-        
+
         if (term is null || ReferenceEquals(term, Constants.ProjectionNullValue))
-        {
-            return TryGetPostingListForNull(field, out var postingListId) 
-                ? TermQuery(field, postingListId, 1D) 
-                : TermMatch.CreateEmpty(this, Allocator);
-        }
-        
+            return TryGetPostingListForNull(field, out termId);
+
         var termSlice = term switch
         {
             Constants.EmptyString => Constants.EmptyStringSlice,
@@ -88,85 +113,84 @@ public partial class IndexSearcher
         };
 
         if (termSlice.Size == 0)
-            return TermMatch.CreateEmpty(this, Allocator);
+            return false;
 
         using var termKeyScope = new CompactKeyCacheScope(_fieldsTree.Llt);
         var termKey = termKeyScope.Key;
         termKey.Set(termSlice.AsReadOnlySpan());
-        return TermQuery(field, termKey, terms);
+        return TryGetTermId(field, termKey, terms, out termId, out termRatioToWholeCollection);
     }
 
-    //Should be already analyzed...
-    public TermMatch TermQuery(in FieldMetadata field, Slice term, CompactTree termsTree = null)
+    internal bool TryGetTermId(in FieldMetadata field, Slice term, out long termId, out double termRatioToWholeCollection, CompactTree termsTree = null)
     {
+        termId = -1;
+        termRatioToWholeCollection = 1;
         var terms = termsTree ?? _fieldsTree?.CompactTreeFor(field.FieldName);
         if (terms == null)
         {
             // If either the term or the field does not exist the request will be empty.
-            return TermMatch.CreateEmpty(this, Allocator);
+            return false;
         }
 
         if (term.Size == 0)
-            return TermQuery(field, (CompactKey)null, terms);
+            return TryGetTermId(field, (CompactKey)null, terms, out termId, out termRatioToWholeCollection);
 
         using var termKeyScope = new CompactKeyCacheScope(_fieldsTree.Llt);
         var termKey = termKeyScope.Key;
         termKey.Set(term.AsReadOnlySpan());
-        return TermQuery(field, termKey, terms);
+        return TryGetTermId(field, termKey, terms, out termId, out termRatioToWholeCollection);
     }
 
-    public TermMatch TermQuery(in FieldMetadata field, CompactKey term, CompactTree tree)
+    internal bool TryGetTermId(in FieldMetadata field, CompactKey term, CompactTree tree, out long termId, out double termRatioToWholeCollection)
     {
-        if (tree.TryGetValue(term, out var value) == false)
-            return TermMatch.CreateEmpty(this, Allocator);
+        termRatioToWholeCollection = 1;
+        if (tree.TryGetValue(term, out termId) == false)
+            return false;
 
         // Calculate bias for BM25 only when needed. There is no reason to calculate this in BM25 class because it would require to pass more information to primitive (and there is no reason to do so).
-        double termRatioToWholeCollection = 1;
         if (field.HasBoost)
-        {
-            termRatioToWholeCollection = GetTermRatioToWholeCollection(field, term, tree);
-        }
+            termRatioToWholeCollection = GetTermRatioToWholeCollection(term, GetAverageTermLength(field, tree));
 
-        var matches = TermQuery(field, value, termRatioToWholeCollection);
-        
-        #if DEBUG
-        matches.Term = Encoding.UTF8.GetString(term.Decoded());
-        #endif
-        return matches;
+        return true;
     }
 
-    private double GetTermRatioToWholeCollection(in FieldMetadata field, CompactKey term, CompactTree tree)
+    /// <summary>
+    /// Average byte length of the field's terms, 0 when it is unknown (the ratio is then 1).
+    /// </summary>
+    internal double GetAverageTermLength(in FieldMetadata field, CompactTree tree)
     {
-        double termRatioToWholeCollection;
         var totalTerms = tree.NumberOfEntries;
         long totalSum = totalTerms;
         if (_metadataTree.TryRead(field.TermLengthSumName, out var totalSumReader))
             totalSum = totalSumReader.ReadLittleEndianInt64();
 
-        if (totalTerms == 0 || totalSum == 0)
-            termRatioToWholeCollection = 1;
-        else
-            termRatioToWholeCollection = term.Decoded().Length / (totalSum / (double)totalTerms);
-        return termRatioToWholeCollection;
+        return totalTerms == 0 || totalSum == 0 ? 0 : totalSum / (double)totalTerms;
     }
 
-    internal TermMatch TermQuery(in FieldMetadata field, long containerId, double termRatioToWholeCollection)
+    internal static double GetTermRatioToWholeCollection(CompactKey term, double averageTermLength)
+    {
+        return averageTermLength == 0 ? 1 : term.Decoded().Length / averageTermLength;
+    }
+
+    internal TermMatch TermQuery(in FieldMetadata field, long containerId, double termRatioToWholeCollection) => TermQuery(containerId, termRatioToWholeCollection, field.HasBoost);
+
+    internal TermMatch TermQuery(long containerId, double termRatioToWholeCollection, bool isBoosting)
     {
         TermMatch matches;
         if ((containerId & (long)TermIdMask.PostingList) != 0)
         {
             var postingList = GetPostingList(containerId);
-            matches = TermMatch.YieldSet(this, Allocator, postingList, termRatioToWholeCollection, field.HasBoost, IsAccelerated);
+            matches = TermMatch.YieldSet(this, Allocator, postingList, termRatioToWholeCollection, isBoosting, IsAccelerated);
         }
         else if ((containerId & (long)TermIdMask.SmallPostingList) != 0)
         {
             var smallSetId = EntryIdEncodings.GetContainerId(containerId);
             Container.Get(_transaction.LowLevelTransaction, smallSetId, out var small);
-            matches = TermMatch.YieldSmall(this, Allocator, small, termRatioToWholeCollection, field.HasBoost);
+            matches = TermMatch.YieldSmall(this, Allocator, small, termRatioToWholeCollection, isBoosting);
         }
         else
         {
-            matches = TermMatch.YieldOnce(this, Allocator, containerId, termRatioToWholeCollection, field.HasBoost);
+            matches = TermMatch.YieldOnce(this, Allocator, containerId, termRatioToWholeCollection, isBoosting);
         }
 
         return matches;
