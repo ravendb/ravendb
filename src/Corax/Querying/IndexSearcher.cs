@@ -36,6 +36,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private const long BitmapAndFillDensityDivisor = 256;
     private const long BitmapOrFillDensityDivisor = 32;
     internal const int BitmapAndFillSingleBatchThreshold = 4096;
+    private const int DocumentBoostLookupRatio = 32;
     
     internal readonly Transaction _transaction;
     private Dictionary<string, Slice> _dynamicFieldNameMapping;
@@ -502,6 +503,53 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     internal FixedSizeTree GetDocumentBoostTree()
     {
         return _transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
+    }
+
+    internal void BoostDocuments(Span<long> matches, Span<float> scores, bool sortedById)
+    {
+        var tree = GetDocumentBoostTree();
+        if (tree.NumberOfEntries == 0 || matches.IsEmpty)
+            return;
+
+        Debug.Assert(sortedById == false || IsSortedById(matches), "Matches flagged as sorted by id are not sorted by id.");
+
+        if (tree.NumberOfEntries > (long)matches.Length * DocumentBoostLookupRatio || sortedById == false)
+        {
+            for (var i = 0; i < matches.Length; i++)
+            {
+                var boost = (float*)tree.ReadPtr(matches[i], out _);
+                if (boost != null)
+                    scores[i] *= *boost;
+            }
+
+            return;
+        }
+
+        using var iterator = tree.Iterate();
+        if (iterator.Seek(matches[0]) == false)
+            return;
+
+        var position = 0;
+        do
+        {
+            position = Bm25Relevance.FindLowerBound(matches, position, iterator.CurrentKey, gallop: true);
+            if (position == matches.Length)
+                return;
+
+            if (matches[position] == iterator.CurrentKey)
+                scores[position] *= *(float*)iterator.ValuePtr(out _);
+        } while (iterator.MoveNext());
+
+        static bool IsSortedById(Span<long> matches)
+        {
+            for (var i = 1; i < matches.Length; i++)
+            {
+                if (matches[i - 1] > matches[i])
+                    return false;
+            }
+
+            return true;
+        }
     }
 
 

@@ -1286,9 +1286,9 @@ public static partial class CoraxQueryBuilder
                     index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved 
                     || index.Configuration.CoraxVectorSearchOrderByScoreAutomatically))
             {
-                // in case when we've single vector clause and we exose the score, we have to go through 
-                // order by primitive to retrieve them; however scores are detected as natively sorted
-                if (builderParameters.IsVectorSingleClause && index.Configuration.CoraxIncludeDocumentScore == false)
+                // in case when we've single vector clause and we exose the score or documents are boosted, we have to go through 
+                // order by primitive to retrieve or boost them; otherwise scores are detected as natively sorted
+                if (builderParameters.IsVectorSingleClause && index.Configuration.CoraxIncludeDocumentScore == false && builderParameters.IndexSearcher.DocumentsAreBoosted == false)
                     return null;
                 
                 if (builderParameters.Metadata.HasVectorSearch == false)
