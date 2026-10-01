@@ -10,7 +10,7 @@ import { isSameRange, RowRange } from "components/common/virtualTable/utils/lazy
 interface UseLazyTableViewportProps<T> {
     lazyRows: LazyRows<T>;
     isPaginated: boolean;
-    setIsPaginated: (isPaginated: boolean) => void;
+    setIsPaginated?: (isPaginated: boolean) => void;
     fixedHeightInPx?: number;
 }
 
@@ -33,7 +33,8 @@ export function useLazyTableViewport<T>({
     setIsPaginated,
     fixedHeightInPx,
 }: UseLazyTableViewportProps<T>) {
-    const { rows, totalCount, loadedCount, hasMore, fetchMode, isFetching, resetId, getItem, setRange } = lazyRows;
+    const { rows, totalCount, loadedCount, hasMore, fetchMode, isFetching, error, resetId, getItem, setRange } =
+        lazyRows;
 
     const areaRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -58,6 +59,12 @@ export function useLazyTableViewport<T>({
     const scrollableRowCount = Math.min(isSkipTake ? (totalCount ?? 0) : loadedCount, MAX_ROWS_IN_DOM);
     const bodyHeightInPx = (isPaginated ? pageRowCount : scrollableRowCount) * rowHeightInPx;
     const range = isPaginated ? { start: pageStart, end: pageStart + pageSize } : scrollRange;
+    const lastPageStart = totalCount ? (Math.ceil(totalCount / pageSize) - 1) * pageSize : 0;
+    const isDomLimitReached = isSkipTake ? totalCount > MAX_ROWS_IN_DOM : loadedCount >= MAX_ROWS_IN_DOM && hasMore;
+
+    if (isPaginated && pageFirstRowIndex !== null && totalCount !== null && pageStart > lastPageStart) {
+        setPageFirstRowIndex(lastPageStart);
+    }
 
     const updateScrollState = useCallback(() => {
         clearTimeout(scrollSettleTimeoutRef.current);
@@ -87,11 +94,12 @@ export function useLazyTableViewport<T>({
 
     useEffect(() => () => clearTimeout(scrollSettleTimeoutRef.current), []);
 
-    // Keeps the same rows on the screen when switching between the scrolled and the paginated view.
-    // The last scroll position is used, because the browser clamps the current one when the body shrinks.
+    // Keeps the same rows on the screen when switching between the scrolled and the paginated view
     useLayoutEffect(() => {
         if (isPaginated) {
-            setPageFirstRowIndex(Math.floor(lastScrollTopRef.current / rowHeightInPx));
+            const isScrolledToDomLimit = isDomLimitReached && isAtBottom && lastScrollTopRef.current > 0;
+            const firstVisibleRowIndex = Math.round(lastScrollTopRef.current / rowHeightInPx);
+            setPageFirstRowIndex(isScrolledToDomLimit ? scrollableRowCount - 1 : firstVisibleRowIndex);
         } else if (pageFirstRowIndex !== null) {
             containerRef.current.scrollTop = Math.min(pageStart, scrollableRowCount - 1) * rowHeightInPx;
             setPageFirstRowIndex(null);
@@ -110,13 +118,14 @@ export function useLazyTableViewport<T>({
         updateScrollState();
     }, [heightInPx, bodyHeightInPx, updateScrollState]);
 
-    // Fetches the rows of the visible range, the page is fetched once it is picked from the scroll position
+    const isPageStartKnown = !isPaginated || pageFirstRowIndex !== null;
+
     useLayoutEffect(() => {
-        if (!isPaginated || pageFirstRowIndex !== null) {
-            setRange(range, { allowSkip: isPaginated });
+        if (isPageStartKnown) {
+            setRange(range);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [range.start, range.end, isPaginated, pageFirstRowIndex, setRange]);
+    }, [range.start, range.end, isPageStartKnown, setRange]);
 
     useTimeout(() => setIsFetchingLong(true), isFetching ? LOADING_INDICATOR_DELAY_IN_MS : null);
     if (!isFetching && isFetchingLong) {
@@ -150,11 +159,17 @@ export function useLazyTableViewport<T>({
           }
         : null;
 
-    const isDomLimitReached = isSkipTake ? totalCount > MAX_ROWS_IN_DOM : loadedCount >= MAX_ROWS_IN_DOM && hasMore;
+    const getHasNoRows = () => {
+        if (isPaginated) {
+            return rows.length === 0 && !totalCount;
+        }
+        if (isSkipTake) {
+            return totalCount === 0;
+        }
+        return loadedCount === 0 && !hasMore;
+    };
 
-    const isEmpty =
-        !isFetching &&
-        (isPaginated ? rows.length === 0 : isSkipTake ? totalCount === 0 : loadedCount === 0 && !hasMore);
+    const isEmpty = !isFetching && !error && getHasNoRows();
 
     return {
         areaRef,
@@ -164,8 +179,9 @@ export function useLazyTableViewport<T>({
         firstRowIndex: isPaginated ? pageStart : 0,
         isLoading: isFetching && (rows.length === 0 || isFetchingLong),
         isEmpty,
+        error,
         isDomLimitBannerVisible: isDomLimitReached && isAtBottom && !isPaginated,
-        turnOnPagination: () => setIsPaginated(true),
+        turnOnPagination: () => setIsPaginated?.(true),
         pagination,
         onScroll: updateScrollState,
     };

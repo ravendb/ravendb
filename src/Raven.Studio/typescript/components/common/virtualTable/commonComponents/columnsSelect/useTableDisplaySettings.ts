@@ -31,7 +31,6 @@ export function useTableDisplaySettings<T>(table: TanstackTable<T>) {
         headerTitle: getColumnHeaderTitle(column),
         canHide: column.getCanHide(),
         canPin: column.getCanPin(),
-        customColumn: column.columnDef.meta?.customColumn,
     }));
 
     const allColumnIds = allColumns.map((x) => x.id);
@@ -66,7 +65,6 @@ export function useTableDisplaySettings<T>(table: TanstackTable<T>) {
 
     return {
         columnMetas,
-        allColumnIds,
         getInitialColumnOrder,
         getInitialPinnedIds,
         getInitialSelectedIds,

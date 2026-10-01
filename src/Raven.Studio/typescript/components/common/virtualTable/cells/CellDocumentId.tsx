@@ -4,7 +4,7 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 
 interface CellDocumentIdProps {
     id: string;
-    collection: string;
+    collection?: string;
     databaseName: string;
     hasHyperlink: boolean;
 }

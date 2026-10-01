@@ -17,7 +17,6 @@ import {
 import TableDisplaySettings from "./commonComponents/columnsSelect/TableDisplaySettings";
 import { FlexGrow } from "components/common/FlexGrow";
 import { CellValueWrapper } from "./cells/CellValue";
-import { useVirtualTableWithToken } from "components/common/virtualTable/hooks/useVirtualTableWithToken";
 import { useLazyRows } from "components/common/virtualTable/hooks/useLazyRows";
 import { LazyFetchMode } from "components/common/virtualTable/utils/LazyRowsLoader";
 import { lazyTableOptions } from "components/common/virtualTable/utils/lazyTableUtils";
@@ -87,11 +86,6 @@ export const LazyVirtualTableStory: StoryObj<LazyLoadingStoryArgs> = {
             options: ["skipTake", "continuationToken"] satisfies LazyFetchMode[],
         },
     },
-};
-
-export const VirtualTableWithTokenStory: StoryObj = {
-    name: "With token (infinite scroll)",
-    render: VirtualTableWithTokenExample,
 };
 
 function VirtualTableExample() {
@@ -175,9 +169,11 @@ function LazyVirtualTableExample({
         <div className="d-flex flex-column" style={{ height: heightInPx }}>
             <div className="d-flex align-items-center gap-3 mb-2">
                 <h2 className="m-0">{totalCount.toLocaleString()} items</h2>
-                <Switch selected={isPaginated} toggleSelection={() => setIsPaginated(!isPaginated)} color="primary">
-                    Pagination
-                </Switch>
+                {fetchMode === "skipTake" && (
+                    <Switch selected={isPaginated} toggleSelection={() => setIsPaginated(!isPaginated)} color="primary">
+                        Pagination
+                    </Switch>
+                )}
             </div>
             <LazyVirtualTable
                 table={table}
@@ -186,30 +182,6 @@ function LazyVirtualTableExample({
                 onIsPaginatedChange={setIsPaginated}
                 heightInPx={heightInPx}
             />
-        </div>
-    );
-}
-
-function VirtualTableWithTokenExample() {
-    const fetchData = useMemo(() => fetchPagedResultWithToken(100), []);
-
-    const { dataArray, componentProps } = useVirtualTableWithToken({ fetchData });
-
-    const table = useReactTable({
-        defaultColumn: {
-            enableSorting: false,
-            enableColumnFilter: false,
-        },
-        columns: itemColumnDefs,
-        data: dataArray,
-        columnResizeMode: "onChange",
-        getCoreRowModel: getCoreRowModel(),
-    });
-
-    return (
-        <div>
-            <h2>Infinity scroll</h2>
-            <VirtualTable {...componentProps} table={table} heightInPx={500} />
         </div>
     );
 }
@@ -240,27 +212,6 @@ function createLazyLoadingFetcher(totalCount: number, delayInMs: number) {
                     continuationToken: next < totalCount ? String(next) : null,
                 });
             }, delayInMs);
-        });
-    };
-}
-
-function fetchPagedResultWithToken(take: number): () => Promise<pagedResultWithToken<Item>> {
-    const initialTake = take;
-    let lastFetchedIndex = 0;
-
-    return () => {
-        const items = createItems(lastFetchedIndex, initialTake);
-
-        lastFetchedIndex += initialTake;
-
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve({
-                    totalResultCount: 100_000_001,
-                    items,
-                    continuationToken: "continuationToken",
-                });
-            }, 200);
         });
     };
 }

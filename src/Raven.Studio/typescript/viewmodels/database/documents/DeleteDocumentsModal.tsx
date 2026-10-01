@@ -25,6 +25,7 @@ interface DeleteDocumentsModalProps {
     isAllDocuments: boolean;
     excludedIds: string[];
     selectedCount: number;
+    onDeleteStarted: () => void;
     onDeleteCompleted: () => void;
     onCollectionDeletionStarted: (collectionName: string) => void;
     onCollectionDeletionFailed: (collectionName: string) => void;
@@ -38,6 +39,7 @@ export default function DeleteDocumentsModal({
     isAllDocuments,
     excludedIds,
     selectedCount,
+    onDeleteStarted,
     onDeleteCompleted,
     onCollectionDeletionStarted,
     onCollectionDeletionFailed,
@@ -59,6 +61,7 @@ export default function DeleteDocumentsModal({
         isAllDocuments,
         excludedIds,
         selectedCount,
+        onDeleteStarted,
         onDeleteCompleted,
         onCollectionDeletionStarted,
         onCollectionDeletionFailed,
@@ -133,6 +136,7 @@ function useDeleteCollection({
     isAllDocuments,
     excludedIds,
     selectedCount: documentCount,
+    onDeleteStarted,
     onDeleteCompleted,
     onCollectionDeletionStarted,
     onCollectionDeletionFailed,
@@ -153,6 +157,7 @@ function useDeleteCollection({
             .deleteCollection(collectionNameForApi, dbName, excludedIds)
             .done((result) => {
                 const operationId = result.OperationId;
+                onDeleteStarted();
 
                 if (isCollectionRemoval) {
                     onCollectionDeletionStarted(collectionName);

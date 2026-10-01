@@ -167,21 +167,68 @@ describe("LazyRowsLoader", () => {
             expect(tokenLoader.loader.getSnapshot().totalCount).toBeNull();
         });
 
-        it("retries a failed fetch only on the next range request", async () => {
+        it("keeps the error of a failed fetch until a retry or another range request", async () => {
             const { loader, fetches } = createLoader();
+            const error = new Error("failed");
 
             loader.reset(true);
             loader.setRange({ start: 0, end: 10 });
 
-            fetches[0].reject(new Error("failed"));
+            fetches[0].reject(error);
             await flush();
 
-            expect(loader.getSnapshot().isFetching).toBe(false);
-            expect(fetches).toHaveLength(1);
+            expect(loader.getSnapshot()).toMatchObject({ isFetching: false, error });
 
             loader.setRange({ start: 0, end: 10 });
+            expect(fetches).toHaveLength(1);
 
+            loader.retry();
+            expect(loader.getSnapshot().error).toBeNull();
             expect(fetches).toHaveLength(2);
+
+            fetches[1].reject(error);
+            await flush();
+
+            loader.setRange({ start: 10, end: 20 });
+            expect(loader.getSnapshot().error).toBeNull();
+            expect(fetches).toHaveLength(3);
+        });
+
+        it("fetches backward only the rows between the loaded ones", async () => {
+            const { loader, fetches } = createLoader("skipTake", 10);
+
+            loader.reset(true);
+            loader.setRange({ start: 0, end: 10 });
+            await resolveFetch(fetches[0]);
+
+            loader.setRange({ start: 15, end: 25 });
+            expect(fetches[1]).toMatchObject({ skip: 15, take: 10 });
+            await resolveFetch(fetches[1]);
+
+            const loadedItem = loader.getItem(5);
+
+            loader.setRange({ start: 0, end: 25 });
+            expect(fetches[2]).toMatchObject({ skip: 10, take: 5 });
+
+            fetches[2].resolve({ items: createItems(10, 5).map((x) => `${x} (new)`), totalResultCount: 1000 });
+            await flush();
+
+            expect(loader.getItem(5)).toBe(loadedItem);
+            expect(loader.getItem(12)).toBe("Item 12 (new)");
+        });
+
+        it("stops the forward fetch at the loaded rows", async () => {
+            const { loader, fetches } = createLoader("skipTake", 10);
+
+            loader.reset(true);
+            loader.setRange({ start: 0, end: 10 });
+            await resolveFetch(fetches[0]);
+
+            loader.setRange({ start: 20, end: 30 });
+            await resolveFetch(fetches[1]);
+
+            loader.setRange({ start: 12, end: 17 });
+            expect(fetches[2]).toMatchObject({ skip: 12, take: 8 });
         });
 
         it("drops an in flight result after cancel", async () => {
@@ -249,41 +296,32 @@ describe("LazyRowsLoader", () => {
             expect(fetches).toHaveLength(3);
         });
 
-        it("fetches a range beyond the loaded rows by skip only when skipping is allowed", async () => {
+        it("loads sequentially up to a range beyond the loaded rows", async () => {
             const { loader, fetches } = createLoader("continuationToken", 10);
 
             loader.reset(true);
             loader.setRange({ start: 0, end: 10 });
             await resolveFetch(fetches[0], { continuationToken: "token-1" });
 
-            loader.setRange({ start: 500, end: 520 }, { allowSkip: true });
+            loader.setRange({ start: 30, end: 40 });
 
-            expect(fetches[1]).toMatchObject({ skip: 500, take: 20, continuationToken: undefined });
-
-            await resolveFetch(fetches[1], { continuationToken: "ignored" });
-
-            expect(loader.getSnapshot().loadedCount).toBe(10);
-            expect(loader.getRows().map((x) => x.index)).toEqual(Array.from({ length: 20 }, (_, i) => 500 + i));
-
-            loader.setRange({ start: 10, end: 20 }, { allowSkip: true });
-
-            expect(fetches[2]).toMatchObject({ skip: 10, take: 10, continuationToken: "token-1" });
+            expect(fetches[1]).toMatchObject({ skip: 10, continuationToken: "token-1" });
+            expect(loader.getRows()).toHaveLength(0);
         });
 
-        it("shows only the sequentially loaded rows when skipping is not allowed", async () => {
+        it("starts from the first row on a soft reset", async () => {
             const { loader, fetches } = createLoader("continuationToken", 10);
 
             loader.reset(true);
-            loader.setRange({ start: 0, end: 10 });
+            loader.setRange({ start: 0, end: 20 });
             await resolveFetch(fetches[0], { continuationToken: "token-1" });
+            await resolveFetch(fetches[1], { continuationToken: "token-2" });
 
-            loader.setRange({ start: 30, end: 40 }, { allowSkip: true });
-            await resolveFetch(fetches[1]);
+            loader.setRange({ start: 10, end: 20 });
+            loader.reset(false);
 
-            loader.setRange({ start: 0, end: 40 });
-
-            expect(fetches[2]).toMatchObject({ skip: 10, continuationToken: "token-1" });
-            expect(loader.getRows()).toHaveLength(10);
+            expect(loader.getSnapshot()).toMatchObject({ range: { start: 0, end: 10 }, resetId: 2 });
+            expect(fetches[2]).toMatchObject({ skip: 0, continuationToken: undefined });
         });
     });
 });

@@ -51,12 +51,24 @@ export function useLazyTableSelection<T>({
     const rowIds = rows.map((x) => getId(x.item));
     const selectedRowIds = rowIds.filter(isSelected);
 
-    const getItemsInRange = (rowIndex: number) => {
-        const items = range(Math.min(anchorRowIndex, rowIndex), Math.max(anchorRowIndex, rowIndex) + 1).map(getItem);
-        return items.includes(undefined) ? null : items;
+    const isRangeLoaded = (rowIndex: number) => {
+        const step = rowIndex >= anchorRowIndex ? 1 : -1;
+
+        for (let i = anchorRowIndex; i !== rowIndex + step; i += step) {
+            if (getItem(i) === undefined) {
+                return false;
+            }
+        }
+
+        return true;
     };
 
-    const canSelectRangeTo = (rowIndex: number) => anchorRowIndex !== null && getItemsInRange(rowIndex) !== null;
+    const getItemsInRange = (rowIndex: number) =>
+        isRangeLoaded(rowIndex)
+            ? range(Math.min(anchorRowIndex, rowIndex), Math.max(anchorRowIndex, rowIndex) + 1).map(getItem)
+            : null;
+
+    const canSelectRangeTo = (rowIndex: number) => anchorRowIndex !== null && isRangeLoaded(rowIndex);
 
     const toggleRow = (item: T, isRangeSelection: boolean) => {
         const rowIndex = rows.find((x) => x.item === item).index;

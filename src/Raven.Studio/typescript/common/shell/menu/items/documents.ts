@@ -1,4 +1,4 @@
-﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
+import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import collectionMenuItem = require("common/shell/menu/collectionMenuItem");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");

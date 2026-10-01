@@ -1,4 +1,5 @@
 import { EntityState, PayloadAction, createEntityAdapter, createSelector, createSlice } from "@reduxjs/toolkit";
+import { shallowEqual } from "react-redux";
 import { RootState } from "components/store";
 import { StringWithAutocomplete } from "components/utils/common";
 
@@ -62,7 +63,8 @@ export const collectionsTrackerActions = collectionsTrackerSlice.actions;
 
 const selectCollectionNames = createSelector(
     (store: RootState) => collectionsSelectors.selectIds(store.collectionsTracker.collections),
-    (collections) => collections.filter((name) => name !== systemCollectionNames.allDocuments)
+    (collections) => collections.filter((name) => name !== systemCollectionNames.allDocuments),
+    { memoizeOptions: { resultEqualityCheck: shallowEqual } }
 );
 
 const selectUserCollectionNames = createSelector(selectCollectionNames, (collections) =>

@@ -1,4 +1,3 @@
-﻿
 import document = require("models/database/documents/document");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import databasesManager = require("common/shell/databasesManager");

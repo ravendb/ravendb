@@ -1,17 +1,9 @@
-import { RowData } from "@tanstack/react-table";
 import genUtils from "common/generalUtils";
 
 export interface CustomColumnDefinition {
     id: string;
     header: string;
     expression: string;
-}
-
-declare module "@tanstack/react-table" {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    interface ColumnMeta<TData extends RowData, TValue> {
-        customColumn?: CustomColumnDefinition;
-    }
 }
 
 export function createCustomColumnId() {
