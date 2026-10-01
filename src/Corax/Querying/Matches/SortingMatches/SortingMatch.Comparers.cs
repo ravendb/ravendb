@@ -92,12 +92,8 @@ unsafe partial struct SortingMatch<TInner>
             // We perform the scoring process. 
             match._inner.Score(batchResults, readScores, 1f);
 
-            // If we need to do documents boosting then we need to modify the based on documents stored score. 
-            if (match._searcher.DocumentsAreBoosted)
-            {
-                // We get the boosting tree and go to check every document. 
-                BoostDocuments(match, batchResults, readScores);
-            }
+            match._searcher.BoostDocuments(batchResults, readScores,
+                sortedById: match._inner is not (VectorSearchMatch { ReturnsResultsByDistance: true } or MultiVectorSearchMatch { ReturnsResultsByDistance: true }));
             
             // Note! readScores & indexes are aliased and same as batchTermIds
             var heapSize = Math.Min(match._take, batchResults.Length);
@@ -114,26 +110,6 @@ unsafe partial struct SortingMatch<TInner>
             }
             
             heapSorter.Fill(batchResults, ref match._results, ref match._scoresResults, readScores);
-        }
-
-        private static void BoostDocuments(SortingMatch<TInner> match, Span<long> batchResults, Span<float> readScores)
-        {
-            var tree = match._searcher.GetDocumentBoostTree();
-            if (tree is { NumberOfEntries: > 0 })
-            {
-                // We are going to read from the boosting tree all the boosting values and apply that to the scores array.
-                ref var scoresRef = ref MemoryMarshal.GetReference(readScores);
-                ref var matchesRef = ref MemoryMarshal.GetReference(batchResults);
-                for (int idx = 0; idx < batchResults.Length; idx++)
-                {
-                    var ptr = (float*)tree.ReadPtr(Unsafe.Add(ref matchesRef, idx), out var _);
-                    if (ptr == null)
-                        continue;
-
-                    ref var scoresIdx = ref Unsafe.Add(ref scoresRef, idx);
-                    scoresIdx *= *ptr;
-                }
-            }
         }
 
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
