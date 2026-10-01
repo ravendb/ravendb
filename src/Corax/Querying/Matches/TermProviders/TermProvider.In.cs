@@ -36,31 +36,30 @@ namespace Corax.Querying.Matches.TermProviders
 
         public void Reset() => _termIndex = -1;
 
-        public bool Next(out TermMatch term)
+        public bool Next(out long termId, out double termRatioToWholeCollection)
         {
-            _termIndex++;
-            if (_termIndex >= _terms.Count)
+            while (++_termIndex < _terms.Count)
             {
-                term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
-                return false;
+                var found = false;
+                termRatioToWholeCollection = 1D;
+                if (typeof(TTermsType) == typeof((string Term, bool Exact)) && (object)_terms[_termIndex] is (string stringTerm, bool isExact))
+                    found = _searcher.TryGetTermId(isExact ? _exactField : _field, stringTerm, out termId, out termRatioToWholeCollection);
+                else if (typeof(TTermsType) == typeof((string Term, bool Exact)) && (object)_terms[_termIndex] is (null, _))
+                    found = _searcher.TryGetPostingListForNull(_field, out termId);
+                else if (typeof(TTermsType) == typeof(string))
+                    found = _searcher.TryGetTermId(_field, (string)(object)_terms[_termIndex], out termId, out termRatioToWholeCollection);
+                else if (typeof(TTermsType) == typeof(Slice))
+                    found = _searcher.TryGetTermId(_field, (Slice)(object)_terms[_termIndex], out termId, out termRatioToWholeCollection);
+                else
+                    termId = ThrowInvalidTermType();
+
+                if (found)
+                    return true;
             }
 
-            if (typeof(TTermsType) == typeof((string Term, bool Exact)) && (object)_terms[_termIndex] is (string stringTerm, bool isExact))
-                term = _searcher.TermQuery(isExact ? _exactField : _field, stringTerm);
-            else if (typeof(TTermsType) == typeof((string Term, bool Exact)) && (object)_terms[_termIndex] is (null, _))
-            {
-                term = _searcher.TryGetPostingListForNull(_field, out var postingListId) 
-                    ? _searcher.TermQuery(_field, postingListId, 1D) 
-                    : TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
-            }
-            else if (typeof(TTermsType) == typeof(string))
-                term = _searcher.TermQuery(_field, (string)(object)_terms[_termIndex]);
-            else if (typeof(TTermsType) == typeof(Slice))
-                term = _searcher.TermQuery(_field, (Slice)(object)_terms[_termIndex]);
-            else
-                term = ThrowInvalidTermType();
-        
-            return true;
+            termId = -1;
+            termRatioToWholeCollection = 1D;
+            return false;
         }
         
         public QueryInspectionNode Inspect()
@@ -74,7 +73,7 @@ namespace Corax.Querying.Matches.TermProviders
         }
 
         [DoesNotReturn]
-        private static TermMatch ThrowInvalidTermType()
+        private static long ThrowInvalidTermType()
         {
             throw new InvalidDataException($"In {nameof(InTermProvider<TTermsType>)} type {nameof(TTermsType)} has to be `string` or `Slice`.");
         }

@@ -9,7 +9,7 @@ namespace Corax.Querying.Matches.Meta
         int Fill(Span<long> containers);
         
         void Reset();
-        bool Next(out TermMatch term);
+        bool Next(out long termId, out double termRatioToWholeCollection);
         QueryInspectionNode Inspect();
 
         string DebugView => Inspect().ToString();

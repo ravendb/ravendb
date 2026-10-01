@@ -147,9 +147,10 @@ namespace Corax.Querying.Matches
         {
             public int TermsCount => 0;
 
-            public bool Next(out TermMatch term)
+            public bool Next(out long termId, out double termRatioToWholeCollection)
             {
-                Unsafe.SkipInit(out term);
+                termId = -1;
+                termRatioToWholeCollection = 1;
                 return false;
             }
 
