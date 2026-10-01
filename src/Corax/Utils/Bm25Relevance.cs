@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using Sparrow.Extensions;
 using Sparrow.Server;
 using Voron.Data.PostingLists;
@@ -13,7 +14,7 @@ namespace Corax.Utils;
 public sealed unsafe class Bm25Relevance : IDisposable
 {
     [ThreadStatic]
-    internal static ArrayPool<Bm25Relevance> RelevancePool; 
+    internal static ArrayPool<TermRelevance> RelevancePool; 
     
     private readonly delegate*<Bm25Relevance, Span<long>, int, void> _processFunc;
     private readonly delegate*<Bm25Relevance, Span<long>, Span<float>, float, void> _scoreFunc;
@@ -95,12 +96,34 @@ public sealed unsafe class Bm25Relevance : IDisposable
     /// We add 1 to the IDF (Inverse Document Frequency) value to ensure that it is not equal to 0.
     /// This guarantees that the boost factor is not 'forgotten' in the calculation of the score. 
     /// </summary>
-    private static float ComputeIdf(Querying.IndexSearcher indexSearcher, long termFrequency)
+    internal static float ComputeIdf(Querying.IndexSearcher indexSearcher, long termFrequency)
     {
         var m = indexSearcher.NumberOfEntries - termFrequency + 0.5D;
         var d = termFrequency + 0.5D;
 
         return (float)Math.Log((m / d) + 1);
+    }
+
+    internal static float Denominator(float termRatioToWholeCollection) => (1 - BFactor) + BFactor * termRatioToWholeCollection;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static float Contribution(short frequency, float boostFactor, float denominator, float idf)
+    {
+        var weight = frequency * boostFactor / denominator;
+        return idf * weight / (K1 + weight);
+    }
+
+    /// <summary>
+    /// Scores a term that has a single document. It is kept inline instead of in a Bm25Relevance.
+    /// </summary>
+    internal static void ScoreSingle(Span<long> matches, Span<float> scores, float boostFactor, in TermRelevance term, float idf)
+    {
+        if (idf.AlmostEquals(0f))
+            return;
+
+        var idOfMatch = matches.BinarySearch(term.EntryId);
+        if (idOfMatch >= 0)
+            scores[idOfMatch] += Contribution(term.Frequency, boostFactor, term.Denominator, idf);
     }
 
     public void Score(Span<long> matches, Span<float> scores, float boostFactor)
@@ -128,7 +151,7 @@ public sealed unsafe class Bm25Relevance : IDisposable
 
         var innerItems = bm25.Matches;
         var frequencies = bm25.Scores;
-        var denominator = (1 - BFactor) + BFactor * bm25._termRatioToWholeCollection;
+        var denominator = Denominator(bm25._termRatioToWholeCollection);
 
         // Both sides are sorted, so every lookup continues from the previous position.
         if (innerItems.Length < matches.Length)
@@ -144,8 +167,7 @@ public sealed unsafe class Bm25Relevance : IDisposable
                 if (matches[idOfMatch] != innerItems[idX])
                     continue;
 
-                var weight = frequencies[idX] * boostFactor / denominator;
-                scores[idOfMatch] += bm25._idf * weight / (K1 + weight);
+                scores[idOfMatch] += Contribution(frequencies[idX], boostFactor, denominator, bm25._idf);
             }
 
             return;
@@ -162,8 +184,7 @@ public sealed unsafe class Bm25Relevance : IDisposable
             if (innerItems[idOfInner] != matches[idX])
                 continue;
 
-            var weight = frequencies[idOfInner] * boostFactor / denominator;
-            scores[idX] += bm25._idf * weight / (K1 + weight);
+            scores[idX] += Contribution(frequencies[idOfInner], boostFactor, denominator, bm25._idf);
         }
     }
 
@@ -293,4 +314,15 @@ public sealed unsafe class Bm25Relevance : IDisposable
             _setIterator = postingList.Iterate()
         };
     }
+}
+
+/// <summary>
+/// Relevance of one term of a multi-term match. A term with a single document is kept inline, without a Bm25Relevance.
+/// </summary>
+internal struct TermRelevance
+{
+    public Bm25Relevance Relevance;
+    public long EntryId;
+    public float Denominator;
+    public short Frequency;
 }

@@ -44,8 +44,9 @@ namespace Corax.Querying.Matches
         private long _current;
         private QueryCountConfidence _confidence;
 
-        private Bm25Relevance[] _frequenciesHolder;
+        private TermRelevance[] _frequenciesHolder;
         private int _currentFreqIdx;
+        private readonly float _singleTermIdf;
 
         //In case of streaming we cannot sort the results since the order will not be persisted. This is possible only in case when MultiTermMatch
         //is not in Binary AST and single document has only 1 term.
@@ -57,6 +58,11 @@ namespace Corax.Querying.Matches
 
         private TTermProvider _inner;
         private TermMatch _currentTerm;
+        
+        // A term with a single document is handled inline, without creating a TermMatch.
+        private TermRelevance _currentSingleTerm;
+        private bool _isCurrentTermSingle, _currentSingleTermReturned;
+        
         private MultiTermReader _termReader;
         private readonly ByteStringContext _context;
 
@@ -102,8 +108,9 @@ namespace Corax.Querying.Matches
 
             if (_scoringMode == ScoringMode.Bm25)
             {
-                var pool = Bm25Relevance.RelevancePool ??= ArrayPool<Bm25Relevance>.Create();
+                var pool = Bm25Relevance.RelevancePool ??= ArrayPool<TermRelevance>.Create();
                 _frequenciesHolder = pool.Rent(InitialFrequencyHolders);
+                _singleTermIdf = Bm25Relevance.ComputeIdf(indexSearcher, termFrequency: 1);
             }
         }
 
@@ -328,7 +335,7 @@ namespace Corax.Querying.Matches
             bool requiresSort = false;
             while (bufferState.Length > 0)
             {
-                var read = _currentTerm.Fill(bufferState);
+                var read = FillCurrentTerm(bufferState);
 
                 if (read == 0)
                 {
@@ -357,6 +364,20 @@ namespace Corax.Querying.Matches
             }
             _totalResults += count;
             return count;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int FillCurrentTerm(Span<long> buffer)
+        {
+            if (_isCurrentTermSingle == false)
+                return _currentTerm.Fill(buffer);
+
+            if (_currentSingleTermReturned)
+                return 0;
+
+            _currentSingleTermReturned = true;
+            buffer[0] = _currentSingleTerm.EntryId;
+            return 1;
         }
 
         private void UnlikelyGrowBufferOfTermMatches()
@@ -478,19 +499,18 @@ namespace Corax.Querying.Matches
             bool hasData = NextTerm();
             AddTermToBm25();
 
-            long totalRead = _currentTerm.Count;
+            long totalRead = CurrentTermCount;
 
             int totalSize = 0;
             while (totalSize < buffer.Length && hasData)
             {
                 _token.ThrowIfCancellationRequested();
-                actualMatches.CopyTo(tmp);
-                var read = _currentTerm.AndWith(tmp, matches);
+                var read = AndWithCurrentTerm(actualMatches, tmp);
                 if (read != 0)
                 {
                     results[0..totalSize].CopyTo(tmp2);
                     totalSize = MergeHelper.Or(results, tmp2[0..totalSize], tmp[0..read]);
-                    totalRead += _currentTerm.Count;
+                    totalRead += CurrentTermCount;
                 }
 
                 hasData = NextTerm();
@@ -509,12 +529,45 @@ namespace Corax.Querying.Matches
             return totalSize;
         }
 
+        private long CurrentTermCount => _isCurrentTermSingle ? 1 : _currentTerm.Count;
+
+        private int AndWithCurrentTerm(Span<long> matches, Span<long> buffer)
+        {
+            if (_isCurrentTermSingle == false)
+            {
+                matches.CopyTo(buffer);
+                return _currentTerm.AndWith(buffer, matches.Length);
+            }
+
+            if (matches.BinarySearch(_currentSingleTerm.EntryId) < 0)
+                return 0;
+
+            buffer[0] = _currentSingleTerm.EntryId;
+            return 1;
+        }
+
         private bool NextTerm()
         {
+            _isCurrentTermSingle = false;
             if (_inner.Next(out var termId, out var termRatioToWholeCollection) == false)
             {
                 _currentTerm = TermMatch.CreateEmpty(_indexSearcher, _context);
                 return false;
+            }
+
+            if ((termId & (long)TermIdMask.EnsureIsSingleMask) == (long)TermIdMask.Single)
+            {
+                var (entryId, frequency) = EntryIdEncodings.Decode(termId);
+                _currentSingleTerm = new TermRelevance
+                {
+                    EntryId = (long)entryId,
+                    Frequency = frequency, 
+                    Denominator = Bm25Relevance.Denominator((float)termRatioToWholeCollection)
+                };
+                
+                _isCurrentTermSingle = true;
+                _currentSingleTermReturned = false;
+                return true;
             }
 
             _currentTerm = _indexSearcher.TermQuery(termId, termRatioToWholeCollection, isBoosting: _scoringMode == ScoringMode.Bm25);
@@ -525,8 +578,8 @@ namespace Corax.Querying.Matches
         {
             for (int idX = 0; idX < _currentFreqIdx; ++idX)
             {
-                _frequenciesHolder[idX].Dispose();
-                _frequenciesHolder[idX] = null;
+                _frequenciesHolder[idX].Relevance?.Dispose();
+                _frequenciesHolder[idX] = default;
             }
 
             _currentFreqIdx = 0;
@@ -534,11 +587,11 @@ namespace Corax.Querying.Matches
 
         private void AddTermToBm25()
         {
-            if (_scoringMode == ScoringMode.Bm25 && _currentTerm.Count != 0)
+            if (_scoringMode == ScoringMode.Bm25 && CurrentTermCount != 0)
             {
                 if (_currentFreqIdx >= FrequenciesHolderSize)
                     UnlikelyGrowBufferOfTermMatches();
-                _frequenciesHolder[_currentFreqIdx] = _currentTerm._bm25Relevance;
+                _frequenciesHolder[_currentFreqIdx] = _isCurrentTermSingle ? _currentSingleTerm : new TermRelevance { Relevance = _currentTerm._bm25Relevance };
                 _currentFreqIdx += 1;
             }
         }
@@ -560,9 +613,17 @@ namespace Corax.Querying.Matches
             {
                 _token.ThrowIfCancellationRequested();
                 ref var currentRelevance = ref _frequenciesHolder[idX];
-                currentRelevance.Score(matches, scores, boostFactor);
-                currentRelevance.Dispose();
-                currentRelevance = null;
+                if (currentRelevance.Relevance is null)
+                {
+                    Bm25Relevance.ScoreSingle(matches, scores, boostFactor, currentRelevance, _singleTermIdf);
+                }
+                else
+                {
+                    currentRelevance.Relevance.Score(matches, scores, boostFactor);
+                    currentRelevance.Relevance.Dispose();
+                }
+
+                currentRelevance = default;
             }
 
             Bm25Relevance.RelevancePool.Return(_frequenciesHolder);
