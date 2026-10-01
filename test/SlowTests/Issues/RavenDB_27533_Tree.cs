@@ -400,6 +400,71 @@ public unsafe class RavenDB_27533_Tree(ITestOutputHelper output) : StorageTest(o
     }
     
     [RavenFact(RavenTestCategory.Voron)]
+    public void MarkedBranchThatOverflowsMustWrapBeforeItSplits()
+    {
+        var model = new SortedSet<long>();
+        using (var tx = Env.WriteTransaction())
+        {
+            var tree = tx.CreateTree(TreeName);
+
+            // keys far apart, so that there is room between them for the keys added later
+            long next = 0;
+            while (tree.State.Header.Depth < 3 || RootChildren(tree).Length < 3)
+            {
+                tree.Add(PaddedKey(next), Value);
+                model.Add(next);
+                next += 1000;
+            }
+
+            long rootPage = tree.State.Header.RootPageNumber;
+            var root = tree.GetReadOnlyTreePage(rootPage);
+            int rootEntries = root.NumberOfEntries;
+            long markedBranch = root.GetNode(0)->PageNumber;
+            Assert.True(tree.GetReadOnlyTreePage(markedBranch).IsBranch);
+
+            // pretend a collapse left this whole subtree one level shallower than its siblings
+            tree.ModifyPage(markedBranch).CollapsedLevels = 1;
+
+            // adding keys after the first key of its last leaf splits that leaf again and again, until the
+            // branch has no room for another pointer and has to split itself: that must wrap it first, not
+            // split it next to its siblings in the root
+            var lastLeaf = tree.GetReadOnlyTreePage(ChildrenOf(tree, markedBranch)[^1]);
+            long fill = KeyOf(lastLeaf, 0) + 1;
+            long end = KeyOf(root, 1);
+            while (tree.GetReadOnlyTreePage(rootPage).GetNode(0)->PageNumber == markedBranch)
+            {
+                Assert.True(fill < end, $"the branch {markedBranch} did not split before the range of its last leaf ran out");
+                tree.Add(PaddedKey(fill), Value);
+                model.Add(fill);
+                fill++;
+            }
+
+            Assert.Equal(rootPage, tree.State.Header.RootPageNumber);
+            root = tree.GetReadOnlyTreePage(rootPage);
+            Assert.Equal(rootEntries, root.NumberOfEntries);
+
+            long wrapperPage = root.GetNode(0)->PageNumber;
+            var wrapper = tree.GetReadOnlyTreePage(wrapperPage);
+            Assert.True(wrapper.IsBranch);
+            Assert.Equal(0, wrapper.CollapsedLevels);
+
+            var wrapped = ChildrenOf(tree, wrapperPage);
+            Assert.Contains(markedBranch, wrapped);
+            Assert.All(wrapped, child =>
+            {
+                var page = tree.GetReadOnlyTreePage(child);
+                Assert.True(page.IsBranch);
+                Assert.Equal(0, page.CollapsedLevels);
+                Assert.All(ChildrenOf(tree, child), leaf => Assert.True(tree.GetReadOnlyTreePage(leaf).IsLeaf));
+            });
+
+            tx.Commit();
+        }
+
+        AssertContents(model);
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
     public void RebalancingABranchThatOwesALevelMustNotPushLeavesBelowTheTreeDepth()
     {
         var model = new SortedSet<long>();
