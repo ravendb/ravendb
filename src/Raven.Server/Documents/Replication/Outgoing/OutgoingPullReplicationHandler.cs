@@ -38,6 +38,27 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         public string CertificateThumbprint;
 
+        private volatile bool _handshakeCompleted;
+
+        internal override DynamicJsonValue GetConnectionInfoAsJson()
+        {
+            var json = base.GetConnectionInfoAsJson();
+
+            if (_handshakeCompleted && IsConnectionDisposed == false)
+                json[nameof(ChangeVectorWireMode)] = ChangeVectorWireMode;
+
+            return json;
+        }
+
+        protected void OnConnectionEstablished(PullReplicationMode direction)
+        {
+            // InitialHandshake has completed the entire derived response chain before entering here.
+            _handshakeCompleted = true;
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Pull replication connection established. {base.FromToString}, {nameof(ReplicationInitialRequest.PullReplicationDefinitionName)}={OutgoingPullReplicationParams.Name}, " +
+                            $"Direction={direction}, ChangeVectorWireMode={ChangeVectorWireMode}, CertificateThumbprint={CertificateThumbprint}");
+        }
+
         internal PullReplicationChangeVectorWireMode ChangeVectorWireMode { get; private set; } = PullReplicationChangeVectorWireMode.SendLegacyCompatible;
 
         protected OutgoingPullReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, TcpConnectionInfo connectionInfo) :
@@ -122,6 +143,12 @@ namespace Raven.Server.Documents.Replication.Outgoing
             }
         }
 
+        protected override void Replicate()
+        {
+            OnConnectionEstablished(PullReplicationMode.HubToSink);
+            base.Replicate();
+        }
+
         protected override void ProcessHandshakeResponse((ReplicationMessageReply.ReplyType ReplyType, ReplicationMessageReply Reply) response)
         {
             base.ProcessHandshakeResponse(response);
@@ -164,11 +191,18 @@ namespace Raven.Server.Documents.Replication.Outgoing
             return request;
         }
 
+        protected override void Replicate()
+        {
+            OnConnectionEstablished(PullReplicationMode.SinkToHub);
+            base.Replicate();
+        }
+
         protected override void ProcessHandshakeResponse((ReplicationMessageReply.ReplyType ReplyType, ReplicationMessageReply Reply) response)
         {
             base.ProcessHandshakeResponse(response);
             OutgoingPullReplicationParams = new ReplicationLoader.PullReplicationParams
             {
+                Name = _node.HubName,
                 PreventDeletionsMode = response.Reply.PreventDeletionsMode,
                 Type = ReplicationLoader.PullReplicationParams.ConnectionType.Outgoing
             };
