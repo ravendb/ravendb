@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Sparrow.Extensions;
 using Sparrow.Server;
+using Voron;
 using Voron.Data.PostingLists;
 
 namespace Corax.Utils;
@@ -311,7 +312,7 @@ public sealed unsafe class Bm25Relevance : IDisposable
 
         return new Bm25Relevance(indexSearcher, termFrequency, context, numberOfDocuments, termRatioToWholeCollection, &PostingListCalculateScoreDynamically)
         {
-            _setIterator = postingList.Iterate()
+            _setIterator = new PostingList(indexSearcher._transaction.LowLevelTransaction, Slices.Empty, postingList.State).Iterate()
         };
     }
 }
