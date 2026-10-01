@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
@@ -224,63 +223,13 @@ public sealed partial class ClusterStateMachine
 
     private static void AssertServerWideConnectionStringNotInUse(BlittableJsonReaderObject databaseRecord, string connectionStringName, ConnectionStringType type, string databaseName)
     {
-        switch (type)
-        {
-            case ConnectionStringType.Raven:
-                CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.RavenEtls), connectionStringName, databaseName);
-                CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.ExternalReplications), connectionStringName, databaseName);
-                CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.SinkPullReplications), connectionStringName, databaseName);
-                break;
-            case ConnectionStringType.Sql:
-                CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.SqlEtls), connectionStringName, databaseName);
-                break;
-            case ConnectionStringType.Olap:
-                CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.OlapEtls), connectionStringName, databaseName);
-                break;
-            case ConnectionStringType.ElasticSearch:
-                CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.ElasticSearchEtls), connectionStringName, databaseName);
-                break;
-            case ConnectionStringType.Queue:
-                CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.QueueEtls), connectionStringName, databaseName);
-                CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.QueueSinks), connectionStringName, databaseName);
-                break;
-            case ConnectionStringType.Snowflake:
-                CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.SnowflakeEtls), connectionStringName, databaseName);
-                break;
-            case ConnectionStringType.Ai:
-                CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.EmbeddingsGenerations), connectionStringName, databaseName);
-                CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.GenAis), connectionStringName, databaseName);
-                CheckAiAgentsUseConnectionString(databaseRecord, connectionStringName, databaseName);
-                break;
-        }
-    }
-
-    private static void CheckTasksUseConnectionString(BlittableJsonReaderObject databaseRecord, string tasksPropertyName, string connectionStringName, string databaseName)
-    {
-        CheckUseConnectionString(databaseRecord, tasksPropertyName, nameof(EtlConfiguration<>.ConnectionStringName), nameof(EtlConfiguration<>.Name), connectionStringName, databaseName);
-    }
-
-    private static void CheckAiAgentsUseConnectionString(BlittableJsonReaderObject databaseRecord, string connectionStringName, string databaseName)
-    {
-        CheckUseConnectionString(databaseRecord, nameof(DatabaseRecord.AiAgents), nameof(AiAgentConfiguration.ConnectionStringName), nameof(AiAgentConfiguration.Name), connectionStringName, databaseName);
-    }
-
-    private static void CheckUseConnectionString(BlittableJsonReaderObject databaseRecord, string arrayPropertyName, string connectionStringPropertyName, string namePropertyName, string connectionStringName, string databaseName)
-    {
-        if (databaseRecord.TryGet(arrayPropertyName, out BlittableJsonReaderArray items) == false || items == null)
+        var usage = ConnectionStringConsumers.FindUsage(JsonDeserializationCluster.DatabaseRecord(databaseRecord), type, connectionStringName);
+        if (usage == null)
             return;
 
-        foreach (BlittableJsonReaderObject item in items)
-        {
-            if (item.TryGet(connectionStringPropertyName, out string itemConnectionStringName) &&
-                string.Equals(itemConnectionStringName, connectionStringName, StringComparison.OrdinalIgnoreCase))
-            {
-                item.TryGet(namePropertyName, out string itemName);
-                throw new RachisApplyException(
-                    $"Can't delete server-wide connection string '{connectionStringName}'. " +
-                    $"It is used by '{itemName}' in database '{databaseName}'");
-            }
-        }
+        throw new RachisApplyException(
+            $"Can't delete server-wide connection string '{connectionStringName}'. " +
+            $"It is used by '{usage.Value.Name}' in database '{databaseName}'");
     }
 
     internal IEnumerable<BlittableJsonReaderObject> GetServerWideConnectionStrings(TransactionOperationContext context, ConnectionStringType? type, string name)
