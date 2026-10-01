@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session;
 using Raven.Server.Config;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -50,6 +51,7 @@ public class RavenDB_27536 : RavenTestBase
         Assert.Equal(duplicate.Key, page[0].Key);
         Assert.DoesNotContain(page, x => x.Key == target.Key);
         Assert.Equal(duplicate.Key, Similar<Widgets_ByCategoryAndName>(s, target, boost: true, take: 100)[0].Key);
+        Assert.Equal(duplicate.Key, Similar<Widgets_ByCategoryAndName>(s, target, boost: false, take: 100, orderByScore: true)[0].Key);
 
         if (options.SearchEngineMode == RavenSearchEngineMode.Corax)
         {
@@ -187,10 +189,38 @@ public class RavenDB_27536 : RavenTestBase
         Assert.Equal(new[] { alpha.Key, bravo.Key }, Similar<Widgets_ByNameWords>(s, target, boost: true, take: 10, fields: fields).Select(x => x.Key));
     }
 
-    private static Widget[] Similar<TIndex>(IDocumentSession session, Widget target, bool boost, int take, string[] fields = null)
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void MoreLikeThisHonorsThePageSizeOfTheRequest(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        store.ExecuteIndex(new Widgets_ByNameWords());
+
+        using (var session = store.OpenSession())
+        {
+            for (int i = 0; i < 30; i++)
+                session.Store(new Widget { Key = Guid.NewGuid(), Category = "common", Name = $"Alpha Bravo Charlie {i}" }, $"widgets/{i}");
+
+            session.SaveChanges();
+        }
+
+        Indexes.WaitForIndexing(store);
+
+        // Studio and the REST API page with pageSize, not with an RQL limit
+        const string query = "from index 'Widgets/ByNameWords' where morelikethis(id() = 'widgets/0', '{ \"Fields\": [\"Name\"], \"MinimumDocumentFrequency\": 0, \"MinimumTermFrequency\": 0, \"MinimumWordLength\": 0, \"MaximumDocumentFrequencyPercentage\": 100 }')";
+
+        using var commands = store.Commands();
+        var json = commands.RawGetJson<BlittableJsonReaderObject>($"/queries?query={Uri.EscapeDataString(query)}&pageSize=5");
+
+        Assert.True(json.TryGet("Results", out BlittableJsonReaderArray results));
+        Assert.InRange(results.Length, 1, 5);
+    }
+
+    private static Widget[] Similar<TIndex>(IDocumentSession session, Widget target, bool boost, int take, string[] fields = null, bool orderByScore = false)
         where TIndex : AbstractIndexCreationTask, new()
     {
-        return session.Advanced.DocumentQuery<Widget, TIndex>()
+        var query = session.Advanced.DocumentQuery<Widget, TIndex>()
             .MoreLikeThis(b => b
                 .UsingDocument(x => x.WhereEquals("Key", target.Key.ToString()))
                 .WithOptions(new MoreLikeThisOptions
@@ -202,9 +232,12 @@ public class RavenDB_27536 : RavenTestBase
                     MaximumDocumentFrequencyPercentage = 100,
                     MinimumTermFrequency = 0,
                     MinimumWordLength = 0
-                }))
-            .Take(take)
-            .ToArray();
+                }));
+
+        if (orderByScore)
+            query = query.OrderByScore();
+
+        return query.Take(take).ToArray();
     }
 
     private sealed class Widget

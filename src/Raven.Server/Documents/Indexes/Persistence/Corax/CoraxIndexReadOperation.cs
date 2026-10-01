@@ -1248,19 +1248,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
 
             // take counts entries, the loop counts documents: +1 for the base document, times fanout
-            long take = CoraxConstants.IndexSearcher.TakeAll;
-            if (query.Limit.HasValue)
-            {
-                var maxOutputsPerDocument = Math.Max(1, _maxNumberOfOutputsPerDocument); // zero until the index has run
-                take = query.Start + query.Limit.Value + 1;
+            var maxOutputsPerDocument = Math.Max(1, _maxNumberOfOutputsPerDocument); // zero until the index has run
+            long take = query.Start + query.PageSize + 1;
 
-                take = take < 0 || take > int.MaxValue / maxOutputsPerDocument // query.Start is unbounded, and take is cast to int below
-                    ? CoraxConstants.IndexSearcher.TakeAll
-                    : take * maxOutputsPerDocument;
+            take = take < 0 || take > int.MaxValue / maxOutputsPerDocument // query.Start is unbounded, and take is cast to int below
+                ? CoraxConstants.IndexSearcher.TakeAll
+                : take * maxOutputsPerDocument;
 
-                if (take > IndexSearcher.NumberOfEntries)
-                    take = CoraxConstants.IndexSearcher.TakeAll;
-            }
+            if (take > IndexSearcher.NumberOfEntries)
+                take = CoraxConstants.IndexSearcher.TakeAll;
 
             var sortedQuery = IndexSearcher.OrderBy(mltQuery, new OrderMetadata(hasBoost: true, MatchCompareFieldType.Score), _index.Configuration.NullsSortMode, (int)take, token);
 
@@ -1286,17 +1282,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     sortedQuery.SetScoreAndDistanceBuffer(sortingData);
                 }
 
-                mltQuery = sortedQuery;
-
                 var read = 0;
                 long returnedDocs = 0;
                 long skippedDocs = 0;
                 Page page = default;
-                while ((read = mltQuery.Fill(ids.AsSpan())) != 0)
+                while ((read = sortedQuery.Fill(ids.AsSpan())) != 0)
                 {
                     for (int i = 0; i < read; i++)
                     {
-                        if (returnedDocs >= query.Limit)
+                        if (returnedDocs >= query.PageSize)
                             yield break;
 
                         var hit = ids[i];
