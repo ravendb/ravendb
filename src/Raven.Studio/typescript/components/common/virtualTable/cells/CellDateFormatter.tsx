@@ -4,6 +4,9 @@ import React, { useMemo } from "react";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import moment from "moment";
 import genUtils from "common/generalUtils";
+import copyToClipboard from "common/copyToClipboard";
+import { Icon } from "components/common/Icon";
+import Button from "react-bootstrap/Button";
 
 type CellContextSubset<TData, TValue> = Pick<CellContext<TData, TValue>, "cell" | "getValue">;
 
@@ -48,22 +51,38 @@ export function DateFormatterCell<TData, TValue>({
     }
 
     return (
-        <PopoverWithHoverWrapper message={<DateTooltip date={dateValue} />}>
+        <PopoverWithHoverWrapper
+            message={<DateTooltip date={dateValue} copyValue={typeof rawValue === "string" ? rawValue : null} />}
+        >
             <CellValue value={formattedDate} className={cellClassName} />
         </PopoverWithHoverWrapper>
     );
 }
 
-function DateTooltip({ date }: { date: Date }) {
+function DateTooltip({ date, copyValue }: { date: Date; copyValue: string | null }) {
+    const utcDate = moment.utc(date).toISOString();
+
+    const handleCopyToClipboard = () => {
+        copyToClipboard.copy(copyValue ?? utcDate, "Date has been copied to clipboard");
+    };
+
     return (
         <>
             <div className="index-errors-details-tooltip__container">
                 <b>UTC: </b>
-                <time className="index-errors-details-tooltip__date">{moment.utc(date).toISOString()}</time>
+                <time className="index-errors-details-tooltip__date">{utcDate}</time>
             </div>
             <div className="index-errors-details-tooltip__container">
                 <b>Relative: </b>
                 <time>{genUtils.formatDurationByDate(moment.utc(date), true)}</time>
+            </div>
+            <div className="mt-3">
+                <span className="small-label">Actions</span>
+                <div className="d-flex gap-2">
+                    <Button onClick={handleCopyToClipboard} size="sm" title="Copy to clipboard">
+                        <Icon icon="copy-to-clipboard" margin="m-0" />
+                    </Button>
+                </div>
             </div>
         </>
     );
