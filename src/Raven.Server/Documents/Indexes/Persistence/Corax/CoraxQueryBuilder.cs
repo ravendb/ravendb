@@ -556,7 +556,7 @@ public static partial class CoraxQueryBuilder
                 case MethodType.Regex:
                     return HandleRegex(builderParameters, me, ref leftOnlyOptimization);
                 case MethodType.MoreLikeThis:
-                    return builderParameters.AllEntries.Replay();
+                    return builderParameters.IndexSearcher.AllEntries();
                 default:
                     QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, queryParameters);
                     return null; // never hit
@@ -1277,6 +1277,9 @@ public static partial class CoraxQueryBuilder
         {
             return null;
         }
+
+        if (query.Metadata.HasMoreLikeThis) // MoreLikeThis orders its matches by score itself
+            return null;
 
         var orderByFields = query.Metadata.OrderBy;
 
