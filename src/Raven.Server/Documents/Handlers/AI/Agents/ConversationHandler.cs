@@ -807,20 +807,39 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         return false;
     }
 
-    public static BlittableJsonReaderObject CreateParameters(JsonOperationContext context, AiToolCall call, BlittableJsonReaderObject parameters)
+    public BlittableJsonReaderObject CreateParameters(JsonOperationContext context, AiToolCall call, BlittableJsonReaderObject parameters)
     {
         var args = context.Sync.ReadForMemory(call.Arguments, "call/args");
-        if (parameters is null)
+        var declaredParameters = _configuration.Parameters;
+
+        if (parameters is null && declaredParameters is not { Count: > 0 })
             return args;
 
-        args.Modifications = new DynamicJsonValue();
-        BlittableJsonReaderObject.PropertyDetails prop = default;
-        for (int i = 0; i < parameters.Count; i++)
+        args.Modifications = new DynamicJsonValue(args);
+
+        if (parameters is not null)
         {
-            // Important: we *override* any parameter from the model with the user provided values
-            // to ensure the safety & security of this feature. Model cannot override those values, period.
-            parameters.GetPropertyByIndex(i, ref prop);
-            args.Modifications[prop.Name] = GetAiConversationParameter(prop.Name, prop.Value).Value;
+            BlittableJsonReaderObject.PropertyDetails prop = default;
+            for (int i = 0; i < parameters.Count; i++)
+            {
+                // Important: we *override* any parameter from the model with the user provided values
+                // to ensure the safety & security of this feature. Model cannot override those values, period.
+                parameters.GetPropertyByIndex(i, ref prop);
+                args.Modifications[prop.Name] = GetAiConversationParameter(prop.Name, prop.Value).Value;
+            }
+        }
+
+        if (declaredParameters is not null)
+        {
+            foreach (var declared in declaredParameters)
+            {
+                if (parameters is not null && parameters.TryGetMember(declared.Name, out _))
+                    continue;
+
+                // A declared parameter with no user provided value is dropped rather than left to the model,
+                // so the query fails instead of running with a scope that the model chose.
+                args.Modifications.Remove(declared.Name);
+            }
         }
 
         return context.ReadObject(args, "args");
