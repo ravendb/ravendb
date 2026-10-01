@@ -67,7 +67,8 @@ class debugAdvancedReplayTransactionCommands extends viewModelBase {
                     dbActivationTask.resolve();
                 } else {
                     databasesManager.default.activate(db, { waitForNotificationCenterWebSocket: true })
-                        .done(() => dbActivationTask.resolve());
+                        .done(() => dbActivationTask.resolve())
+                        .fail(() => this.isUploading(false));
                 }
                 
                 dbActivationTask.done(() => {

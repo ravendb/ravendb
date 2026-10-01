@@ -95,16 +95,7 @@ class databasesManager {
         const task = $.Deferred<canActivateResultDto>();
         const databasesListView = appUrl.forDatabases();
 
-        const incomingDatabaseName = db ? db.name : undefined;
-
         this.initialized.done(() => {
-            const currentActiveDatabase = this.activeDatabaseTracker.database();
-            
-            if (currentActiveDatabase != null && currentActiveDatabase.name === incomingDatabaseName) {
-                task.resolve({ can: true });
-                return;
-            }
-
             if (db && !db.disabled() && db.relevant()) {
                 this.activate(db)
                     .done(() => task.resolve({ can: true }))
@@ -131,8 +122,9 @@ class databasesManager {
     }
 
     activate(db: database, opts: { waitForNotificationCenterWebSocket: boolean } = undefined): JQueryPromise<void> {
-        if (db === this.activeDatabaseTracker.database()) {
-            return $.Deferred<void>().resolve();
+        const existingActivationTask = this.activeDatabaseTracker.getActivationTask(db);
+        if (existingActivationTask) {
+            return existingActivationTask;
         }
 
         this.changesContext.changeDatabase(db);

@@ -241,7 +241,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
         }
     };
 
-    const onHeaderClicked = async (db: DatabaseSharedInfo, e: MouseEvent<HTMLElement>) => {
+    const onHeaderClicked = (db: DatabaseSharedInfo, e: MouseEvent<HTMLElement>) => {
         if (genUtils.canConsumeDelegatedEvent(e)) {
             if (!db || db.isDisabled || !db.currentNode.isRelevant) {
                 return true;
@@ -252,12 +252,10 @@ export function DatabasePanel(props: DatabasePanelProps) {
             const databaseToActivate = manager.getDatabaseByName(db.name);
 
             if (databaseToActivate) {
-                try {
-                    await manager.activate(databaseToActivate);
-                    await manager.updateDatabaseInfo(databaseToActivate, db.name);
-                } finally {
-                    await dispatch(reloadDatabaseDetails(db.name));
-                }
+                manager
+                    .activate(databaseToActivate)
+                    .then(() => manager.updateDatabaseInfo(databaseToActivate, db.name))
+                    .always(() => dispatch(reloadDatabaseDetails(db.name)));
             }
         }
     };
