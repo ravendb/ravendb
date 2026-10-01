@@ -660,7 +660,6 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             }
             case ValueType.LazyString:
                 var lazyStringValue = ((LazyStringValue)v);
-                EnsureHasSpace(lazyStringValue.Length);
                 index += AppendAnalyzedTerm(lazyStringValue.AsSpan());
                 break;
             case ValueType.LazyCompressedString:
@@ -752,7 +751,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         int AppendAnalyzedTerm(Span<byte> term)
         {
             var analyzedTerm = builder.AnalyzeSingleTerm(indexFieldId, term);
-            var buffer = EnsureHasSpace(analyzedTerm.Length - term.Length); // just in case the analyze is _larger_
+            var buffer = EnsureHasSpace(analyzedTerm.Length);
             analyzedTerm.CopyTo(buffer[index..]);
             return analyzedTerm.Length;
         }
