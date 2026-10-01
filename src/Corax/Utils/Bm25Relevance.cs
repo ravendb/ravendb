@@ -34,6 +34,7 @@ public sealed unsafe class Bm25Relevance : IDisposable
     public const float ConstantScoreValue = 1f;
 
     private const int MaximumDocumentCapacity = MaxSizeOfStorage / (sizeof(long) + sizeof(short));
+    private const int DynamicScoreBatchSize = 16 * 1024;
     private const int MaxSizeOfStorage = 1024 * 1024; //1MB;
     private const float BFactor = 0.25f;
     private const float K1 = 2f;
@@ -75,8 +76,8 @@ public sealed unsafe class Bm25Relevance : IDisposable
         {
             _scoreFunc = dynamicalScoreFunc;
             _processFunc = &DecodeAndDiscard;
-            _bufferCapacity = MaximumDocumentCapacity;
-            _currentId = MaximumDocumentCapacity;
+            _bufferCapacity = DynamicScoreBatchSize;
+            _currentId = DynamicScoreBatchSize;
         }
         else
         {
@@ -297,15 +298,31 @@ public sealed unsafe class Bm25Relevance : IDisposable
     {
         static void PostingListCalculateScoreDynamically(Bm25Relevance bm25, Span<long> matches, Span<float> scores, float boostFactor)
         {
+            if (matches.Length == 0)
+                return;
+            var lastMatch = matches[^1];
+            var pruneBound = EntryIdEncodings.PrepareIdForSeekInPostingList(lastMatch + 1);
+            bm25._setIterator.Seek(EntryIdEncodings.PrepareIdForSeekInPostingList(matches[0]));
+
+            var matchesStart = 0;
             bm25._currentId = bm25._bufferCapacity;
-            while (bm25._setIterator.Fill(bm25.Matches, out var read, pruneGreaterThanOptimization: EntryIdEncodings.PrepareIdForPruneInPostingList(matches[^1])) && read > 0)
+            while (bm25._setIterator.Fill(bm25.Matches, out var read, pruneGreaterThanOptimization: pruneBound) && read > 0)
             {
                 bm25._currentId = read;
                 // The posting list yields encoded ids (entry id + quantized frequency). Split them the way the stored
                 // path does in DecodeAndSave, otherwise the ids never match and the frequencies stay zero - leaving
                 // every document with the score buffer's initial value.
                 EntryIdEncodings.Decode(bm25.Matches, bm25.Scores);
-                CalculateScoreFromMemory(bm25, matches, scores, boostFactor);
+
+                var postings = bm25.Matches;
+                matchesStart = FindLowerBound(matches, matchesStart, postings[0], gallop: true);
+                if (matchesStart == matches.Length)
+                    return;
+
+                CalculateScoreFromMemory(bm25, matches[matchesStart..], scores[matchesStart..], boostFactor);
+                if (postings[^1] >= lastMatch)
+                    return;
+
                 bm25._currentId = bm25._bufferCapacity;
             }
         }
