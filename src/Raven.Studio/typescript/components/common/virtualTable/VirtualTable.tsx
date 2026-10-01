@@ -31,6 +31,10 @@ export default function VirtualTable<T>(props: VirtualTableProps<T> & ClassNameP
         overscan = 5,
         rowHeightInPx,
         isLoading = false,
+        isEmpty,
+        emptyMessage,
+        onScroll,
+        overlay,
         isCompact,
         isRoundingDisabled,
         isPaddingDisabled,
@@ -72,6 +76,10 @@ export default function VirtualTable<T>(props: VirtualTableProps<T> & ClassNameP
             className={className}
             tableContainerRef={tableContainerRef}
             isLoading={isLoading}
+            isEmpty={isEmpty}
+            emptyMessage={emptyMessage}
+            onScroll={onScroll}
+            overlay={overlay}
             heightInPx={heightInPx}
             isCompact={isCompact}
             isRoundingDisabled={isRoundingDisabled}

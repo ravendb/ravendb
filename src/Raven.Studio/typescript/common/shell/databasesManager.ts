@@ -1,4 +1,4 @@
-﻿import router = require("plugins/router");
+import router = require("plugins/router");
 import database = require("models/resources/database");
 import changesContext = require("common/changesContext");
 import appUrl = require("common/appUrl");
@@ -131,6 +131,10 @@ class databasesManager {
     }
 
     activate(db: database, opts: { waitForNotificationCenterWebSocket: boolean } = undefined): JQueryPromise<void> {
+        if (db === this.activeDatabaseTracker.database()) {
+            return $.Deferred<void>().resolve();
+        }
+
         this.changesContext.changeDatabase(db);
 
         const basicTask = this.activeDatabaseTracker.onActivation(db);

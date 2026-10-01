@@ -1,14 +1,38 @@
-import { MouseEvent, useEffect, useState } from "react";
+import { MouseEvent, useCallback, useEffect, useRef, useState } from "react";
 import { LazyTableSelection } from "components/common/virtualTable/hooks/useLazyTableSelection";
 
 export function useSelectionPreview<T>(selection: LazyTableSelection<T> | undefined) {
-    const [hoveredRowIndex, setHoveredRowIndex] = useState<number>(null);
-    const [isShiftPressed, setIsShiftPressed] = useState(false);
+    const [previewTargetRowIndex, setPreviewTargetRowIndex] = useState<number>(null);
+    const hoveredRowIndexRef = useRef<number>(null);
+    const isShiftPressedRef = useRef(false);
+
+    const anchorRowIndex = selection?.anchorRowIndex ?? null;
+    const anchorRowIndexRef = useRef(anchorRowIndex);
+    anchorRowIndexRef.current = anchorRowIndex;
+
+    const hasSelection = selection != null;
+
+    const updatePreviewTarget = useCallback(() => {
+        const nextTarget =
+            isShiftPressedRef.current && anchorRowIndexRef.current !== null ? hoveredRowIndexRef.current : null;
+
+        setPreviewTargetRowIndex(nextTarget);
+    }, []);
 
     // Tracks the shift key on the document, so the preview follows it without moving the mouse
     useEffect(() => {
-        const handleKey = (e: KeyboardEvent) => setIsShiftPressed(e.shiftKey);
-        const handleBlur = () => setIsShiftPressed(false);
+        if (!hasSelection) {
+            return;
+        }
+
+        const handleKey = (e: KeyboardEvent) => {
+            isShiftPressedRef.current = e.shiftKey;
+            updatePreviewTarget();
+        };
+        const handleBlur = () => {
+            isShiftPressedRef.current = false;
+            updatePreviewTarget();
+        };
 
         document.addEventListener("keydown", handleKey);
         document.addEventListener("keyup", handleKey);
@@ -19,28 +43,32 @@ export function useSelectionPreview<T>(selection: LazyTableSelection<T> | undefi
             document.removeEventListener("keyup", handleKey);
             window.removeEventListener("blur", handleBlur);
         };
-    }, []);
+    }, [hasSelection, updatePreviewTarget]);
 
     const onMouseMove = (e: MouseEvent) => {
         const row = (e.target as Element).closest<HTMLElement>("tr[data-row-index]");
 
-        setIsShiftPressed(e.shiftKey);
-        setHoveredRowIndex(row ? Number(row.dataset.rowIndex) : null);
+        hoveredRowIndexRef.current = row ? Number(row.dataset.rowIndex) : null;
+        isShiftPressedRef.current = e.shiftKey;
+        updatePreviewTarget();
     };
 
-    const onMouseLeave = () => setHoveredRowIndex(null);
+    const onMouseLeave = () => {
+        hoveredRowIndexRef.current = null;
+        updatePreviewTarget();
+    };
 
-    const anchorRowIndex = selection?.anchorRowIndex ?? null;
     const isPreviewVisible =
-        anchorRowIndex !== null &&
-        hoveredRowIndex !== null &&
-        isShiftPressed &&
-        selection.canSelectRangeTo(hoveredRowIndex);
+        anchorRowIndex !== null && previewTargetRowIndex !== null && selection.canSelectRangeTo(previewTargetRowIndex);
 
     const isPreviewed = (rowIndex: number) =>
         isPreviewVisible &&
-        rowIndex >= Math.min(anchorRowIndex, hoveredRowIndex) &&
-        rowIndex <= Math.max(anchorRowIndex, hoveredRowIndex);
+        rowIndex >= Math.min(anchorRowIndex, previewTargetRowIndex) &&
+        rowIndex <= Math.max(anchorRowIndex, previewTargetRowIndex);
 
-    return { isPreviewed, onMouseMove, onMouseLeave };
+    return {
+        isPreviewed,
+        onMouseMove: hasSelection ? onMouseMove : undefined,
+        onMouseLeave: hasSelection ? onMouseLeave : undefined,
+    };
 }

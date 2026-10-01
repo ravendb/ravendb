@@ -22,20 +22,16 @@ export default function CellDocumentValue({
     const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
 
     const getLinkToDocument = (cellValue: unknown): string => {
-        if (typeof cellValue !== "string") {
+        if (typeof cellValue !== "string" || !externalIdRegex.test(cellValue)) {
             return null;
         }
 
-        if (cellValue.match(externalIdRegex)) {
-            const extractedCollectionName = cellValue.split("/")[0].toLowerCase();
-            const matchedCollection = allCollectionNames.find((collection) =>
-                extractedCollectionName.startsWith(collection.toLowerCase())
-            );
+        const extractedCollectionName = cellValue.split("/")[0].toLowerCase();
+        const matchedCollection = allCollectionNames.find((collection) =>
+            extractedCollectionName.startsWith(collection.toLowerCase())
+        );
 
-            return matchedCollection ? appUrl.forEditDoc(cellValue, databaseName, matchedCollection) : null;
-        }
-
-        return null;
+        return matchedCollection ? appUrl.forEditDoc(cellValue, databaseName, matchedCollection) : null;
     };
 
     const documentLink = getLinkToDocument(value);
@@ -63,7 +59,7 @@ export default function CellDocumentValue({
     );
 }
 
-const externalIdRegex = /^\w+\/\w+/gi;
+const externalIdRegex = /^\w+\/\w+/;
 
 function getUrl(cellValue: unknown): string {
     if (typeof cellValue !== "string" || !cellValue.includes("//")) {

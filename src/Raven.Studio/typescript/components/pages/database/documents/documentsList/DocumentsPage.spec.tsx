@@ -42,18 +42,27 @@ const addCustomCityColumn = async (screen: Screen) => {
     await flushFetches();
 };
 
+const TABLE_WIDTH_IN_PX = 600;
+
 const getColumnLayoutStorageKeys = () =>
-    Object.keys(localStorage).filter((key) => key.includes("documents-columns-") && key.includes("[Orders]"));
+    Object.keys(localStorage).filter((key) => key.includes("custom-columns-") && key.includes("[Orders]"));
 
 describe("DocumentsPage", () => {
     // the ResizeObserver polyfill reports a 100px wide table in jsdom, which would hide all property columns
-    // without it the table keeps the 500px width mocked by getBoundingClientRect
+    // without it the table keeps the width mocked by getBoundingClientRect
     beforeAll(() => {
         window.ResizeObserver = class {
             observe() {}
             unobserve() {}
             disconnect() {}
         };
+    });
+
+    beforeEach(() => {
+        jest.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+            width: TABLE_WIDTH_IN_PX,
+            height: 500,
+        } as DOMRect);
     });
 
     afterEach(() => {
@@ -486,7 +495,10 @@ describe("DocumentsPage", () => {
         });
 
         expect(reportWarning).toHaveBeenCalledWith("Orders was removed");
-        expect(navigate).toHaveBeenCalledWith(expect.stringContaining(appUrl.forDocuments(null, null)));
+        expect(navigate).toHaveBeenCalledWith(expect.stringContaining(appUrl.forDocuments(null, null)), {
+            replace: true,
+            trigger: true,
+        });
         expect(navigate.mock.calls[0][0]).not.toContain("collection=");
     });
 
@@ -510,7 +522,10 @@ describe("DocumentsPage", () => {
         await flushFetches();
 
         expect(reportWarning).not.toHaveBeenCalled();
-        expect(navigate).toHaveBeenCalledWith(appUrl.forDocuments(null, switchedDatabaseName));
+        expect(navigate).toHaveBeenCalledWith(appUrl.forDocuments(null, switchedDatabaseName), {
+            replace: true,
+            trigger: true,
+        });
     });
 
     it("keeps the column layout of the collection between visits", async () => {

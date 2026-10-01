@@ -17,7 +17,12 @@ export function useFullDocumentProvider(databaseName: string) {
                 const id = doc.getId();
 
                 if (!cacheRef.current.has(id)) {
-                    const fetched = databasesService.getDocumentWithMetadata(id, databaseName, true);
+                    const fetched = databasesService.getDocumentWithMetadata(id, databaseName, true).then((result) => {
+                        if (!result) {
+                            throw new Error("The document no longer exists");
+                        }
+                        return result;
+                    });
                     fetched.catch(() => cacheRef.current.delete(id));
                     cacheRef.current.set(id, fetched);
                 }

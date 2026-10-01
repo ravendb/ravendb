@@ -1,10 +1,7 @@
-import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import { AllRevisionsTableProps } from "components/pages/database/documents/allRevisions/common/allRevisionsTypes";
-import AllRevisionsTableNonSharded from "components/pages/database/documents/allRevisions/partials/AllRevisionsTableNonSharded";
-import AllRevisionsTableSharded from "components/pages/database/documents/allRevisions/partials/AllRevisionsTableSharded";
+import AllRevisionsTable from "components/pages/database/documents/allRevisions/partials/AllRevisionsTable";
 import AllRevisionsTableSmallSample from "components/pages/database/documents/allRevisions/partials/AllRevisionsTableSmallSample";
-import { useAppSelector } from "components/store";
 
 export default function AllRevisionsWithSize({
     width,
@@ -15,8 +12,6 @@ export default function AllRevisionsWithSize({
     selectedRows,
     setSelectedRows,
 }: AllRevisionsTableProps) {
-    const isSharded = useAppSelector(databaseSelectors.activeDatabase)?.isSharded;
-
     const tableProps = {
         width: virtualTableUtils.getTableBodyWidth(width),
         height,
@@ -32,9 +27,5 @@ export default function AllRevisionsWithSize({
         return <AllRevisionsTableSmallSample {...tableProps} />;
     }
 
-    if (isSharded) {
-        return <AllRevisionsTableSharded {...tableProps} />;
-    }
-
-    return <AllRevisionsTableNonSharded {...tableProps} />;
+    return <AllRevisionsTable {...tableProps} />;
 }

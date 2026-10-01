@@ -28,12 +28,22 @@ const getDocumentId = (doc: document) => doc.getId();
 export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyProps) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const isSharded = useAppSelector(databaseSelectors.activeDatabase)?.isSharded;
-    const collectionDocumentCount = useAppSelector(
-        collectionsTrackerSelectors.collectionByName(collectionName ?? systemCollectionNames.allDocuments)
-    )?.documentCount;
+    const trackedCollectionName = collectionName ?? systemCollectionNames.allDocuments;
+    const collection = useAppSelector(collectionsTrackerSelectors.collectionByName(trackedCollectionName));
+    const collectionDocumentCount = collection?.documentCount;
     const { databasesService } = useServices();
 
-    const { isDataChanged, trackResultEtag, reset: resetDataChanged } = useDocumentsDataChanged(collectionName);
+    const {
+        isDataChanged,
+        trackResultEtag,
+        reset: resetDataChanged,
+    } = useDocumentsDataChanged({
+        collection,
+        isAllDocuments: collectionName === null,
+        isSharded,
+        fetchCurrentEtag: async () =>
+            (await databasesService.getDocumentsPreview(databaseName, 0, 0, collectionName ?? undefined)).resultEtag,
+    });
     const { getPropertyPreviewResolver, clearCache: clearFullDocumentCache } = useFullDocumentProvider(databaseName);
     const collectionDeletionCallbacks = useCollectionRemovalRedirect(databaseName, collectionName);
 
@@ -63,7 +73,11 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
             columns.onPreviewResult(result);
             trackResultEtag(result.resultEtag);
         },
-        reloadDependencies: [columns.previewBindings, columns.fullBindings],
+        onReset: () => {
+            clearFullDocumentCache();
+            resetDataChanged();
+        },
+        reloadDependencies: [columns.bindingsKey],
     });
 
     const [isPaginated, setIsPaginated] = useState(false);
@@ -88,8 +102,7 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
     const { openSheet: openColumnSettings } = useTableDisplaySettingsSheet(table, columns.settingsOptions);
 
     const refresh = () => {
-        clearFullDocumentCache();
-        resetDataChanged();
+        selection.clear();
         lazyRows.reload();
     };
 
@@ -122,13 +135,11 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
                 bottomOverlay={
                     <DocumentsSelectionActions
                         collectionName={collectionName}
+                        trackedCollectionName={trackedCollectionName}
                         collectionDocumentCount={collectionDocumentCount}
                         selection={selection}
                         collectionDeletionCallbacks={collectionDeletionCallbacks}
-                        onSelectionDeleted={() => {
-                            selection.clear();
-                            refresh();
-                        }}
+                        onSelectionDeleted={refresh}
                     />
                 }
             />

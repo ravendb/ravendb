@@ -1,8 +1,7 @@
-import { rtlRender, fireEvent, act } from "test/rtlTestUtils";
+import { rtlRender, fireEvent } from "test/rtlTestUtils";
 import { composeStories } from "@storybook/react-webpack5";
 import * as Stories from "./VirtualTable.stories";
 import { virtualTableConstants } from "./utils/virtualTableConstants";
-import { mockStore } from "test/mocks/store/MockStore";
 
 const { LazyVirtualTableStory } = composeStories(Stories);
 
@@ -19,8 +18,8 @@ function getScrollContainer(container: HTMLElement) {
 }
 
 // jsdom has no layout, so the scroll geometry is derived from the rendered body height
-function mockLayout(scrollContainer: HTMLDivElement) {
-    Object.defineProperty(scrollContainer, "clientHeight", { configurable: true, value: VIEWPORT_HEIGHT_IN_PX });
+function mockLayout(scrollContainer: HTMLDivElement, viewportHeightInPx = VIEWPORT_HEIGHT_IN_PX) {
+    Object.defineProperty(scrollContainer, "clientHeight", { configurable: true, value: viewportHeightInPx });
     Object.defineProperty(scrollContainer, "scrollHeight", {
         configurable: true,
         get: () => parseFloat(scrollContainer.querySelector("tbody").style.height) + headerHeightInPx,
@@ -43,58 +42,50 @@ describe("LazyVirtualTable", () => {
             expect(screen.queryByText("Item 500")).not.toBeInTheDocument();
             expect(screen.queryByTestId("dom-limit-banner")).not.toBeInTheDocument();
         });
-
-        it("shows the end of DOM banner at the bottom and switches to the page matching the scroll position", async () => {
-            const minFetchCount = fetchMode === "continuationToken" ? MAX_ROWS_IN_DOM / 4 : PAGE_SIZE;
-
-            const { screen, container } = rtlRender(
-                <LazyVirtualTableStory
-                    totalCount={TOTAL_COUNT}
-                    fetchMode={fetchMode}
-                    fetchDelayInMs={0}
-                    minFetchCount={minFetchCount}
-                    heightInPx={TABLE_HEIGHT_IN_PX}
-                />
-            );
-
-            expect(await screen.findByText("Item 0")).toBeInTheDocument();
-
-            const scrollContainer = getScrollContainer(container);
-            mockLayout(scrollContainer);
-
-            if (fetchMode === "continuationToken") {
-                for (let loaded = minFetchCount; loaded < MAX_ROWS_IN_DOM; loaded += minFetchCount) {
-                    scrollTo(scrollContainer, loaded * defaultRowHeightInPx);
-                    expect(await screen.findByText(`Item ${loaded}`)).toBeInTheDocument();
-                }
-            }
-
-            scrollTo(scrollContainer, maxBodyHeightInPx);
-
-            expect(await screen.findByTestId("dom-limit-banner")).toBeInTheDocument();
-            expect(await screen.findByText(`Item ${MAX_ROWS_IN_DOM - 1}`)).toBeInTheDocument();
-            expect(screen.queryByText(`Item ${MAX_ROWS_IN_DOM}`)).not.toBeInTheDocument();
-
-            fireEvent.click(screen.getByRole("button", { name: "Turn on pagination" }));
-
-            const firstRowOfPage = await screen.findByText(`Item ${MAX_ROWS_IN_DOM}`);
-            expect(firstRowOfPage.closest("tr")).toHaveStyle({ transform: "translateY(0px)" });
-            expect(scrollContainer.querySelector("tbody")).toHaveStyle({
-                height: `${PAGE_SIZE * defaultRowHeightInPx}px`,
-            });
-            expect(screen.queryByTestId("dom-limit-banner")).not.toBeInTheDocument();
-            expect(
-                screen.getByText(
-                    `${(MAX_ROWS_IN_DOM + 1).toLocaleString()}-${(MAX_ROWS_IN_DOM + PAGE_SIZE).toLocaleString()} of ${TOTAL_COUNT.toLocaleString()}`
-                )
-            ).toBeInTheDocument();
-
-            const expectedPage = MAX_ROWS_IN_DOM / PAGE_SIZE + 1;
-            expect(screen.getByRole("spinbutton", { name: "Page" })).toHaveValue(expectedPage);
-        });
     });
 
-    it("suggests a query instead of pagination at the end of DOM in a sharded database", async () => {
+    it("shows the end of DOM banner at the bottom and switches to the last page of the DOM", async () => {
+        const { screen, container } = rtlRender(
+            <LazyVirtualTableStory
+                totalCount={TOTAL_COUNT}
+                fetchMode="skipTake"
+                fetchDelayInMs={0}
+                minFetchCount={PAGE_SIZE}
+                heightInPx={TABLE_HEIGHT_IN_PX}
+            />
+        );
+
+        expect(await screen.findByText("Item 0")).toBeInTheDocument();
+
+        const scrollContainer = getScrollContainer(container);
+        const viewportHeightInPx = (PAGE_SIZE + 5) * defaultRowHeightInPx;
+        mockLayout(scrollContainer, viewportHeightInPx);
+
+        scrollTo(scrollContainer, maxBodyHeightInPx + headerHeightInPx - viewportHeightInPx);
+
+        expect(await screen.findByTestId("dom-limit-banner")).toBeInTheDocument();
+        expect(await screen.findByText(`Item ${MAX_ROWS_IN_DOM - 1}`)).toBeInTheDocument();
+        expect(screen.queryByText(`Item ${MAX_ROWS_IN_DOM}`)).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("button", { name: "Turn on pagination" }));
+
+        const firstRowOfPage = await screen.findByText(`Item ${MAX_ROWS_IN_DOM - PAGE_SIZE}`);
+        expect(firstRowOfPage.closest("tr")).toHaveStyle({ transform: "translateY(0px)" });
+        expect(scrollContainer.querySelector("tbody")).toHaveStyle({
+            height: `${PAGE_SIZE * defaultRowHeightInPx}px`,
+        });
+        expect(screen.queryByTestId("dom-limit-banner")).not.toBeInTheDocument();
+        expect(
+            screen.getByText(
+                `${(MAX_ROWS_IN_DOM - PAGE_SIZE + 1).toLocaleString()}-${MAX_ROWS_IN_DOM.toLocaleString()} of ${TOTAL_COUNT.toLocaleString()}`
+            )
+        ).toBeInTheDocument();
+
+        const expectedPage = MAX_ROWS_IN_DOM / PAGE_SIZE;
+        expect(screen.getByRole("spinbutton", { name: "Page" })).toHaveValue(expectedPage);
+    });
+
+    it("suggests a query instead of pagination at the end of DOM in continuation token mode", async () => {
         const minFetchCount = MAX_ROWS_IN_DOM / 4;
 
         const { screen, container } = rtlRender(
@@ -106,10 +97,6 @@ describe("LazyVirtualTable", () => {
                 heightInPx={TABLE_HEIGHT_IN_PX}
             />
         );
-
-        act(() => {
-            mockStore.databases.withActiveDatabase_Sharded();
-        });
 
         expect(await screen.findByText("Item 0")).toBeInTheDocument();
 
@@ -152,6 +139,30 @@ describe("LazyVirtualTable", () => {
         expect(await screen.findByText(`Item ${PAGE_SIZE}`)).toBeInTheDocument();
     });
 
+    it("switches to the page starting at the scrolled row when the browser reports a fractional scroll position", async () => {
+        const { screen, container } = rtlRender(
+            <LazyVirtualTableStory
+                totalCount={TOTAL_COUNT}
+                fetchMode="skipTake"
+                fetchDelayInMs={0}
+                heightInPx={TABLE_HEIGHT_IN_PX}
+            />
+        );
+
+        expect(await screen.findByText("Item 0")).toBeInTheDocument();
+
+        const scrollContainer = getScrollContainer(container);
+        mockLayout(scrollContainer);
+
+        const pageNumber = 5;
+        scrollTo(scrollContainer, (pageNumber - 1) * PAGE_SIZE * defaultRowHeightInPx - 0.8);
+
+        fireEvent.click(screen.getByRole("checkbox", { name: "Pagination" }));
+
+        expect(await screen.findByRole("spinbutton", { name: "Page" })).toHaveValue(pageNumber);
+        expect(await screen.findByText(`Item ${(pageNumber - 1) * PAGE_SIZE}`)).toBeInTheDocument();
+    });
+
     it("can pick the rows per page and jump to a page from the input", async () => {
         const { screen, container } = rtlRender(
             <LazyVirtualTableStory
@@ -190,5 +201,37 @@ describe("LazyVirtualTable", () => {
         expect(await screen.findByText(`Item ${TOTAL_COUNT - 1}`)).toBeInTheDocument();
         expect(pageInput).toHaveValue(totalPages);
         expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled();
+    });
+
+    it("ignores an out of range page typed into the input and restores the current page on blur", async () => {
+        const { screen } = rtlRender(
+            <LazyVirtualTableStory
+                totalCount={1000}
+                fetchMode="skipTake"
+                fetchDelayInMs={0}
+                heightInPx={TABLE_HEIGHT_IN_PX}
+            />
+        );
+
+        expect(await screen.findByText("Item 0")).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("checkbox", { name: "Pagination" }));
+
+        const pageInput = await screen.findByRole("spinbutton", { name: "Page" });
+
+        fireEvent.change(pageInput, { target: { value: "4" } });
+
+        const firstRowOfPage = `Item ${3 * PAGE_SIZE}`;
+        expect(await screen.findByText(firstRowOfPage)).toBeInTheDocument();
+
+        fireEvent.change(pageInput, { target: { value: "45000" } });
+
+        expect(pageInput).toHaveValue(45000);
+        expect(screen.getByText(firstRowOfPage)).toBeInTheDocument();
+
+        fireEvent.blur(pageInput);
+
+        expect(pageInput).toHaveValue(4);
+        expect(screen.getByText(firstRowOfPage)).toBeInTheDocument();
     });
 });

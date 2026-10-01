@@ -1,4 +1,5 @@
 import appUrl from "common/appUrl";
+import queryUtil from "common/queryUtil";
 import { CustomDropdownToggle } from "components/common/Dropdown";
 import { Icon } from "components/common/Icon";
 import { MultiRadioToggle } from "components/common/toggles/MultiRadioToggle";
@@ -91,7 +92,7 @@ export default function ExportDocumentsDropdown({
                 <input
                     type="hidden"
                     name="ExportOptions"
-                    value={JSON.stringify({ Query: `from '${collectionName}'` })}
+                    value={JSON.stringify({ Query: `from ${queryUtil.escapeName(collectionName)}` })}
                 />
             </form>
         </>

@@ -31,7 +31,7 @@ import ProgressBar from "react-bootstrap/ProgressBar";
 import { isEmpty } from "common/typeUtils";
 import { documentSchemaUtils } from "components/pages/database/settings/documentSchema/documentSchemaUtils";
 import { CellWithCopyWrapper } from "components/common/virtualTable/cells/CellWithCopy";
-import CellDocumentValue from "components/common/virtualTable/cells/CellDocumentValue";
+import CellDocumentId from "components/common/virtualTable/cells/CellDocumentId";
 import Code from "components/common/Code";
 import { virtualTableConstants } from "components/common/virtualTable/utils/virtualTableConstants";
 import { Checkbox } from "components/common/Checkbox";
@@ -298,6 +298,7 @@ export function ValidationSchemaViewSheetPanel({ validators, isPlayground }: Val
 }
 
 interface ValidatedDocumentsTableProps {
+    collectionName: string;
     width: number;
     loading: boolean;
     result?: ValidateSchemaResult;
@@ -308,8 +309,8 @@ interface TableProps {
     error: string;
 }
 
-const ValidatedDocumentsTable = ({ width, loading, result }: ValidatedDocumentsTableProps) => {
-    const { columns } = useValidationInvalidDocumentsColumns(width);
+const ValidatedDocumentsTable = ({ collectionName, width, loading, result }: ValidatedDocumentsTableProps) => {
+    const { columns } = useValidationInvalidDocumentsColumns(width, collectionName);
 
     const data: TableProps[] = useMemo(() => {
         if (!result?.Errors) {
@@ -339,7 +340,10 @@ const ValidatedDocumentsTable = ({ width, loading, result }: ValidatedDocumentsT
     );
 };
 
-function useValidationInvalidDocumentsColumns(availableWidth: number): { columns: ColumnDef<TableProps>[] } {
+function useValidationInvalidDocumentsColumns(
+    availableWidth: number,
+    collectionName: string
+): { columns: ColumnDef<TableProps>[] } {
     const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidth);
     const getSize = React.useCallback(
         (percentage: number) => virtualTableUtils.getCellSizeProvider(bodyWidth)(percentage),
@@ -352,7 +356,12 @@ function useValidationInvalidDocumentsColumns(availableWidth: number): { columns
                 header: "@id",
                 accessorKey: "documentId",
                 cell: ({ getValue }) => (
-                    <CellDocumentValue value={getValue()} databaseName={databaseName} hasHyperlinkForIds />
+                    <CellDocumentId
+                        id={getValue<string>()}
+                        collection={collectionName}
+                        databaseName={databaseName}
+                        hasHyperlink
+                    />
                 ),
                 size: getSize(25),
             },
@@ -363,7 +372,7 @@ function useValidationInvalidDocumentsColumns(availableWidth: number): { columns
                 size: getSize(75),
             },
         ],
-        [getSize]
+        [getSize, collectionName, databaseName]
     );
 
     return { columns };
@@ -659,6 +668,7 @@ function ValidationCollectionAccordionItem({
                         <SizeGetter
                             render={(props) => (
                                 <ValidatedDocumentsTable
+                                    collectionName={validator.Name}
                                     loading={isLoading}
                                     result={monitorOperationProgress}
                                     {...props}

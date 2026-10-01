@@ -18,21 +18,18 @@ interface LazyRowsLoaderOptions<T, TResult extends pagedResultWithToken<T>> {
     fetchMode: LazyFetchMode;
     minFetchCount: number;
     onResult?: (result: TResult) => void;
+    onReset?: () => void;
 }
 
 interface LazyRowsSnapshot {
     range: RowRange;
-    allowSkip: boolean;
     version: number;
     resetId: number;
     totalCount: number | null;
     loadedCount: number;
     hasMore: boolean;
     isFetching: boolean;
-}
-
-export interface SetRangeOptions {
-    allowSkip?: boolean;
+    error: unknown;
 }
 
 interface FetchRequest {
@@ -44,13 +41,13 @@ interface FetchRequest {
 
 const INITIAL_SNAPSHOT: LazyRowsSnapshot = {
     range: { start: 0, end: 0 },
-    allowSkip: false,
     version: 0,
     resetId: 0,
     totalCount: null,
     loadedCount: 0,
     hasMore: true,
     isFetching: false,
+    error: null,
 };
 
 export class LazyRowsLoader<T, TResult extends pagedResultWithToken<T> = pagedResultWithToken<T>> {
@@ -79,9 +76,8 @@ export class LazyRowsLoader<T, TResult extends pagedResultWithToken<T> = pagedRe
     getItem = (rowIndex: number): T | undefined => this.items.get(rowIndex);
 
     getRows(): LazyRow<T>[] {
-        const { range, allowSkip, loadedCount, totalCount } = this.snapshot;
-        const limit =
-            this.options.fetchMode === "continuationToken" && !allowSkip ? loadedCount : (totalCount ?? Infinity);
+        const { range, loadedCount, totalCount } = this.snapshot;
+        const limit = this.options.fetchMode === "continuationToken" ? loadedCount : (totalCount ?? Infinity);
         const end = Math.min(range.end, limit);
 
         const rows: LazyRow<T>[] = [];
@@ -95,9 +91,9 @@ export class LazyRowsLoader<T, TResult extends pagedResultWithToken<T> = pagedRe
         return rows;
     }
 
-    setRange = (range: RowRange, { allowSkip = false }: SetRangeOptions = {}) => {
-        if (!isSameRange(range, this.snapshot.range) || allowSkip !== this.snapshot.allowSkip) {
-            this.update({ range, allowSkip });
+    setRange = (range: RowRange) => {
+        if (!isSameRange(range, this.snapshot.range)) {
+            this.update({ range, error: null });
         }
 
         this.load();
@@ -108,15 +104,18 @@ export class LazyRowsLoader<T, TResult extends pagedResultWithToken<T> = pagedRe
         this.items = new Map();
         this.continuationToken = undefined;
         this.isStarted = true;
+        this.options.onReset?.();
 
         const { range, version, resetId } = this.snapshot;
+        const isRangeRestarted = isHard || this.options.fetchMode === "continuationToken";
 
         this.update({
             version: version + 1,
             loadedCount: 0,
             hasMore: true,
             isFetching: false,
-            ...(isHard && {
+            error: null,
+            ...(isRangeRestarted && {
                 range: { start: 0, end: range.end - range.start },
                 resetId: resetId + 1,
                 totalCount: null,
@@ -126,13 +125,18 @@ export class LazyRowsLoader<T, TResult extends pagedResultWithToken<T> = pagedRe
         this.load();
     };
 
+    retry = () => {
+        this.update({ error: null });
+        this.load();
+    };
+
     cancel = () => {
         this.generation++;
         this.update({ isFetching: false });
     };
 
     private async load() {
-        if (!this.isStarted || this.snapshot.isFetching) {
+        if (!this.isStarted || this.snapshot.isFetching || this.snapshot.error) {
             return;
         }
 
@@ -147,9 +151,9 @@ export class LazyRowsLoader<T, TResult extends pagedResultWithToken<T> = pagedRe
         let result: TResult;
         try {
             result = await this.options.fetchData(request.skip, request.take, request.continuationToken);
-        } catch {
+        } catch (error) {
             if (generation === this.generation) {
-                this.update({ isFetching: false });
+                this.update({ isFetching: false, error: error ?? "Failed to fetch the rows" });
             }
             return;
         }
@@ -164,7 +168,7 @@ export class LazyRowsLoader<T, TResult extends pagedResultWithToken<T> = pagedRe
     }
 
     private getNextRequest(): FetchRequest | null {
-        const { range, allowSkip, totalCount, loadedCount, hasMore } = this.snapshot;
+        const { range, totalCount, loadedCount, hasMore } = this.snapshot;
         const { fetchMode, minFetchCount } = this.options;
         const end = Math.min(range.end, totalCount ?? Infinity);
 
@@ -172,7 +176,7 @@ export class LazyRowsLoader<T, TResult extends pagedResultWithToken<T> = pagedRe
             return null;
         }
 
-        if (fetchMode === "continuationToken" && (range.start <= loadedCount || !allowSkip)) {
+        if (fetchMode === "continuationToken") {
             if (!hasMore || end <= loadedCount) {
                 return null;
             }
@@ -190,18 +194,34 @@ export class LazyRowsLoader<T, TResult extends pagedResultWithToken<T> = pagedRe
             return null;
         }
 
-        return {
-            skip: missing.start,
-            take: Math.min(
-                Math.max(minFetchCount, missing.end - missing.start),
-                (totalCount ?? Infinity) - missing.start
-            ),
-            isSequential: false,
-        };
+        if (this.items.has(missing.end)) {
+            const minSkip = Math.max(0, missing.end - minFetchCount);
+            let skip = missing.start;
+            while (skip > minSkip && !this.items.has(skip - 1)) {
+                skip--;
+            }
+
+            return { skip, take: missing.end - skip, isSequential: false };
+        }
+
+        const maxEnd = Math.min(
+            missing.start + Math.max(minFetchCount, missing.end - missing.start),
+            totalCount ?? Infinity
+        );
+        let fetchEnd = missing.end;
+        while (fetchEnd < maxEnd && !this.items.has(fetchEnd)) {
+            fetchEnd++;
+        }
+
+        return { skip: missing.start, take: fetchEnd - missing.start, isSequential: false };
     }
 
     private apply({ skip, take, isSequential }: FetchRequest, result: pagedResultWithToken<T>) {
-        result.items.forEach((item, i) => this.items.set(skip + i, item));
+        result.items.forEach((item, i) => {
+            if (!this.items.has(skip + i)) {
+                this.items.set(skip + i, item);
+            }
+        });
 
         const loadedEnd = skip + result.items.length;
         const reportedTotal = result.totalResultCount >= 0 ? result.totalResultCount : null;

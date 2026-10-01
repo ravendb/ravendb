@@ -73,10 +73,22 @@ export function useTableDisplaySettingsSheet<T>(table: TanstackTable<T>, options
                     initialPinnedIds={getInitialPinnedIds()}
                     customColumns={customColumns}
                     onApply={(layout) => {
-                        applySettings(layout.visibleColumnIds, layout.columnOrder, layout.pinnedColumnIds);
-                        onApplied?.(layout);
+                        if (onApplied) {
+                            table.resetColumnSizing();
+                            onApplied(layout);
+                        } else {
+                            applySettings(layout.visibleColumnIds, layout.columnOrder, layout.pinnedColumnIds);
+                        }
                     }}
-                    restoreDefaults={restoreDefaults}
+                    restoreDefaults={
+                        restoreDefaults && {
+                            ...restoreDefaults,
+                            onRestore: () => {
+                                table.resetColumnSizing();
+                                restoreDefaults.onRestore();
+                            },
+                        }
+                    }
                 />
             ),
             initialWidth: 400,
@@ -124,7 +136,8 @@ function TableDisplaySettingsSheet({
     const { close } = useViewSheet();
 
     const initialCustomColumns = customColumns ?? [];
-    const defaultColumnOrder = columnMetas.filter((m) => !m.customColumn).map((m) => m.id);
+    const initialCustomColumnIds = new Set(initialCustomColumns.map((column) => column.id));
+    const defaultColumnOrder = columnMetas.filter((m) => !initialCustomColumnIds.has(m.id)).map((m) => m.id);
 
     const [columnOrder, setColumnOrder] = useState<string[]>(initialColumnOrder);
     const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedIds);
