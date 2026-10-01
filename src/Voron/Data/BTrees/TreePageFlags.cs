@@ -1,4 +1,5 @@
 ﻿using System;
+using Voron.Data;
 
 namespace Voron.Data.BTrees
 {
@@ -9,5 +10,6 @@ namespace Voron.Data.BTrees
         Branch = 1,
         Leaf = 2,
         Value = 4,
+        Reserved = PageCollapsedLevels.Mask, // not available here, PageCollapsedLevels keeps the count in them
     }
 }

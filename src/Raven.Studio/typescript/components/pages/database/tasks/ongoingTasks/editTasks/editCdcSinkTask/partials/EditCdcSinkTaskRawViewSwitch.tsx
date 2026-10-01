@@ -8,6 +8,7 @@ import { editCdcSinkTaskUtils } from "components/pages/database/tasks/ongoingTas
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { useFormContext } from "react-hook-form";
+import { useEditCdcSinkTaskRawViewSync } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/hooks/useEditCdcSinkTaskRawViewSync";
 
 interface EditCdcSinkTaskRawViewSwitchProps {
     taskId: number;
@@ -17,30 +18,25 @@ interface EditCdcSinkTaskRawViewSwitchProps {
 export default function EditCdcSinkTaskRawViewSwitch({ taskId, isDisabled }: EditCdcSinkTaskRawViewSwitchProps) {
     const dispatch = useAppDispatch();
     const isRawView = useAppSelector(editCdcSinkTaskSelectors.isRawView);
-    const rawViewContent = useAppSelector(editCdcSinkTaskSelectors.rawViewContent);
-
     const editForm = useFormContext<EditCdcSinkTaskFormData>();
+    const { applyRawViewContent } = useEditCdcSinkTaskRawViewSync(editForm);
 
     const handleToggleRawView = (e: React.ChangeEvent<HTMLInputElement, Element>) => {
-        try {
-            if (e.target.checked) {
-                const currentFormData = editForm.getValues();
-                const dto = editCdcSinkTaskUtils.mapToDto(currentFormData, taskId);
-                const configAsString = JSON.stringify(dto, null, 2);
-                dispatch(editCdcSinkTaskActions.rawViewContentSet(configAsString));
-            } else {
-                const parsedConfig = JSON.parse(rawViewContent);
-                const formData = editCdcSinkTaskUtils.mapConfigFromDto(parsedConfig);
-                editForm.reset(formData);
-                dispatch(editCdcSinkTaskActions.rawViewContentSet(null));
+        if (e.target.checked) {
+            try {
+                const dto = editCdcSinkTaskUtils.mapToDto(editForm.getValues(), taskId);
+                dispatch(editCdcSinkTaskActions.rawViewOpened(JSON.stringify(dto, null, 2)));
+            } catch (error) {
+                messagePublisher.reportError(
+                    "The current form data cannot be converted. Please fix validation errors and try again.",
+                    error
+                );
             }
+            return;
+        }
 
-            dispatch(editCdcSinkTaskActions.rawViewToggled());
-        } catch (error) {
-            messagePublisher.reportError(
-                "The current form data cannot be converted. Please fix validation errors and try again.",
-                error
-            );
+        if (applyRawViewContent()) {
+            dispatch(editCdcSinkTaskActions.rawViewClosed());
         }
     };
 

@@ -106,6 +106,14 @@ namespace Voron.Data.Compression
             set => Page.TreeFlags = value;
         }
 
+        public int CollapsedLevels
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => Page.CollapsedLevels;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            set => Page.CollapsedLevels = value;
+        }
+
         public ushort* KeysOffsets
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -272,7 +280,7 @@ namespace Voron.Data.Compression
                         cursor.SetTopPage(this); // we need to use uncompressed page here because it might have some modifications (e.g. deleted node)
 
                         var pageSplitter = new TreePageSplitter(tx, tree, key, len, pageNumber, flags, ref cursor,
-                            splittingOnDecompressed: true);
+                            splittingOnDecompressed: true, decompressedOriginal: Original);
 
                         var pos = pageSplitter.Execute();
 

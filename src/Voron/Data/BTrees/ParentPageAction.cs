@@ -98,7 +98,7 @@ namespace Voron.Data.BTrees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void EnsureValidLastSearchPosition(ref TreePage page, long referencedPageNumber, int originalLastSearchPosition)
+        internal static void EnsureValidLastSearchPosition(ref TreePage page, long referencedPageNumber, int originalLastSearchPosition)
         {
             if (page.NumberOfEntries <= originalLastSearchPosition || page.GetNode(originalLastSearchPosition)->PageNumber != referencedPageNumber)
                 page.LastSearchPosition = (short)page.NodePositionReferencing(referencedPageNumber);

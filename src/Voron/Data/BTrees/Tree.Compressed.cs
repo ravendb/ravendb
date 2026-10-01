@@ -155,24 +155,31 @@ namespace Voron.Data.BTrees
 
         private DecompressedLeafPage ReuseCachedPage(DecompressedLeafPage cached, DecompressionUsage usage, ref DecompressionInput input)
         {
+            DecompressedLeafPage result;
 
             var sizeDiff = input.DecompressedPageSize - cached.PageSize;
-            if (sizeDiff <= 0)
-                return cached;
-
-            var result = GetDecompressedPage(input.DecompressedPageSize, usage, input.Page);
-
-            Memory.Copy(result.Base, cached.Base, cached.Lower);
-            Memory.Copy(result.Base + cached.Upper + sizeDiff,
-                cached.Base + cached.Upper,
-                cached.PageSize - cached.Upper);
-
-            result.Upper += (ushort)sizeDiff;
-
-            for (var i = 0; i < result.NumberOfEntries; i++)
+            if (sizeDiff > 0)
             {
-                result.KeysOffsets[i] += (ushort)sizeDiff;
+                result = GetDecompressedPage(input.DecompressedPageSize, usage, input.Page);
+
+                Memory.Copy(result.Base, cached.Base, cached.Lower);
+                Memory.Copy(result.Base + cached.Upper + sizeDiff,
+                    cached.Base + cached.Upper,
+                    cached.PageSize - cached.Upper);
+
+                result.Upper += (ushort)sizeDiff;
+
+                for (var i = 0; i < result.NumberOfEntries; i++)
+                {
+                    result.KeysOffsets[i] += (ushort)sizeDiff;
+                }
             }
+            else
+            {
+                result = cached;
+            }
+
+            result.CollapsedLevels = input.Page.CollapsedLevels;
 
             return result;
         }
@@ -320,7 +327,7 @@ namespace Voron.Data.BTrees
 
                 {
                     ref var cursor = ref cursorConstructor;
-                    var treeRebalancer = new TreeRebalancer(_llt, this, ref cursor);
+                    var treeRebalancer = new TreeRebalancer(_llt, this, ref cursor, decompressed);
                     TreePage changedPage = decompressed;
                     while (changedPage.IsValid)
                     {

@@ -213,11 +213,12 @@ namespace Raven.Server.Documents.Indexes
             public const long CoraxOrderPreservingCompoundNumericEncoding = Base72Version; // RavenDB-26831
             public const long CoraxNumericTreesWithoutFrequencies_72 = 72_002; // RavenDB-27171
             public const long LuceneExactDatesUseTimeTicks_72 = 72_003; // RavenDB-27052
+            public const long CoraxPerEntryMultipleTermsMarker_72 = 72_004; // RavenDB-27565
 
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = LuceneExactDatesUseTimeTicks_72;
+            public const long CurrentVersion = CoraxPerEntryMultipleTermsMarker_72;
 
             public static bool IsLowerCasedReferencesSupported(long indexVersion)
             {
@@ -274,6 +275,11 @@ namespace Raven.Server.Documents.Indexes
                     return indexVersion >= LuceneExactDatesUseTimeTicks_72;
 
                 return indexVersion >= LuceneExactDatesUseTimeTicks_62;
+            }
+
+            public static bool IsPerEntryMultipleTermsMarkerSupported(long indexVersion)
+            {
+                return indexVersion >= CoraxPerEntryMultipleTermsMarker_72;
             }
         }
     }

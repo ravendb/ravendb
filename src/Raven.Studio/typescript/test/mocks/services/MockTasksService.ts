@@ -14,6 +14,7 @@ import { ServerWideConnectionStringDto } from "components/pages/database/setting
 import TaskErrors = Raven.Server.Documents.TasksErrors.TaskErrors;
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 import OngoingTaskPullReplicationAsHub = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub;
+import CdcTestResult = Raven.Client.Documents.Operations.CdcSink.Test.CdcTestResult;
 
 function handlerIdForLocation(handlerId: string, location: databaseLocationSpecifier) {
     return [handlerId, location.nodeTag, location.shardNumber].filter((x) => x != null).join("-");
@@ -168,6 +169,14 @@ export default class MockTasksService extends AutoMockService<TasksService> {
 
     withGetCdcSinkTaskSchema(dto?: MockedValue<Raven.Client.Documents.Operations.CdcSink.Schema.CdcSinkSourceSchema>) {
         return this.mockResolvedValue(this.mocks.getCdcSinkTaskSchema, dto, TasksStubs.cdcSinkTaskSchema());
+    }
+
+    withVerifyCdcSink(dto?: MockedValue<CdcTestResult>) {
+        return this.mockResolvedValue(this.mocks.verifyCdcSink, dto, TasksStubs.verifyCdcSink());
+    }
+
+    withThrowingVerifyCdcSink() {
+        this.mocks.verifyCdcSink.mockRejectedValue(new Error());
     }
 
     withTestSnowflakeConnectionString(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {

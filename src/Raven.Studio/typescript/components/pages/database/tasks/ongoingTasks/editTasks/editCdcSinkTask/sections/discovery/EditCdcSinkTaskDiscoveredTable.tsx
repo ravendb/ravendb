@@ -4,6 +4,7 @@ import {
     getFilteredRowModel,
     getSortedRowModel,
     ColumnDef,
+    Getter,
 } from "@tanstack/react-table";
 import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
@@ -222,20 +223,7 @@ const useSelectableColumns = (widthPx: number): ColumnDef<CdcSinkSchema.CdcSinkS
                 id: "Warnings",
                 header: "Warnings",
                 accessorFn: (x) => x.Warnings,
-                cell: ({ getValue }) => {
-                    const warnings = getValue<string[]>();
-                    if (!warnings?.length) {
-                        return null;
-                    }
-
-                    return (
-                        <PopoverWithHoverWrapper
-                            message={<ExpandableListContainer items={warnings} renderItem={(warning) => warning} />}
-                        >
-                            <Icon icon="warning" color="warning" margin="m-0" aria-label="Table warnings" />
-                        </PopoverWithHoverWrapper>
-                    );
-                },
+                cell: TableWarningsCell,
                 size: warningsColumnWidth,
                 enableSorting: false,
                 enableFiltering: false,
@@ -278,11 +266,7 @@ const useUnavailableColumns = (widthPx: number): ColumnDef<CdcSinkSchema.CdcSink
                 id: "Error",
                 header: "Error",
                 accessorFn: getUnavailableTableMessage,
-                cell: ({ getValue }) => (
-                    <PopoverWithHoverWrapper message={getValue<string>()}>
-                        <Icon icon="danger" color="danger" margin="m-0" aria-label="CDC setup required" />
-                    </PopoverWithHoverWrapper>
-                ),
+                cell: UnavailableTableErrorCell,
                 size: errorColumnWidth,
                 enableSorting: false,
                 enableFiltering: false,
@@ -292,6 +276,29 @@ const useUnavailableColumns = (widthPx: number): ColumnDef<CdcSinkSchema.CdcSink
         [getSize]
     );
 };
+
+function TableWarningsCell({ getValue }: { getValue: Getter<unknown> }) {
+    const warnings = getValue<string[]>();
+    if (!warnings?.length) {
+        return null;
+    }
+
+    return (
+        <PopoverWithHoverWrapper
+            message={<ExpandableListContainer items={warnings} renderItem={(warning) => warning} />}
+        >
+            <Icon icon="warning" color="warning" margin="m-0" aria-label="Table warnings" />
+        </PopoverWithHoverWrapper>
+    );
+}
+
+function UnavailableTableErrorCell({ getValue }: { getValue: Getter<unknown> }) {
+    return (
+        <PopoverWithHoverWrapper message={getValue<string>()}>
+            <Icon icon="danger" color="danger" margin="m-0" aria-label="CDC setup required" />
+        </PopoverWithHoverWrapper>
+    );
+}
 
 function getTableName(table: CdcSinkSchema.CdcSinkSourceTable) {
     return `${table.SourceTableSchema}.${table.SourceTableName}`;
