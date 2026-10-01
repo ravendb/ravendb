@@ -3,7 +3,7 @@ import { CellContext } from "@tanstack/react-table";
 import { Icon } from "components/common/Icon";
 import CellValue from "components/common/virtualTable/cells/CellValue";
 import { CellWithCopyWrapper } from "components/common/virtualTable/cells/CellWithCopy";
-import CellDocumentValue from "components/common/virtualTable/cells/CellDocumentValue";
+import CellDocumentId from "components/common/virtualTable/cells/CellDocumentId";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -130,7 +130,7 @@ export const HyperLinkDocumentCellValue = ({ getValue }: Pick<CellContext<FlatEr
         return <CellValue value="-" />;
     }
 
-    return <CellDocumentValue value={getValue()} databaseName={dbName} hasHyperlinkForIds />;
+    return <CellDocumentId id={getValue<string>()} databaseName={dbName} hasHyperlink />;
 };
 
 export const CellTaskWrapper = ({ row }: CellContext<FlatError, string>) => {

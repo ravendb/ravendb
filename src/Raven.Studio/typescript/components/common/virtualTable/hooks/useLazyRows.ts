@@ -4,7 +4,6 @@ import {
     LazyFetchMode,
     LazyRow,
     LazyRowsLoader,
-    SetRangeOptions,
 } from "components/common/virtualTable/utils/LazyRowsLoader";
 import { RowRange } from "components/common/virtualTable/utils/lazyTableUtils";
 
@@ -13,6 +12,7 @@ interface UseLazyRowsProps<T, TResult extends pagedResultWithToken<T>> {
     fetchMode?: LazyFetchMode;
     minFetchCount?: number;
     onResult?: (result: TResult) => void;
+    onReset?: () => void;
     reloadDependencies?: unknown[];
 }
 
@@ -24,10 +24,12 @@ export interface LazyRows<T> {
     hasMore: boolean;
     fetchMode: LazyFetchMode;
     isFetching: boolean;
+    error: unknown;
     resetId: number;
     getItem: (rowIndex: number) => T | undefined;
-    setRange: (range: RowRange, options?: SetRangeOptions) => void;
+    setRange: (range: RowRange) => void;
     reload: () => void;
+    retry: () => void;
 }
 
 export function useLazyRows<T, TResult extends pagedResultWithToken<T> = pagedResultWithToken<T>>({
@@ -35,10 +37,12 @@ export function useLazyRows<T, TResult extends pagedResultWithToken<T> = pagedRe
     fetchMode = "skipTake",
     minFetchCount = 100,
     onResult,
+    onReset,
     reloadDependencies = [],
 }: UseLazyRowsProps<T, TResult>): LazyRows<T> {
-    const [loader] = useState(() => new LazyRowsLoader<T, TResult>({ fetchData, fetchMode, minFetchCount, onResult }));
-    loader.setOptions({ fetchData, fetchMode, minFetchCount, onResult });
+    const options = { fetchData, fetchMode, minFetchCount, onResult, onReset };
+    const [loader] = useState(() => new LazyRowsLoader<T, TResult>(options));
+    loader.setOptions(options);
 
     const snapshot = useSyncExternalStore(loader.subscribe, loader.getSnapshot);
 
@@ -52,7 +56,7 @@ export function useLazyRows<T, TResult extends pagedResultWithToken<T> = pagedRe
     const rows = useMemo(
         () => loader.getRows(),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [snapshot.version, snapshot.range, snapshot.allowSkip, snapshot.loadedCount, snapshot.totalCount]
+        [snapshot.version, snapshot.range, snapshot.loadedCount, snapshot.totalCount]
     );
     const data = useMemo(() => rows.map((x) => x.item), [rows]);
 
@@ -64,9 +68,11 @@ export function useLazyRows<T, TResult extends pagedResultWithToken<T> = pagedRe
         hasMore: snapshot.hasMore,
         fetchMode,
         isFetching: snapshot.isFetching,
+        error: snapshot.error,
         resetId: snapshot.resetId,
         getItem: loader.getItem,
         setRange: loader.setRange,
         reload: () => loader.reset(false),
+        retry: loader.retry,
     };
 }

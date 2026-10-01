@@ -11,7 +11,6 @@ export function useCollectionRemovalRedirect(databaseName: string, collectionNam
     const wasCollectionSeenRef = useRef(false);
     const isRemovalExpectedRef = useRef(false);
 
-    // Navigates to all documents once the collection disappears from the collection stats
     useEffect(() => {
         if (collectionName === null) {
             return;
@@ -45,7 +44,7 @@ export function useCollectionRemovalRedirect(databaseName: string, collectionNam
 }
 
 function redirectToAllDocuments(databaseName: string) {
-    router.navigate(appUrl.forDocuments(null, databaseName));
+    router.navigate(appUrl.forDocuments(null, databaseName), { replace: true, trigger: true });
 }
 
 export type CollectionDeletionCallbacks = ReturnType<typeof useCollectionRemovalRedirect>;

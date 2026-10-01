@@ -1,5 +1,6 @@
 import { useReactTable, getCoreRowModel } from "@tanstack/react-table";
 import { RevisionsPreviewResultItem } from "commands/database/documents/getRevisionsPreviewCommand";
+import { Switch } from "components/common/Checkbox";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useLazyRows } from "components/common/virtualTable/hooks/useLazyRows";
 import LazyVirtualTable from "components/common/virtualTable/LazyVirtualTable";
@@ -10,7 +11,7 @@ import { useAllRevisionsColumns } from "components/pages/database/documents/allR
 import { useAppSelector } from "components/store";
 import { useImperativeHandle, useState } from "react";
 
-export default function AllRevisionsTableNonSharded({
+export default function AllRevisionsTable({
     width,
     height,
     selectedType,
@@ -20,14 +21,17 @@ export default function AllRevisionsTableNonSharded({
     setSelectedRows,
 }: AllRevisionsTableProps) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isSharded = useAppSelector(databaseSelectors.activeDatabase)?.isSharded;
     const { databasesService } = useServices();
 
     const lazyRows = useLazyRows<RevisionsPreviewResultItem>({
-        fetchData: (skip: number, take: number) =>
+        fetchMode: isSharded ? "continuationToken" : "skipTake",
+        fetchData: (skip: number, take: number, continuationToken?: string) =>
             databasesService.getRevisionsPreview({
                 databaseName,
                 start: skip,
                 pageSize: take,
+                continuationToken,
                 type: selectedType,
                 collection: selectedCollectionName,
             }),
@@ -36,7 +40,7 @@ export default function AllRevisionsTableNonSharded({
 
     const [isPaginated, setIsPaginated] = useState(false);
 
-    const columns = useAllRevisionsColumns(databaseName, false, width, selectedRows, setSelectedRows);
+    const columns = useAllRevisionsColumns(databaseName, isSharded, width, selectedRows, setSelectedRows);
 
     useImperativeHandle(fetcherRef, () => ({
         reload: lazyRows.reload,
@@ -51,6 +55,18 @@ export default function AllRevisionsTableNonSharded({
 
     return (
         <div className="d-flex flex-column" style={{ height }}>
+            {!isSharded && (
+                <div className="d-flex justify-content-end mb-1">
+                    <Switch
+                        selected={isPaginated}
+                        toggleSelection={() => setIsPaginated(!isPaginated)}
+                        color="primary"
+                        title="Show the revisions page by page instead of scrolling"
+                    >
+                        Pagination
+                    </Switch>
+                </div>
+            )}
             <LazyVirtualTable
                 table={table}
                 lazyRows={lazyRows}

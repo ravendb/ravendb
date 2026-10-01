@@ -3,7 +3,8 @@ import { virtualTableUtils } from "components/common/virtualTable/utils/virtualT
 import { CellContext, ColumnDef, Row, RowData, Table as TanstackTable } from "@tanstack/react-table";
 import { useMemo } from "react";
 import CellValue, { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
-import CellDocumentValue from "components/common/virtualTable/cells/CellDocumentValue";
+import CellDocumentId from "components/common/virtualTable/cells/CellDocumentId";
+import { indexErrorsUtils } from "components/pages/database/indexes/errors/IndexErrorsUtils";
 import { useAppUrls } from "hooks/useAppUrls";
 import { CellWithCopy } from "components/common/virtualTable/cells/CellWithCopy";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -40,6 +41,7 @@ function openIndexErrorsSheet(
                 errorDetails={row}
                 allRows={allRows}
                 initialIndex={currentIndex >= 0 ? currentIndex : 0}
+                disableLinks={table.options.meta?.disableLinks}
             />
         ),
         ...indexErrorsSheetConfig,
@@ -101,14 +103,24 @@ export function useIndexErrorsPanelColumns(availableWidth: number) {
 
 type HyperLinkDocumentCellValueProps = Pick<
     CellContext<IndexErrorPerDocument, IndexErrorPerDocument["Document"]>,
-    "getValue" | "table"
+    "getValue" | "row" | "table"
 >;
 
-const HyperLinkDocumentCellValue = ({ getValue, table }: HyperLinkDocumentCellValueProps) => {
+const HyperLinkDocumentCellValue = ({ getValue, row, table }: HyperLinkDocumentCellValueProps) => {
     const dbName = useAppSelector(databaseSelectors.activeDatabaseName);
     const disableLinks = table.options.meta?.disableLinks;
 
-    return <CellDocumentValue value={getValue()} databaseName={dbName} hasHyperlinkForIds={!disableLinks} />;
+    if (!getValue()) {
+        return <CellValue value={getValue()} />;
+    }
+
+    return (
+        <CellDocumentId
+            id={getValue()}
+            databaseName={dbName}
+            hasHyperlink={!disableLinks && indexErrorsUtils.isDocumentError(row.original)}
+        />
+    );
 };
 
 type HyperlinkIndexCellValueProps = Pick<

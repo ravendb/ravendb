@@ -8,12 +8,13 @@ import { useLazyTableViewport } from "./hooks/useLazyTableViewport";
 import { useSelectionPreview } from "./hooks/useSelectionPreview";
 import { ReactNode } from "react";
 import { Table as TanstackTable } from "@tanstack/react-table";
+import Button from "react-bootstrap/Button";
 
 interface LazyVirtualTableProps<T> {
     table: TanstackTable<T>;
     lazyRows: LazyRows<T>;
-    isPaginated: boolean;
-    onIsPaginatedChange: (isPaginated: boolean) => void;
+    isPaginated?: boolean;
+    onIsPaginatedChange?: (isPaginated: boolean) => void;
     heightInPx?: number;
     emptyMessage?: ReactNode;
     itemsName?: string;
@@ -23,7 +24,7 @@ interface LazyVirtualTableProps<T> {
 export default function LazyVirtualTable<T>({
     table,
     lazyRows,
-    isPaginated,
+    isPaginated = false,
     onIsPaginatedChange,
     heightInPx,
     emptyMessage,
@@ -53,11 +54,20 @@ export default function LazyVirtualTable<T>({
                     emptyMessage={emptyMessage}
                     heightInPx={viewport.heightInPx}
                     overlay={
-                        (viewport.isDomLimitBannerVisible || bottomOverlay) && (
+                        (viewport.error || viewport.isDomLimitBannerVisible || bottomOverlay) && (
                             <div className="floating-bars-container">
+                                {viewport.error && (
+                                    <div className="floating-bar text-nowrap" data-testid="fetch-error-banner">
+                                        <span className="text-danger">Unable to load the {itemsName}.</span>
+                                        <Button variant="link" className="p-0" onClick={lazyRows.retry}>
+                                            Retry
+                                        </Button>
+                                    </div>
+                                )}
                                 {viewport.isDomLimitBannerVisible && (
                                     <LazyVirtualTableDomLimitBanner
                                         itemsName={itemsName}
+                                        canPaginate={lazyRows.fetchMode === "skipTake" && onIsPaginatedChange != null}
                                         onTurnOnPagination={viewport.turnOnPagination}
                                     />
                                 )}

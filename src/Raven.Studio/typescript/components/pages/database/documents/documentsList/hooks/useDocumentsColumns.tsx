@@ -1,6 +1,9 @@
 import { ColumnDef, Table as TanstackTable, VisibilityState } from "@tanstack/react-table";
 import changeVectorUtils from "common/changeVectorUtils";
-import { useDocumentColumnsProvider } from "components/common/virtualTable/columnProviders/useDocumentColumnsProvider";
+import {
+    getDocumentPropertyName,
+    useDocumentColumnsProvider,
+} from "components/common/virtualTable/columnProviders/useDocumentColumnsProvider";
 import CellDocumentId from "components/common/virtualTable/cells/CellDocumentId";
 import CellValue from "components/common/virtualTable/cells/CellValue";
 import { CellWithCopy } from "components/common/virtualTable/cells/CellWithCopy";
@@ -40,6 +43,11 @@ const ID_COLUMN_NAME = "@id";
 const CHANGE_VECTOR_COLUMN_ID = "Change Vector";
 const LAST_MODIFIED_COLUMN_ID = "Last Modified";
 const COLLECTION_COLUMN_ID = "Collection";
+const METADATA_COLUMN_WIDTH_PERCENTAGES: Record<string, number> = {
+    [ID_COLUMN_NAME]: 30,
+    [CHANGE_VECTOR_COLUMN_ID]: 20,
+    [COLLECTION_COLUMN_ID]: 25,
+};
 
 const selectionColumn = createLazySelectionColumn<document>("Select all documents", "Select document");
 
@@ -68,12 +76,11 @@ export function useDocumentsColumns({
     const fullBindings = useMemo(() => (appliedLayout ? getFullBindings(appliedLayout) : NO_COLUMNS), [appliedLayout]);
 
     const previewBindings = useMemo(
-        () =>
-            appliedLayout
-                ? getPreviewBindings(appliedLayout, isAllDocuments).filter((x) => !fullBindings.includes(x))
-                : NO_COLUMNS,
-        [appliedLayout, isAllDocuments, fullBindings]
+        () => (appliedLayout ? getPreviewBindings(appliedLayout).filter((x) => !fullBindings.includes(x)) : NO_COLUMNS),
+        [appliedLayout, fullBindings]
     );
+
+    const bindingsKey = JSON.stringify([[...previewBindings].sort(), [...fullBindings].sort()]);
 
     const propertyColumnNames = useMemo(
         () => (isAllDocuments ? availableColumns.filter((x) => x !== METADATA_COLUMN_NAME) : availableColumns),
@@ -88,47 +95,53 @@ export function useDocumentsColumns({
         getPreviewValueResolver: getPropertyPreviewResolver,
     });
 
+    const defaultColumnVisibility = useSettledColumnVisibility(propertyColumns.initialColumnVisibility);
+
     const customColumnDefs = useMemo(
         () => customColumns.map((column) => createCustomColumn(column, databaseName)),
         [customColumns, databaseName]
     );
 
+    const metadataColumnDefs = useMemo(
+        () => (isAllDocuments ? createMetadataColumns(databaseName, appUrl) : []),
+        [isAllDocuments, databaseName, appUrl]
+    );
+
     const columnDefs = useMemo(
-        () => [
-            selectionColumn,
-            ...(isAllDocuments ? createMetadataColumns(databaseName, propertyColumnsWidthInPx, appUrl) : []),
-            ...propertyColumns.columnDefs,
-            ...customColumnDefs,
-            flagsColumn,
-        ],
-        [isAllDocuments, databaseName, propertyColumnsWidthInPx, appUrl, propertyColumns.columnDefs, customColumnDefs]
+        () => [selectionColumn, ...metadataColumnDefs, ...propertyColumns.columnDefs, ...customColumnDefs, flagsColumn],
+        [metadataColumnDefs, propertyColumns.columnDefs, customColumnDefs]
     );
 
     const tableState = useMemo(
         () => ({
-            columnVisibility: appliedLayout
-                ? getLayoutVisibility(columnDefs, appliedLayout)
-                : propertyColumns.initialColumnVisibility,
+            columnVisibility: appliedLayout ? getLayoutVisibility(columnDefs, appliedLayout) : defaultColumnVisibility,
             columnOrder: appliedLayout?.columnOrder ?? NO_COLUMNS,
             columnPinning: { left: [columnCheckbox.id, ...(appliedLayout?.pinnedColumnIds ?? NO_COLUMNS)] },
         }),
-        [appliedLayout, columnDefs, propertyColumns.initialColumnVisibility]
+        [appliedLayout, columnDefs, defaultColumnVisibility]
     );
 
     const fittedColumnDefs = useMemo(
-        () => fitVisibleColumnsToWidth(columnDefs, tableState.columnVisibility, tableBodyWidthInPx),
-        [columnDefs, tableState.columnVisibility, tableBodyWidthInPx]
+        () =>
+            fitVisibleColumnsToWidth(
+                columnDefs,
+                tableState.columnVisibility,
+                tableBodyWidthInPx,
+                propertyColumnsWidthInPx
+            ),
+        [columnDefs, tableState.columnVisibility, tableBodyWidthInPx, propertyColumnsWidthInPx]
     );
 
     const defaultVisibleColumnIds = columnDefs
         .map((column) => column.id)
-        .filter((id) => propertyColumns.initialColumnVisibility[id] !== false);
+        .filter((id) => defaultColumnVisibility[id] !== false);
 
     return {
         columnDefs: fittedColumnDefs,
         tableState,
         previewBindings,
         fullBindings,
+        bindingsKey,
         onPreviewResult: (result: pagedResultWithAvailableColumns<document>) => {
             setAvailableColumns((prev) => mergeColumnNames(prev, result.availableColumns));
             setPreviewedColumns((prev) => mergeColumnNames(prev, uniq(result.items.flatMap((x) => Object.keys(x)))));
@@ -153,21 +166,27 @@ export function useDocumentsColumns({
         getExportFields: (table: TanstackTable<document>) =>
             table
                 .getVisibleLeafColumns()
-                .map((column) => column.id)
-                .filter((id) => id === ID_COLUMN_NAME || availableColumns.includes(id)),
+                .map((column) => (column.id === ID_COLUMN_NAME ? ID_COLUMN_NAME : getDocumentPropertyName(column.id)))
+                .filter((field) => field === ID_COLUMN_NAME || availableColumns.includes(field)),
     };
 }
 
-function getPreviewBindings(layout: AppliedColumnLayout, isAllDocuments: boolean): string[] {
-    const nonPropertyColumnIds = new Set<string>([
-        columnCheckbox.id,
-        ID_COLUMN_NAME,
-        columnDocumentFlags.id,
-        ...(isAllDocuments ? [CHANGE_VECTOR_COLUMN_ID, LAST_MODIFIED_COLUMN_ID, COLLECTION_COLUMN_ID] : []),
-        ...layout.customColumns.map((column) => column.id),
-    ]);
+function useSettledColumnVisibility(columnVisibility: VisibilityState): VisibilityState {
+    const [settledVisibility, setSettledVisibility] = useState(columnVisibility);
+    const hasNewColumns = Object.keys(columnVisibility).some((id) => !(id in settledVisibility));
 
-    return layout.visibleColumnIds.filter((id) => !nonPropertyColumnIds.has(id));
+    if (!hasNewColumns) {
+        return settledVisibility;
+    }
+
+    const nextSettledVisibility = { ...columnVisibility, ...settledVisibility };
+    setSettledVisibility(nextSettledVisibility);
+
+    return nextSettledVisibility;
+}
+
+function getPreviewBindings(layout: AppliedColumnLayout): string[] {
+    return layout.visibleColumnIds.map(getDocumentPropertyName).filter((name) => name !== null);
 }
 
 function getFullBindings(layout: AppliedColumnLayout): string[] {
@@ -179,9 +198,17 @@ function getFullBindings(layout: AppliedColumnLayout): string[] {
 function fitVisibleColumnsToWidth(
     columnDefs: ColumnDef<document>[],
     columnVisibility: VisibilityState,
-    availableWidth: number
+    availableWidth: number,
+    propertyColumnsWidth: number
 ): ColumnDef<document>[] {
-    const getSize = (column: ColumnDef<document>) => column.size ?? PROPERTY_COLUMN_WIDTH;
+    const getMetadataColumnSize = virtualTableUtils.getCellSizeProvider(propertyColumnsWidth);
+    const getSize = (column: ColumnDef<document>) => {
+        const metadataWidthPercentage = METADATA_COLUMN_WIDTH_PERCENTAGES[column.id];
+        if (metadataWidthPercentage && column.size == null) {
+            return getMetadataColumnSize(metadataWidthPercentage);
+        }
+        return column.size ?? PROPERTY_COLUMN_WIDTH;
+    };
     const isFixed = (column: ColumnDef<document>) =>
         column.id === columnCheckbox.id ||
         column.id === columnDocumentFlags.id ||
@@ -227,13 +254,10 @@ function createCustomColumn(column: CustomColumnDefinition, databaseName: string
         accessorFn: (doc) => getValue(doc),
         cell: ({ getValue }) => <CellDocumentValue value={getValue()} databaseName={databaseName} hasHyperlinkForIds />,
         size: CUSTOM_COLUMN_WIDTH,
-        meta: { customColumn: column },
     };
 }
 
-function createMetadataColumns(databaseName: string, widthInPx: number, appUrl: AppUrl): ColumnDef<document>[] {
-    const getSize = virtualTableUtils.getCellSizeProvider(widthInPx);
-
+function createMetadataColumns(databaseName: string, appUrl: AppUrl): ColumnDef<document>[] {
     return [
         {
             id: ID_COLUMN_NAME,
@@ -247,7 +271,6 @@ function createMetadataColumns(databaseName: string, widthInPx: number, appUrl: 
                     hasHyperlink
                 />
             ),
-            size: getSize(30),
             enableHiding: false,
         },
         {
@@ -265,7 +288,6 @@ function createMetadataColumns(databaseName: string, widthInPx: number, appUrl: 
                     </CellWithCopy>
                 );
             },
-            size: getSize(20),
         },
         {
             id: LAST_MODIFIED_COLUMN_ID,
@@ -287,7 +309,6 @@ function createMetadataColumns(databaseName: string, widthInPx: number, appUrl: 
                     </CellWithCopy>
                 );
             },
-            size: getSize(25),
         },
     ];
 }

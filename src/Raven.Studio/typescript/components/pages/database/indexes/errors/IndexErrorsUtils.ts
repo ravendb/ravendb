@@ -86,7 +86,12 @@ const getErroredActionNames = (errorInfoItems: ErrorInfoItem[]): NameAndCount[] 
     );
 };
 
+const documentActions = ["Map", "MapReference"];
+
+const isDocumentError = (error: IndexErrorPerDocument) => documentActions.includes(error.Action);
+
 export const indexErrorsUtils = {
+    isDocumentError,
     findNearestTimestamp,
     mapItems,
     getErroredIndexNames,

@@ -1,4 +1,4 @@
-﻿import nonShardedDatabase from "models/resources/nonShardedDatabase";
+import nonShardedDatabase from "models/resources/nonShardedDatabase";
 import shardedDatabase from "models/resources/shardedDatabase";
 import document from "models/database/documents/document";
 import { TimeInSeconds } from "common/constants/timeInSeconds";

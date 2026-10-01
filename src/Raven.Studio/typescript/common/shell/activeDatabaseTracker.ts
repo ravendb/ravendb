@@ -42,12 +42,6 @@ class activeDatabaseTracker {
     onActivation(db: database): JQueryPromise<void> {
         const task = $.Deferred<void>();
 
-        // If the 'same' database was selected from the top databases selector dropdown, 
-        // then we want the knockout observable to be aware of it so that scrolling on page will occur
-        if (db === this.database()) {
-            this.database(null);
-        }
-
         studioSettings.default.forDatabase(db)
             .done((settings) => {
 

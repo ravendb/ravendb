@@ -1,4 +1,4 @@
-﻿import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
+import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 import { globalDispatch } from "components/storeCompat";
 import databasesManager from "common/shell/databasesManager";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
@@ -45,6 +45,11 @@ function initRedux() {
 
     activeDatabaseTracker.default.database.subscribe((db) => {
         const dbName = db?.name ?? null;
+
+        if (!db) {
+            globalDispatch(collectionsTrackerActions.collectionsLoaded({ databaseName: null, collections: [] }));
+        }
+
         globalDispatch(databaseActions.activeDatabaseChanged(dbName));
         globalDispatch(chatbotActions.attachedContextUnrelatedRemoved());
         globalDispatch(
@@ -56,10 +61,6 @@ function initRedux() {
                 state: "included",
             })
         );
-
-        if (!db) {
-            globalDispatch(collectionsTrackerActions.collectionsLoaded({ databaseName: null, collections: [] }));
-        }
     });
 
     clusterTopologyManager.default.localNodeTag.subscribe((tag) => {

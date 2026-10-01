@@ -49,6 +49,8 @@ class collectionsTracker {
 
     private db: database;
 
+    private loadedDatabase: database;
+
     private events = {
         created: [] as Array<(coll: collection) => void>,
         changed: [] as Array<(coll: collection, changeVector: string) => void>,
@@ -58,29 +60,42 @@ class collectionsTracker {
 
     onDatabaseChanged(db: database) {
         this.db = db;
-        
-        this.loadStatsTask = new getCollectionsStatsCommand(db)
-            .execute()
-            .done(stats => this.collectionsLoaded(stats));
-
+        this.loadStats(db);
         this.configureRevisions(db);
 
         return this.loadStatsTask;
     }
 
-    async configureRevisions(db: database) {
-        const revisionsPreview = await new getRevisionsPreviewCommand.default({
+    private loadStats(db: database) {
+        this.loadStatsTask = new getCollectionsStatsCommand(db)
+            .execute()
+            .done(stats => {
+                if (db === this.db) {
+                    this.collectionsLoaded(stats, db);
+                }
+            });
+    }
+
+    configureRevisions(db: database) {
+        new getRevisionsPreviewCommand.default({
             databaseName: db.name,
             start: 0,
             pageSize: 0,
             type: "All",
-        }).execute();
+        })
+            .execute()
+            .done(revisionsPreview => {
+                if (db !== this.db) {
+                    return;
+                }
 
-        this.allRevisions(new collection(collection.allRevisionsCollectionName, revisionsPreview.totalResultCount));
-        this.revisionsBin(new collection(collection.revisionsBinCollectionName));
+                this.allRevisions(new collection(collection.allRevisionsCollectionName, revisionsPreview.totalResultCount));
+                this.revisionsBin(new collection(collection.revisionsBinCollectionName));
+            });
     }
 
-    private collectionsLoaded(collectionsStats: collectionsStats) {
+    private collectionsLoaded(collectionsStats: collectionsStats, db: database) {
+        this.loadedDatabase = db;
         const collections = collectionsStats.collections.filter(x => x.documentCount());
         
         collections.sort((a, b) => this.sortAlphaNumericCollection(a.name, b.name));
@@ -93,7 +108,7 @@ class collectionsTracker {
 
     private dispatchCollectionsLoaded() {
         storeCompat.globalDispatch(collectionsTrackerSlice.collectionsTrackerActions.collectionsLoaded({
-            databaseName: this.db.name,
+            databaseName: this.loadedDatabase?.name ?? null,
             collections: this.collections().map((x) => x.toCollectionState()),
         }));
     }
@@ -114,6 +129,13 @@ class collectionsTracker {
     }    
     
     onDatabaseStatsChanged(notification: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged) {
+        if (this.loadedDatabase !== this.db) {
+            if (this.loadStatsTask.state() === "rejected") {
+                this.loadStats(this.db);
+            }
+            return;
+        }
+
         const removedCollections = notification.ModifiedCollections.filter(x => x.Count < 1);
         const changedCollections = notification.ModifiedCollections.filter(x => x.Count >= 1);
         const totalCount = notification.CountOfDocuments;

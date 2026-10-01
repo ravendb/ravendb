@@ -7,6 +7,7 @@ import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { Icon } from "components/common/Icon";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { CellWithCopy, CellWithCopyWrapper } from "components/common/virtualTable/cells/CellWithCopy";
+import { columnCheckbox } from "components/common/virtualTable/utils/commonColumnDefs";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useAppSelector } from "components/store";
@@ -44,7 +45,7 @@ function createColumns(
     setRowSelection: (rows: RevisionsPreviewResultItem[]) => void,
     hasDatabaseAdminAccess: boolean
 ): ColumnDef<RevisionsPreviewResultItem>[] {
-    const checkboxWidth = hasDatabaseAdminAccess ? 38 : 0;
+    const checkboxWidth = hasDatabaseAdminAccess ? columnCheckbox.size : 0;
 
     const sizeProvider = virtualTableUtils.getCellSizeProvider(tableBodyWidth - checkboxWidth);
 
@@ -209,7 +210,12 @@ function CheckboxCell({ rowValue, rowSelection, setRowSelection }: CheckboxCellP
             }}
             popoverPlacement="top"
         >
-            <Checkbox selected={isSelected} toggleSelection={toggleSelection} disabled={isDeleteRevision} />
+            <Checkbox
+                selected={isSelected}
+                toggleSelection={toggleSelection}
+                disabled={isDeleteRevision}
+                className="selection-checkbox"
+            />
         </ConditionalPopover>
     );
 }

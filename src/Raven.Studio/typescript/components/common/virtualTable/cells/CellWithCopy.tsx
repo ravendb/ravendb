@@ -113,6 +113,10 @@ function CellWithCopyResolvedPreview({
         return <span className="text-danger">Unable to load the value: {asyncValue.error.message}</span>;
     }
 
+    if (asyncValue.result === undefined) {
+        return <span className="text-muted">The value no longer exists</span>;
+    }
+
     return (
         <CellWithCopyPreview
             value={asyncValue.result}
