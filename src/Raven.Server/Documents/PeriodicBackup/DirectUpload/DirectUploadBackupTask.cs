@@ -14,7 +14,7 @@ public class DirectUploadBackupTask : BackupTask
 
     protected override BackupDestinationStream GetUploaderForBackupDestination(string filePath, string folderName, string fileName)
     {
-        var uploaderSettings = UploaderSettings.GenerateUploaderSettingsForBackup(Database, Configuration, _taskName, _isServerWide, _backupToLocalFolder, OnBackupException);
+        var uploaderSettings = UploaderSettings.GenerateUploaderSettingsForBackup(Database, Configuration, _taskName, _isServerWide, _backupToLocalFolder, RegisterOnBackupException);
         var backupUploader = new DirectFileUploader(uploaderSettings, RetentionPolicyParameters, _logger, BackupResult, _onProgress, TaskCancelToken);
         return new BackupDestinationStream()
         {

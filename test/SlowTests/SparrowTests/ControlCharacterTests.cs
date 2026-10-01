@@ -648,11 +648,16 @@ public class ControlCharacterTests : ClusterTestBase
     
     private static async Task AssertLegacyControlCharIdentifiersReadableAsync(DocumentStore store)
     {
-        using (var session = store.OpenAsyncSession())
+        var docsCount = await WaitForValueAsync(async () =>
         {
-            var docs = await session.Query<TestObj>().ToArrayAsync();
-            Assert.Equal(2, docs.Length);
-        }
+            using (var session = store.OpenAsyncSession())
+            {
+                var docs = await session.Query<TestObj>().ToArrayAsync();
+                return docs.Length;
+            }
+        }, expectedVal: 2);
+
+        Assert.Equal(2, docsCount);
 
         using (var session = store.OpenAsyncSession())
         {

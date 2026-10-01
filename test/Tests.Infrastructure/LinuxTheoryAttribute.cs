@@ -1,5 +1,4 @@
-﻿﻿using System.Runtime.InteropServices;
-using Xunit.Sdk;
+using System.Runtime.InteropServices;
 
 namespace Tests.Infrastructure
 {

@@ -1,4 +1,4 @@
-import { ReactNode, RefObject, useEffect, useRef, useState } from "react";
+import { MouseEvent, ReactNode, RefObject, useEffect, useRef, useState } from "react";
 import { AceEditorMode, LanguageService } from "components/models/aceEditor";
 import { Ace } from "ace-builds";
 import { setCompleters } from "ace-builds/src-noconflict/ext-language_tools";
@@ -15,6 +15,12 @@ import AceEditorToggleNewLinesAction from "./actions/AceEditorToggleNewLinesActi
 import AceEditorAutoResizeHeightAction, { handleAutoResizeHeight } from "./actions/AceEditorAutoResizeHeightAction";
 import { aceEditorConstants } from "./aceEditorConstants";
 import useResizableHeight from "components/hooks/useResizableHeight";
+import useBoolean from "components/hooks/useBoolean";
+import AceEditorSamplesPanel, {
+    AceEditorSamplesPanelConfig,
+    AceEditorSamplesToggleAction,
+} from "./AceEditorSamplesPanel";
+import useConfirm from "components/common/ConfirmDialog";
 
 interface ActionItem {
     component: ReactNode;
@@ -33,6 +39,8 @@ export interface AceEditorProps extends IAceEditorProps {
     minHeight?: number | string;
     maxHeight?: number | string;
     disabled?: boolean;
+    samplesPanel?: AceEditorSamplesPanelConfig;
+    aiAssistantSlot?: ReactNode;
 }
 
 function AceEditor(props: AceEditorProps) {
@@ -50,6 +58,11 @@ function AceEditor(props: AceEditorProps) {
         isFullScreenLabelHidden,
         readOnly,
         disabled,
+        samplesPanel,
+        aiAssistantSlot,
+        onChange,
+        value,
+        placeholder,
         ...rest
     } = props;
 
@@ -66,7 +79,19 @@ function AceEditor(props: AceEditorProps) {
         ...setOptions,
     };
 
-    const validActions = actions.filter(Boolean);
+    const { value: isSamplesPanelOpen, toggle: toggleSamplesPanel } = useBoolean(false);
+
+    const hasSamplesPanel = samplesPanel?.tabs.length > 0;
+
+    const samplesToggleAction: ActionItem | null =
+        hasSamplesPanel && !readOnly
+            ? {
+                  component: <AceEditorSamplesToggleAction onClick={toggleSamplesPanel} />,
+                  position: "bottom",
+              }
+            : null;
+
+    const validActions = [...actions, samplesToggleAction].filter(Boolean);
 
     const [aceErrorMessage, setAceErrorMessage] = useState<string>(null);
 
@@ -140,6 +165,36 @@ function AceEditor(props: AceEditorProps) {
           ]
         : defaultCommands;
 
+    const confirm = useConfirm();
+
+    const handleSampleSelect = async (script: string) => {
+        const currentValue = aceRef.current?.editor.getValue() ?? "";
+
+        if (currentValue.trim() && confirm) {
+            const isConfirmed = await confirm({
+                title: "Load sample into the editor?",
+                message: "The current editor content will be replaced.",
+                actionColor: "warning",
+                confirmText: "Load",
+            });
+
+            if (!isConfirmed) {
+                return;
+            }
+        }
+
+        onChange?.(script);
+    };
+
+    const handleBrowseSamplesClick = (e: MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleSamplesPanel();
+        aceRef.current?.editor.focus();
+    };
+
+    const showSamplesPlaceholder = hasSamplesPanel && !readOnly && !disabled && !placeholder && !value;
+
     const handleLoad = (editor: Ace.Editor) => {
         // (ctrl+k is used for studio search)
         removeFindNextCommand(editor);
@@ -186,10 +241,13 @@ function AceEditor(props: AceEditorProps) {
                         setOptions={overriddenSetOptions}
                         commands={commands}
                         onLoad={handleLoad}
+                        onChange={onChange}
+                        value={value}
+                        placeholder={placeholder}
                         readOnly={disabled || readOnly}
                         {...rest}
                     />
-                    {actions.length > 0 && (
+                    {validActions.length > 0 && (
                         <div className="actions">
                             <div className="d-flex flex-column h-100">
                                 <div className="flex-grow-0 vstack gap-1">
@@ -212,12 +270,27 @@ function AceEditor(props: AceEditorProps) {
                     {!isFullScreenLabelHidden && (
                         <span className="fullScreenModeLabel">Press Shift+F11 to enter full screen mode</span>
                     )}
+                    {showSamplesPlaceholder && (
+                        <div className="ace-samples-placeholder">
+                            <span className="ace-samples-placeholder__text">
+                                {"// Start writing, or "}
+                                <button
+                                    type="button"
+                                    className="ace-samples-placeholder__link"
+                                    onClick={handleBrowseSamplesClick}
+                                >
+                                    browse samples
+                                </button>
+                            </span>
+                        </div>
+                    )}
                 </div>
                 {errorMessage && (
                     <div className="bg-faded-danger py-1 px-2">
                         <small>{errorMessage}</small>
                     </div>
                 )}
+                {aiAssistantSlot}
                 <div
                     style={{
                         position: "absolute",
@@ -231,6 +304,14 @@ function AceEditor(props: AceEditorProps) {
                     onDoubleClick={() => handleAutoResizeHeight(aceRef, resizableHeight.setHeight)}
                 />
             </div>
+            {hasSamplesPanel && (
+                <AceEditorSamplesPanel
+                    isOpen={isSamplesPanelOpen && !readOnly}
+                    tabs={samplesPanel.tabs}
+                    onSelect={handleSampleSelect}
+                    onClose={toggleSamplesPanel}
+                />
+            )}
         </AceEditorContext.Provider>
     );
 }

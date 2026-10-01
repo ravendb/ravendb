@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.Indexes.Workers
     public readonly struct CanContinueBatchParameters
     {
         public CanContinueBatchParameters(IndexingStatsScope stats, IndexingWorkType workType, QueryOperationContext queryContext, TransactionOperationContext indexingContext,
-            Lazy<IndexWriteOperationBase> indexWriteOperation, long currentEtag, long maxEtag, long count,
+            Lazy<IndexWriteOperationBase> indexWriteOperation, long currentEtag, long maxEtag, long count, long seenCount,
             Stopwatch sw)
         {
             Stats = stats;
@@ -19,6 +19,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             CurrentEtag = currentEtag;
             MaxEtag = maxEtag;
             Count = count;
+            SeenCount = seenCount;
             Sw = sw;
         }
 
@@ -37,6 +38,8 @@ namespace Raven.Server.Documents.Indexes.Workers
         public long MaxEtag { get; }
 
         public long Count { get; }
+
+        public long SeenCount { get; }
 
         public Stopwatch Sw { get; }
 

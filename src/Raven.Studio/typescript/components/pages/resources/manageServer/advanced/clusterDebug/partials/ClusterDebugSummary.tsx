@@ -211,6 +211,7 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                                     {() => (
                                         <PopoverWithHoverWrapper
                                             inline={false}
+                                            targetStyle={{ width: "100%" }}
                                             message={
                                                 <>
                                                     First entry index:{" "}

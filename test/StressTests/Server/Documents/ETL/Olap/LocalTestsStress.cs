@@ -84,7 +84,7 @@ loadToOrders(partitionBy(key), o);
                 var expectedFields = new[] { "Company", ParquetTransformedItems.DefaultIdColumn, ParquetTransformedItems.LastModifiedColumn };
 
                 using (var fs = File.OpenRead(files[0]))
-                using (var parquetReader = await ParquetReader.CreateAsync(fs))
+                await using (var parquetReader = await ParquetReader.CreateAsync(fs))
                 {
                     Assert.Equal(1, parquetReader.RowGroupCount);
                     Assert.Equal(expectedFields.Length, parquetReader.Schema.Fields.Count);
@@ -94,7 +94,7 @@ loadToOrders(partitionBy(key), o);
                     {
                         Assert.True(field.Name.In(expectedFields));
 
-                        var data = (await rowGroupReader.ReadColumnAsync((DataField)field)).Data;
+                        var data = await rowGroupReader.ReadColumnDataAsync((DataField)field);
                         Assert.True(data.Length == 10);
 
                         if (field.Name == ParquetTransformedItems.LastModifiedColumn)

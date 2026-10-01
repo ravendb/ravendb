@@ -21,7 +21,7 @@ class collectionsTracker {
 
     conflictsCount = ko.observable<number>();
 
-    systemCollectionsExpanded = ko.observable<boolean>(true);
+    systemCollectionsExpanded = ko.observable<boolean>(false);
 
     systemCollections = ko.pureComputed<collection[]>(() => {
         return this.collections().filter(x => x.isSystem);

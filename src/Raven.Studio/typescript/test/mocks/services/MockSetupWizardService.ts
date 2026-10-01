@@ -23,17 +23,26 @@ export default class MockSetupWizardService extends AutoMockService<SetupWizardS
         return this.mocks.registrationInfo.mockImplementation(async (license) => {
             const baseInfo = SetupWizardStubs.registrationInfoCommunity();
 
-            const licenseConfigs: Record<string, Partial<typeof baseInfo>> = {
+            const paidFeatures: Partial<LicenseStatus> = {
+                HasStudioConfiguration: true,
+                HasPostgreSqlIntegration: true,
+            };
+
+            const licenseConfigs: Record<string, Partial<LicenseStatus>> = {
                 "53f54157-3862-47b6-9dbd-94d323687a90": {},
-                "53f54157-3862-47b6-9dbd-94d323687a91": { LicenseType: "Essential" },
-                "53f54157-3862-47b6-9dbd-94d323687a94": { LicenseType: "Professional", MaxClusterSize: 5 },
-                "53f54157-3862-47b6-9dbd-94d323687a92": { LicenseType: "Enterprise", MaxClusterSize: 2147483647 },
-                "53f54157-3862-47b6-9dbd-94d323687a95": { LicenseType: "EnterpriseAi", MaxClusterSize: 2147483647 },
-                "53f54157-3862-47b6-9dbd-94d323687a93": { LicenseType: "Developer", MaxClusterSize: 5 },
+                "53f54157-3862-47b6-9dbd-94d323687a91": { Type: "Essential" },
+                "53f54157-3862-47b6-9dbd-94d323687a94": {
+                    Type: "Professional",
+                    MaxClusterSize: 5,
+                    HasStudioConfiguration: true,
+                },
+                "53f54157-3862-47b6-9dbd-94d323687a92": { Type: "Enterprise", MaxClusterSize: 0, ...paidFeatures },
+                "53f54157-3862-47b6-9dbd-94d323687a95": { Type: "EnterpriseAi", MaxClusterSize: 0, ...paidFeatures },
+                "53f54157-3862-47b6-9dbd-94d323687a93": { Type: "Developer", MaxClusterSize: 3, ...paidFeatures },
             };
 
             const config = licenseConfigs[license.Id];
-            return config ? { ...baseInfo, ...config } : baseInfo;
+            return config ? { ...baseInfo, LicenseStatus: { ...baseInfo.LicenseStatus, ...config } } : baseInfo;
         });
     }
 

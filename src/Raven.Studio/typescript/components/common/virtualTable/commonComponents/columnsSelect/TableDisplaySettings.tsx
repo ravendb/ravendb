@@ -351,7 +351,7 @@ function SortableColumnRow({
     );
 }
 
-function ColumnRowPreview({ id, meta, isSelected, isPinned }: ColumnRowProps) {
+function ColumnRowPreview({ meta, isSelected, isPinned }: ColumnRowProps) {
     return (
         <div className="column-list-item column-list-item-preview d-flex align-items-center">
             <span className="column-drag-handle" style={{ cursor: "grabbing" }}>

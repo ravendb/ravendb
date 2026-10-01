@@ -14,6 +14,7 @@ import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
 import OverrideConfigurationViaExternalScriptToggle from "components/common/formDestinations/OverrideConfigurationViaExternalScriptToggle";
+import AzureAuthTypeToggle from "components/common/formDestinations/AzureAuthTypeToggle";
 
 export default function Azure() {
     const { control, trigger } = useFormContext<FormDestinations>();
@@ -103,15 +104,32 @@ export default function Azure() {
                                     />
                                 </div>
                                 <div className="mb-2">
-                                    <FormLabel>Account key</FormLabel>
-                                    <FormInput
-                                        name={getName("accountKey")}
+                                    <AzureAuthTypeToggle
                                         control={control}
-                                        placeholder="Enter an account key"
-                                        type="password"
-                                        passwordPreview
-                                        autoComplete="off"
+                                        name={getName("authType")}
+                                        className="mb-2"
                                     />
+                                    {formValues.authType === "sasToken" ? (
+                                        <FormInput
+                                            key="sasToken"
+                                            name={getName("sasToken")}
+                                            control={control}
+                                            placeholder="Enter a SAS token"
+                                            type="password"
+                                            passwordPreview
+                                            autoComplete="off"
+                                        />
+                                    ) : (
+                                        <FormInput
+                                            key="accountKey"
+                                            name={getName("accountKey")}
+                                            control={control}
+                                            placeholder="Enter an account key"
+                                            type="password"
+                                            passwordPreview
+                                            autoComplete="off"
+                                        />
+                                    )}
                                 </div>
                                 <div className="d-flex">
                                     <FlexGrow />

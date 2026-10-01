@@ -32,7 +32,8 @@ namespace Voron.Data.BTrees
             long pageNumber,
             TreeNodeFlags nodeType,
             TreeCursor cursor,
-            bool splittingOnDecompressed = false)
+            bool splittingOnDecompressed = false,
+            DecompressedLeafPage pageDecompressed = null)
         {
             _tx = tx;
             _tree = tree;
@@ -53,6 +54,13 @@ namespace Voron.Data.BTrees
             }
 
             _cursor.Pop();
+
+            // pageDecompressed: the page on top of the cursor decompressed with Write usage by Tree.TryCompressPageNodes. It has
+            // already applied the compression tombstones to the tree state, so it must be reused, not decompressed again (RavenDB-27347)
+            Debug.Assert(splittingOnDecompressed == false || pageDecompressed == null);
+            Debug.Assert(pageDecompressed == null || (_page.IsCompressed && pageDecompressed.PageNumber == _page.PageNumber && pageDecompressed.Usage == WriteDecompressionUsage));
+
+            _pageDecompressed = pageDecompressed;
         }
 
         private FreeSpaceHandlingDisabler DisableFreeSpaceUsageIfSplittingRootTree()
@@ -75,7 +83,7 @@ namespace Voron.Data.BTrees
 
                 if (_page.IsCompressed)
                 {
-                    _pageDecompressed = _tree.DecompressPage(_page, WriteDecompressionUsage, skipCache: false);
+                    _pageDecompressed ??= _tree.DecompressPage(_page, WriteDecompressionUsage, skipCache: false);
                     _pageDecompressed.Search(_tx, _newKey);
 
                     if (_pageDecompressed.LastMatch == 0)
@@ -102,7 +110,7 @@ namespace Voron.Data.BTrees
                     _page = _pageDecompressed;
                 }
                 
-                TreePage rightPage = _tree.NewPage(_page.TreeFlags, _page.PageNumber);
+                TreePage rightPage = _tree.NewPage(_page.PageType, _page.PageNumber);
 
                 if (_cursor.PageCount == 0) // we need to do a root split
                 {
@@ -125,6 +133,11 @@ namespace Voron.Data.BTrees
                     _parentPage = _tree.ModifyPage(_cursor.CurrentPage);
 
                     _cursor.Update(_cursor.Pages, _parentPage);
+
+                    ParentPageAction.EnsureValidLastSearchPosition(_parentPage, _page.PageNumber, _parentPage.LastSearchPosition);
+
+                    if (ShouldPromotePage())
+                        WrapPageInBranch();
                 }
 
                 using (_pageDecompressed)
@@ -233,6 +246,50 @@ namespace Voron.Data.BTrees
                 default:
                     throw new NotSupportedException($"Unknown node type: {_nodeType}");
             }
+        }
+
+        private bool ShouldPromotePage()
+        {
+            Debug.Assert(_parentPage.GetNode(_parentPage.LastSearchPosition)->PageNumber == _page.PageNumber, "the parent is not positioned at the page being split");
+
+            if (_page.CollapsedLevels > 0)
+                return true;
+
+            // Before RavenDB-27533 - we didn't have CollapsedLevels, so we need heuristics
+            if (_page.IsBranch)
+                return false; // we cannot tell from a branch without the counter
+
+            // heuristics - we probe the left & right siblings, a leaf splitting next to a branch sibling
+            // would add a leaf pointer next to branch pointers
+            int count = _parentPage.NumberOfEntries;
+            int position = _parentPage.LastSearchPosition;
+            return IsBranchPage((position - 1 + count) % count) || IsBranchPage((position + 1) % count);
+
+            bool IsBranchPage(int pos)
+            {
+                long pageNumber = _parentPage.GetNode(pos)->PageNumber;
+                return pageNumber != _page.PageNumber && _tree.GetReadOnlyTreePage(pageNumber).IsBranch;
+            }
+        }
+
+        private void WrapPageInBranch()
+        {
+            var wrapper = _tree.NewPage(TreePageFlags.Branch, _page.PageNumber);
+            wrapper.AddPageRefNode(0, Slices.BeforeAllKeys, _page.PageNumber);
+
+            // the wrapper takes the place of the page it wraps, same range
+            var node = _parentPage.GetNode(_parentPage.LastSearchPosition);
+            Debug.Assert(node->PageNumber == _page.PageNumber);
+            node->PageNumber = wrapper.PageNumber;
+
+            wrapper.CollapsedLevels = _page.CollapsedLevels - 1;
+            _page.CollapsedLevels = 0;
+            if (_page is DecompressedLeafPage decompressed)
+                decompressed.Original.CollapsedLevels = 0; // decompressed is a copy, have to set the original one
+
+            _cursor.Push(wrapper);
+            _parentPage = wrapper;
+            _parentPage.LastSearchPosition++;
         }
 
         private byte* SplitPageInHalf(TreePage rightPage)

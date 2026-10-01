@@ -9,8 +9,12 @@ Prerequisites:
     - 'vcbin' to point to the location where vcvars32.bat and vcvars64.bat are located
     - 'clbin' to point to the location where cl.exe is located
   c. Run './build-all-posix.sh setup' for the first time in order to install osxcross tool to compile c files for macos
-  d. follow the instructions of './build-all-posix.sh setup' and add the path of the osxcross bin to PATH.
+  d. no need to add osxcross bin to PATH - 'build-all-posix.sh' exports it by itself (a manual export
+     is only needed when invoking o64-clang / oa64-clang directly, outside of the build scripts)
 
 1. Run .\build-all.ps1
  - it will bump the PAL version - pal.ver file
- - it will update int32_t rvn_get_pal_ver() 
+ - it will update int32_t rvn_get_pal_ver()
+
+2. Update 'PAL_VER' in src/Sparrow.Server/Platform/Pal.cs to match the new pal.ver value
+   (the scripts do not do this; a mismatch fails RavenDB startup with IncorrectDllException)

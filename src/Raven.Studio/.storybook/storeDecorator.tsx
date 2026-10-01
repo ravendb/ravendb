@@ -1,6 +1,7 @@
 import { resetAllMocks } from "storybook/test";
 import { useState } from "react";
 import { createStoreConfiguration } from "../typescript/components/store";
+import { throttledUpdateLicenseLimitsUsage } from "../typescript/components/common/shell/setup";
 import { setEffectiveTestStore } from "../typescript/components/storeCompat";
 import { Provider } from "react-redux";
 import React from "react";
@@ -9,6 +10,7 @@ export const StoreDecorator = (Story, context) => {
     useTheme(context.globals.theme);
 
     const [store] = useState(() => {
+        throttledUpdateLicenseLimitsUsage.cancel();
         resetAllMocks();
 
         const storeConfiguration = createStoreConfiguration();

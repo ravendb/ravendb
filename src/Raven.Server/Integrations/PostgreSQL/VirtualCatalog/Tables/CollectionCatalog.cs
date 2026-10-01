@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using Raven.Server.Documents;
 using Raven.Server.Integrations.PostgreSQL.Types;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
@@ -36,13 +38,25 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
                 }
             }
 
-            // Oids aren't persisted; every catalog table must derive them the same way or joins silently return nothing.
             names.Sort(StringComparer.Ordinal);
 
-            for (int i = 0; i < names.Count; i++)
-                relations.Add(new CollectionRelation(names[i], FirstCollectionOid + i));
+            var taken = new HashSet<int>();
+            foreach (var name in names)
+            {
+                var oid = OidFor(name);
+                while (taken.Add(oid) == false)
+                    oid = oid == int.MaxValue ? FirstCollectionOid : oid + 1;
+
+                relations.Add(new CollectionRelation(name, oid));
+            }
 
             return relations;
+        }
+
+        private static int OidFor(string collection)
+        {
+            var hash = Hashing.XXHash64.Calculate(collection, Encoding.UTF8);
+            return FirstCollectionOid + (int)(hash % (int.MaxValue - FirstCollectionOid));
         }
 
         // Must match RqlQuery's RowDescription exactly, or PowerBI raises DataSource.Changed.

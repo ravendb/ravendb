@@ -178,7 +178,7 @@ export default function ClusterObserverDecisions({ summary }: ClusterObserverDec
                 <h3 className="mb-3">Cluster Observer Decisions</h3>
                 {observer.loading ? (
                     <div className="hstack gap-2 justify-content-center text-muted py-3">
-                        <Spinner size="sm" /> Loading cluster observer decisions...
+                        <Spinner size="sm" data-testid="loader" /> Loading cluster observer decisions...
                     </div>
                 ) : !hasAnyDecisions ? (
                     <EmptySet compact className="justify-content-center">

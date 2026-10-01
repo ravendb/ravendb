@@ -150,7 +150,7 @@ public class TelegramPhoneNumberTests(ITestOutputHelper output, QuillTelegramFix
 
         var token = NewBotToken();
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Telegram, agentId, null, Telegram: new(token)));
+            ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(token)));
 
         const long chatId = 730;
         Mock.EnqueueContactMessage(token, chatId, fromUserId: 730, "+48222222222");
@@ -181,7 +181,7 @@ public class TelegramPhoneNumberTests(ITestOutputHelper output, QuillTelegramFix
         var token = NewBotToken();
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Telegram, agentId, null,
-            Telegram: new(token, new Dictionary<string, ChannelParameterBinding>
+            DisplayName: "Support bot", Telegram: new(token, new Dictionary<string, ChannelParameterBinding>
             {
                 ["phone"] = new() { Source = ChannelParameterSource.PhoneNumber },
             })));

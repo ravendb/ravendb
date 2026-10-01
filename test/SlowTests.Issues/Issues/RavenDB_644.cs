@@ -227,7 +227,7 @@ namespace SlowTests.Issues
                             new IndexDefinition
                             {
                                 Name = "Index1",
-                                Maps = { "from i in items select new { Year = i.Year, Number = i.Number, Count = 0 }" },
+                                Maps = { "from i in docs select new { Year = i.Year, Number = i.Number, Count = 0 }" },
                                 Reduce =
                                     "from r in records group r by new { r.Year, r.Number } into yearAndNumber select new { Year = yearAndNumber.Key.Year, Number = yearAndNumber.Key.Number, Count = yearAndNumber.Where(x => x.Number == 0).Select(x => yearAndNumber.Count()) }"
                             }}));

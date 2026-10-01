@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createSelector, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
 import LicenseLimitsUsage = Raven.Server.Commercial.LicenseLimitsUsage;
 import LicenseType = Raven.Server.Commercial.LicenseType;
@@ -25,6 +25,12 @@ const initialState: LicenseState = {
     },
 };
 
+// 0 in MaxClusterSize means Infinity, in other fields null means Infinity
+// for consistency we convert 0 to null
+export function normalizeMaxClusterSize(maxClusterSize: number): number | null {
+    return maxClusterSize === 0 ? null : maxClusterSize;
+}
+
 const licenseTiers: Record<LicenseType, number> = {
     None: 0,
     Invalid: 0,
@@ -44,15 +50,11 @@ export const licenseSlice = createSlice({
         statusLoaded: (store, { payload: status }: PayloadAction<LicenseStatus>) => {
             store.status = status;
 
-            // 0 in MaxClusterSize means Infinity, in other fields null means Infinity
-            // for consistency we convert 0 to null
-            if (
-                store.status?.Attributes &&
-                "MaxClusterSize" in store.status.Attributes &&
-                store.status.Attributes.MaxClusterSize === 0
-            ) {
-                store.status.Attributes.MaxClusterSize = null;
-                store.status.MaxClusterSize = null;
+            if (store.status?.Attributes && "MaxClusterSize" in store.status.Attributes) {
+                store.status.Attributes.MaxClusterSize = normalizeMaxClusterSize(
+                    store.status.Attributes.MaxClusterSize as number
+                );
+                store.status.MaxClusterSize = normalizeMaxClusterSize(store.status.MaxClusterSize);
             }
         },
         supportLoaded: (store, { payload: status }: PayloadAction<Raven.Server.Commercial.LicenseSupportInfo>) => {
@@ -75,8 +77,8 @@ const licenseRegistered = (store: RootState): boolean => {
     return !!licenseStatus && licenseStatus.Type !== "None" && licenseStatus.Type !== "Invalid";
 };
 
-const licenseInfo = (store: RootState) => {
-    const type = licenseSelectors.licenseType(store) ?? "None";
+const licenseInfo = createSelector([(store: RootState) => store.license?.status?.Type], (licenseType) => {
+    const type = licenseType ?? "None";
 
     return {
         type,
@@ -85,7 +87,7 @@ const licenseInfo = (store: RootState) => {
         isExact: (compareType: LicenseType) => licenseTiers[type] === licenseTiers[compareType],
         hasLicense: () => type !== "None" && type !== "Invalid",
     };
-};
+});
 
 export const licenseSelectors = {
     status: (store: RootState) => store.license.status,

@@ -2,6 +2,7 @@
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Mappings;
@@ -200,10 +201,10 @@ unsafe partial struct SortingMatch<TInner>
             var terms = new Span<UnmanagedSpan>(batchTerms, batchTermIds.Length);
             Container.GetAll(llt, batchTermIds, terms, SortingHelpers.MissingTermId, pageLocator);
 
-            
-            var indirectComparer = new IndirectComparer<CompactKeyComparer>(batchTerms, new CompactKeyComparer(), descending);
-            var indexes = SortByTerms(ref match, batchTermIds, batchTerms, descending, indirectComparer);
-            
+            var indexBits = IndexBitsFor(batchResults.Length);
+            var indirectComparer = new IndirectComparer<CompactKeyComparer>(batchTerms, new CompactKeyComparer(), descending, indexBits);
+            var indexes = SortByTerms(ref match, batchTermIds, batchTerms, descending, indirectComparer, indexBits);
+
             for (int i = 0; i < indexes.Length; i++)
             {
                 int bIdx = indexes[i];
@@ -211,46 +212,58 @@ unsafe partial struct SortingMatch<TInner>
             }
         }
 
-        private static void MaybeBreakTies<TComparer>(Span<long> buffer, TComparer tieBreaker, bool isDescending) where TComparer : struct, IComparer<long>
+        /// <summary>Width of the batch index packed into the sort key. 15 bits are free by construction; a larger batch
+        /// takes one more per doubling from the term prefix, which only costs pre-sort precision - ties are resolved by the
+        /// full comparer. Capped at 31 so the key stays non-negative.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int IndexBitsFor(int length) => Math.Clamp(32 - BitOperations.LeadingZeroCount((uint)(length - 1)), 15, 31);
+
+        /// <summary>The part of the key at <paramref name="i"/> that the pre-sort actually ordered, i.e. without the packed batch index.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static long KeyPrefixAt(Span<long> buffer, int i, bool isDescending, int indexBits)
+        {
+            var key = buffer[i];
+            if (isDescending)
+                key = -key;
+            return key >> indexBits;
+        }
+
+        /// <summary>First position at or after <paramref name="from"/> whose key prefix differs from <paramref name="prefix"/>.</summary>
+        private static int TieRunEnd(Span<long> buffer, long prefix, int from, bool isDescending, int indexBits)
+        {
+            int end = from;
+            for (; end < buffer.Length; end++)
+            {
+                if (KeyPrefixAt(buffer, end, isDescending, indexBits) != prefix)
+                    break;
+            }
+
+            return end;
+        }
+
+        private static void MaybeBreakTies<TComparer>(Span<long> buffer, TComparer tieBreaker, bool isDescending, int indexBits)
+            where TComparer : struct, IComparer<long>
         {
             // We may have ties, have to resolve that before we can continue
             for (int i = 1; i < buffer.Length; i++)
             {
-                var x = buffer[i - 1];
-                var y = buffer[i];
-                if (isDescending)
-                {
-                    x = -x;
-                    y = -y;
-                }
-
-                x >>= 15;
-                y >>= 15;
-                if (x != y)
+                var x = KeyPrefixAt(buffer, i - 1, isDescending, indexBits);
+                if (x != KeyPrefixAt(buffer, i, isDescending, indexBits))
                     continue;
 
                 // we have a match on the prefix, need to figure out where it ends hopefully this is rare
-                int end = i;
-                for (; end < buffer.Length; end++)
-                {
-                    y = buffer[end];
-                    if (isDescending)
-                        y = -y;
-                    y >>= 15;
-                    if (x != y)
-                        break;
-                }
-
+                int end = TieRunEnd(buffer, x, i, isDescending, indexBits);
                 buffer[(i - 1)..end].Sort(tieBreaker);
                 i = end;
             }
         }
 
         private static Span<int> SortByTerms<TComparer>(ref SortingMatch<TInner> match, Span<long> buffer, UnmanagedSpan* batchTerms, bool isDescending,
-            TComparer tieBreaker)
+            TComparer tieBreaker, int indexBits)
             where TComparer : struct, IComparer<long>
         {
-            Debug.Assert(buffer.Length < (1 << 15), "buffer.Length < (1<<15)");
+            long indexMask = (1L << indexBits) - 1;
+            Debug.Assert(buffer.Length <= indexMask + 1, "the packed index field has to address every entry of the batch");
             var nullValue = match.NullIsSmallest
                 ? 0
                 : -1 >>> 16;
@@ -267,7 +280,7 @@ unsafe partial struct SortingMatch<TInner>
                     l = nullValue;
                 }
 
-                l = BinaryPrimitives.ReverseEndianness(l) >>> 1;
+                l = (BinaryPrimitives.ReverseEndianness(l) >>> 1) & ~indexMask;
                 long sortKey = l | (uint)i;
                 if (isDescending)
                     sortKey = -sortKey;
@@ -277,16 +290,19 @@ unsafe partial struct SortingMatch<TInner>
 
             Sort.Run(buffer);
 
-            if (match._take >= 0 &&
-                buffer.Length > match._take)
-                buffer = buffer[..match._take];
+            var take = match._take >= 0 && match._take < buffer.Length ? match._take : buffer.Length;
+            if (take > 0)
+            {
+                // Resolve the tie run straddling the cut before cutting, or the top N is chosen by batch index, not by term.
+                // That run can be the whole buffer; nth-element selection is the upgrade if it shows in a profile.
+                var end = TieRunEnd(buffer, KeyPrefixAt(buffer, take - 1, isDescending, indexBits), take, isDescending, indexBits);
+                MaybeBreakTies(buffer[..end], tieBreaker, isDescending, indexBits);
+            }
 
-            MaybeBreakTies(buffer, tieBreaker, isDescending);
-
-            return ExtractIndexes(buffer, isDescending);
+            return ExtractIndexes(buffer[..take], isDescending, indexMask);
         }
 
-        private static Span<int> ExtractIndexes(Span<long> buffer, bool isDescending)
+        private static Span<int> ExtractIndexes(Span<long> buffer, bool isDescending, long indexMask)
         {
             // note - we reuse the memory
             var indexes = MemoryMarshal.Cast<long, int>(buffer)[..(buffer.Length)];
@@ -295,7 +311,7 @@ unsafe partial struct SortingMatch<TInner>
                 var sortKey = buffer[i];
                 if (isDescending)
                     sortKey = -sortKey;
-                var idx = (ushort)sortKey & 0x7FFF;
+                var idx = (int)(sortKey & indexMask);
                 indexes[i] = idx;
             }
 
@@ -308,37 +324,6 @@ unsafe partial struct SortingMatch<TInner>
         }
     }
 
-
-    private struct EntryComparerHelper
-    {
-        public static Span<int> NumericSortBatch<TCmp>(Span<long> batchTermIds, UnmanagedSpan* batchTerms, bool descending = false)
-            where TCmp : struct, IComparer<UnmanagedSpan>, IEntryComparer
-        {
-            var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
-            for (int i = 0; i < batchTermIds.Length; i++)
-            {
-                batchTerms[i] = new UnmanagedSpan(batchTermIds[i]);
-                indexes[i] = i;
-            }
-
-            IndirectSort<TCmp>(indexes, batchTerms, descending);
-
-            return indexes;
-        }
-
-        public static void IndirectSort<TCmp>(Span<int> indexes, UnmanagedSpan* batchTerms, bool descending, TCmp cmp = default)
-            where TCmp : struct, IComparer<UnmanagedSpan>, IEntryComparer
-        {
-            if (descending)
-            {
-                indexes.Sort(new IndirectComparer<Descending<TCmp>>(batchTerms, new(cmp), true));
-            }
-            else
-            {
-                indexes.Sort(new IndirectComparer<TCmp>(batchTerms, cmp, false));
-            }
-        }
-    }
 
     private struct EntryComparerByLong : IEntryComparer, IComparer<UnmanagedSpan>
     {
@@ -574,18 +559,20 @@ unsafe partial struct SortingMatch<TInner>
     }
 
 
-    private readonly struct IndirectComparer<TComparer> : IComparer<long>, IComparer<int>
+    private readonly struct IndirectComparer<TComparer> : IComparer<long>
         where TComparer : struct, IComparer<UnmanagedSpan>
     {
         private readonly UnmanagedSpan* _terms;
         private readonly TComparer _inner;
         private readonly bool _isDescending;
+        private readonly long _indexMask;
 
-        public IndirectComparer(UnmanagedSpan* terms, TComparer entryComparer, bool isDescending)
+        public IndirectComparer(UnmanagedSpan* terms, TComparer entryComparer, bool isDescending, int indexBits)
         {
             _terms = terms;
             _inner = entryComparer;
             _isDescending = isDescending;
+            _indexMask = (1L << indexBits) - 1;
         }
 
         public int Compare(long x, long y)
@@ -596,17 +583,18 @@ unsafe partial struct SortingMatch<TInner>
                 y = -y;
             }
 
-            var xIdx = (ushort)x & 0X7FFF;
-            var yIdx = (ushort)y & 0X7FFF;
-            Debug.Assert(yIdx < SortingMatch.SortBatchSize && xIdx < SortingMatch.SortBatchSize);
-            return _isDescending
+            // Same width SortByTerms packed for this batch; a fixed 15-bit mask folded larger batches onto 0..32767.
+            var xIdx = (int)(x & _indexMask);
+            var yIdx = (int)(y & _indexMask);
+            var cmp = _isDescending
                 ? -_inner.Compare(_terms[xIdx], _terms[yIdx])
                 : _inner.Compare(_terms[xIdx], _terms[yIdx]);
-        }
+            if (cmp != 0)
+                return cmp;
 
-        public int Compare(int x, int y)
-        {
-            return _inner.Compare(_terms[x], _terms[y]);
+            // Equal sort terms: break the tie by ascending batch index. batchResults holds entry ids in ascending
+            // order, so ties come out in entry id order for both directions instead of whatever the sort left.
+            return xIdx - yIdx;
         }
     }
 }

@@ -1,0 +1,117 @@
+@use "Content/scss/sizes";
+@use "Content/scss/colors";
+
+.samples-tabs {
+    &.card {
+        border-radius: sizes.$border-radius;
+        overflow: hidden;
+    }
+
+    .samples-nav {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        padding: sizes.$gutter-xxs;
+
+        &::before,
+        &::after {
+            display: none;
+        }
+    }
+
+    .samples-close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        align-self: stretch;
+    }
+
+    .nav-item {
+        .nav-link {
+            color: inherit;
+            border-radius: sizes.$border-radius-sm;
+            padding: sizes.$gutter-xxxs sizes.$gutter-xxs;
+            font-size: sizes.$font-size-xs;
+
+            &.active {
+                background-color: colors.$panel-bg-3-var;
+            }
+
+            &:hover {
+                opacity: 0.8;
+                background-image: none !important;
+            }
+
+            &:focus {
+                background-image: none !important;
+            }
+        }
+    }
+}
+
+.methods-search-wrapper {
+    padding: sizes.$gutter-xs 0;
+
+    .methods-search-icon {
+        top: 50%;
+        left: calc(1rem + #{sizes.$gutter-xs});
+        transform: translateY(-50%);
+        pointer-events: none;
+        opacity: 0.5;
+    }
+
+    .methods-search-input {
+        padding-left: calc(1rem + #{sizes.$gutter-xs} + 1.25em);
+    }
+}
+
+.methods-table {
+    h4 {
+        letter-spacing: 0.08em;
+    }
+
+    code {
+        color: colors.$info-var;
+        background-color: rgba(var(--bs-info-rgb), 0.1);
+        padding: 1px sizes.$gutter-xxxs;
+        border-radius: sizes.$border-radius-sm;
+    }
+
+    .method-row {
+        &--expandable {
+            cursor: pointer;
+
+            &:hover {
+                background-color: colors.$panel-bg-2-var;
+            }
+        }
+
+        &__chevron {
+            display: inline-block;
+            margin-right: sizes.$gutter-xxs;
+            line-height: 1;
+            vertical-align: middle;
+        }
+    }
+
+    .method-example {
+        background-color: colors.$panel-bg-1-var;
+    }
+}
+
+.ace-samples-panel {
+    margin-top: sizes.$gutter-xxxs;
+    border-radius: sizes.$border-radius;
+
+    .tab-content {
+        background-color: transparent;
+        max-height: calc(45vh - 60px);
+        overflow-y: auto;
+        padding: 0;
+    }
+
+    .tab-pane.fade {
+        opacity: 1;
+        transition: none;
+    }
+}

@@ -60,7 +60,7 @@ public class RavenDB_27191(ITestOutputHelper output) : NoDisposalNeeded(output)
             () => documentProcessor.SetSourceColumnNames("public", "CustomerAddresses", names));
         Assert.Contains("Column 'CustomerId' not found in source columns", first.Message);
 
-        var processor = documentProcessor.GetProcessor("public", "CustomerAddresses");
+        var processor = documentProcessor.GetProcessor("public", "CustomerAddresses", discriminator: null);
         Assert.Null(processor.SourceColumnNames);
         Assert.Null(processor.LinkedTableJoinIndices);
 

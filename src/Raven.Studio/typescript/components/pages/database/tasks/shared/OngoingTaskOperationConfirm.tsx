@@ -13,23 +13,25 @@ import classNames from "classnames";
 
 export type OngoingTaskOperationConfirmType = "enable" | "disable" | "delete";
 
+export type OperationConfirmTaskInfo = Pick<OngoingTaskSharedInfo, "taskId" | "taskName" | "taskType" | "taskState">;
+
 type DestinationStatus = Exclude<OngoingTaskState, "None" | "PartiallyEnabled"> | "Removed";
 
 interface TaskGroup {
     title: string | ReactNode;
-    tasks: OngoingTaskSharedInfo[];
+    tasks: OperationConfirmTaskInfo[];
     destinationStatus?: DestinationStatus;
 }
 
 interface AffectedTasksGrouped {
-    disabling?: OngoingTaskSharedInfo[];
-    enabling?: OngoingTaskSharedInfo[];
-    skipping?: OngoingTaskSharedInfo[];
+    disabling?: OperationConfirmTaskInfo[];
+    enabling?: OperationConfirmTaskInfo[];
+    skipping?: OperationConfirmTaskInfo[];
 }
 
 interface OngoingTaskOperationConfirmProps {
     type: OngoingTaskOperationConfirmType;
-    taskSharedInfos: OngoingTaskSharedInfo[];
+    taskSharedInfos: OperationConfirmTaskInfo[];
     toggle: () => void;
     onConfirm: () => void;
 }
@@ -165,11 +167,11 @@ function getStatusIcon(status: OngoingTaskState | DestinationStatus): IconName {
     }
 }
 
-function getTaskGroups(type: OngoingTaskOperationConfirmType, tasks: OngoingTaskSharedInfo[]): TaskGroup[] {
+function getTaskGroups(type: OngoingTaskOperationConfirmType, tasks: OperationConfirmTaskInfo[]): TaskGroup[] {
     switch (type) {
         case "enable": {
             const affectedTaskGrouped = tasks.reduce(
-                (accumulator: AffectedTasksGrouped, currentValue: OngoingTaskSharedInfo) => {
+                (accumulator: AffectedTasksGrouped, currentValue: OperationConfirmTaskInfo) => {
                     if (currentValue.taskState === "Enabled" || currentValue.taskState === "PartiallyEnabled") {
                         accumulator.skipping.push({ ...currentValue, taskState: "Enabled" });
                     } else {
@@ -202,7 +204,7 @@ function getTaskGroups(type: OngoingTaskOperationConfirmType, tasks: OngoingTask
         }
         case "disable": {
             const affectedTaskGrouped = tasks.reduce(
-                (accumulator: AffectedTasksGrouped, currentValue: OngoingTaskSharedInfo) => {
+                (accumulator: AffectedTasksGrouped, currentValue: OperationConfirmTaskInfo) => {
                     if (currentValue.taskState === "Disabled") {
                         accumulator.skipping.push(currentValue);
                     } else {

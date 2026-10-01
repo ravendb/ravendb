@@ -80,7 +80,6 @@ interface IndexErrorPerDocument {
     IndexName: string;
     Timestamp: string;
     LocalTime: string;
-    RelativeTime: string;
 }
 
 interface revisionTimeSeriesDto {
@@ -801,7 +800,6 @@ interface confirmationDialogOptions {
     defaultOption?: string;
     html?: boolean;
     wideDialog?: boolean;
-    isCancelHidden?: boolean;
 }
 
 type IndexEntriesFieldType = "Static" | "Dynamic";
@@ -1105,6 +1103,10 @@ type TombstonesStateOnWire = Omit<Raven.Server.Documents.TombstoneCleaner.Tombst
 
 // Server ToJson() method converts the version object to a string
 type LicenseStatus = Omit<Raven.Server.Commercial.LicenseStatus, "Version"> & { Version: string };
+
+type UserDomainsAndLicenseInfo = Omit<Raven.Server.Commercial.UserDomainsAndLicenseInfo, "LicenseStatus"> & {
+    LicenseStatus: LicenseStatus;
+};
 
 
 type SqlConnectionStringFactoryName =

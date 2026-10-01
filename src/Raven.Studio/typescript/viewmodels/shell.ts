@@ -445,8 +445,11 @@ class shell extends viewModelBase {
     }
 
     static applyTableFont(value: string) {
-        const font = value === "default" ? '"Figtree"' : `"${value}"`;
-        document.documentElement.style.setProperty("--table-font", font);
+        if (value === "default") {
+            document.documentElement.style.removeProperty("--table-font");
+        } else {
+            document.documentElement.style.setProperty("--table-font", `"${value}"`);
+        }
     }
 
     static applyMonospaceFont(value: string) {

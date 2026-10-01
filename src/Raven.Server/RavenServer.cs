@@ -204,7 +204,7 @@ namespace Raven.Server
             // In unsecured + HTTP/2-only (h2c) mode, Kestrel expects HTTP/2 prior-knowledge (no HTTP/1.1 upgrade).
             // Ensure RequestExecutor uses RequestVersionExact so server-to-self calls succeed, without mutating frozen conventions instances.
             if (Configuration.Http.Protocols == HttpProtocols.Http2 && Certificate.ServerCertificate == null)
-                DocumentConventions.DefaultHttpVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
+                DocumentConventions.DefaultHttpVersionPolicy = HttpVersionPolicy.RequestVersionExact;
 
             CpuUsageCalculator = string.IsNullOrEmpty(Configuration.Monitoring.CpuUsageMonitorExec)
                 ? CpuHelper.GetOSCpuUsageCalculator()
@@ -2935,18 +2935,19 @@ namespace Raven.Server
             try
             {
                 using (var context = JsonOperationContext.ShortTermSingleUse())
-                await using (var errorWriter = new AsyncBlittableJsonTextWriter(context, tcpStream))
                 {
-                    context.Write(errorWriter, new DynamicJsonValue
+                    await using (var errorWriter = new AsyncBlittableJsonTextWriter(context, tcpStream))
                     {
-                        ["Type"] = "Error",
-                        ["Exception"] = e.ToString(),
-                        ["Message"] = e.Message
-                    });
+                        context.Write(errorWriter, new DynamicJsonValue
+                        {
+                            ["Type"] = "Error",
+                            ["Exception"] = e.ToString(),
+                            ["Message"] = e.Message
+                        });
+                    }
 
-                    await errorWriter.FlushAsync();
+                    await tcpStream.FlushAsync();
                 }
-
             }
             catch (Exception inner)
             {

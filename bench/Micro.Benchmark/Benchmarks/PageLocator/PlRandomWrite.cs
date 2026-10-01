@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using BenchmarkDotNet.Analysers;
@@ -23,7 +23,7 @@ namespace Micro.Benchmark.Benchmarks.PageLocator
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core80,
+                        Runtime = CoreRuntime.Core10_0,
                         Platform = Platform.X64,
                         Jit = Jit.RyuJit
                     },

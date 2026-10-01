@@ -6,11 +6,13 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import React from "react";
-import {Icon} from "components/common/Icon";
-import {useRavenLink} from "hooks/useRavenLink";
+import { Icon } from "components/common/Icon";
+import { useRavenLink } from "hooks/useRavenLink";
 
 export function EditIndexInfoHub() {
-    const hasAdditionalAssembliesFromNuGet = useAppSelector(licenseSelectors.statusValue("HasAdditionalAssembliesFromNuGet"));
+    const hasAdditionalAssembliesFromNuGet = useAppSelector(
+        licenseSelectors.statusValue("HasAdditionalAssembliesFromNuGet")
+    );
 
     const featureAvailability = useLimitedFeatureAvailability({
         defaultFeatureAvailability,
@@ -22,17 +24,13 @@ export function EditIndexInfoHub() {
         ],
     });
     const indexViewDocsLink = useRavenLink({ hash: "XZXJP2" });
-    
+
     return (
         <AboutViewFloating>
-            <AccordionItemWrapper
-                targetId="about"
-                icon="about"
-                color="info"
-            >
+            <AccordionItemWrapper targetId="about" icon="about" color="info">
                 <p>
                     Create a new index or edit an existing one in this view.
-                    <br/>
+                    <br />
                     The indexing process will immediately start upon saving the index.
                 </p>
                 <ul>
@@ -50,7 +48,7 @@ export function EditIndexInfoHub() {
                         You can configure the index fields for:
                         <br />
                         Full-text search, Highlighting, Suggestions, Spatial queries,
-                        <br /> 
+                        <br />
                         and Store index fields.
                     </li>
                     <li className="margin-top-xxs">
@@ -62,9 +60,7 @@ export function EditIndexInfoHub() {
                         Add additional assemblies and sources to enhance your index functions by referencing classes and
                         methods from other files.
                     </li>
-                    <li className="margin-top-xxs">
-                        The index can be tested in this view before saving it.
-                    </li>
+                    <li className="margin-top-xxs">The index can be tested in this view before saving it.</li>
                     <li className="margin-top-xxs">
                         Index history is available when editing an existing index,
                         <br />
@@ -77,7 +73,10 @@ export function EditIndexInfoHub() {
                     <Icon icon="newtab" /> Docs - Index View
                 </a>
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper isUnlimited={hasAdditionalAssembliesFromNuGet} data={featureAvailability} />
+            <FeatureAvailabilitySummaryWrapper
+                isUnlimited={hasAdditionalAssembliesFromNuGet}
+                data={featureAvailability}
+            />
         </AboutViewFloating>
     );
 }

@@ -122,7 +122,7 @@ public static class SetupWizardUtils
                 throw new InvalidOperationException($"Failed to generate a client certificate for '{domain}'.", e);
             }
 
-            if (parameters.SetupInfo.RegisterClientCert)
+            if (parameters.SetupInfo.RegisterClientCert && parameters.SetupInfo.ZipOnly == false)
                 parameters.RegisterClientCertInOs?.Invoke(parameters.OnProgress, parameters.Progress, clientCert);
             
             parameters.Progress?.SetupActionSteps.StepsByConfigurationStepType[ConfigurationStepType.ClientCertificate].SetState(State.Completed);

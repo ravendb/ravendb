@@ -15,6 +15,7 @@ using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Server.Documents;
 using Raven.Server.Documents.CdcSink;
 using Raven.Server.Documents.CdcSink.Commands;
+using Raven.Server.Documents.CdcSink.Stats;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -104,7 +105,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { config }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var processor = docProcessor.GetProcessor(config.SourceTableSchema ?? "public", config.SourceTableName);
+            var processor = docProcessor.GetPrimaryProcessor(config.SourceTableSchema ?? "public", config.SourceTableName);
             SetSourceColumnNamesFromConfig(processor, config.Columns);
             return processor;
         }
@@ -124,10 +125,10 @@ namespace SlowTests.Server.Documents.CdcSink
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
 
             // Set column names on root processor too
-            var rootProcessor = docProcessor.GetProcessor(rootConfig.SourceTableSchema ?? "public", rootConfig.SourceTableName);
+            var rootProcessor = docProcessor.GetPrimaryProcessor(rootConfig.SourceTableSchema ?? "public", rootConfig.SourceTableName);
             SetSourceColumnNamesFromConfig(rootProcessor, rootConfig.Columns);
 
-            var processor = docProcessor.GetProcessor(embeddedConfig.SourceTableSchema ?? "", embeddedConfig.SourceTableName);
+            var processor = docProcessor.GetPrimaryProcessor(embeddedConfig.SourceTableSchema ?? "", embeddedConfig.SourceTableName);
             SetSourceColumnNamesFromConfig(processor, embeddedConfig.Columns);
             return processor;
         }
@@ -815,6 +816,37 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         [RavenFact(RavenTestCategory.Sinks)]
+        public async Task ProcessedMessagesCounter_CountsSourceOperationsNotDocuments()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            DynamicJsonValue Order(int version) => new DynamicJsonValue
+            {
+                ["Version"] = version,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Orders"
+                }
+            };
+
+            var ops = new List<CdcSinkDocumentOp>
+            {
+                CreatePutOp("Orders/1", Order(1)),
+                CreatePutOp("Orders/1", Order(2)),
+                CreatePutOp("Orders/2", Order(1))
+            };
+
+            var runStats = new CdcSinkRunStats();
+            var statsScope = new CdcSinkStatsScope(runStats);
+            var cmd = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, statsScope, null, null);
+            await database.TxMerger.Enqueue(cmd);
+
+            Assert.Equal(3, cmd.ProcessedSuccessfully);
+            Assert.Equal(3, runStats.NumberOfProcessedMessages);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task PatchWithDollarRow()
         {
             using var store = GetDocumentStore();
@@ -1076,7 +1108,7 @@ namespace SlowTests.Server.Documents.CdcSink
             {
             }
 
-            public CdcSinkTableProcessor GetTableProcessor(string schema, string table) => DocumentProcessor.GetProcessor(schema, table);
+            public CdcSinkTableProcessor GetTableProcessor(string schema, string table) => DocumentProcessor.GetProcessor(schema, table, discriminator: null);
 
             public Task<(string Checkpoint, int Rows)> SubmitBatchForTest(List<CdcSinkDocumentOp> ops, string checkpoint) => SubmitBatch(ops, checkpoint);
 
@@ -1131,7 +1163,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { config }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var processor = docProcessor.GetProcessor("public", "documents");
+            var processor = docProcessor.GetPrimaryProcessor("public", "documents");
 
             var mappedData = new DynamicJsonValue
             {
@@ -1217,7 +1249,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { config }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var processor = docProcessor.GetProcessor("public", "products");
+            var processor = docProcessor.GetPrimaryProcessor("public", "products");
 
             var mappedData = new DynamicJsonValue
             {
@@ -1290,7 +1322,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { config }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var processor = docProcessor.GetProcessor("public", "articles");
+            var processor = docProcessor.GetPrimaryProcessor("public", "articles");
 
             var mappedData = new DynamicJsonValue
             {
@@ -2089,7 +2121,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { rootConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var empProcessor = docProcessor.GetProcessor("public", "employees");
+            var empProcessor = docProcessor.GetPrimaryProcessor("public", "employees");
 
             return (rootConfig, deptConfig, empConfig, empProcessor);
         }
@@ -2441,7 +2473,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { tableConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var processor = docProcessor.GetProcessor("public", "items");
+            var processor = docProcessor.GetPrimaryProcessor("public", "items");
 
             DynamicJsonValue MakeMapped(string name) => new DynamicJsonValue
             {
@@ -2549,7 +2581,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { tableConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var processor = docProcessor.GetProcessor("public", "items");
+            var processor = docProcessor.GetPrimaryProcessor("public", "items");
 
             DynamicJsonValue MakeMapped(string name) => new DynamicJsonValue
             {
@@ -2642,7 +2674,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { tableConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var processor = docProcessor.GetProcessor("public", "items");
+            var processor = docProcessor.GetPrimaryProcessor("public", "items");
 
             DynamicJsonValue MakeMapped(string name) => new DynamicJsonValue
             {
@@ -2730,7 +2762,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { tableConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var processor = docProcessor.GetProcessor("public", "items");
+            var processor = docProcessor.GetPrimaryProcessor("public", "items");
 
             DynamicJsonValue MakeMapped(string name) => new DynamicJsonValue
             {
@@ -2802,8 +2834,8 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { badConfig, goodConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var badProcessor = docProcessor.GetProcessor("public", "bad_orders");
-            var goodProcessor = docProcessor.GetProcessor("public", "good_orders");
+            var badProcessor = docProcessor.GetPrimaryProcessor("public", "bad_orders");
+            var goodProcessor = docProcessor.GetPrimaryProcessor("public", "good_orders");
 
             var badData = new DynamicJsonValue
             {
@@ -2897,7 +2929,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { config }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var processor = docProcessor.GetProcessor("public", "records");
+            var processor = docProcessor.GetPrimaryProcessor("public", "records");
 
             // Simulate Npgsql-returned types:
             // json/jsonb → string containing JSON
@@ -3007,7 +3039,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { tableConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var processor = docProcessor.GetProcessor("public", "orders");
+            var processor = docProcessor.GetPrimaryProcessor("public", "orders");
 
             // Step 1: Create the document via a Put
             var putMapped = new DynamicJsonValue
@@ -3124,7 +3156,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var sinkConfig = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { rootConfig } };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var embProcessor = docProcessor.GetProcessor("public", "order_lines");
+            var embProcessor = docProcessor.GetPrimaryProcessor("public", "order_lines");
 
             // Step 1: Create parent
             var putCmd = new CdcSinkBatchCommand(database,
@@ -3160,6 +3192,260 @@ namespace SlowTests.Server.Documents.CdcSink
                         "Lines": []
                     }
                     """);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks)]
+        public async Task SourceTableMappedBothEmbeddedAndStandalone_PopulatesBoth()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // "order_lines" is mapped two ways at once: embedded under Orders as "Lines", and as its own
+            // "OrderLines" collection.
+            var ordersConfig = CreateRootTableConfig("Orders");
+            ordersConfig.EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+            {
+                new CdcSinkEmbeddedTableConfig
+                {
+                    SourceTableSchema = "public",
+                    SourceTableName = "order_lines",
+                    PropertyName = "Lines",
+                    PrimaryKeyColumns = new List<string> { "line_id" },
+                    JoinColumns = new List<string> { "order_id" },
+                    Type = CdcSinkRelationType.Array,
+                    Columns = new List<CdcColumnMapping>
+                    {
+                        new() { Column = "line_id", Name = "LineId" },
+                        new() { Column = "product", Name = "Product" },
+                        new() { Column = "qty", Name = "Qty" }
+                    }
+                }
+            };
+
+            var orderLinesConfig = new CdcSinkTableConfig
+            {
+                CollectionName = "OrderLines",
+                SourceTableSchema = "public",
+                SourceTableName = "order_lines",
+                PrimaryKeyColumns = new List<string> { "line_id" },
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "line_id", Name = "LineId" },
+                    new() { Column = "order_id", Name = "OrderId" },
+                    new() { Column = "product", Name = "Product" },
+                    new() { Column = "qty", Name = "Qty" }
+                }
+            };
+
+            var sinkConfig = new CdcSinkConfiguration
+            {
+                Name = "test-dual",
+                Tables = new List<CdcSinkTableConfig> { ordersConfig, orderLinesConfig }
+            };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+
+            var lineProcessors = docProcessor.GetProcessors("public", "order_lines");
+            Assert.Equal(2, lineProcessors.Count);
+            Assert.Equal(1, lineProcessors.Count(p => p.IsRoot));
+            Assert.Equal(1, lineProcessors.Count(p => p.IsRoot == false));
+
+            var lineColumns = new[] { "line_id", "order_id", "product", "qty" };
+            docProcessor.SetSourceColumnNames("public", "order_lines", lineColumns);
+            SetSourceColumnNamesFromConfig(docProcessor.GetPrimaryProcessor("public", "orders"), ordersConfig.Columns);
+
+            List<CdcSinkDocumentOp> FanOut(CdcSinkOperation operation, object[] data)
+            {
+                var ops = new List<CdcSinkDocumentOp>();
+                foreach (var proc in docProcessor.GetProcessors("public", "order_lines"))
+                    ops.Add(docProcessor.ProcessRow(proc, operation, (object[])data.Clone(), null));
+                return ops;
+            }
+
+            var orderOp = docProcessor.ProcessRow(new CdcSinkRow
+            {
+                TableSchema = "public", TableName = "orders",
+                Operation = CdcSinkOperation.Upsert,
+                Data = new object[] { 1, "Acme", 0 }
+            }, null);
+            await database.TxMerger.Enqueue(new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp> { orderOp }, "test-dual", null, null, null, null, null, null));
+
+            await database.TxMerger.Enqueue(new CdcSinkBatchCommand(database,
+                FanOut(CdcSinkOperation.Upsert, new object[] { 1, 1, "Widget", 5 }),
+                "test-dual", null, null, null, null, null, null));
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var standalone = database.DocumentsStorage.Get(ctx, "OrderLines/1");
+                Assert.NotNull(standalone);
+                AssertDocumentMatches(ctx, standalone.Data, """
+                    { "LineId": 1, "OrderId": 1, "Product": "Widget", "Qty": 5 }
+                    """);
+
+                var order = database.DocumentsStorage.Get(ctx, "Orders/1");
+                Assert.NotNull(order);
+                Assert.True(order.Data.TryGet("Lines", out BlittableJsonReaderArray lines));
+                Assert.Equal(1, lines.Length);
+                AssertDocumentMatches(ctx, (BlittableJsonReaderObject)lines[0], """
+                    { "LineId": 1, "Product": "Widget", "Qty": 5 }
+                    """);
+            }
+
+            await database.TxMerger.Enqueue(new CdcSinkBatchCommand(database,
+                FanOut(CdcSinkOperation.Upsert, new object[] { 1, 1, "Widget", 10 }),
+                "test-dual", null, null, null, null, null, null));
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var standalone = database.DocumentsStorage.Get(ctx, "OrderLines/1");
+                Assert.True(standalone.Data.TryGet("Qty", out long standaloneQty));
+                Assert.Equal(10, standaloneQty);
+
+                var order = database.DocumentsStorage.Get(ctx, "Orders/1");
+                order.Data.TryGet("Lines", out BlittableJsonReaderArray lines);
+                Assert.Equal(1, lines.Length);
+                ((BlittableJsonReaderObject)lines[0]).TryGet("Qty", out long embeddedQty);
+                Assert.Equal(10, embeddedQty);
+            }
+
+            await database.TxMerger.Enqueue(new CdcSinkBatchCommand(database,
+                FanOut(CdcSinkOperation.Delete, new object[] { 1, 1, "Widget", 10 }),
+                "test-dual", null, null, null, null, null, null));
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                Assert.Null(database.DocumentsStorage.Get(ctx, "OrderLines/1"));
+
+                var order = database.DocumentsStorage.Get(ctx, "Orders/1");
+                order.Data.TryGet("Lines", out BlittableJsonReaderArray lines);
+                Assert.Equal(0, lines.Length);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks)]
+        public void SameTableEmbeddedUnderTwoRoots_EachMappingResolvesByDiscriminator()
+        {
+            CdcSinkTableConfig CreateRoot(string collection, string sourceTable) => new CdcSinkTableConfig
+            {
+                CollectionName = collection,
+                SourceTableSchema = "public",
+                SourceTableName = sourceTable,
+                PrimaryKeyColumns = new List<string> { "id" },
+                Columns = new List<CdcColumnMapping> { new() { Column = "id", Name = "Id" } },
+                EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                {
+                    new()
+                    {
+                        SourceTableSchema = "public",
+                        SourceTableName = "order_lines",
+                        PropertyName = "Lines",
+                        PrimaryKeyColumns = new List<string> { "line_id" },
+                        JoinColumns = new List<string> { "id" },
+                        Type = CdcSinkRelationType.Array,
+                        Columns = new List<CdcColumnMapping> { new() { Column = "line_id", Name = "LineId" } }
+                    }
+                }
+            };
+
+            var sinkConfig = new CdcSinkConfiguration
+            {
+                Name = "test-discriminators",
+                Tables = new List<CdcSinkTableConfig> { CreateRoot("Orders", "orders"), CreateRoot("Invoices", "invoices") }
+            };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+
+            var processors = docProcessor.GetProcessors("public", "order_lines");
+            Assert.Equal(2, processors.Count);
+            Assert.NotEqual(processors[0].Discriminator, processors[1].Discriminator);
+            Assert.Same(processors[0], docProcessor.GetProcessor("public", "order_lines", processors[0].Discriminator));
+            Assert.Same(processors[1], docProcessor.GetProcessor("public", "order_lines", processors[1].Discriminator));
+
+            Assert.Throws<InvalidOperationException>(() => docProcessor.GetProcessor("public", "order_lines", "Removed/Mapping"));
+        }
+
+        [RavenFact(RavenTestCategory.Sinks)]
+        public async Task SourceTableMappedBothEmbeddedAndStandalone_EachMappingRunsItsOwnPatch()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var ordersConfig = CreateRootTableConfig("Orders");
+            ordersConfig.EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+            {
+                new CdcSinkEmbeddedTableConfig
+                {
+                    SourceTableSchema = "public",
+                    SourceTableName = "order_lines",
+                    PropertyName = "Lines",
+                    PrimaryKeyColumns = new List<string> { "line_id" },
+                    JoinColumns = new List<string> { "order_id" },
+                    Type = CdcSinkRelationType.Array,
+                    Patch = "this.EmbeddedPatchRan = true;",
+                    Columns = new List<CdcColumnMapping>
+                    {
+                        new() { Column = "line_id", Name = "LineId" },
+                        new() { Column = "product", Name = "Product" }
+                    }
+                }
+            };
+
+            var orderLinesConfig = new CdcSinkTableConfig
+            {
+                CollectionName = "OrderLines",
+                SourceTableSchema = "public",
+                SourceTableName = "order_lines",
+                PrimaryKeyColumns = new List<string> { "line_id" },
+                Patch = "this.RootPatchRan = true;",
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "line_id", Name = "LineId" },
+                    new() { Column = "order_id", Name = "OrderId" },
+                    new() { Column = "product", Name = "Product" }
+                }
+            };
+
+            var sinkConfig = new CdcSinkConfiguration
+            {
+                Name = "test-dual-patch",
+                Tables = new List<CdcSinkTableConfig> { ordersConfig, orderLinesConfig }
+            };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            docProcessor.SetSourceColumnNames("public", "order_lines", new[] { "line_id", "order_id", "product" });
+            SetSourceColumnNamesFromConfig(docProcessor.GetPrimaryProcessor("public", "orders"), ordersConfig.Columns);
+
+            var ops = new List<CdcSinkDocumentOp>
+            {
+                docProcessor.ProcessRow(new CdcSinkRow
+                {
+                    TableSchema = "public", TableName = "orders",
+                    Operation = CdcSinkOperation.Upsert,
+                    Data = new object[] { 1, "Acme", 0 }
+                }, null)
+            };
+            foreach (var proc in docProcessor.GetProcessors("public", "order_lines"))
+                ops.Add(docProcessor.ProcessRow(proc, CdcSinkOperation.Upsert, new object[] { 10, 1, "Widget" }, null));
+
+            var command = new CdcSinkBatchCommand(database, ops, "test-dual-patch", null,
+                tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
+                statsScope: null, statistics: null, logger: null);
+            await database.TxMerger.Enqueue(command);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var order = database.DocumentsStorage.Get(ctx, "Orders/1");
+                Assert.NotNull(order);
+                Assert.True(order.Data.TryGet("EmbeddedPatchRan", out bool embeddedPatchRan) && embeddedPatchRan);
+                Assert.False(order.Data.TryGet("RootPatchRan", out bool _));
+
+                var line = database.DocumentsStorage.Get(ctx, "OrderLines/10");
+                Assert.NotNull(line);
+                Assert.True(line.Data.TryGet("RootPatchRan", out bool rootPatchRan) && rootPatchRan);
+                Assert.False(line.Data.TryGet("EmbeddedPatchRan", out bool _));
             }
         }
 
@@ -3201,7 +3487,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var sinkConfig = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { rootConfig } };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var embProcessor = docProcessor.GetProcessor("public", "order_detail");
+            var embProcessor = docProcessor.GetPrimaryProcessor("public", "order_detail");
 
             // Step 1: Create parent
             var putCmd = new CdcSinkBatchCommand(database,
@@ -3278,7 +3564,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var sinkConfig = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { rootConfig } };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var embProcessor = docProcessor.GetProcessor("public", "order_tags");
+            var embProcessor = docProcessor.GetPrimaryProcessor("public", "order_tags");
 
             // Step 1: Create parent
             var putCmd = new CdcSinkBatchCommand(database,
@@ -3473,7 +3759,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { rootConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var empProcessor = docProcessor.GetProcessor("public", "employees");
+            var empProcessor = docProcessor.GetPrimaryProcessor("public", "employees");
 
             // Delete employee Alice (emp_id=100) from dept_id=10
             var deleteData = new DynamicJsonValue { ["EmpId"] = 100 };
@@ -3553,7 +3839,7 @@ namespace SlowTests.Server.Documents.CdcSink
             rootConfig.EmbeddedTables = new List<CdcSinkEmbeddedTableConfig> { embeddedConfig };
             var sinkConfig = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { rootConfig } };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var embProcessor = docProcessor.GetProcessor("public", "order_lines");
+            var embProcessor = docProcessor.GetPrimaryProcessor("public", "order_lines");
 
             // Seed with existing lines
             var putCmd = new CdcSinkBatchCommand(database,
@@ -3688,7 +3974,7 @@ namespace SlowTests.Server.Documents.CdcSink
             rootConfig.EmbeddedTables = new List<CdcSinkEmbeddedTableConfig> { embeddedConfig };
             var sinkConfig = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { rootConfig } };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var embProcessor = docProcessor.GetProcessor("public", "order_lines");
+            var embProcessor = docProcessor.GetPrimaryProcessor("public", "order_lines");
 
             // Seed parent + one line with Amount=100
             var putCmd = new CdcSinkBatchCommand(database,
@@ -3799,10 +4085,10 @@ namespace SlowTests.Server.Documents.CdcSink
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
 
             // Set source column names (simulates what providers do from DB schema metadata)
-            var rootProcessor = docProcessor.GetProcessor("public", "groups");
+            var rootProcessor = docProcessor.GetPrimaryProcessor("public", "groups");
             SetSourceColumnNamesFromConfig(rootProcessor, rootConfig.Columns);
 
-            var embProcessor = docProcessor.GetProcessor("public", "group_members");
+            var embProcessor = docProcessor.GetPrimaryProcessor("public", "group_members");
             SetSourceColumnNamesFromConfig(embProcessor, rootConfig.EmbeddedTables[0].Columns);
 
             // --- Step 1: Create parent documents Groups/1 and Groups/2 ---

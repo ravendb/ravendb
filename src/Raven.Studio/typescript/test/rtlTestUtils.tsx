@@ -22,7 +22,7 @@ import { Provider as ReduxProvider } from "react-redux";
 import { setEffectiveTestStore } from "components/storeCompat";
 import { DirtyFlagProvider } from "components/hooks/useDirtyFlag";
 import { ConfirmDialogProvider } from "components/common/ConfirmDialog";
-import { userEvent } from "storybook/internal/test";
+import { userEvent } from "@testing-library/user-event";
 import { DialogProvider } from "components/common/Dialog";
 import { SplitViewProvider } from "components/common/splitView/SplitView";
 
@@ -51,7 +51,8 @@ function genericRtlRender(
     const localScreen = getQueriesForElementFunc(document.body) as Screen<typeof allQueries>;
     localScreen.logTestingPlaygroundURL = screen.logTestingPlaygroundURL;
 
-    const waitForLoad = () => waitForElementToBeRemoved(localScreen.getAllByTestId("loader"));
+    // Callback re-queries the DOM on every check, so it also works when React reuses a node and only drops its data-testid
+    const waitForLoad = () => waitForElementToBeRemoved(() => localScreen.queryAllByTestId("loader"));
 
     return {
         ...container,
@@ -80,13 +81,15 @@ async function fillInput(element: HTMLElement, value: string) {
 
 const AllProviders = () => MockProviders;
 
+const JEST_WORKER_WARN_AFTER_MS = 1000;
+
 interface MockProvidersProps {
     children: React.ReactNode;
     isSplitViewDisabled?: boolean;
 }
 
 export function MockProviders({ children, isSplitViewDisabled }: MockProvidersProps) {
-    const [store] = useState(() => createStoreConfiguration());
+    const [store] = useState(() => createStoreConfiguration({ devChecksWarnAfterMs: JEST_WORKER_WARN_AFTER_MS }));
 
     setEffectiveTestStore(store);
 

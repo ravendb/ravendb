@@ -44,7 +44,7 @@ const parameterBindingSchema = z
 
 const telegramChannelSchema = z.object({
     agentId: z.string().min(1, "Select an agent to route conversations to"),
-    displayName: z.string().trim(),
+    displayName: z.string().trim().min(1, "Channel name is required"),
     botToken: z.string().trim().min(1, "Paste the bot token from @BotFather"),
     parameters: z.array(parameterBindingSchema),
 });
@@ -130,7 +130,7 @@ function LoadedTelegramChannelForm({
                 type: "Telegram",
                 agentId: values.agentId,
                 allowedOrigins: null,
-                displayName: values.displayName.trim() || null,
+                displayName: values.displayName.trim(),
                 telegram: {
                     botToken: values.botToken.trim(),
                     parameterBindings: values.parameters.length > 0 ? toParameterBindings(values.parameters) : null,
@@ -184,8 +184,8 @@ function LoadedTelegramChannelForm({
                             control={form.control}
                             name="displayName"
                             label="Channel name"
-                            placeholder="Defaults to the bot's username"
-                            description="Shown in the channels list. Optional."
+                            placeholder="e.g. Support Telegram"
+                            description="Shown in the channels list."
                         />
                         <ParameterBindingFields
                             control={form.control}

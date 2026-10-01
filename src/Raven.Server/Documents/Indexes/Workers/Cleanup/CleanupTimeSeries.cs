@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
             _tsStorage = documentsStorage.TimeSeriesStorage;
         }
 
-        public override string Name => "TimeSeriesCleanup";
+        public override string Name => IndexingOperation.Cleanup.TimeSeries;
 
         protected override long ReadLastProcessedTombstoneEtag(RavenTransaction transaction, string collection) =>
             IndexStorage.ReadLastProcessedTimeSeriesDeletedRangeEtag(transaction, collection);

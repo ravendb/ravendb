@@ -2,7 +2,7 @@ import { hashKey, queryOptions, type QueryClient, type QueryFilters } from "@tan
 import { api } from "@/api/api";
 import { AI_CONSENT_REQUIRED_MESSAGE } from "@/api/custom-services/assistant-service";
 import type { DiscoverResponse } from "@/api/generated/server-api";
-import { clearFetchStartedAt, recordFetchStartedAt } from "@/lib/query-fetch-start";
+import { dropQueries, recordFetchStartedAt } from "@/lib/query-fetch-start";
 import { tablesSchema, type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { wrapDtoTablesToFormShape } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 
@@ -89,7 +89,6 @@ export function cancelAbandonedSuggestions(queryClient: QueryClient, keptQueryKe
         queryKey: SUGGEST_MAP_TABLES_QUERY_KEY,
         predicate: (query) => query.queryHash !== keptQueryHash,
     };
-    const abandonedQueries = queryClient.getQueryCache().findAll(abandonedQueryFilter);
 
     // Reverts each abandoned entry to its pre-fetch state first, so the abort below is swallowed as a
     // cancellation instead of landing in the cache as a failed suggestion.
@@ -102,11 +101,7 @@ export function cancelAbandonedSuggestions(queryClient: QueryClient, keptQueryKe
         }
     }
 
-    for (const query of abandonedQueries) {
-        clearFetchStartedAt(query.queryKey);
-    }
-
-    queryClient.removeQueries(abandonedQueryFilter);
+    dropQueries(queryClient, abandonedQueryFilter);
 }
 
 async function suggestMapTables(

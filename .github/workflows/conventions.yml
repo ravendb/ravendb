@@ -9,7 +9,7 @@ jobs:
     name: CLA Signed
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: CLA Signed test
         env:
           CLA_SIGNED_URL: http://api.web.ravendb.net/api/v1/contributors/cla/signed?pullRequestId=
@@ -30,7 +30,7 @@ jobs:
       ghprNumber: ${{ github.event.pull_request.number }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Commit Message Conventions
         run: ./scripts/githubActions/commitMessageConventions.ps1
 

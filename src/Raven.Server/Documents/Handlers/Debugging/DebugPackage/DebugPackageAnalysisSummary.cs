@@ -32,10 +32,12 @@ public class DebugPackageAnalysisSummary : IDynamicJson
             SummaryPerNode.Add(nodeTag, summary);
         }
 
+        UnreachableNodes = packageAnalysisReport.UnreachableNodes;
         ClusterWideIssues = packageAnalysisReport.ClusterWideIssues;
     }
     public string PackageId { get; set; }
     public Dictionary<string, DebugPackageNodeAnalysisSummary> SummaryPerNode { get; set; }
+    public Dictionary<string, string> UnreachableNodes { get; set; }
     public DebugPackageAnalysisIssues ClusterWideIssues { get; set; }
 
     private DebugPackageNodeAnalysisSummary GetNodeSummary(DebugPackageNodeReport nodeReport)
@@ -150,9 +152,8 @@ public class DebugPackageAnalysisSummary : IDynamicJson
         return new DynamicJsonValue
         {
             [nameof(PackageId)] = PackageId,
-            [nameof(SummaryPerNode)] = SummaryPerNode != null 
-                ? DynamicJsonValue.Convert(SummaryPerNode)
-                : null,
+            [nameof(SummaryPerNode)] = DynamicJsonValue.Convert(SummaryPerNode),
+            [nameof(UnreachableNodes)] = DynamicJsonValue.Convert(UnreachableNodes),
             [nameof(ClusterWideIssues)] = ClusterWideIssues?.ToJson()
         };
     }

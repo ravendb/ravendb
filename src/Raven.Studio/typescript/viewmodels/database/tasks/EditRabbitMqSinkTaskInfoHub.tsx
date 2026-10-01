@@ -1,7 +1,9 @@
 ﻿import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
-import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import FeatureAvailabilitySummaryWrapper, {
+    FeatureAvailabilityData,
+} from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import React from "react";
 
@@ -19,11 +21,7 @@ export function EditRabbitMqSinkTaskInfoHub() {
 
     return (
         <AboutViewFloating defaultOpen={hasQueueSink ? null : "licensing"}>
-            <AccordionItemWrapper
-                targetId="about"
-                icon="about"
-                color="info"
-            >
+            <AccordionItemWrapper targetId="about" icon="about" color="info">
                 <p>
                     Define a <strong>RabbitMQ Sink</strong> ongoing-task in order to consume and process incoming
                     messages from RabbitMQ queues.
@@ -48,14 +46,12 @@ export function EditRabbitMqSinkTaskInfoHub() {
                     <li className="margin-top-xxs">Incoming messages are expected only as JSON.</li>
                 </ul>
                 <p>
-                    A database with a defined RabbitMQ Sink task will Not become idle,<br />
+                    A database with a defined RabbitMQ Sink task will Not become idle,
+                    <br />
                     ensuring continuous processing of incoming messages.
                 </p>
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper
-                isUnlimited={hasQueueSink}
-                data={featureAvailability}
-            />
+            <FeatureAvailabilitySummaryWrapper isUnlimited={hasQueueSink} data={featureAvailability} />
         </AboutViewFloating>
     );
 }

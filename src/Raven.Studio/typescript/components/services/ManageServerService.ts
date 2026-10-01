@@ -48,6 +48,9 @@ import getDebugPackageDatabaseOngoingTasksCommand = require("commands/maintenanc
 import getDebugPackageDatabaseIndexErrorsCommand = require("commands/maintenance/getDebugPackageDatabaseIndexErrorsCommand");
 import getDebugPackageNetworkInfoCommand = require("commands/maintenance/getDebugPackageNetworkInfoCommand");
 import getDebugPackageThreadsInfoCommand = require("commands/maintenance/getDebugPackageThreadsInfoCommand");
+import getAllServerWideTasksCommand = require("commands/serverWide/tasks/getAllServerWideTasksCommand");
+import deleteServerWideTaskCommand = require("commands/serverWide/tasks/deleteServerWideTaskCommand");
+import toggleServerWideTaskCommand = require("commands/serverWide/tasks/toggleServerWideTaskCommand");
 
 export default class ManageServerService {
     async getGlobalClientConfiguration(): Promise<ClientConfiguration> {
@@ -261,5 +264,17 @@ export default class ManageServerService {
 
     async getDebugPackageThreadsInfo(...args: ConstructorParameters<typeof getDebugPackageThreadsInfoCommand>) {
         return new getDebugPackageThreadsInfoCommand(...args).execute();
+    }
+
+    async getAllServerWideTasks() {
+        return new getAllServerWideTasksCommand().execute();
+    }
+
+    async deleteServerWideTask(...args: ConstructorParameters<typeof deleteServerWideTaskCommand>) {
+        return new deleteServerWideTaskCommand(...args).execute();
+    }
+
+    async toggleServerWideTask(...args: ConstructorParameters<typeof toggleServerWideTaskCommand>) {
+        return new toggleServerWideTaskCommand(...args).execute();
     }
 }

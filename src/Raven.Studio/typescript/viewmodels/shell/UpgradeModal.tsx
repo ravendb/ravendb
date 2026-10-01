@@ -29,7 +29,7 @@ export default function UpgradeModal(props: { close: () => void }) {
     const isReplaceLicenseEnabled = canActivate && isClusterAdminOrClusterNode;
 
     const licenseStatus = useAppSelector(licenseSelectors.status);
-    
+
     const registerLicense = () => {
         registration.showRegistrationDialog(licenseStatus, false, true);
 
@@ -74,11 +74,12 @@ export default function UpgradeModal(props: { close: () => void }) {
                                     message={`${allowDismissUntilUtc.local().format(dateFormat)} your local time`}
                                 >
                                     <Icon icon="info" color="info" margin="ms-1" />
-                                </PopoverWithHoverWrapper> 
+                                </PopoverWithHoverWrapper>
                             </span>
                             <br />
                             <span className="text-muted">
-                                Afterwards the <strong>RavenDB Studio</strong> will be <strong className="text-danger">blocked</strong>.
+                                Afterwards the <strong>RavenDB Studio</strong> will be{" "}
+                                <strong className="text-danger">blocked</strong>.
                             </span>
                         </>
                     )}

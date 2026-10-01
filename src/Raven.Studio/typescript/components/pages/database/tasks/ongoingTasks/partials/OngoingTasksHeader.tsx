@@ -84,16 +84,14 @@ export function OngoingTasksHeader(props: OngoingTasksHeaderProps) {
                     <FlexGrow />
 
                     {isClusterAdminOrClusterNode && !isAiOnly && (
-                        <Button
-                            variant="link"
-                            size="sm"
-                            target="_blank"
+                        <a
+                            className="btn btn-link btn-sm"
                             href={serverWideTasksUrl}
                             title="Go to the Server-Wide Tasks view"
                         >
                             <Icon icon="server-wide-tasks" />
                             Server-Wide Tasks
-                        </Button>
+                        </a>
                     )}
 
                     {isAiOnly ? <AiTasksInfoHub /> : <AboutView />}

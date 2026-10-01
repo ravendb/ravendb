@@ -5,6 +5,7 @@ import { api } from "@/api/api";
 import type { AiConnectionStringDeleteConflictResponse } from "@/api/generated/server-api";
 import { isApiError } from "@/api/http-client";
 import { invalidateAiConnectionStringQueries } from "@/lib/query-invalidation";
+import { AiConnectionStringUsageList } from "@/components/ai-connection-string/ai-connection-string-usage";
 import { DestructiveConfirmDialog } from "@/components/shadcn/ui/destructive-confirm-dialog";
 
 type DeleteAiConnectionStringDialogProps = {
@@ -12,14 +13,14 @@ type DeleteAiConnectionStringDialogProps = {
     trigger: ReactNode;
 };
 
-// The server refuses (409) to delete a connection string still referenced by an
-// agent, returning the offending agent identifiers so we can list them.
+// The server refuses (409) to delete a connection string an agent or an AI task still
+// references, returning those usages so we can list them.
 function getDeleteConflict(error: unknown): AiConnectionStringDeleteConflictResponse | null {
     if (
         isApiError<AiConnectionStringDeleteConflictResponse>(error) &&
         error.status === 409 &&
         error.details != null &&
-        Array.isArray(error.details.referencingAgentIds)
+        Array.isArray(error.details.usedBy)
     ) {
         return error.details;
     }
@@ -30,21 +31,10 @@ function DeleteErrorMessage({ error }: { error: unknown }) {
     const conflict = getDeleteConflict(error);
 
     if (conflict) {
-        const isSingle = conflict.referencingAgentIds.length === 1;
-
         return (
             <>
-                <p>
-                    This connection string is still used by {isSingle ? "an agent" : "agents"}. Remove{" "}
-                    {isSingle ? "it" : "them"} first:
-                </p>
-                <ul className="mt-1 list-disc pl-5">
-                    {conflict.referencingAgentIds.map((agentId) => (
-                        <li key={agentId} className="font-mono text-xs break-all">
-                            {agentId}
-                        </li>
-                    ))}
-                </ul>
+                <p>This connection string is still in use. Remove what uses it first:</p>
+                <AiConnectionStringUsageList usedBy={conflict.usedBy} className="mt-1" />
             </>
         );
     }

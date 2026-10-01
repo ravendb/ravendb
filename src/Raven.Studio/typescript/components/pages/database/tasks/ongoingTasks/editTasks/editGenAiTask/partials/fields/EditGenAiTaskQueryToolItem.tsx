@@ -1,6 +1,5 @@
 import savedQueriesStorage from "common/storage/savedQueriesStorage";
 import AceEditor from "components/common/ace/AceEditor";
-import Code from "components/common/Code";
 import { FormInput, FormAceEditor, FormGroup, FormLabel, FormSelect, FormSwitch } from "components/common/Form";
 import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -13,6 +12,7 @@ import ReactAce from "react-ace";
 import Button from "react-bootstrap/Button";
 import { useFormContext, useWatch } from "react-hook-form";
 import { EditGenAiTaskFormData } from "../../utils/editGenAiTaskValidation";
+import { queryToolParametersSamplesTabs, queryToolParametersSchemaSamplesTabs } from "../../editGenAiTaskSamplesData";
 import { SelectOption } from "components/common/select/Select";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import Accordion from "react-bootstrap/Accordion";
@@ -174,15 +174,14 @@ export default function EditGenAiTaskQueryToolItem({ index, remove, save, edit }
                 sampleObjectName={`queries.${index}.parametersSampleObject`}
                 sampleObjectLabel="Sample parameters object"
                 sampleObject={queryItem.parametersSampleObject}
-                sampleObjectSyntaxHelp={<QueryFieldQuerySyntaxHelp />}
+                sampleObjectSamplesPanel={{ tabs: queryToolParametersSamplesTabs }}
                 sampleObjectTooltip={<QueryFieldSampleObjectTooltip />}
                 sampleObjectPlaceholder={queryFieldSampleObjectPlaceholder}
                 jsonSchemaName={`queries.${index}.parametersSchema`}
                 jsonSchemaLabel="Parameters JSON schema"
                 jsonSchema={queryItem.parametersSchema}
-                jsonSchemaSyntaxHelp={<QueryFieldJsonSchemaSyntaxHelp />}
+                jsonSchemaSamplesPanel={{ tabs: queryToolParametersSchemaSamplesTabs }}
                 schemaType="ToolParameters"
-                helpActionTooltipTitle="Syntax example"
                 canRegenerateSchemaName={`queries.${index}.canRegenerateSchema`}
             />
 
@@ -328,59 +327,6 @@ const queryFieldSampleObjectPlaceholder = `{
     // The value ("Instruction to the LLM") is a natural-language instruction that tells the LLM what value to supply in this field.
 }
 Open the (?) icon to view an example.`;
-
-const QueryFieldQuerySyntaxHelp = () => {
-    const exampleCode1 = `{
-    "country": "Provide the country to which the order was shipped.",
-    "company": "Provide the company that placed this order."         
-}`;
-
-    const exampleCode2 = `{
-    "searchTerm": "Provide the name of a product to search for similar items.",
-    "similarityLevel": "Provide the similarity level to apply in the search."
-}`;
-
-    const exampleCode3 = `{}`;
-
-    return (
-        <div>
-            <div>Example 1:</div>
-            <Code code={exampleCode1} language="json" />
-            <div className="mt-2">Example 2:</div>
-            <Code code={exampleCode2} language="json" />
-            <div className="mt-2">Example 3 (no parameters will be used):</div>
-            <Code code={exampleCode3} language="json" />
-        </div>
-    );
-};
-
-const QueryFieldJsonSchemaSyntaxHelp = () => {
-    const exampleCode = `{
-    "type": "object",
-    "properties": {
-        "country": {
-            "type": "string",
-            "description": "Provide the country to which the order was shipped."
-        },
-        "company": {
-            "type": "string",
-            "description": "Provide the company that placed this order."
-        }
-    },
-    "required": [
-        "country",
-        "company"
-    ],
-    "additionalProperties": false
-}`;
-
-    return (
-        <div>
-            <div>Example:</div>
-            <Code code={exampleCode} language="json" />
-        </div>
-    );
-};
 
 const isAllowModelQueriesOptions: SelectOption<boolean>[] = [
     { label: "True", value: true },

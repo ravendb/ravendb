@@ -85,6 +85,9 @@ internal abstract class AbstractChatCompletionClientSettings
         {
             public const string Think = "think";
             public const string Temperature = "temperature";
+            public const string ReasoningEffort = "reasoning_effort";
+            public const string Seed = "seed";
+            public const string ReasoningEffortNoneValue = "none";
         }
 
         public static class Headers
@@ -96,12 +99,39 @@ internal abstract class AbstractChatCompletionClientSettings
 
     public abstract AiError ParseError(BlittableJsonReaderObject content, HttpResponseMessage response);
 
-    public virtual string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message)
-    {
-        _ = choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.Refusal, out string refusal)
-            || message.TryGet(ChatCompletionClient.Constants.ResponseFields.Refusal, out refusal);
+    public string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message, bool streaming = false)
+        => GetRefusal(choice0, message, streaming, out _);
 
-        return refusal;
+    // OpenAI's default: an explicit `refusal` field on the message (non-streaming) or on the delta
+    // (streaming - GetRefusal gets the delta here as the "message"). Providers whose refusal
+    // shape differs (Azure, Google) override this.
+    //
+    // isCompleteMessage tells a streaming caller how to accumulate the result: OpenAI streams the refusal
+    // as text fragments on the delta that must be concatenated (false), whereas Azure/Google derive a full
+    // message from finish_reason/content_filter_results per chunk that must NOT be concatenated (true).
+    public virtual string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message, bool streaming, out bool isCompleteMessage)
+    {
+        isCompleteMessage = false;
+
+        _ = choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.Refusal, out string refusal)
+            || (message != null && message.TryGet(ChatCompletionClient.Constants.ResponseFields.Refusal, out refusal));
+
+        if (string.IsNullOrEmpty(refusal) == false)
+            return refusal;
+
+        if (string.Equals(GetFinishReason(choice0), ChatCompletionClient.Constants.ResponseFields.FinishReasonContentFilter, StringComparison.OrdinalIgnoreCase))
+        {
+            isCompleteMessage = true;
+            return "Response blocked due to content policy";
+        }
+
+        return null;
+    }
+
+    public virtual string GetFinishReason(BlittableJsonReaderObject choice0)
+    {
+        choice0.TryGet(ChatCompletionClient.Constants.ResponseFields.FinishReason, out string finishReason);
+        return finishReason;
     }
 
     public virtual ValueTask<BlittableJsonReaderObject> TryGetResponseContentAsync(JsonOperationContext context, Stream stream)

@@ -15,8 +15,11 @@ internal sealed class DiscordStreamingReply(
     private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(60);
 
     private string _currentMessageId = "";
+    private DateTime _previewCooldownUntil;
 
     protected override bool HasOpenMessage => _currentMessageId.Length > 0;
+
+    protected override bool CanPreview => DateTime.UtcNow >= _previewCooldownUntil;
 
     protected override void CloseCurrentMessage() => _currentMessageId = "";
 
@@ -28,10 +31,19 @@ internal sealed class DiscordStreamingReply(
 
     protected override async Task ShowPreviewAsync(string text)
     {
-        if (_currentMessageId.Length == 0)
-            _currentMessageId = await discord.CreateMessageAsync(botToken, dmChannelId, text, ct);
-        else
-            await discord.EditMessageAsync(botToken, dmChannelId, _currentMessageId, text, ct);
+        try
+        {
+            if (_currentMessageId.Length == 0)
+                _currentMessageId = await discord.CreateMessageAsync(botToken, dmChannelId, text, ct);
+            else
+                await discord.EditMessageAsync(botToken, dmChannelId, _currentMessageId, text, ct);
+        }
+        catch (DiscordApiException e) when (e.RateLimited)
+        {
+            var delay = e.RetryAfter ?? TimeSpan.FromSeconds(1);
+            _previewCooldownUntil = DateTime.UtcNow + (delay > MaxRetryDelay ? MaxRetryDelay : delay);
+            throw;
+        }
     }
 
     protected override Task SendFinalAsync(string text) => CreateWithRetryAsync(text);

@@ -339,11 +339,9 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
                 if (line.StartsWith("{"))
                 {
                     using var final = context.Sync.ReadForMemory(line, "final/result");
-
-                    // a server exception thrown after the stream started cannot change the 200 status; it is
-                    // appended to the response as the standard error envelope - surface it instead of
-                    // mistaking it for the final result
-                    if (final.TryGet(nameof(ExceptionDispatcher.ExceptionSchema.Type), out string _) && final.TryGet(nameof(ExceptionDispatcher.ExceptionSchema.Error), out string _))
+                    // An exception thrown after streaming already started (HTTP 200) is written into the stream as the
+                    // standard error payload - surface it (e.g. RefusedToAnswerException) instead of parsing it as the result.
+                    if (final.TryGet(nameof(ExceptionDispatcher.ExceptionSchema.Type), out string exceptionType) && string.IsNullOrEmpty(exceptionType) == false)
                         throw ExceptionDispatcher.Get(final, response.StatusCode);
 
                     SetResponse(context, final, fromCache: false);

@@ -127,8 +127,10 @@ internal sealed class TelegramBotRuntime
 
     internal int ActiveChatCount => _chats.Count;
 
-    internal void OnChatRetired(long chatId, TelegramChat chat) =>
+    internal void OnChatRetired(long chatId, TelegramChat chat)
+    {
         _chats.TryRemove(new KeyValuePair<long, TelegramChat>(chatId, chat));
+    }
 
     private async Task OnErrorAsync(
         ITelegramBotClient client, Exception e, HandleErrorSource source, CancellationToken ct)

@@ -332,10 +332,8 @@ class patch extends shardViewModelBase {
             this.spinners.countMatchingDocuments(true);
             
             this.getMatchingDocumentsNumber()
-                .done((matchingDocs: number) => {
-                    this.spinners.countMatchingDocuments(false);
-                    this.executePatch(matchingDocs);
-                });
+                .done((matchingDocs: number) => this.executePatch(matchingDocs))
+                .always(() => this.spinners.countMatchingDocuments(false));
         }
     }
 
@@ -428,7 +426,7 @@ class patch extends shardViewModelBase {
                 })
                 .execute()
                 .done((queryResults: pagedResultExtended<document>) => matchingDocs.resolve(queryResults.totalResultCount))
-                .fail(() => matchingDocs.resolve(-1))
+                .fail(() => matchingDocs.reject())
         } else {
             matchingDocs.resolve(-1);
         }
