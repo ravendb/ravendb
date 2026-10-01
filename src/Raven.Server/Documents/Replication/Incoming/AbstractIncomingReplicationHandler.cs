@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -121,7 +121,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                 Logger.Debug($"Incoming replication thread started ({FromToString})");
         }
 
-        public void DoIncomingReplication()
+        public virtual DynamicJsonValue GetConnectionInfoAsJson() => ConnectionInfo.ToJson();
+
+        protected virtual void DoIncomingReplication()
         {
             try
             {
