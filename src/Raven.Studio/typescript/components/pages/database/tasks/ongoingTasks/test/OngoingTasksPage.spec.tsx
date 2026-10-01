@@ -1,4 +1,4 @@
-import { commonSelectors, rtlRender, waitFor } from "test/rtlTestUtils";
+import { act, commonSelectors, rtlRender, waitFor } from "test/rtlTestUtils";
 import React from "react";
 
 import * as stories from "../stories/OngoingTasksPage.stories";
@@ -10,6 +10,10 @@ const { FullView, EmptyView, WithUnreachableNode, WithUnreachableOrchestrator, W
     composeStories(stories);
 
 describe("OngoingTasksPage", function () {
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
     it("can render full view", async () => {
         const { screen } = rtlRender(<FullView />);
 
@@ -57,5 +61,21 @@ describe("OngoingTasksPage", function () {
         rtlRender(<FullView />);
 
         await waitFor(() => expect(getEtlProgress).toHaveBeenCalled(), { timeout: 2000 });
+    });
+
+    it("does not refetch a node while its previous request is still pending", async () => {
+        jest.useFakeTimers();
+        const getOngoingTasks = jest.mocked(mockServices.tasksService.mock.getOngoingTasks);
+        getOngoingTasks.mockClear();
+        const requestsTo = (nodeTag: string) =>
+            getOngoingTasks.mock.calls.filter(([, location]) => location.nodeTag === nodeTag);
+
+        const { screen } = rtlRender(<WithUnreachableNode />);
+        await screen.findByText(/RavenDB ETL/);
+
+        await act(() => jest.advanceTimersByTimeAsync(10_000));
+
+        expect(requestsTo("A")).toHaveLength(2);
+        expect(requestsTo("C")).toHaveLength(1);
     });
 });

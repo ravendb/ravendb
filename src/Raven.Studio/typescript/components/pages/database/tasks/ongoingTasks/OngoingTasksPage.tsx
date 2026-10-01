@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useReducer, useState } from "react";
+﻿import React, { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { useServices } from "hooks/useServices";
 import { ongoingTasksReducer, ongoingTasksReducerInitializer, OngoingTasksState } from "./partials/OngoingTasksReducer";
 import { ExternalReplicationPanel } from "./panels/ExternalReplicationPanel";
@@ -69,7 +69,7 @@ import { InternalReplicationPanel } from "./panels/InternalReplicationPanel";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
 import DatabaseUtils from "components/utils/DatabaseUtils";
-import { getRequestErrorMessage } from "components/utils/common";
+import { databaseLocationComparator, getRequestErrorMessage } from "components/utils/common";
 import { SnowflakeEtlPanel } from "components/pages/database/tasks/ongoingTasks/panels/SnowflakeEtlPanel";
 import { AmazonSqsEtlPanel } from "components/pages/database/tasks/ongoingTasks/panels/AmazonSqsEtlPanel";
 import { EmbeddingsGenerationPanel } from "components/pages/database/tasks/ongoingTasks/panels/EmbeddingsGenerationPanel";
@@ -141,8 +141,15 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps = {
     const isInitialLoadDone = tasks.locationsLoadStatus.some((x) => x.status !== "idle");
     const allLocationsFailed = tasks.locationsLoadStatus.every((x) => x.status === "failure");
 
+    const pendingLocations = useRef<databaseLocationSpecifier[]>([]);
+
     const fetchTasks = useCallback(
         async (location: databaseLocationSpecifier) => {
+            if (pendingLocations.current.some((x) => databaseLocationComparator(x, location))) {
+                return;
+            }
+            pendingLocations.current.push(location);
+
             try {
                 const tasks = await tasksService.getOngoingTasks(db?.name, location);
                 dispatch({
@@ -163,6 +170,10 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps = {
                     location,
                     error: getRequestErrorMessage(e),
                 });
+            } finally {
+                pendingLocations.current = pendingLocations.current.filter(
+                    (x) => !databaseLocationComparator(x, location)
+                );
             }
         },
         [db, tasksService, dispatch, startTrackingEtlProgress]
