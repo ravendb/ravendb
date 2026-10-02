@@ -916,6 +916,39 @@ public class RavenDB_24310 : RavenTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Ai)]
+    public async Task ServerWideAiConnectionString_RejectsIdentifierUsedByAnotherServerWideConnectionString()
+    {
+        using (var store = GetDocumentStore(new Options { CreateDatabase = false }))
+        {
+            var identifier = "shared-identifier";
+            await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(new ServerWideConnectionString
+            {
+                ConnectionString = NewAiConnectionString("FirstAiCS", identifier)
+            }));
+
+            var ex = await Assert.ThrowsAsync<RavenException>(async () =>
+                await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(new ServerWideConnectionString
+                {
+                    ConnectionString = NewAiConnectionString("SecondAiCS", identifier)
+                })));
+            Assert.Contains($"The identifier '{identifier}' is already used by server-wide connection string 'FirstAiCS'", ex.Message);
+
+            var getResult = await store.Maintenance.Server.SendAsync(new GetServerWideConnectionStringsOperation("SecondAiCS", ConnectionStringType.Ai));
+            Assert.Equal(0, getResult.Results.Count);
+
+            await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(new ServerWideConnectionString
+            {
+                ConnectionString = NewAiConnectionString("SecondAiCS", "other-identifier")
+            }));
+
+            var newDbName = store.Database + "_new";
+            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDbName)));
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
+            Assert.Equal(2, record.AiConnectionStrings.Count);
+        }
+    }
+
     private static AiConnectionString NewAiConnectionString(string name, string identifier)
     {
         return new AiConnectionString
