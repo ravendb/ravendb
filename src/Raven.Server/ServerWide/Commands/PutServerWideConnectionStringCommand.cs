@@ -41,6 +41,9 @@ namespace Raven.Server.ServerWide.Commands
 
             if (previousValue != null)
             {
+                if (Value.ConnectionString is AiConnectionString aiConnectionString)
+                    AssertAiIdentifierNotInUse(previousValue, aiConnectionString);
+
                 previousValue.Modifications = new DynamicJsonValue(previousValue);
                 previousValue.Modifications[Value.Name] = Value.ToJson();
                 return context.ReadObject(previousValue, Name);
@@ -52,6 +55,26 @@ namespace Raven.Server.ServerWide.Commands
             };
 
             return context.ReadObject(djv, Name);
+        }
+
+        private static void AssertAiIdentifierNotInUse(BlittableJsonReaderObject serverWideConnectionStrings, AiConnectionString aiConnectionString)
+        {
+            foreach (var name in serverWideConnectionStrings.GetPropertyNames())
+            {
+                if (name == aiConnectionString.Name)
+                    continue;
+
+                if (serverWideConnectionStrings.TryGet(name, out BlittableJsonReaderObject existing) == false || existing == null)
+                    continue;
+
+                existing.TryGet(nameof(AiConnectionString.Identifier), out string existingIdentifier);
+                existingIdentifier ??= AiTaskIdentifierHelper.GenerateIdentifier(name);
+
+                if (existingIdentifier == aiConnectionString.Identifier)
+                    throw new RachisApplyException(
+                        $"Can't put server-wide connection string '{aiConnectionString.Name}'. " +
+                        $"The identifier '{aiConnectionString.Identifier}' is already used by server-wide connection string '{name}'");
+            }
         }
 
         internal static void EnsureAiIdentifier(ServerWideConnectionString connectionString)
