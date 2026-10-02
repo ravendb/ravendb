@@ -41,6 +41,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
     private readonly bool _canContainSourceDocumentId;
     private readonly bool _legacyHandlingOfComplexFields;
+    private readonly bool _charAsString;
 
     // RavenDB-26831: XOR mask applied to raw signed longs before writing them big-endian into a compound field,
     // so byte order matches numeric order. long.MinValue flips the sign bit (order-preserving) for fixed indexes;
@@ -94,6 +95,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     {
         _canContainSourceDocumentId = canContainSourceDocumentId;
         _legacyHandlingOfComplexFields = _index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.CoraxComplexFieldIndexingBehavior;
+        _charAsString = IndexDefinitionBaseServerSide.IndexVersion.IsCoraxCharAsStringSupported(_index.Definition.Version);
         _compoundFieldNumericXorMask = _index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.CoraxOrderPreservingCompoundNumericEncoding
             ? long.MinValue
             : 0L;
@@ -253,6 +255,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 break;
 
             case ValueType.Char:
+                if (_charAsString)
+                    goto case ValueType.Enum;
+
                 unsafe
                 {
                     char item = (char)value;
@@ -703,6 +708,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 AppendLong(l);
                 break;
             case ValueType.Char:
+                if (_charAsString)
+                    goto case ValueType.String;
+
                 unsafe
                 {
                     char value = (char)v;
