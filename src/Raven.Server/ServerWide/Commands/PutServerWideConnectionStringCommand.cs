@@ -67,14 +67,25 @@ namespace Raven.Server.ServerWide.Commands
                 if (serverWideConnectionStrings.TryGet(name, out BlittableJsonReaderObject existing) == false || existing == null)
                     continue;
 
-                existing.TryGet(nameof(AiConnectionString.Identifier), out string existingIdentifier);
-                existingIdentifier ??= AiTaskIdentifierHelper.GenerateIdentifier(name);
-
-                if (existingIdentifier == aiConnectionString.Identifier)
+                if (GetEffectiveAiIdentifier(existing, name) == aiConnectionString.Identifier)
                     throw new RachisApplyException(
                         $"Can't put server-wide connection string '{aiConnectionString.Name}'. " +
                         $"The identifier '{aiConnectionString.Identifier}' is already used by server-wide connection string '{name}'");
             }
+        }
+
+        internal static string GetEffectiveAiIdentifier(BlittableJsonReaderObject aiConnectionString, string name)
+        {
+            aiConnectionString.TryGet(nameof(AiConnectionString.Identifier), out string identifier);
+            return GetEffectiveAiIdentifier(identifier, name);
+        }
+
+        internal static string GetEffectiveAiIdentifier(string identifier, string name)
+        {
+            if (string.IsNullOrWhiteSpace(identifier) == false)
+                return identifier;
+
+            return AiTaskIdentifierHelper.GenerateIdentifier(ServerWideConnectionString.GetNameFromDatabaseRecordConnectionStringName(name));
         }
 
         internal static void EnsureAiIdentifier(ServerWideConnectionString connectionString)
