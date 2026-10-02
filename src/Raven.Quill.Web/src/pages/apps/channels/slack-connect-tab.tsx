@@ -1,12 +1,8 @@
 import type { ChannelSummaryResponse } from "@/api/generated/server-api";
 import { Alert } from "@/components/shadcn/ui/alert";
-import { SlackConnectionCard } from "@/pages/apps/channels/slack-connection-card";
-import { SlackWebhookPanel } from "@/pages/apps/channels/slack-webhook-panel";
+import { SlackConnectionCard, SlackSetupSteps } from "@/pages/apps/channels/slack-connection-card";
 import { SectionCard } from "@/pages/apps/section-card";
 
-// "How Slack reaches this bot" — the Slack analogue of the Telegram Connect tab. The connection card
-// confirms which workspace/bot is wired up and how it's doing; the event-subscription card is the admin
-// wiring.
 export function SlackConnectTab({ slug, channel }: { slug: string; channel: ChannelSummaryResponse }) {
     return (
         <div className="grid gap-5">
@@ -25,12 +21,12 @@ export function SlackConnectTab({ slug, channel }: { slug: string; channel: Chan
             </SectionCard>
 
             <SectionCard
-                title="Slack event subscription"
-                description="Where Slack delivers this bot's direct messages."
+                title="Slack app setup"
+                description="Socket Mode and the bot event subscription that let Slack hand this bot its direct messages."
                 isRaised
             >
                 <div className="mt-4">
-                    <SlackWebhookPanel slug={slug} channelId={channel.channelId} />
+                    <SlackSetupSteps />
                 </div>
             </SectionCard>
         </div>

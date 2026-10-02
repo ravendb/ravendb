@@ -262,6 +262,8 @@ public abstract class QuillSlackTestBase(ITestOutputHelper output, QuillSlackFix
 {
     protected MockSlackApi Slack => fixture.Slack;
 
+    protected static readonly TimeSpan SocketRestartDelay = TimeSpan.FromSeconds(3);
+
     internal FakeAgentRouter Router => fixture.Router;
 
     protected override Task<QuillHost> NewHostAsync(
@@ -272,6 +274,8 @@ public abstract class QuillSlackTestBase(ITestOutputHelper output, QuillSlackFix
             {
                 opts.Slack.ApiUrl = fixture.Slack.BaseAddress;
                 opts.Slack.EditDebounce = TimeSpan.FromMilliseconds(50);
+                opts.Slack.ApplyChangesInterval = TimeSpan.FromSeconds(1);
+                opts.Slack.SocketRestartDelay = SocketRestartDelay;
                 configure?.Invoke(opts);
             },
             configureServices: services =>
@@ -291,6 +295,13 @@ public abstract class QuillSlackTestBase(ITestOutputHelper output, QuillSlackFix
     }
 
     protected static string NewBotToken() => "xoxb-" + Guid.NewGuid().ToString("N");
+
+    protected string NewAppToken()
+    {
+        var appToken = "xapp-1-A0MOCK-" + Guid.NewGuid().ToString("N");
+        Slack.AddAppToken(appToken);
+        return appToken;
+    }
 
     protected static string NewTeamId() => "T" + Random.Shared.Next(100_000_000, 999_999_999);
 
