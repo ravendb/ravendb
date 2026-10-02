@@ -3,9 +3,9 @@
     <TargetFramework>net10.0</TargetFramework>
     <RuntimeFrameworkVersion>10.0.12</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <AssemblyName>RequestHandler.Benchmark</AssemblyName>
+    <AssemblyName>Integration.Benchmark</AssemblyName>
     <OutputType>Exe</OutputType>
-    <PackageId>RequestHandler.Benchmark</PackageId>
+    <PackageId>Integration.Benchmark</PackageId>
     <RuntimeIdentifiers>win-x64;win-x86;linux-x64</RuntimeIdentifiers>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
