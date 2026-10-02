@@ -13,6 +13,7 @@ const ForkTsCheckerWebpackPlugin = require("fork-ts-checker-webpack-plugin");
 module.exports = (_, args) => {
     const isProductionMode = args && args.mode === "production";
     const isWatchMode = args && args.watch;
+    const ignoreCssOrder = args && args.ignoreCssOrder;
 
     console.log(`PROD?: ${isProductionMode}`);
 
@@ -37,7 +38,7 @@ module.exports = (_, args) => {
             chunkFilename: isProductionMode ? "assets/[name].[contenthash:8].js" : "assets/[name].js",
             publicPath: "/studio/",
         },
-        plugins: getPlugins({ isProductionMode, isWatchMode }),
+        plugins: getPlugins({ isProductionMode, isWatchMode, ignoreCssOrder }),
         optimization: {
             minimize: isProductionMode,
             emitOnErrors: false,
@@ -216,12 +217,12 @@ module.exports = (_, args) => {
     };
 };
 
-function getPlugins({ isProductionMode, isWatchMode }) {
+function getPlugins({ isProductionMode, isWatchMode, ignoreCssOrder }) {
     const plugins = [
         new MiniCssExtractPlugin({
             filename: "styles/[name].css",
             chunkFilename: "styles/[name].css",
-            ignoreOrder: true,
+            ignoreOrder: ignoreCssOrder,
         }),
         new HtmlWebpackPlugin({
             template: path.join(__dirname, "wwwroot/index.html"),
