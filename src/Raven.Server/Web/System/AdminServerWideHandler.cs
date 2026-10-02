@@ -288,51 +288,16 @@ namespace Raven.Server.Web.System
         {
             var map = new Dictionary<string, List<ServerWideConnectionStringUsage>>(StringComparer.OrdinalIgnoreCase);
 
-            void AddTask(string connectionStringName, string databaseName, ConnectionStringUsageKind kind, long taskId, string taskName) =>
-                Add(connectionStringName, new ServerWideConnectionStringUsage { Kind = kind, Id = taskId, Name = taskName, DatabaseName = databaseName });
-
-            void AddAgent(string connectionStringName, string databaseName, string identifier, string agentName) =>
-                Add(connectionStringName, new ServerWideConnectionStringUsage { Kind = ConnectionStringUsageKind.AiAgent, Identifier = identifier, Name = agentName, DatabaseName = databaseName });
-
-            void Add(string connectionStringName, ServerWideConnectionStringUsage usage)
-            {
-                if (connectionStringName == null)
-                    return;
-                if (relevantNames.Contains(connectionStringName) == false)
-                    return;
-                if (map.TryGetValue(connectionStringName, out var list) == false)
-                    map[connectionStringName] = list = new List<ServerWideConnectionStringUsage>();
-                list.Add(usage);
-            }
-
             foreach (var db in databases)
             {
-                foreach (var t in db.RavenEtls)
-                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.RavenEtl, t.TaskId, t.Name);
-                foreach (var t in db.SqlEtls)
-                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.SqlEtl, t.TaskId, t.Name);
-                foreach (var t in db.OlapEtls)
-                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.OlapEtl, t.TaskId, t.Name);
-                foreach (var t in db.ElasticSearchEtls)
-                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.ElasticSearchEtl, t.TaskId, t.Name);
-                foreach (var t in db.QueueEtls)
-                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.QueueEtl, t.TaskId, t.Name);
-                foreach (var t in db.SnowflakeEtls)
-                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.SnowflakeEtl, t.TaskId, t.Name);
-                foreach (var t in db.QueueSinks)
-                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.QueueSink, t.TaskId, t.Name);
-                foreach (var t in db.CdcSinks)
-                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.CdcSink, t.TaskId, t.Name);
-                foreach (var t in db.EmbeddingsGenerations)
-                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.EmbeddingsGeneration, t.TaskId, t.Name);
-                foreach (var t in db.GenAis)
-                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.GenAi, t.TaskId, t.Name);
-                foreach (var t in db.ExternalReplications)
-                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.ExternalReplication, t.TaskId, t.Name);
-                foreach (var t in db.SinkPullReplications)
-                    AddTask(t.ConnectionStringName, db.DatabaseName, ConnectionStringUsageKind.PullReplicationAsSink, t.TaskId, t.Name);
-                foreach (var a in db.AiAgents)
-                    AddAgent(a.ConnectionStringName, db.DatabaseName, a.Identifier, a.Name);
+                foreach (var usage in ConnectionStringConsumers.GetUsages(db))
+                {
+                    if (usage.ConnectionStringName == null || relevantNames.Contains(usage.ConnectionStringName) == false)
+                        continue;
+                    if (map.TryGetValue(usage.ConnectionStringName, out var list) == false)
+                        map[usage.ConnectionStringName] = list = new List<ServerWideConnectionStringUsage>();
+                    list.Add(new ServerWideConnectionStringUsage { Kind = usage.Kind, Id = usage.Id, Identifier = usage.Identifier, Name = usage.Name, DatabaseName = db.DatabaseName });
+                }
             }
 
             return map;
