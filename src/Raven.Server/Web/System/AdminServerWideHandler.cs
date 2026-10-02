@@ -214,13 +214,9 @@ namespace Raven.Server.Web.System
                 if (errors.Count > 0)
                     throw new BadRequestException($"Invalid connection string configuration. Errors: {string.Join($"{Environment.NewLine}", errors)}");
 
-                if (serverWideConnectionString.ConnectionString is AiConnectionString aiConnectionString)
-                {
-                    if (string.IsNullOrWhiteSpace(aiConnectionString.Identifier))
-                        aiConnectionString.Identifier = AiTaskIdentifierHelper.GenerateIdentifier(aiConnectionString.Name);
-                    if (AiTaskIdentifierHelper.ValidateIdentifier(aiConnectionString.Identifier, out var identifierErrors) == false)
-                        throw new BadRequestException($"Invalid connection string identifier. Errors: {string.Join($"{Environment.NewLine}", identifierErrors)}");
-                }
+                if (serverWideConnectionString.ConnectionString is AiConnectionString aiConnectionString &&
+                    aiConnectionString.EnsureIdentifier(out var identifierErrors) == false)
+                    throw new BadRequestException($"Invalid connection string identifier. Errors: {string.Join($"{Environment.NewLine}", identifierErrors)}");
 
                 var (newIndex, _) = await ServerStore.PutServerWideConnectionStringAsync(serverWideConnectionString, GetRaftRequestIdFromQuery());
                 await ServerStore.Cluster.WaitForIndexNotification(newIndex);
