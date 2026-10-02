@@ -16,6 +16,10 @@ namespace QuillTests.E2E.Fixtures;
 public sealed class MockDiscordApi : IAsyncDisposable
 {
     internal const int DirectMessagesIntent = 1 << 12;
+    internal const int SuppressEmbedsFlag = 1 << 2;
+
+    private const long InboundMessageIdBase = 1_000_000_000_000_000_000;
+    private const long SentMessageIdBase = 2_000_000_000_000_000_000;
 
     private readonly WebApplication _app;
     private readonly object _lock = new();
@@ -26,17 +30,23 @@ public sealed class MockDiscordApi : IAsyncDisposable
     private readonly List<IdentifyCall> _identifies = [];
     private readonly List<ResumeCall> _resumes = [];
     private readonly List<string> _identityCalls = [];
+    private readonly List<string> _typingCalls = [];
+    private readonly List<string> _presenceUpdates = [];
+    private readonly Dictionary<string, long> _inboundMessageIds = new();
+    private readonly HashSet<string> _sessions = new();
 
     private int _heartbeats;
     private int _connects;
-    private int _nextMessageId = 1;
+    private long _nextMessageId = 1;
     private int _nextSessionId = 1;
     private GatewaySession? _session;
 
     public sealed record SentMessage(
-        string BotToken, string ChannelId, string Content, string MessageId, bool MentionsSuppressed);
+        string BotToken, string ChannelId, string Content, string MessageId, bool MentionsSuppressed,
+        bool EmbedsSuppressed);
 
-    public sealed record EditedMessage(string BotToken, string ChannelId, string MessageId, string Content);
+    public sealed record EditedMessage(
+        string BotToken, string ChannelId, string MessageId, string Content, bool EmbedsSuppressed);
 
     public sealed record IdentifyCall(string Token, int Intents);
 
@@ -72,6 +82,8 @@ public sealed class MockDiscordApi : IAsyncDisposable
     public bool StallBeforeHello { get; set; }
 
     public int? CloseAfterIdentify { get; set; }
+
+    public bool BreakNextReady { get; set; }
 
     public int? CloseAfterResume { get; set; }
 
@@ -109,6 +121,16 @@ public sealed class MockDiscordApi : IAsyncDisposable
         get { lock (_lock) return _identityCalls.ToArray(); }
     }
 
+    public IReadOnlyList<string> TypingCalls
+    {
+        get { lock (_lock) return _typingCalls.ToArray(); }
+    }
+
+    public IReadOnlyList<string> PresenceUpdates
+    {
+        get { lock (_lock) return _presenceUpdates.ToArray(); }
+    }
+
     public int Heartbeats => Volatile.Read(ref _heartbeats);
 
     public int Connects => Volatile.Read(ref _connects);
@@ -134,6 +156,8 @@ public sealed class MockDiscordApi : IAsyncDisposable
             _identifies.Clear();
             _resumes.Clear();
             _identityCalls.Clear();
+            _typingCalls.Clear();
+            _presenceUpdates.Clear();
             session = _session;
             _session = null;
         }
@@ -150,6 +174,7 @@ public sealed class MockDiscordApi : IAsyncDisposable
         CloseOnConnect = null;
         StallBeforeHello = false;
         CloseAfterIdentify = null;
+        BreakNextReady = false;
         CloseAfterResume = null;
         HeartbeatIntervalMs = 30_000;
     }
@@ -177,13 +202,20 @@ public sealed class MockDiscordApi : IAsyncDisposable
 
         var message = new JsonObject
         {
-            ["id"] = messageId,
+            ["id"] = SnowflakeFor(messageId),
             ["channel_id"] = channelId,
             ["type"] = messageType,
             ["content"] = content,
             ["author"] = author,
             ["attachments"] = withAttachment
-                ? new JsonArray(new JsonObject { ["id"] = "attachment-1" })
+                ? new JsonArray(new JsonObject
+                {
+                    ["id"] = "1",
+                    ["filename"] = "error.png",
+                    ["size"] = 1,
+                    ["url"] = "https://cdn.example/error.png",
+                    ["proxy_url"] = "https://cdn.example/error.png",
+                })
                 : new JsonArray(),
         };
 
@@ -243,6 +275,8 @@ public sealed class MockDiscordApi : IAsyncDisposable
         app.MapGet("/users/@me", (HttpContext ctx) => instance.HandleCurrentUser(ctx));
         app.MapGet("/oauth2/applications/@me", (HttpContext ctx) => instance.HandleCurrentApplication(ctx));
         app.MapGet("/gateway/bot", (HttpContext ctx) => instance.HandleGatewayBot(ctx));
+        app.MapGet("/channels/{channelId}", (string channelId, HttpContext ctx) => instance.HandleGetChannel(ctx, channelId));
+        app.MapPost("/channels/{channelId}/typing", (string channelId, HttpContext ctx) => instance.HandleTyping(ctx, channelId));
 
         app.MapPost("/channels/{channelId}/messages", async (string channelId, HttpContext ctx) =>
         {
@@ -283,7 +317,10 @@ public sealed class MockDiscordApi : IAsyncDisposable
 
         string sessionId;
         lock (_lock)
+        {
             sessionId = string.Create(CultureInfo.InvariantCulture, $"session-{_nextSessionId++}");
+            _sessions.Add(sessionId);
+        }
 
         var session = new GatewaySession(socket, sessionId);
         lock (_lock)
@@ -326,72 +363,8 @@ public sealed class MockDiscordApi : IAsyncDisposable
             ["d"] = new JsonObject { ["heartbeat_interval"] = HeartbeatIntervalMs },
         });
 
-        var handshake = await ReceiveAsync(session, ct);
-        if (handshake is null)
+        if (await HandshakeAsync(session, ct) == false)
             return;
-
-        var op = handshake["op"]?.GetValue<int>() ?? -1;
-        var data = handshake["d"];
-
-        if (op == 2)
-        {
-            var token = data?["token"]?.GetValue<string>() ?? "";
-            var intents = data?["intents"]?.GetValue<int>() ?? 0;
-
-            lock (_lock)
-                _identifies.Add(new IdentifyCall(token, intents));
-
-            if (CloseAfterIdentify is { } forcedAfterIdentify)
-            {
-                await CloseAsync(session, forcedAfterIdentify);
-                return;
-            }
-
-            if (BotFor(token) is null)
-            {
-                await CloseAsync(session, 4004);
-                return;
-            }
-
-            if ((intents & DirectMessagesIntent) == 0)
-            {
-                await CloseAsync(session, 4014);
-                return;
-            }
-
-            await DispatchAsync(session, "READY", new JsonObject
-            {
-                ["session_id"] = session.SessionId,
-                ["resume_gateway_url"] = GatewayUrl,
-            });
-        }
-        else if (op == 6)
-        {
-            var token = data?["token"]?.GetValue<string>() ?? "";
-            var resumedSession = data?["session_id"]?.GetValue<string>() ?? "";
-            var seq = data?["seq"]?.GetValue<long>() ?? -1;
-
-            lock (_lock)
-                _resumes.Add(new ResumeCall(token, resumedSession, seq));
-
-            if (CloseAfterResume is { } forcedAfterResume)
-            {
-                await CloseAsync(session, forcedAfterResume);
-                return;
-            }
-
-            if (InvalidateResume)
-            {
-                await SendAsync(session, new JsonObject { ["op"] = 9, ["d"] = false });
-                return;
-            }
-
-            await DispatchAsync(session, "RESUMED", new JsonObject());
-        }
-        else
-        {
-            return;
-        }
 
         session.Ready = true;
 
@@ -401,13 +374,142 @@ public sealed class MockDiscordApi : IAsyncDisposable
             if (frame is null)
                 return;
 
-            if (frame["op"]?.GetValue<int>() != 1)
-                continue;
+            switch (frame["op"]?.GetValue<int>())
+            {
+                case 1:
+                    await AcknowledgeHeartbeatAsync(session);
+                    break;
 
-            Interlocked.Increment(ref _heartbeats);
+                case 3:
+                    var activity = frame["d"]?["activities"]?[0];
+                    var status = activity?["state"]?.GetValue<string>() ?? activity?["name"]?.GetValue<string>() ?? "";
+                    lock (_lock)
+                        _presenceUpdates.Add(status);
+                    break;
+            }
+        }
+    }
 
-            if (SuppressHeartbeatAck == false)
-                await SendAsync(session, new JsonObject { ["op"] = 11, ["d"] = null });
+    private async Task<bool> HandshakeAsync(GatewaySession session, CancellationToken ct)
+    {
+        while (true)
+        {
+            var handshake = await ReceiveAsync(session, ct);
+            if (handshake is null)
+                return false;
+
+            var op = handshake["op"]?.GetValue<int>() ?? -1;
+            var data = handshake["d"];
+
+            switch (op)
+            {
+                case 1:
+                    await AcknowledgeHeartbeatAsync(session);
+                    continue;
+
+                case 2:
+                {
+                    var token = data?["token"]?.GetValue<string>() ?? "";
+                    var intents = data?["intents"]?.GetValue<int>() ?? 0;
+
+                    lock (_lock)
+                        _identifies.Add(new IdentifyCall(token, intents));
+
+                    if (CloseAfterIdentify is { } forcedAfterIdentify)
+                    {
+                        await CloseAsync(session, forcedAfterIdentify);
+                        return false;
+                    }
+
+                    var bot = BotFor(token);
+                    if (bot is null)
+                    {
+                        await CloseAsync(session, 4004);
+                        return false;
+                    }
+
+                    if ((intents & DirectMessagesIntent) == 0)
+                    {
+                        await CloseAsync(session, 4014);
+                        return false;
+                    }
+
+                    if (BreakNextReady)
+                    {
+                        BreakNextReady = false;
+                        await DispatchAsync(session, "READY", new JsonObject { ["v"] = 10 });
+                        return true;
+                    }
+
+                    await DispatchAsync(session, "READY", new JsonObject
+                    {
+                        ["v"] = 10,
+                        ["user"] = new JsonObject
+                        {
+                            ["id"] = bot.BotUserId,
+                            ["username"] = bot.Username,
+                            ["bot"] = true,
+                        },
+                        ["guilds"] = new JsonArray(),
+                        ["private_channels"] = new JsonArray(),
+                        ["session_id"] = session.SessionId,
+                        ["resume_gateway_url"] = GatewayUrl,
+                        ["application"] = new JsonObject { ["id"] = bot.ApplicationId },
+                    });
+                    return true;
+                }
+
+                case 6:
+                {
+                    var token = data?["token"]?.GetValue<string>() ?? "";
+                    var resumedSession = data?["session_id"]?.GetValue<string>() ?? "";
+                    var seq = data?["seq"]?.GetValue<long>() ?? -1;
+
+                    lock (_lock)
+                        _resumes.Add(new ResumeCall(token, resumedSession, seq));
+
+                    if (CloseAfterResume is { } forcedAfterResume)
+                    {
+                        await CloseAsync(session, forcedAfterResume);
+                        return false;
+                    }
+
+                    bool known;
+                    lock (_lock)
+                        known = _sessions.Contains(resumedSession);
+
+                    if (InvalidateResume || known == false)
+                    {
+                        await SendAsync(session, new JsonObject { ["op"] = 9, ["d"] = false });
+                        continue;
+                    }
+
+                    await DispatchAsync(session, "RESUMED", new JsonObject());
+                    return true;
+                }
+
+                default:
+                    return false;
+            }
+        }
+    }
+
+    private async Task AcknowledgeHeartbeatAsync(GatewaySession session)
+    {
+        Interlocked.Increment(ref _heartbeats);
+
+        if (SuppressHeartbeatAck == false)
+            await SendAsync(session, new JsonObject { ["op"] = 11, ["d"] = null });
+    }
+
+    private string SnowflakeFor(string inboundMessageId)
+    {
+        lock (_lock)
+        {
+            if (_inboundMessageIds.TryGetValue(inboundMessageId, out var id) == false)
+                _inboundMessageIds[inboundMessageId] = id = InboundMessageIdBase + _inboundMessageIds.Count + 1;
+
+            return id.ToString(CultureInfo.InvariantCulture);
         }
     }
 
@@ -436,8 +538,12 @@ public sealed class MockDiscordApi : IAsyncDisposable
         }
     }
 
-    private static async Task CloseAsync(GatewaySession session, int code)
+    private async Task CloseAsync(GatewaySession session, int code)
     {
+        if (code is 4006 or 4007 or 4009)
+            lock (_lock)
+                _sessions.Remove(session.SessionId);
+
         await session.SendLock.WaitAsync();
         try
         {
@@ -533,6 +639,30 @@ public sealed class MockDiscordApi : IAsyncDisposable
         });
     }
 
+    private IResult HandleGetChannel(HttpContext ctx, string channelId)
+    {
+        if (BotFor(BotToken(ctx)) is null)
+            return DiscordError(401, "401: Unauthorized");
+
+        return Results.Json(new JsonObject
+        {
+            ["id"] = channelId,
+            ["type"] = 1,
+            ["recipients"] = new JsonArray(new JsonObject { ["id"] = "1", ["username"] = "dana" }),
+        });
+    }
+
+    private IResult HandleTyping(HttpContext ctx, string channelId)
+    {
+        if (BotFor(BotToken(ctx)) is null)
+            return DiscordError(401, "401: Unauthorized");
+
+        lock (_lock)
+            _typingCalls.Add(channelId);
+
+        return Results.NoContent();
+    }
+
     private IResult HandleCreateMessage(HttpContext ctx, string channelId, JsonNode? body)
     {
         var token = BotToken(ctx);
@@ -548,16 +678,11 @@ public sealed class MockDiscordApi : IAsyncDisposable
         string messageId;
         lock (_lock)
         {
-            messageId = string.Create(CultureInfo.InvariantCulture, $"msg-{_nextMessageId++}");
-            _sent.Add(new SentMessage(token, channelId, content, messageId, suppressed));
+            messageId = (SentMessageIdBase + _nextMessageId++).ToString(CultureInfo.InvariantCulture);
+            _sent.Add(new SentMessage(token, channelId, content, messageId, suppressed, EmbedsSuppressed(body)));
         }
 
-        return Results.Json(new JsonObject
-        {
-            ["id"] = messageId,
-            ["channel_id"] = channelId,
-            ["content"] = content,
-        });
+        return Results.Json(MessagePayload(messageId, channelId, content, token));
     }
 
     private IResult HandleEditMessage(HttpContext ctx, string channelId, string messageId, JsonNode? body)
@@ -589,16 +714,33 @@ public sealed class MockDiscordApi : IAsyncDisposable
             if (_sent.Any(m => m.MessageId == messageId) == false)
                 return DiscordError(404, "10008: Unknown Message");
 
-            _edited.Add(new EditedMessage(token, channelId, messageId, content));
+            _edited.Add(new EditedMessage(token, channelId, messageId, content, EmbedsSuppressed(body)));
         }
 
-        return Results.Json(new JsonObject
+        return Results.Json(MessagePayload(messageId, channelId, content, token));
+    }
+
+    private JsonObject MessagePayload(string messageId, string channelId, string content, string token)
+    {
+        var bot = BotFor(token);
+        return new JsonObject
         {
             ["id"] = messageId,
             ["channel_id"] = channelId,
+            ["type"] = 0,
             ["content"] = content,
-        });
+            ["author"] = new JsonObject
+            {
+                ["id"] = bot?.BotUserId ?? "0",
+                ["username"] = bot?.Username ?? "quill-bot",
+                ["bot"] = true,
+            },
+            ["timestamp"] = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture),
+        };
     }
+
+    private static bool EmbedsSuppressed(JsonNode? body) =>
+        ((body?["flags"]?.GetValue<int>() ?? 0) & SuppressEmbedsFlag) != 0;
 
     private BotEntry? BotFor(string botToken)
     {

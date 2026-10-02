@@ -21,7 +21,7 @@ internal sealed class DiscordChannelManager(
     IDocumentStore store,
     DiscordInboundProcessor processor,
     DiscordHealthRegistry health,
-    IServiceScopeFactory scopes,
+    DiscordSdk sdk,
     IOptions<ApplianceOptions> options,
     IServerReady ready,
     QuillLogger<DiscordChannelManager> logger) : BackgroundService, IDiscordChannelManager
@@ -149,7 +149,7 @@ internal sealed class DiscordChannelManager(
             try
             {
                 _runtimes[key] = DiscordGatewayRuntime.Start(
-                    key.Database, entry.Channel, entry.ChangeVector, processor, health, scopes,
+                    key.Database, entry.Channel, entry.ChangeVector, processor, health, sdk,
                     options.Value.Discord, logger);
             }
             catch (Exception e) when (e is not OperationCanceledException)

@@ -1,63 +1,53 @@
-using Raven.Quill.Logging;
+using System.Globalization;
 using System.Net;
-using System.Net.WebSockets;
-using System.Text;
-using System.Text.Json;
+using Discord;
+using Discord.Net;
+using Discord.WebSocket;
 using Raven.Quill.Channels;
 using Raven.Quill.Hosting;
+using Raven.Quill.Logging;
 
 namespace Raven.Quill.Discord;
 
 internal sealed class DiscordGatewayRuntime
 {
-    private const int DirectMessagesIntent = 1 << 12;
-    private const int DefaultMessageType = 0;
-    private const int ReplyMessageType = 19;
-    private const int AttemptsBeforeSessionReset = 3;
+    private const string SdkReadyFailure = "Processing READY failed";
 
     private static readonly TimeSpan MinBackoff = TimeSpan.FromSeconds(1);
-
-    private static readonly JsonSerializerOptions JsonOptions = new();
 
     private readonly string _database;
     private readonly string _shortChannelId;
     private readonly string _channelDocId;
+    private readonly string _displayName;
     private readonly string _botToken;
     private readonly string _botUserId;
     private readonly DiscordOptions _options;
     private readonly DiscordInboundProcessor _processor;
     private readonly DiscordHealthRegistry _health;
-    private readonly IServiceScopeFactory _scopes;
+    private readonly DiscordSdk _sdk;
     private readonly QuillLogger<DiscordChannelManager> _logger;
 
     private readonly CancellationTokenSource _cts = new();
-    private readonly SemaphoreSlim _sendLock = new(1, 1);
-    private readonly byte[] _receiveBuffer = new byte[8 * 1024];
-    private readonly MemoryStream _frameBuffer = new();
 
     private volatile bool _canRestart = true;
     private Task _run = Task.CompletedTask;
     private TimeSpan _backoff = MinBackoff;
-    private long _seq = -1;
     private long _exitedAtTicks;
-    private int _awaitingAck;
-    private int _attemptsSinceConnected;
-    private string? _sessionId;
-    private string? _resumeUrl;
 
     private DiscordGatewayRuntime(
         string database, Channel channel, string? channelChangeVector, DiscordSettings settings,
-        DiscordInboundProcessor processor, DiscordHealthRegistry health, IServiceScopeFactory scopes,
+        DiscordInboundProcessor processor, DiscordHealthRegistry health, DiscordSdk sdk,
         DiscordOptions options, QuillLogger<DiscordChannelManager> logger)
     {
         _database = database;
         _shortChannelId = channel.ShortId;
         _channelDocId = channel.Id!;
+        _displayName = channel.DisplayName;
         _botToken = settings.BotToken;
         _botUserId = settings.BotUserId;
         _processor = processor;
         _health = health;
-        _scopes = scopes;
+        _sdk = sdk;
         _options = options;
         _logger = logger;
         ChannelChangeVector = channelChangeVector;
@@ -78,10 +68,10 @@ internal sealed class DiscordGatewayRuntime
 
     public static DiscordGatewayRuntime Start(
         string database, Channel channel, string? channelChangeVector, DiscordInboundProcessor processor,
-        DiscordHealthRegistry health, IServiceScopeFactory scopes, DiscordOptions options, QuillLogger<DiscordChannelManager> logger)
+        DiscordHealthRegistry health, DiscordSdk sdk, DiscordOptions options, QuillLogger<DiscordChannelManager> logger)
     {
         var runtime = new DiscordGatewayRuntime(
-            database, channel, channelChangeVector, channel.Discord!, processor, health, scopes, options, logger);
+            database, channel, channelChangeVector, channel.Discord!, processor, health, sdk, options, logger);
 
         runtime._run = Task.Run(runtime.RunAsync);
         return runtime;
@@ -113,42 +103,29 @@ internal sealed class DiscordGatewayRuntime
     {
         try
         {
-            await ReconnectLoopAsync();
+            await SessionLoopAsync();
+        }
+        catch (OperationCanceledException) when (_cts.IsCancellationRequested)
+        {
+        }
+        catch (Exception e)
+        {
+            _health.RecordGatewayDisconnected(_database, _shortChannelId, e.Message);
+            if (_logger.IsErrorEnabled)
+                _logger.Error(e, $"Discord gateway crashed for channel {_shortChannelId}");
         }
         finally
         {
             Interlocked.Exchange(ref _exitedAtTicks, DateTime.UtcNow.Ticks);
             _cts.Dispose();
-            _sendLock.Dispose();
-            _frameBuffer.Dispose();
         }
     }
 
-    private async Task ReconnectLoopAsync()
+    private async Task SessionLoopAsync()
     {
-        while (_cts.IsCancellationRequested == false)
+        while (true)
         {
-            string? fatal;
-            try
-            {
-                fatal = await ConnectAndPumpAsync();
-            }
-            catch (OperationCanceledException) when (_cts.IsCancellationRequested)
-            {
-                return;
-            }
-            catch (DiscordApiException e) when (e.Status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
-            {
-                fatal = "discord rejected the bot token; reset it on the app's Bot page and reconnect the channel";
-            }
-            catch (Exception e)
-            {
-                fatal = null;
-                _health.RecordGatewayDisconnected(_database, _shortChannelId, e.Message);
-                if (_logger.IsWarnEnabled)
-                    _logger.Warn($"Discord gateway attempt failed for channel {_shortChannelId}: {e.Message}");
-            }
-
+            var fatal = await RunClientAsync();
             if (fatal is not null)
             {
                 _health.RecordGatewayDisconnected(_database, _shortChannelId, fatal);
@@ -157,326 +134,186 @@ internal sealed class DiscordGatewayRuntime
                 return;
             }
 
-            if (++_attemptsSinceConnected >= AttemptsBeforeSessionReset && _sessionId is not null)
-            {
-                if (_logger.IsWarnEnabled)
-                    _logger.Warn($"Discord gateway for channel {_shortChannelId} dropped its cached session after {_attemptsSinceConnected} " +
-                        "attempts that never connected");
-                ForgetSession();
-            }
+            if (_logger.IsWarnEnabled)
+                _logger.Warn($"Discord gateway for channel {_shortChannelId} dropped its session and starts a new one in {_backoff}");
 
-            try
-            {
-                await Task.Delay(_backoff, _cts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                return;
-            }
+            await Task.Delay(_backoff, _cts.Token);
 
             var doubled = _backoff * 2 + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 250));
             _backoff = doubled < _options.GatewayBackoffMax ? doubled : _options.GatewayBackoffMax;
         }
     }
 
-    private async Task<string?> ConnectAndPumpAsync()
+    private async Task<string?> RunClientAsync()
     {
-        var resuming = _sessionId is not null && _resumeUrl is not null;
-        var url = resuming ? _resumeUrl! : await DiscoverGatewayUrlAsync();
+        var exit = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        using var socket = new ClientWebSocket();
-        _frameBuffer.SetLength(0);
+        await using var client = _sdk.NewSocketClient();
 
-        var hello = await HandshakeAsync(socket, url);
+        client.Log += message =>
+        {
+            Log(message);
+            return Task.CompletedTask;
+        };
 
-        using var connection = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
-        var ct = connection.Token;
+        client.Connected += async () =>
+        {
+            OnConnected();
+            await ShowStatusAsync(client);
+        };
 
-        if (hello is null)
-            return OnClosed(socket.CloseStatus);
+        client.Disconnected += error =>
+        {
+            if (_cts.IsCancellationRequested || exit.Task.IsCompleted)
+                return Task.CompletedTask;
 
-        if (hello.Op != DiscordGatewayOpcode.Hello)
-            return null;
+            var fatal = FatalReasonFor(error);
+            if (fatal is not null)
+            {
+                exit.TrySetResult(fatal);
+                return Task.CompletedTask;
+            }
 
-        var interval = TimeSpan.FromMilliseconds(
-            hello.D?.Deserialize<DiscordHelloPayload>(JsonOptions)?.HeartbeatInterval ?? 0);
-        if (interval <= TimeSpan.Zero)
-            return null;
+            var reason = TransientReasonFor(error);
+            _health.RecordGatewayDisconnected(_database, _shortChannelId, reason);
+            if (reason is not null && _logger.IsWarnEnabled)
+                _logger.Warn($"Discord gateway attempt failed for channel {_shortChannelId}: {reason}");
 
-        await SendAsync(socket, resuming ? ResumePayload() : IdentifyPayload(), ct);
+            if (NeedsNewClient(error))
+                exit.TrySetResult(null);
 
-        Volatile.Write(ref _awaitingAck, 0);
-        var heartbeat = HeartbeatLoopAsync(socket, interval, ct);
+            return Task.CompletedTask;
+        };
+
+        client.MessageReceived += message =>
+        {
+            OnMessage(message);
+            return Task.CompletedTask;
+        };
 
         try
         {
-            while (true)
-            {
-                var frame = await ReceiveFrameAsync(socket, ct);
-                if (frame is null)
-                    return OnClosed(socket.CloseStatus);
+            await client.LoginAsync(TokenType.Bot, _botToken, validateToken: false);
+            await client.StartAsync();
 
-                switch (frame.Op)
-                {
-                    case DiscordGatewayOpcode.HeartbeatAck:
-                        Volatile.Write(ref _awaitingAck, 0);
-                        break;
-
-                    case DiscordGatewayOpcode.Heartbeat:
-                        await SendHeartbeatAsync(socket, ct);
-                        break;
-
-                    case DiscordGatewayOpcode.Reconnect:
-                        return null;
-
-                    case DiscordGatewayOpcode.InvalidSession:
-                        if (frame.D?.ValueKind != JsonValueKind.True)
-                            ForgetSession();
-                        return null;
-
-                    case DiscordGatewayOpcode.Dispatch:
-                        if (frame.S is { } seq)
-                            Interlocked.Exchange(ref _seq, seq);
-                        OnDispatch(frame);
-                        break;
-                }
-            }
+            return await exit.Task.WaitAsync(_cts.Token);
         }
         finally
         {
-            await connection.CancelAsync();
-            try
-            {
-                await heartbeat;
-            }
-            catch (Exception)
-            {
-            }
-
+            await client.StopAsync();
             _health.RecordGatewayDisconnected(_database, _shortChannelId, null);
-        }
-    }
-
-    private async Task<DiscordGatewayFrame?> HandshakeAsync(ClientWebSocket socket, string url)
-    {
-        using var handshake = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
-        handshake.CancelAfter(_options.GatewayHandshakeTimeout);
-
-        try
-        {
-            await socket.ConnectAsync(GatewayUri(url), handshake.Token);
-            return await ReceiveFrameAsync(socket, handshake.Token);
-        }
-        catch (OperationCanceledException) when (_cts.IsCancellationRequested == false)
-        {
-            socket.Abort();
-            throw new TimeoutException(
-                $"discord did not send a hello frame within {_options.GatewayHandshakeTimeout}");
-        }
-    }
-
-    private void OnDispatch(DiscordGatewayFrame frame)
-    {
-        switch (frame.T)
-        {
-            case "READY":
-                var ready = frame.D?.Deserialize<DiscordReadyPayload>(JsonOptions);
-                _sessionId = ready?.SessionId;
-                _resumeUrl = ready?.ResumeGatewayUrl;
-                OnConnected();
-                break;
-
-            case "RESUMED":
-                OnConnected();
-                break;
-
-            case "MESSAGE_CREATE":
-                OnMessage(frame.D);
-                break;
         }
     }
 
     private void OnConnected()
     {
         _backoff = MinBackoff;
-        _attemptsSinceConnected = 0;
         _health.RecordGatewayConnected(_database, _shortChannelId);
         if (_logger.IsInfoEnabled)
             _logger.Info($"Discord gateway connected for channel {_shortChannelId} (bot {_botUserId})");
     }
 
-    private void OnMessage(JsonElement? data)
+    private async Task ShowStatusAsync(DiscordSocketClient client)
     {
-        var message = data?.Deserialize<DiscordMessagePayload>(JsonOptions);
-        if (message is null)
+        if (string.IsNullOrWhiteSpace(_displayName))
             return;
 
-        if (string.IsNullOrEmpty(message.GuildId) == false)
+        try
+        {
+            await client.SetCustomStatusAsync(_displayName);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            if (_logger.IsDebugEnabled)
+                _logger.Debug($"Discord custom status failed for channel {_shortChannelId}: {e.Message}");
+        }
+    }
+
+    private void OnMessage(SocketMessage message)
+    {
+        if (message.Channel is not IDMChannel dm)
             return;
 
-        if (message.Author is not { Id.Length: > 0 } author || author.Bot == true || author.Id == _botUserId)
+        var author = message.Author;
+        if (author is null || author.IsBot || Snowflake(author.Id) == _botUserId)
             return;
 
-        if (string.IsNullOrEmpty(message.ChannelId))
-            return;
-
-        if (message.Type is not (DefaultMessageType or ReplyMessageType))
+        if (message.Type is not (MessageType.Default or MessageType.Reply))
             return;
 
         var content = message.Content ?? "";
-        var kind = message.Attachments is { Length: > 0 } || content.Trim().Length == 0
+        var kind = message.Attachments.Count > 0 || content.Trim().Length == 0
             ? "unsupported"
             : "text";
 
         _health.RecordInbound(_database, _shortChannelId);
         _processor.Enqueue(
-            _database, _channelDocId, author.Id, author.Username, message.ChannelId,
-            message.Id ?? "", kind, content);
+            _database, _channelDocId, Snowflake(author.Id), author.Username, Snowflake(dm.Id),
+            Snowflake(message.Id), kind, content);
     }
 
-    private async Task HeartbeatLoopAsync(ClientWebSocket socket, TimeSpan interval, CancellationToken ct)
+    private void Log(LogMessage message)
     {
-        try
-        {
-            await Task.Delay(interval * Random.Shared.NextDouble(), ct);
+        var text = $"Discord.Net {message.Source} for channel {_shortChannelId}: {message.Message}";
 
-            while (ct.IsCancellationRequested == false)
-            {
-                if (Interlocked.Exchange(ref _awaitingAck, 1) == 1)
-                {
-                    if (_logger.IsWarnEnabled)
-                        _logger.Warn($"Discord gateway heartbeat went unacknowledged for channel {_shortChannelId}; reconnecting");
-                    socket.Abort();
-                    return;
-                }
+        if (message.Severity is LogSeverity.Critical or LogSeverity.Error)
+        {
+            if (_logger.IsWarnEnabled == false)
+                return;
 
-                await SendHeartbeatAsync(socket, ct);
-                await Task.Delay(interval, ct);
-            }
+            if (message.Exception is null)
+                _logger.Warn(text);
+            else
+                _logger.Warn(message.Exception, text);
+            return;
         }
-        catch (OperationCanceledException)
-        {
-        }
-        catch (Exception e)
-        {
-            if (_logger.IsDebugEnabled)
-                _logger.Debug($"Discord gateway heartbeat stopped for channel {_shortChannelId}: {e.Message}");
-            socket.Abort();
-        }
+
+        if (_logger.IsDebugEnabled == false)
+            return;
+
+        if (message.Exception is null)
+            _logger.Debug(text);
+        else
+            _logger.Debug(message.Exception, text);
     }
 
-    private async Task<DiscordGatewayFrame?> ReceiveFrameAsync(ClientWebSocket socket, CancellationToken ct)
+    private string? FatalReasonFor(Exception error)
     {
-        while (true)
+        if (CloseOf(error) is { } closed)
         {
-            WebSocketReceiveResult result;
-            try
-            {
-                result = await socket.ReceiveAsync(_receiveBuffer, ct);
-            }
-            catch (WebSocketException)
-            {
-                return null;
-            }
-
-            if (result.MessageType == WebSocketMessageType.Close)
-                return null;
-
-            if (_frameBuffer.Length + result.Count > _options.MaxGatewayFrameBytes)
-                throw new InvalidOperationException(
-                    $"discord sent a gateway frame over {_options.MaxGatewayFrameBytes} bytes");
-
-            _frameBuffer.Write(_receiveBuffer, 0, result.Count);
-
-            if (result.EndOfMessage == false)
-                continue;
-
-            var text = Encoding.UTF8.GetString(_frameBuffer.GetBuffer(), 0, (int)_frameBuffer.Length);
-            _frameBuffer.SetLength(0);
-
-            try
-            {
-                return JsonSerializer.Deserialize<DiscordGatewayFrame>(text, JsonOptions);
-            }
-            catch (JsonException e)
-            {
-                if (_logger.IsDebugEnabled)
-                    _logger.Debug($"Dropped an unparseable Discord gateway frame for channel {_shortChannelId}: {e.Message}");
-            }
+            var fatal = FatalReasonFor(closed.CloseCode);
+            if (fatal is not null)
+                _canRestart = closed.CloseCode is 4013 or 4014;
+            return fatal;
         }
-    }
 
-    private async Task<string> DiscoverGatewayUrlAsync()
-    {
-        await using var scope = _scopes.CreateAsyncScope();
-        var discord = scope.ServiceProvider.GetRequiredService<IDiscordClient>();
-        return await discord.GetGatewayUrlAsync(_botToken, _cts.Token);
-    }
-
-    private Task SendHeartbeatAsync(ClientWebSocket socket, CancellationToken ct)
-    {
-        var seq = Interlocked.Read(ref _seq);
-        return SendAsync(socket, new { op = DiscordGatewayOpcode.Heartbeat, d = seq < 0 ? null : (long?)seq }, ct);
-    }
-
-    private async Task SendAsync(ClientWebSocket socket, object payload, CancellationToken ct)
-    {
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(payload, JsonOptions);
-
-        await _sendLock.WaitAsync(ct);
-        try
+        if (error is HttpException { HttpCode: HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden })
         {
-            await socket.SendAsync(bytes, WebSocketMessageType.Text, true, ct);
+            _canRestart = true;
+            return "discord rejected the bot token; reset it on the app's Bot page and reconnect the channel";
         }
-        finally
-        {
-            _sendLock.Release();
-        }
+
+        return null;
     }
 
-    private object IdentifyPayload() => new
+    private string? TransientReasonFor(Exception error) => error switch
     {
-        op = DiscordGatewayOpcode.Identify,
-        d = new
-        {
-            token = _botToken,
-            intents = DirectMessagesIntent,
-            properties = new { os = "linux", browser = "raven-quill", device = "raven-quill" },
-        },
+        GatewayReconnectException or OperationCanceledException => null,
+        RateLimitedException => error.Message,
+        TimeoutException => $"discord gateway did not become ready within {_options.GatewayHandshakeTimeout}",
+        _ when CloseOf(error) is not null => null,
+        _ => error.Message,
     };
 
-    private object ResumePayload() => new
-    {
-        op = DiscordGatewayOpcode.Resume,
-        d = new { token = _botToken, session_id = _sessionId, seq = Interlocked.Read(ref _seq) },
-    };
+    private static bool NeedsNewClient(Exception error) =>
+        CloseOf(error)?.CloseCode is 4006 or 4007 or 4009 || error.Message == SdkReadyFailure;
 
-    private string? OnClosed(WebSocketCloseStatus? status)
-    {
-        if ((int?)status is 4007 or 4009)
-            ForgetSession();
+    private static WebSocketClosedException? CloseOf(Exception error) =>
+        error as WebSocketClosedException ?? error.InnerException as WebSocketClosedException;
 
-        var fatal = FatalReasonFor(status);
-        if (fatal is not null)
-            _canRestart = (int?)status is 4013 or 4014;
+    private static string Snowflake(ulong id) => id.ToString(CultureInfo.InvariantCulture);
 
-        return fatal;
-    }
-
-    private void ForgetSession()
-    {
-        _sessionId = null;
-        _resumeUrl = null;
-        Interlocked.Exchange(ref _seq, -1);
-    }
-
-    private static Uri GatewayUri(string url)
-    {
-        var separator = url.Contains('?') ? '&' : '?';
-        return new Uri($"{url}{separator}v=10&encoding=json");
-    }
-
-    private static string? FatalReasonFor(WebSocketCloseStatus? status) => (int?)status switch
+    private static string? FatalReasonFor(int closeCode) => closeCode switch
     {
         4004 => "discord rejected the bot token; reset it on the app's Bot page and reconnect the channel",
         4010 => "discord rejected the shard this appliance identified with",
