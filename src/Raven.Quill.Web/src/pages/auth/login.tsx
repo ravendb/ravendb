@@ -14,6 +14,7 @@ import { Heading, Text } from "@/components/typography";
 import { DASHBOARD_API_KEY_DOCS_URL } from "@/lib/help-links";
 
 const INVALID_KEY_MESSAGE = "That API key wasn't accepted. Double-check it and try again.";
+const THROTTLED_MESSAGE = "Too many failed attempts. Wait a minute, then try again.";
 const SIGN_IN_ERROR_MESSAGE = "We couldn't sign you in. Please try again in a moment.";
 
 export function Login() {
@@ -41,7 +42,7 @@ export function Login() {
                 setFormError(INVALID_KEY_MESSAGE);
             }
         } catch (error) {
-            setFormError(isApiError(error) && error.status === 401 ? INVALID_KEY_MESSAGE : SIGN_IN_ERROR_MESSAGE);
+            setFormError(loginErrorMessage(error));
         }
     }
 
@@ -100,6 +101,19 @@ export function Login() {
             </Text>
         </AuthScreenLayout>
     );
+}
+
+function loginErrorMessage(error: unknown): string {
+    if (!isApiError(error)) {
+        return SIGN_IN_ERROR_MESSAGE;
+    }
+    if (error.status === 401) {
+        return INVALID_KEY_MESSAGE;
+    }
+    if (error.status === 429) {
+        return THROTTLED_MESSAGE;
+    }
+    return SIGN_IN_ERROR_MESSAGE;
 }
 
 const loginSchema = z.object({
