@@ -39,7 +39,7 @@ public class RavenDB_27597 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void LongNonAsciiCompoundMemberIsIndexed(Options options)
     {
         var name = new string('é', 100);
@@ -63,7 +63,7 @@ public class RavenDB_27597 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void BoostedDocumentWithCompoundFieldIsIndexed(Options options)
     {
         using var store = GetDocumentStore(options);
