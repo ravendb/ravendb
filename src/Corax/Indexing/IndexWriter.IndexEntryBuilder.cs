@@ -36,6 +36,9 @@ public partial class IndexWriter
 
         public void Boost(float boost)
         {
+            if (float.IsFinite(boost) == false)
+                throw new ArgumentOutOfRangeException(nameof(boost), boost, "Document boost must be a finite number.");
+
             _parent.BoostEntry(_entryId, boost);
         }
 
