@@ -134,6 +134,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 switch (returnStatement.Argument)
                 {
                     case ObjectExpression oe:
+                        if (oe.Properties.Any(p => p is SpreadElement))
+                            HasDynamicReturns = true;
 
                         //If we got here we must validate that all return statements have the same structure.
                         //Having zero fields means its the first return statements we encounter that has a structure.
@@ -213,6 +215,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
             void AddObjectFieldsToIndexFields(ObjectExpression oe)
             {
+                if (oe.Properties.Any(p => p is SpreadElement))
+                    HasDynamicReturns = true;
+
                 foreach (var prop in oe.Properties)
                 {
                     if (prop is Property property)
