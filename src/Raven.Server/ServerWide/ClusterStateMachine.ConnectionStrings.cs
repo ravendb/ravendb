@@ -346,6 +346,8 @@ public sealed partial class ClusterStateMachine
                 if (serverWideCS?.ConnectionString == null)
                     continue;
 
+                PutServerWideConnectionStringCommand.EnsureAiIdentifier(serverWideCS);
+
                 var databaseRecordCSName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(serverWideCS.Name);
                 serverWideCS.ConnectionString.Name = databaseRecordCSName;
 
