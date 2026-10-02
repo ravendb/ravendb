@@ -169,7 +169,8 @@
                 "jest-process-manager": {
                     "wait-on": "^9.0.1"
                 }
-            }
+            },
+            "uuid": "^11.1.1"
         },
         "durandal": {
             "jquery": "3.7.1"
@@ -180,6 +181,11 @@
         "@storybook/builder-webpack5": {
             "webpack-dev-middleware": "^7.4.6"
         },
-        "uuid": "^11.1.1"
+        "jest-junit": {
+            "uuid": "^11.1.1"
+        },
+        "istanbul-lib-processinfo": {
+            "uuid": "^11.1.1"
+        }
     }
 }
