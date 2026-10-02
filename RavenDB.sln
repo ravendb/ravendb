@@ -99,7 +99,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SlowTests.Tools", "test\Slo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SlowTests.Issues", "test\SlowTests.Issues\SlowTests.Issues.csproj", "{74AA8EAC-F8A1-4137-A3A4-A04B17A719EF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RequestHandler.Benchmark", "bench\RequestHandler.Benchmark\RequestHandler.Benchmark.csproj", "{4E976E13-4BEC-4826-86CD-89E64C04DC69}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Integration.Benchmark", "bench\Integration.Benchmark\Integration.Benchmark.csproj", "{4E976E13-4BEC-4826-86CD-89E64C04DC69}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Quill", "src\Raven.Quill\Raven.Quill.csproj", "{711E245F-FB88-4F7B-A572-82DD7B9B3DC0}"
 EndProject

@@ -22,7 +22,7 @@ using Sparrow.Utils;
 using Voron.Exceptions;
 using Voron.Platform.Posix;
 
-namespace RequestHandler.Benchmark;
+namespace Integration.Benchmark;
 
 public class RavenDbInstance : IDisposable
 {
@@ -31,6 +31,7 @@ public class RavenDbInstance : IDisposable
     public RavenServer Server;
     public DocumentDatabase Database;
     private string _pathToServer;
+    private bool _keepData;
 
     static RavenDbInstance()
     {
@@ -126,7 +127,7 @@ public class RavenDbInstance : IDisposable
         return newDataDir;
     }
     
-    public void InitializeDatabase()
+    public void InitializeDatabase(string dataDirectory = null)
     {
         var configuration = RavenConfiguration.CreateForServer(Guid.NewGuid().ToString());
         configuration.Initialize();
@@ -138,7 +139,8 @@ public class RavenDbInstance : IDisposable
         configuration.Core.RunInMemory = false;
         configuration.Core.FeaturesAvailability = FeaturesAvailability.Experimental;
         configuration.Core.ServerUrls = ["http://127.0.0.1:0"];
-        _pathToServer = NewDataPath("RequestsBenchmark", 0, true);
+        _pathToServer = dataDirectory ?? NewDataPath("RequestsBenchmark", 0, true);
+        _keepData = dataDirectory != null;
         configuration.Core.DataDirectory = new PathSetting(_pathToServer);
         Server = new RavenServer(configuration)
         {
@@ -168,11 +170,16 @@ public class RavenDbInstance : IDisposable
         {
             Urls = [Server.WebUrl],
             Database = DatabaseName,
+            // A kept server listens on a new port, but its topology still has the port of the first run.
+            Conventions = { DisableTopologyUpdates = _keepData }
         };
         Store.Initialize();
 
-        Store.Maintenance.Server.Send(new DeleteDatabasesOperation(DatabaseName, hardDelete: false));
-        Store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
+        if (_keepData == false || Store.Maintenance.Server.Send(new GetDatabaseRecordOperation(DatabaseName)) == null)
+        {
+            Store.Maintenance.Server.Send(new DeleteDatabasesOperation(DatabaseName, hardDelete: false));
+            Store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
+        }
 
         Database = AsyncHelpers.RunSync(() => GetDatabase(Server, DatabaseName));
     }
@@ -182,7 +189,8 @@ public class RavenDbInstance : IDisposable
         var exceptions = new ExceptionAggregator("Found exceptions during dispose");
         exceptions.Execute(Store);
         exceptions.Execute(Server);
-        DeletePath(_pathToServer, exceptions);
+        if (_keepData == false)
+            DeletePath(_pathToServer, exceptions);
         exceptions.ThrowIfNeeded();
     }
 }
