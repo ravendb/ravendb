@@ -1,18 +1,39 @@
+using System.IO;
 using Voron.Impl.FileHeaders;
 
 namespace Voron.Schema.Updates;
 
-/// <summary>
-/// Fixed size tree leaf pages now keep a tombstone bitmap at the end of the page, and pages written with it
-/// are unreadable by older versions - they would hand out deleted entries as if they were live. The pages
-/// that are already in the file are readable as they are and are converted lazily as writes touch them, so
-/// there is nothing to migrate here, the version bump exists to keep older binaries from opening the file.
-/// </summary>
-public class From25 : IVoronSchemaUpdate
+public sealed class From25 : IVoronSchemaUpdate
 {
     public bool Update(int currentVersion, StorageEnvironmentOptions options, HeaderAccessor headerAccessor, out int versionAfterUpgrade)
     {
+        // Version 26 is the 8.0 format. Compared to 7.2 (version 25):
+        // - database.metadata holds the environment's JournalId, filled below
+        // - transaction headers carry that JournalId, XORed with the incarnation of the journal file
+        // - every journal starts with a journal header record holding its number and incarnation
+        // - a root and its branches can share journals, registered with a linked journals record
+        // - a transaction can carry the pages it freed and its durability watermark, and can be Zstd compressed
+        // - headers.one / headers.two no longer track the current journal, the existence of the journal file does
+        // - FixedSizeTree leaf pages can carry a tombstone bitmap
+
+        // the recyclable journals left by 7.2 are deleted, 8.0 builds its own reuse pool
+        foreach (var unusedFile in Directory.GetFiles(options.JournalPath.FullPath, "recyclable-journal.*"))
+        {
+            try
+            {
+                File.Delete(unusedFile);
+            }
+            catch
+            {
+                // best effort - if it stays, the 8.0 reuse pool can still take it: a reused journal gets a fresh
+                // journal header record first, so the 7.2 transactions left in it are skipped as foreign
+            }
+        }
+
+        headerAccessor.MetadataAccessor.Modify(headerAccessor.MetadataAccessor.FillMetadata);
+
         versionAfterUpgrade = 26;
+
         return true;
     }
 }

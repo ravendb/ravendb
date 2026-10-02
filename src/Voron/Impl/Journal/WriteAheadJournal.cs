@@ -82,6 +82,8 @@ namespace Voron.Impl.Journal
 
         private readonly DisposeOnce<SingleAttempt> _disposeRunner;
 
+        internal static readonly TimeSpan CompressionPagerSwapWaitTime = TimeSpan.FromSeconds(5);
+
         public class LinkedJournalsRecord : IDisposable
         {
             public static readonly Guid LinkedJournalId = new("66d2ff9c-6251-462c-bde5-e05ba50110cf");
@@ -279,9 +281,25 @@ namespace Voron.Impl.Journal
 
                 _writePipeline.Dispose();
 
-                _compressionPager.Dispose();
+                bool writeLockTaken = false;
+                try
+                {
+                    _forTestingPurposes?.OnJournalDispose_BeforeTakingCompressionPagerWriteLock?.Invoke();
+
+                    Monitor.TryEnter(_writeLock, CompressionPagerSwapWaitTime, ref writeLockTaken);
+
+                    Volatile.Read(ref _compressionPager).Dispose();
+                }
+                finally
+                {
+                    if (writeLockTaken)
+                        Monitor.Exit(_writeLock);
+                }
+
+                _forTestingPurposes?.OnJournalDispose_AfterDisposingCompressionPager?.Invoke();
 
                 _journalApplicator.Dispose();
+
                 if (_env.Options.OwnsPagers)
                 {
                     foreach (var logFile in _files)
@@ -293,6 +311,18 @@ namespace Voron.Impl.Journal
                 _files = ImmutableAppendOnlyList<JournalFile>.Empty;
                 _linkedJournalsRecord.Dispose();
                 _journalHeaderRecord.Dispose();
+
+                if (writeLockTaken == false)
+                {
+                    Volatile.Read(ref _compressionPager).Dispose();
+
+                    if (_logger.IsWarnEnabled)
+                    {
+                        _logger.Warn(
+                            $"Could not acquire the journal write lock within {CompressionPagerSwapWaitTime} while disposing the journal of '{_env.Options.BasePath}'. " +
+                            "The compression buffer was disposed without it.");
+                    }
+                }
             });
         }
 
@@ -2842,7 +2872,7 @@ namespace Voron.Impl.Journal
                 // RavenDB-10830: failed to lock memory of temp buffers in encrypted db, let's create new file with initial size
 
                 _compressionPager.Dispose();
-                (_compressionPager, _compressionPagerState) = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
+                PublishNewCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
                 _lastCompressionBufferReduceCheck = DateTime.UtcNow;
                 throw;
             }
@@ -2970,7 +3000,7 @@ namespace Voron.Impl.Journal
                     // RavenDB-10830: failed to lock memory of temp buffers in encrypted db, let's create new file with initial size
 
                     _compressionPager.Dispose();
-                    (_compressionPager, _compressionPagerState) = CreateCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
+                    PublishNewCompressionPager(_env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize);
                     _lastCompressionBufferReduceCheck = DateTime.UtcNow;
                     throw;
                 }
@@ -3129,6 +3159,8 @@ namespace Voron.Impl.Journal
 
         private (Pager Pager, Pager.State State) CreateCompressionPager(long initialSize)
         {
+            Debug.Assert(Monitor.IsEntered(_writeLock) || _compressionPager == null, "CreateCompressionPager must be called under _writeLock");
+
             return _env.Options.CreateTemporaryBufferPager(
                 $"compression.{_compressionPagerCounter++:D10}{StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.BuffersFileExtension}", initialSize,
                 encrypted: false);
@@ -3139,6 +3171,15 @@ namespace Voron.Impl.Journal
 
         private void ReduceSizeOfCompressionBufferIfNeeded(bool forceReduce = false)
         {
+            Debug.Assert(Monitor.IsEntered(_writeLock), "ReduceSizeOfCompressionBufferIfNeeded must be called under _writeLock");
+
+            if (_disposeRunner.DisposedRequested)
+            {
+                // the journal is being torn down, possibly by a thread blocked on _writeLock right now - swapping the
+                // pager can only leak it or throw from here on
+                return;
+            }
+
             var maxSize = _env.Options.MaxScratchBufferSize;
             if (ShouldReduceSizeOfCompressionPager(maxSize, forceReduce) == false)
             {
@@ -3149,7 +3190,6 @@ namespace Voron.Impl.Journal
 
                 return;
             }
-
 
             // the compression pager is too large, we probably had a big transaction and now can
             // free all of that and come back to more reasonable values.
@@ -3167,7 +3207,20 @@ namespace Voron.Impl.Journal
 
             _forTestingPurposes?.OnReduceSizeOfCompressionBufferIfNeeded_RightAfterDisposingCompressionPager?.Invoke();
 
-            (_compressionPager, _compressionPagerState) = CreateCompressionPager(maxSize);
+            PublishNewCompressionPager(maxSize);
+        }
+
+        private void PublishNewCompressionPager(long initialSize)
+        {
+            Debug.Assert(Monitor.IsEntered(_writeLock), "PublishNewCompressionPager must be called under _writeLock");
+
+            (Pager pager, Pager.State state) = CreateCompressionPager(initialSize);
+
+            _compressionPagerState = state;
+            Volatile.Write(ref _compressionPager, pager);
+
+            if (_disposeRunner.DisposedRequested)
+                pager.Dispose();
         }
 
         public void ZeroCompressionBuffer(ref Pager.PagerTransactionState txState)
@@ -3254,6 +3307,12 @@ namespace Voron.Impl.Journal
             internal Action<ConcurrentQueue<WriteAheadJournal.JournalStateRecord>> OnWriteBuffersToJournal;
 
             internal int InFlightJournalWrites => journal._writePipeline.ForTestingPurposesOnly().InFlightCount;
+
+            internal Action OnJournalDispose_BeforeTakingCompressionPagerWriteLock;
+
+            internal Action OnJournalDispose_AfterDisposingCompressionPager;
+
+            internal Pager.State CompressionPagerState => journal._compressionPagerState;
         }
 
         private void RejectCommitsToMerge() => SharedJournalState.SetCancel();

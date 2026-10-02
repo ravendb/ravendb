@@ -18,15 +18,17 @@ namespace Voron.Data.BTrees
         private readonly LowLevelTransaction _tx;
         private readonly Tree _tree;
         private readonly ref TreeCursor _cursor;
+        private readonly DecompressedLeafPage _decompressed;
 
         private bool _ancestorsChanged;
 
-        public TreeRebalancer(LowLevelTransaction tx, Tree tree, ref TreeCursor cursor)
+        public TreeRebalancer(LowLevelTransaction tx, Tree tree, ref TreeCursor cursor, DecompressedLeafPage decompressed = null)
         {
             tree.StructureVersion++;
             _tx = tx;
             _tree = tree;
             _cursor = ref cursor;
+            _decompressed = decompressed;
         }
         
         private FreeSpaceHandlingDisabler DisableFreeSpaceUsageIfSplittingRootTree()
@@ -127,8 +129,8 @@ namespace Voron.Data.BTrees
                 _cursor.SyncTopPage(parentPage);
                 Debug.Assert(sibling.PageNumber != page.PageNumber);
 
-                if (page.TreeFlags != sibling.TreeFlags)
-                    return default;
+                if (page.PageType != sibling.PageType || (page.IsBranch && page.CollapsedLevels != sibling.CollapsedLevels))
+                    return default; // leaf & branch, or branches of different heights (sibling leaves always sit at the same depth)
 
                 if (sibling.IsCompressed)
                     return default;
@@ -188,6 +190,10 @@ namespace Voron.Data.BTrees
 
             nodeHeader->PageNumber = pageRefNumber;
 
+            // subtree is now one level shallower than its siblings, record that for the next time
+            var promotedChild = _tree.ModifyPage(pageRefNumber);
+            promotedChild.CollapsedLevels += page.CollapsedLevels + 1;
+
             FreePage(page);
         }
 
@@ -223,6 +229,10 @@ namespace Voron.Data.BTrees
 
                 Memory.Copy(left.Base, mergedPage.Base, left.PageSize);
             }
+
+            left.CollapsedLevels = Math.Max(left.CollapsedLevels, right.CollapsedLevels);
+            if (_decompressed != null && left.Base == _decompressed.Base)
+                _decompressed.Original.CollapsedLevels = left.CollapsedLevels; // decompressed is a copy, have to set the original one
 
             if (parentPage.GetNode(parentPage.LastSearchPositionOrLastEntry)->PageNumber != right.PageNumber)
                 VoronUnrecoverableErrorException.Raise(_tx,
@@ -531,6 +541,8 @@ namespace Voron.Data.BTrees
             Debug.Assert(node->Flags == (TreeNodeFlags.PageRef));
 
             var rootPage = _tree.ModifyPage(node->PageNumber);
+            rootPage.CollapsedLevels = 0; // levels are owed to siblings, the root has none
+
             ref var header = ref _tree.ModifyHeader();
             header.RootPageNumber = rootPage.PageNumber;
             header.Depth--;
