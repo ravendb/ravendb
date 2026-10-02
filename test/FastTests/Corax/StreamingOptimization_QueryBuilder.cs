@@ -364,7 +364,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task ExistsOptimization(bool hasMultipleValues) => await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>>(hasMultipleValues, session =>
+    public async Task ExistsOptimization(bool hasMultipleValues) => await TestQueryBuilder<IncludeNullMatch<MultiTermMatch>>(hasMultipleValues, session =>
         session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
             .WhereExists(p => p.Name)
             .OrderBy(x => x.Name)
