@@ -56,13 +56,8 @@ namespace Raven.Server.ServerWide.Commands
 
         internal static void EnsureAiIdentifier(ServerWideConnectionString connectionString)
         {
-            if (connectionString.ConnectionString is not AiConnectionString aiConnectionString)
-                return;
-
-            if (string.IsNullOrWhiteSpace(aiConnectionString.Identifier))
-                aiConnectionString.Identifier = AiTaskIdentifierHelper.GenerateIdentifier(aiConnectionString.Name);
-
-            if (AiTaskIdentifierHelper.ValidateIdentifier(aiConnectionString.Identifier, out var errors) == false)
+            if (connectionString.ConnectionString is AiConnectionString aiConnectionString &&
+                aiConnectionString.EnsureIdentifier(out var errors) == false)
                 throw new RachisApplyException($"Invalid identifier format. Validation errors:{Environment.NewLine} - {string.Join($"{Environment.NewLine} - ", errors)}");
         }
 

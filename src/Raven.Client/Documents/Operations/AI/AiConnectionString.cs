@@ -109,6 +109,14 @@ public sealed class AiConnectionString : ConnectionString
         return AiTaskIdentifierHelper.ValidateIdentifier(Identifier, out errors);
     }
 
+    internal bool EnsureIdentifier(out List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(Identifier))
+            Identifier = GenerateIdentifier();
+
+        return ValidateIdentifier(out errors);
+    }
+
     /// <summary>
     /// Compares this connection string with another and returns a set of flags describing
     /// which aspects differ (e.g., model, endpoint, authentication). This can be used to
