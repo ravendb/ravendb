@@ -930,6 +930,9 @@ public static partial class CoraxQueryBuilder
                     metadata.QueryText, queryParameters);
         }
 
+        if (float.IsFinite(boost) == false || boost < 0)
+            throw new InvalidQueryException($"The boost value must be a finite, non-negative number, but was {val}", metadata.QueryText, queryParameters);
+
 
         var query = ToCoraxQuery(builderParameters, expression.Arguments[0], ref builderParameters.StreamingDisabled, exact);
 
