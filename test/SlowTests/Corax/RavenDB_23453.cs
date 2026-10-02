@@ -50,7 +50,7 @@ public class RavenDB_23453_Integration(ITestOutputHelper output) : RavenTestBase
             bulkInsert.Store(new Dto { Text = "car", Counter0 = 1, Counter1 = 3 });
             bulkInsert.Store(new Dto { Text = "car", Counter0 = 1, Counter1 = 3 });
             bulkInsert.Store(new Dto { Text = "cars", Counter0 = 2, Counter1 = 3 });
-            bulkInsert.Store(new Dto { Text = "bike", Counter0 = 1, Counter1 = 2 });
+            bulkInsert.Store(new Dto { Text = "bike", Counter0 = 1, Counter1 = 3 });
         }
 
         var index = new Index();
