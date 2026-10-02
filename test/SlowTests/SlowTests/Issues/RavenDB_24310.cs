@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,7 +13,10 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -880,6 +883,36 @@ public class RavenDB_24310 : RavenTestBase
             var ex = await Assert.ThrowsAsync<RavenException>(async () =>
                 await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(newRecord)));
             Assert.Contains($"The identifier '{identifier}' is already used by connection string 'DbLevelAiCS' in database '{newDbName}'", ex.Message);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Ai)]
+    public async Task ServerWideAiConnectionStrings_WithoutIdentifiers_GetIdentifiersWhenPropagatedToNewDatabase()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var names = new[] { "LegacyAiCS1", "LegacyAiCS2" };
+            var djv = new DynamicJsonValue();
+            foreach (var name in names)
+                djv[name] = new ServerWideConnectionString { ConnectionString = NewAiConnectionString(name, identifier: null) }.ToJson();
+
+            using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            using (var json = context.ReadObject(djv, ClusterStateMachine.ServerWideConfigurationKey.ConnectionStringAi))
+            {
+                ClusterStateMachine.PutValueDirectly(context, ClusterStateMachine.ServerWideConfigurationKey.ConnectionStringAi, json, 1);
+                tx.Commit();
+            }
+
+            var newDbName = store.Database + "_new";
+            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDbName)));
+
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
+            foreach (var name in names)
+            {
+                var prefixedName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(name);
+                Assert.Equal(AiTaskIdentifierHelper.GenerateIdentifier(name), record.AiConnectionStrings[prefixedName].Identifier);
+            }
         }
     }
 
