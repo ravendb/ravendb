@@ -4150,8 +4150,8 @@ namespace Raven.Server.Documents.Indexes
 
             void AssertField(QueryFieldName field)
             {
-                AssertKnownField(field, metadata);                           // is there such a field at all?
-                QueryBuilderHelper.AssertFieldIsIndexed(field.Value, this);  // ...and does it carry terms?
+                AssertKnownField(field, metadata);
+                QueryBuilderHelper.AssertFieldIsIndexed(field.Value, this);
             }
         }
 
