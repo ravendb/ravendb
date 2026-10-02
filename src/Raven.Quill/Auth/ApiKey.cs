@@ -1,10 +1,10 @@
 namespace Raven.Quill.Auth;
 
-internal sealed class ApiKey
+public sealed class ApiKey
 {
-    internal const string IdPrefix = "api-keys/";
+    public const string IdPrefix = "api-keys/";
 
-    internal const string PrimaryId = IdPrefix + "primary";
+    public const string PrimaryId = IdPrefix + "primary";
 
     public string? Id { get; set; }
 
@@ -12,7 +12,6 @@ internal sealed class ApiKey
 
     public string Salt { get; set; } = "";
 
-    // fast salted hash is fine: high-entropy bearer secret, not a password
     public string Hash { get; set; } = "";
 
     public bool Revoked { get; set; }
