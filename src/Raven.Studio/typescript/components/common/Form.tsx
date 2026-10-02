@@ -20,7 +20,15 @@ import AceEditor, { AceEditorProps } from "./ace/AceEditor";
 import classNames from "classnames";
 import DurationPicker, { DurationPickerProps } from "./DurationPicker";
 import SelectCreatable from "./select/SelectCreatable";
-import { ActionMeta, GetOptionValue, GroupBase, InputActionMeta, OnChangeValue, OptionsOrGroups } from "react-select";
+import {
+    ActionMeta,
+    GetOptionValue,
+    GroupBase,
+    InputActionMeta,
+    OnChangeValue,
+    OptionsOrGroups,
+    Props as SelectProps,
+} from "react-select";
 import Select, { InputNotHidden, SelectValue } from "./select/Select";
 import DatePicker, { type DatePickerProps } from "./DatePicker";
 import { Icon } from "components/common/Icon";
@@ -32,7 +40,6 @@ import { InputType } from "../../../typings/_studio/react-bootstrap";
 import useUniqueId from "hooks/useUniqueId";
 import { FormGroupProps as ReactBootstrapFormGroupsProps } from "react-bootstrap/FormGroup";
 import useBoolean from "components/hooks/useBoolean";
-import { FilterOptionOption } from "react-select/dist/declarations/src/filters";
 import { MultiRadioToggle } from "./toggles/MultiRadioToggle";
 import "./VerificationCodeInput.scss";
 import { ConditionalPopover } from "./ConditionalPopover";
@@ -377,7 +384,7 @@ export function FormSelectAutocomplete<
     const valueAccessor = props.getOptionValue ?? ((option: any) => option.value);
     const labelAccessor = props.getOptionLabel ?? ((option: any) => option.label);
 
-    const handleFilterOption = (option: FilterOptionOption<Option>, inputValue: string) => {
+    const handleFilterOption: SelectProps<Option, IsMulti, Group>["filterOption"] = (option, inputValue) => {
         if (isInitialOpen) {
             return true;
         }
