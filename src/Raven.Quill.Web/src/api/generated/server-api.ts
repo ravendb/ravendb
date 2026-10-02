@@ -624,6 +624,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/apps/{slug}/agent/test-query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["agents.testQuery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/apps/{slug}/overview": {
         parameters: {
             query?: never;
@@ -1912,6 +1928,18 @@ export interface components {
             ignoreDeletes?: boolean;
             debugOutput?: string[];
             error?: null | string;
+        };
+        TestQueryRequest: {
+            query: string;
+            parameters: null | Record<string, unknown>;
+        };
+        TestQueryResponse: {
+            results: unknown[];
+            /** Format: int64 */
+            totalResults: number;
+            isTruncated: boolean;
+            /** Format: int64 */
+            durationMs: number;
         };
         TokensByAppResponse: {
             apps: components["schemas"]["AppTokens"][];
@@ -3656,6 +3684,50 @@ export interface operations {
             };
         };
     };
+    "agents.testQuery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TestQueryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestQueryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     "stats.overview": {
         parameters: {
             query?: never;
@@ -4544,6 +4616,8 @@ export type TelegramUpdateRequest = components["schemas"]["TelegramUpdateRequest
 export type TestMappingRequest = components["schemas"]["TestMappingRequest"];
 export type TestMappingResponse = components["schemas"]["TestMappingResponse"];
 export type TestMappingRowResponse = components["schemas"]["TestMappingRowResponse"];
+export type TestQueryRequest = components["schemas"]["TestQueryRequest"];
+export type TestQueryResponse = components["schemas"]["TestQueryResponse"];
 export type TokensByAppResponse = components["schemas"]["TokensByAppResponse"];
 export type TopCapability = components["schemas"]["TopCapability"];
 export type UpdateChannelRequest = components["schemas"]["UpdateChannelRequest"];
@@ -4573,6 +4647,7 @@ export const API_ENDPOINTS = {
         edit: (slug: string) => `/apps/${encodeURIComponent(slug)}/agent`,
         get: (slug: string, agentId: string) => `/apps/${encodeURIComponent(slug)}/agent/${encodeURIComponent(agentId)}`,
         list: (slug: string) => `/apps/${encodeURIComponent(slug)}/agents`,
+        testQuery: (slug: string) => `/apps/${encodeURIComponent(slug)}/agent/test-query`,
     },
     aiConnectionStrings: {
         create: "/ai/connection-strings",
@@ -4680,6 +4755,7 @@ export function createServerApi(client: ApiClient) {
             edit: (slug: string, request: EditAgentRequest) => client.post<ProvisionAgentResponse, ApiErrorResponse>(API_ENDPOINTS.agents.edit(slug), request),
             get: (slug: string, agentId: string) => client.get<AgentDetailsResponse, ApiErrorResponse>(API_ENDPOINTS.agents.get(slug, agentId)),
             list: (slug: string) => client.get<AgentSummaryResponse[], ApiErrorResponse>(API_ENDPOINTS.agents.list(slug)),
+            testQuery: (slug: string, request: TestQueryRequest) => client.post<TestQueryResponse, ApiErrorResponse>(API_ENDPOINTS.agents.testQuery(slug), request),
         },
         aiConnectionStrings: {
             create: (request: AiConnectionString) => client.post<AiConnectionStringCreatedResponse, ApiErrorResponse>(API_ENDPOINTS.aiConnectionStrings.create, request),
