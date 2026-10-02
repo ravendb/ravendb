@@ -27,6 +27,17 @@ describe("ClientGlobalConfiguration", function () {
         expect(screen.getByText("Please enter exactly 1 character")).toBeInTheDocument();
     });
 
+    it("links balance behavior labels to their selects", async () => {
+        const { screen } = rtlRender(<ClientConfiguration />);
+
+        await screen.findByText(/Save/);
+
+        for (const label of ["Load Balance Behavior", "Read Balance Behavior"]) {
+            const select = screen.getByRole("combobox", { name: label });
+            expect(screen.getByText(label).closest("label")).toHaveAttribute("for", select.id);
+        }
+    });
+
     it("is license restricted", async () => {
         const { screen } = rtlRender(<LicenseRestricted />);
 
