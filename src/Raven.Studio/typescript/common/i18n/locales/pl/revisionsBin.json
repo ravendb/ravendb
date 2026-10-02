@@ -1,0 +1,14 @@
+{
+    "selectionLabel": "Zaznaczenie",
+    "dataChanged": "Dane uległy zmianie. Wyniki mogą zawierać duplikaty lub nieaktualne wpisy.",
+    "emptyBin": "Kosz rewizji jest pusty.",
+    "columns": {
+        "id": "Id",
+        "deletionDate": "Data usunięcia"
+    },
+    "deleteConfirm": {
+        "title": "Usunąć rewizje?",
+        "message": "Zaznaczone elementy „Delete Revision” zostaną usunięte,<br/>a wszystkie powiązane z nimi rewizje zostaną trwale usunięte.<br/><br/>Tej operacji nie można cofnąć.",
+        "confirmButton": "Tak, usuń"
+    }
+}
