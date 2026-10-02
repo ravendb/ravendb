@@ -1,5 +1,5 @@
 import React from "react";
-import { act, rtlRender, RtlScreen, waitFor, within } from "test/rtlTestUtils";
+import { rtlRender, RtlScreen, waitFor, within } from "test/rtlTestUtils";
 import document from "models/database/documents/document";
 import editDocumentUploader = require("viewmodels/database/documents/editDocumentUploader");
 import AddAttachmentModal from "./AddAttachmentModal";
@@ -40,13 +40,13 @@ describe("AddAttachmentModal", () => {
 
     async function selectFiles(screen: RtlScreen, user: User, files: File[]) {
         const fileInput = await screen.findByTestId("file-input");
-        await act(() => user.upload(fileInput, files));
+        await user.upload(fileInput, files);
     }
 
     async function clickUpload(screen: RtlScreen, user: User) {
         const uploadButton = await screen.findByRole("button", { name: /Upload attachment/ });
         await waitFor(() => expect(uploadButton).toBeEnabled());
-        await act(() => user.click(uploadButton));
+        await user.click(uploadButton);
     }
 
     it("uploads every selected file without remote parameters", async () => {
