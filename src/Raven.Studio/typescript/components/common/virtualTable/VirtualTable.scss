@@ -2,6 +2,9 @@
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
 
+$row-bg-selected: color-mix(in srgb, colors.$primary-var 20%, colors.$row-bg-var);
+$row-bg-selection-preview: color-mix(in srgb, colors.$primary-var 8%, colors.$row-bg-var);
+
 .virtual-table {
     background-color: colors.$panel-bg-2-var;
     padding: sizes.$gutter-xxs;
@@ -12,6 +15,44 @@
         border-radius: sizes.$gutter-xxs;
         overflow: auto;
         position: relative;
+        background-color: colors.$row-bg-var;
+    }
+
+    .floating-bars-container {
+        position: absolute;
+        bottom: sizes.$gutter-xs;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 3;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: sizes.$gutter-xxs;
+    }
+
+    .floating-bar {
+        display: flex;
+        align-items: center;
+        gap: sizes.$gutter-xxs;
+        padding: sizes.$gutter-xxxs sizes.$gutter-xs;
+        background-color: colors.$panel-bg-1-var;
+        border: 1px solid colors.$border-color-light-var;
+        border-radius: sizes.$border-radius-pill;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+
+        .vr {
+            align-self: stretch;
+            opacity: 0.5;
+        }
+    }
+
+    .scroll-to-top {
+        position: absolute;
+        bottom: sizes.$gutter-xs;
+        right: sizes.$gutter-sm;
+        z-index: 3;
+        padding: sizes.$gutter-xxs;
+        line-height: 1;
     }
 
     .table-state {
@@ -20,6 +61,23 @@
         left: 50%;
         transform: translate(-50%, -50%);
         z-index: 1;
+    }
+
+    .selection-checkbox {
+        overflow: visible !important;
+
+        .form-check-input {
+            width: 18px;
+            height: 18px;
+        }
+    }
+
+    th,
+    td {
+        &:has(.selection-checkbox) {
+            padding-left: sizes.$gutter-xxs;
+            padding-right: sizes.$gutter-xxs;
+        }
     }
 
     thead {
@@ -47,7 +105,6 @@
             &.col-pinned {
                 position: sticky !important;
                 background-color: colors.$panel-bg-2-var;
-                box-shadow: inset -2px 0 0 colors.$border-color-var;
                 z-index: 3;
             }
         }
@@ -113,8 +170,6 @@
     }
 
     tbody {
-        border-radius: sizes.$gutter-xxs;
-        overflow: hidden;
         position: relative;
         background-color: colors.$row-bg-var;
 
@@ -138,9 +193,8 @@
                 }
 
                 &.col-pinned {
-                    box-shadow: inset -2px 0 0 colors.$border-color-var;
                     z-index: 1;
-                    background-color: colors.$row-even-bg-var !important;
+                    background-color: colors.$row-even-bg-var;
                 }
 
                 .value-string {
@@ -166,10 +220,18 @@
 
                 td {
                     background-color: colors.$row-bg-var;
+                }
+            }
 
-                    &.col-pinned {
-                        background-color: colors.$row-bg-var !important;
-                    }
+            &.is-selected {
+                td {
+                    background-color: $row-bg-selected !important;
+                }
+            }
+
+            &.selection-preview {
+                td {
+                    background-color: $row-bg-selection-preview !important;
                 }
             }
 
@@ -216,5 +278,23 @@
                 transition: bs5variables.$transition-base;
             }
         }
+    }
+}
+
+.lazy-virtual-table {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+
+    // Firefox ignores the height of an empty table body, so the scroll position resets while the rows are loading
+    tbody {
+        display: block;
+    }
+
+    .lazy-virtual-table-area {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
     }
 }

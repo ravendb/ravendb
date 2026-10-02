@@ -17,9 +17,11 @@ import {
 import TableDisplaySettings from "./commonComponents/columnsSelect/TableDisplaySettings";
 import { FlexGrow } from "components/common/FlexGrow";
 import { CellValueWrapper } from "./cells/CellValue";
-import { useVirtualTableWithToken } from "components/common/virtualTable/hooks/useVirtualTableWithToken";
-import { useVirtualTableWithLazyLoading } from "components/common/virtualTable/hooks/useVirtualTableWithLazyLoading";
-import VirtualTableWithLazyLoading from "components/common/virtualTable/VirtualTableWithLazyLoading";
+import { useLazyRows } from "components/common/virtualTable/hooks/useLazyRows";
+import { LazyFetchMode } from "components/common/virtualTable/utils/LazyRowsLoader";
+import { lazyTableOptions } from "components/common/virtualTable/utils/lazyTableUtils";
+import LazyVirtualTable from "components/common/virtualTable/LazyVirtualTable";
+import { Switch } from "components/common/Checkbox";
 
 // copied from queryCommand
 const selector = (
@@ -60,14 +62,30 @@ export const VirtualTableStory: StoryObj = {
     },
 };
 
-export const VirtualTableWithLazyLoadingStory: StoryObj = {
-    name: "With lazy loading",
-    render: VirtualTableWithLazyLoadingExample,
-};
+interface LazyLoadingStoryArgs {
+    totalCount: number;
+    fetchMode: LazyFetchMode;
+    fetchDelayInMs: number;
+    minFetchCount: number;
+    heightInPx: number;
+}
 
-export const VirtualTableWithTokenStory: StoryObj = {
-    name: "With token (infinite scroll)",
-    render: VirtualTableWithTokenExample,
+export const LazyVirtualTableStory: StoryObj<LazyLoadingStoryArgs> = {
+    name: "With lazy loading",
+    render: (args) => <LazyVirtualTableExample {...args} />,
+    args: {
+        totalCount: 100_000_001,
+        fetchMode: "skipTake",
+        fetchDelayInMs: 200,
+        minFetchCount: 100,
+        heightInPx: 500,
+    },
+    argTypes: {
+        fetchMode: {
+            control: "radio",
+            options: ["skipTake", "continuationToken"] satisfies LazyFetchMode[],
+        },
+    },
 };
 
 function VirtualTableExample() {
@@ -128,47 +146,42 @@ function VirtualTableExample() {
     );
 }
 
-function VirtualTableWithLazyLoadingExample() {
-    const { dataPreview, componentProps } = useVirtualTableWithLazyLoading({ fetchData: fetchPagedResultData });
+function LazyVirtualTableExample({
+    totalCount,
+    fetchMode,
+    fetchDelayInMs,
+    minFetchCount,
+    heightInPx,
+}: LazyLoadingStoryArgs) {
+    const fetchData = useMemo(() => createLazyLoadingFetcher(totalCount, fetchDelayInMs), [totalCount, fetchDelayInMs]);
+
+    const lazyRows = useLazyRows<Item>({ fetchData, fetchMode, minFetchCount, reloadDependencies: [fetchData] });
+    const [isPaginated, setIsPaginated] = useState(false);
 
     const table = useReactTable({
-        defaultColumn: {
-            enableSorting: false,
-        },
-        data: dataPreview,
+        ...lazyTableOptions,
+        data: lazyRows.data,
         columns: itemColumnDefs,
-        columnResizeMode: "onChange",
         getCoreRowModel: getCoreRowModel(),
     });
 
     return (
-        <div>
-            <h2>100M items</h2>
-            <VirtualTableWithLazyLoading {...componentProps} table={table} heightInPx={500} />
-        </div>
-    );
-}
-
-function VirtualTableWithTokenExample() {
-    const fetchData = useMemo(() => fetchPagedResultWithToken(100), []);
-
-    const { dataArray, componentProps } = useVirtualTableWithToken({ fetchData });
-
-    const table = useReactTable({
-        defaultColumn: {
-            enableSorting: false,
-            enableColumnFilter: false,
-        },
-        columns: itemColumnDefs,
-        data: dataArray,
-        columnResizeMode: "onChange",
-        getCoreRowModel: getCoreRowModel(),
-    });
-
-    return (
-        <div>
-            <h2>Infinity scroll</h2>
-            <VirtualTable {...componentProps} table={table} heightInPx={500} />
+        <div className="d-flex flex-column" style={{ height: heightInPx }}>
+            <div className="d-flex align-items-center gap-3 mb-2">
+                <h2 className="m-0">{totalCount.toLocaleString()} items</h2>
+                {fetchMode === "skipTake" && (
+                    <Switch selected={isPaginated} toggleSelection={() => setIsPaginated(!isPaginated)} color="primary">
+                        Pagination
+                    </Switch>
+                )}
+            </div>
+            <LazyVirtualTable
+                table={table}
+                lazyRows={lazyRows}
+                isPaginated={isPaginated}
+                onIsPaginatedChange={setIsPaginated}
+                heightInPx={heightInPx}
+            />
         </div>
     );
 }
@@ -178,47 +191,27 @@ interface Item {
     name: string;
 }
 
-// mocked fetcher with 100_000_001 items
-function fetchPagedResultData(skip: number, take: number): Promise<pagedResult<Item>> {
-    const items: Item[] = new Array(take).fill(null).map((_, i) => {
-        return {
-            id: skip + i,
-            name: `Item ${skip + i}`,
-        };
-    });
-
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve({
-                totalResultCount: 100_000_001,
-                items,
-            });
-        }, 200);
-    });
+function createItems(skip: number, take: number): Item[] {
+    return new Array(take).fill(null).map((_, i) => ({
+        id: skip + i,
+        name: `Item ${skip + i}`,
+    }));
 }
 
-function fetchPagedResultWithToken(take: number): () => Promise<pagedResultWithToken<Item>> {
-    const initialTake = take;
-    let lastFetchedIndex = 0;
-
-    return () => {
-        const items: Item[] = new Array(initialTake).fill(null).map((_, i) => {
-            return {
-                id: lastFetchedIndex + i,
-                name: `Item ${lastFetchedIndex + i}`,
-            };
-        });
-
-        lastFetchedIndex += initialTake;
+function createLazyLoadingFetcher(totalCount: number, delayInMs: number) {
+    return (skip: number, take: number, continuationToken?: string): Promise<pagedResultWithToken<Item>> => {
+        const start = continuationToken ? Number(continuationToken) : skip;
+        const count = Math.max(0, Math.min(take, totalCount - start));
+        const next = start + count;
 
         return new Promise((resolve) => {
             setTimeout(() => {
                 resolve({
-                    totalResultCount: 100_000_001,
-                    items,
-                    continuationToken: "continuationToken",
+                    totalResultCount: totalCount,
+                    items: createItems(start, count),
+                    continuationToken: next < totalCount ? String(next) : null,
                 });
-            }, 200);
+            }, delayInMs);
         });
     };
 }

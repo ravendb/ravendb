@@ -1,0 +1,148 @@
+import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { collectionsTrackerSelectors, systemCollectionNames } from "components/common/shell/collectionsTrackerSlice";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useTableDisplaySettingsSheet } from "components/common/virtualTable/commonComponents/columnsSelect/TableDisplaySettings";
+import { useLazyRows } from "components/common/virtualTable/hooks/useLazyRows";
+import { useLazyTableSelection } from "components/common/virtualTable/hooks/useLazyTableSelection";
+import LazyVirtualTable from "components/common/virtualTable/LazyVirtualTable";
+import { lazyTableOptions } from "components/common/virtualTable/utils/lazyTableUtils";
+import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
+import { useResizeObserver } from "components/hooks/useResizeObserver";
+import { useServices } from "components/hooks/useServices";
+import { useCollectionRemovalRedirect } from "components/pages/database/documents/documentsList/hooks/useCollectionRemovalRedirect";
+import { useDocumentsColumns } from "components/pages/database/documents/documentsList/hooks/useDocumentsColumns";
+import { useDocumentsDataChanged } from "components/pages/database/documents/documentsList/hooks/useDocumentsDataChanged";
+import { useFullDocumentProvider } from "components/pages/database/documents/documentsList/hooks/useFullDocumentProvider";
+import DocumentsListToolbar from "components/pages/database/documents/documentsList/partials/DocumentsListToolbar";
+import DocumentsSelectionActions from "components/pages/database/documents/documentsList/partials/DocumentsSelectionActions";
+import { useAppSelector } from "components/store";
+import document from "models/database/documents/document";
+import { useRef, useState } from "react";
+
+interface DocumentsPageBodyProps {
+    collectionName: string | null;
+}
+
+const getDocumentId = (doc: document) => doc.getId();
+
+export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyProps) {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isSharded = useAppSelector(databaseSelectors.activeDatabase)?.isSharded;
+    const trackedCollectionName = collectionName ?? systemCollectionNames.allDocuments;
+    const collection = useAppSelector(collectionsTrackerSelectors.collectionByName(trackedCollectionName));
+    const collectionDocumentCount = collection?.documentCount;
+    const { databasesService } = useServices();
+
+    const {
+        isDataChanged,
+        trackResultEtag,
+        reset: resetDataChanged,
+    } = useDocumentsDataChanged({
+        collection,
+        isAllDocuments: collectionName === null,
+        isSharded,
+        fetchCurrentEtag: async () =>
+            (await databasesService.getDocumentsPreview(databaseName, 0, 0, collectionName ?? undefined)).resultEtag,
+    });
+    const { getPropertyPreviewResolver, clearCache: clearFullDocumentCache } = useFullDocumentProvider(databaseName);
+    const collectionDeletionCallbacks = useCollectionRemovalRedirect(databaseName, collectionName);
+
+    const bodyRef = useRef<HTMLDivElement>(null);
+    const { width: bodyWidthInPx } = useResizeObserver({ ref: bodyRef });
+
+    const columns = useDocumentsColumns({
+        databaseName,
+        collectionName,
+        tableBodyWidthInPx: virtualTableUtils.getTableBodyWidth(bodyWidthInPx),
+        getPropertyPreviewResolver,
+    });
+
+    const lazyRows = useLazyRows<document, pagedResultWithAvailableColumns<document>>({
+        fetchMode: isSharded ? "continuationToken" : "skipTake",
+        fetchData: (skip, take, continuationToken) =>
+            databasesService.getDocumentsPreview(
+                databaseName,
+                skip,
+                take,
+                collectionName ?? undefined,
+                columns.previewBindings,
+                columns.fullBindings,
+                continuationToken
+            ),
+        onResult: (result) => {
+            columns.onPreviewResult(result);
+            trackResultEtag(result.resultEtag);
+        },
+        onReset: () => {
+            clearFullDocumentCache();
+            resetDataChanged();
+        },
+        reloadDependencies: [columns.bindingsKey],
+    });
+
+    const [isPaginated, setIsPaginated] = useState(false);
+
+    const selection = useLazyTableSelection({
+        lazyRows,
+        getId: getDocumentId,
+        totalCount: collectionDocumentCount ?? lazyRows.totalCount,
+        isPaginated,
+    });
+
+    const table = useReactTable({
+        ...lazyTableOptions,
+        data: lazyRows.data,
+        columns: columns.columnDefs,
+        getRowId: getDocumentId,
+        meta: { lazySelection: selection },
+        state: { rowSelection: selection.rowSelection, ...columns.tableState },
+        getCoreRowModel: getCoreRowModel(),
+    });
+
+    const { openSheet: openColumnSettings } = useTableDisplaySettingsSheet(table, columns.settingsOptions);
+
+    const refresh = () => {
+        selection.clear();
+        lazyRows.reload();
+    };
+
+    const changePagination = (value: boolean) => {
+        selection.clear();
+        setIsPaginated(value);
+    };
+
+    return (
+        <div ref={bodyRef} className="vstack min-height-0">
+            <DocumentsListToolbar
+                collectionName={collectionName}
+                isPaginated={isPaginated}
+                onIsPaginatedChange={changePagination}
+                isCustomLayout={columns.isCustomLayout}
+                onOpenColumnSettings={openColumnSettings}
+                getVisibleColumnFields={() => columns.getExportFields(table)}
+                isDataChanged={isDataChanged}
+                onDataChangedRefresh={refresh}
+            />
+            <LazyVirtualTable
+                table={table}
+                lazyRows={lazyRows}
+                isPaginated={isPaginated}
+                onIsPaginatedChange={changePagination}
+                itemsName="documents"
+                emptyMessage={
+                    collectionName === null ? "There are no documents in the database" : "Collection is empty"
+                }
+                bottomOverlay={
+                    <DocumentsSelectionActions
+                        collectionName={collectionName}
+                        trackedCollectionName={trackedCollectionName}
+                        collectionDocumentCount={collectionDocumentCount}
+                        selection={selection}
+                        collectionDeletionCallbacks={collectionDeletionCallbacks}
+                        onSelectionDeleted={refresh}
+                    />
+                }
+            />
+        </div>
+    );
+}

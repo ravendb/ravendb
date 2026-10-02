@@ -1,4 +1,4 @@
-﻿import React, { MouseEvent, useMemo, useState } from "react";
+import React, { MouseEvent, useMemo, useState } from "react";
 import { DatabaseLocalInfo, DatabaseSharedInfo } from "components/models/databases";
 import classNames from "classnames";
 import { useAppUrls } from "hooks/useAppUrls";

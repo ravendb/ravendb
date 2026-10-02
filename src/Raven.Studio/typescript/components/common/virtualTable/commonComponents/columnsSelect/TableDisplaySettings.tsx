@@ -6,9 +6,18 @@ import {
     ColumnMeta,
     useTableDisplaySettings,
 } from "components/common/virtualTable/commonComponents/columnsSelect/useTableDisplaySettings";
+import {
+    createCustomColumnId,
+    CustomColumnDefinition,
+    getCustomColumnExpressionError,
+} from "components/common/virtualTable/commonComponents/columnsSelect/customColumns";
 import { ClassNameProps } from "components/models/common";
 import classNames from "classnames";
 import Button from "react-bootstrap/Button";
+import { FormGroup, FormInput, FormLabel } from "components/common/Form";
+import { SubmitHandler, useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
 import { useViewSheet, ViewSheet } from "components/common/splitView/ViewSheet";
 import {
     closestCenter,
@@ -24,44 +33,80 @@ import { CSS } from "@dnd-kit/utilities";
 import { CSSProperties, useState } from "react";
 import genUtils from "common/generalUtils";
 import Card from "react-bootstrap/Card";
+import { isEqual, xor } from "lodash";
 
-interface TableColumnsSelectProps<T> extends ClassNameProps {
+export interface AppliedColumnLayout {
+    visibleColumnIds: string[];
+    columnOrder: string[];
+    pinnedColumnIds: string[];
+    customColumns: CustomColumnDefinition[];
+}
+
+export interface RestoreDefaultsSettings {
+    visibleColumnIds: string[];
+    onRestore: () => void;
+}
+
+export interface TableDisplaySettingsOptions {
+    customColumns?: CustomColumnDefinition[];
+    onApplied?: (layout: AppliedColumnLayout) => void;
+    restoreDefaults?: RestoreDefaultsSettings;
+}
+
+interface TableDisplaySettingsProps<T> extends ClassNameProps, TableDisplaySettingsOptions {
     table: TanstackTable<T>;
 }
 
-export default function TableDisplaySettings<T>({ table, className }: TableColumnsSelectProps<T>) {
+export function useTableDisplaySettingsSheet<T>(table: TanstackTable<T>, options: TableDisplaySettingsOptions = {}) {
+    const { customColumns, onApplied, restoreDefaults } = options;
     const { open } = useViewSheet();
-    const {
-        columnMetas,
-        allColumnIds,
-        getInitialColumnOrder,
-        getInitialPinnedIds,
-        getInitialSelectedIds,
-        applySettings,
-    } = useTableDisplaySettings(table);
+    const { columnMetas, getInitialColumnOrder, getInitialPinnedIds, getInitialSelectedIds, applySettings } =
+        useTableDisplaySettings(table);
 
-    const handleOpenSheet = () => {
+    const openSheet = () => {
         open({
             component: (
                 <TableDisplaySettingsSheet
                     columnMetas={columnMetas}
-                    allColumnIds={allColumnIds}
                     initialSelectedIds={getInitialSelectedIds()}
                     initialColumnOrder={getInitialColumnOrder()}
                     initialPinnedIds={getInitialPinnedIds()}
-                    onApply={applySettings}
+                    customColumns={customColumns}
+                    onApply={(layout) => {
+                        if (onApplied) {
+                            table.resetColumnSizing();
+                            onApplied(layout);
+                        } else {
+                            applySettings(layout.visibleColumnIds, layout.columnOrder, layout.pinnedColumnIds);
+                        }
+                    }}
+                    restoreDefaults={
+                        restoreDefaults && {
+                            ...restoreDefaults,
+                            onRestore: () => {
+                                table.resetColumnSizing();
+                                restoreDefaults.onRestore();
+                            },
+                        }
+                    }
                 />
             ),
-            initialWidth: "30%",
+            initialWidth: 400,
             minWidth: "20%",
             maxWidth: "50%",
             isPinned: false,
         });
     };
 
+    return { openSheet };
+}
+
+export default function TableDisplaySettings<T>({ table, className, ...options }: TableDisplaySettingsProps<T>) {
+    const { openSheet } = useTableDisplaySettingsSheet(table, options);
+
     return (
         <div className={classNames("table-display-settings", className)}>
-            <Button variant="secondary" onClick={handleOpenSheet}>
+            <Button variant="secondary" onClick={openSheet}>
                 <Icon icon="table" />
                 Column layout settings
             </Button>
@@ -71,45 +116,63 @@ export default function TableDisplaySettings<T>({ table, className }: TableColum
 
 interface TableDisplaySettingsSheetProps {
     columnMetas: ColumnMeta[];
-    allColumnIds: string[];
     initialSelectedIds: string[];
     initialColumnOrder: string[];
     initialPinnedIds: string[];
-    onApply: (selectedIds: string[], columnOrder: string[], pinnedIds: string[]) => void;
+    customColumns?: CustomColumnDefinition[];
+    onApply: (layout: AppliedColumnLayout) => void;
+    restoreDefaults?: RestoreDefaultsSettings;
 }
 
 function TableDisplaySettingsSheet({
     columnMetas,
-    allColumnIds,
     initialSelectedIds,
     initialColumnOrder,
     initialPinnedIds,
+    customColumns,
     onApply,
+    restoreDefaults,
 }: TableDisplaySettingsSheetProps) {
     const { close } = useViewSheet();
+
+    const initialCustomColumns = customColumns ?? [];
+    const initialCustomColumnIds = new Set(initialCustomColumns.map((column) => column.id));
+    const defaultColumnOrder = columnMetas.filter((m) => !initialCustomColumnIds.has(m.id)).map((m) => m.id);
 
     const [columnOrder, setColumnOrder] = useState<string[]>(initialColumnOrder);
     const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedIds);
     const [pinnedIds, setPinnedIds] = useState<string[]>(initialPinnedIds);
+    const [customColumnList, setCustomColumnList] = useState<CustomColumnDefinition[]>(initialCustomColumns);
+    const [editedCustomColumn, setEditedCustomColumn] = useState<CustomColumnDefinition>(null);
     const [activeDragId, setActiveDragId] = useState<string>(null);
 
     const sensors = useSensors(useSensor(PointerSensor));
 
-    const hideableIds = columnMetas.filter((m) => m.canHide).map((m) => m.id);
+    const metaById: Record<string, ColumnMeta> = {
+        ...Object.fromEntries(columnMetas.map((m) => [m.id, m])),
+        ...Object.fromEntries(
+            customColumnList.map((column): [string, ColumnMeta] => [
+                column.id,
+                { id: column.id, headerTitle: column.header, canHide: true, canPin: true, customColumn: column },
+            ])
+        ),
+    };
+
+    const availableColumnIds = [...defaultColumnOrder, ...customColumnList.map((x) => x.id)];
+
+    const hideableIds = availableColumnIds.filter((id) => metaById[id].canHide);
     const selectionState = genUtils.getSelectionState(
         hideableIds,
         selectedIds.filter((id) => hideableIds.includes(id))
     );
 
-    const metaById = Object.fromEntries(columnMetas.map((m) => [m.id, m]));
-
-    const orderedIds = columnOrder.filter((id) => allColumnIds.includes(id));
+    const orderedIds = columnOrder.filter((id) => availableColumnIds.includes(id));
     const pinnedColumnIds = orderedIds.filter((id) => pinnedIds.includes(id));
     const unpinnedColumnIds = orderedIds.filter((id) => !pinnedIds.includes(id));
 
     const handleToggleAll = () => {
         if (selectionState === "Empty") {
-            setSelectedIds(columnMetas.map((m) => m.id));
+            setSelectedIds(availableColumnIds);
         } else {
             setSelectedIds(selectedIds.filter((id) => !hideableIds.includes(id)));
         }
@@ -124,14 +187,62 @@ function TableDisplaySettingsSheet({
     };
 
     const handleReset = () => {
-        setColumnOrder(initialColumnOrder);
-        setSelectedIds(initialSelectedIds);
-        setPinnedIds(initialPinnedIds);
+        if (restoreDefaults) {
+            setColumnOrder(defaultColumnOrder);
+            setSelectedIds(restoreDefaults.visibleColumnIds);
+            setPinnedIds([]);
+            setCustomColumnList([]);
+        } else {
+            setColumnOrder(initialColumnOrder);
+            setSelectedIds(initialSelectedIds);
+            setPinnedIds(initialPinnedIds);
+            setCustomColumnList(initialCustomColumns);
+        }
+
+        setEditedCustomColumn(null);
     };
 
+    const getHideableSelection = (ids: string[]) => ids.filter((id) => hideableIds.includes(id));
+
+    const isDefaultLayout = () =>
+        customColumnList.length === 0 &&
+        pinnedIds.length === 0 &&
+        isEqual(orderedIds, defaultColumnOrder) &&
+        xor(getHideableSelection(selectedIds), getHideableSelection(restoreDefaults.visibleColumnIds)).length === 0;
+
     const handleApply = () => {
-        onApply(selectedIds, columnOrder, pinnedIds);
+        if (restoreDefaults && isDefaultLayout()) {
+            restoreDefaults.onRestore();
+        } else {
+            onApply({
+                visibleColumnIds: selectedIds,
+                columnOrder,
+                pinnedColumnIds: pinnedIds,
+                customColumns: customColumnList,
+            });
+        }
+
         close();
+    };
+
+    const handleSaveCustomColumn = (column: CustomColumnDefinition) => {
+        const isNew = !customColumnList.some((x) => x.id === column.id);
+
+        setCustomColumnList((prev) => (isNew ? [...prev, column] : prev.map((x) => (x.id === column.id ? column : x))));
+
+        if (isNew) {
+            setColumnOrder((prev) => [...prev, column.id]);
+            setSelectedIds((prev) => [...prev, column.id]);
+        }
+
+        setEditedCustomColumn(null);
+    };
+
+    const handleRemoveCustomColumn = (id: string) => {
+        setCustomColumnList((prev) => prev.filter((x) => x.id !== id));
+        setColumnOrder((prev) => prev.filter((x) => x !== id));
+        setSelectedIds((prev) => prev.filter((x) => x !== id));
+        setPinnedIds((prev) => prev.filter((x) => x !== id));
     };
 
     const handleDragStart: DndContextProps["onDragStart"] = (event) => {
@@ -166,6 +277,21 @@ function TableDisplaySettingsSheet({
     const handleDragCancel = () => {
         setActiveDragId(null);
     };
+
+    const renderSortableRow = (id: string, isPinned: boolean) => (
+        <SortableColumnRow
+            key={id}
+            id={id}
+            meta={metaById[id]}
+            isSelected={selectedIds.includes(id)}
+            isPinned={isPinned}
+            isDraggingActive={activeDragId !== null}
+            onToggle={() => handleToggleOne(id)}
+            onTogglePin={() => handleTogglePin(id)}
+            onEdit={() => setEditedCustomColumn(metaById[id].customColumn)}
+            onRemove={() => handleRemoveCustomColumn(id)}
+        />
+    );
 
     return (
         <ViewSheet>
@@ -207,18 +333,7 @@ function TableDisplaySettingsSheet({
                                     onDragCancel={handleDragCancel}
                                 >
                                     <SortableContext items={pinnedColumnIds} strategy={verticalListSortingStrategy}>
-                                        {pinnedColumnIds.map((id) => (
-                                            <SortableColumnRow
-                                                key={id}
-                                                id={id}
-                                                meta={metaById[id]}
-                                                isSelected={selectedIds.includes(id)}
-                                                isPinned
-                                                isDraggingActive={activeDragId !== null}
-                                                onToggle={() => handleToggleOne(id)}
-                                                onTogglePin={() => handleTogglePin(id)}
-                                            />
-                                        ))}
+                                        {pinnedColumnIds.map((id) => renderSortableRow(id, true))}
                                     </SortableContext>
                                     <DragOverlay>
                                         {activeDragId && pinnedIds.includes(activeDragId) ? (
@@ -243,18 +358,7 @@ function TableDisplaySettingsSheet({
                             onDragCancel={handleDragCancel}
                         >
                             <SortableContext items={unpinnedColumnIds} strategy={verticalListSortingStrategy}>
-                                {unpinnedColumnIds.map((id) => (
-                                    <SortableColumnRow
-                                        key={id}
-                                        id={id}
-                                        meta={metaById[id]}
-                                        isSelected={selectedIds.includes(id)}
-                                        isPinned={false}
-                                        isDraggingActive={activeDragId !== null}
-                                        onToggle={() => handleToggleOne(id)}
-                                        onTogglePin={() => handleTogglePin(id)}
-                                    />
-                                ))}
+                                {unpinnedColumnIds.map((id) => renderSortableRow(id, false))}
                             </SortableContext>
                             <DragOverlay>
                                 {activeDragId && !pinnedIds.includes(activeDragId) ? (
@@ -269,6 +373,29 @@ function TableDisplaySettingsSheet({
                         </DndContext>
                     </div>
                 </Card>
+                {customColumns && (
+                    <div className="mt-3">
+                        {editedCustomColumn ? (
+                            <CustomColumnForm
+                                key={editedCustomColumn.id}
+                                column={editedCustomColumn}
+                                onSave={handleSaveCustomColumn}
+                                onCancel={() => setEditedCustomColumn(null)}
+                            />
+                        ) : (
+                            <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={() =>
+                                    setEditedCustomColumn({ id: createCustomColumnId(), header: "", expression: "" })
+                                }
+                            >
+                                <Icon icon="plus" />
+                                Add a custom column
+                            </Button>
+                        )}
+                    </div>
+                )}
             </ViewSheet.Body>
             <ViewSheet.Footer>
                 <div className="d-flex justify-content-between w-100">
@@ -286,6 +413,69 @@ function TableDisplaySettingsSheet({
     );
 }
 
+interface CustomColumnFormProps {
+    column: CustomColumnDefinition;
+    onSave: (column: CustomColumnDefinition) => void;
+    onCancel: () => void;
+}
+
+function CustomColumnForm({ column, onSave, onCancel }: CustomColumnFormProps) {
+    const { control, handleSubmit } = useForm<CustomColumnFormData>({
+        defaultValues: { expression: column.expression, header: column.header },
+        resolver: yupResolver(customColumnSchema),
+    });
+
+    const handleSave: SubmitHandler<CustomColumnFormData> = (formData) => {
+        onSave({ id: column.id, header: formData.header, expression: formData.expression });
+    };
+
+    return (
+        <form onSubmit={handleSubmit(handleSave)}>
+            <Card className="bg-black p-2 vstack gap-2" data-testid="custom-column-form">
+                <FormGroup marginClass="m-0">
+                    <FormLabel className="mb-1">Binding expression</FormLabel>
+                    <FormInput
+                        type="text"
+                        control={control}
+                        name="expression"
+                        size="sm"
+                        placeholder="e.g. this.ShipTo.City"
+                        autoFocus
+                    />
+                </FormGroup>
+                <FormGroup marginClass="m-0">
+                    <FormLabel className="mb-1">Alias</FormLabel>
+                    <FormInput type="text" control={control} name="header" size="sm" placeholder="Column name" />
+                </FormGroup>
+                <div className="d-flex gap-2 justify-content-end">
+                    <Button variant="secondary" size="sm" onClick={onCancel}>
+                        <Icon icon="cancel" />
+                        Cancel
+                    </Button>
+                    <Button type="submit" variant="success" size="sm">
+                        <Icon icon="check" />
+                        Save column
+                    </Button>
+                </div>
+            </Card>
+        </form>
+    );
+}
+
+const customColumnSchema = yup.object({
+    expression: yup
+        .string()
+        .trim()
+        .required("The binding expression is required")
+        .test("custom-column-expression", function (value) {
+            const error = value ? getCustomColumnExpressionError(value) : null;
+            return error ? this.createError({ message: error }) : true;
+        }),
+    header: yup.string().trim().required("The alias is required"),
+});
+
+type CustomColumnFormData = yup.InferType<typeof customColumnSchema>;
+
 interface ColumnRowProps {
     id: string;
     meta: ColumnMeta;
@@ -293,6 +483,8 @@ interface ColumnRowProps {
     isPinned: boolean;
     onToggle?: () => void;
     onTogglePin?: () => void;
+    onEdit?: () => void;
+    onRemove?: () => void;
 }
 
 interface SortableColumnRowProps extends ColumnRowProps {
@@ -307,6 +499,8 @@ function SortableColumnRow({
     isDraggingActive,
     onToggle,
     onTogglePin,
+    onEdit,
+    onRemove,
 }: SortableColumnRowProps) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
@@ -337,6 +531,28 @@ function SortableColumnRow({
             >
                 <span className="column-list-item-name">{meta.headerTitle}</span>
             </Checkbox>
+            {meta.customColumn && (
+                <>
+                    <Button
+                        variant="link"
+                        size="sm"
+                        className="p-0 flex-shrink-0 text-reset"
+                        title="Edit custom column"
+                        onClick={onEdit}
+                    >
+                        <Icon icon="edit" margin="m-0" />
+                    </Button>
+                    <Button
+                        variant="link"
+                        size="sm"
+                        className="p-0 flex-shrink-0 text-reset"
+                        title="Remove custom column"
+                        onClick={onRemove}
+                    >
+                        <Icon icon="trash" margin="m-0" />
+                    </Button>
+                </>
+            )}
             <Button
                 variant="link"
                 size="sm"

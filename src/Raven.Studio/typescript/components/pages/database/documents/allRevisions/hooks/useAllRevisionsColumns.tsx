@@ -7,9 +7,11 @@ import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { Icon } from "components/common/Icon";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { CellWithCopy, CellWithCopyWrapper } from "components/common/virtualTable/cells/CellWithCopy";
+import { columnCheckbox } from "components/common/virtualTable/utils/commonColumnDefs";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useAppSelector } from "components/store";
+import { useMemo } from "react";
 
 export function useAllRevisionsColumns(
     databaseName: string,
@@ -20,7 +22,30 @@ export function useAllRevisionsColumns(
 ): ColumnDef<RevisionsPreviewResultItem>[] {
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
-    const checkboxWidth = hasDatabaseAdminAccess ? 38 : 0;
+    // column defs must be stable between renders, otherwise flexRender remounts every cell on each render
+    return useMemo(
+        () =>
+            createColumns(
+                databaseName,
+                isSharded,
+                tableBodyWidth,
+                rowSelection,
+                setRowSelection,
+                hasDatabaseAdminAccess
+            ),
+        [databaseName, isSharded, tableBodyWidth, rowSelection, setRowSelection, hasDatabaseAdminAccess]
+    );
+}
+
+function createColumns(
+    databaseName: string,
+    isSharded: boolean,
+    tableBodyWidth: number,
+    rowSelection: RevisionsPreviewResultItem[],
+    setRowSelection: (rows: RevisionsPreviewResultItem[]) => void,
+    hasDatabaseAdminAccess: boolean
+): ColumnDef<RevisionsPreviewResultItem>[] {
+    const checkboxWidth = hasDatabaseAdminAccess ? columnCheckbox.size : 0;
 
     const sizeProvider = virtualTableUtils.getCellSizeProvider(tableBodyWidth - checkboxWidth);
 
@@ -185,7 +210,12 @@ function CheckboxCell({ rowValue, rowSelection, setRowSelection }: CheckboxCellP
             }}
             popoverPlacement="top"
         >
-            <Checkbox selected={isSelected} toggleSelection={toggleSelection} disabled={isDeleteRevision} />
+            <Checkbox
+                selected={isSelected}
+                toggleSelection={toggleSelection}
+                disabled={isDeleteRevision}
+                className="selection-checkbox"
+            />
         </ConditionalPopover>
     );
 }
