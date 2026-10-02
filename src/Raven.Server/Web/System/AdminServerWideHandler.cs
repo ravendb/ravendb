@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions;
@@ -213,6 +214,10 @@ namespace Raven.Server.Web.System
                 if (errors.Count > 0)
                     throw new BadRequestException($"Invalid connection string configuration. Errors: {string.Join($"{Environment.NewLine}", errors)}");
 
+                if (serverWideConnectionString.ConnectionString is AiConnectionString aiConnectionString &&
+                    aiConnectionString.EnsureIdentifier(out var identifierErrors) == false)
+                    throw new BadRequestException($"Invalid connection string identifier. Errors: {string.Join($"{Environment.NewLine}", identifierErrors)}");
+
                 var (newIndex, _) = await ServerStore.PutServerWideConnectionStringAsync(serverWideConnectionString, GetRaftRequestIdFromQuery());
                 await ServerStore.Cluster.WaitForIndexNotification(newIndex);
 
@@ -258,8 +263,13 @@ namespace Raven.Server.Web.System
                 foreach (var blittable in blittables)
                 {
                     var connectionString = ServerWideConnectionString.FromBlittable(blittable);
-                    if (connectionString != null)
-                        result.Results.Add(connectionString);
+                    if (connectionString == null)
+                        continue;
+
+                    if (connectionString.ConnectionString is AiConnectionString aiConnectionString)
+                        aiConnectionString.EnsureIdentifier(out _);
+
+                    result.Results.Add(connectionString);
                 }
 
                 if (result.Results.Count > 0)

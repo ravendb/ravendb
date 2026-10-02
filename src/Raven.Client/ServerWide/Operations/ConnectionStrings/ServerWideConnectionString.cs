@@ -63,6 +63,12 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
             return $"{NamePrefix}, {name}";
         }
 
+        internal static string GetNameFromDatabaseRecordConnectionStringName(string databaseRecordName)
+        {
+            var prefix = GetDatabaseRecordConnectionStringName(string.Empty);
+            return databaseRecordName.StartsWith(prefix, StringComparison.Ordinal) ? databaseRecordName.Substring(prefix.Length) : databaseRecordName;
+        }
+
         public DynamicJsonValue ToJson()
         {
             var json = ConnectionString?.ToJson() ?? new DynamicJsonValue();
