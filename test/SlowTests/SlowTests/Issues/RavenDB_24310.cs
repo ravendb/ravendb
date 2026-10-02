@@ -887,6 +887,28 @@ public class RavenDB_24310 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Ai)]
+    public async Task ServerWideAiConnectionString_RejectsNewDatabaseWhoseConnectionStringWithoutIdentifierWouldGetConflictingIdentifier()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var dbLevelName = "DbLevelAiCS";
+            var identifier = AiTaskIdentifierHelper.GenerateIdentifier(dbLevelName);
+            await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(new ServerWideConnectionString
+            {
+                ConnectionString = NewAiConnectionString("MyAiCS", identifier)
+            }));
+
+            var newDbName = store.Database + "_new";
+            var newRecord = new DatabaseRecord(newDbName);
+            newRecord.AiConnectionStrings[dbLevelName] = NewAiConnectionString(dbLevelName, identifier: null);
+
+            var ex = await Assert.ThrowsAsync<RavenException>(async () =>
+                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(newRecord)));
+            Assert.Contains($"The identifier '{identifier}' is already used by connection string '{dbLevelName}' in database '{newDbName}'", ex.Message);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Ai)]
     public async Task ServerWideAiConnectionStrings_WithoutIdentifiers_GetIdentifiersWhenPropagatedToNewDatabase()
     {
         using (var store = GetDocumentStore())
@@ -902,6 +924,12 @@ public class RavenDB_24310 : RavenTestBase
             {
                 ClusterStateMachine.PutValueDirectly(context, ClusterStateMachine.ServerWideConfigurationKey.ConnectionStringAi, json, 1);
                 tx.Commit();
+            }
+
+            foreach (var name in names)
+            {
+                var getResult = await store.Maintenance.Server.SendAsync(new GetServerWideConnectionStringsOperation(name, ConnectionStringType.Ai));
+                Assert.Equal(AiTaskIdentifierHelper.GenerateIdentifier(name), ((AiConnectionString)getResult.Results.Single().ConnectionString).Identifier);
             }
 
             var newDbName = store.Database + "_new";

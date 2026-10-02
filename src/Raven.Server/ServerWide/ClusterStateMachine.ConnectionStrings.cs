@@ -247,7 +247,7 @@ public sealed partial class ClusterStateMachine
             if (aiConnectionStrings.TryGet(propertyName, out BlittableJsonReaderObject existing) == false || existing == null)
                 continue;
 
-            if (existing.TryGet(nameof(AiConnectionString.Identifier), out string existingIdentifier) && existingIdentifier == identifier)
+            if (PutServerWideConnectionStringCommand.GetEffectiveAiIdentifier(existing, propertyName) == identifier)
                 ThrowAiIdentifierInUse(connectionStringName, identifier, propertyName, databaseName);
         }
     }
@@ -259,7 +259,7 @@ public sealed partial class ClusterStateMachine
             if (name == connectionStringName)
                 continue;
 
-            if (existing?.Identifier == identifier)
+            if (existing != null && PutServerWideConnectionStringCommand.GetEffectiveAiIdentifier(existing.Identifier, name) == identifier)
                 ThrowAiIdentifierInUse(connectionStringName, identifier, name, databaseName);
         }
     }
