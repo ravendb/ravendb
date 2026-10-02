@@ -242,7 +242,7 @@ public sealed partial class ClusterStateMachine
     {
         foreach (var propertyName in aiConnectionStrings.GetPropertyNames())
         {
-            if (string.Equals(propertyName, connectionStringName, StringComparison.OrdinalIgnoreCase))
+            if (propertyName == connectionStringName)
                 continue;
 
             if (aiConnectionStrings.TryGet(propertyName, out BlittableJsonReaderObject existing) == false || existing == null)
@@ -257,7 +257,7 @@ public sealed partial class ClusterStateMachine
     {
         foreach (var (name, existing) in aiConnectionStrings)
         {
-            if (string.Equals(name, connectionStringName, StringComparison.OrdinalIgnoreCase))
+            if (name == connectionStringName)
                 continue;
 
             if (existing?.Identifier == identifier)
