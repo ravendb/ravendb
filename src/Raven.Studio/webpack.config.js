@@ -139,7 +139,7 @@ module.exports = (_, args) => {
                                 sourceMap: true,
                                 sassOptions: {
                                     quietDeps: true,
-                                    silenceDeprecations: ["mixed-decls", "color-functions", "global-builtin", "import"],
+                                    silenceDeprecations: ["color-functions", "global-builtin", "import"],
                                 },
                             },
                         },
@@ -221,6 +221,7 @@ function getPlugins({ isProductionMode, isWatchMode }) {
         new MiniCssExtractPlugin({
             filename: "styles/[name].css",
             chunkFilename: "styles/[name].css",
+            ignoreOrder: true,
         }),
         new HtmlWebpackPlugin({
             template: path.join(__dirname, "wwwroot/index.html"),

@@ -9,8 +9,7 @@ import {
 } from "components/setupWizard/setupWizardValidation";
 import { setupWizardConstants } from "components/setupWizard/utils/setupWizardConstants";
 import { Meta, StoryObj } from "@storybook/react-webpack5";
-import { expect, waitFor } from "storybook/test";
-import { userEvent } from "storybook/internal/test";
+import { expect, userEvent, waitFor } from "storybook/test";
 
 const getSecurityOptionLabel = (option: SetupWizardSecurityOption): string => {
     switch (option) {
