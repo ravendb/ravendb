@@ -1,0 +1,267 @@
+using System;
+using System.Linq;
+using FastTests;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.Documents.Session;
+using Raven.Server.Config;
+using Tests.Infrastructure;
+using Xunit;
+using Xunit.Abstractions;
+
+namespace SlowTests.Issues;
+
+public class RavenDB_27536 : RavenTestBase
+{
+    public RavenDB_27536(ITestOutputHelper output) : base(output)
+    {
+    }
+
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void MoreLikeThisRanksItsResults(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        store.ExecuteIndex(new Widgets_ByCategoryAndName());
+
+        var target = new Widget { Key = Guid.NewGuid(), Category = "common", Name = "Alpha Bravo Charlie" };
+        var duplicate = new Widget { Key = Guid.NewGuid(), Category = "common", Name = "Alpha Bravo Charlie" };
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(target);
+
+            // the fillers share Category only; the duplicate also matches on Name
+            for (int i = 0; i < 150; i++)
+                session.Store(new Widget { Key = Guid.NewGuid(), Category = target.Category, Name = $"filler-{i}" });
+
+            session.Store(duplicate);
+            session.SaveChanges();
+        }
+
+        Indexes.WaitForIndexing(store);
+
+        using var s = store.OpenSession();
+
+        // the duplicate is stored last, so entry order alone would leave it outside a page of 100
+        var page = Similar<Widgets_ByCategoryAndName>(s, target, boost: false, take: 100);
+
+        Assert.Equal(duplicate.Key, page[0].Key);
+        Assert.DoesNotContain(page, x => x.Key == target.Key);
+        Assert.Equal(duplicate.Key, Similar<Widgets_ByCategoryAndName>(s, target, boost: true, take: 100)[0].Key);
+
+        if (options.SearchEngineMode == RavenSearchEngineMode.Corax)
+        {
+            // Corax budgets the sort for the rows the loop drops; Lucene bounds its collector by the page size and returns 99
+            Assert.Equal(100, page.Length);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void MoreLikeThisFillsThePageOnAFanoutIndex(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        store.ExecuteIndex(new Widgets_ByTag());
+
+        // three index entries per document: the sort budget has to be in entries, not documents
+        var target = new Widget { Key = Guid.NewGuid(), Category = "common", Name = "Alpha", Tags = new[] { "x", "y", "z" } };
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(target);
+
+            for (int i = 0; i < 40; i++)
+                session.Store(new Widget { Key = Guid.NewGuid(), Category = target.Category, Name = $"filler-{i}", Tags = new[] { "x", "y", "z" } });
+
+            session.SaveChanges();
+        }
+
+        Indexes.WaitForIndexing(store);
+
+        using var s = store.OpenSession();
+
+        var page = Similar<Widgets_ByTag>(s, target, boost: false, take: 10);
+
+        Assert.Equal(page.Length, page.Select(x => x.Key).Distinct().Count()); // one row per document, not one per entry
+
+        if (options.SearchEngineMode == RavenSearchEngineMode.Corax)
+        {
+            Assert.Equal(10, page.Length);
+
+            // blacklisted by id, so the sibling entries stay out too; Lucene compares one entry id and returns the base document
+            Assert.DoesNotContain(page, x => x.Key == target.Key);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void MoreLikeThisReportsTheScoreItRanksBy(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        store.ExecuteIndex(new Widgets_ByNameWords());
+
+        var target = new Widget { Key = Guid.NewGuid(), Category = "common", Name = "Alpha Bravo Charlie" };
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(target);
+
+            // tiers sharing three, two and one of the target's words, so the tiers score strictly apart
+            for (int i = 0; i < 3; i++)
+            {
+                session.Store(new Widget { Key = Guid.NewGuid(), Category = target.Category, Name = $"Alpha Bravo Charlie x{i}" });
+                session.Store(new Widget { Key = Guid.NewGuid(), Category = target.Category, Name = $"Alpha Bravo y{i}" });
+                session.Store(new Widget { Key = Guid.NewGuid(), Category = target.Category, Name = $"Alpha z{i}" });
+            }
+
+            // unrelated documents keep the shared words' idf positive
+            for (int i = 0; i < 5; i++)
+                session.Store(new Widget { Key = Guid.NewGuid(), Category = "rare", Name = $"Delta w{i}" });
+
+            session.SaveChanges();
+        }
+
+        Indexes.WaitForIndexing(store);
+
+        using var s = store.OpenSession();
+
+        var page = Similar<Widgets_ByNameWords>(s, target, boost: false, take: 20, fields: new[] { nameof(Widget.Name) });
+
+        var scored = page
+            .Select(x => (
+                Shared: x.Name.Split(' ').Count(w => w is "Alpha" or "Bravo" or "Charlie"),
+                Score: (double)s.Advanced.GetMetadataFor(x)[Constants.Documents.Metadata.IndexScore]))
+            .ToArray();
+
+        Assert.Equal(9, scored.Length);
+
+        // the page comes in the order of the score it reports
+        Assert.Equal(scored.Select(x => x.Score).OrderByDescending(x => x), scored.Select(x => x.Score));
+
+        // and each score belongs to its own row: a shifted score buffer would hand a row its neighbour's tier
+        Assert.True(scored.Where(x => x.Shared == 3).Min(x => x.Score) > scored.Where(x => x.Shared == 2).Max(x => x.Score));
+        Assert.True(scored.Where(x => x.Shared == 2).Min(x => x.Score) > scored.Where(x => x.Shared == 1).Max(x => x.Score));
+    }
+
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void MoreLikeThisBoostWeighsTermsByTheBaseDocument(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        store.ExecuteIndex(new Widgets_ByNameWords());
+
+        // alpha dominates the target and bravo barely appears; both are equally rare, so only the boost tells them apart
+        var target = new Widget { Key = Guid.NewGuid(), Category = "common", Name = "alpha alpha alpha alpha alpha alpha alpha alpha bravo" };
+
+        // same length, so Lucene's length norm treats them alike
+        var alpha = new Widget { Key = Guid.NewGuid(), Category = "common", Name = "alpha kilo" };
+        var bravo = new Widget { Key = Guid.NewGuid(), Category = "common", Name = "bravo bravo" };
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(target);
+            session.Store(alpha);
+            session.Store(bravo);
+
+            for (int i = 0; i < 5; i++)
+                session.Store(new Widget { Key = Guid.NewGuid(), Category = "rare", Name = $"delta w{i}" });
+
+            session.SaveChanges();
+        }
+
+        Indexes.WaitForIndexing(store);
+
+        using var s = store.OpenSession();
+
+        var fields = new[] { nameof(Widget.Name) };
+
+        // unboosted, the target's term frequencies play no part and bravo's second occurrence wins
+        Assert.Equal(new[] { bravo.Key, alpha.Key }, Similar<Widgets_ByNameWords>(s, target, boost: false, take: 10, fields: fields).Select(x => x.Key));
+
+        // boosted, bravo weighs an eighth of alpha, which outweighs its second occurrence
+        Assert.Equal(new[] { alpha.Key, bravo.Key }, Similar<Widgets_ByNameWords>(s, target, boost: true, take: 10, fields: fields).Select(x => x.Key));
+    }
+
+    private static Widget[] Similar<TIndex>(IDocumentSession session, Widget target, bool boost, int take, string[] fields = null)
+        where TIndex : AbstractIndexCreationTask, new()
+    {
+        return session.Advanced.DocumentQuery<Widget, TIndex>()
+            .MoreLikeThis(b => b
+                .UsingDocument(x => x.WhereEquals("Key", target.Key.ToString()))
+                .WithOptions(new MoreLikeThisOptions
+                {
+                    Boost = boost,
+                    Fields = fields,
+                    MaximumQueryTerms = int.MaxValue,
+                    MinimumDocumentFrequency = 0,
+                    MaximumDocumentFrequencyPercentage = 100,
+                    MinimumTermFrequency = 0,
+                    MinimumWordLength = 0
+                }))
+            .Take(take)
+            .ToArray();
+    }
+
+    private sealed class Widget
+    {
+        public string Id { get; set; }
+
+        public Guid Key { get; set; }
+
+        public string Category { get; set; }
+
+        public string Name { get; set; }
+
+        public string[] Tags { get; set; }
+    }
+
+    private sealed class Widgets_ByCategoryAndName : AbstractIndexCreationTask<Widget>
+    {
+        public Widgets_ByCategoryAndName()
+        {
+            Map = widgets => from w in widgets select new { w.Key, w.Category, w.Name };
+
+            Store(w => w.Key, FieldStorage.Yes);
+            Store(w => w.Category, FieldStorage.Yes);
+            Store(w => w.Name, FieldStorage.Yes);
+        }
+    }
+
+    private sealed class Widgets_ByNameWords : AbstractIndexCreationTask<Widget>
+    {
+        public Widgets_ByNameWords()
+        {
+            Map = widgets => from w in widgets select new { w.Key, w.Category, w.Name };
+
+            Store(w => w.Key, FieldStorage.Yes);
+            Store(w => w.Category, FieldStorage.Yes);
+            Store(w => w.Name, FieldStorage.Yes);
+
+            // one term per word, so documents can share part of a name
+            Index(w => w.Name, FieldIndexing.Search);
+
+            // Corax hides score metadata behind this opt-in, Lucene reports it either way
+            Configuration = new IndexConfiguration { [RavenConfiguration.GetKey(x => x.Indexing.CoraxIncludeDocumentScore)] = "true" };
+        }
+    }
+
+    private sealed class Widgets_ByTag : AbstractIndexCreationTask<Widget>
+    {
+        public Widgets_ByTag()
+        {
+            Map = widgets => from w in widgets
+                             from tag in w.Tags
+                             select new { w.Key, w.Category, w.Name, Tag = tag };
+
+            Store(w => w.Key, FieldStorage.Yes);
+            Store(w => w.Category, FieldStorage.Yes);
+            Store(w => w.Name, FieldStorage.Yes);
+        }
+    }
+}

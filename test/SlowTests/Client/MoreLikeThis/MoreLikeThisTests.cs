@@ -523,8 +523,7 @@ namespace SlowTests.Client.MoreLikeThis
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "No support for boosting")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void Can_Use_Boost_Param(Options options)
         {
             using (var store = GetDocumentStore(options))
