@@ -1,12 +1,16 @@
 using System.Globalization;
+using Raven.Quill.Channels;
 
 namespace Raven.Quill.Telegram;
 
 internal static class TelegramConversationId
 {
-    // chats/ prefix satisfies AgentRouter.TryNormalizeConversationId; the UTC date
-    // segment rolls the same chat to a fresh conversation at midnight
-    internal static string ForUtcDay(string channelId, long telegramChatId, DateTime utcNow) =>
-        string.Create(CultureInfo.InvariantCulture,
-            $"chats/tg/{channelId}/{telegramChatId}/{utcNow:yyyy-MM-dd}");
+    internal static string For(
+        string channelId, long telegramChatId, Dictionary<string, string> parameters) =>
+        ChannelConversationId.For(
+            ChannelType.Telegram, channelId, telegramChatId.ToString(CultureInfo.InvariantCulture), parameters);
+
+    internal static string ChatPrefix(string channelId, long telegramChatId) =>
+        ChannelConversationId.ChatPrefix(
+            ChannelType.Telegram, channelId, telegramChatId.ToString(CultureInfo.InvariantCulture));
 }
