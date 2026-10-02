@@ -182,6 +182,9 @@
         },
         "bootstrap-multiselect": {
             "jquery": "3.7.1"
+        },
+        "@storybook/builder-webpack5": {
+            "webpack-dev-middleware": "^7.4.6"
         }
     }
 }
