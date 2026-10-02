@@ -263,8 +263,13 @@ namespace Raven.Server.Web.System
                 foreach (var blittable in blittables)
                 {
                     var connectionString = ServerWideConnectionString.FromBlittable(blittable);
-                    if (connectionString != null)
-                        result.Results.Add(connectionString);
+                    if (connectionString == null)
+                        continue;
+
+                    if (connectionString.ConnectionString is AiConnectionString aiConnectionString)
+                        aiConnectionString.EnsureIdentifier(out _);
+
+                    result.Results.Add(connectionString);
                 }
 
                 if (result.Results.Count > 0)
