@@ -72,7 +72,9 @@ public partial class CoraxQueryBuilder
                 ? new Lazy<List<string>>(() => IndexSearcher.GetFields())
                 : null;
 
-            AllowImplicitScoreOrdering = allowImplicitScoreOrdering;
+            AllowImplicitScoreOrdering = allowImplicitScoreOrdering
+                                         && (index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved
+                                             || (Metadata.HasVectorSearch && index.Configuration.CoraxVectorSearchOrderByScoreAutomatically));
 
             // in case when we've implicit boosting we've built primitives with scoring enabled
             QueryHasBoost = (index.HasBoostedFields
@@ -80,7 +82,7 @@ public partial class CoraxQueryBuilder
                         || IsVectorSingleClause
                         || (query.Metadata.HasVectorSearch && index.Configuration.CoraxVectorSearchOrderByScoreAutomatically)
                         || HasBoostingAsOrderingType(query.Metadata.OrderBy))
-                       && (query.Metadata.HasVectorSearch || ScoresAreConsumed(query, index, allowImplicitScoreOrdering));
+                       && (query.Metadata.HasVectorSearch || ScoresAreConsumed(query, AllowImplicitScoreOrdering));
             Allocator = allocator;
             IndexReadOperation = indexReadOperation;
             DeduplicationDisabled = deduplicationDisabled;
@@ -92,7 +94,7 @@ public partial class CoraxQueryBuilder
         // AndNotMatch never scores its excluded side
         public bool HasBoost => QueryHasBoost && NegationDepth == 0;
 
-        private static bool ScoresAreConsumed(IndexQueryServerSide query, Index index, bool allowImplicitScoreOrdering)
+        private static bool ScoresAreConsumed(IndexQueryServerSide query, bool allowImplicitScoreOrdering)
         {
             if (query.PageSize == 0)
                 return false;
@@ -100,8 +102,7 @@ public partial class CoraxQueryBuilder
             if (query.Metadata.OrderBy is not null)
                 return HasBoostingAsOrderingType(query.Metadata.OrderBy);
 
-            return allowImplicitScoreOrdering
-                   && (index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved || index.Configuration.CoraxVectorSearchOrderByScoreAutomatically);
+            return allowImplicitScoreOrdering;
         }
 
         private static bool HasBoostingAsOrderingType(OrderByField[] orderBy)

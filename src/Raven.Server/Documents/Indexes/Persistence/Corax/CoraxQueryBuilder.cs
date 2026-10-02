@@ -1282,9 +1282,7 @@ public static partial class CoraxQueryBuilder
 
         if (orderByFields == null)
         {
-            if (builderParameters.HasBoost && builderParameters.AllowImplicitScoreOrdering && (
-                    index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved 
-                    || index.Configuration.CoraxVectorSearchOrderByScoreAutomatically))
+            if (builderParameters.HasBoost && builderParameters.AllowImplicitScoreOrdering)
             {
                 // in case when we've single vector clause and we exose the score or documents are boosted, we have to go through 
                 // order by primitive to retrieve or boost them; otherwise scores are detected as natively sorted
