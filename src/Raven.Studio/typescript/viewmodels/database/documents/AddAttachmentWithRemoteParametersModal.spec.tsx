@@ -1,5 +1,5 @@
 import React from "react";
-import { act, rtlRender, RtlScreen, waitFor, within } from "test/rtlTestUtils";
+import { rtlRender, RtlScreen, waitFor, within } from "test/rtlTestUtils";
 import { mockServices } from "test/mocks/services/MockServices";
 import document from "models/database/documents/document";
 import editDocumentUploader = require("viewmodels/database/documents/editDocumentUploader");
@@ -59,13 +59,13 @@ describe("AddAttachmentWithRemoteParametersModal", () => {
 
     async function selectFiles(screen: RtlScreen, user: User, files: File[]) {
         const fileInput = await screen.findByTestId("file-input");
-        await act(() => user.upload(fileInput, files));
+        await user.upload(fileInput, files);
     }
 
     async function clickSave(screen: RtlScreen, user: User) {
         const saveButton = await screen.findByRole("button", { name: /Save attachment/ });
         await waitFor(() => expect(saveButton).toBeEnabled());
-        await act(() => user.click(saveButton));
+        await user.click(saveButton);
     }
 
     it("uploads every selected file with the chosen remote parameters", async () => {
@@ -101,7 +101,7 @@ describe("AddAttachmentWithRemoteParametersModal", () => {
         const { screen, user } = renderModal();
         await selectFiles(screen, user, [fileA, fileB]);
 
-        await act(() => user.click(screen.getByRole("button", { name: "Remove a.txt" })));
+        await user.click(screen.getByRole("button", { name: "Remove a.txt" }));
 
         await waitFor(() => expect(screen.queryByText("a.txt")).not.toBeInTheDocument());
         await clickSave(screen, user);
@@ -185,7 +185,7 @@ describe("AddAttachmentWithRemoteParametersModal", () => {
         await clickSave(screen, user);
 
         const cancelButton = await screen.findByRole("button", { name: "Cancel upload of a.txt" });
-        await act(() => user.click(cancelButton));
+        await user.click(cancelButton);
 
         expect(abortCurrent).toHaveBeenCalledTimes(1);
         abortCurrent.mockRestore();
