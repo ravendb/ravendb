@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions;
@@ -212,6 +213,14 @@ namespace Raven.Server.Web.System
                 serverWideConnectionString.ConnectionString.Validate(errors);
                 if (errors.Count > 0)
                     throw new BadRequestException($"Invalid connection string configuration. Errors: {string.Join($"{Environment.NewLine}", errors)}");
+
+                if (serverWideConnectionString.ConnectionString is AiConnectionString aiConnectionString)
+                {
+                    if (string.IsNullOrWhiteSpace(aiConnectionString.Identifier))
+                        aiConnectionString.Identifier = AiTaskIdentifierHelper.GenerateIdentifier(aiConnectionString.Name);
+                    if (AiTaskIdentifierHelper.ValidateIdentifier(aiConnectionString.Identifier, out var identifierErrors) == false)
+                        throw new BadRequestException($"Invalid connection string identifier. Errors: {string.Join($"{Environment.NewLine}", identifierErrors)}");
+                }
 
                 var (newIndex, _) = await ServerStore.PutServerWideConnectionStringAsync(serverWideConnectionString, GetRaftRequestIdFromQuery());
                 await ServerStore.Cluster.WaitForIndexNotification(newIndex);

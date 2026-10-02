@@ -1,4 +1,6 @@
+using System;
 using System.Linq;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Server.Rachis;
@@ -35,6 +37,8 @@ namespace Raven.Server.ServerWide.Commands
                 Value.ExcludedDatabases.Any(string.IsNullOrWhiteSpace))
                 throw new RachisApplyException($"{nameof(ServerWideConnectionString.ExcludedDatabases)} cannot contain null or empty database names");
 
+            EnsureAiIdentifier(Value);
+
             if (previousValue != null)
             {
                 previousValue.Modifications = new DynamicJsonValue(previousValue);
@@ -48,6 +52,18 @@ namespace Raven.Server.ServerWide.Commands
             };
 
             return context.ReadObject(djv, Name);
+        }
+
+        internal static void EnsureAiIdentifier(ServerWideConnectionString connectionString)
+        {
+            if (connectionString.ConnectionString is not AiConnectionString aiConnectionString)
+                return;
+
+            if (string.IsNullOrWhiteSpace(aiConnectionString.Identifier))
+                aiConnectionString.Identifier = AiTaskIdentifierHelper.GenerateIdentifier(aiConnectionString.Name);
+
+            if (AiTaskIdentifierHelper.ValidateIdentifier(aiConnectionString.Identifier, out var errors) == false)
+                throw new RachisApplyException($"Invalid identifier format. Validation errors:{Environment.NewLine} - {string.Join($"{Environment.NewLine} - ", errors)}");
         }
 
         internal static string GetConnectionStringDictionaryPropertyName(ConnectionStringType type)
