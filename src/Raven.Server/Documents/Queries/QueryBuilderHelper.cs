@@ -30,6 +30,119 @@ public static class QueryBuilderHelper
 {
     internal const int ScoreId = -1;
 
+    // a lower or an upper bound on a field against a literal or a parameter, the shape the between fold works on
+    internal static bool IsRangeBound(BinaryExpression expression)
+    {
+        return expression.IsRangeOperation && expression.Right is ValueExpression;
+    }
+
+    // the paths must match in full: FieldExpression.Equals ignores the first segment to tolerate an alias,
+    // which would make 'Origin.X' and 'Destination.X' the same field
+    internal static bool IsSameField(QueryExpression first, QueryExpression second)
+    {
+        if (first is FieldExpression firstField && second is FieldExpression secondField)
+            return firstField.FieldValue == secondField.FieldValue;
+
+        return first.Equals(second);
+    }
+
+    // lower bounds keep the greater value, upper bounds the lesser; on a tie the strict operator wins
+    internal static BinaryExpression TighterBound(BinaryExpression first, BinaryExpression second, int comparison)
+    {
+        if (comparison == 0)
+            return first.Operator is OperatorType.GreaterThan or OperatorType.LessThan ? first : second;
+
+        if (first.IsGreaterThan)
+            return comparison > 0 ? first : second;
+
+        return comparison < 0 ? first : second;
+    }
+
+    /// <summary>
+    /// 'Foo > $a and Foo > $b' needs only the tighter bound, but which one that is depends on the parameter values, which
+    /// are known only while building the query. <see cref="WhereClauseNormalizer"/> already placed such bounds next to each
+    /// other along the left spine of the 'and' chain, so this walks that spine from <paramref name="and"/> and keeps the
+    /// tighter bound at every step. Values that cannot be compared stop the walk and stay as they are; what the walk did not
+    /// consume comes back as <paramref name="remainder"/>, null when the whole chain was bounds on this field.
+    /// Returns false when fewer than two bounds were merged, without allocating.
+    /// </summary>
+    internal static bool TryMergeSameDirectionBounds(BinaryExpression and, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, Index index,
+        out BinaryExpression tighter, out QueryExpression remainder)
+    {
+        tighter = null;
+        remainder = null;
+
+        if (and.Right is not BinaryExpression last || IsRangeBound(last) == false)
+            return false;
+
+        QueryFieldName fieldName = null;
+        var merged = false;
+        tighter = last;
+        QueryExpression node = and.Left;
+
+        while (node != null)
+        {
+            BinaryExpression candidate;
+            QueryExpression rest;
+            if (node is BinaryExpression { Operator: OperatorType.And } inner && inner.Right is BinaryExpression innerRight && IsRangeBound(innerRight))
+            {
+                candidate = innerRight;
+                rest = inner.Left;
+            }
+            else if (node is BinaryExpression leaf && IsRangeBound(leaf))
+            {
+                candidate = leaf;
+                rest = null;
+            }
+            else
+                break;
+
+            if (IsSameField(candidate.Left, tighter.Left) == false || candidate.IsGreaterThan != tighter.IsGreaterThan)
+                break;
+
+            fieldName ??= ExtractIndexFieldName(query, parameters, tighter.Left, metadata);
+
+            var comparison = CompareBoundValues(query, metadata, parameters, index, fieldName, (ValueExpression)candidate.Right, (ValueExpression)tighter.Right);
+            if (comparison == null)
+                break;
+
+            tighter = TighterBound(candidate, tighter, comparison.Value);
+            merged = true;
+            node = rest;
+        }
+
+        if (merged == false)
+        {
+            tighter = null;
+            return false;
+        }
+
+        remainder = node;
+        return true;
+    }
+
+    // numbers compare as numbers, dates as ticks when the index knows the field holds dates; anything else is not comparable
+    private static int? CompareBoundValues(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, Index index, QueryFieldName fieldName,
+        ValueExpression first, ValueExpression second)
+    {
+        var (firstValue, firstType) = GetValue(query, metadata, parameters, first);
+        var (secondValue, secondType) = GetValue(query, metadata, parameters, second);
+
+        if (firstType == ValueTokenType.Long && secondType == ValueTokenType.Long)
+            return ((long)firstValue).CompareTo((long)secondValue);
+
+        if (IsNumber(firstType) && IsNumber(secondType))
+            return Convert.ToDouble(firstValue, CultureInfo.InvariantCulture).CompareTo(Convert.ToDouble(secondValue, CultureInfo.InvariantCulture));
+
+        if (firstType == ValueTokenType.String && secondType == ValueTokenType.String &&
+            TryUseTime(index, fieldName, firstValue, secondValue, exact: false, out var firstTicks, out var secondTicks))
+            return firstTicks.CompareTo(secondTicks);
+
+        return null;
+
+        static bool IsNumber(ValueTokenType type) => type is ValueTokenType.Long or ValueTokenType.Double;
+    }
+
     internal static IEnumerable<(object Value, ValueTokenType Type)> GetValues(Query query, QueryMetadata metadata,
         BlittableJsonReaderObject parameters, ValueExpression value)
     {
