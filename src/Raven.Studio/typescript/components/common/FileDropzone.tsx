@@ -17,6 +17,7 @@ interface FileDropzoneProps {
     className?: string;
     showSelectedFiles?: boolean;
     disabled?: boolean;
+    displayedExtensions?: string[];
 }
 
 export default function FileDropzone({
@@ -27,6 +28,7 @@ export default function FileDropzone({
     className,
     showSelectedFiles = true,
     disabled = false,
+    displayedExtensions,
 }: FileDropzoneProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -139,7 +141,7 @@ export default function FileDropzone({
                     maxFiles={maxFiles}
                     isDragging={isDragging}
                 />
-                <ValidExtensionsList validExtensions={validExtensions} />
+                <ValidExtensionsList validExtensions={displayedExtensions ?? validExtensions} />
             </div>
         </div>
     );

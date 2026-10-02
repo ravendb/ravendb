@@ -1,0 +1,31 @@
+@use "Content/scss/sizes";
+
+// Variant styles (colors, gradients) are registered per page via the
+// navigation-card-variant mixin from navigationCardVariants.scss.
+
+.navigation-card {
+    .task-icon {
+        font-size: 1.25rem;
+    }
+
+    &.compact .card-body {
+        padding: sizes.$gutter-sm;
+    }
+
+    .license-restricted-badge {
+        z-index: 4;
+    }
+}
+
+// Pair with Bootstrap "d-grid gap-3" at the call site — this class only defines column counts.
+.navigation-cards-grid {
+    grid-template-columns: 1fr;
+
+    @media (min-width: sizes.$screen-sm) {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    @media (min-width: sizes.$screen-lg) {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+}

@@ -58,6 +58,9 @@ import saveCdcSinkTaskCommand from "commands/database/tasks/saveCdcSinkTaskComma
 import getCdcSinkTaskSchemaCommand from "commands/database/tasks/getCdcSinkTaskSchemaCommand";
 import verifyCdcSinkCommand from "commands/database/tasks/verifyCdcSinkCommand";
 import assertUnreachable from "components/utils/assertUnreachable";
+import importDatabaseFromFileCommand = require("commands/database/studio/importDatabaseFromFileCommand");
+import validateSmugglerOptionsCommand = require("commands/database/studio/validateSmugglerOptionsCommand");
+import getNextOperationIdCommand = require("commands/database/studio/getNextOperationIdCommand");
 
 export default class TasksService {
     async getOngoingTasks(databaseName: string, location: databaseLocationSpecifier) {
@@ -359,5 +362,17 @@ export default class TasksService {
 
     async verifyCdcSink(...args: ConstructorParameters<typeof verifyCdcSinkCommand>) {
         return new verifyCdcSinkCommand(...args).execute();
+    }
+
+    async validateSmugglerOptions(...args: ConstructorParameters<typeof validateSmugglerOptionsCommand>) {
+        return new validateSmugglerOptionsCommand(...args).execute();
+    }
+
+    async getNextOperationId(...args: ConstructorParameters<typeof getNextOperationIdCommand>) {
+        return new getNextOperationIdCommand(...args).execute();
+    }
+
+    async importDatabaseFromFile(...args: ConstructorParameters<typeof importDatabaseFromFileCommand>) {
+        return new importDatabaseFromFileCommand(...args).execute();
     }
 }
