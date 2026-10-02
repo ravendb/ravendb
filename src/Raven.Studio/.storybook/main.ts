@@ -1,13 +1,11 @@
-import { fileURLToPath } from "node:url";
 import type { StorybookConfig } from "@storybook/react-webpack5";
 import type { Configuration } from "webpack";
 import webpackConfigFunc from "../webpack.config.js";
-import path, { dirname } from "path";
+import path from "path";
 import webpack from "webpack";
 import { hooksForAutoMock } from "../typescript/components/hooks/hooksForAutoMock.ts";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = import.meta.dirname;
 
 const customHooksAliases: Record<string, string> = Object.fromEntries(
     hooksForAutoMock.map((name: string) => [
@@ -19,6 +17,7 @@ const customHooksAliases: Record<string, string> = Object.fromEntries(
 const webpackConfig: Configuration = webpackConfigFunc(null, {
     mode: "development",
     watch: false,
+    ignoreCssOrder: true,
 });
 
 const config: StorybookConfig = {
