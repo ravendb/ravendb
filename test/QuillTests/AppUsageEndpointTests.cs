@@ -26,6 +26,11 @@ public class AppUsageEndpointTests(ITestOutputHelper output) : QuillTestBase(out
         Assert.Equal(3, usage.Metrics.Conversations.Value);
         Assert.Equal(350_000, usage.Metrics.Tokens.Value);
 
+        // Sparkline tooltips read their dates from Buckets, so it must align 1:1 with each sparkline.
+        Assert.NotEmpty(usage.Metrics.Buckets);
+        Assert.Equal(usage.Metrics.Conversations.Sparkline.Length, usage.Metrics.Buckets.Length);
+        Assert.Equal(usage.Metrics.Tokens.Sparkline.Length, usage.Metrics.Buckets.Length);
+
         var top = usage.TopCapabilities;
         Assert.Equal(2, top.Length);
         Assert.Equal("support", top[0].Name);

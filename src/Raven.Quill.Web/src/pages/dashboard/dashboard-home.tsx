@@ -19,6 +19,7 @@ export function DashboardHome() {
 
     const cards = buildUsageStatCards(usageQuery.data, usageQuery.isPending);
     const hasApps = Boolean(appsQuery.data && appsQuery.data.length > 0);
+    const writesByApp = usageQuery.data?.isWritesUnavailable ? undefined : usageQuery.data?.writesByApp;
 
     return (
         <div className="space-y-6">
@@ -40,11 +41,7 @@ export function DashboardHome() {
                 skeleton={<DashboardAppsTableSkeleton period={period} />}
             >
                 {appsQuery.data && (
-                    <DashboardAppsTable
-                        apps={appsQuery.data}
-                        period={period}
-                        writesByApp={usageQuery.data?.writesByApp}
-                    />
+                    <DashboardAppsTable apps={appsQuery.data} period={period} writesByApp={writesByApp} />
                 )}
             </ApiState>
         </div>

@@ -1,6 +1,6 @@
 namespace Raven.Quill.Contracts;
 
-public sealed record UsageResponse(List<UsagePoint> Points, List<AppWrites> WritesByApp);
+public sealed record UsageResponse(List<UsagePoint> Points, List<AppWrites> WritesByApp, bool IsWritesUnavailable);
 
 public sealed record UsagePoint(DateTime Timestamp, long Conversations, long Messages, long Tokens, long Writes);
 
