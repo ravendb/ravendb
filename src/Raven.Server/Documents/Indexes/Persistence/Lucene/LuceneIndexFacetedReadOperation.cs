@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -188,6 +188,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             foreach (var readerFacetInfo in returnedReaders)
             {
+                // a reader without matches has nothing to contribute, and loading the field's terms, let alone building the
+                // per-document term index, would only fill the caches on its behalf
+                if (readerFacetInfo.Results.Count == 0)
+                    continue;
+
                 Dictionary<string, int[]> termsForField;
                 using (queryTimings?.For(nameof(QueryTimingsScope.Names.Terms)))
                     termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, result.Value.AggregateBy, _indexName, _state);
