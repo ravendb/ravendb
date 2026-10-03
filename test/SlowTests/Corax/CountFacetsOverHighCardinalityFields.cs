@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
@@ -8,7 +9,7 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Corax
+namespace SlowTests.Corax
 {
     // A Corax count-only facet with a where clause used to run one term query per distinct term of the facet field,
     // however few documents matched. When the matches are fewer than the terms the server now takes the per-document
