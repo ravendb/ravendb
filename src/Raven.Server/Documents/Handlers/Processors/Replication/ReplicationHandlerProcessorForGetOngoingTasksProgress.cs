@@ -39,6 +39,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         public IDictionary<long, ReplicationTaskProgress> GetProcessesProgress(DocumentsOperationContext context, StringValues names)
         {
             var replicationTasks = new Dictionary<long, ReplicationTaskProgress>();
+            var isExact = IsExact();
 
             foreach (var handler in RequestHandler.Database.ReplicationLoader.OutgoingHandlers)
             {
@@ -62,14 +63,14 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
                         ReplicationType = node.Type,
                         ProcessesProgress = new List<ReplicationProcessProgress>
                         {
-                            RequestHandler.Database.ReplicationLoader.GetOutgoingReplicationProgress(context, handler)
+                            RequestHandler.Database.ReplicationLoader.GetOutgoingReplicationProgress(context, handler, isExact)
                         }
                     };
 
                     continue;
                 }
 
-                taskProgress.ProcessesProgress.Add(RequestHandler.Database.ReplicationLoader.GetOutgoingReplicationProgress(context, handler));
+                taskProgress.ProcessesProgress.Add(RequestHandler.Database.ReplicationLoader.GetOutgoingReplicationProgress(context, handler, isExact));
             }
 
             return replicationTasks;

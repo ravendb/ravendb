@@ -1,4 +1,5 @@
 ﻿using JetBrains.Annotations;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands.Indexes;
@@ -14,5 +15,14 @@ internal abstract class AbstractIndexHandlerProcessorForProgress<TRequestHandler
     {
     }
 
-    protected override RavenCommand<IndexProgress[]> CreateCommandForNode(string nodeTag) => new GetIndexesProgressCommand(nodeTag);
+    protected override RavenCommand<IndexProgress[]> CreateCommandForNode(string nodeTag)
+    {
+        var names = GetNames();
+        var exact = IsExact();
+        return new GetIndexesProgressCommand(nodeTag, names, exact);
+    }
+
+    protected StringValues GetNames() => RequestHandler.GetStringValuesQueryString("name", required: false);
+
+    protected bool IsExact() => RequestHandler.GetBoolValueQueryString("exact", required: false) ?? false;
 }

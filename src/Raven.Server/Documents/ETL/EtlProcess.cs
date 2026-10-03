@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.ETL
 
         public abstract OngoingTaskConnectionStatus GetConnectionStatus();
 
-        public abstract EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext);
+        public abstract EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext, bool exact);
 
         internal abstract bool IsRunning { get; }
 
@@ -1361,7 +1361,7 @@ namespace Raven.Server.Documents.ETL
             });
         }
 
-        public override EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext)
+        public override EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext, bool exact)
         {
             var result = new EtlProcessProgress
             {
@@ -1379,25 +1379,35 @@ namespace Raven.Server.Documents.ETL
             var overallDuration = Stopwatch.StartNew();
             foreach (var collection in collections)
             {
-                result.NumberOfDocumentsToProcess += Database.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext, collection, lastProcessedEtag, out var total, overallDuration);
-                result.TotalNumberOfDocuments += total;
+                var entriesAfter = Database.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact);
+                result.NumberOfDocumentsToProcess += entriesAfter.Count;
+                result.TotalNumberOfDocuments += entriesAfter.Total;
+                result.Estimated |= entriesAfter.Estimated;
 
-                result.NumberOfDocumentTombstonesToProcess += Database.DocumentsStorage.GetNumberOfTombstonesToProcess(documentsContext, collection, lastProcessedEtag, out total, overallDuration);
-                result.TotalNumberOfDocumentTombstones += total;
+                entriesAfter = Database.DocumentsStorage.GetNumberOfTombstonesToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact);
+                result.NumberOfDocumentTombstonesToProcess += entriesAfter.Count;
+                result.TotalNumberOfDocumentTombstones += entriesAfter.Total;
+                result.Estimated |= entriesAfter.Estimated;
 
                 if (ShouldTrackCounters())
                 {
-                    result.NumberOfCounterGroupsToProcess += Database.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(documentsContext, collection, lastProcessedEtag, out total, overallDuration);
-                    result.TotalNumberOfCounterGroups += total;
+                    entriesAfter = Database.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact);
+                    result.NumberOfCounterGroupsToProcess += entriesAfter.Count;
+                    result.TotalNumberOfCounterGroups += entriesAfter.Total;
+                    result.Estimated |= entriesAfter.Estimated;
                 }
 
                 if (ShouldTrackTimeSeries())
                 {
-                    result.NumberOfTimeSeriesSegmentsToProcess += Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(documentsContext, collection, lastProcessedEtag, out total, overallDuration);
-                    result.TotalNumberOfTimeSeriesSegments += total;
+                    entriesAfter = Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact);
+                    result.NumberOfTimeSeriesSegmentsToProcess += entriesAfter.Count;
+                    result.TotalNumberOfTimeSeriesSegments += entriesAfter.Total;
+                    result.Estimated |= entriesAfter.Estimated;
 
-                    result.NumberOfTimeSeriesDeletedRangesToProcess += Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(documentsContext, collection, lastProcessedEtag, out total, overallDuration);
-                    result.TotalNumberOfTimeSeriesDeletedRanges += total;
+                    entriesAfter = Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact);
+                    result.NumberOfTimeSeriesDeletedRangesToProcess += entriesAfter.Count;
+                    result.TotalNumberOfTimeSeriesDeletedRanges += entriesAfter.Total;
+                    result.Estimated |= entriesAfter.Estimated;
                 }
             }
 

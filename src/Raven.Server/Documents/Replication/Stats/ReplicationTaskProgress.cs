@@ -35,6 +35,8 @@ namespace Raven.Server.Documents.Replication.Stats
 
         public string SourceChangeVector { get; set; }
 
+        public bool Estimated { get; set; }
+
         public long NumberOfDocumentsToProcess { get; set; }
 
         public long TotalNumberOfDocuments { get; set; }

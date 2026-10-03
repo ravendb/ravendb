@@ -10,10 +10,12 @@ namespace Raven.Server.Documents.Commands.ETL;
 internal sealed class GetEtlTaskProgressCommand : RavenCommand<EtlTaskProgress[]>
 {
     private readonly string[] _names;
+    private readonly bool _exact;
 
-    public GetEtlTaskProgressCommand(string[] names, string nodeTag)
+    public GetEtlTaskProgressCommand(string[] names, string nodeTag, bool exact = false)
     {
         _names = names;
+        _exact = exact;
         SelectedNodeTag = nodeTag;
     }
 
@@ -23,10 +25,20 @@ internal sealed class GetEtlTaskProgressCommand : RavenCommand<EtlTaskProgress[]
     {
         url = $"{node.Url}/databases/{node.Database}/etl/progress";
 
+        var separator = '?';
+
         if (_names is { Length: > 0 })
         {
             for (var i = 0; i < _names.Length; i++)
-                url += $"{(i == 0 ? "?" : "&")}name={Uri.EscapeDataString(_names[i])}";
+            {
+                url += $"{separator}name={Uri.EscapeDataString(_names[i])}";
+                separator = '&';
+            }
+        }
+
+        if (_exact)
+        {
+            url += $"{separator}exact=true";
         }
 
         return new HttpRequestMessage
