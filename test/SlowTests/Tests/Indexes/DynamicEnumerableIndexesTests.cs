@@ -1,8 +1,13 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Linq;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -13,6 +18,382 @@ namespace SlowTests.Tests.Indexes
     {
         public DynamicEnumerableIndexesTests(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [RavenFact(RavenTestCategory.Indexes)]
+        public void DisposingDynamicArrayEnumeratorDisposesWrappedEnumerator()
+        {
+            var source = new DisposableEnumerable();
+            var array = new DynamicArray(source);
+
+            using (var enumerator = array.GetEnumerator())
+                Assert.True(enumerator.MoveNext());
+
+            Assert.Equal(1, source.EnumeratorCount);
+            Assert.Equal(1, source.DisposeCount);
+        }
+
+        [RavenFact(RavenTestCategory.Indexes)]
+        public void MinAndMaxDisposeTheirEnumerators()
+        {
+            var minSource = new DisposableEnumerable();
+            Assert.Equal(1L, DynamicEnumerable.Min(minSource));
+            Assert.Equal(1, minSource.EnumeratorCount);
+            Assert.Equal(1, minSource.DisposeCount);
+
+            var maxSource = new DisposableEnumerable();
+            Assert.Equal(1L, DynamicEnumerable.Max(maxSource.Cast<object>()));
+            Assert.Equal(1, maxSource.EnumeratorCount);
+            Assert.Equal(1, maxSource.DisposeCount);
+        }
+
+        private sealed class DisposableEnumerable : IEnumerable<object>
+        {
+            public int EnumeratorCount { get; private set; }
+
+            public int DisposeCount { get; private set; }
+
+            public IEnumerator<object> GetEnumerator()
+            {
+                EnumeratorCount++;
+                return new DisposableEnumerator(this);
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
+            }
+
+            private sealed class DisposableEnumerator : IEnumerator<object>
+            {
+                private readonly DisposableEnumerable _owner;
+                private bool _moved;
+
+                public DisposableEnumerator(DisposableEnumerable owner)
+                {
+                    _owner = owner;
+                }
+
+                public bool MoveNext()
+                {
+                    if (_moved)
+                        return false;
+
+                    _moved = true;
+                    Current = 1L;
+                    return true;
+                }
+
+                public void Reset()
+                {
+                    _moved = false;
+                }
+
+                public object Current { get; private set; }
+
+                object IEnumerator.Current => Current;
+
+                public void Dispose()
+                {
+                    _owner.DisposeCount++;
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void OrderByWithComparerCanBeFollowedByAdditionalOrderingLevels(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var index = new OrderByWithComparerIndex();
+                store.ExecuteIndex(index);
+
+                var definition = store.Maintenance.Send(new GetIndexOperation(index.IndexName));
+                var map = Assert.Single(definition.Maps);
+                Assert.Contains(".OrderBy(", map);
+                Assert.Contains(".ThenByDescending(", map);
+                Assert.Contains(".ThenBy(", map);
+                Assert.DoesNotContain("Enumerable.OrderBy", map);
+                Assert.Contains("StringComparer.OrdinalIgnoreCase", map);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new PrimitiveArrayItem { Tags = new[] { "a", "A" } });
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store, allowErrors: true);
+
+                var errors = store.Maintenance
+                    .Send(new GetIndexErrorsOperation(new[] { index.IndexName }))
+                    .Single()
+                    .Errors;
+                Assert.Empty(errors);
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Advanced.RawQuery<OrderByWithComparerIndex.Result>(
+                            $"from index '{index.IndexName}' select First, NullComparerFirst, NullDescendingComparerFirst")
+                        .Single();
+                    Assert.Equal("A", result.First);
+                    Assert.Equal("a", result.NullComparerFirst);
+                    Assert.Equal("a", result.NullDescendingComparerFirst);
+                }
+            }
+        }
+
+        public class OrderByWithComparerIndex : AbstractIndexCreationTask<PrimitiveArrayItem, OrderByWithComparerIndex.Result>
+        {
+            public OrderByWithComparerIndex()
+            {
+                Map = items => from item in items
+                               select new Result
+                               {
+                                   First = item.Tags
+                                       .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                                       .ThenByDescending(x => x.Length)
+                                       .ThenBy(x => x.ToString() == "A" ? 0 : 1)
+                                       .First(),
+                                   NullComparerFirst = item.Tags
+                                       .OrderBy(x => x.Length)
+                                       .ThenBy(x => x == "a" ? 0 : 1, null)
+                                       .First(),
+                                   NullDescendingComparerFirst = item.Tags
+                                       .OrderBy(x => x.Length)
+                                       .ThenByDescending(x => x == "a" ? 1 : 0, null)
+                                       .First()
+                               };
+
+                Store(x => x.First, FieldStorage.Yes);
+                Store(x => x.NullComparerFirst, FieldStorage.Yes);
+                Store(x => x.NullDescendingComparerFirst, FieldStorage.Yes);
+            }
+
+            public class Result
+            {
+                public string First { get; set; }
+
+                public string NullComparerFirst { get; set; }
+
+                public string NullDescendingComparerFirst { get; set; }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void PrimitiveArrayLinqOperationsRunWithReleasedDefinitionSpelling(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var index = new PrimitiveArrayLinqOperationsIndex();
+                store.ExecuteIndex(index);
+
+                var definition = store.Maintenance.Send(new GetIndexOperation(index.IndexName));
+                var map = Assert.Single(definition.Maps);
+                foreach (var method in new[] { "Contains", "SequenceEqual" })
+                {
+                    Assert.Contains($"Enumerable.{method}", map);
+                    Assert.DoesNotContain($"DynamicEnumerable.{method}", map);
+                }
+
+                Assert.Contains("DynamicEnumerable.Concat", map);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new PrimitiveArrayItem
+                    {
+                        Values = new[] { 1L, 2L, 3L },
+                        Tags = new[] { "a", "b" }
+                    });
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store, allowErrors: true);
+
+                var errors = store.Maintenance
+                    .Send(new GetIndexErrorsOperation(new[] { index.IndexName }))
+                    .Single()
+                    .Errors;
+                Assert.Empty(errors);
+
+                using (var session = store.OpenSession())
+                {
+                    var count = session.Advanced.RawQuery<dynamic>(
+                            $"from index '{index.IndexName}' " +
+                            "where ContainsTwo = true and ContainsCaseInsensitive = true and ExactSequence = true " +
+                            "and ConcatCount = 4")
+                        .Count();
+                    Assert.Equal(1, count);
+                }
+            }
+        }
+
+        public class PrimitiveArrayLinqOperationsIndex : AbstractIndexCreationTask<PrimitiveArrayItem, PrimitiveArrayLinqOperationsIndex.Result>
+        {
+            public PrimitiveArrayLinqOperationsIndex()
+            {
+                Map = items => from item in items
+                               select new Result
+                               {
+                                   ContainsTwo = item.Values.Contains(2L),
+                                   ContainsCaseInsensitive = item.Tags.Contains("A", StringComparer.OrdinalIgnoreCase),
+                                   ExactSequence = item.Values.SequenceEqual(new[] { 1L, 2L, 3L }),
+                                   ConcatCount = item.Values.Concat(new[] { 4L }).Count()
+                               };
+            }
+
+            public class Result
+            {
+                public bool ContainsTwo { get; set; }
+
+                public bool ContainsCaseInsensitive { get; set; }
+
+                public bool ExactSequence { get; set; }
+
+                public int ConcatCount { get; set; }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void SequenceEqualOnLongArrayUsesUnchangedDefinition(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var index = new SequenceEqualOnLongArrayIndex();
+                store.ExecuteIndex(index);
+
+                var definition = store.Maintenance.Send(new GetIndexOperation(index.IndexName));
+                var map = Assert.Single(definition.Maps);
+                Assert.Contains("Enumerable.SequenceEqual", map);
+                Assert.DoesNotContain("DynamicEnumerable.SequenceEqual", map);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new PrimitiveArrayItem { Values = new[] { 1L, 2L, 3L } });
+                    session.Store(new PrimitiveArrayItem { Values = new[] { 1L, 2L } });
+                    session.Store(new PrimitiveArrayItem { Values = new[] { 2L, 3L, 4L } });
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store, allowErrors: true);
+
+                var errors = store.Maintenance
+                    .Send(new GetIndexErrorsOperation(new[] { index.IndexName }))
+                    .Single()
+                    .Errors;
+                Assert.Empty(errors);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<SequenceEqualOnLongArrayIndex.Result, SequenceEqualOnLongArrayIndex>()
+                        .Where(x => x.IsExact)
+                        .ToList();
+                    Assert.Single(results);
+                }
+            }
+        }
+
+        public class SequenceEqualOnLongArrayIndex : AbstractIndexCreationTask<PrimitiveArrayItem, SequenceEqualOnLongArrayIndex.Result>
+        {
+            public SequenceEqualOnLongArrayIndex()
+            {
+                Map = items => from item in items
+                               select new Result
+                               {
+                                   IsExact = item.Values.SequenceEqual(new[] { 1L, 2L, 3L })
+                               };
+            }
+
+            public class Result
+            {
+                public bool IsExact { get; set; }
+            }
+        }
+
+        public class PrimitiveArrayItem
+        {
+            public string Group { get; set; }
+
+            public long[] Values { get; set; }
+
+            public string[] Tags { get; set; }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void SequenceEqualOnLongArrayWorksInReduce(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var index = new SequenceEqualOnLongArrayMapReduceIndex();
+                store.ExecuteIndex(index);
+
+                var definition = store.Maintenance.Send(new GetIndexOperation(index.IndexName));
+                Assert.Contains("Enumerable.SequenceEqual", definition.Reduce);
+                Assert.DoesNotContain("DynamicEnumerable.SequenceEqual", definition.Reduce);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new PrimitiveArrayItem
+                    {
+                        Group = "expected",
+                        Values = new[] { 1L, 2L, 3L }
+                    });
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store, allowErrors: true);
+
+                var errors = store.Maintenance
+                    .Send(new GetIndexErrorsOperation(new[] { index.IndexName }))
+                    .Single()
+                    .Errors;
+                Assert.Empty(errors);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<SequenceEqualOnLongArrayMapReduceIndex.Result, SequenceEqualOnLongArrayMapReduceIndex>()
+                        .Where(x => x.IsExact)
+                        .ToList();
+                    Assert.Single(results);
+                }
+            }
+        }
+
+        public class SequenceEqualOnLongArrayMapReduceIndex : AbstractIndexCreationTask<PrimitiveArrayItem, SequenceEqualOnLongArrayMapReduceIndex.Result>
+        {
+            public SequenceEqualOnLongArrayMapReduceIndex()
+            {
+                Map = items => from item in items
+                               select new Result
+                               {
+                                   Group = item.Group,
+                                   Values = item.Values,
+                                   IsExact = false
+                               };
+
+                Reduce = results => from result in results
+                                    group result by result.Group
+                                    into grouped
+                                    let values = grouped.First().Values
+                                    select new Result
+                                    {
+                                        Group = grouped.Key,
+                                        Values = values,
+                                        IsExact = values.SequenceEqual(new[] { 1L, 2L, 3L })
+                                    };
+            }
+
+            public class Result
+            {
+                public string Group { get; set; }
+
+                public long[] Values { get; set; }
+
+                public bool IsExact { get; set; }
+            }
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
@@ -177,7 +558,7 @@ namespace SlowTests.Tests.Indexes
                 Store("Path", FieldStorage.Yes);
             }
         }
-        
+
         [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void IndexWithLastOrDefaultOnWhereWithPredicate(Options options)
