@@ -381,48 +381,52 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         if (ranges == null || ranges.Count == 0)
             return;
 
-        // Read the field value once per document, then check every range against it.
-        var firstRange = ranges[0] as FacetedQueryParser.CoraxParsedRange;
-        if (firstRange == null)
+        if (ranges[0] is not FacetedQueryParser.CoraxParsedRange firstRange)
             return;
+
+        // The indexed path serves a numeric range with a range query over the double terms of the field, whether the
+        // bounds were written as integers or as doubles. The long term of a double value is truncated, so comparing
+        // it with an integer bound would leave 15.7 out of 'Price > 15'.
+        var isNumeric = result.RangeType is RangeType.Double or RangeType.Long;
+
+        // A multi-valued field has one term per value. A document counts once for every range that any of its values
+        // falls into, as on the indexed path, where a range query returns each document once.
+        Span<bool> matchedRanges = ranges.Count <= 64 ? stackalloc bool[ranges.Count] : new bool[ranges.Count];
 
         var fieldRootPage = GetFieldRootPage(firstRange.Field);
         reader.Reset();
-        bool fieldFound = false;
         while (reader.FindNext(fieldRootPage))
         {
             if (reader.IsNull || reader.IsNonExisting)
-                continue; // skip null/non-existing entries, look for actual value
-            fieldFound = true;
-            break;
-        }
-        if (!fieldFound)
-            return;
-
-        var currentDouble = reader.CurrentDouble;
-        var currentLong = reader.CurrentLong;
-        byte[] currentDecodedBytes = result.RangeType == RangeType.None ? reader.Current.Decoded().ToArray() : null;
-
-        foreach (var parsedRange in ranges)
-        {
-            if (parsedRange is not FacetedQueryParser.CoraxParsedRange range)
                 continue;
 
-            bool isMatching = result.RangeType switch
-            {
-                RangeType.Double => range.IsMatch(currentDouble),
-                RangeType.Long => range.IsMatch(currentLong),
-                _ => range.IsMatch(currentDecodedBytes.AsSpan())
-            };
+            // a term without a numeric form is not among the double terms of the field, so a range query would not see it
+            if (isNumeric && reader.HasNumeric == false)
+                continue;
 
-            var collectionOfFacetValues = facetValues[range.RangeText];
-            if (isMatching)
+            var currentDouble = reader.CurrentDouble;
+            var currentBytes = isNumeric ? ReadOnlySpan<byte>.Empty : reader.Current.Decoded();
+
+            for (var i = 0; i < ranges.Count; i++)
             {
-                collectionOfFacetValues.IncrementCount(1);
-                if (needToApplyAggregation)
-                    ApplyAggregation(result.Aggregations, collectionOfFacetValues, ref reader);
+                if (matchedRanges[i] || ranges[i] is not FacetedQueryParser.CoraxParsedRange range)
+                    continue;
+
+                matchedRanges[i] = isNumeric ? range.IsMatch(currentDouble) : range.IsMatch(currentBytes);
             }
+
             token.ThrowIfCancellationRequested();
+        }
+
+        for (var i = 0; i < ranges.Count; i++)
+        {
+            if (matchedRanges[i] == false)
+                continue;
+
+            var collectionOfFacetValues = facetValues[ranges[i].RangeText];
+            collectionOfFacetValues.IncrementCount(1);
+            if (needToApplyAggregation)
+                ApplyAggregation(result.Aggregations, collectionOfFacetValues, ref reader);
         }
     }
 
