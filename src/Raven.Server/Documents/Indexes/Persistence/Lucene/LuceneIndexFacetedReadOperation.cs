@@ -154,10 +154,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         collectionOfFacetValues.IncrementCount(intersectCount);
 
                         if (needToApplyAggregation)
-                        {
-                            var docsInQuery = new ArraySegment<int>(intersectedDocuments.Documents, 0, intersectedDocuments.Count);
-                            ApplyAggregation(result.Value.Aggregations, collectionOfFacetValues, docsInQuery, readerFacetInfo.Reader, readerFacetInfo.DocBase, _state);
-                        }
+                            ApplyAggregation(result.Value.Aggregations, collectionOfFacetValues, intersectedDocuments.Documents, readerFacetInfo.Reader, readerFacetInfo.DocBase, _state);
 
                         intersectedDocuments.Free();
                     }
@@ -224,7 +221,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     if (intersectedDocuments.Count == 0)
                         continue;
 
-                    AddTermMatches(readerFacetInfo, result, facetValues, legacy, needToApplyAggregation, kvp.Key, intersectedDocuments);
+                    AddTermMatches(readerFacetInfo, result, facetValues, legacy, needToApplyAggregation, kvp.Key, intersectedDocuments.Count, intersectedDocuments.Documents);
+                    intersectedDocuments.Free();
                 }
             }
         }
@@ -238,28 +236,79 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             bool needToApplyAggregation,
             CancellationToken token)
         {
-            var matchesByTerm = new Dictionary<int, IntersectDocs>();
-
             var matches = readerFacetInfo.Results;
             var array = matches.Array;
             var end = matches.Offset + matches.Count;
+            var docBase = readerFacetInfo.DocBase;
+
+            // one pass over the matches counts the matches of every term
+            var slicesByTerm = new Dictionary<int, TermSlice>();
+            var total = 0;
             for (var i = matches.Offset; i < end; i++)
             {
                 token.ThrowIfCancellationRequested();
 
-                var doc = array[i];
-                foreach (var ordinal in documentTerms.GetTermOrdinals(doc - readerFacetInfo.DocBase))
+                foreach (var ordinal in documentTerms.GetTermOrdinals(array[i] - docBase))
                 {
-                    ref var docs = ref CollectionsMarshal.GetValueRefOrAddDefault(matchesByTerm, ordinal, out var exists);
-                    if (exists == false)
-                        docs = new IntersectDocs(needToApplyAggregation);
-
-                    docs.AddIntersection(doc);
+                    CollectionsMarshal.GetValueRefOrAddDefault(slicesByTerm, ordinal, out _).Count++;
+                    total++;
                 }
             }
 
-            foreach (var (ordinal, docs) in matchesByTerm)
-                AddTermMatches(readerFacetInfo, result, facetValues, legacy, needToApplyAggregation, documentTerms.Terms[ordinal], docs);
+            if (needToApplyAggregation == false)
+            {
+                // the counts are all a facet without an aggregation needs
+                foreach (var (ordinal, slice) in slicesByTerm)
+                    AddTermMatches(readerFacetInfo, result, facetValues, legacy, needToApplyAggregation, documentTerms.Terms[ordinal], slice.Count, ReadOnlySpan<int>.Empty);
+
+                return;
+            }
+
+            if (total == 0)
+                return;
+
+            // The aggregation reads the matches of every term. A buffer per term would keep one pooled array alive per
+            // distinct term until the whole reader is done, hundreds of megabytes when many documents match, so the
+            // matches of all terms go next to each other in a single buffer, each term in its own slice: the counts
+            // become the slice offsets and a second pass over the matches fills them.
+            var offset = 0;
+            foreach (var ordinal in slicesByTerm.Keys)
+            {
+                ref var slice = ref CollectionsMarshal.GetValueRefOrNullRef(slicesByTerm, ordinal);
+                slice.Start = offset;
+                offset += slice.Count;
+            }
+
+            var buffer = IntArraysPool.Instance.AllocateArray(total);
+            try
+            {
+                for (var i = matches.Offset; i < end; i++)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    var doc = array[i];
+                    foreach (var ordinal in documentTerms.GetTermOrdinals(doc - docBase))
+                    {
+                        ref var slice = ref CollectionsMarshal.GetValueRefOrNullRef(slicesByTerm, ordinal);
+                        buffer[slice.Start + slice.Filled++] = doc;
+                    }
+                }
+
+                foreach (var (ordinal, slice) in slicesByTerm)
+                    AddTermMatches(readerFacetInfo, result, facetValues, legacy, needToApplyAggregation, documentTerms.Terms[ordinal], slice.Count, new ReadOnlySpan<int>(buffer, slice.Start, slice.Count));
+            }
+            finally
+            {
+                IntArraysPool.Instance.FreeArray(buffer);
+            }
+        }
+
+        // the matches of one term within the buffer shared by all the terms of a reader
+        private struct TermSlice
+        {
+            public int Start;
+            public int Count;
+            public int Filled;
         }
 
         private void AddTermMatches(
@@ -269,7 +318,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             bool legacy,
             bool needToApplyAggregation,
             string term,
-            IntersectDocs matches)
+            int count,
+            ReadOnlySpan<int> documents)
         {
             if (facetValues.TryGetValue(term, out var collectionOfFacetValues) == false)
             {
@@ -286,18 +336,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 facetValues.Add(term, collectionOfFacetValues);
             }
 
-            collectionOfFacetValues.IncrementCount(matches.Count);
+            collectionOfFacetValues.IncrementCount(count);
 
             if (needToApplyAggregation)
-            {
-                var docsInQuery = new ArraySegment<int>(matches.Documents, 0, matches.Count);
-                ApplyAggregation(result.Value.Aggregations, collectionOfFacetValues, docsInQuery, readerFacetInfo.Reader, readerFacetInfo.DocBase, _state);
-            }
-
-            matches.Free();
+                ApplyAggregation(result.Value.Aggregations, collectionOfFacetValues, documents, readerFacetInfo.Reader, readerFacetInfo.DocBase, _state);
         }
 
-        private static void ApplyAggregation(Dictionary<FacetAggregationField, FacetedQueryParser.FacetResult.Aggregation> aggregations, FacetValues values, ArraySegment<int> docsInQuery, IndexReader indexReader, int docBase, IState state)
+        private static void ApplyAggregation(Dictionary<FacetAggregationField, FacetedQueryParser.FacetResult.Aggregation> aggregations, FacetValues values, ReadOnlySpan<int> docsInQuery, IndexReader indexReader, int docBase, IState state)
         {
             foreach (var kvp in aggregations)
             {
@@ -311,10 +356,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 var val = kvp.Value;
                 double min = value.Min ?? double.MaxValue, max = value.Max ?? double.MinValue, sum = value.Sum ?? 0, avg = value.Average ?? 0;
-                int[] array = docsInQuery.Array;
-                for (var index = 0; index < docsInQuery.Count; index++)
+                foreach (var doc in docsInQuery)
                 {
-                    var doc = array[index];
                     var currentVal = doubles[doc - docBase];
                     sum += currentVal;
                     avg += currentVal;
@@ -451,24 +494,27 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public int Count;
 
             // rented from the pool on the first intersection, so the many terms without any cost nothing
-            public int[] Documents;
+            private int[] _documents;
 
             public IntersectDocs(bool collectDocuments)
             {
                 _collectDocuments = collectDocuments;
             }
 
+            // empty unless the documents were collected
+            public ReadOnlySpan<int> Documents => _documents == null ? ReadOnlySpan<int>.Empty : new ReadOnlySpan<int>(_documents, 0, Count);
+
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void AddIntersection(int docId)
             {
                 if (_collectDocuments)
                 {
-                    if (Documents == null)
-                        Documents = IntArraysPool.Instance.AllocateArray();
-                    else if (Count >= Documents.Length)
+                    if (_documents == null)
+                        _documents = IntArraysPool.Instance.AllocateArray();
+                    else if (Count >= _documents.Length)
                         IncreaseSize();
 
-                    Documents[Count] = docId;
+                    _documents[Count] = docId;
                 }
 
                 Count++;
@@ -476,19 +522,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             public void Free()
             {
-                if (Documents == null)
+                if (_documents == null)
                     return;
 
-                IntArraysPool.Instance.FreeArray(Documents);
-                Documents = null;
+                IntArraysPool.Instance.FreeArray(_documents);
+                _documents = null;
             }
 
             private void IncreaseSize()
             {
                 var newDocumentsArray = IntArraysPool.Instance.AllocateArray(Count * 2);
-                Array.Copy(Documents, newDocumentsArray, Count);
-                IntArraysPool.Instance.FreeArray(Documents);
-                Documents = newDocumentsArray;
+                Array.Copy(_documents, newDocumentsArray, Count);
+                IntArraysPool.Instance.FreeArray(_documents);
+                _documents = newDocumentsArray;
             }
         }
 

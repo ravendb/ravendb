@@ -75,7 +75,7 @@ namespace FastTests.Client.Queries
                     var facets = session.Query<Coin, CoinIndex>()
                         .Where(x => x.Group == "g1" && x.CustomerId.In(customerIds))
                         .AggregateBy(f => f.ByField(x => x.CustomerId).SumOn(x => x.Amount).MinOn(x => x.Amount).MaxOn(x => x.Amount).AverageOn(x => x.Amount))
-                        .AndAggregateBy(f => f.ByField(x => x.Tags))
+                        .AndAggregateBy(f => f.ByField(x => x.Tags).SumOn(x => x.Amount))
                         .AndAggregateBy(f => f.ByField(x => x.Group))
                         .Execute();
 
@@ -102,7 +102,7 @@ namespace FastTests.Client.Queries
                     var facets = session.Query<Coin, CoinIndex>()
                         .Where(x => x.Group.In(groups))
                         .AggregateBy(f => f.ByField(x => x.CustomerId).SumOn(x => x.Amount).MinOn(x => x.Amount).MaxOn(x => x.Amount).AverageOn(x => x.Amount))
-                        .AndAggregateBy(f => f.ByField(x => x.Tags))
+                        .AndAggregateBy(f => f.ByField(x => x.Tags).SumOn(x => x.Amount))
                         .AndAggregateBy(f => f.ByField(x => x.Group))
                         .Execute();
 
@@ -188,14 +188,16 @@ namespace FastTests.Client.Queries
                 Assert.Equal(amounts.Average(), value.Average.Value, 6);
             }
 
-            var byTag = expected.SelectMany(x => x.Tags).GroupBy(x => x).ToDictionary(g => g.Key, g => g.Count());
+            // a multi-valued field: a document counts, and its amount sums, towards each of its tags
+            var byTag = expected.SelectMany(x => x.Tags.Select(tag => (Tag: tag, Amount: (double)x.Amount))).GroupBy(x => x.Tag).ToDictionary(g => g.Key, g => g.Select(x => x.Amount).ToList());
             var tags = facets[nameof(Coin.Tags)].Values;
 
             Assert.Equal(byTag.Count, tags.Count);
             foreach (var value in tags)
             {
-                Assert.True(byTag.TryGetValue(value.Range, out var count), $"unexpected tag '{value.Range}' in the facet");
-                Assert.Equal(count, value.Count);
+                Assert.True(byTag.TryGetValue(value.Range, out var amounts), $"unexpected tag '{value.Range}' in the facet");
+                Assert.Equal(amounts.Count, value.Count);
+                Assert.Equal(amounts.Sum(), value.Sum.Value, 6);
             }
 
             var byGroup = expected.GroupBy(x => x.Group).ToDictionary(g => g.Key, g => g.Count());
