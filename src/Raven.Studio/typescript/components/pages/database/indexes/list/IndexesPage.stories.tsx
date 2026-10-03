@@ -189,3 +189,15 @@ export const LicenseLimits: StoryFn = () => {
 
     return <IndexesPage />;
 };
+
+export const StaleIndexWithEstimatedProgress: StoryFn = () => {
+    commonInit("singleNode");
+
+    const { indexesService } = mockServices;
+    const [staleStats, staleProgress] = IndexesStubs.getStaleInProgressIndex();
+
+    indexesService.withGetStats([staleStats]);
+    indexesService.withGetProgress([staleProgress]);
+
+    return <IndexesPage />;
+};

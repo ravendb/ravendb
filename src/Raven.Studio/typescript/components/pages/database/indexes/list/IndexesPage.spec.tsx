@@ -1,5 +1,9 @@
-import { rtlRender } from "test/rtlTestUtils";
+import { rtlRender, waitFor } from "test/rtlTestUtils";
 import React from "react";
+import { mockServices } from "test/mocks/services/MockServices";
+import { IndexesStubs } from "test/stubs/IndexesStubs";
+import messagePublisher from "common/messagePublisher";
+import IndexesService from "components/services/IndexesService";
 import { composeStories } from "@storybook/react-webpack5";
 
 import * as stories from "./IndexesPage.stories";
@@ -10,6 +14,7 @@ const {
     FaultyIndexSharded,
     FaultyIndexSingleNode,
     LicenseLimits: CommunityLimits,
+    StaleIndexWithEstimatedProgress,
 } = composeStories(stories);
 
 describe("IndexesPage", function () {
@@ -61,5 +66,66 @@ describe("IndexesPage", function () {
 
         expect(await screen.findByText(/Cluster is reaching/)).toBeInTheDocument();
         expect(screen.getByText(/Database is reaching/)).toBeInTheDocument();
+    });
+
+    it("can request the exact progress of a stale index", async () => {
+        const { screen, fireClick, user } = rtlRender(<StaleIndexWithEstimatedProgress />);
+
+        await screen.findByText("StaleInProgress");
+
+        const getProgress = mockServices.indexesService.mock.getProgress as unknown as jest.Mock;
+        await waitFor(() => expect(getProgress).toHaveBeenCalled());
+
+        // the periodic refresh is not scoped to any index, so the server reports every stale index
+        expect(getProgress).toHaveBeenLastCalledWith(expect.any(String), expect.anything());
+
+        const distributionItems = screen.queryAllByClassName("distribution-item");
+        expect(distributionItems.length).toBeGreaterThan(0);
+        await user.hover(distributionItems[0]);
+
+        expect(await screen.findByText("(~)")).toBeInTheDocument();
+
+        await fireClick(await screen.findByText("show exact counts"));
+
+        await waitFor(() =>
+            expect(getProgress).toHaveBeenLastCalledWith(
+                expect.any(String),
+                expect.anything(),
+                ["StaleInProgress"],
+                true
+            )
+        );
+        expect(await screen.findByText("show estimated counts")).toBeInTheDocument();
+    });
+
+    it("keeps the estimated counts when the exact progress request fails", async () => {
+        const reportError = jest.spyOn(messagePublisher, "reportError").mockImplementation(() => {});
+        const getProgress = mockServices.indexesService.mock.getProgress as unknown as jest.Mock;
+
+        try {
+            const { screen, fireClick, user } = rtlRender(<StaleIndexWithEstimatedProgress />);
+
+            await screen.findByText("StaleInProgress");
+
+            const [, staleProgress] = IndexesStubs.getStaleInProgressIndex();
+            getProgress.mockImplementation((...args: Parameters<IndexesService["getProgress"]>) => {
+                const [, , , exact] = args;
+                return exact ? Promise.reject({ responseText: "timeout" }) : Promise.resolve([staleProgress]);
+            });
+
+            const distributionItems = screen.queryAllByClassName("distribution-item");
+            await user.hover(distributionItems[0]);
+
+            await fireClick(await screen.findByText("show exact counts"));
+
+            await waitFor(() => expect(reportError).toHaveBeenCalled());
+
+            // the toggle is reverted, so the link still offers the exact counts
+            expect(await screen.findByText("show exact counts")).toBeInTheDocument();
+            expect(screen.queryByText("show estimated counts")).not.toBeInTheDocument();
+        } finally {
+            reportError.mockRestore();
+            getProgress.mockReset();
+        }
     });
 });
