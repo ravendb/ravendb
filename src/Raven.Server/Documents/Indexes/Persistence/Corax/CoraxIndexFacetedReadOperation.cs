@@ -122,7 +122,7 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                 if (result.Value.Ranges != null && result.Value.Ranges.Count > 0)
                     continue;
 
-                if (baseQueryMatchingIds.Count < _indexSearcher.GetTermAmountInField(GetFieldMetadata(result.Value.AggregateBy)))
+                if (baseQueryMatchingIds.Count < _indexSearcher.GetNumberOfDistinctTermsInField(GetFieldMetadata(result.Value.AggregateBy)))
                 {
                     CoraxIndexReadOperation.QueryPool.Return(ids);
                     return ScanningFacetedQuery(results, facetQuery, queryTimings, context, getSpatialField, baseQueryMatchingIds, token);

@@ -423,6 +423,25 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return covered >= NumberOfEntries;
     }
 
+    /// <summary>
+    /// The number of terms a pass over the terms of the field visits, as <see cref="TextualAggregation"/> does: one per
+    /// distinct value, plus one for null when any entry holds a null. <see cref="GetTermAmountInField"/> adds the number
+    /// of entries holding a null instead.
+    /// </summary>
+    public long GetNumberOfDistinctTermsInField(in FieldMetadata field)
+    {
+        var fieldTree = _fieldsTree?.CompactTreeFor(field.FieldName);
+        if (fieldTree == null)
+            return 0;
+
+        var numberOfTerms = fieldTree.NumberOfEntries;
+
+        if (TryGetPostingListForNull(field, out var nullPostingListId) && GetPostingList(nullPostingListId)?.State.NumberOfEntries > 0)
+            numberOfTerms++;
+
+        return numberOfTerms;
+    }
+
     public bool TryGetTermsOfField(in FieldMetadata field, out ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator> existsTermProvider)
     {
         return TryGetTermsOfField<Lookup<CompactKeyLookup>.ForwardIterator>(field, out existsTermProvider);
