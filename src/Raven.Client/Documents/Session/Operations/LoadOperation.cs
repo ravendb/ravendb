@@ -24,6 +24,13 @@ namespace Raven.Client.Documents.Session.Operations
 
         private bool _resultsSet;
         private GetDocumentsResult _results;
+        
+        private bool SkipSessionCheck => _countersToInclude != null 
+                                              || _revisionsToIncludeByChangeVector != null
+                                              || _revisionsToIncludeByDateTimeBefore != null
+                                              || _compareExchangeValuesToInclude != null
+                                              || _includeAllCounters
+                                              || _timeSeriesToInclude != null;
 
         public LoadOperation(InMemoryDocumentSessionOperations session)
         {
@@ -32,8 +39,12 @@ namespace Raven.Client.Documents.Session.Operations
 
         public GetDocumentsCommand CreateRequest()
         {
-            if (_session.CheckIfIdAlreadyIncluded(_ids, _includes))
-                return null;
+            if (SkipSessionCheck == false)
+            {
+                var allDocumentsInSession = _session.CheckIfIdAlreadyIncluded(_ids, _includes);
+                if (allDocumentsInSession)
+                    return null;
+            }
 
             _session.IncrementRequestCount();
             if (Logger.IsInfoEnabled)

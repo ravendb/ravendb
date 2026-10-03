@@ -248,7 +248,8 @@ namespace SlowTests.Issues
                     Assert.Equal("Torun", value1.Value.City);
 
                     var company2 = session.Load<Company>("companies/1", includes => includes.IncludeCompareExchangeValue(x => x.ExternalId));
-
+                    numberOfRequests += 1; // RavenDB-25420
+                    
                     Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
 
                     Assert.Equal(company1, company2);
@@ -316,7 +317,8 @@ namespace SlowTests.Issues
                     Assert.Equal("Torun", value1.Value.City);
 
                     var company2 = await session.LoadAsync<Company>("companies/1", includes => includes.IncludeCompareExchangeValue(x => x.ExternalId));
-
+                    numberOfRequests += 1; // RavenDB-25420
+                    
                     Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
 
                     Assert.Equal(company1, company2);
