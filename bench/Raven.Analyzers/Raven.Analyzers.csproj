@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!--
+      Print per-analyzer execution time to the build log.
+      Look for "Total analyzer execution time:" at the end of the build output.
+      Run compare.ps1 to compare with/without analyzers side by side.
+    -->
+    <ReportAnalyzer>true</ReportAnalyzer>
+    <!-- Toggle: /p:UseRavenAnalyzers=false for a baseline build with no analyzers. -->
+    <UseRavenAnalyzers Condition="'$(UseRavenAnalyzers)' == ''">true</UseRavenAnalyzers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Raven.Client types so all fixture code compiles against the real APIs. -->
+    <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
+  </ItemGroup>
+
+  <!--
+    Analyzer projects are referenced as analyzers, not runtime libraries.
+    MSBuild rebuilds them first; the IDE picks up freshly-built DLLs automatically.
+    OutputItemType="Analyzer"  — output DLL is loaded as a Roslyn analyzer.
+    ReferenceOutputAssembly="false" — prevents the analyzer DLLs from leaking
+    into the playground's runtime references (they target netstandard2.0 and
+    pull in Microsoft.CodeAnalysis.* types we don't want here).
+  -->
+  <ItemGroup Condition="'$(UseRavenAnalyzers)' == 'true'">
+    <ProjectReference Include="..\..\src\Raven.Analyzers\Raven.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\src\Raven.Analyzers.CodeFixes\Raven.Analyzers.CodeFixes.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+</Project>
