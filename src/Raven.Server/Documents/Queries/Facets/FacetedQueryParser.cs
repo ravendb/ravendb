@@ -398,8 +398,6 @@ namespace Raven.Server.Documents.Queries.Facets
             
             public double LowValueAsDouble = double.MinValue;
             public double HighValueAsDouble = double.MaxValue;
-            public long LowValueAsLong = long.MinValue;
-            public long HighValueAsLong = long.MaxValue;
             public ReadOnlySpan<byte> HighValueAsBytes => _highValueAsBytes.AsSpan();
             private readonly byte[] _highValueAsBytes;
             
@@ -429,7 +427,6 @@ namespace Raven.Server.Documents.Queries.Facets
                 {
                     _leftSide |= Operation.GreaterThan;
                     _lowValueAsBytes = Encodings.Utf8.GetBytes(LowValue);
-                    long.TryParse(LowValue, out LowValueAsLong);
                     IsNumerical &= double.TryParse(LowValue, out LowValueAsDouble);
                 }
                 
@@ -437,7 +434,6 @@ namespace Raven.Server.Documents.Queries.Facets
                 {
                     _rightSide |= Operation.LowerThan;
                     _highValueAsBytes = Encodings.Utf8.GetBytes(HighValue);
-                    long.TryParse(HighValue, out HighValueAsLong);
                     IsNumerical &= double.TryParse(HighValue, out HighValueAsDouble);
                 }
             }
@@ -533,28 +529,6 @@ namespace Raven.Server.Documents.Queries.Facets
                     Operation.None => true,
                     Operation.LowerThan => value < HighValueAsDouble,
                     Operation.LowerOrEqualThan => value <= HighValueAsDouble,
-                    _ => ThrowOnUnsupportedType(_rightSide)
-                };
-
-                return leftSide & rightSide;
-            }
-            
-            public bool IsMatch(long value)
-            {
-                var leftSide = _leftSide switch
-                {
-                    Operation.None => true,
-                    Operation.GreaterThan => value > LowValueAsLong,
-                    Operation.GreaterOrEqualThan => value >= LowValueAsLong,
-                    _ => ThrowOnUnsupportedType(_leftSide)
-
-                };
-                
-                var rightSide = _rightSide switch
-                {
-                    Operation.None => true,
-                    Operation.LowerThan => value < HighValueAsLong,
-                    Operation.LowerOrEqualThan => value <= HighValueAsLong,
                     _ => ThrowOnUnsupportedType(_rightSide)
                 };
 
