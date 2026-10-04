@@ -8,6 +8,7 @@ using Azure;
 using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Azure.Storage.Sas;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
@@ -89,7 +90,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 _client = new BlobContainerClient(serverUrlForContainer, new AzureSasCredential(azureSettings.SasToken), options);
             }
 
-            _canCheckContainerExistence = hasAccountKey || CanSasTokenReadContainerProperties(azureSettings.SasToken);
+            _canCheckContainerExistence = hasAccountKey || CanSasTokenReadContainerProperties(serverUrlForContainer, azureSettings.SasToken);
 
             _progress = progress;
             _cancellationToken = cancellationToken;
@@ -197,31 +198,26 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 throw new ContainerNotFoundException($"Container '{_storageContainer}' wasn't found!");
         }
 
-        private static bool CanSasTokenReadContainerProperties(string sasToken)
+        private static bool CanSasTokenReadContainerProperties(Uri containerUri, string sasToken)
         {
             // a service / user delegation SAS (has 'sr') can't read container properties at all,
             // an account SAS needs srt=c and sp=r
             // https://learn.microsoft.com/en-us/rest/api/storageservices/create-account-sas#blob-service
-            string resourceTypes = null;
-            string permissions = null;
-
-            foreach (var parameter in sasToken.TrimStart('?').Split('&'))
+            BlobSasQueryParameters sas;
+            try
             {
-                var keyValue = parameter.Split('=', 2);
-                switch (keyValue[0])
-                {
-                    case "sr":
-                        return false;
-                    case "srt":
-                        resourceTypes = keyValue[1];
-                        break;
-                    case "sp":
-                        permissions = keyValue[1];
-                        break;
-                }
+                sas = new BlobUriBuilder(new UriBuilder(containerUri) { Query = sasToken.TrimStart('?') }.Uri).Sas;
+            }
+            catch
+            {
+                return false;
             }
 
-            return resourceTypes?.Contains('c') == true && permissions?.Contains('r') == true;
+            if (string.IsNullOrEmpty(sas.Resource) == false)
+                return false;
+
+            return sas.ResourceTypes?.HasFlag(AccountSasResourceTypes.Container) == true &&
+                   sas.Permissions?.Contains('r') == true;
         }
 
         public void Report(long value)
