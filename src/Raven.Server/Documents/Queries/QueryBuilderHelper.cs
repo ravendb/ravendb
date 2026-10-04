@@ -36,13 +36,8 @@ public static class QueryBuilderHelper
         return expression.IsRangeOperation && expression.Right is ValueExpression;
     }
 
-    /// <summary>
-    /// A between assembled from two comparisons may pair bounds of different kinds, a string with a number or a long with a
-    /// double, and each engine translates a bound differently per kind: a long literal queries the long term of a double
-    /// field, a string one the string term. Such a between goes back to the two comparisons it came from, so each bound keeps
-    /// exactly the meaning it had on its own. A hand-written between never gets here, the parser and the metadata reject
-    /// mixed kinds.
-    /// </summary>
+    // the builders translate a between as a single kind; one the metadata folded from 'Foo > 1 and Foo < 2.5' mixes kinds,
+    // which a hand-written between cannot, so it is translated back as the two comparisons it came from
     internal static bool TryUnfoldBetweenOfMixedKinds(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, BetweenExpression between,
         out BinaryExpression lower, out BinaryExpression upper)
     {
