@@ -109,9 +109,11 @@ public class RavenDB_27542 : CloudBackupTestBase
     [RavenTheory(RavenTestCategory.BackupExportImport)]
     [InlineData("sv=2025-01-05&sr=c&sp=racwdl&se=2099-01-01T00%3A00%3A00Z&sig=abc")] // service SAS
     [InlineData("?sv=2025-01-05&sr=c&sp=racwdl&se=2099-01-01T00%3A00%3A00Z&sig=abc")] // service SAS with a leading '?'
+    [InlineData("SV=2025-01-05&SR=c&SP=racwdl&SE=2099-01-01T00%3A00%3A00Z&SIG=abc")] // service SAS, the parameter names are case insensitive
     [InlineData("sv=2025-01-05&sr=c&sp=racwdl&skoid=00000000-0000-0000-0000-000000000000&se=2099-01-01T00%3A00%3A00Z&sig=abc")] // user delegation SAS
     [InlineData("sv=2025-01-05&ss=b&srt=o&sp=rcw&se=2099-01-01T00%3A00%3A00Z&sig=abc")] // account SAS without the container resource type
     [InlineData("sv=2025-01-05&ss=b&srt=co&sp=cw&se=2099-01-01T00%3A00%3A00Z&sig=abc")] // account SAS without the read permission
+    [InlineData("sv=2025-01-05&ss=b&srt=cox&sp=rcw&se=2099-01-01T00%3A00%3A00Z&sig=abc")] // account SAS with a resource type the SDK doesn't know
     public async Task TestConnectionShouldSkipTheContainerCheckForSasTokenThatCannotReadContainerProperties(string sasToken)
     {
         // the account doesn't exist, so any request would fail
@@ -123,15 +125,17 @@ public class RavenDB_27542 : CloudBackupTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.BackupExportImport)]
-    public async Task TestConnectionShouldCheckTheContainerForAccountSasTokenThatCanReadContainerProperties()
+    [RavenTheory(RavenTestCategory.BackupExportImport)]
+    [InlineData("sv=2025-01-05&ss=b&srt=co&sp=rcw&se=2099-01-01T00%3A00%3A00Z&sig=abc")]
+    [InlineData("SV=2025-01-05&SS=b&SRT=co&SP=rcw&SE=2099-01-01T00%3A00%3A00Z&SIG=abc")] // the parameter names are case insensitive
+    public async Task TestConnectionShouldCheckTheContainerForAccountSasTokenThatCanReadContainerProperties(string sasToken)
     {
         // the account doesn't exist, so the check fails
         var settings = new AzureSettings
         {
             AccountName = $"nonexisting{Guid.NewGuid():N}"[..24],
             StorageContainer = "container",
-            SasToken = "sv=2025-01-05&ss=b&srt=co&sp=rcw&se=2099-01-01T00%3A00%3A00Z&sig=abc"
+            SasToken = sasToken
         };
 
         using (var client = RavenAzureClient.Create(settings, DefaultConfiguration))
