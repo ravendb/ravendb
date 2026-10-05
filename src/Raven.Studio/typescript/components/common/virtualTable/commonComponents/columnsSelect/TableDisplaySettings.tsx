@@ -302,7 +302,6 @@ function TableDisplaySettingsSheet({
                 </h3>
             </ViewSheet.Header>
             <ViewSheet.Body className="m-2">
-                <h4 className="mb-2">Set up your column layout</h4>
                 {customColumns && (
                     <>
                         {editedCustomColumn ? (
