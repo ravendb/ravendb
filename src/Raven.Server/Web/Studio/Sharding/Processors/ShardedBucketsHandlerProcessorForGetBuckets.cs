@@ -28,7 +28,9 @@ namespace Raven.Server.Web.Studio.Sharding.Processors
 
             var shardedGetBucketsOperation = new ShardedGetBucketsOperation(RequestHandler.HttpContext.Request, fromBucket, toBucket, range);
             var results = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(shardedGetBucketsOperation, token);
-            MarkOwnerShards(results);
+            if (range == 1)
+                MarkOwnerShards(results);
+
             return results;
         }
 
@@ -36,10 +38,7 @@ namespace Raven.Server.Web.Studio.Sharding.Processors
         {
             var configuration = RequestHandler.DatabaseContext.DatabaseRecord.Sharding;
             foreach (var bucketRange in results.BucketRanges.Values)
-            {
-                if (bucketRange.FromBucket == bucketRange.ToBucket)
-                    bucketRange.OwnerShardNumber = ShardHelper.GetShardNumberFor(configuration, (int)bucketRange.FromBucket);
-            }
+                bucketRange.OwnerShardNumber = ShardHelper.GetShardNumberFor(configuration, (int)bucketRange.FromBucket);
         }
     }
 
