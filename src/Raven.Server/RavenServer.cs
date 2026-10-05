@@ -2161,19 +2161,7 @@ namespace Raven.Server
             if (cert != null)
                 return;
 
-            // This command will discard leftover certificates after the new certificate is saved.
-            GC.KeepAlive(Task.Run(async () =>
-            {
-                try
-                {
-                    await ServerStore.SendToLeaderAsync(new PutCertificateWithSamePinningHashCommand(certificate.Thumbprint, newCertDef, RaftIdGenerator.NewId()));
-                }
-                catch (Exception e)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Failed to run command '{nameof(PutCertificateWithSamePinningHashCommand)}'.", e);
-                }
-            }, ServerStore.ServerShutdown));
+            RegisterCertificateWithSamePinningHashInBackground(newCertDef);
 
             if (_auditLogger.IsAuditEnabled)
                 _auditLogger.Audit(
@@ -2209,6 +2197,12 @@ namespace Raven.Server
                 return;
             }
 
+            // The SSO server embeds the certificate it signs with in every client certificate it issues. SSO server
+            // certificates are typically renewed with the same key (e.g. Let's Encrypt with --reuse-key), so the
+            // registered certificate may be an older issuance of that key - possibly already expired.
+            using var embeddedSsoServerCert = TryGetEmbeddedSsoServerCertificate(certificate);
+            var embeddedSsoServerCertPinningHash = embeddedSsoServerCert?.GetPublicKeyPinningHash();
+
             // Find the single SSO server whose certificate signed this client certificate. There is typically a
             // single SSO server cert, so iterating and parsing them inline per request is cheap.
             CertificateDefinition signingSsoServer = null;
@@ -2217,7 +2211,16 @@ namespace Raven.Server
                 if (ssoServerDef.Disabled || string.IsNullOrEmpty(ssoServerDef.Certificate))
                     continue;
 
-                using var ssoServerCert = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(ssoServerDef.Certificate));
+                using var registeredSsoServerCert = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(ssoServerDef.Certificate));
+
+                // When the embedded certificate carries the registered key, validate against it - it is the exact certificate
+                // that signed the client certificate. Whether an expired trust anchor fails the chain is platform dependent
+                // (OpenSSL 3 ignores it, Windows does not), so a stale registered certificate must not be used as the anchor.
+                // The issuer is pinned to the registered public key below either way.
+                var ssoServerCert = embeddedSsoServerCert != null &&
+                                    CertificateUtils.PinningHashEquals(embeddedSsoServerCertPinningHash, ssoServerDef.PublicKeyPinningHash)
+                    ? embeddedSsoServerCert
+                    : registeredSsoServerCert;
 
                 using var chain = new X509Chain(false);
                 chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
@@ -2275,6 +2278,10 @@ namespace Raven.Server
 
             if (signingSsoServer == null)
                 return;
+
+            if (embeddedSsoServerCert != null &&
+                CertificateUtils.PinningHashEquals(embeddedSsoServerCertPinningHash, signingSsoServer.PublicKeyPinningHash))
+                MaybeRegisterRenewedSsoServerCertificate(ctx, signingSsoServer, embeddedSsoServerCert, connectionInfo);
 
             var ssoUserIdentity = payload.GetDisplayIdentity();
             var ssoServerPinningHash = signingSsoServer.PublicKeyPinningHash;
@@ -2340,6 +2347,85 @@ namespace Raven.Server
                     $"SSO user: '{ssoUserDef.Name}' ({ssoUserIdentity}), SSO server: '{signingSsoServer.Name}' ({signingSsoServer.Thumbprint}). " +
                     $"Security Clearance: {ssoUserDef.SecurityClearance}, " +
                     $"Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, ssoUserDef.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))}");
+        }
+
+        private static X509Certificate2 TryGetEmbeddedSsoServerCertificate(X509Certificate2 certificate)
+        {
+            var extension = certificate.Extensions[Raven.Client.Constants.Certificates.ServerCertExtensionOid];
+            if (extension == null)
+                return null;
+
+            // The SSO server writes the plain DER encoding of its certificate. We deliberately don't use
+            // CertificateUtils.ExtractServerCertificateFromExtension here - its fallback scans the (unauthenticated)
+            // extension bytes for a certificate at every offset.
+            try
+            {
+                return X509CertificateLoader.LoadCertificate(extension.RawData);
+            }
+            catch (CryptographicException)
+            {
+                return null;
+            }
+        }
+
+        // Registers a renewed SSO server certificate (same key, new issuance) presented embedded in a validated SSO
+        // client certificate, so the cluster keeps an up-to-date copy without the admin re-uploading it after every
+        // renewal. Mirrors MaybeAllowConnectionBasedOnPinningHash: the new certificate inherits the definition of the
+        // registered one and leftovers with the same pinning hash are discarded by the state machine.
+        private void MaybeRegisterRenewedSsoServerCertificate(TransactionOperationContext ctx, CertificateDefinition registeredSsoServer,
+            X509Certificate2 renewedSsoServerCert, object connectionInfo)
+        {
+            var thumbprint = renewedSsoServerCert.Thumbprint;
+
+            if (ServerStore.Cluster.GetCertificateByThumbprint(ctx, thumbprint) != null)
+                return;
+
+            // Only move forward - an older issuance (e.g. from an SSO server that wasn't restarted) must not be registered.
+            foreach (var ssoServerDef in ServerStore.Cluster.GetSsoServerCertificates(ctx))
+            {
+                if (CertificateUtils.PinningHashEquals(ssoServerDef.PublicKeyPinningHash, registeredSsoServer.PublicKeyPinningHash) &&
+                    ssoServerDef.NotAfter >= renewedSsoServerCert.NotAfter)
+                    return;
+            }
+
+            var newSsoServerDef = new CertificateDefinition
+            {
+                Name = registeredSsoServer.Name,
+                Certificate = Convert.ToBase64String(renewedSsoServerCert.Export(X509ContentType.Cert)),
+                Permissions = registeredSsoServer.Permissions,
+                SecurityClearance = registeredSsoServer.SecurityClearance,
+                Thumbprint = thumbprint,
+                PublicKeyPinningHash = registeredSsoServer.PublicKeyPinningHash,
+                NotAfter = renewedSsoServerCert.NotAfter,
+                NotBefore = renewedSsoServerCert.NotBefore,
+                Usage = CertificateUsage.SsoServer
+            };
+
+            if (_auditLogger.IsAuditEnabled)
+                _auditLogger.Audit(
+                    $"Connection from {GetRemoteAddress(connectionInfo)} with an SSO client certificate signed by renewed SSO server certificate '{renewedSsoServerCert.GetDisplayName()} ({thumbprint})' " +
+                    $"which is not registered in the cluster. Registering it based on the Public Key Pinning Hash of the registered SSO server certificate " +
+                    $"'{registeredSsoServer.Name}' ({registeredSsoServer.Thumbprint}).");
+
+            RegisterCertificateWithSamePinningHashInBackground(newSsoServerDef);
+        }
+
+        // Authentication can't wait for a cluster round trip, so the new certificate is registered in the background.
+        // The command also discards leftover certificates with the same pinning hash after the new certificate is saved.
+        private void RegisterCertificateWithSamePinningHashInBackground(CertificateDefinition certificateDefinition)
+        {
+            GC.KeepAlive(Task.Run(async () =>
+            {
+                try
+                {
+                    await ServerStore.SendToLeaderAsync(new PutCertificateWithSamePinningHashCommand(certificateDefinition.Thumbprint, certificateDefinition, RaftIdGenerator.NewId()));
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Failed to run command '{nameof(PutCertificateWithSamePinningHashCommand)}' for certificate '{certificateDefinition.Thumbprint}'.", e);
+                }
+            }, ServerStore.ServerShutdown));
         }
 
         private static string GetRemoteAddress(object connectionInfo)

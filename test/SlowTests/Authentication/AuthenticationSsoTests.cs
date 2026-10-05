@@ -1694,6 +1694,170 @@ namespace SlowTests.Authentication
             }
         }
 
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public async Task SsoServerCertRenewal_EmbeddedRenewedCert_IsRegisteredAutomatically()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+            var ssoUserId = "auto.renewed@example.com";
+
+            // The registered SSO server cert is an old, already expired issuance of the SSO server key (RavenDB-27630) -
+            // the SSO server has since been renewed with the same key and embeds the renewed cert in user certs.
+            var expiredSsoServerCert = CreateRenewedSsoServerCert(ssoCerts, DateTimeOffset.UtcNow.AddDays(-100), DateTimeOffset.UtcNow.AddDays(-10));
+            var renewedSsoServerCert = CreateRenewedSsoServerCert(ssoCerts, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(89));
+            var ssoUserCert = Certificates.CreateSsoUserCertificateWithEmbeddedSsoServerCert(renewedSsoServerCert, (RSA)ssoCerts.SsoServerPrivateKey, ssoUserId);
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, expiredSsoServerCert, "sso-prod");
+                Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite });
+
+                using (var ssoStore = new DocumentStore
+                {
+                    Urls = new[] { Server.WebUrl },
+                    Database = dbName,
+                    Certificate = ssoUserCert,
+                    Conventions = new DocumentConventions { DisposeCertificate = false, DisableTopologyUpdates = true }
+                }.Initialize())
+                {
+                    using (var session = ssoStore.OpenSession())
+                    {
+                        session.Store(new { Name = "Renewed" }, "test/1");
+                        session.SaveChanges();
+                    }
+                }
+
+                var registered = await WaitForValueAsync(async () =>
+                {
+                    var certs = await adminStore.Maintenance.Server.SendAsync(new GetCertificatesMetadataOperation());
+                    return certs.Any(c => c.Thumbprint == renewedSsoServerCert.Thumbprint && c.Usage == CertificateUsage.SsoServer && c.Name == "sso-prod");
+                }, true);
+
+                Assert.True(registered);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public async Task SsoServerCertRenewal_EmbeddedOlderCert_IsNotRegistered()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+            var ssoUserId = "older.issuance@example.com";
+
+            // e.g. an SSO server instance that still signs with a previous (but not yet expired) issuance of its key
+            var currentSsoServerCert = CreateRenewedSsoServerCert(ssoCerts, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(89));
+            var olderSsoServerCert = CreateRenewedSsoServerCert(ssoCerts, DateTimeOffset.UtcNow.AddDays(-60), DateTimeOffset.UtcNow.AddDays(30));
+            var ssoUserCert = Certificates.CreateSsoUserCertificateWithEmbeddedSsoServerCert(olderSsoServerCert, (RSA)ssoCerts.SsoServerPrivateKey, ssoUserId);
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, currentSsoServerCert, "sso-prod");
+                Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite });
+
+                using (var ssoStore = new DocumentStore
+                {
+                    Urls = new[] { Server.WebUrl },
+                    Database = dbName,
+                    Certificate = ssoUserCert,
+                    Conventions = new DocumentConventions { DisposeCertificate = false, DisableTopologyUpdates = true }
+                }.Initialize())
+                {
+                    using (var session = ssoStore.OpenSession())
+                    {
+                        session.Store(new { Name = "Older" }, "test/1");
+                        session.SaveChanges();
+                    }
+                }
+
+                var olderRegistered = await WaitForValueAsync(async () =>
+                {
+                    var certs = await adminStore.Maintenance.Server.SendAsync(new GetCertificatesMetadataOperation());
+                    return certs.Any(c => c.Thumbprint == olderSsoServerCert.Thumbprint);
+                }, true, timeout: 3000);
+
+                Assert.False(olderRegistered);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public async Task SsoUserCertSignedByUnknownKey_EmbeddingRegisteredSsoServerCert_IsRejected()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+            var ssoUserId = "forged@example.com";
+
+            // Embedding a (public) renewed SSO server cert must not let a cert signed by a different key in, nor get the embedded cert registered.
+            var renewedSsoServerCert = CreateRenewedSsoServerCert(ssoCerts, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddYears(1));
+            using var rogueKey = RSA.Create(2048);
+            var forgedUserCert = Certificates.CreateSsoUserCertificateWithEmbeddedSsoServerCert(renewedSsoServerCert, rogueKey, ssoUserId);
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+                Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite });
+
+                using (var ssoStore = new DocumentStore
+                {
+                    Urls = new[] { Server.WebUrl },
+                    Database = dbName,
+                    Certificate = forgedUserCert,
+                    Conventions = new DocumentConventions { DisposeCertificate = false, DisableTopologyUpdates = true }
+                }.Initialize())
+                {
+                    Assert.Throws<AuthorizationException>(() =>
+                    {
+                        using (var session = ssoStore.OpenSession())
+                        {
+                            session.Store(new { Name = "Forged" }, "test/1");
+                            session.SaveChanges();
+                        }
+                    });
+                }
+
+                var certs = await adminStore.Maintenance.Server.SendAsync(new GetCertificatesMetadataOperation());
+                Assert.DoesNotContain(certs, c => c.Thumbprint == renewedSsoServerCert.Thumbprint);
+            }
+        }
+
         private static X509Certificate2 CreateSsoUserCertificateWithRawExtension(SsoTestCertificates ssoCerts, byte[] rawExtensionData)
         {
             const string ssoUserIdExtensionOid = Raven.Client.Constants.Certificates.SsoUserIdExtensionOid;
@@ -1747,7 +1911,7 @@ namespace SlowTests.Authentication
                 Convert.ToBase64String(cert.Export(X509ContentType.Cert)));
         }
 
-        private static X509Certificate2 CreateRenewedSsoServerCert(SsoTestCertificates ssoCerts)
+        private static X509Certificate2 CreateRenewedSsoServerCert(SsoTestCertificates ssoCerts, DateTimeOffset? notBefore = null, DateTimeOffset? notAfter = null)
         {
             var ssoServerKey = (RSA)ssoCerts.SsoServerPrivateKey;
             var dn = new X500DistinguishedName("CN=Renewed SSO Server");
@@ -1761,7 +1925,7 @@ namespace SlowTests.Authentication
                     new Oid("1.3.6.1.5.5.7.3.2")
                 }, false));
 
-            var selfSigned = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-7), DateTimeOffset.UtcNow.AddMonths(3));
+            var selfSigned = request.CreateSelfSigned(notBefore ?? DateTimeOffset.UtcNow.AddDays(-7), notAfter ?? DateTimeOffset.UtcNow.AddMonths(3));
             var certBytes = selfSigned.Export(X509ContentType.Pfx, string.Empty);
 
 #pragma warning disable SYSLIB0057
