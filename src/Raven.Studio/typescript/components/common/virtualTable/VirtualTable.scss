@@ -180,6 +180,7 @@ $row-bg-selection-preview: color-mix(in srgb, colors.$primary-var 8%, colors.$ro
             background-color: colors.$row-even-bg-var;
 
             td {
+                position: relative;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
@@ -195,6 +196,12 @@ $row-bg-selection-preview: color-mix(in srgb, colors.$primary-var 8%, colors.$ro
                 &.col-pinned {
                     z-index: 1;
                     background-color: colors.$row-even-bg-var;
+                }
+
+                .cell-link::after {
+                    content: "";
+                    position: absolute;
+                    inset: 0;
                 }
 
                 .value-string {
