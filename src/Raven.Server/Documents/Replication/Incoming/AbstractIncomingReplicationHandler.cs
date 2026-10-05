@@ -75,6 +75,8 @@ namespace Raven.Server.Documents.Replication.Incoming
         public virtual string FromToString => $"In database {_server.NodeTag}-{_databaseName} @ {_server.GetNodeTcpServerUrl()} " +
                                               $"from {ConnectionInfo.SourceTag}-{ConnectionInfo.SourceDatabaseName} @ {ConnectionInfo.SourceUrl}";
 
+        protected virtual string ConnectionEstablishedLogDetails => FromToString;
+
         protected AbstractIncomingReplicationHandler(AbstractReplicationLoader<TContextPool, TOperationContext> parent, TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer, ReplicationLatestEtagRequest replicatedLastEtag)
         {
             _parent = parent;
@@ -123,10 +125,13 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         public virtual DynamicJsonValue GetConnectionInfoAsJson() => ConnectionInfo.ToJson();
 
-        protected virtual void DoIncomingReplication()
+        private void DoIncomingReplication()
         {
             try
             {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Incoming replication connection established. {ConnectionEstablishedLogDetails}");
+
                 ReceiveReplicationBatches();
             }
             catch (Exception e)
