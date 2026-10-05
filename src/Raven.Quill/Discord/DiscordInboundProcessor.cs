@@ -68,7 +68,7 @@ internal sealed class DiscordInboundProcessor(
         if (IsDuplicate(messageId))
             return;
 
-        health.Inbound();
+        health.MarkReceived();
 
         var chainKey = $"{database}/{Channel.ShortIdFor(channelId)}/{sender}";
         var notifyOverload = false;
@@ -196,7 +196,7 @@ internal sealed class DiscordInboundProcessor(
         var conversationId = ChannelConversationId.For(ChannelType.Discord, shortChannelId, sender, parameters);
 
         var reply = new DiscordStreamingReply(
-            discord, settings.BotToken, dmChannel, options.Value.Discord, logger, ct);
+            discord, settings.BotToken, dmChannel, options.Value.Discord, logger);
 
         try
         {
@@ -206,13 +206,13 @@ internal sealed class DiscordInboundProcessor(
                         parameter => parameter.Key,
                         parameter => AgentParameterValue.FromString(parameter.Value)),
                     options.Value.ChannelConversationIdleWindow),
-                reply.OnChunkAsync, config, ct);
+                chunk => reply.OnChunkAsync(chunk, ct), config, ct);
 
-            await reply.FinalizeAsync();
+            await reply.FinalizeAsync(ct);
             health.MarkSendSucceeded();
 
             if (result.StartedFresh)
-                await TrySendAsync(discord, database, shortChannelId, settings, dmChannel, ConversationExpiredReply, ct);
+                await TrySendAsync(discord, health, shortChannelId, settings, dmChannel, ConversationExpiredReply, ct);
 
             if (reply.IsEmpty)
                 if (logger.IsWarnEnabled)

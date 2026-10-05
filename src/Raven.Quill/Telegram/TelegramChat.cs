@@ -263,7 +263,7 @@ internal sealed class TelegramChat
         string prompt, string conversationId, AiAgentConfiguration config, Dictionary<string, string> parameters)
     {
         var reply = new TelegramStreamingReply(
-            _bot.Client, _chatId, _context.Options.Telegram, _context.Logger, _ct);
+            _bot.Client, _chatId, _context.Options.Telegram, _context.Logger);
 
         try
         {
@@ -274,9 +274,9 @@ internal sealed class TelegramChat
                         parameter => parameter.Key,
                         parameter => AgentParameterValue.FromString(parameter.Value)),
                     _context.Options.ChannelConversationIdleWindow),
-                reply.OnChunkAsync, config, _ct);
+                chunk => reply.OnChunkAsync(chunk, _ct), config, _ct);
 
-            await reply.FinalizeAsync();
+            await reply.FinalizeAsync(_ct);
 
             if (result.StartedFresh)
                 await SendPlainAsync(_context.Messages.ConversationExpired);

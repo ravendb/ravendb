@@ -9,21 +9,21 @@ internal sealed class ChannelConnectionHealth
     public DateTime? LastSendErrorAt { get; private set; }
     public string? LastSendError { get; private set; }
 
-    public void Connected()
+    public void MarkConnected()
     {
         IsConnected = true;
         LastConnectedAt = DateTime.UtcNow;
         LastConnectionError = null;
     }
 
-    public void Disconnected(string? error)
+    public void MarkDisconnected(string? error)
     {
         IsConnected = false;
         if (error is not null)
             LastConnectionError = error;
     }
 
-    public void Inbound() => LastInboundAt = DateTime.UtcNow;
+    public void MarkReceived() => LastInboundAt = DateTime.UtcNow;
 
     public void MarkSendFailed(string error)
     {

@@ -144,14 +144,14 @@ internal sealed class DiscordGatewayRuntime
             catch (Exception e)
             {
                 fatal = null;
-                Health.Disconnected(e.Message);
+                Health.MarkDisconnected(e.Message);
                 if (_logger.IsWarnEnabled)
                     _logger.Warn($"Discord gateway attempt failed for channel {_shortChannelId}: {e.Message}");
             }
 
             if (fatal is not null)
             {
-                Health.Disconnected(fatal);
+                Health.MarkDisconnected(fatal);
                 if (_logger.IsErrorEnabled)
                     _logger.Error($"Discord gateway stopped for channel {_shortChannelId}: {fatal}");
                 return;
@@ -253,7 +253,7 @@ internal sealed class DiscordGatewayRuntime
             {
             }
 
-            Health.Disconnected(null);
+            Health.MarkDisconnected(null);
         }
     }
 
@@ -300,7 +300,7 @@ internal sealed class DiscordGatewayRuntime
     {
         _backoff = MinBackoff;
         _attemptsSinceConnected = 0;
-        Health.Connected();
+        Health.MarkConnected();
         if (_logger.IsInfoEnabled)
             _logger.Info($"Discord gateway connected for channel {_shortChannelId} (bot {_botUserId})");
     }

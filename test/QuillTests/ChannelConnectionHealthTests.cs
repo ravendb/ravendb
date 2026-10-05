@@ -11,9 +11,9 @@ public class ChannelConnectionHealthTests(ITestOutputHelper output) : NoDisposal
     public void Reconnecting_clears_the_previous_connection_error()
     {
         var health = new ChannelConnectionHealth();
-        health.Disconnected("slack disabled Socket Mode for this app");
+        health.MarkDisconnected("slack disabled Socket Mode for this app");
 
-        health.Connected();
+        health.MarkConnected();
 
         Assert.True(health.IsConnected);
         Assert.NotNull(health.LastConnectedAt);
@@ -24,11 +24,11 @@ public class ChannelConnectionHealthTests(ITestOutputHelper output) : NoDisposal
     public void A_quiet_disconnect_keeps_the_last_connect_time_and_error()
     {
         var health = new ChannelConnectionHealth();
-        health.Connected();
+        health.MarkConnected();
         var connectedAt = health.LastConnectedAt;
-        health.Disconnected("discord did not send a hello frame within 00:00:15");
+        health.MarkDisconnected("discord did not send a hello frame within 00:00:15");
 
-        health.Disconnected(null);
+        health.MarkDisconnected(null);
 
         Assert.False(health.IsConnected);
         Assert.Equal(connectedAt, health.LastConnectedAt);
@@ -51,7 +51,7 @@ public class ChannelConnectionHealthTests(ITestOutputHelper output) : NoDisposal
     public void A_successful_send_clears_the_recorded_send_error()
     {
         var health = new ChannelConnectionHealth();
-        health.Inbound();
+        health.MarkReceived();
         health.MarkSendFailed("503: discord is unavailable");
 
         health.MarkSendSucceeded();

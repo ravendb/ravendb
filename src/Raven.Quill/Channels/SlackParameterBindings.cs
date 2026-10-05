@@ -38,12 +38,12 @@ internal static class SlackParameterBindings
                         {
                             sender = await lookupSender();
                         }
-                        catch (SlackApiException e)
+                        catch (Exception e) when (SlackApiErrors.IsApiFailure(e))
                         {
-                            return new BindResult(null, e.Error == SlackApiException.MissingScopeError
+                            return new BindResult(null, SlackApiErrors.ErrorCodeOf(e) == SlackApiErrors.MissingScope
                                 ? $"parameter '{name}': reading the sender's email needs the users:read and " +
                                   "users:read.email scopes; add them to the Slack app and reinstall it to the workspace"
-                                : $"parameter '{name}': could not read the sender's email from Slack: {e.Message}");
+                                : $"parameter '{name}': could not read the sender's email from Slack: {SlackApiErrors.Describe(e)}");
                         }
                     }
 
