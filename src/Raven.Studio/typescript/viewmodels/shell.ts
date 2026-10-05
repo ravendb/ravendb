@@ -454,7 +454,7 @@ class shell extends viewModelBase {
 
     static applyLanguage(value: i18nResources.StudioLanguage) {
         if (i18nModule.i18n.language !== value) {
-            i18nModule.changeLanguage(value);
+            i18nModule.changeLanguage(value).catch((error) => console.error("Failed to load Studio language", error));
         }
     }
 

@@ -18,6 +18,7 @@ import database = require("models/resources/database");
 import i18nModule = require("common/i18n/i18n");
 
 const t = i18nModule.createTranslator("revisionsBin");
+const commonT = i18nModule.createTranslator("common");
 
 class revisionsBin extends shardViewModelBase {
 
@@ -34,6 +35,7 @@ class revisionsBin extends shardViewModelBase {
 
     private gridController = ko.observable<virtualGridController<document>>();
     private columnPreview = new columnPreviewPlugin<document>();
+    private deletionDateColumn: textColumn<document>;
 
     itemsSoFar = ko.observable<number>(0);
     continuationToken: string;
@@ -119,13 +121,12 @@ class revisionsBin extends shardViewModelBase {
 
         grid.headerVisible(true);
         
-        const checkColumn = new checkedColumn(false);
-        const idColumn = new hyperlinkColumn<document>(grid, x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.db), t("columns.id"), "300px");
-        const changeVectorColumn = new textColumn<document>(grid, x => x.__metadata.changeVector(), "Change Vector", "210px");
-        const deletionDateColumn = new textColumn<document>(grid, x => generalUtils.formatUtcDateAsLocal(x.__metadata.lastModified()), t("columns.deletionDate"), "300px");
+        grid.init((s) => this.fetchRevisionsBinEntries(s), () => this.createColumns(grid));
 
-        const gridColumns = this.isAdminAccessOrAbove() ? [checkColumn, idColumn, changeVectorColumn, deletionDateColumn] : [idColumn, changeVectorColumn, deletionDateColumn];
-        grid.init((s) => this.fetchRevisionsBinEntries(s), () => gridColumns);
+        this.registerDisposable(i18nModule.currentLanguage.subscribe(() => {
+            grid.markColumnsDirty();
+            grid.reset(false);
+        }));
 
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 
@@ -133,7 +134,7 @@ class revisionsBin extends shardViewModelBase {
             (doc: document, column: virtualColumn, e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy: string) => void) => {
             if (column instanceof textColumn) {
                 
-                if (column === deletionDateColumn) {
+                if (column === this.deletionDateColumn) {
                     onValue(moment.utc(doc.__metadata.lastModified()), doc.__metadata.lastModified());
                 } else {
                     const value = column.getCellValue(doc);
@@ -147,6 +148,16 @@ class revisionsBin extends shardViewModelBase {
         });
     }
 
+    private createColumns(grid: virtualGridController<document>): virtualColumn[] {
+        const checkColumn = new checkedColumn(false);
+        const idColumn = new hyperlinkColumn<document>(grid, x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.db), t("columns.id"), "300px");
+        const changeVectorColumn = new textColumn<document>(grid, x => x.__metadata.changeVector(), t("columns.changeVector"), "210px");
+        this.deletionDateColumn = new textColumn<document>(grid, x => generalUtils.formatUtcDateAsLocal(x.__metadata.lastModified()), t("columns.deletionDate"), "300px");
+
+        const dataColumns = [idColumn, changeVectorColumn, this.deletionDateColumn];
+        return this.isAdminAccessOrAbove() ? [checkColumn, ...dataColumns] : dataColumns;
+    }
+
     deleteSelected() {
         const selectedIds = this.gridController().getSelectedItems().map(x => x.getId());
 
@@ -155,7 +166,7 @@ class revisionsBin extends shardViewModelBase {
         this.confirmationMessage(t("deleteConfirm.title"),
             t("deleteConfirm.message"),
             {
-                buttons: [t("common:cancel"), t("deleteConfirm.confirmButton")],
+                buttons: [commonT("cancel"), t("deleteConfirm.confirmButton")],
                 html: true
             })
             .done(result => {

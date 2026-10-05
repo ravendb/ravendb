@@ -1,3 +1,10 @@
+const reactBootstrapImport = {
+  "name": "react-bootstrap",
+  "message": "Please import individual components, e.g.: import Tooltip from 'react-bootstrap/Tooltip'"
+};
+
+const i18nImportMessage = "Use useStudioTranslation, StudioTrans or createTranslator, they type-check keys and options";
+
 module.exports = {
   "env": {
     "browser": true,
@@ -39,19 +46,33 @@ module.exports = {
       'warn',
       { props: 'never', children: 'never' },
     ],
-    "no-restricted-imports": [
+    "no-restricted-imports": "off",
+    "@typescript-eslint/no-restricted-imports": [
       "error",
       {
         "paths": [
-          {
-            "name": "react-bootstrap",
-            "message": "Please import individual components, e.g.: import Tooltip from 'react-bootstrap/Tooltip'"
-          }
+          reactBootstrapImport,
+          { "name": "i18next", "message": i18nImportMessage },
+          { "name": "react-i18next", "message": i18nImportMessage }
         ]
       }
     ],
     "no-constant-condition": "off"
   },
+  "overrides": [
+    {
+      "files": [
+        "typescript/common/i18n/**",
+        "typescript/common/extensions.ts",
+        "typescript/components/hooks/useStudioTranslation.ts",
+        "typescript/components/common/i18n/**",
+        "typescript/test/rtlTestUtils.tsx"
+      ],
+      "rules": {
+        "@typescript-eslint/no-restricted-imports": ["error", { "paths": [reactBootstrapImport] }]
+      }
+    }
+  ],
   "settings": {
     "react": {
       "pragma": "React",

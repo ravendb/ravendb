@@ -74,6 +74,23 @@ describe("i18nBindingHandler", () => {
         expect(attr.getAttribute("title")).toBe("Anuluj");
     });
 
+    it("rejects keys without a namespace", () => {
+        expect(() => bind(`<span data-bind="i18n: 'save'"></span>`)).toThrow("must have a namespace: save");
+    });
+
+    it("clears text and removes attributes for null values", () => {
+        const title = ko.observable<string>(null);
+        const text = bind(`<span data-bind="i18n: title"></span>`, { title });
+        const attr = bind(`<button title="stale" data-bind="i18nAttr: { title: title }"></button>`, { title });
+
+        expect(text.textContent).toBe("");
+        expect(attr.hasAttribute("title")).toBe(false);
+
+        title("common:cancel");
+        expect(text.textContent).toBe("Cancel");
+        expect(attr.getAttribute("title")).toBe("Cancel");
+    });
+
     it("never writes HTML", () => {
         i18n.addResourceBundle("en", "spec", { html: "<b>bold</b>" }, true, true);
         const element = bind(`<span data-bind="i18n: 'spec:html'"></span>`);

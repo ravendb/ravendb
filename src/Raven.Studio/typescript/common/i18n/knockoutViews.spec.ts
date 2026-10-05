@@ -19,6 +19,7 @@ const i18nBindingRegex = /data-bind="([^"]*\bi18n(?:Attr)?\s*:[^"]*)"/g;
 const keyRegex = /'([A-Za-z][\w]*:[\w.]+)'/g;
 const contextRegex = /\bcontext\s*:([^,}]*)/g;
 const stringLiteralRegex = /'([^']*)'/g;
+const placeholderRegex = /\{\{(\w+)\}\}/g;
 
 function contextsOf(binding: string): string[] {
     return [...binding.matchAll(contextRegex)].flatMap(([, expression]) =>
@@ -33,10 +34,25 @@ function keyResolves(key: string, contexts: string[]): boolean {
     return contexts.every((context) => i18n.exists(key, { context }));
 }
 
-function unresolvedKeys(html: string): string[] {
+function placeholdersOf(key: string, contexts: string[]): string[] {
+    const [ns, path] = key.split(":");
+    const paths = contexts.length === 0 ? [path] : contexts.map((context) => `${path}_${context}`);
+    return paths.flatMap((variant) =>
+        [...String(i18n.getResource("en", ns, variant)).matchAll(placeholderRegex)].map(([, name]) => name)
+    );
+}
+
+function keyProblems(html: string): string[] {
     return [...html.matchAll(i18nBindingRegex)].flatMap(([, binding]) => {
         const contexts = contextsOf(binding);
-        return [...binding.matchAll(keyRegex)].map(([, key]) => key).filter((key) => !keyResolves(key, contexts));
+        return [...binding.matchAll(keyRegex)].flatMap(([, key]) => {
+            if (!keyResolves(key, contexts)) {
+                return [key];
+            }
+            return placeholdersOf(key, contexts)
+                .filter((name) => !new RegExp(`\\b${name}\\s*:`).test(binding))
+                .map((name) => `${key} needs option ${name}`);
+        });
     });
 }
 
@@ -57,16 +73,24 @@ describe("Knockout views i18n keys", () => {
         const withoutContext = `<h3 data-bind="i18n: 'editCustomSorter:heading'"></h3>`;
         const withUnknownContext = `<h3 data-bind="i18n: { key: 'editCustomSorter:heading', options: { context: 'clone' } }"></h3>`;
 
-        expect(unresolvedKeys(withContext)).toEqual([]);
-        expect(unresolvedKeys(withoutContext)).toEqual(["editCustomSorter:heading"]);
-        expect(unresolvedKeys(withUnknownContext)).toEqual(["editCustomSorter:heading"]);
+        expect(keyProblems(withContext)).toEqual([]);
+        expect(keyProblems(withoutContext)).toEqual(["editCustomSorter:heading"]);
+        expect(keyProblems(withUnknownContext)).toEqual(["editCustomSorter:heading"]);
     });
 
-    it("every key used in a view exists in en resources", () => {
-        const missing = listHtmlFiles(viewsRoot).flatMap((file) =>
-            unresolvedKeys(fs.readFileSync(file, "utf8")).map((key) => `${path.relative(viewsRoot, file)}: ${key}`)
+    it("requires an option for every placeholder of the key", () => {
+        const withOptions = `<span data-bind="i18n: { key: 'conflicts:resolvingConflictFor', options: { documentId: id } }"></span>`;
+        const withoutOptions = `<span data-bind="i18n: 'conflicts:resolvingConflictFor'"></span>`;
+
+        expect(keyProblems(withOptions)).toEqual([]);
+        expect(keyProblems(withoutOptions)).toEqual(["conflicts:resolvingConflictFor needs option documentId"]);
+    });
+
+    it("every key used in a view exists in en resources and gets its options", () => {
+        const problems = listHtmlFiles(viewsRoot).flatMap((file) =>
+            keyProblems(fs.readFileSync(file, "utf8")).map((problem) => `${path.relative(viewsRoot, file)}: ${problem}`)
         );
 
-        expect(missing).toEqual([]);
+        expect(problems).toEqual([]);
     });
 });

@@ -4,6 +4,7 @@ export default {
     emptyBin: "The revisions bin is empty.",
     columns: {
         id: "Id",
+        changeVector: "Change Vector",
         deletionDate: "Deletion date",
     },
     deleteConfirm: {
