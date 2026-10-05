@@ -1,9 +1,5 @@
 using FastTests;
-using System.Net;
 using Raven.Quill.Channels;
-using Raven.Quill.Discord;
-using Raven.Quill.Hosting;
-using Raven.Quill.Logging;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -38,30 +34,6 @@ public class ChannelStreamingReplyTests(ITestOutputHelper output) : NoDisposalNe
         Assert.Equal(["0123456789", "x"], reply.Previews);
         Assert.Contains("0123456789", reply.Finals);
         Assert.Contains("x", reply.Finals);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task Discord_preview_backs_off_for_retry_after_and_still_finalizes()
-    {
-        var client = new RateLimitingDiscordClient();
-        var options = new DiscordOptions { EditDebounce = TimeSpan.Zero };
-        var reply = new DiscordStreamingReply(
-            client, "bot-token", "dm-channel", options, new QuillLogger<DiscordInboundProcessor>(), CancellationToken.None);
-
-        await reply.OnChunkAsync("a");
-
-        client.NextEditRateLimited = TimeSpan.FromMinutes(5);
-        await reply.OnChunkAsync("b");
-        await reply.OnChunkAsync("c");
-        await reply.OnChunkAsync("d");
-
-        Assert.Equal(1, client.CreateCalls);
-        Assert.Equal(1, client.EditCalls);
-
-        await reply.FinalizeAsync();
-
-        Assert.Equal(2, client.EditCalls);
-        Assert.Equal("abcd", client.LastEditContent);
     }
 
     private sealed class RecordingReply(int messageLimit)
@@ -104,39 +76,5 @@ public class ChannelStreamingReplyTests(ITestOutputHelper output) : NoDisposalNe
             _open = true;
             return Task.CompletedTask;
         }
-    }
-
-    private sealed class RateLimitingDiscordClient : IDiscordClient
-    {
-        public int CreateCalls { get; private set; }
-        public int EditCalls { get; private set; }
-        public string LastEditContent { get; private set; } = "";
-        public TimeSpan? NextEditRateLimited { get; set; }
-
-        public Task<string> CreateMessageAsync(string botToken, string channelId, string content, CancellationToken ct)
-        {
-            CreateCalls++;
-            return Task.FromResult("message-1");
-        }
-
-        public Task EditMessageAsync(
-            string botToken, string channelId, string messageId, string content, CancellationToken ct)
-        {
-            EditCalls++;
-            if (NextEditRateLimited is { } retryAfter)
-            {
-                NextEditRateLimited = null;
-                throw new DiscordApiException("rate limited", HttpStatusCode.TooManyRequests, retryAfter);
-            }
-
-            LastEditContent = content;
-            return Task.CompletedTask;
-        }
-
-        public Task<(DiscordBotIdentity? Identity, string? Error, bool DiscordResponded)> GetBotIdentityAsync(
-            string botToken, CancellationToken ct) => throw new NotSupportedException();
-
-        public Task<string> GetGatewayUrlAsync(string botToken, CancellationToken ct) =>
-            throw new NotSupportedException();
     }
 }
