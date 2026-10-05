@@ -5,6 +5,8 @@ import i18nModule = require("common/i18n/i18n");
 type i18nKeyOptions = Record<string, unknown>;
 
 type i18nBindingValue =
+    | null
+    | undefined
     | string
     | KnockoutObservable<string>
     | {
@@ -23,11 +25,10 @@ type i18nAttrBindingValue = Record<string, i18nBindingValue>;
  *
  * Keys use the "namespace:key" form. `key`, `options` and option values may be observables.
  * Text is written to textContent, never innerHTML. Bindings re-evaluate on language change.
+ * A null or undefined value clears the text or removes the attribute.
  */
 class i18nBindingHandler {
     private static installed = false;
-
-    private static readonly languageVersion = ko.observable(0);
 
     static install() {
         if (i18nBindingHandler.installed) {
@@ -35,13 +36,9 @@ class i18nBindingHandler {
         }
         i18nBindingHandler.installed = true;
 
-        i18nModule.i18n.on("languageChanged", () => {
-            i18nBindingHandler.languageVersion(i18nBindingHandler.languageVersion() + 1);
-        });
-
         ko.bindingHandlers["i18n"] = {
             update(element: HTMLElement, valueAccessor: () => i18nBindingValue) {
-                element.textContent = i18nBindingHandler.resolve(valueAccessor());
+                element.textContent = i18nBindingHandler.resolve(valueAccessor()) ?? "";
             },
         };
 
@@ -49,16 +46,25 @@ class i18nBindingHandler {
             update(element: HTMLElement, valueAccessor: () => i18nAttrBindingValue) {
                 const attributes = ko.unwrap(valueAccessor());
                 Object.entries(attributes).forEach(([attribute, value]) => {
-                    element.setAttribute(attribute, i18nBindingHandler.resolve(value));
+                    const text = i18nBindingHandler.resolve(value);
+                    if (text == null) {
+                        element.removeAttribute(attribute);
+                    } else {
+                        element.setAttribute(attribute, text);
+                    }
                 });
             },
         };
     }
 
-    static resolve(value: i18nBindingValue): string {
-        i18nBindingHandler.languageVersion();
+    static resolve(value: i18nBindingValue): string | null {
+        i18nModule.currentLanguage();
 
         const unwrapped = ko.unwrap(value);
+
+        if (unwrapped == null) {
+            return null;
+        }
 
         if (typeof unwrapped === "string") {
             return i18nBindingHandler.translate(unwrapped);
@@ -72,6 +78,9 @@ class i18nBindingHandler {
     }
 
     private static translate(key: string, options?: i18nKeyOptions): string {
+        if (!key.includes(":")) {
+            throw new Error(`[i18n] Knockout translation key must have a namespace: ${key}`);
+        }
         return i18nModule.i18n.t(key, { ...options, interpolation: { escapeValue: false } }) as string;
     }
 }

@@ -48,6 +48,7 @@ export default function StudioGlobalConfiguration() {
     const [tableHoveredFont, setTableHoveredFont] = useState<string>(null);
     const [codeHoveredFont, setCodeHoveredFont] = useState<string>(null);
     const t = useStudioTranslation("studioGlobalConfiguration");
+    const commonT = useStudioTranslation("common");
 
     const asyncGlobalSettings = useAsyncCallback<StudioGlobalConfigurationFormData>(async () => {
         const settings = await studioSettings.default.globalSettings(true);
@@ -137,7 +138,7 @@ export default function StudioGlobalConfiguration() {
                                 disabled={!formState.isDirty}
                                 isSpinning={formState.isSubmitting}
                             >
-                                {t("common:save")}
+                                {commonT("save")}
                             </ButtonWithSpinner>
                         </ConditionalPopover>
                         <div className={hasStudioConfiguration ? null : "item-disabled pe-none"}>
@@ -288,7 +289,7 @@ export default function StudioGlobalConfiguration() {
                                 <li>{t("about.environmentPerDatabase")}</li>
                             </ul>
                             <hr />
-                            <div className="small-label mb-2">{t("common:usefulLinks")}</div>
+                            <div className="small-label mb-2">{commonT("usefulLinks")}</div>
                             <a href={clientConfigurationDocsLink} target="_blank">
                                 <Icon icon="newtab" /> {t("about.docsLink")}
                             </a>

@@ -4,6 +4,7 @@
     "emptyBin": "Kosz rewizji jest pusty.",
     "columns": {
         "id": "Id",
+        "changeVector": "Change Vector",
         "deletionDate": "Data usunięcia"
     },
     "deleteConfirm": {

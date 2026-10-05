@@ -11,6 +11,10 @@ export const supportedLanguages = ["en", "pl"] as const;
 
 export type StudioLanguage = (typeof supportedLanguages)[number];
 
+export function isStudioLanguage(value: unknown): value is StudioLanguage {
+    return supportedLanguages.includes(value as StudioLanguage);
+}
+
 export const languageNames: Record<StudioLanguage, string> = {
     en: "English",
     pl: "Polski",
@@ -75,17 +79,19 @@ type VariantParams<V extends { context: string; vars: string }> = {
     [Name in V["vars"]]: Name extends "count" ? number : string | number;
 } & ContextParam<V>;
 
-type KeyParams<Ns extends TranslationNamespace, Key> = VariantParams<Extract<Variant<Ns>, { base: Key }>>;
+type KeyParams<Ns extends TranslationNamespace, Key> = Key extends unknown
+    ? VariantParams<Extract<Variant<Ns>, { base: Key }>>
+    : never;
 
 type BaseOf<V> = V extends { base: infer Base extends string } ? Base : never;
 
-export type NamespaceKey<Ns extends TranslationNamespace> = BaseOf<Variant<Ns>>;
+export type TranslationKey<Ns extends TranslationNamespace> = BaseOf<Variant<Ns>>;
 
-type CommonKey = `${typeof defaultNS}:${NamespaceKey<typeof defaultNS>}`;
+type UnionToIntersection<U> = (U extends unknown ? (union: U) => void : never) extends (intersection: infer I) => void
+    ? I
+    : never;
 
-type ScopedKeyParams<Ns extends TranslationNamespace, Key> = Key extends `${typeof defaultNS}:${infer CommonKeyName}`
-    ? KeyParams<typeof defaultNS, CommonKeyName>
-    : KeyParams<Ns, Key>;
+type TranslateParams<Ns extends TranslationNamespace, Key> = UnionToIntersection<KeyParams<Ns, Key>>;
 
 type TranslateArgs<Params> = [keyof Params] extends [never]
     ? []
@@ -93,7 +99,19 @@ type TranslateArgs<Params> = [keyof Params] extends [never]
       ? [options?: Params]
       : [options: Params];
 
-export type StudioTranslate<Ns extends TranslationNamespace> = <Key extends NamespaceKey<Ns> | CommonKey>(
+export type StudioTranslate<Ns extends TranslationNamespace> = <Key extends TranslationKey<Ns>>(
     key: Key,
-    ...args: TranslateArgs<ScopedKeyParams<Ns, Key>>
+    ...args: TranslateArgs<TranslateParams<Ns, Key>>
 ) => string;
+
+type OptionsProp<Args> = Args extends []
+    ? { options?: never }
+    : Args extends [options: infer Params]
+      ? { options: Params }
+      : Args extends [options?: infer Params]
+        ? { options?: Params }
+        : never;
+
+export type TranslateOptionsProp<Ns extends TranslationNamespace, Key> = OptionsProp<
+    TranslateArgs<TranslateParams<Ns, Key>>
+>;

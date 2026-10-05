@@ -71,6 +71,7 @@ class conflicts extends shardViewModelBase {
 
     private gridController = ko.observable<virtualGridController<replicationConflictListItemDto>>();
     private columnPreview = new columnPreviewPlugin<replicationConflictListItemDto>();
+    private lastModifiedColumn: textColumn<replicationConflictListItemDto>;
 
     currentConflict = ko.observable<Raven.Client.Documents.Commands.GetConflictsResult>();
     conflictItems = ko.observableArray<conflictItem>([]);
@@ -102,7 +103,7 @@ class conflicts extends shardViewModelBase {
             aceValidation: true,
             validation: [{
                 validator: (val: string) => conflictTokens.every(token => !val.includes(token)),
-                message: t("conflictMarkersPresent")
+                message: () => t("conflictMarkersPresent")
             }]
         });
     }
@@ -123,22 +124,18 @@ class conflicts extends shardViewModelBase {
         const grid = this.gridController();
         grid.headerVisible(true);
 
-        const documentColumn = new hyperlinkColumn<replicationConflictListItemDto>(grid, x => x.Id, x => appUrl.forConflicts(this.db, x.Id), t("columns.document"), "40%",
-            {
-                handler: (item, event) => this.handleLoadAction(item, event)
-            });
-        const conflictsPerDocumentColumn = new textColumn<replicationConflictListItemDto>(grid, x => x.ConflictsPerDocument, "#", "10%", {
-            headerTitle: t("columns.conflictsPerDocument")
-        });
-        const lastModifiedColumn = new textColumn<replicationConflictListItemDto>(grid, x => x.LastModified, t("columns.lastModified"), "45%");
+        grid.init((_skip, take) => this.fetchConflicts(take), () => this.createColumns(grid));
 
-        grid.init((skip, take) => this.fetchConflicts(take), () => [documentColumn, conflictsPerDocumentColumn, lastModifiedColumn]);
+        this.registerDisposable(i18nModule.currentLanguage.subscribe(() => {
+            grid.markColumnsDirty();
+            this.reloadGrid();
+        }));
 
         this.columnPreview.install(".conflicts-grid", ".js-conflict-details-tooltip",
             (details: replicationConflictListItemDto, column: virtualColumn, e: JQuery.TriggeredEvent,
              onValue: (context: any, valueToCopy?: string) => void) => {
                 if (column instanceof textColumn) {
-                    if (column === lastModifiedColumn) {
+                    if (column === this.lastModifiedColumn) {
                         onValue(moment.utc(details.LastModified), details.LastModified);
                     } else {
                         const value = column.getCellValue(details);
@@ -170,6 +167,19 @@ class conflicts extends shardViewModelBase {
                     }
                 }
             });
+    }
+
+    private createColumns(grid: virtualGridController<replicationConflictListItemDto>): virtualColumn[] {
+        const documentColumn = new hyperlinkColumn<replicationConflictListItemDto>(grid, x => x.Id, x => appUrl.forConflicts(this.db, x.Id), t("columns.document"), "40%",
+            {
+                handler: (item, event) => this.handleLoadAction(item, event)
+            });
+        const conflictsPerDocumentColumn = new textColumn<replicationConflictListItemDto>(grid, x => x.ConflictsPerDocument, "#", "10%", {
+            headerTitle: t("columns.conflictsPerDocument")
+        });
+        this.lastModifiedColumn = new textColumn<replicationConflictListItemDto>(grid, x => x.LastModified, t("columns.lastModified"), "45%");
+
+        return [documentColumn, conflictsPerDocumentColumn, this.lastModifiedColumn];
     }
 
     private fetchConflicts(take: number): JQueryPromise<pagedResultWithToken<replicationConflictListItemDto>> {
@@ -298,9 +308,13 @@ class conflicts extends shardViewModelBase {
         }
     }
 
-    private onResolved() {
+    private reloadGrid() {
         this.nextStart = 0;
         this.gridController().reset(false);
+    }
+
+    private onResolved() {
+        this.reloadGrid();
         
         this.suggestedResolution("");
         this.conflictItems([]);
