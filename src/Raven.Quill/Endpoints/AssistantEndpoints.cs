@@ -55,7 +55,7 @@ public static class AssistantEndpoints
     }
 
     private static IResult ToConsentResult(AiHelperStatus status) =>
-        status is AiHelperStatus.Success or AiHelperStatus.ConsentRequired or AiHelperStatus.InvalidCredentials
+        status.ServiceAnswered()
             ? Results.Ok(new AssistantConsentResponse(status))
             : Results.Json(
                 new ApiErrorResponse("The AI service could not be reached."),

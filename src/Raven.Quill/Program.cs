@@ -14,6 +14,7 @@ using Microsoft.Extensions.Options;
 using Polly;
 using Raven.Quill.Agents;
 using Raven.Quill.AiHelper;
+using Raven.Quill.AiHelper.Migration;
 using Raven.Quill.Auth;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
@@ -174,24 +175,11 @@ builder.Services.ConfigureHttpClientDefaults(httpBuilder =>
 builder.Services.AddHttpClient(WebhookActionExecutor.ClientName,
     static http => http.Timeout = TimeSpan.FromSeconds(30));
 
-builder.Services.AddHttpClient<IAiHelperClient, AiHelperInternalClient>(static (sp, http) =>
-    {
-        var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value;
-        var store = sp.GetRequiredService<IDocumentStore>();
-        http.BaseAddress = new Uri(string.IsNullOrEmpty(opts.AiApiUrl) ? store.Urls[0] : opts.AiApiUrl);
-        http.Timeout = opts.AiAssistTimeout;
-    })
-    .ConfigurePrimaryHttpMessageHandler(static sp =>
-    {
-        var store = sp.GetRequiredService<IDocumentStore>();
-        var handler = new HttpClientHandler
-        {
-            AllowAutoRedirect = false
-        };
-        if (store.Certificate is not null)
-            handler.ClientCertificates.Add(store.Certificate);
-        return handler;
-    });
+builder.Services.AddHttpClient<IAiHelperClient, AiHelperInternalClient>(ConfigureRavenServerClient)
+    .ConfigurePrimaryHttpMessageHandler(CreateRavenServerHandler);
+
+builder.Services.AddHttpClient<MigrationService>(ConfigureRavenServerClient)
+    .ConfigurePrimaryHttpMessageHandler(CreateRavenServerHandler);
 
 builder.Services.AddSingleton<ILicenseClient, LicenseHttpClient>();
 
@@ -391,6 +379,26 @@ static TimeSpan ParsePositiveSeconds(string name, string value)
     if (int.TryParse(value, out var seconds) == false || seconds <= 0)
         throw new InvalidOperationException($"{name} must be a positive number of seconds, got '{value}'");
     return TimeSpan.FromSeconds(seconds);
+}
+
+static void ConfigureRavenServerClient(IServiceProvider sp, HttpClient http)
+{
+    var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value;
+    var store = sp.GetRequiredService<IDocumentStore>();
+    http.BaseAddress = new Uri(string.IsNullOrEmpty(opts.AiApiUrl) ? store.Urls[0] : opts.AiApiUrl);
+    http.Timeout = opts.AiAssistTimeout;
+}
+
+static HttpMessageHandler CreateRavenServerHandler(IServiceProvider sp)
+{
+    var store = sp.GetRequiredService<IDocumentStore>();
+    var handler = new HttpClientHandler
+    {
+        AllowAutoRedirect = false
+    };
+    if (store.Certificate is not null)
+        handler.ClientCertificates.Add(store.Certificate);
+    return handler;
 }
 
 static string GetJsonPropertyName(System.Reflection.PropertyInfo property)

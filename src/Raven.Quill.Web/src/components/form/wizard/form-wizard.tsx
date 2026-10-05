@@ -10,6 +10,7 @@ import {
 } from "react-hook-form";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/shadcn/ui/button";
+import { ConfirmDialog } from "@/components/shadcn/ui/confirm-dialog";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { useUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { Heading, Text } from "@/components/typography";
@@ -34,6 +35,14 @@ export type WizardValidationTarget<Values extends FieldValues> = Path<Values> | 
 export type WizardCompletion =
     | { type: "submit"; label?: ReactNode; busyLabel?: ReactNode }
     | { type: "action"; label?: ReactNode; busyLabel?: ReactNode; onComplete: WizardAction };
+
+export type WizardConfirmNext = {
+    isRequired: boolean;
+    title: ReactNode;
+    description?: ReactNode;
+    confirmLabel?: ReactNode;
+    onConfirm?: () => void;
+};
 
 export type WizardBodyComponentProps<StepId extends string = string> = {
     currentStepId: StepId;
@@ -72,6 +81,7 @@ export type WizardStep<StepId extends string, Values extends FieldValues = Field
     validate: WizardValidationTarget<Values>;
     onValidationFailed?: WizardAction;
     beforeNext?: WizardAction;
+    confirmNext?: WizardConfirmNext;
     isNextDisabled?: boolean;
     /** Shown as a tooltip on the disabled button. */
     nextDisabledReason?: ReactNode;
@@ -120,6 +130,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
     const [isAdvancing, setIsAdvancing] = useState(false);
     const [progressLabel, setProgressLabel] = useState<string | null>(null);
     const [advanceError, setAdvanceError] = useState<Error | null>(null);
+    const [isConfirmingNext, setIsConfirmingNext] = useState(false);
     const isAdvancingRef = useRef(false);
 
     // A failure describes the values it ran against, so any edit makes it stale. Steps that edit values
@@ -193,11 +204,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
         }
     };
 
-    const handleNext = async () => {
-        if (currentIndex >= flow.length - 1) {
-            return;
-        }
-
+    const advance = async () => {
         await runAction(async (progress) => {
             if (!(await validateCurrentStep(progress))) {
                 return;
@@ -206,6 +213,24 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
             await currentStep.beforeNext?.(progress);
             setActiveStepIndex(currentIndex + 1);
         });
+    };
+
+    const handleNext = async () => {
+        if (currentIndex >= flow.length - 1) {
+            return;
+        }
+
+        if (currentStep.confirmNext?.isRequired) {
+            setIsConfirmingNext(true);
+            return;
+        }
+
+        await advance();
+    };
+
+    const confirmNext = () => {
+        currentStep.confirmNext?.onConfirm?.();
+        void advance();
     };
 
     const handleComplete = async () => {
@@ -277,6 +302,17 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                         completion={completion}
                         footerComponent={currentStep.footerComponent}
                     />
+                    {currentStep.confirmNext && (
+                        <ConfirmDialog
+                            variant="warning"
+                            open={isConfirmingNext}
+                            onOpenChange={setIsConfirmingNext}
+                            title={currentStep.confirmNext.title}
+                            description={currentStep.confirmNext.description}
+                            confirmLabel={currentStep.confirmNext.confirmLabel}
+                            onConfirm={confirmNext}
+                        />
+                    )}
                 </div>
 
                 <aside className="hidden border-l bg-sidebar/30 px-4 py-5 lg:block" aria-label="Setup steps">

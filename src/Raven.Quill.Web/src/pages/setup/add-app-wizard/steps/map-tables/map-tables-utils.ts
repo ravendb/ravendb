@@ -52,6 +52,16 @@ export function getSourceTableKey(table: SourceTableRef): string | null {
     return `${table.sourceTableSchema?.trim().toLowerCase() ?? ""}::${name}`;
 }
 
+export function haveSameTables(current: SourceTableRef[], other: SourceTableRef[]): boolean {
+    if (current.length !== other.length) {
+        return false;
+    }
+
+    const currentKeys = new Set(current.map(getSourceTableKey));
+
+    return other.every((table) => currentKeys.has(getSourceTableKey(table)));
+}
+
 /** A source table the mapping refers to, in the shape the verify-schema selection and the CDC
  * dry run both use. */
 export type MappedSourceTable = AppFormData["verifySchema"]["tables"][number];
