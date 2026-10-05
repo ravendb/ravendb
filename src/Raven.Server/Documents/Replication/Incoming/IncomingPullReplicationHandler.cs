@@ -143,8 +143,6 @@ namespace Raven.Server.Documents.Replication.Incoming
         public override DynamicJsonValue GetConnectionInfoAsJson()
         {
             var json = base.GetConnectionInfoAsJson();
-            if (IsDisposed != false)
-                return json;
 
             json[nameof(ChangeVectorWireMode)] = ChangeVectorWireMode;
             json[nameof(PullReplicationMode)] = IncomingPullReplicationParams.Mode;

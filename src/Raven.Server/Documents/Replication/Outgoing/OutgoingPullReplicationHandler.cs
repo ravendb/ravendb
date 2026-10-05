@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         {
             var json = base.GetConnectionInfoAsJson();
 
-            if (HandshakeCompleted && IsConnectionDisposed == false)
+            if (HandshakeCompleted)
                 json[nameof(ChangeVectorWireMode)] = ChangeVectorWireMode;
 
             return json;
