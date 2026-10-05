@@ -326,10 +326,17 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
     private AiAgentConfiguration CreateAgentConfiguration(JsonOperationContext context, GenAiResultItem item)
     {
         var agentParameters = new List<AiAgentParameter>();
-        var contextObjPropNames = item.ContextOutput.Context.GetPropertyNames();
-        foreach (var name in contextObjPropNames)
+        BlittableJsonReaderObject.PropertyDetails contextProperty = default;
+        for (var i = 0; i < item.ContextOutput.Context.Count; i++)
         {
-            agentParameters.Add(new AiAgentParameter(name) { SendToModel = false });
+            item.ContextOutput.Context.GetPropertyByIndex(i, ref contextProperty);
+
+            // a context value the query binder cannot take is not an agent parameter at all - it reaches the
+            // model through the prompt, and declaring it would claim a value that is never supplied
+            if (ConversationHandler.TryGetValueType(contextProperty.Value, out _, out _) == false)
+                continue;
+
+            agentParameters.Add(new AiAgentParameter(contextProperty.Name) { SendToModel = false });
         }
 
         var agentConfiguration = new AiAgentConfiguration("GenAiAgent", Configuration.ConnectionStringName, Configuration.Prompt)

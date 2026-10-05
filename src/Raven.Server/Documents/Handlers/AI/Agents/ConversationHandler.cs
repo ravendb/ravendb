@@ -156,6 +156,14 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             }
         }
 
+        // every parameter the agent declares must have a value, on creation and on every later request,
+        // so that the model can never be the one to supply it
+        foreach (var declared in _configuration.Parameters ?? [])
+        {
+            if (_document.Parameters == null || _document.Parameters.TryGetMember(declared.Name, out _) == false)
+                throw new MissingAiAgentParameterException($"Parameter '{declared.Name}' is missing.");
+        }
+
         if (_debugOverride.HasValue)
             _document.Debug = _debugOverride.Value;
 
@@ -807,39 +815,20 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         return false;
     }
 
-    public BlittableJsonReaderObject CreateParameters(JsonOperationContext context, AiToolCall call, BlittableJsonReaderObject parameters)
+    public static BlittableJsonReaderObject CreateParameters(JsonOperationContext context, AiToolCall call, BlittableJsonReaderObject parameters)
     {
         var args = context.Sync.ReadForMemory(call.Arguments, "call/args");
-        var declaredParameters = _configuration.Parameters;
-
-        if (parameters is null && declaredParameters is not { Count: > 0 })
+        if (parameters is null)
             return args;
 
-        args.Modifications = new DynamicJsonValue(args);
-
-        if (parameters is not null)
+        args.Modifications = new DynamicJsonValue();
+        BlittableJsonReaderObject.PropertyDetails prop = default;
+        for (int i = 0; i < parameters.Count; i++)
         {
-            BlittableJsonReaderObject.PropertyDetails prop = default;
-            for (int i = 0; i < parameters.Count; i++)
-            {
-                // Important: we *override* any parameter from the model with the user provided values
-                // to ensure the safety & security of this feature. Model cannot override those values, period.
-                parameters.GetPropertyByIndex(i, ref prop);
-                args.Modifications[prop.Name] = GetAiConversationParameter(prop.Name, prop.Value).Value;
-            }
-        }
-
-        if (declaredParameters is not null)
-        {
-            foreach (var declared in declaredParameters)
-            {
-                if (parameters is not null && parameters.TryGetMember(declared.Name, out _))
-                    continue;
-
-                // A declared parameter with no user provided value is dropped rather than left to the model,
-                // so the query fails instead of running with a scope that the model chose.
-                args.Modifications.Remove(declared.Name);
-            }
+            // Important: we *override* any parameter from the model with the user provided values
+            // to ensure the safety & security of this feature. Model cannot override those values, period.
+            parameters.GetPropertyByIndex(i, ref prop);
+            args.Modifications[prop.Name] = GetAiConversationParameter(prop.Name, prop.Value).Value;
         }
 
         return context.ReadObject(args, "args");

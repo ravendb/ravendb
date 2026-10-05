@@ -114,7 +114,7 @@ public class RavenDB_27289(ITestOutputHelper output) : RavenTestBase(output)
     // ---- the defect -------------------------------------------------------
 
     [RavenFact(RavenTestCategory.Ai)]
-    public async Task SendToModelFalseParameterIsNotEnforcedAsRequired()
+    public async Task SendToModelFalseParameterIsEnforcedAsRequired()
     {
         using var store = GetDocumentStore();
         await SeedAsync(store);
@@ -132,7 +132,7 @@ public class RavenDB_27289(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public async Task SendToModelFalseParameterIsNotModelControlled()
+    public async Task ConversationIsRefusedBeforeTheModelCanSupplyTheParameter()
     {
         using var store = GetDocumentStore();
         await SeedAsync(store);
@@ -141,11 +141,11 @@ public class RavenDB_27289(ITestOutputHelper output) : RavenTestBase(output)
         var database = await Databases.GetDocumentDatabaseInstanceFor(store);
         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         {
+            // the mock stands ready to hand the tool another user's handle, but never gets the chance
             var handler = HandlerCallingToolOnce(Server.ServerStore, database, $"{{\"TelegramUsername\":\"{OtherHandle}\"}}");
             handler.Initialize(agent, "Dummy", Request(parameters: null), changeVector: null);
 
-            // the model's value is discarded, so the query runs without a value and fails
-            var e = await Assert.ThrowsAsync<QueryToolFailedException>(
+            var e = await Assert.ThrowsAsync<MissingAiAgentParameterException>(
                 () => handler.HandleRequestAsync(context, CancellationToken.None));
 
             Assert.DoesNotContain(Secret, e.ToString());
@@ -178,14 +178,13 @@ public class RavenDB_27289(ITestOutputHelper output) : RavenTestBase(output)
                         advertised = true;
                 });
 
-            handler.Initialize(agent, "Dummy", Request(parameters: null), changeVector: null);
+            // the value is supplied here, so the conversation runs and the advertised name can be observed
+            handler.Initialize(agent, "Dummy", Request(SuppliedParameters(context, OwnHandle)), changeVector: null);
 
-            // the model's value is discarded, so the query runs without a value and fails
-            var e = await Assert.ThrowsAsync<QueryToolFailedException>(
-                () => handler.HandleRequestAsync(context, CancellationToken.None));
+            var r = await handler.HandleRequestAsync(context, CancellationToken.None);
 
             Assert.True(advertised, "the server should have advertised the scoping parameter name to the model");
-            Assert.DoesNotContain(Secret, e.ToString());
+            Assert.DoesNotContain(Secret, r.Response.ToString());
         }
     }
 
@@ -242,23 +241,33 @@ public class RavenDB_27289(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public async Task ModelOmittingTheArgumentFailsTheQueryInsteadOfLeaking()
+    public async Task ParameterAddedToTheAgentIsEnforcedOnAnAlreadyRunningConversation()
     {
         using var store = GetDocumentStore();
         await SeedAsync(store);
 
-        var agent = CreateAgent(sendToModel: false);
+        const string conversationId = "chats/running";
         var database = await Databases.GetDocumentDatabaseInstanceFor(store);
         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         {
-            var handler = HandlerCallingToolOnce(Server.ServerStore, database, "{}");
-            handler.Initialize(agent, "Dummy", Request(parameters: null), changeVector: null);
+            // the conversation is opened while the agent declares one parameter, and supplies it
+            var handler = HandlerThatOnlyAnswers(Server.ServerStore, database);
+            handler.Initialize(CreateAgent(sendToModel: false), conversationId,
+                Request(SuppliedParameters(context, OwnHandle)), changeVector: null);
 
-            // the query cannot run without a value, so it fails instead of returning an unscoped result
-            var e = await Assert.ThrowsAsync<QueryToolFailedException>(
-                () => handler.HandleRequestAsync(context, CancellationToken.None));
+            await handler.HandleRequestAsync(context, CancellationToken.None);
 
-            Assert.DoesNotContain(Secret, e.ToString());
+            // the agent then gains a second parameter, which the running conversation never supplied
+            var extendedAgent = CreateAgent(sendToModel: false);
+            extendedAgent.Parameters.Add(new AiAgentParameter("Department", "the department of the sender", sendToModel: false));
+
+            var next = HandlerThatOnlyAnswers(Server.ServerStore, database);
+            next.Initialize(extendedAgent, conversationId, Request(parameters: null), changeVector: null);
+
+            var e = await Assert.ThrowsAsync<MissingAiAgentParameterException>(
+                () => next.HandleRequestAsync(context, CancellationToken.None));
+
+            Assert.Contains("Department", e.Message);
         }
     }
 }
