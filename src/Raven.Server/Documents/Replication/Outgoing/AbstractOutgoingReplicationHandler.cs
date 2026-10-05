@@ -73,7 +73,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
         protected RavenLogger Logger;
         private DeescalatingWarnToDebugLogger _endOfStreamExceptionLogger;
         private Exception _reportedFailure;
-        private volatile bool _handshakeCompleted;
 
         public ServerStore Server => _server;
         public long LastSentDocumentEtag => _lastSentDocumentEtag;
@@ -81,7 +80,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; protected set; }
         internal CancellationToken CancellationToken => _cts.Token;
         public bool IsConnectionDisposed => _connectionDisposed.IsSet;
-        protected bool HandshakeCompleted => _handshakeCompleted;
         public ReplicationNode Destination { get; }
         public string LastSentChangeVector;
         public string LastAcceptedChangeVector { get; set; }
@@ -551,8 +549,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 throw;
             }
 
-            // Publish only after the complete derived response chain has succeeded.
-            _handshakeCompleted = true;
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Outgoing replication connection established. {ConnectionEstablishedLogDetails}");
         }

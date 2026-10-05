@@ -594,7 +594,7 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
         });
     }
 
-    private static Task AssertOutgoingWireModeAsync(DocumentStore store, PullReplicationChangeVectorWireMode? expectedMode)
+    private static Task AssertOutgoingWireModeAsync(DocumentStore store, PullReplicationChangeVectorWireMode expectedMode)
     {
         return AssertActiveConnectionsAsync(store, response =>
         {
@@ -604,10 +604,8 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
             {
                 Assert.True(row.TryGet("Type", out string type));
                 Assert.Equal(ReplicationNode.ReplicationType.PullAsHub.ToString(), type);
-                bool hasMode = row.TryGet("ChangeVectorWireMode", out string mode);
-                Assert.Equal(expectedMode.HasValue, hasMode);
-                if (expectedMode.HasValue)
-                    Assert.Equal(expectedMode.Value.ToString(), mode);
+                Assert.True(row.TryGet("ChangeVectorWireMode", out string mode));
+                Assert.Equal(expectedMode.ToString(), mode);
             }
         });
     }
@@ -656,7 +654,7 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
             {
                 await SetupFilteredHubToSinkPullReplicationAsync(hub, sink, pullCert);
                 await AssertWaitForTrueAsync(() => Task.FromResult(heldHandlers.IsEmpty == false), timeout: 30_000);
-                await AssertOutgoingWireModeAsync(hub, expectedMode: null);
+                await AssertOutgoingWireModeAsync(hub, PullReplicationChangeVectorWireMode.NotNegotiated);
             }
             finally
             {
@@ -680,7 +678,7 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
                 await AssertWaitForTrueAsync(() => Task.FromResult(heldHandlers.Any(handler =>
                     ReferenceEquals(handler, hubOutgoingHandler) == false && handler.IsConnectionDisposed == false &&
                     handler.CancellationToken.IsCancellationRequested == false)), timeout: 30_000);
-                await AssertOutgoingWireModeAsync(hub, expectedMode: null);
+                await AssertOutgoingWireModeAsync(hub, PullReplicationChangeVectorWireMode.NotNegotiated);
             }
             finally
             {
