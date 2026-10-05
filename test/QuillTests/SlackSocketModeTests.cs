@@ -286,6 +286,25 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_successful_reply_clears_the_recorded_send_error()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        Slack.SendError = "channel_not_found";
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-send-clear-1", DmMessage(Sender, "hi"));
+        await Slack.WaitUntilAsync(async () => (await HealthRowAsync(app, channel)).LastSendError is not null,
+            "the send error to surface in health");
+
+        Slack.SendError = null;
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-send-clear-2", DmMessage(Sender, "hi again"));
+
+        await Slack.WaitUntilAsync(async () => (await HealthRowAsync(app, channel)).LastSendError is null,
+            "the send error to clear");
+        Assert.Null((await HealthRowAsync(app, channel)).LastSendErrorAt);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Markdown_replies_are_sent_as_a_markdown_block_with_an_escaped_fallback()
     {
         await using var app = await NewAppAsync();
