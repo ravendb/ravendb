@@ -18,11 +18,9 @@ internal sealed class SlackSocketRuntime
 
     private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(10);
 
-    private readonly string _database;
     private readonly string _shortChannelId;
     private readonly string _botUserId;
     private readonly SlackOptions _options;
-    private readonly SlackHealthRegistry _health;
     private readonly QuillLogger<SlackChannelManager> _logger;
     private readonly ISlackSocketModeClient _client;
     private readonly IDisposable _frames;
@@ -38,26 +36,26 @@ internal sealed class SlackSocketRuntime
 
     private SlackSocketRuntime(
         string database, Channel channel, string? channelChangeVector, SlackSdk sdk,
-        SlackInboundProcessor processor, SlackHealthRegistry health, SlackOptions options,
+        SlackInboundProcessor processor, SlackOptions options,
         QuillLogger<SlackChannelManager> logger)
     {
         var settings = channel.Slack!;
 
-        _database = database;
         _shortChannelId = channel.ShortId;
         _botUserId = settings.BotUserId;
         _options = options;
-        _health = health;
         _logger = logger;
         ChannelChangeVector = channelChangeVector;
 
-        var handler = new SlackMessageHandler(database, channel.Id!, channel.ShortId, settings, processor, health);
+        var handler = new SlackMessageHandler(database, channel.Id!, settings, processor, Health);
         var socket = sdk.NewSocketClient(settings.AppToken, handler, new SlackNetLogger(channel.ShortId, logger));
         _client = socket.Client;
         _frames = socket.RawMessages.Subscribe(OnRawMessage);
     }
 
     public string? ChannelChangeVector { get; }
+
+    public SlackChannelHealth Health { get; } = new();
 
     public bool CanRestart => _canRestart;
 
@@ -81,11 +79,11 @@ internal sealed class SlackSocketRuntime
 
     public static SlackSocketRuntime Start(
         string database, Channel channel, string? channelChangeVector, SlackSdk sdk,
-        SlackInboundProcessor processor, SlackHealthRegistry health, SlackOptions options,
+        SlackInboundProcessor processor, SlackOptions options,
         QuillLogger<SlackChannelManager> logger)
     {
         var runtime = new SlackSocketRuntime(
-            database, channel, channelChangeVector, sdk, processor, health, options, logger);
+            database, channel, channelChangeVector, sdk, processor, options, logger);
 
         runtime._run = Task.Run(runtime.ConnectAsync);
         return runtime;
@@ -121,10 +119,6 @@ internal sealed class SlackSocketRuntime
                 _logger.Warn($"Slack socket for channel {_shortChannelId} did not stop within {StopTimeout}");
             return;
         }
-        finally
-        {
-            _health.RecordSocketStopped(_database, _shortChannelId);
-        }
 
         _cts.Dispose();
     }
@@ -135,7 +129,8 @@ internal sealed class SlackSocketRuntime
         {
             await _client.Connect(new SocketModeConnectionOptions { NumberOfConnections = 1 }, _cts.Token);
             _connected = true;
-            _health.RecordSocketConnected(_database, _shortChannelId);
+            if (ExitedAt is null)
+                Health.Connected();
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Slack socket connected for channel {_shortChannelId} (bot {_botUserId})");
         }
@@ -178,7 +173,7 @@ internal sealed class SlackSocketRuntime
         if (MarkExited(TimeSpan.Zero) == false)
             return;
 
-        _health.RecordSocketDisconnected(_database, _shortChannelId, error: null);
+        Health.Exited(error: null);
         if (_logger.IsInfoEnabled)
             _logger.Info($"Slack socket for channel {_shortChannelId} stayed down; replacing it");
     }
@@ -188,7 +183,7 @@ internal sealed class SlackSocketRuntime
         if (MarkExited(restartDelay) == false)
             return;
 
-        _health.RecordSocketDisconnected(_database, _shortChannelId, error);
+        Health.Exited(error);
         if (_logger.IsWarnEnabled)
             _logger.Warn($"Slack socket for channel {_shortChannelId} exited: {error}");
     }

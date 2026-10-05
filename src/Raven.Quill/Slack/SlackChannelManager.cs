@@ -15,12 +15,13 @@ namespace Raven.Quill.Slack;
 internal interface ISlackChannelManager
 {
     void Wake();
+
+    SlackChannelHealth? HealthFor(string database, string channelId);
 }
 
 internal sealed class SlackChannelManager(
     IDocumentStore store,
     SlackInboundProcessor processor,
-    SlackHealthRegistry health,
     SlackSdk sdk,
     IOptions<ApplianceOptions> options,
     IServerReady ready,
@@ -33,6 +34,9 @@ internal sealed class SlackChannelManager(
     private volatile bool _stopped;
 
     public void Wake() => _wake?.Set();
+
+    public SlackChannelHealth? HealthFor(string database, string channelId) =>
+        _runtimes.TryGetValue((database, channelId), out var runtime) ? runtime.Health : null;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -151,8 +155,7 @@ internal sealed class SlackChannelManager(
             try
             {
                 _runtimes[key] = SlackSocketRuntime.Start(
-                    key.Database, entry.Channel, entry.ChangeVector, sdk, processor, health,
-                    options.Value.Slack, logger);
+                    key.Database, entry.Channel, entry.ChangeVector, sdk, processor, options.Value.Slack, logger);
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {

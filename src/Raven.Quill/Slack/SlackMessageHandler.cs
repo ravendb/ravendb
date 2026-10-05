@@ -7,10 +7,9 @@ namespace Raven.Quill.Slack;
 internal sealed class SlackMessageHandler(
     string database,
     string channelDocId,
-    string shortChannelId,
     SlackSettings settings,
     SlackInboundProcessor processor,
-    SlackHealthRegistry health) : IEventHandler
+    SlackChannelHealth health) : IEventHandler
 {
     public Task Handle(EventCallback callback)
     {
@@ -30,9 +29,8 @@ internal sealed class SlackMessageHandler(
         if (kind is null)
             return Task.CompletedTask;
 
-        health.RecordInbound(database, shortChannelId);
         processor.Enqueue(
-            database, channelDocId, message.User, message.Channel, callback.EventId ?? "", kind, message.Text);
+            database, channelDocId, health, message.User, message.Channel, callback.EventId ?? "", kind, message.Text);
         return Task.CompletedTask;
     }
 }

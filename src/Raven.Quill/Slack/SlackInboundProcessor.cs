@@ -11,7 +11,6 @@ internal sealed class SlackInboundProcessor(
     IDocumentStore store,
     IAgentRouter router,
     IServiceScopeFactory scopes,
-    SlackHealthRegistry health,
     SlackUserDirectory users,
     IOptions<ApplianceOptions> options,
     QuillLogger<SlackInboundProcessor> logger) : IHostedService
@@ -64,10 +63,13 @@ internal sealed class SlackInboundProcessor(
     }
 
     public void Enqueue(
-        string database, string channelId, string sender, string dmChannel, string eventId, string kind, string? text)
+        string database, string channelId, SlackChannelHealth health, string sender, string dmChannel, string eventId,
+        string kind, string? text)
     {
         if (IsDuplicate(eventId))
             return;
+
+        health.Inbound();
 
         var chainKey = $"{database}/{Channel.ShortIdFor(channelId)}/{sender}";
         var notifyOverload = false;
@@ -86,7 +88,7 @@ internal sealed class SlackInboundProcessor(
             {
                 chain.Pending++;
                 var next = chain.Tail
-                    .ContinueWith(_ => HandleMessageSafeAsync(database, channelId, sender, dmChannel, kind, text),
+                    .ContinueWith(_ => HandleMessageSafeAsync(database, channelId, health, sender, dmChannel, kind, text),
                         CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default)
                     .Unwrap();
                 chain.Tail = next;
@@ -96,7 +98,7 @@ internal sealed class SlackInboundProcessor(
         }
 
         if (notifyOverload)
-            _ = SendOverloadNoticeAsync(database, channelId, dmChannel);
+            _ = SendOverloadNoticeAsync(database, channelId, health, dmChannel);
     }
 
     private void OnTurnCompleted(string chainKey, SenderChain chain)
@@ -134,11 +136,12 @@ internal sealed class SlackInboundProcessor(
     }
 
     private async Task HandleMessageSafeAsync(
-        string database, string channelId, string sender, string dmChannel, string kind, string? text)
+        string database, string channelId, SlackChannelHealth health, string sender, string dmChannel, string kind,
+        string? text)
     {
         try
         {
-            await HandleMessageAsync(database, channelId, sender, dmChannel, kind, text, _stopping.Token);
+            await HandleMessageAsync(database, channelId, health, sender, dmChannel, kind, text, _stopping.Token);
         }
         catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
         {
@@ -151,7 +154,8 @@ internal sealed class SlackInboundProcessor(
     }
 
     private async Task HandleMessageAsync(
-        string database, string channelId, string sender, string dmChannel, string kind, string? text, CancellationToken ct)
+        string database, string channelId, SlackChannelHealth health, string sender, string dmChannel, string kind,
+        string? text, CancellationToken ct)
     {
         Channel? channel;
         using (var session = store.OpenAsyncSession(database))
@@ -167,7 +171,7 @@ internal sealed class SlackInboundProcessor(
 
         if (kind != "text")
         {
-            await TrySendAsync(slack, database, shortChannelId, settings, dmChannel, UnsupportedKindReply, ct);
+            await TrySendAsync(slack, health, shortChannelId, settings, dmChannel, UnsupportedKindReply, ct);
             return;
         }
 
@@ -184,7 +188,7 @@ internal sealed class SlackInboundProcessor(
             () => users.GetAsync(slack, settings.BotToken, settings.TeamId, sender, ct));
         if (parameters is null)
         {
-            await TrySendAsync(slack, database, shortChannelId, settings, dmChannel, ErrorReply, ct);
+            await TrySendAsync(slack, health, shortChannelId, settings, dmChannel, ErrorReply, ct);
             throw new InvalidOperationException(bindError);
         }
 
@@ -218,14 +222,14 @@ internal sealed class SlackInboundProcessor(
         catch (Exception e)
         {
             if (e is SlackApiException apiError)
-                health.RecordSendError(database, shortChannelId, apiError.Message);
+                health.SendFailed(apiError.Message);
 
-            await TrySendAsync(slack, database, shortChannelId, settings, dmChannel, ErrorReply, ct);
+            await TrySendAsync(slack, health, shortChannelId, settings, dmChannel, ErrorReply, ct);
             throw;
         }
     }
 
-    private async Task SendOverloadNoticeAsync(string database, string channelId, string dmChannel)
+    private async Task SendOverloadNoticeAsync(string database, string channelId, SlackChannelHealth health, string dmChannel)
     {
         try
         {
@@ -238,7 +242,7 @@ internal sealed class SlackInboundProcessor(
 
             await using var scope = scopes.CreateAsyncScope();
             var slack = scope.ServiceProvider.GetRequiredService<ISlackClient>();
-            await TrySendAsync(slack, database, channel.ShortId, settings, dmChannel, OverloadReply, _stopping.Token);
+            await TrySendAsync(slack, health, channel.ShortId, settings, dmChannel, OverloadReply, _stopping.Token);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
@@ -248,8 +252,8 @@ internal sealed class SlackInboundProcessor(
     }
 
     private async Task TrySendAsync(
-        ISlackClient slack, string database, string shortChannelId, SlackSettings settings, string dmChannel, string text,
-        CancellationToken ct)
+        ISlackClient slack, SlackChannelHealth health, string shortChannelId, SlackSettings settings, string dmChannel,
+        string text, CancellationToken ct)
     {
         try
         {
@@ -258,7 +262,7 @@ internal sealed class SlackInboundProcessor(
         catch (Exception e) when (e is not OperationCanceledException)
         {
             if (e is SlackApiException apiError)
-                health.RecordSendError(database, shortChannelId, apiError.Message);
+                health.SendFailed(apiError.Message);
 
             if (logger.IsWarnEnabled)
                 logger.Warn($"Slack send failed for channel {shortChannelId} in {dmChannel}: {e.Message}");

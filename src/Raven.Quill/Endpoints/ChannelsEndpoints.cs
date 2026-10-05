@@ -523,7 +523,6 @@ public static class ChannelsEndpoints
         IDocumentStore store,
         ITelegramChannelManager telegramManager,
         ISlackClient slackClient,
-        SlackHealthRegistry slackHealth,
         ISlackChannelManager slackManager,
         IDiscordClient discordClient,
         DiscordHealthRegistry discordHealth,
@@ -552,7 +551,7 @@ public static class ChannelsEndpoints
             ChannelType.IFrame => await UpdateIFrameChannelAsync(session, channel, body, app.Slug, channelId, logger, ctx, ct),
             ChannelType.Telegram => await UpdateTelegramChannelAsync(session, channel, body, app, channelId, store, telegramManager, logger, ctx, ct),
             ChannelType.WhatsApp => UpdateWhatsAppChannelAsync(),
-            ChannelType.Slack => await UpdateSlackChannelAsync(session, channel, body, app, channelId, store, slackClient, slackHealth, slackManager, logger, ct),
+            ChannelType.Slack => await UpdateSlackChannelAsync(session, channel, body, app, channelId, store, slackClient, slackManager, logger, ct),
             ChannelType.Discord => await UpdateDiscordChannelAsync(session, channel, body, app, channelId, store, discordClient, discordHealth, discordManager, logger, ct),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
@@ -743,7 +742,6 @@ public static class ChannelsEndpoints
         string channelId,
         IDocumentStore store,
         ISlackClient slackClient,
-        SlackHealthRegistry health,
         ISlackChannelManager slackManager,
         QuillLogger<ChannelsLogger> logger,
         CancellationToken ct)
@@ -818,9 +816,6 @@ public static class ChannelsEndpoints
             channel.Enabled = body.Enabled.Value;
 
         await session.SaveChangesAsync(ct);
-
-        if (tokenRotated)
-            health.InvalidateTokenCheck(app.Database, channel.ShortId);
 
         slackManager.Wake();
 
@@ -908,7 +903,6 @@ public static class ChannelsEndpoints
         string channelId,
         IDocumentStore store,
         ITelegramChannelManager telegramManager,
-        SlackHealthRegistry slackHealth,
         ISlackChannelManager slackManager,
         IDiscordChannelManager discordManager,
         DiscordHealthRegistry discordHealth,
@@ -930,7 +924,7 @@ public static class ChannelsEndpoints
                 ChannelType.IFrame => await DeleteIFrameChannelAsync(session, channel, app.Slug, channelId, logger, ctx, ct),
             ChannelType.Telegram => await DeleteTelegramChannelAsync(session, channel, app, channelId, store, telegramManager, logger, ctx, ct),
             ChannelType.WhatsApp => DeleteWhatsAppChannelAsync(),
-            ChannelType.Slack => await DeleteSlackChannelAsync(session, channel, app, channelId, store, slackHealth, slackManager, logger, ct),
+            ChannelType.Slack => await DeleteSlackChannelAsync(session, channel, app, channelId, store, slackManager, logger, ct),
             ChannelType.Discord => await DeleteDiscordChannelAsync(
                 session, channel, app, channelId, store, discordManager, discordHealth, logger, ct),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
@@ -991,7 +985,6 @@ public static class ChannelsEndpoints
         App app,
         string channelId,
         IDocumentStore store,
-        SlackHealthRegistry health,
         ISlackChannelManager slackManager,
         QuillLogger<ChannelsLogger> logger,
         CancellationToken ct)
@@ -1002,7 +995,6 @@ public static class ChannelsEndpoints
         if (channel.Slack is { TeamId.Length: > 0, BotUserId.Length: > 0 } settings)
             await TryReleaseSlackAsync(store, settings.TeamId, settings.BotUserId, app.Database, channel.Id!);
 
-        health.Remove(app.Database, channel.ShortId);
         slackManager.Wake();
 
         if (logger.IsInfoEnabled)
