@@ -1,7 +1,7 @@
 import type { DiscoverColumnResponse, DiscoverResponse, DiscoverTableResponse } from "@/api/generated/server-api";
 
 /** How many source tables one app can process. Beta-only limit of the AI service; unlimited tables are planned. */
-export const MAX_SELECTED_TABLES = 64;
+export const MAX_SELECTED_TABLES = 10_000;
 
 /** A discovered table can be used when discovery succeeded, the table is supported, and CDC
  * is either already enabled on it or the connecting user has permission to set CDC up. */
