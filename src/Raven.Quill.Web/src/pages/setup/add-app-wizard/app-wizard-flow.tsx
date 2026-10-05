@@ -12,15 +12,16 @@ import { ChooseDataSourceStep } from "@/pages/setup/add-app-wizard/steps/data-so
 import { DATA_SOURCE_OPTIONS } from "@/pages/setup/add-app-wizard/steps/data-source/data-source-options";
 import { MAP_SOURCE_OPTIONS } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
 import { ConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-step";
-import { MapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map/map-schema-step";
+import { DesignWithAiStep } from "@/pages/setup/add-app-wizard/steps/map/design-with-ai-step";
 import { useMapAiConsentBlock } from "@/pages/setup/add-app-wizard/steps/map/use-map-ai-consent-block";
+import { usePlannerNextBlock } from "@/pages/setup/add-app-wizard/steps/map/use-planner-next-block";
+import { useApplyPlanner } from "@/pages/setup/add-app-wizard/steps/map/use-apply-planner";
 import { MapTablesStep } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-step";
 import { PreviewStep } from "@/pages/setup/add-app-wizard/steps/preview/preview-step";
 import { ExportConfigAction } from "@/pages/setup/add-app-wizard/steps/preview/export-config-action";
 import { ImportConfigHeaderAction } from "@/pages/setup/add-app-wizard/steps/connect/import-config-header-action";
 import { VerifySchemaStep } from "@/pages/setup/add-app-wizard/steps/verify/verify-schema-step";
 import { useConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect/use-connect-source-step";
-import { useMapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map/use-map-schema-step";
 import { useFocusMapTablesError } from "@/pages/setup/add-app-wizard/steps/map-tables/use-focus-map-tables-error";
 import { useMapTablesStep } from "@/pages/setup/add-app-wizard/steps/map-tables/use-map-tables-step";
 import { useIsMapTablesNextDisabled } from "@/pages/setup/add-app-wizard/steps/map-tables/use-suggested-map-tables";
@@ -33,8 +34,9 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
     const verifySchemaBeforeNext = useVerifySchemaStep();
     const verifyCdcBeforeNext = useVerifyCdcStep();
     const isVerifyCdcRunning = useIsVerifyCdcRunning();
-    const mapSchemaBeforeNext = useMapSchemaStep();
     const mapAiConsentBlock = useMapAiConsentBlock();
+    const plannerBlock = usePlannerNextBlock();
+    const applyPlanner = useApplyPlanner();
     const mapTablesBeforeNext = useMapTablesStep();
     const focusMapTablesError = useFocusMapTablesError();
     const isMapTablesNextDisabled = useIsMapTablesNextDisabled();
@@ -87,12 +89,16 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             badge: ({ values }) => <VerifySelectionChangedBadge tables={values.verifySchema.tables} />,
         },
         map: {
-            title: "How would you like to map your schema?",
-            bodyComponent: MapSchemaStep,
-            validate: "map",
-            beforeNext: mapSchemaBeforeNext,
-            isNextDisabled: mapAiConsentBlock.isNextDisabled,
-            nextDisabledReason: mapAiConsentBlock.nextDisabledReason,
+            title: "Design your document model with the planner",
+            bodyComponent: DesignWithAiStep,
+            isFullHeight: true,
+            // The mapping is produced by the planner, not by form fields, so there is nothing here
+            // for the resolver to check. Applying it is what Next does.
+            validate: false,
+            nextLabel: "Apply to mapping",
+            beforeNext: applyPlanner,
+            isNextDisabled: mapAiConsentBlock.isNextDisabled || plannerBlock.isNextDisabled,
+            nextDisabledReason: mapAiConsentBlock.nextDisabledReason ?? plannerBlock.nextDisabledReason,
             badgeFields: ["map.source"],
             badge: ({ isComplete, values }) => {
                 if (!isComplete) {
@@ -130,8 +136,7 @@ export const getAppFlow = ({ dataSource, isEditing }: { dataSource: string; isEd
         return [/* "dataSource", */ "preview"];
     }
 
-    // The edit seed pins the map source to "manual", so the "How would you like to map your
-    // schema?" step has nothing to ask.
+    // The edit seed pins the map source to "manual", so the planner step has nothing to offer.
     if (isEditing) {
         return ["externalConnection", "verifySchema", "mapTables", "preview"];
     }

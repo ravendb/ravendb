@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions;
 using Raven.Quill.AiHelper;
+using Raven.Quill.AiHelper.Migration;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Infrastructure;
@@ -19,8 +20,8 @@ namespace Raven.Quill.Endpoints;
 public static class WizardEndpoints
 {
     // the source connection string's name on the app DB once provisioned (used when the map didn't set one)
-    private const string SourceConnectionStringName = "quill-cdc-connection";
-    private const string DefaultCdcTaskName = "quill-cdc";
+    internal const string SourceConnectionStringName = "quill-cdc-connection";
+    internal const string DefaultCdcTaskName = "quill-cdc";
     private const string CdcDryRunTaskName = "quill-cdc-dry-run";
 
     private const string DefaultIntentPrompt =
@@ -62,6 +63,30 @@ public static class WizardEndpoints
             .WithName("setup.suggestCdc")
             .Accepts<SuggestCdcRequest>("application/json")
             .Produces<SuggestCdcResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status422UnprocessableEntity);
+        group.MapPost("/migration/start", StartMigrationAsync)
+            .WithName("setup.migrationStart")
+            .WithDescription(
+                "Opens an interactive planning session over the discovered schema. Streams NDJSON " +
+                "frames: the agent's proposal, then one frame per collection as it is registered or " +
+                "rejected, then its reply.")
+            .Accepts<MigrationStartRequest>("application/json");
+        group.MapPost("/migration/ask", AskMigrationAsync)
+            .WithName("setup.migrationAsk")
+            .WithDescription("One more turn in an existing planning session. Streams the same NDJSON frames.")
+            .Accepts<MigrationAskRequest>("application/json");
+        group.MapPost("/migration/remove", RemoveMigrationCollectionAsync)
+            .WithName("setup.migrationRemoveCollection")
+            .WithDescription("Takes a registered collection out of the plan. The planner is told on the next turn.")
+            .Accepts<MigrationRemoveCollectionRequest>("application/json")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+        group.MapPost("/migration/apply", ApplyMigrationAsync)
+            .WithName("setup.migrationApply")
+            .WithDescription("Assembles the registered plan into a CDC configuration and hands it to the map step.")
+            .Accepts<MigrationApplyRequest>("application/json")
+            .Produces<MigrationApplyResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status422UnprocessableEntity);
         group.MapPost("/test-mapping", TestMappingAsync)
@@ -447,6 +472,112 @@ public static class WizardEndpoints
         return Results.Ok(new SuggestCdcResponse(result.Configuration, result.Rationale, result.Status.ToString()));
     }
 
+    private static Task StartMigrationAsync(
+        MigrationStartRequest? body,
+        MigrationService service,
+        HttpContext ctx,
+        CancellationToken ct) =>
+        StreamMigrationAsync(ctx, ct, body, (request, write) => service.StartAsync(request, write, ct));
+
+    private static Task AskMigrationAsync(
+        MigrationAskRequest? body,
+        MigrationService service,
+        HttpContext ctx,
+        CancellationToken ct) =>
+        StreamMigrationAsync(ctx, ct, body, (request, write) => service.AskAsync(request, write, ct));
+
+    private static async Task<IResult> RemoveMigrationCollectionAsync(
+        MigrationRemoveCollectionRequest? body,
+        MigrationService service,
+        CancellationToken ct)
+    {
+        if (body is null)
+            return Results.BadRequest(new ApiErrorResponse("request body is required"));
+
+        var refusal = await service.RemoveCollectionAsync(body, ct);
+
+        return refusal is null
+            ? Results.NoContent()
+            : Results.BadRequest(new ApiErrorResponse(refusal.Message));
+    }
+
+    private static async Task<IResult> ApplyMigrationAsync(
+        MigrationApplyRequest? body,
+        MigrationService service,
+        QuillLogger<WizardLogger> logger,
+        CancellationToken ct)
+    {
+        if (body is null)
+            return Results.BadRequest(new ApiErrorResponse("request body is required"));
+
+        var (response, refusal) = await service.ApplyAsync(body, ct);
+
+        if (refusal is not null)
+            return Results.BadRequest(new ApiErrorResponse(refusal.Message));
+
+        if (response!.Errors.Length > 0)
+        {
+            if (logger.IsInfoEnabled)
+                logger.Info($"Migration apply: assembled configuration failed validation ({response.Errors.Length} errors)");
+
+            return Results.UnprocessableEntity(new ApiErrorResponse(Errors: response.Errors));
+        }
+
+        if (response.UnmappedTables.Length > 0 && logger.IsInfoEnabled)
+            logger.Info($"Migration apply: {response.UnmappedTables.Length} discovered table(s) are not covered by the plan");
+
+        return Results.Ok(response);
+    }
+
+    /// <summary>
+    /// Streams migration frames as NDJSON. The response headers are only committed once there is a
+    /// frame to write, so a request that is refused before the turn starts can still answer with a
+    /// status code rather than a 200 carrying an error frame.
+    /// </summary>
+    private static async Task StreamMigrationAsync<TRequest>(
+        HttpContext ctx,
+        CancellationToken ct,
+        TRequest? body,
+        Func<TRequest, Func<MigrationFrame, Task>, Task<MigrationService.Refusal?>> run)
+        where TRequest : class
+    {
+        if (body is null)
+        {
+            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("request body is required"), ct);
+            return;
+        }
+
+        var started = false;
+
+        async Task WriteAsync(MigrationFrame frame)
+        {
+            if (started == false)
+            {
+                NdjsonStream.SetHeaders(ctx);
+                started = true;
+            }
+
+            await NdjsonStream.WriteLineAsync(ctx, frame);
+        }
+
+        var refusal = await run(body, WriteAsync);
+
+        if (refusal is null || started)
+            return;
+
+        // A status the AI service reported is the operator's to act on; no status at all means the
+        // request itself was wrong, and a status it never got to report means the service is down.
+        ctx.Response.StatusCode = refusal.Status switch
+        {
+            null => StatusCodes.Status400BadRequest,
+            var status when status.Value.ServiceAnswered() => StatusCodes.Status401Unauthorized,
+            _ => StatusCodes.Status502BadGateway
+        };
+
+        await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse(refusal.Message), ct);
+    }
+
     private static async Task<IResult> TestMappingAsync(
         TestMappingRequest body,
         IDocumentStore store,
@@ -610,7 +741,7 @@ public static class WizardEndpoints
     /// Discovery enumerates whole schemas, so handing the AI everything it found would map tables the
     /// operator deliberately left out.
     /// </summary>
-    private static void ValidateJoinColumnsAgainstSchema(CdcSinkConfiguration configuration, CdcSinkSourceSchema schema, List<string> errors)
+    internal static void ValidateJoinColumnsAgainstSchema(CdcSinkConfiguration configuration, CdcSinkSourceSchema schema, List<string> errors)
     {
         foreach (var table in configuration.Tables)
             ValidateScope(table.SourceTableSchema, table.SourceTableName, table.CollectionName, table.EmbeddedTables, table.LinkedTables);
@@ -659,7 +790,7 @@ public static class WizardEndpoints
         }
     }
 
-    private static CdcSinkSourceSchema SelectTables(CdcSinkSourceSchema schema, SelectedSourceTable[] selectedTables)
+    internal static CdcSinkSourceSchema SelectTables(CdcSinkSourceSchema schema, SelectedSourceTable[] selectedTables)
     {
         var selectedKeys = selectedTables
             .Select(table => TableKey(table.SourceTableSchema, table.SourceTableName))
