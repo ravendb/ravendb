@@ -314,7 +314,7 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Health_reports_token_validity_per_channel_and_caches_the_verdict()
+    public async Task Health_reports_token_validity_per_channel()
     {
         await using var app = await NewAppAsync();
         var agentId = await SeedAgentAsync(app);
@@ -336,10 +336,6 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
         Assert.Equal(botUserId, row.BotUserId);
         Assert.True(row.Enabled);
         Assert.Null(row.LastInboundAt);
-
-        var callsAfterFirstPoll = Discord.IdentityCalls.Count;
-        await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(Host.Client, QuillRoutes.DiscordHealth(app.Slug));
-        Assert.Equal(callsAfterFirstPoll, Discord.IdentityCalls.Count);
     }
 
     private static async Task<string> SeedAgentAsync(QuillApp app, params AiAgentParameter[] parameters)

@@ -63,7 +63,7 @@ internal sealed class SlackInboundProcessor(
     }
 
     public void Enqueue(
-        string database, string channelId, SlackChannelHealth health, string sender, string dmChannel, string eventId,
+        string database, string channelId, ChannelConnectionHealth health, string sender, string dmChannel, string eventId,
         string kind, string? text)
     {
         if (IsDuplicate(eventId))
@@ -136,7 +136,7 @@ internal sealed class SlackInboundProcessor(
     }
 
     private async Task HandleMessageSafeAsync(
-        string database, string channelId, SlackChannelHealth health, string sender, string dmChannel, string kind,
+        string database, string channelId, ChannelConnectionHealth health, string sender, string dmChannel, string kind,
         string? text)
     {
         try
@@ -154,7 +154,7 @@ internal sealed class SlackInboundProcessor(
     }
 
     private async Task HandleMessageAsync(
-        string database, string channelId, SlackChannelHealth health, string sender, string dmChannel, string kind,
+        string database, string channelId, ChannelConnectionHealth health, string sender, string dmChannel, string kind,
         string? text, CancellationToken ct)
     {
         Channel? channel;
@@ -229,7 +229,7 @@ internal sealed class SlackInboundProcessor(
         }
     }
 
-    private async Task SendOverloadNoticeAsync(string database, string channelId, SlackChannelHealth health, string dmChannel)
+    private async Task SendOverloadNoticeAsync(string database, string channelId, ChannelConnectionHealth health, string dmChannel)
     {
         try
         {
@@ -252,7 +252,7 @@ internal sealed class SlackInboundProcessor(
     }
 
     private async Task TrySendAsync(
-        ISlackClient slack, SlackChannelHealth health, string shortChannelId, SlackSettings settings, string dmChannel,
+        ISlackClient slack, ChannelConnectionHealth health, string shortChannelId, SlackSettings settings, string dmChannel,
         string text, CancellationToken ct)
     {
         try

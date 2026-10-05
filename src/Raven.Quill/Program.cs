@@ -193,7 +193,6 @@ builder.Services.AddSingleton<SlackUserDirectory>();
 builder.Services.AddSingleton<SlackInboundProcessor>();
 builder.Services.AddSingleton<SlackChannelManager>();
 builder.Services.AddSingleton<ISlackChannelManager>(sp => sp.GetRequiredService<SlackChannelManager>());
-builder.Services.AddSingleton<DiscordHealthRegistry>();
 builder.Services.AddSingleton<DiscordInboundProcessor>();
 builder.Services.AddSingleton<DiscordChannelManager>();
 builder.Services.AddSingleton<IDiscordChannelManager>(sp => sp.GetRequiredService<DiscordChannelManager>());

@@ -26,7 +26,6 @@ internal sealed class DiscordGatewayRuntime
     private readonly string _botUserId;
     private readonly DiscordOptions _options;
     private readonly DiscordInboundProcessor _processor;
-    private readonly DiscordHealthRegistry _health;
     private readonly IServiceScopeFactory _scopes;
     private readonly QuillLogger<DiscordChannelManager> _logger;
 
@@ -47,7 +46,7 @@ internal sealed class DiscordGatewayRuntime
 
     private DiscordGatewayRuntime(
         string database, Channel channel, string? channelChangeVector, DiscordSettings settings,
-        DiscordInboundProcessor processor, DiscordHealthRegistry health, IServiceScopeFactory scopes,
+        DiscordInboundProcessor processor, IServiceScopeFactory scopes,
         DiscordOptions options, QuillLogger<DiscordChannelManager> logger)
     {
         _database = database;
@@ -56,7 +55,6 @@ internal sealed class DiscordGatewayRuntime
         _botToken = settings.BotToken;
         _botUserId = settings.BotUserId;
         _processor = processor;
-        _health = health;
         _scopes = scopes;
         _options = options;
         _logger = logger;
@@ -64,6 +62,8 @@ internal sealed class DiscordGatewayRuntime
     }
 
     public string? ChannelChangeVector { get; }
+
+    public ChannelConnectionHealth Health { get; } = new();
 
     public bool CanRestart => _canRestart;
 
@@ -78,10 +78,10 @@ internal sealed class DiscordGatewayRuntime
 
     public static DiscordGatewayRuntime Start(
         string database, Channel channel, string? channelChangeVector, DiscordInboundProcessor processor,
-        DiscordHealthRegistry health, IServiceScopeFactory scopes, DiscordOptions options, QuillLogger<DiscordChannelManager> logger)
+        IServiceScopeFactory scopes, DiscordOptions options, QuillLogger<DiscordChannelManager> logger)
     {
         var runtime = new DiscordGatewayRuntime(
-            database, channel, channelChangeVector, channel.Discord!, processor, health, scopes, options, logger);
+            database, channel, channelChangeVector, channel.Discord!, processor, scopes, options, logger);
 
         runtime._run = Task.Run(runtime.RunAsync);
         return runtime;
@@ -144,14 +144,14 @@ internal sealed class DiscordGatewayRuntime
             catch (Exception e)
             {
                 fatal = null;
-                _health.RecordGatewayDisconnected(_database, _shortChannelId, e.Message);
+                Health.Disconnected(e.Message);
                 if (_logger.IsWarnEnabled)
                     _logger.Warn($"Discord gateway attempt failed for channel {_shortChannelId}: {e.Message}");
             }
 
             if (fatal is not null)
             {
-                _health.RecordGatewayDisconnected(_database, _shortChannelId, fatal);
+                Health.Disconnected(fatal);
                 if (_logger.IsErrorEnabled)
                     _logger.Error($"Discord gateway stopped for channel {_shortChannelId}: {fatal}");
                 return;
@@ -253,7 +253,7 @@ internal sealed class DiscordGatewayRuntime
             {
             }
 
-            _health.RecordGatewayDisconnected(_database, _shortChannelId, null);
+            Health.Disconnected(null);
         }
     }
 
@@ -300,7 +300,7 @@ internal sealed class DiscordGatewayRuntime
     {
         _backoff = MinBackoff;
         _attemptsSinceConnected = 0;
-        _health.RecordGatewayConnected(_database, _shortChannelId);
+        Health.Connected();
         if (_logger.IsInfoEnabled)
             _logger.Info($"Discord gateway connected for channel {_shortChannelId} (bot {_botUserId})");
     }
@@ -328,9 +328,8 @@ internal sealed class DiscordGatewayRuntime
             ? "unsupported"
             : "text";
 
-        _health.RecordInbound(_database, _shortChannelId);
         _processor.Enqueue(
-            _database, _channelDocId, author.Id, author.Username, message.ChannelId,
+            _database, _channelDocId, Health, author.Id, author.Username, message.ChannelId,
             message.Id ?? "", kind, content);
     }
 

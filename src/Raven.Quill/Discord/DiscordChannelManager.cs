@@ -15,12 +15,13 @@ namespace Raven.Quill.Discord;
 internal interface IDiscordChannelManager
 {
     void Wake();
+
+    ChannelConnectionHealth? HealthFor(string database, string channelId);
 }
 
 internal sealed class DiscordChannelManager(
     IDocumentStore store,
     DiscordInboundProcessor processor,
-    DiscordHealthRegistry health,
     IServiceScopeFactory scopes,
     IOptions<ApplianceOptions> options,
     IServerReady ready,
@@ -33,6 +34,9 @@ internal sealed class DiscordChannelManager(
     private volatile bool _stopped;
 
     public void Wake() => _wake?.Set();
+
+    public ChannelConnectionHealth? HealthFor(string database, string channelId) =>
+        _runtimes.TryGetValue((database, channelId), out var runtime) ? runtime.Health : null;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -149,8 +153,7 @@ internal sealed class DiscordChannelManager(
             try
             {
                 _runtimes[key] = DiscordGatewayRuntime.Start(
-                    key.Database, entry.Channel, entry.ChangeVector, processor, health, scopes,
-                    options.Value.Discord, logger);
+                    key.Database, entry.Channel, entry.ChangeVector, processor, scopes, options.Value.Discord, logger);
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {

@@ -55,7 +55,7 @@ internal sealed class SlackSocketRuntime
 
     public string? ChannelChangeVector { get; }
 
-    public SlackChannelHealth Health { get; } = new();
+    public ChannelConnectionHealth Health { get; } = new();
 
     public bool CanRestart => _canRestart;
 
@@ -173,7 +173,7 @@ internal sealed class SlackSocketRuntime
         if (MarkExited(TimeSpan.Zero) == false)
             return;
 
-        Health.Exited(error: null);
+        Health.Disconnected(error: null);
         if (_logger.IsInfoEnabled)
             _logger.Info($"Slack socket for channel {_shortChannelId} stayed down; replacing it");
     }
@@ -183,7 +183,7 @@ internal sealed class SlackSocketRuntime
         if (MarkExited(restartDelay) == false)
             return;
 
-        Health.Exited(error);
+        Health.Disconnected(error);
         if (_logger.IsWarnEnabled)
             _logger.Warn($"Slack socket for channel {_shortChannelId} exited: {error}");
     }

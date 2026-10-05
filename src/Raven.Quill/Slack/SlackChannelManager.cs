@@ -16,7 +16,7 @@ internal interface ISlackChannelManager
 {
     void Wake();
 
-    SlackChannelHealth? HealthFor(string database, string channelId);
+    ChannelConnectionHealth? HealthFor(string database, string channelId);
 }
 
 internal sealed class SlackChannelManager(
@@ -35,7 +35,7 @@ internal sealed class SlackChannelManager(
 
     public void Wake() => _wake?.Set();
 
-    public SlackChannelHealth? HealthFor(string database, string channelId) =>
+    public ChannelConnectionHealth? HealthFor(string database, string channelId) =>
         _runtimes.TryGetValue((database, channelId), out var runtime) ? runtime.Health : null;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
