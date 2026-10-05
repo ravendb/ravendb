@@ -28,7 +28,7 @@ const flushFetches = () => act(async () => {});
 const openColumnSettings = async (screen: Screen) => {
     openDisplayDropdown(screen);
     fireEvent.click(await screen.findByText("Column layout settings"));
-    return await screen.findByText("Set up your column layout");
+    return await screen.findByRole("heading", { name: "Column layout settings" });
 };
 
 const addCustomCityColumn = async (screen: Screen) => {
