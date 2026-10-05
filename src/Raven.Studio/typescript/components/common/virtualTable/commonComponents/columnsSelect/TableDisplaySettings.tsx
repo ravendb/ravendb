@@ -303,6 +303,35 @@ function TableDisplaySettingsSheet({
             </ViewSheet.Header>
             <ViewSheet.Body className="m-2">
                 <h4 className="mb-2">Set up your column layout</h4>
+                {customColumns && (
+                    <>
+                        {editedCustomColumn ? (
+                            <CustomColumnForm
+                                key={editedCustomColumn.id}
+                                column={editedCustomColumn}
+                                onSave={handleSaveCustomColumn}
+                                onCancel={() => setEditedCustomColumn(null)}
+                            />
+                        ) : (
+                            <div className="d-flex justify-content-end">
+                                <Button
+                                    variant="link"
+                                    size="sm"
+                                    onClick={() =>
+                                        setEditedCustomColumn({
+                                            id: createCustomColumnId(),
+                                            header: "",
+                                            expression: "",
+                                        })
+                                    }
+                                >
+                                    <Icon icon="plus" />
+                                    Add a custom column
+                                </Button>
+                            </div>
+                        )}
+                    </>
+                )}
                 <Card className="well p-1">
                     {hideableIds.length > 0 && (
                         <div className="px-2 py-1 d-flex align-items-center border-bottom border-secondary">
@@ -373,29 +402,6 @@ function TableDisplaySettingsSheet({
                         </DndContext>
                     </div>
                 </Card>
-                {customColumns && (
-                    <div className="mt-3">
-                        {editedCustomColumn ? (
-                            <CustomColumnForm
-                                key={editedCustomColumn.id}
-                                column={editedCustomColumn}
-                                onSave={handleSaveCustomColumn}
-                                onCancel={() => setEditedCustomColumn(null)}
-                            />
-                        ) : (
-                            <Button
-                                variant="primary"
-                                size="sm"
-                                onClick={() =>
-                                    setEditedCustomColumn({ id: createCustomColumnId(), header: "", expression: "" })
-                                }
-                            >
-                                <Icon icon="plus" />
-                                Add a custom column
-                            </Button>
-                        )}
-                    </div>
-                )}
             </ViewSheet.Body>
             <ViewSheet.Footer>
                 <div className="d-flex justify-content-between w-100">
@@ -431,7 +437,7 @@ function CustomColumnForm({ column, onSave, onCancel }: CustomColumnFormProps) {
 
     return (
         <form onSubmit={handleSubmit(handleSave)}>
-            <Card className="well p-2 vstack gap-2" data-testid="custom-column-form">
+            <Card className="well p-2 vstack gap-2 mb-2" data-testid="custom-column-form">
                 <FormGroup marginClass="m-0">
                     <FormLabel className="mb-1">Binding expression</FormLabel>
                     <FormInput
