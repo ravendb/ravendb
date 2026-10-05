@@ -61,7 +61,7 @@ print_urls() {
 runs_on_desktop_or_wsl() {
     kernel="$(uname -r 2>/dev/null) $(cat /proc/version 2>/dev/null)"
     case "$kernel" in
-        *[Mm]icrosoft*|*WSL*|*wsl*|*linuxkit*) return 0 ;;
+        *[Mm]icrosoft*|*WSL*|*wsl*) return 0 ;;
         *) return 1 ;;
     esac
 }
