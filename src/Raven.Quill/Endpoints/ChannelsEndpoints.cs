@@ -324,7 +324,7 @@ public static class ChannelsEndpoints
         {
             auth = await slackClient.AuthTestAsync(botToken, ct);
         }
-        catch (SlackApiException e)
+        catch (Exception e) when (SlackApiErrors.IsApiFailure(e))
         {
             return Results.BadRequest(new ApiErrorResponse(SlackApiErrors.DescribeBotTokenError(e)));
         }
@@ -770,7 +770,7 @@ public static class ChannelsEndpoints
             {
                 auth = await slackClient.AuthTestAsync(botToken, ct);
             }
-            catch (SlackApiException e)
+            catch (Exception e) when (SlackApiErrors.IsApiFailure(e))
             {
                 return Results.BadRequest(new ApiErrorResponse(SlackApiErrors.DescribeBotTokenError(e)));
             }
@@ -1085,13 +1085,9 @@ public static class ChannelsEndpoints
             await slackClient.OpenSocketAsync(appToken, ct);
             return null;
         }
-        catch (SlackApiException e)
+        catch (Exception e) when (SlackApiErrors.IsApiFailure(e))
         {
-            if (e.Error == SlackApiException.RateLimitedError)
-                return "slack is rate-limiting the app-level token check; try again shortly";
-
-            return SlackApiErrors.DescribeAppTokenError(e.Error) ??
-                   (e.Error is null ? e.Message : $"slack refused the app-level token check: {e.Error}");
+            return SlackApiErrors.DescribeAppTokenCheckError(e);
         }
     }
 

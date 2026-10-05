@@ -53,9 +53,9 @@ public static class SlackEndpoints
                 await slackClient.AuthTestAsync(channel.Slack!.BotToken, ct);
                 checks[i] = (true, null);
             }
-            catch (SlackApiException e)
+            catch (Exception e) when (SlackApiErrors.IsApiFailure(e))
             {
-                checks[i] = (e.SlackResponded && e.Error != SlackApiException.RateLimitedError ? false : null,
+                checks[i] = (SlackApiErrors.IsRefusal(e) ? false : null,
                     SlackApiErrors.DescribeBotTokenError(e));
             }
         }));

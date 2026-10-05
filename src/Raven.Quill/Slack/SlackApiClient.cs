@@ -10,14 +10,13 @@ internal sealed class SlackApiClient(SlackSdk sdk) : ISlackClient
 
     public async Task<SlackAuthInfo> AuthTestAsync(string botToken, CancellationToken ct)
     {
-        var payload = await CallAsync(() => Api(botToken).Auth.Test(ct), "auth.test", ct);
+        var payload = await Api(botToken).Auth.Test(ct);
         return new SlackAuthInfo(payload.TeamId, payload.Team ?? "", payload.UserId, payload.User ?? "");
     }
 
     public async Task<string> OpenSocketAsync(string appToken, CancellationToken ct)
     {
-        var payload = await CallAsync(
-            () => Api(appToken).AppsConnectionsApi.Open(ct), "apps.connections.open", ct);
+        var payload = await Api(appToken).AppsConnectionsApi.Open(ct);
         return payload.Url;
     }
 
@@ -31,7 +30,7 @@ internal sealed class SlackApiClient(SlackSdk sdk) : ISlackClient
             Parse = ParseMode.None,
             Blocks = [new MarkdownBlock { Text = markdown }],
         };
-        var payload = await CallAsync(() => Api(botToken).Chat.PostMessage(message, ct), "chat.postMessage", ct);
+        var payload = await Api(botToken).Chat.PostMessage(message, ct);
         return payload.Ts;
     }
 
@@ -46,13 +45,12 @@ internal sealed class SlackApiClient(SlackSdk sdk) : ISlackClient
             Parse = ParseMode.None,
             Blocks = [new MarkdownBlock { Text = markdown }],
         };
-        return CallAsync(() => Api(botToken).Chat.Update(update, ct), "chat.update", ct);
+        return Api(botToken).Chat.Update(update, ct);
     }
 
     public async Task<SlackUserInfo> UserInfoAsync(string botToken, string userId, CancellationToken ct)
     {
-        var user = await CallAsync(
-            () => Api(botToken).Users.Info(userId, cancellationToken: ct), "users.info", ct);
+        var user = await Api(botToken).Users.Info(userId, cancellationToken: ct);
 
         var email = user?.Profile?.Email;
         return new SlackUserInfo(userId, string.IsNullOrWhiteSpace(email) ? null : email);
@@ -64,16 +62,4 @@ internal sealed class SlackApiClient(SlackSdk sdk) : ISlackClient
             : text.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
 
     private ISlackApiClient Api(string token) => sdk.Api.WithAccessToken(token);
-
-    private static async Task<T> CallAsync<T>(Func<Task<T>> call, string method, CancellationToken ct)
-    {
-        try
-        {
-            return await call();
-        }
-        catch (Exception e) when (ct.IsCancellationRequested == false)
-        {
-            throw SlackApiErrors.Translate(e, method) ?? e;
-        }
-    }
 }

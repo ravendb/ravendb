@@ -69,7 +69,7 @@ internal sealed class SlackInboundProcessor(
         if (IsDuplicate(eventId))
             return;
 
-        health.Inbound();
+        health.MarkReceived();
 
         var chainKey = $"{database}/{Channel.ShortIdFor(channelId)}/{sender}";
         var notifyOverload = false;
@@ -194,7 +194,7 @@ internal sealed class SlackInboundProcessor(
 
         var conversationId = ChannelConversationId.For(ChannelType.Slack, shortChannelId, sender, parameters);
 
-        var reply = new SlackStreamingReply(slack, settings.BotToken, dmChannel, options.Value.Slack, logger, ct);
+        var reply = new SlackStreamingReply(slack, settings.BotToken, dmChannel, options.Value.Slack, logger);
 
         try
         {
@@ -204,26 +204,26 @@ internal sealed class SlackInboundProcessor(
                         parameter => parameter.Key,
                         parameter => AgentParameterValue.FromString(parameter.Value)),
                     options.Value.ChannelConversationIdleWindow),
-                reply.OnChunkAsync, config, ct);
+                chunk => reply.OnChunkAsync(chunk, ct), config, ct);
 
-            await reply.FinalizeAsync();
+            await reply.FinalizeAsync(ct);
             health.MarkSendSucceeded();
 
             if (result.StartedFresh)
-                await TrySendAsync(slack, database, shortChannelId, settings, dmChannel, ConversationExpiredReply, ct);
+                await TrySendAsync(slack, health, shortChannelId, settings, dmChannel, ConversationExpiredReply, ct);
 
             if (reply.IsEmpty)
                 if (logger.IsWarnEnabled)
                     logger.Warn($"Slack agent turn produced an empty reply for channel {channel.Id}");
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             throw;
         }
         catch (Exception e)
         {
-            if (e is SlackApiException apiError)
-                health.MarkSendFailed(apiError.Message);
+            if (SlackApiErrors.IsApiFailure(e))
+                health.MarkSendFailed(SlackApiErrors.Describe(e));
 
             await TrySendAsync(slack, health, shortChannelId, settings, dmChannel, ErrorReply, ct);
             throw;
@@ -261,10 +261,10 @@ internal sealed class SlackInboundProcessor(
             await slack.PostMessageAsync(settings.BotToken, dmChannel, text, ct);
             health.MarkSendSucceeded();
         }
-        catch (Exception e) when (e is not OperationCanceledException)
+        catch (Exception e) when (ct.IsCancellationRequested == false)
         {
-            if (e is SlackApiException apiError)
-                health.MarkSendFailed(apiError.Message);
+            if (SlackApiErrors.IsApiFailure(e))
+                health.MarkSendFailed(SlackApiErrors.Describe(e));
 
             if (logger.IsWarnEnabled)
                 logger.Warn($"Slack send failed for channel {shortChannelId} in {dmChannel}: {e.Message}");

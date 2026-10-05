@@ -12,8 +12,7 @@ internal sealed class TelegramStreamingReply(
     ITelegramBotClient bot,
     long chatId,
     TelegramOptions options,
-    QuillLogger<TelegramChannelManager> logger,
-    CancellationToken ct) : ChannelStreamingReply(options.MessageLimit, options.EditDebounce)
+    QuillLogger<TelegramChannelManager> logger) : ChannelStreamingReply(options.MessageLimit, options.EditDebounce)
 {
     private int _currentMessageId;
 
@@ -27,51 +26,51 @@ internal sealed class TelegramStreamingReply(
             logger.Debug($"Telegram streaming flush failed for chat {chatId}: {error.Message}");
     }
 
-    protected override async Task ShowPreviewAsync(string text)
+    protected override async Task ShowPreviewAsync(string text, CancellationToken token)
     {
         if (_currentMessageId == 0)
         {
-            var message = await bot.SendMessage(chatId, text, cancellationToken: ct);
+            var message = await bot.SendMessage(chatId, text, cancellationToken: token);
             _currentMessageId = message.Id;
         }
         else
         {
-            await EditPlainAsync(_currentMessageId, text);
+            await EditPlainAsync(_currentMessageId, text, token);
         }
     }
 
-    protected override async Task SendFinalAsync(string text)
+    protected override async Task SendFinalAsync(string text, CancellationToken token)
     {
         try
         {
-            await bot.SendMessage(chatId, text, parseMode: ParseMode.Markdown, cancellationToken: ct);
+            await bot.SendMessage(chatId, text, parseMode: ParseMode.Markdown, cancellationToken: token);
         }
         catch (ApiRequestException)
         {
-            await bot.SendMessage(chatId, text, cancellationToken: ct);
+            await bot.SendMessage(chatId, text, cancellationToken: token);
         }
     }
 
-    protected override async Task EditFinalAsync(string text)
+    protected override async Task EditFinalAsync(string text, CancellationToken token)
     {
         try
         {
-            await bot.EditMessageText(chatId, _currentMessageId, text, parseMode: ParseMode.Markdown, cancellationToken: ct);
+            await bot.EditMessageText(chatId, _currentMessageId, text, parseMode: ParseMode.Markdown, cancellationToken: token);
         }
         catch (ApiRequestException e) when (IsNotModified(e))
         {
         }
         catch (ApiRequestException)
         {
-            await EditPlainAsync(_currentMessageId, text);
+            await EditPlainAsync(_currentMessageId, text, token);
         }
     }
 
-    private async Task EditPlainAsync(int messageId, string text)
+    private async Task EditPlainAsync(int messageId, string text, CancellationToken token)
     {
         try
         {
-            await bot.EditMessageText(chatId, messageId, text, cancellationToken: ct);
+            await bot.EditMessageText(chatId, messageId, text, cancellationToken: token);
         }
         catch (ApiRequestException e) when (IsNotModified(e))
         {

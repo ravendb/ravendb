@@ -65,9 +65,7 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
         var channel = await NewChannelAsync(app);
         Router.StartedFresh = true;
 
-        var raw = EventBytes(channel.TeamId, "EvFresh1", DmMessage(Sender, "hello again"));
-        var response = await Host.Client.SendAsync(SignedPost(channel.WebhookToken, raw, channel.SigningSecret));
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await Slack.DispatchEventAsync(channel.TeamId, "EvFresh1", DmMessage(Sender, "hello again"));
 
         await Slack.WaitUntilAsync(
             () => Slack.SentMessages.Any(m => m.Channel == DmChannel && m.Text.Contains("fresh conversation")),
@@ -91,32 +89,28 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
 
         var botToken = NewBotToken();
         var teamId = NewTeamId();
-        var signingSecret = "signing-" + Guid.NewGuid().ToString("N");
-        Slack.AddBot(botToken, teamId, "Webhook Test Co", NewBotUserId());
+        Slack.AddBot(botToken, teamId, "Socket Test Co", NewBotUserId());
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Slack, agentId, null,
-            Slack: new(botToken, signingSecret, ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+            DisplayName: "Support bot",
+            Slack: new(botToken, NewAppToken(), ParameterBindings: new Dictionary<string, ChannelParameterBinding>
             {
                 ["userId"] = new() { Source = ChannelParameterSource.Constant, Value = "users/1" },
             })));
 
-        var info = await QuillHttp.GetAsync<SlackWebhookInfoResponse>(
-            Host.Client, QuillRoutes.SlackWebhookInfo(app.Slug, created.ChannelId));
-        var webhookToken = info.RequestUrl[(info.RequestUrl.LastIndexOf('/') + 1)..];
-
-        var first = EventBytes(teamId, "Ev-bind-1", DmMessage(Sender, "first question"));
-        await Host.Client.SendAsync(SignedPost(webhookToken, first, signingSecret));
+        await Slack.DispatchEventAsync(teamId, "Ev-bind-1", DmMessage(Sender, "first question"));
         await Slack.WaitUntilAsync(() => Router.Requests.Count == 1, "the first agent dispatch");
 
+        var connectsBefore = Slack.Connects;
         await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
             Slack: new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
             {
                 ["userId"] = new() { Source = ChannelParameterSource.Constant, Value = "users/2" },
             })));
+        await Slack.WaitUntilAsync(() => Slack.Connects > connectsBefore, "the socket to reconnect after the update");
 
-        var second = EventBytes(teamId, "Ev-bind-2", DmMessage(Sender, "second question"));
-        await Host.Client.SendAsync(SignedPost(webhookToken, second, signingSecret));
+        await Slack.DispatchEventAsync(teamId, "Ev-bind-2", DmMessage(Sender, "second question"));
         await Slack.WaitUntilAsync(() => Router.Requests.Count == 2, "the second agent dispatch");
 
         var firstRequest = Router.Requests[0];

@@ -9,8 +9,7 @@ internal sealed class DiscordStreamingReply(
     string botToken,
     string dmChannelId,
     DiscordOptions options,
-    QuillLogger<DiscordInboundProcessor> logger,
-    CancellationToken ct) : ChannelStreamingReply(options.MessageLimit, options.EditDebounce)
+    QuillLogger<DiscordInboundProcessor> logger) : ChannelStreamingReply(options.MessageLimit, options.EditDebounce)
 {
     private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(60);
 
@@ -29,14 +28,14 @@ internal sealed class DiscordStreamingReply(
             logger.Debug($"Discord streaming flush failed for channel {dmChannelId}: {error.Message}");
     }
 
-    protected override async Task ShowPreviewAsync(string text)
+    protected override async Task ShowPreviewAsync(string text, CancellationToken token)
     {
         try
         {
             if (_currentMessageId.Length == 0)
-                _currentMessageId = await discord.CreateMessageAsync(botToken, dmChannelId, text, ct);
+                _currentMessageId = await discord.CreateMessageAsync(botToken, dmChannelId, text, token);
             else
-                await discord.EditMessageAsync(botToken, dmChannelId, _currentMessageId, text, ct);
+                await discord.EditMessageAsync(botToken, dmChannelId, _currentMessageId, text, token);
         }
         catch (DiscordApiException e) when (e.RateLimited)
         {
@@ -46,40 +45,40 @@ internal sealed class DiscordStreamingReply(
         }
     }
 
-    protected override Task SendFinalAsync(string text) => CreateWithRetryAsync(text);
+    protected override Task SendFinalAsync(string text, CancellationToken token) => CreateWithRetryAsync(text, token);
 
-    protected override Task EditFinalAsync(string text) =>
-        text == LastShownText ? Task.CompletedTask : EditWithRetryAsync(_currentMessageId, text);
+    protected override Task EditFinalAsync(string text, CancellationToken token) =>
+        text == LastShownText ? Task.CompletedTask : EditWithRetryAsync(_currentMessageId, text, token);
 
-    private async Task CreateWithRetryAsync(string text)
+    private async Task CreateWithRetryAsync(string text, CancellationToken token)
     {
         try
         {
-            await discord.CreateMessageAsync(botToken, dmChannelId, text, ct);
+            await discord.CreateMessageAsync(botToken, dmChannelId, text, token);
         }
         catch (DiscordApiException e) when (e.RateLimited)
         {
-            await DelayForRetryAsync(e);
-            await discord.CreateMessageAsync(botToken, dmChannelId, text, ct);
+            await DelayForRetryAsync(e, token);
+            await discord.CreateMessageAsync(botToken, dmChannelId, text, token);
         }
     }
 
-    private async Task EditWithRetryAsync(string messageId, string text)
+    private async Task EditWithRetryAsync(string messageId, string text, CancellationToken token)
     {
         try
         {
-            await discord.EditMessageAsync(botToken, dmChannelId, messageId, text, ct);
+            await discord.EditMessageAsync(botToken, dmChannelId, messageId, text, token);
         }
         catch (DiscordApiException e) when (e.RateLimited)
         {
-            await DelayForRetryAsync(e);
-            await discord.EditMessageAsync(botToken, dmChannelId, messageId, text, ct);
+            await DelayForRetryAsync(e, token);
+            await discord.EditMessageAsync(botToken, dmChannelId, messageId, text, token);
         }
     }
 
-    private Task DelayForRetryAsync(DiscordApiException e)
+    private static Task DelayForRetryAsync(DiscordApiException e, CancellationToken token)
     {
         var delay = e.RetryAfter ?? TimeSpan.FromSeconds(1);
-        return Task.Delay(delay > MaxRetryDelay ? MaxRetryDelay : delay, ct);
+        return Task.Delay(delay > MaxRetryDelay ? MaxRetryDelay : delay, token);
     }
 }

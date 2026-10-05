@@ -130,7 +130,7 @@ internal sealed class SlackSocketRuntime
             await _client.Connect(new SocketModeConnectionOptions { NumberOfConnections = 1 }, _cts.Token);
             _connected = true;
             if (ExitedAt is null)
-                Health.Connected();
+                Health.MarkConnected();
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Slack socket connected for channel {_shortChannelId} (bot {_botUserId})");
         }
@@ -139,10 +139,10 @@ internal sealed class SlackSocketRuntime
         }
         catch (Exception e)
         {
-            var error = SlackApiErrors.Translate(e, "apps.connections.open");
-            var tokenError = SlackApiErrors.DescribeAppTokenError(error?.Error);
-            _canRestart = tokenError is null || SlackApiErrors.AppTokenErrorIsFixableInSlack(error!.Error);
-            Exit(tokenError ?? error?.Message ?? e.Message, _options.SocketRestartDelay);
+            var code = SlackApiErrors.ErrorCodeOf(e);
+            var tokenError = SlackApiErrors.DescribeAppTokenError(code);
+            _canRestart = tokenError is null || SlackApiErrors.AppTokenErrorIsFixableInSlack(code);
+            Exit(tokenError ?? SlackApiErrors.Describe(e), _options.SocketRestartDelay);
         }
     }
 
@@ -173,7 +173,7 @@ internal sealed class SlackSocketRuntime
         if (MarkExited(TimeSpan.Zero) == false)
             return;
 
-        Health.Disconnected(error: null);
+        Health.MarkDisconnected(error: null);
         if (_logger.IsInfoEnabled)
             _logger.Info($"Slack socket for channel {_shortChannelId} stayed down; replacing it");
     }
@@ -183,7 +183,7 @@ internal sealed class SlackSocketRuntime
         if (MarkExited(restartDelay) == false)
             return;
 
-        Health.Disconnected(error);
+        Health.MarkDisconnected(error);
         if (_logger.IsWarnEnabled)
             _logger.Warn($"Slack socket for channel {_shortChannelId} exited: {error}");
     }

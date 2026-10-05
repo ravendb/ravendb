@@ -16,9 +16,9 @@ public class ChannelStreamingReplyTests(ITestOutputHelper output) : NoDisposalNe
     {
         var reply = new RecordingReply(messageLimit: 10);
 
-        await reply.OnChunkAsync(new string('\n', 15));
-        await reply.OnChunkAsync("hello");
-        await reply.FinalizeAsync();
+        await reply.OnChunkAsync(new string('\n', 15), CancellationToken.None);
+        await reply.OnChunkAsync("hello", CancellationToken.None);
+        await reply.FinalizeAsync(CancellationToken.None);
 
         Assert.Equal(0, reply.EmptyAttempts);
         Assert.Equal("hello", Assert.Single(reply.Previews));
@@ -30,9 +30,9 @@ public class ChannelStreamingReplyTests(ITestOutputHelper output) : NoDisposalNe
     {
         var reply = new RecordingReply(messageLimit: 10);
 
-        await reply.OnChunkAsync("0123456789");
-        await reply.OnChunkAsync("x");
-        await reply.FinalizeAsync();
+        await reply.OnChunkAsync("0123456789", CancellationToken.None);
+        await reply.OnChunkAsync("x", CancellationToken.None);
+        await reply.FinalizeAsync(CancellationToken.None);
 
         Assert.Equal(0, reply.EmptyAttempts);
         Assert.Equal(["0123456789", "x"], reply.Previews);
@@ -46,19 +46,19 @@ public class ChannelStreamingReplyTests(ITestOutputHelper output) : NoDisposalNe
         var client = new RateLimitingDiscordClient();
         var options = new DiscordOptions { EditDebounce = TimeSpan.Zero };
         var reply = new DiscordStreamingReply(
-            client, "bot-token", "dm-channel", options, new QuillLogger<DiscordInboundProcessor>(), CancellationToken.None);
+            client, "bot-token", "dm-channel", options, new QuillLogger<DiscordInboundProcessor>());
 
-        await reply.OnChunkAsync("a");
+        await reply.OnChunkAsync("a", CancellationToken.None);
 
         client.NextEditRateLimited = TimeSpan.FromMinutes(5);
-        await reply.OnChunkAsync("b");
-        await reply.OnChunkAsync("c");
-        await reply.OnChunkAsync("d");
+        await reply.OnChunkAsync("b", CancellationToken.None);
+        await reply.OnChunkAsync("c", CancellationToken.None);
+        await reply.OnChunkAsync("d", CancellationToken.None);
 
         Assert.Equal(1, client.CreateCalls);
         Assert.Equal(1, client.EditCalls);
 
-        await reply.FinalizeAsync();
+        await reply.FinalizeAsync(CancellationToken.None);
 
         Assert.Equal(2, client.EditCalls);
         Assert.Equal("abcd", client.LastEditContent);
@@ -75,16 +75,16 @@ public class ChannelStreamingReplyTests(ITestOutputHelper output) : NoDisposalNe
 
         protected override bool HasOpenMessage => _open;
 
-        protected override Task ShowPreviewAsync(string text)
+        protected override Task ShowPreviewAsync(string text, CancellationToken token)
         {
             Previews.Add(text);
             _open = true;
             return Task.CompletedTask;
         }
 
-        protected override Task SendFinalAsync(string text) => RecordFinal(text);
+        protected override Task SendFinalAsync(string text, CancellationToken token) => RecordFinal(text);
 
-        protected override Task EditFinalAsync(string text) => RecordFinal(text);
+        protected override Task EditFinalAsync(string text, CancellationToken token) => RecordFinal(text);
 
         protected override void CloseCurrentMessage() => _open = false;
 
