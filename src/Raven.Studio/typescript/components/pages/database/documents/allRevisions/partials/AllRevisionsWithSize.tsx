@@ -1,5 +1,9 @@
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
-import { AllRevisionsTableProps } from "components/pages/database/documents/allRevisions/common/allRevisionsTypes";
+import {
+    AllRevisionsPaginationProps,
+    AllRevisionsTableProps,
+} from "components/pages/database/documents/allRevisions/common/allRevisionsTypes";
+import { allRevisionsUtils } from "components/pages/database/documents/allRevisions/common/allRevisionsUtils";
 import AllRevisionsTable from "components/pages/database/documents/allRevisions/partials/AllRevisionsTable";
 import AllRevisionsTableSmallSample from "components/pages/database/documents/allRevisions/partials/AllRevisionsTableSmallSample";
 
@@ -11,7 +15,9 @@ export default function AllRevisionsWithSize({
     fetcherRef,
     selectedRows,
     setSelectedRows,
-}: AllRevisionsTableProps) {
+    isPaginated,
+    onIsPaginatedChange,
+}: AllRevisionsTableProps & AllRevisionsPaginationProps) {
     const tableProps = {
         width: virtualTableUtils.getTableBodyWidth(width),
         height,
@@ -22,10 +28,10 @@ export default function AllRevisionsWithSize({
         setSelectedRows,
     };
 
-    if (selectedType !== "All" && selectedCollectionName) {
+    if (allRevisionsUtils.isSmallSample(selectedType, selectedCollectionName)) {
         // in this case the server does not return `TotalResults` so we display part of the results
         return <AllRevisionsTableSmallSample {...tableProps} />;
     }
 
-    return <AllRevisionsTable {...tableProps} />;
+    return <AllRevisionsTable {...tableProps} isPaginated={isPaginated} onIsPaginatedChange={onIsPaginatedChange} />;
 }
