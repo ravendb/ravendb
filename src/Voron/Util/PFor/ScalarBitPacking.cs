@@ -856,7 +856,7 @@ public static unsafe class ScalarBitPacking {
   }
 
   private static void fastpack32(int *input, int *output) {
-    Unsafe.CopyBlock(output, input, 32);
+    Unsafe.CopyBlock(output, input, 32 * sizeof(int));
   }
 
   private static void fastpack4(int *input, int *output) {
@@ -1820,7 +1820,7 @@ public static unsafe class ScalarBitPacking {
   }
 
   private static void fastpackwithoutmask32(int *input, int *output) {
-    Unsafe.CopyBlock(output, input, 32);
+    Unsafe.CopyBlock(output, input, 32 * sizeof(int));
   }
 
   private static void fastpackwithoutmask4(int *input, int *output) {
@@ -2921,7 +2921,7 @@ public static unsafe class ScalarBitPacking {
   }
 
   private static void fastunpack32(int *input, int *output) {
-    Unsafe.CopyBlock(output, input, 32);
+    Unsafe.CopyBlock(output, input, 32 * sizeof(int));
   }
 
   private static void fastunpack4(int *input, int *output) {
