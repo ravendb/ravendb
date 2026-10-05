@@ -303,7 +303,7 @@ function TableDisplaySettingsSheet({
             </ViewSheet.Header>
             <ViewSheet.Body className="m-2">
                 <h4 className="mb-2">Set up your column layout</h4>
-                <Card className="bg-black p-1">
+                <Card className="well p-1">
                     {hideableIds.length > 0 && (
                         <div className="px-2 py-1 d-flex align-items-center border-bottom border-secondary">
                             <Checkbox
@@ -431,7 +431,7 @@ function CustomColumnForm({ column, onSave, onCancel }: CustomColumnFormProps) {
 
     return (
         <form onSubmit={handleSubmit(handleSave)}>
-            <Card className="bg-black p-2 vstack gap-2" data-testid="custom-column-form">
+            <Card className="well p-2 vstack gap-2" data-testid="custom-column-form">
                 <FormGroup marginClass="m-0">
                     <FormLabel className="mb-1">Binding expression</FormLabel>
                     <FormInput
