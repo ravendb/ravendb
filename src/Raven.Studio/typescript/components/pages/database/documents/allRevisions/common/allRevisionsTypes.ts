@@ -18,3 +18,8 @@ export interface AllRevisionsTableProps extends AllRevisionsWithSizeProps {
     selectedRows: RevisionsPreviewResultItem[];
     setSelectedRows: (rows: RevisionsPreviewResultItem[]) => void;
 }
+
+export interface AllRevisionsPaginationProps {
+    isPaginated: boolean;
+    onIsPaginatedChange: (isPaginated: boolean) => void;
+}
