@@ -53,14 +53,8 @@ namespace Raven.Server.Documents.Replication.Incoming
             AfterItemsReadFromStream = ValidateIncomingReplicationItemsPaths;
         }
 
-        protected override void DoIncomingReplication()
-        {
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Pull replication connection established. {FromToString}, Direction={IncomingPullReplicationParams.Mode}, " +
-                            $"ChangeVectorWireMode={ChangeVectorWireMode}, CertificateThumbprint={CertificateThumbprint}");
-
-            base.DoIncomingReplication();
-        }
+        protected override string ConnectionEstablishedLogDetails =>
+            $"{base.ConnectionEstablishedLogDetails}, Direction={IncomingPullReplicationParams.Mode}, ChangeVectorWireMode={ChangeVectorWireMode}, CertificateThumbprint={CertificateThumbprint}";
 
         public override string FromToString => base.FromToString +
                                                $"{(IncomingPullReplicationParams?.Name == null ? null : $"(pull definition: {IncomingPullReplicationParams?.Name})")}";
