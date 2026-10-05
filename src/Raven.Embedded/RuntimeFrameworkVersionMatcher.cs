@@ -86,9 +86,11 @@ namespace Raven.Embedded
                 throw new InvalidOperationException($"Unable to execute dotnet to retrieve list of installed runtimes.{Environment.NewLine}Command was: {Environment.NewLine}{processStartInfo.WorkingDirectory}> {processStartInfo.FileName} {processStartInfo.Arguments}", e);
             }
 
+            var standardErrorTask = process.StandardError.ReadToEndAsync();
+
             var insideRuntimes = false;
             var runtimeLines = new List<string>();
-            await ProcessHelper.ReadOutput(process.StandardOutput, elapsed: null, options, (line, builder) =>
+            var standardOutput = await ProcessHelper.ReadOutput(process.StandardOutput, elapsed: null, options, (line, builder) =>
             {
                 line = line.Trim();
 
@@ -112,6 +114,24 @@ namespace Raven.Embedded
                     throw new InvalidOperationException($"Invalid runtime line. Expected 'Microsoft.NETCore.App x.x.x', but was '{runtimeLine}'.");
 
                 runtimes.Add(new RuntimeFrameworkVersion(values[1]));
+            }
+
+            var standardError = await standardErrorTask.ConfigureAwait(false);
+            if (runtimes.Count == 0)
+            {
+                await Task.Run(process.WaitForExit).ConfigureAwait(false);
+                if (process.ExitCode != 0)
+                {
+                    var message = new StringBuilder();
+                    message.AppendLine("Unable to discover installed .NET runtimes: dotnet --info failed.");
+                    message.AppendLine($"Command: \"{processStartInfo.FileName}\" {processStartInfo.Arguments}");
+                    message.AppendLine($"Exit code: {process.ExitCode} (0x{process.ExitCode:X8})");
+                    message.AppendLine("Standard output:");
+                    message.AppendLine(string.IsNullOrEmpty(standardOutput) ? "<empty>" : standardOutput);
+                    message.AppendLine("Standard error:");
+                    message.AppendLine(string.IsNullOrEmpty(standardError) ? "<empty>" : standardError);
+                    throw new InvalidOperationException(message.ToString());
+                }
             }
 
             return runtimes;
