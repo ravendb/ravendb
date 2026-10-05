@@ -19,9 +19,9 @@ public static class SlackEndpoints
         group.MapGet("/slack/health", GetHealthAsync)
             .WithName("slack.health")
             .WithDescription(
-                "Per-channel connection health for the app's Slack channels: bot token validity " +
-                "(cached a few minutes) plus the live Socket Mode connection state and the inbound and send " +
-                "activity seen since the last restart.")
+                "Per-channel connection health for the app's Slack channels: bot token validity plus the live " +
+                "Socket Mode connection state and the inbound and send activity seen since the channel's socket " +
+                "last started.")
             .Produces<SlackChannelHealthResponse[]>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
     }
@@ -30,7 +30,7 @@ public static class SlackEndpoints
         string slug,
         IDocumentStore store,
         ISlackClient slackClient,
-        SlackHealthRegistry health,
+        ISlackChannelManager slackManager,
         CancellationToken ct)
     {
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
@@ -48,23 +48,16 @@ public static class SlackEndpoints
         var checks = new (bool? Valid, string? Error)[slackChannels.Length];
         await Task.WhenAll(slackChannels.Select(async (channel, i) =>
         {
-            if (health.TryGetFreshTokenCheck(app.Database, channel.ShortId, out var tokenValid, out var tokenError) == false)
+            try
             {
-                try
-                {
-                    await slackClient.AuthTestAsync(channel.Slack!.BotToken, ct);
-                    tokenValid = true;
-                    tokenError = null;
-                }
-                catch (SlackApiException e)
-                {
-                    tokenValid = e.SlackResponded && e.Error != SlackApiException.RateLimitedError ? false : null;
-                    tokenError = SlackApiErrors.DescribeBotTokenError(e);
-                }
-                health.StoreTokenCheck(app.Database, channel.ShortId, tokenValid, tokenError);
+                await slackClient.AuthTestAsync(channel.Slack!.BotToken, ct);
+                checks[i] = (true, null);
             }
-
-            checks[i] = (tokenValid, tokenError);
+            catch (SlackApiException e)
+            {
+                checks[i] = (e.SlackResponded && e.Error != SlackApiException.RateLimitedError ? false : null,
+                    SlackApiErrors.DescribeBotTokenError(e));
+            }
         }));
 
         var rows = new SlackChannelHealthResponse[slackChannels.Length];
@@ -72,7 +65,7 @@ public static class SlackEndpoints
         {
             var channel = slackChannels[i];
             var settings = channel.Slack!;
-            var snapshot = health.SnapshotFor(app.Database, channel.ShortId);
+            var health = slackManager.HealthFor(app.Database, channel.ShortId);
             rows[i] = new SlackChannelHealthResponse(
                 channel.ShortId,
                 settings.TeamId,
@@ -81,12 +74,12 @@ public static class SlackEndpoints
                 channel.Enabled,
                 checks[i].Valid,
                 checks[i].Error,
-                snapshot.SocketConnected,
-                snapshot.LastConnectedAt,
-                settings.AppToken.Length == 0 ? AppTokenMissingError : snapshot.LastSocketError,
-                snapshot.LastInboundAt,
-                snapshot.LastSendErrorAt,
-                snapshot.LastSendError);
+                health?.SocketConnected ?? false,
+                health?.LastConnectedAt,
+                settings.AppToken.Length == 0 ? AppTokenMissingError : health?.LastSocketError,
+                health?.LastInboundAt,
+                health?.LastSendErrorAt,
+                health?.LastSendError);
         }
 
         return Results.Ok(rows);

@@ -458,7 +458,7 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Health_reports_token_validity_per_channel_and_caches_the_verdict()
+    public async Task Health_reports_token_validity_per_channel()
     {
         await using var app = await NewAppAsync();
         var agentId = await SeedAgentAsync(app);
@@ -478,10 +478,6 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
         Assert.Equal(teamId, row.TeamId);
         Assert.True(row.Enabled);
         Assert.Null(row.LastInboundAt);
-
-        var callsAfterFirstPoll = Slack.AuthTestCalls.Count;
-        await QuillHttp.GetAsync<SlackChannelHealthResponse[]>(Host.Client, QuillRoutes.SlackHealth(app.Slug));
-        Assert.Equal(callsAfterFirstPoll, Slack.AuthTestCalls.Count);
     }
 
     private static async Task<string> SeedAgentAsync(QuillApp app, params AiAgentParameter[] parameters)
