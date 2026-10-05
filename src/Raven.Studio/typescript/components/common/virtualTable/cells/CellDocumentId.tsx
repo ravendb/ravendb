@@ -15,7 +15,9 @@ export default function CellDocumentId({ id, collection, databaseName, hasHyperl
     return (
         <CellWithCopy value={id}>
             {hasHyperlink ? (
-                <a href={appUrl.forEditDoc(id, databaseName, collection)}>{id}</a>
+                <a href={appUrl.forEditDoc(id, databaseName, collection)} className="cell-link">
+                    {id}
+                </a>
             ) : (
                 <CellValue value={id} />
             )}
