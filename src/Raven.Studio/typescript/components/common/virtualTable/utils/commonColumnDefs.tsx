@@ -26,6 +26,7 @@ export const columnCheckbox: ColumnDef<unknown> = {
                 }
                 table.toggleAllRowsSelected(e.target.checked);
             }}
+            disabled={table.getRowCount() === 0}
             className="selection-checkbox"
         />
     ),
@@ -61,6 +62,7 @@ export function createLazySelectionColumn<T>(selectAllLabel: string, selectRowLa
                     indeterminate={selectionState === "SomeSelected"}
                     toggleSelection={toggleAll}
                     aria-label={selectAllLabel}
+                    disabled={table.getRowCount() === 0}
                     className="selection-checkbox"
                 />
             );
