@@ -929,6 +929,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/setup/migration/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Opens an interactive planning session over the discovered schema. Streams NDJSON frames: the agent's proposal, then one frame per collection as it is registered or rejected, then its reply. */
+        post: operations["setup.migrationStart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/migration/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description One more turn in an existing planning session. Streams the same NDJSON frames. */
+        post: operations["setup.migrationAsk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/migration/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Takes a registered collection out of the plan. The planner is told on the next turn. */
+        post: operations["setup.migrationRemoveCollection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/migration/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Assembles the registered plan into a CDC configuration and hands it to the map step. */
+        post: operations["setup.migrationApply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/setup/test-mapping": {
         parameters: {
             query?: never;
@@ -1650,6 +1718,31 @@ export interface components {
             /** Format: double */
             delta: number;
             sparkline: number[];
+        };
+        MigrationApplyRequest: {
+            slug: string;
+            conversationId: string;
+            collections?: null | string[];
+        };
+        MigrationApplyResponse: {
+            configuration: null | components["schemas"]["CdcSinkConfiguration"];
+            unmappedTables: string[];
+            errors: string[];
+        };
+        MigrationAskRequest: {
+            slug: string;
+            conversationId: string;
+            prompt: string;
+        };
+        MigrationRemoveCollectionRequest: {
+            slug: string;
+            conversationId: string;
+            collection: string;
+        };
+        MigrationStartRequest: {
+            slug: string;
+            selectedTables?: null | components["schemas"]["SelectedSourceTable"][];
+            prompt?: null | string;
         };
         MintEmbedLinkRequest: {
             channelId: string;
@@ -4312,6 +4405,123 @@ export interface operations {
             };
         };
     };
+    "setup.migrationStart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": null | components["schemas"]["MigrationStartRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "setup.migrationAsk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": null | components["schemas"]["MigrationAskRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "setup.migrationRemoveCollection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": null | components["schemas"]["MigrationRemoveCollectionRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "setup.migrationApply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": null | components["schemas"]["MigrationApplyRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationApplyResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     "setup.testMapping": {
         parameters: {
             query?: never;
@@ -4518,6 +4728,11 @@ export type LicenseResponse = components["schemas"]["LicenseResponse"];
 export type LoginRequest = components["schemas"]["LoginRequest"];
 export type MapRequest = components["schemas"]["MapRequest"];
 export type MetricCard = components["schemas"]["MetricCard"];
+export type MigrationApplyRequest = components["schemas"]["MigrationApplyRequest"];
+export type MigrationApplyResponse = components["schemas"]["MigrationApplyResponse"];
+export type MigrationAskRequest = components["schemas"]["MigrationAskRequest"];
+export type MigrationRemoveCollectionRequest = components["schemas"]["MigrationRemoveCollectionRequest"];
+export type MigrationStartRequest = components["schemas"]["MigrationStartRequest"];
 export type MintEmbedLinkRequest = components["schemas"]["MintEmbedLinkRequest"];
 export type MintEmbedLinkResponse = components["schemas"]["MintEmbedLinkResponse"];
 export type MistralAiSettings = components["schemas"]["MistralAiSettings"];
@@ -4660,6 +4875,10 @@ export const API_ENDPOINTS = {
         connect: "/setup/connect",
         discover: "/setup/discover",
         map: "/setup/map",
+        migrationApply: "/setup/migration/apply",
+        migrationAsk: "/setup/migration/ask",
+        migrationRemoveCollection: "/setup/migration/remove",
+        migrationStart: "/setup/migration/start",
         provision: "/setup/provision",
         suggestCdc: "/setup/suggest/cdc",
         testMapping: "/setup/test-mapping",
@@ -4767,6 +4986,10 @@ export function createServerApi(client: ApiClient) {
             connect: (request: ConnectRequest) => client.post<ConnectResult, ApiErrorResponse>(API_ENDPOINTS.setup.connect, request),
             discover: (request: DiscoverRequest) => client.post<DiscoverResponse, ApiErrorResponse>(API_ENDPOINTS.setup.discover, request),
             map: (request: MapRequest) => client.post<CdcSinkConfiguration, ApiErrorResponse>(API_ENDPOINTS.setup.map, request),
+            migrationApply: (request: string) => client.post<MigrationApplyResponse, ApiErrorResponse>(API_ENDPOINTS.setup.migrationApply, request),
+            migrationAsk: (request: string) => client.post<void>(API_ENDPOINTS.setup.migrationAsk, request),
+            migrationRemoveCollection: (request: string) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.setup.migrationRemoveCollection, request),
+            migrationStart: (request: string) => client.post<void>(API_ENDPOINTS.setup.migrationStart, request),
             provision: (request: ProvisionRequest) => client.post<ProvisionResponse, ApiErrorResponse>(API_ENDPOINTS.setup.provision, request),
             suggestCdc: (request: SuggestCdcRequest) => client.post<SuggestCdcResponse, ApiErrorResponse>(API_ENDPOINTS.setup.suggestCdc, request),
             testMapping: (request: TestMappingRequest) => client.post<TestMappingResponse, ApiErrorResponse>(API_ENDPOINTS.setup.testMapping, request),
