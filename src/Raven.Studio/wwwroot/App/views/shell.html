@@ -86,7 +86,7 @@
         <h3 data-bind="visible: $root.collectionsTracker.collections().length > 1, attr: { title: $root.collectionsCountText() + ' collections'}">
             Collections (<span data-bind="text: $root.collectionsCountText"></span>)
         </h3>
-        <li class="scroll collections-list">
+        <li class="collections-list">
             <ul>
                 <!-- ko if: $root.collectionsTracker.systemCollections().length > 0 -->
                 <li class="system-collections-group">
