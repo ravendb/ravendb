@@ -74,9 +74,9 @@ public static class SlackEndpoints
                 channel.Enabled,
                 checks[i].Valid,
                 checks[i].Error,
-                health?.SocketConnected ?? false,
+                health?.IsConnected ?? false,
                 health?.LastConnectedAt,
-                settings.AppToken.Length == 0 ? AppTokenMissingError : health?.LastSocketError,
+                settings.AppToken.Length == 0 ? AppTokenMissingError : health?.LastConnectionError,
                 health?.LastInboundAt,
                 health?.LastSendErrorAt,
                 health?.LastSendError);

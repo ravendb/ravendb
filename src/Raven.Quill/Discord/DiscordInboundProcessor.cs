@@ -11,7 +11,6 @@ internal sealed class DiscordInboundProcessor(
     IDocumentStore store,
     IAgentRouter router,
     IServiceScopeFactory scopes,
-    DiscordHealthRegistry health,
     IOptions<ApplianceOptions> options,
     QuillLogger<DiscordInboundProcessor> logger) : IHostedService
 {
@@ -63,11 +62,13 @@ internal sealed class DiscordInboundProcessor(
     }
 
     public void Enqueue(
-        string database, string channelId, string sender, string? senderUsername, string dmChannel,
-        string messageId, string kind, string? text)
+        string database, string channelId, ChannelConnectionHealth health, string sender, string? senderUsername,
+        string dmChannel, string messageId, string kind, string? text)
     {
         if (IsDuplicate(messageId))
             return;
+
+        health.Inbound();
 
         var chainKey = $"{database}/{Channel.ShortIdFor(channelId)}/{sender}";
         var notifyOverload = false;
@@ -87,7 +88,8 @@ internal sealed class DiscordInboundProcessor(
                 chain.Pending++;
                 var next = chain.Tail
                     .ContinueWith(
-                        _ => HandleMessageSafeAsync(database, channelId, sender, senderUsername, dmChannel, kind, text),
+                        _ => HandleMessageSafeAsync(
+                            database, channelId, health, sender, senderUsername, dmChannel, kind, text),
                         CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default)
                     .Unwrap();
                 chain.Tail = next;
@@ -97,7 +99,7 @@ internal sealed class DiscordInboundProcessor(
         }
 
         if (notifyOverload)
-            _ = SendOverloadNoticeAsync(database, channelId, dmChannel);
+            _ = SendOverloadNoticeAsync(database, channelId, health, dmChannel);
     }
 
     private void OnTurnCompleted(string chainKey, SenderChain chain)
@@ -135,13 +137,13 @@ internal sealed class DiscordInboundProcessor(
     }
 
     private async Task HandleMessageSafeAsync(
-        string database, string channelId, string sender, string? senderUsername, string dmChannel, string kind,
-        string? text)
+        string database, string channelId, ChannelConnectionHealth health, string sender, string? senderUsername,
+        string dmChannel, string kind, string? text)
     {
         try
         {
             await HandleMessageAsync(
-                database, channelId, sender, senderUsername, dmChannel, kind, text, _stopping.Token);
+                database, channelId, health, sender, senderUsername, dmChannel, kind, text, _stopping.Token);
         }
         catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
         {
@@ -154,8 +156,8 @@ internal sealed class DiscordInboundProcessor(
     }
 
     private async Task HandleMessageAsync(
-        string database, string channelId, string sender, string? senderUsername, string dmChannel, string kind,
-        string? text, CancellationToken ct)
+        string database, string channelId, ChannelConnectionHealth health, string sender, string? senderUsername,
+        string dmChannel, string kind, string? text, CancellationToken ct)
     {
         Channel? channel;
         using (var session = store.OpenAsyncSession(database))
@@ -171,7 +173,7 @@ internal sealed class DiscordInboundProcessor(
 
         if (kind != "text")
         {
-            await TrySendAsync(discord, database, shortChannelId, settings, dmChannel, UnsupportedKindReply, ct);
+            await TrySendAsync(discord, health, shortChannelId, settings, dmChannel, UnsupportedKindReply, ct);
             return;
         }
 
@@ -187,7 +189,7 @@ internal sealed class DiscordInboundProcessor(
             config, settings.ParameterBindings, sender, senderUsername);
         if (parameters is null)
         {
-            await TrySendAsync(discord, database, shortChannelId, settings, dmChannel, ErrorReply, ct);
+            await TrySendAsync(discord, health, shortChannelId, settings, dmChannel, ErrorReply, ct);
             throw new InvalidOperationException(bindError);
         }
 
@@ -207,7 +209,7 @@ internal sealed class DiscordInboundProcessor(
                 reply.OnChunkAsync, config, ct);
 
             await reply.FinalizeAsync();
-            health.RecordSendSuccess(database, shortChannelId);
+            health.SendSucceeded();
 
             if (result.StartedFresh)
                 await TrySendAsync(discord, database, shortChannelId, settings, dmChannel, ConversationExpiredReply, ct);
@@ -222,16 +224,17 @@ internal sealed class DiscordInboundProcessor(
         }
         catch (Exception e)
         {
-            await TrySendAsync(discord, database, shortChannelId, settings, dmChannel, ErrorReply, ct);
+            await TrySendAsync(discord, health, shortChannelId, settings, dmChannel, ErrorReply, ct);
 
             if (e is DiscordApiException apiError)
-                health.RecordSendError(database, shortChannelId, apiError.Message);
+                health.SendFailed(apiError.Message);
 
             throw;
         }
     }
 
-    private async Task SendOverloadNoticeAsync(string database, string channelId, string dmChannel)
+    private async Task SendOverloadNoticeAsync(
+        string database, string channelId, ChannelConnectionHealth health, string dmChannel)
     {
         try
         {
@@ -245,7 +248,7 @@ internal sealed class DiscordInboundProcessor(
             await using var scope = scopes.CreateAsyncScope();
             var discord = scope.ServiceProvider.GetRequiredService<IDiscordClient>();
             await TrySendAsync(
-                discord, database, channel.ShortId, settings, dmChannel, OverloadReply, _stopping.Token);
+                discord, health, channel.ShortId, settings, dmChannel, OverloadReply, _stopping.Token);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
@@ -255,18 +258,18 @@ internal sealed class DiscordInboundProcessor(
     }
 
     private async Task TrySendAsync(
-        IDiscordClient discord, string database, string shortChannelId, DiscordSettings settings, string dmChannel,
-        string text, CancellationToken ct)
+        IDiscordClient discord, ChannelConnectionHealth health, string shortChannelId, DiscordSettings settings,
+        string dmChannel, string text, CancellationToken ct)
     {
         try
         {
             await discord.CreateMessageAsync(settings.BotToken, dmChannel, text, ct);
-            health.RecordSendSuccess(database, shortChannelId);
+            health.SendSucceeded();
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
             if (e is DiscordApiException apiError)
-                health.RecordSendError(database, shortChannelId, apiError.Message);
+                health.SendFailed(apiError.Message);
 
             if (logger.IsWarnEnabled)
                 logger.Warn($"Discord send failed for channel {shortChannelId} in {dmChannel}: {e.Message}");

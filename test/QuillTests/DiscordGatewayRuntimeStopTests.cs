@@ -35,7 +35,7 @@ public class DiscordGatewayRuntimeStopTests(ITestOutputHelper output) : NoDispos
 
         var options = new DiscordOptions { GatewayStopTimeout = TimeSpan.FromMilliseconds(250) };
         var runtime = DiscordGatewayRuntime.Start(
-            "db", channel, channelChangeVector: null, processor: null!, new DiscordHealthRegistry(),
+            "db", channel, channelChangeVector: null, processor: null!,
             services.GetRequiredService<IServiceScopeFactory>(), options, new QuillLogger<DiscordChannelManager>());
 
         await client.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));

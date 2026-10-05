@@ -16,9 +16,9 @@ public static class DiscordEndpoints
         group.MapGet("/discord/health", GetHealthAsync)
             .WithName("discord.health")
             .WithDescription(
-                "Per-channel connection health for the app's Discord channels: bot token validity " +
-                "(cached a few minutes) plus the live gateway connection state and the inbound and send " +
-                "activity seen since the last restart.")
+                "Per-channel connection health for the app's Discord channels: bot token validity plus the live " +
+                "gateway connection state and the inbound and send activity seen since the channel's gateway " +
+                "last started.")
             .Produces<DiscordChannelHealthResponse[]>()
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
     }
@@ -27,7 +27,7 @@ public static class DiscordEndpoints
         string slug,
         IDocumentStore store,
         IDiscordClient discordClient,
-        DiscordHealthRegistry health,
+        IDiscordChannelManager discordManager,
         CancellationToken ct)
     {
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
@@ -45,16 +45,9 @@ public static class DiscordEndpoints
         var checks = new (bool? Valid, string? Error)[discordChannels.Length];
         await Task.WhenAll(discordChannels.Select(async (channel, i) =>
         {
-            if (health.TryGetFreshTokenCheck(app.Database, channel.ShortId, out var tokenValid, out var tokenError) == false)
-            {
-                var (identity, error, discordResponded) =
-                    await discordClient.GetBotIdentityAsync(channel.Discord!.BotToken, ct);
-                tokenValid = identity is not null ? true : discordResponded ? false : null;
-                tokenError = identity is null ? error : null;
-                health.StoreTokenCheck(app.Database, channel.ShortId, tokenValid, tokenError);
-            }
-
-            checks[i] = (tokenValid, tokenError);
+            var (identity, error, discordResponded) =
+                await discordClient.GetBotIdentityAsync(channel.Discord!.BotToken, ct);
+            checks[i] = (identity is not null ? true : discordResponded ? false : null, identity is null ? error : null);
         }));
 
         var rows = new DiscordChannelHealthResponse[discordChannels.Length];
@@ -62,7 +55,7 @@ public static class DiscordEndpoints
         {
             var channel = discordChannels[i];
             var settings = channel.Discord!;
-            var snapshot = health.SnapshotFor(app.Database, channel.ShortId);
+            var health = discordManager.HealthFor(app.Database, channel.ShortId);
             rows[i] = new DiscordChannelHealthResponse(
                 channel.ShortId,
                 settings.ApplicationId,
@@ -71,12 +64,12 @@ public static class DiscordEndpoints
                 channel.Enabled,
                 checks[i].Valid,
                 checks[i].Error,
-                snapshot.GatewayConnected,
-                snapshot.LastConnectedAt,
-                snapshot.LastGatewayError,
-                snapshot.LastInboundAt,
-                snapshot.LastSendErrorAt,
-                snapshot.LastSendError);
+                health?.IsConnected ?? false,
+                health?.LastConnectedAt,
+                health?.LastConnectionError,
+                health?.LastInboundAt,
+                health?.LastSendErrorAt,
+                health?.LastSendError);
         }
 
         return Results.Ok(rows);

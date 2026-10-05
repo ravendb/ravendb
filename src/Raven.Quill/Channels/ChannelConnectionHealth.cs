@@ -1,25 +1,26 @@
-namespace Raven.Quill.Slack;
+namespace Raven.Quill.Channels;
 
-internal sealed class SlackChannelHealth
+internal sealed class ChannelConnectionHealth
 {
-    public bool SocketConnected { get; private set; }
+    public bool IsConnected { get; private set; }
     public DateTime? LastConnectedAt { get; private set; }
-    public string? LastSocketError { get; private set; }
+    public string? LastConnectionError { get; private set; }
     public DateTime? LastInboundAt { get; private set; }
     public DateTime? LastSendErrorAt { get; private set; }
     public string? LastSendError { get; private set; }
 
     public void Connected()
     {
-        SocketConnected = true;
+        IsConnected = true;
         LastConnectedAt = DateTime.UtcNow;
-        LastSocketError = null;
+        LastConnectionError = null;
     }
 
-    public void Exited(string? error)
+    public void Disconnected(string? error)
     {
-        SocketConnected = false;
-        LastSocketError = error;
+        IsConnected = false;
+        if (error is not null)
+            LastConnectionError = error;
     }
 
     public void Inbound() => LastInboundAt = DateTime.UtcNow;
@@ -28,5 +29,11 @@ internal sealed class SlackChannelHealth
     {
         LastSendErrorAt = DateTime.UtcNow;
         LastSendError = error;
+    }
+
+    public void SendSucceeded()
+    {
+        LastSendErrorAt = null;
+        LastSendError = null;
     }
 }

@@ -112,7 +112,6 @@ public static class AppsEndpoints
         IDocumentStore store,
         ITelegramChannelManager telegramManager,
         IDiscordChannelManager discordManager,
-        DiscordHealthRegistry discordHealth,
         QuillLogger<AppsLogger> logger,
         HttpContext ctx,
         CancellationToken ct)
@@ -128,7 +127,6 @@ public static class AppsEndpoints
         await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(slug, true), ct);
         await AppLookup.DeleteAppAsync(store, slug, ct);
 
-        discordHealth.RemoveDatabase(app.Database);
 
         if (logger.AuditEnabled)
             logger.Audit("DELETE", $"App '{slug}' (database={slug})", ctx);

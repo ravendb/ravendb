@@ -9,7 +9,7 @@ internal sealed class SlackMessageHandler(
     string channelDocId,
     SlackSettings settings,
     SlackInboundProcessor processor,
-    SlackChannelHealth health) : IEventHandler
+    ChannelConnectionHealth health) : IEventHandler
 {
     public Task Handle(EventCallback callback)
     {
