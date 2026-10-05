@@ -249,33 +249,16 @@ namespace FastTests
                 return path;
             };
 
-            ServerCertificate = new Lazy<TrackingX509Certificate2>(() =>
-            {
-                try
-                {
-                    return new TrackingX509Certificate2(ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | CertificateLoaderUtil.FlagsForExport);
-                }
-                catch (CryptographicException e)
-                {
-                    throw new CryptographicException($"Failed to load the test server certificate from {ServerCertificatePath}.", e);
-                }
-            });
-            
-            ServerCertificateForCommunication = new Lazy<TrackingX509Certificate2>(() =>
-            {
-                try
-                {
-                    return new TrackingX509Certificate2(ServerCertificateForCommunicationPath, (string)null, X509KeyStorageFlags.MachineKeySet | CertificateLoaderUtil.FlagsForExport);
-                }
-                catch (CryptographicException e)
-                {
-                    throw new CryptographicException($"Failed to load the test server certificate for communication from {ServerCertificateForCommunicationPath}.", e);
-                }
-            });
-
-            ClientCertificate1 = CreateLazy(() => ClientCertificate1Path, 1);
-            ClientCertificate2 = CreateLazy(() => ClientCertificate2Path, 2);
-            ClientCertificate3 = CreateLazy(() => ClientCertificate3Path, 3);
+            // RavenDB-25209: share the parent's certificate instances instead of loading them again from the temporary copies.
+            // On Windows, loading a PFX with MachineKeySet (without PersistKeySet) creates a key container whose name comes from the PFX.
+            // Concurrent loads of the same PFX (parallel tests) can end up sharing one container, so when one test's instance is
+            // finalized, the key of another (still used) instance is deleted and TLS fails with
+            // 'The credentials supplied to the package were not recognized'. The parent's Lazy guarantees a single load per process.
+            ServerCertificate = parent.ServerCertificate;
+            ServerCertificateForCommunication = parent.ServerCertificateForCommunication;
+            ClientCertificate1 = parent.ClientCertificate1;
+            ClientCertificate2 = parent.ClientCertificate2;
+            ClientCertificate3 = parent.ClientCertificate3;
         }
 
         private Lazy<TrackingX509Certificate2> CreateLazy(Func<string> path, int index)
