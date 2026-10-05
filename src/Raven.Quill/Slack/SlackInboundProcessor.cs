@@ -207,6 +207,7 @@ internal sealed class SlackInboundProcessor(
                 reply.OnChunkAsync, config, ct);
 
             await reply.FinalizeAsync();
+            health.MarkSendSucceeded();
 
             if (result.StartedFresh)
                 await TrySendAsync(slack, database, shortChannelId, settings, dmChannel, ConversationExpiredReply, ct);
@@ -222,7 +223,7 @@ internal sealed class SlackInboundProcessor(
         catch (Exception e)
         {
             if (e is SlackApiException apiError)
-                health.SendFailed(apiError.Message);
+                health.MarkSendFailed(apiError.Message);
 
             await TrySendAsync(slack, health, shortChannelId, settings, dmChannel, ErrorReply, ct);
             throw;
@@ -258,11 +259,12 @@ internal sealed class SlackInboundProcessor(
         try
         {
             await slack.PostMessageAsync(settings.BotToken, dmChannel, text, ct);
+            health.MarkSendSucceeded();
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
             if (e is SlackApiException apiError)
-                health.SendFailed(apiError.Message);
+                health.MarkSendFailed(apiError.Message);
 
             if (logger.IsWarnEnabled)
                 logger.Warn($"Slack send failed for channel {shortChannelId} in {dmChannel}: {e.Message}");

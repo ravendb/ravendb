@@ -1,10 +1,11 @@
+using FastTests;
 using Raven.Quill.Slack;
 using Tests.Infrastructure;
 using Xunit;
 
 namespace QuillTests;
 
-public class SlackApiClientTests
+public class SlackApiClientTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
     [RavenFact(RavenTestCategory.Quill)]
     public void Angle_brackets_and_ampersands_are_escaped()

@@ -40,7 +40,7 @@ public class ChannelConnectionHealthTests(ITestOutputHelper output) : NoDisposal
     {
         var health = new ChannelConnectionHealth();
 
-        health.SendFailed("channel_not_found");
+        health.MarkSendFailed("channel_not_found");
 
         Assert.NotNull(health.LastSendErrorAt);
         Assert.Equal("channel_not_found", health.LastSendError);
@@ -52,9 +52,9 @@ public class ChannelConnectionHealthTests(ITestOutputHelper output) : NoDisposal
     {
         var health = new ChannelConnectionHealth();
         health.Inbound();
-        health.SendFailed("503: discord is unavailable");
+        health.MarkSendFailed("503: discord is unavailable");
 
-        health.SendSucceeded();
+        health.MarkSendSucceeded();
 
         Assert.Null(health.LastSendError);
         Assert.Null(health.LastSendErrorAt);

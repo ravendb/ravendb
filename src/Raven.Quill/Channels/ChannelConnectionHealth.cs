@@ -25,13 +25,13 @@ internal sealed class ChannelConnectionHealth
 
     public void Inbound() => LastInboundAt = DateTime.UtcNow;
 
-    public void SendFailed(string error)
+    public void MarkSendFailed(string error)
     {
         LastSendErrorAt = DateTime.UtcNow;
         LastSendError = error;
     }
 
-    public void SendSucceeded()
+    public void MarkSendSucceeded()
     {
         LastSendErrorAt = null;
         LastSendError = null;

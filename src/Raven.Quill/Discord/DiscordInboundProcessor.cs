@@ -209,7 +209,7 @@ internal sealed class DiscordInboundProcessor(
                 reply.OnChunkAsync, config, ct);
 
             await reply.FinalizeAsync();
-            health.SendSucceeded();
+            health.MarkSendSucceeded();
 
             if (result.StartedFresh)
                 await TrySendAsync(discord, database, shortChannelId, settings, dmChannel, ConversationExpiredReply, ct);
@@ -227,7 +227,7 @@ internal sealed class DiscordInboundProcessor(
             await TrySendAsync(discord, health, shortChannelId, settings, dmChannel, ErrorReply, ct);
 
             if (e is DiscordApiException apiError)
-                health.SendFailed(apiError.Message);
+                health.MarkSendFailed(apiError.Message);
 
             throw;
         }
@@ -264,12 +264,12 @@ internal sealed class DiscordInboundProcessor(
         try
         {
             await discord.CreateMessageAsync(settings.BotToken, dmChannel, text, ct);
-            health.SendSucceeded();
+            health.MarkSendSucceeded();
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
             if (e is DiscordApiException apiError)
-                health.SendFailed(apiError.Message);
+                health.MarkSendFailed(apiError.Message);
 
             if (logger.IsWarnEnabled)
                 logger.Warn($"Discord send failed for channel {shortChannelId} in {dmChannel}: {e.Message}");
