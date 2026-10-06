@@ -1247,6 +1247,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 mltQuery = IndexSearcher.And(mltQuery, moreLikeThisQuery.FilterQuery, token: token);
             }
 
+            if (query.PageSize == 0)
+                yield break;
+
             // take counts entries, the loop counts documents: +1 for the base document, times fanout
             var maxOutputsPerDocument = Math.Max(1, _maxNumberOfOutputsPerDocument); // zero until the index has run
             long take = query.Start + query.PageSize + 1;
