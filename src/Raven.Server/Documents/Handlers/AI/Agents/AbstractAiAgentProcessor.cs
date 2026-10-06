@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,7 +9,6 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Server.Documents.AI;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Attachments;
 using Raven.Server.Documents.Handlers.Batches;
@@ -125,6 +125,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             body.TryGet(nameof(ConversionRequestBody.ArtificialActions), out BlittableJsonReaderArray artificialActions);
             body.TryGet(nameof(ConversionRequestBody.UserPrompt), out object userPrompt);
             body.TryGet(nameof(ConversionRequestBody.CreationOptions), out BlittableJsonReaderObject optionsBlittable);
+            body.TryGet(nameof(ConversionRequestBody.AttachmentOptions), out BlittableJsonReaderObject attachmentOptions);
 
             optionsBlittable.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject parameters);
             optionsBlittable.TryGet(nameof(AiConversationCreationOptions.ExpirationInSec), out int? conversationExpirationInSec);
@@ -143,10 +144,34 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 UserPrompt = userPrompt,
                 Parameters = parameters,
                 CreationOptions = options,
-                OutputOptions = AiServerOutputOptions.From(body)
+                OutputOptions = AiServerOutputOptions.From(body),
+                AttachmentOptions = ReadAttachmentOptions(attachmentOptions)
             };
 
             return request;
+        }
+
+        internal static Dictionary<string, AttachmentOptions> ReadAttachmentOptions(BlittableJsonReaderObject attachmentOptions)
+        {
+            if (attachmentOptions == null)
+                return null;
+
+            var result = new Dictionary<string, AttachmentOptions>(StringComparer.OrdinalIgnoreCase);
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            for (var i = 0; i < attachmentOptions.Count; i++)
+            {
+                attachmentOptions.GetPropertyByIndex(i, ref prop);
+                var name = prop.Name.ToString();
+                if (prop.Value is not BlittableJsonReaderObject optionsJson)
+                    throw new InvalidOperationException($"Attachment options for '{name}' must be an object, but got: {prop.Value ?? "null"}.");
+
+                var options = AttachmentOptions.FromBlittable(optionsJson);
+                options.Validate(name);
+                if (result.TryAdd(name, options) == false)
+                    throw new InvalidOperationException($"Attachment options for '{name}' were provided more than once (attachment names are case-insensitive).");
+            }
+
+            return result;
         }
 
         public async Task<RequestBody> ReadRequestBodyAsync(DocumentsOperationContext context, string destinationDocumentId, CancellationToken token)

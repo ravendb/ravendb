@@ -24,6 +24,7 @@ using Raven.Server.Documents.AI;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.ETL.Providers.AI;
+using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Processors.MultiGet;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -57,6 +58,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     private bool _cancelPendingActionTools;
     protected int _maxModelIterationsPerCall;
     internal List<string> _persistedAttachmentsNames;
+    private List<AiAttachment> _attachmentsToPersistInHistory;
     private string _schema;
     public string Schema => _schema;
     public required RavenServer.AuthenticateConnection Authentication;
@@ -95,6 +97,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     protected virtual async Task InitializeDocumentAsync(DocumentsOperationContext context, CancellationToken token)
     {
         var agentId = _configuration.Identifier;
+        AssertAttachmentOptionsMatchAttachments();
 
         using var __ = context.OpenReadTransaction();
         var conversation = database.DocumentsStorage.Get(context, _conversationId);
@@ -114,10 +117,15 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 };
             }
 
-            if (RequestBody.HasUserPrompt(_request.Content) == false && _request.Attachments is { Count: > 0 } == false && _request.AttachmentCommands?.ParsedCommands is {Count: > 0} == false)
+            if (RequestBody.HasUserPrompt(_request.Content) == false && _request.Attachments is { Count: > 0 } == false && HasImmediateAttachmentCommands() == false)
             {
-                throw new InvalidOperationException(
-                    $"Cannot start a new conversation '{_conversationId}' without a user prompt.");
+                if (HasAttachmentCommandsSentToModel())
+                    throw new InvalidOperationException(
+                        $"Cannot start a new conversation '{_conversationId}' with only attachments that are not sent immediately to the model (SendImmediately: false). Provide a user prompt or an attachment that is sent immediately.");
+
+                throw new InvalidOperationException(_request.AttachmentCommands?.ParsedCommands is { Count: > 0 }
+                    ? $"Cannot start a new conversation '{_conversationId}' with only attachments that are hidden from the model (SendToModel: false). Provide a user prompt or an attachment that is sent to the model."
+                    : $"Cannot start a new conversation '{_conversationId}' without a user prompt.");
             }
 
             ValidateParameterValues(_request.Parameters);
@@ -169,11 +177,15 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             using var it = _request.AttachmentCommands.AttachmentStreams?.GetEnumerator() ?? default;
             foreach (var cmd in _request.AttachmentCommands.ParsedCommands)
             {
+                var storedName = GetStoredAttachmentName(cmd);
+                var options = _request.GetAttachmentOptions(storedName);
+                AiAttachment attachment = null;
                 switch (cmd.Type)
                 {
                     case CommandType.AttachmentCOPY:
                         cmd.DestinationId = _document.Id;
-                        ConversationHandlerAttachments.RetrieveAndAddAttachment(database, context, _request, _conversationId, cmd.Name, cmd.Id);
+                        if (options.SendToModel)
+                            attachment = ConversationHandlerAttachments.RetrieveAttachment(database, context, cmd.Name, cmd.Id);
                         break;
                     case CommandType.AttachmentPUT:
                         cmd.Id = _document.Id;
@@ -182,16 +194,103 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
                         it.Current.Stream.Position =0;
 
-                        ConversationHandlerAttachments.AddPutAttachmentFromStream(_request, it.Current.Stream, cmd.Name, cmd.ContentType);
+                        if (options.SendToModel)
+                            attachment = ConversationHandlerAttachments.CreateAttachmentFromStream(it.Current.Stream, cmd.Name, cmd.ContentType);
                         break;
 
                     default:
                         throw new NotSupportedException($"{cmd.Type} is not supported");
                 }
+
+                if (options.SendToModel == false)
+                {
+                    _document.AttachmentsHiddenFromModel.Add(storedName);
+                    continue;
+                }
+
+                _document.AttachmentsHiddenFromModel.Remove(storedName);
+
+                if (options.SendImmediately)
+                {
+                    _request.Attachments ??= new List<AiAttachment>();
+                    _request.Attachments.Add(attachment);
+
+                    if (options.PersistToModelHistory && attachment.Source != AiAttachmentSource.NotFound)
+                        (_attachmentsToPersistInHistory ??= new List<AiAttachment>()).Add(attachment);
+                }
+                else
+                {
+                    _request.OnDemandAttachments ??= new Dictionary<string, AiAttachment>(StringComparer.OrdinalIgnoreCase);
+                    _request.OnDemandAttachments[storedName] = attachment;
+                }
             }
         }
-        _persistedAttachmentsNames = ConversationHandlerAttachments.GetConversationPersistedAttachmentsNames(database, context, _document.Id);
+        _persistedAttachmentsNames = ConversationHandlerAttachments.GetConversationAttachmentsNames(database, context, _document.Id, _document.AttachmentsHiddenFromModel).VisibleToModel;
+
+        foreach (var name in _request.OnDemandAttachments?.Keys ?? Enumerable.Empty<string>())
+        {
+            if (_persistedAttachmentsNames.Contains(name, StringComparer.OrdinalIgnoreCase) == false)
+                _persistedAttachmentsNames.Add(name);
+        }
     }
+
+    private void AssertAttachmentOptionsMatchAttachments()
+    {
+        if (_request.AttachmentOptions is not { Count: > 0 })
+            return;
+
+        foreach (var name in _request.AttachmentOptions.Keys)
+        {
+            if (HasAttachmentCommandNamed(name) == false)
+                throw new InvalidOperationException($"Attachment options were provided for '{name}', but no attachment with that name is added to conversation '{_conversationId}' in this request.");
+        }
+    }
+
+    private bool HasAttachmentCommandNamed(string name)
+    {
+        if (_request.AttachmentCommands?.ParsedCommands is not { } commands)
+            return false;
+
+        foreach (var cmd in commands)
+        {
+            if (string.Equals(GetStoredAttachmentName(cmd), name, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    private bool HasImmediateAttachmentCommands()
+    {
+        if (_request.AttachmentCommands?.ParsedCommands == null)
+            return false;
+
+        foreach (var cmd in _request.AttachmentCommands.ParsedCommands)
+        {
+            var options = _request.GetAttachmentOptions(GetStoredAttachmentName(cmd));
+            if (options.SendToModel && options.SendImmediately)
+                return true;
+        }
+
+        return false;
+    }
+
+    private bool HasAttachmentCommandsSentToModel()
+    {
+        if (_request.AttachmentCommands?.ParsedCommands == null)
+            return false;
+
+        foreach (var cmd in _request.AttachmentCommands.ParsedCommands)
+        {
+            if (_request.GetAttachmentOptions(GetStoredAttachmentName(cmd)).SendToModel)
+                return true;
+        }
+
+        return false;
+    }
+
+    private static string GetStoredAttachmentName(BatchRequestParser.CommandData cmd) =>
+        cmd.Type == CommandType.AttachmentCOPY ? cmd.DestinationName ?? cmd.Name : cmd.Name;
 
     // runs before any work on the conversation, so that a missing value can never be filled in by the model
     private void ValidateDeclaredParametersAreSupplied(Document conversation)
@@ -466,6 +565,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
         // Resolve deferred attachments before talking to the model
         await ResolveDeferredAttachmentsAsync(_request.Attachments, token);
+        AddPersistedAttachmentsMessage(context, talker);
 
         AiResponse r = default;
         List<BlittableJsonReaderObject> historyDocs = default;
@@ -575,9 +675,28 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         };
     }
 
+    private void AddPersistedAttachmentsMessage(JsonOperationContext context, Talker talker)
+    {
+        if (_attachmentsToPersistInHistory is not { Count: > 0 })
+            return;
+
+        var message = talker.Client.CreateAttachmentsMessage(_attachmentsToPersistInHistory);
+        message[ConversationDocument.AttachmentsContentProperty] = true;
+        _document.AddMessage(context, context.ReadObject(message, "user/attachments-content"), usage: null);
+        _request.Attachments.RemoveAll(_attachmentsToPersistInHistory.Contains);
+    }
+
     private void AddMessageWithAttachmentsName(JsonOperationContext context, bool isFirstIteration)
     {
-        var attachmentNames = string.Join(", ", _request.AttachmentCommands.ParsedCommands.Select(c => c.Name));
+        var visibleNames = _request.AttachmentCommands.ParsedCommands
+            .Where(c => _request.GetAttachmentOptions(GetStoredAttachmentName(c)).SendToModel)
+            .Select(c => c.Name)
+            .ToList();
+
+        if (visibleNames.Count == 0)
+            return;
+
+        var attachmentNames = string.Join(", ", visibleNames);
         _document.AddMessage(context, context.ReadObject(new DynamicJsonValue
         {
             [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleUserValue,
@@ -608,8 +727,8 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         // do not use reduction if attachments are being added in the current request.
         // Attachments cause single-turn spike in token usage.
         // which usually trigger chat reduction that is not needed
-        // as the raw file data is not persisted on the messages we send to the LLM.
-        if (_request.AttachmentCommands?.ParsedCommands.Count > 0)
+        // as the raw file data is not persisted on the messages we send to the LLM (unless PersistToModelHistory is set).
+        if (HasAttachmentCommandsSentToModel())
             return null;
 
         TimeSpan? historyExpiration = reduction.History?.HistoryExpirationInSec == null
