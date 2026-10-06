@@ -153,39 +153,21 @@ public class RavenDB_27289(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public async Task ToolSchemaDeclaringTheScopingParameterAsOptionalIsAcceptedAndAdvertisedToTheModel()
+    public async Task ToolSchemaDeclaringTheScopingParameterAsOptionalIsRejected()
     {
         using var store = GetDocumentStore();
-        await SeedAsync(store);
 
+        // the parameter sits in 'properties' with an empty 'required', which the guard used to let through -
+        // the server would then advertise the scoping parameter's name to the model itself
         const string optionalScopingParameter =
             "{\"type\":\"object\",\"properties\":{\"TelegramUsername\":{\"type\":\"string\"}},\"required\":[],\"additionalProperties\":false}";
 
         var agent = CreateAgent(sendToModel: false, parametersSchema: optionalScopingParameter);
 
-        // the server accepts this configuration
-        await store.Maintenance.SendAsync(AddOrUpdateAiAgentOperation.Create(agent, AiAgentBasics.OutputSchema.Instance));
+        var e = await Assert.ThrowsAsync<RavenException>(
+            () => store.Maintenance.SendAsync(AddOrUpdateAiAgentOperation.Create(agent, AiAgentBasics.OutputSchema.Instance)));
 
-        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
-        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-        {
-            var advertised = false;
-            var handler = HandlerCallingToolOnce(Server.ServerStore, database,
-                $"{{\"TelegramUsername\":\"{OtherHandle}\"}}",
-                inspectPayload: payload =>
-                {
-                    if (payload["tools"]?.ToString().Contains("TelegramUsername") == true)
-                        advertised = true;
-                });
-
-            // the value is supplied here, so the conversation runs and the advertised name can be observed
-            handler.Initialize(agent, "Dummy", Request(SuppliedParameters(context, OwnHandle)), changeVector: null);
-
-            var r = await handler.HandleRequestAsync(context, CancellationToken.None);
-
-            Assert.True(advertised, "the server should have advertised the scoping parameter name to the model");
-            Assert.DoesNotContain(Secret, r.Response.ToString());
-        }
+        Assert.Contains("TelegramUsername", e.Message);
     }
 
     // ---- controls and bounds ---------------------------------------------

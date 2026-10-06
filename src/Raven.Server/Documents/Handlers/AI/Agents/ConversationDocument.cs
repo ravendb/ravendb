@@ -56,8 +56,10 @@ public partial class ConversationDocument([NotNull] string agent, BlittableJsonR
             if (p.SendToModel == false)
                 continue;
 
+            // a declared parameter with no value is rejected in ConversationHandler.InitializeDocumentAsync,
+            // so this is a safety net rather than a state we expect to reach
             if (Parameters == null || Parameters.TryGet(p.Name, out object value) == false)
-                throw new MissingAiAgentParameterException($"Parameter '{p.Name}' is missing.");
+                continue;
 
             var param = ConversationHandler.GetAiConversationParameter(p.Name, value);
             if (param.SendToModel)
