@@ -97,6 +97,7 @@ function AppWizardAtStep({
     discovery = sampleDiscovery,
     isMappingApplied = true,
     hasSelectedTables = true,
+    hasPlannerSession = false,
     seedOverride,
 }: {
     initialStep: AppStepId;
@@ -105,6 +106,7 @@ function AppWizardAtStep({
     isMappingApplied?: boolean;
     /** When false, the verify step starts with nothing selected, as it does on a fresh discovery. */
     hasSelectedTables?: boolean;
+    hasPlannerSession?: boolean;
     seedOverride?: (seed: AppFormData) => AppFormData;
 }) {
     const [seed] = useState(() => {
@@ -132,6 +134,8 @@ function AppWizardAtStep({
             mapTablesKey: null,
             mapActiveTable: { type: "root", path: "mapTables.tables.0" },
             mapExpandedPaths: {},
+            plannerConversationId: hasPlannerSession ? "quill-cdc-planner/1" : null,
+            plannerSelectedTables: hasPlannerSession ? seed.verifySchema.tables : null,
         }),
     );
 
@@ -509,6 +513,51 @@ export const VerifySchemaCdcVerificationFailed: Story = {
 
         await userEvent.click(canvas.getAllByRole("checkbox", { name: "Select row" })[0]);
         await waitFor(() => expect(findAlert()).not.toBeInTheDocument());
+    },
+};
+
+// Changing the tables under a planner session asks before throwing the session away.
+export const VerifySchemaChangedUnderPlannerSession: Story = {
+    render: () => <AppWizardAtStep initialStep="verifySchema" hasPlannerSession />,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const body = within(canvasElement.ownerDocument.body);
+
+        await userEvent.click(canvas.getAllByRole("checkbox", { name: "Select row" })[0]);
+        await userEvent.click(canvas.getByRole("button", { name: /^next$/i }));
+
+        await waitFor(() => expect(body.getByRole("alertdialog")).toBeInTheDocument());
+        expect(body.getByText("Start the planner over?")).toBeInTheDocument();
+
+        await userEvent.click(body.getByRole("button", { name: /cancel/i }));
+        await waitFor(() => expect(body.queryByRole("alertdialog")).not.toBeInTheDocument());
+        expect(canvas.getByRole("heading", { name: /verify your schema/i })).toBeInTheDocument();
+        expect(useSetupWizardStore.getState().plannerConversationId).toBe("quill-cdc-planner/1");
+
+        await userEvent.click(canvas.getByRole("button", { name: /^next$/i }));
+        await userEvent.click(await body.findByRole("button", { name: /start over/i }));
+
+        await waitFor(() =>
+            expect(canvas.getByRole("heading", { name: /design your document model/i })).toBeInTheDocument(),
+        );
+        expect(useSetupWizardStore.getState().plannerConversationId).toBeNull();
+        expect(useSetupWizardStore.getState().plannerSelectedTables).toBeNull();
+    },
+};
+
+// An unchanged selection moves on without asking.
+export const VerifySchemaUnchangedUnderPlannerSession: Story = {
+    tags: ["!dev"],
+    render: () => <AppWizardAtStep initialStep="verifySchema" hasPlannerSession />,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await userEvent.click(canvas.getByRole("button", { name: /^next$/i }));
+
+        await waitFor(() =>
+            expect(canvas.getByRole("heading", { name: /design your document model/i })).toBeInTheDocument(),
+        );
+        expect(useSetupWizardStore.getState().plannerConversationId).toBe("quill-cdc-planner/1");
     },
 };
 

@@ -8,6 +8,7 @@ import {
     collectMappedSourceTables,
     createEmptyEmbeddedTable,
     createEmptyRootTable,
+    haveSameTables,
     makeUniquePropertyName,
     propertyNameFromJoinColumn,
     scaffoldRootTable,
@@ -231,5 +232,31 @@ describe("toTakenPropertyNames", () => {
         expect(toTakenPropertyNames(["Language", " Currency ", "", null, undefined])).toEqual(
             new Set(["language", "currency"]),
         );
+    });
+});
+
+describe("haveSameTables", () => {
+    it("ignores order and name case", () => {
+        expect(
+            haveSameTables(
+                [
+                    { sourceTableSchema: "public", sourceTableName: "Orders" },
+                    { sourceTableSchema: "public", sourceTableName: "lines" },
+                ],
+                [
+                    { sourceTableSchema: "PUBLIC", sourceTableName: "LINES" },
+                    { sourceTableSchema: "public", sourceTableName: "orders" },
+                ],
+            ),
+        ).toBe(true);
+    });
+
+    it("tells a different length or a swapped table apart", () => {
+        const orders = { sourceTableSchema: "public", sourceTableName: "orders" };
+
+        expect(haveSameTables([orders], [orders, { sourceTableSchema: "public", sourceTableName: "lines" }])).toBe(
+            false,
+        );
+        expect(haveSameTables([orders], [{ sourceTableSchema: "sales", sourceTableName: "orders" }])).toBe(false);
     });
 });

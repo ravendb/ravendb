@@ -27,6 +27,7 @@ import { useMapTablesStep } from "@/pages/setup/add-app-wizard/steps/map-tables/
 import { useIsMapTablesNextDisabled } from "@/pages/setup/add-app-wizard/steps/map-tables/use-suggested-map-tables";
 import { useIsVerifyCdcRunning, useVerifyCdcStep } from "@/pages/setup/add-app-wizard/steps/verify/use-verify-cdc-step";
 import { useVerifySchemaStep } from "@/pages/setup/add-app-wizard/steps/verify/use-verify-schema-step";
+import { usePlannerSelectionConfirm } from "@/pages/setup/add-app-wizard/steps/verify/use-planner-selection-confirm";
 import { VerifySelectionChangedBadge } from "@/pages/setup/add-app-wizard/steps/verify/verify-selection-changed-badge";
 
 export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
@@ -34,6 +35,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
     const verifySchemaBeforeNext = useVerifySchemaStep();
     const verifyCdcBeforeNext = useVerifyCdcStep();
     const isVerifyCdcRunning = useIsVerifyCdcRunning();
+    const plannerSelectionConfirm = usePlannerSelectionConfirm();
     const mapAiConsentBlock = useMapAiConsentBlock();
     const plannerBlock = usePlannerNextBlock();
     const applyPlanner = useApplyPlanner();
@@ -83,6 +85,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
                 await verifyCdcBeforeNext(progress);
                 verifySchemaBeforeNext();
             },
+            confirmNext: plannerSelectionConfirm,
             // Advancing mid-run would carry a selection the dry run has not answered for yet.
             isNextDisabled: isVerifyCdcRunning,
             badgeFields: ["verifySchema.tables"],
