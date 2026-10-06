@@ -308,7 +308,7 @@ internal static class MetricsReadService
                 ChannelsCount: 0,
                 AdaptersCount: 0,
                 AgentsCount: 0,
-                ChannelsLabel: null,
+                ChannelTypes: [],
                 StatusSubtitle: "Database unavailable",
                 CreatedAt: Utc(app.CreatedAt),
                 UpdatedAt: Utc(app.CreatedAt)));
@@ -329,9 +329,7 @@ internal static class MetricsReadService
         using (var session = store.OpenAsyncSession(app.Database))
             channels = await session.LoadAllStartingWithAsync<Channel>(Channel.IdPrefix, ct);
         var enabledChannels = channels.Count(c => c.Enabled);
-        var channelsLabel = channels.Count == 0
-            ? null
-            : string.Join(", ", channels.Select(c => ChannelTypeLabel(c.Type)).Distinct());
+        var channelTypes = channels.Select(c => c.Type).Distinct().ToList();
 
         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(app.Database), ct);
         var cdc = record.CdcSinks?.FirstOrDefault();
@@ -363,7 +361,7 @@ internal static class MetricsReadService
             ChannelsCount: channels.Count,
             AdaptersCount: 0,
             AgentsCount: agentsCount,
-            ChannelsLabel: channelsLabel,
+            ChannelTypes: channelTypes,
             StatusSubtitle: subtitle,
             CreatedAt: Utc(app.CreatedAt),
             UpdatedAt: Utc(app.CreatedAt));
@@ -393,12 +391,6 @@ internal static class MetricsReadService
         if (f.Contains("oracle")) return "Oracle";
         return "";
     }
-
-    private static string ChannelTypeLabel(ChannelType type) => type switch
-    {
-        ChannelType.IFrame => "Embedded chat",
-        _ => type.ToString(),
-    };
 
     private static async Task<bool> HasSyncErrorsAsync(IDocumentStore store, string database, CancellationToken ct)
     {

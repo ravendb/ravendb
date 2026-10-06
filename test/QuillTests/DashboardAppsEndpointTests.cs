@@ -34,7 +34,7 @@ public class DashboardAppsEndpointTests(ITestOutputHelper output, QuillCollectio
         Assert.Equal(1, appResp.AgentsCount);
         Assert.Equal(1, appResp.ChannelsCount);
         Assert.True(appResp.DocumentsCount >= 1);
-        Assert.Equal("Embedded chat", appResp.ChannelsLabel);
+        Assert.Equal(ChannelType.IFrame, Assert.Single(appResp.ChannelTypes));
         Assert.Equal(1, appResp.TablesCount);
         Assert.Equal("PostgreSQL", appResp.Source.Type);
     }

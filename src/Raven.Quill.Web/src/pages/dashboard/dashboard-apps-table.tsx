@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { TableSkeletonRows } from "@/components/table/table-skeleton";
 import { WruLabel } from "@/components/data/wru-label";
 import { appRoutes } from "@/lib/app-routes";
+import { CHANNEL_TYPE_LABELS } from "@/lib/channel-type-labels";
 import { datePeriodUnit, type DatePeriod } from "@/lib/date-period";
 import { formatCompact } from "@/lib/format";
 import { DeleteAppDialog } from "@/pages/apps/delete-app-dialog";
@@ -102,6 +103,11 @@ function AppsTableFrame({ period, children }: { period: DatePeriod; children: Re
 }
 
 function AppRow({ app, writes }: { app: ApplianceAppResponse; writes: number | undefined }) {
+    const channelsLabel = app.channelTypes
+        .filter((type) => type != null)
+        .map((type) => CHANNEL_TYPE_LABELS[type])
+        .join(", ");
+
     return (
         <TableRow className="group">
             <TableCell className="py-3">
@@ -116,7 +122,7 @@ function AppRow({ app, writes }: { app: ApplianceAppResponse; writes: number | u
             </TableCell>
             <TableCell className="text-sm">{app.source.type || "—"}</TableCell>
             <TableCell className="text-sm tabular-nums">{app.agentsCount > 0 ? app.agentsCount : "—"}</TableCell>
-            <TableCell className="text-sm">{app.channelsLabel ?? "—"}</TableCell>
+            <TableCell className="text-sm">{channelsLabel || "—"}</TableCell>
             <TableCell className="text-sm tabular-nums">{writes != null ? formatCompact(writes) : "—"}</TableCell>
             <TableCell className="py-3">
                 <AppStatusCell app={app} />
