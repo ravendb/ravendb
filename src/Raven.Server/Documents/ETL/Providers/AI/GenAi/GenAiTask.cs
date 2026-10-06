@@ -275,7 +275,10 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 string json = item.ContextOutput.Context.ToString();
                 Task<GenAiHandlerResult> task;
 
-                var agentConfiguration = CreateAgentConfiguration(context, item);
+                // the agent declares exactly the context values the query binder can take, so what is declared
+                // and what is supplied cannot drift apart - the rest reaches the model through the prompt
+                var queryParameters = FilterSupportedGenAiQueryParameters(context, item.ContextOutput.Context);
+                var agentConfiguration = CreateAgentConfiguration(context, queryParameters);
                 var handler = new GenAiConversationHandler(Database.ServerStore, Database, Configuration)
                 {
                     Authentication = authentication
@@ -283,7 +286,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
                 handler.Initialize(agentConfiguration, $"{Configuration.Identifier}/{item.DocumentId}/", new RequestBody
                 {
-                    Parameters = FilterSupportedGenAiQueryParameters(context, item.ContextOutput.Context),
+                    Parameters = queryParameters,
                     CreationOptions = new AiConversationCreationOptions
                     {
                         ExpirationInSec = Configuration.ExpirationInSec
@@ -323,20 +326,12 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         }
     }
 
-    private AiAgentConfiguration CreateAgentConfiguration(JsonOperationContext context, GenAiResultItem item)
+    private AiAgentConfiguration CreateAgentConfiguration(JsonOperationContext context, BlittableJsonReaderObject queryParameters)
     {
         var agentParameters = new List<AiAgentParameter>();
-        BlittableJsonReaderObject.PropertyDetails contextProperty = default;
-        for (var i = 0; i < item.ContextOutput.Context.Count; i++)
+        foreach (var name in queryParameters.GetPropertyNames())
         {
-            item.ContextOutput.Context.GetPropertyByIndex(i, ref contextProperty);
-
-            // a context value the query binder cannot take is not an agent parameter at all - it reaches the
-            // model through the prompt, and declaring it would claim a value that is never supplied
-            if (ConversationHandler.TryGetValueType(contextProperty.Value, out _, out _) == false)
-                continue;
-
-            agentParameters.Add(new AiAgentParameter(contextProperty.Name) { SendToModel = false });
+            agentParameters.Add(new AiAgentParameter(name) { SendToModel = false });
         }
 
         var agentConfiguration = new AiAgentConfiguration("GenAiAgent", Configuration.ConnectionStringName, Configuration.Prompt)
