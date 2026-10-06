@@ -217,6 +217,32 @@ public class RavenDB_27536 : RavenTestBase
         Assert.InRange(results.Length, 1, 5);
     }
 
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void MoreLikeThisDoesNotRankWhenNoRowsAreRequested(Options options)
+    {
+        // ranking memoizes the matches, and with no memoization budget only a query that skips the ranking succeeds
+        options.ModifyDatabaseRecord += record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxMemoizationSize)] = "0";
+        using var store = GetDocumentStore(options);
+
+        store.ExecuteIndex(new Widgets_ByCategoryAndName());
+
+        var target = new Widget { Key = Guid.NewGuid(), Category = "common", Name = "Alpha" };
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(target);
+            session.Store(new Widget { Key = Guid.NewGuid(), Category = target.Category, Name = "Bravo" });
+            session.SaveChanges();
+        }
+
+        Indexes.WaitForIndexing(store);
+
+        using var s = store.OpenSession();
+
+        Assert.Empty(Similar<Widgets_ByCategoryAndName>(s, target, boost: false, take: 0));
+    }
+
     private static Widget[] Similar<TIndex>(IDocumentSession session, Widget target, bool boost, int take, string[] fields = null, bool orderByScore = false)
         where TIndex : AbstractIndexCreationTask, new()
     {
