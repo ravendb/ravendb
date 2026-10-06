@@ -828,7 +828,7 @@ public class ChatCompletionClient : IDisposable
         writer.WriteString(_settings.Model);
         writer.WriteComma();
 
-        List<LazyStringValue> filterProperties = [ctx.GetLazyString(ConversationDocument.DateProperty), ctx.GetLazyString(ConversationDocument.UsageProperty), ctx.GetLazyString(ConversationDocument.OutputSchemaProperty)];
+        List<LazyStringValue> filterProperties = [ctx.GetLazyString(ConversationDocument.DateProperty), ctx.GetLazyString(ConversationDocument.UsageProperty), ctx.GetLazyString(ConversationDocument.OutputSchemaProperty), ctx.GetLazyString(ConversationDocument.AttachmentsContentProperty)];
 
         writer.WriteArray(ctx, Constants.RequestFields.Messages, WithAttachments(ctx, messages, attachments), (w, context, message) =>
         {
@@ -924,30 +924,34 @@ public class ChatCompletionClient : IDisposable
         }
 
         if (attachments is not null && attachments.Count > 0)
+            yield return context.ReadObject(CreateAttachmentsMessage(attachments), "write-ai-attachments");
+    }
+
+    public DynamicJsonValue CreateAttachmentsMessage(List<AiAttachment> attachments)
+    {
+        var content = new DynamicJsonArray();
+        var message = new DynamicJsonValue
         {
-            var content = new DynamicJsonArray();
-            var message = new DynamicJsonValue
-            {
-                [Constants.RequestFields.Role] = Constants.RequestFields.RoleUserValue,
-                [Constants.RequestFields.Content] = content
-            };
+            [Constants.RequestFields.Role] = Constants.RequestFields.RoleUserValue,
+            [Constants.RequestFields.Content] = content
+        };
 
-            foreach (var attachment in attachments)
+        foreach (var attachment in attachments)
+        {
+            if (attachment.Source == AiAttachmentSource.NotFound)
             {
-                if (attachment.Source == AiAttachmentSource.NotFound)
+                content.Add(new DynamicJsonValue
                 {
-                    content.Add(new DynamicJsonValue
-                    {
-                        [Constants.AttachmentsRequestFields.Type] = Constants.AttachmentsRequestFields.TypeText,
-                        [Constants.AttachmentsRequestFields.TypeText] = $"File '{attachment.Name}' (of type '{attachment.Type}') could not be loaded: attachment not found"
-                    });
-                    continue;
-                }
-
-                content.Add(_settings.GetAiAttachmentJson(attachment));
+                    [Constants.AttachmentsRequestFields.Type] = Constants.AttachmentsRequestFields.TypeText,
+                    [Constants.AttachmentsRequestFields.TypeText] = $"File '{attachment.Name}' (of type '{attachment.Type}') could not be loaded: attachment not found"
+                });
+                continue;
             }
-            yield return context.ReadObject(message, "write-ai-attachments");
+
+            content.Add(_settings.GetAiAttachmentJson(attachment));
         }
+
+        return message;
     }
 
     public async Task ProxyModelsAsync(HttpResponse response, CancellationToken token)

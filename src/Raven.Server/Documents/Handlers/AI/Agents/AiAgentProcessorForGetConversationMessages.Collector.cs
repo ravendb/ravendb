@@ -336,6 +336,9 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
             AiMessageRole? apiRole = role switch
             {
                 ChatCompletionClient.Constants.RequestFields.RoleSystemValue => AiMessageRole.System,
+                ChatCompletionClient.Constants.RequestFields.RoleUserValue
+                    when msg.TryGet(ConversationDocument.AttachmentsContentProperty, out bool isAttachmentsContent) && isAttachmentsContent =>
+                        null,
                 ChatCompletionClient.Constants.RequestFields.RoleUserValue => AiMessageRole.User,
                 ChatCompletionClient.Constants.RequestFields.RoleAssistantValue
                     when msg.TryGet(ConversationDocument.SummaryProperty, out bool isSummary) && isSummary =>

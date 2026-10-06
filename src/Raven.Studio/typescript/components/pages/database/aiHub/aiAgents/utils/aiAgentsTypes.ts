@@ -94,4 +94,5 @@ export interface AiAgentDocMessage {
     date?: string;
     usage?: Raven.Client.Documents.Operations.AI.AiUsage;
     subConversationId?: string;
+    attachments_content?: boolean;
 }

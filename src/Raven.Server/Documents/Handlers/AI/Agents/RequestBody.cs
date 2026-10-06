@@ -22,6 +22,15 @@ public class RequestBody
 
     public AiServerOutputOptions OutputOptions { get; set; }
 
+    public Dictionary<string, AttachmentOptions> AttachmentOptions { get; set; }
+
+    public Dictionary<string, AiAttachment> OnDemandAttachments { get; set; }
+
+    private static readonly AttachmentOptions DefaultAttachmentOptions = new();
+
+    public AttachmentOptions GetAttachmentOptions(string name) =>
+        AttachmentOptions != null && AttachmentOptions.TryGetValue(name, out var options) ? options : DefaultAttachmentOptions;
+
     public object Content
     {
         get

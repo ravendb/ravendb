@@ -71,6 +71,32 @@ describe("AiAgentMessages", () => {
         expect(screen.queryByText("AI Agent Parameters")).not.toBeInTheDocument();
     });
 
+    it("can hide persisted attachments content message", async () => {
+        const promptText = "What do you see in this image?";
+        const attachmentsContent = "persisted-attachment-base64-content";
+
+        const conversationDocument = createDocumentWithMessages([
+            {
+                role: "user",
+                content: promptText,
+                date: "2025-08-08T10:28:01.5884757Z",
+            },
+            {
+                role: "user",
+                content: attachmentsContent,
+                date: "2025-08-08T10:28:01.5884758Z",
+                attachments_content: true,
+            },
+        ]);
+
+        const { screen } = await rtlRender_WithWaitForLoad(
+            <ChatAiAgentStory conversationDocument={conversationDocument} />
+        );
+
+        expect(await screen.findByText(promptText)).toBeInTheDocument();
+        expect(screen.queryByText(attachmentsContent)).not.toBeInTheDocument();
+    });
+
     it("can show query tool", async () => {
         const queryToolName = "QueryRecentCategories";
 
