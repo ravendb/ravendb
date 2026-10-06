@@ -609,9 +609,11 @@ namespace Voron
                 public int StalledMs;
 
                 [UnmanagedCallersOnly]
-                public static unsafe int JournalZeroingPacing(void* state)
+                public static int JournalZeroingPacing(void* state)
                 {
-                    var pacing = (JournalZeroingPacingState)GCHandle.FromIntPtr((IntPtr)state).Target;
+                    var pacing = (JournalZeroingPacingState)GCHandle.FromIntPtr((IntPtr)state).Target!;
+
+                    pacing.Journal.Env.Options.ForTestingPurposes?.OnJournalZeroingPacing?.Invoke();
 
                     var writeFlow = pacing.Journal.Env.WriteFlow;
                     var jrnl = pacing.Journal;
@@ -682,6 +684,7 @@ namespace Voron
                     finally
                     {
                         Volatile.Write(ref request.Options._journalPoolPreparationInFlight, 0);
+                        request.Options.ForTestingPurposes?.AfterJournalZeroing?.Invoke();
                     }
                 }
             }
@@ -689,6 +692,7 @@ namespace Voron
             private unsafe void PrepareRecyclableJournal(long size, WriteAheadJournal journal)
             {
                 var path = Path.Combine(JournalPath.FullPath, RecyclableJournalName(Interlocked.Increment(ref _reuseCounter)));
+                string zeroingPath = path + TempFileExtension;
 
                 long zeroedBytes;
                 var pacingHandle = GCHandle.Alloc(new JournalZeroingPacingState { Journal = journal });
@@ -698,13 +702,13 @@ namespace Voron
                     int errorCode;
                     using (IoMetrics.MeterIoRate(path, IoMetrics.MeterType.JournalWrite, size))
                     {
-                        rc = Pal.rvn_create_zeroed_file(path, size,
+                        rc = Pal.rvn_create_zeroed_file(zeroingPath, size,
                             &JournalZeroingPacingState.JournalZeroingPacing, (void*)GCHandle.ToIntPtr(pacingHandle),
                             out zeroedBytes, out errorCode);
                     }
 
                     if (rc != PalFlags.FailCodes.Success)
-                        PalHelper.ThrowLastError(rc, errorCode, $"Failed to create a zeroed pool journal {path} of size {size}");
+                        PalHelper.ThrowLastError(rc, errorCode, $"Failed to create a zeroed pool journal {zeroingPath} of size {size}");
                 }
                 finally
                 {
@@ -715,9 +719,11 @@ namespace Voron
                 {
                     if (Disposed)
                     {
-                        TryDelete(path);
+                        TryDelete(zeroingPath);
                         return;
                     }
+
+                    File.Move(zeroingPath, path);
 
                     var ticks = new FileInfo(path).LastWriteTimeUtc.Ticks;
                     while (_journalsForReuse.TryAdd(ticks, path) is false)
@@ -914,6 +920,12 @@ namespace Voron
             {
                 foreach (string reusableFile in GetRecyclableJournalFiles())
                 {
+                    if (IsTemporaryFile(reusableFile))
+                    {
+                        TryDelete(reusableFile);
+                        continue;
+                    }
+
                     var reuseNameWithoutExt = Path.GetExtension(reusableFile.AsSpan())[1..];
 
                     if (long.TryParse(reuseNameWithoutExt, out var reuseNum))
@@ -2063,6 +2075,10 @@ namespace Voron
             internal Action<long, long> OnJournalWrite;
 
             internal Action<long, long> OnJournalWriteCompleted;
+
+            internal Action OnJournalZeroingPacing;
+
+            internal Action AfterJournalZeroing;
 
             internal sealed class PartialJournalWriteFailure
             {
