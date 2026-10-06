@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -8,9 +9,9 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Server.Documents.AI;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Attachments;
+using Raven.Server.Documents.AI;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide;
@@ -121,6 +122,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             body.TryGet(nameof(ConversionRequestBody.ArtificialActions), out BlittableJsonReaderArray artificialActions);
             body.TryGet(nameof(ConversionRequestBody.UserPrompt), out object userPrompt);
             body.TryGet(nameof(ConversionRequestBody.CreationOptions), out BlittableJsonReaderObject optionsBlittable);
+            body.TryGet(nameof(ConversionRequestBody.HiddenAttachments), out BlittableJsonReaderArray hiddenAttachments);
 
             optionsBlittable.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject parameters);
             optionsBlittable.TryGet(nameof(AiConversationCreationOptions.ExpirationInSec), out int? conversationExpirationInSec);
@@ -139,7 +141,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 UserPrompt = userPrompt,
                 Parameters = parameters,
                 CreationOptions = options,
-                OutputOptions = AiServerOutputOptions.From(body)
+                OutputOptions = AiServerOutputOptions.From(body),
+                HiddenAttachments = hiddenAttachments?.Select(x => x.ToString()).ToHashSet(StringComparer.OrdinalIgnoreCase)
             };
 
             return request;

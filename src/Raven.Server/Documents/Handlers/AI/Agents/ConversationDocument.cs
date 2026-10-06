@@ -42,6 +42,8 @@ public partial class ConversationDocument([NotNull] string agent, BlittableJsonR
 
     public HashSet<string> SubConversationIds = new (StringComparer.OrdinalIgnoreCase);
 
+    public HashSet<string> HiddenAttachments = new(StringComparer.OrdinalIgnoreCase);
+
     public void Initialize(JsonOperationContext context, AiAgentConfiguration configuration, bool resetRemainingToolIterations, int maxModelIterationsPerCall)
     {
         if (Messages.Count > 0)
@@ -244,6 +246,9 @@ public partial class ConversationDocument([NotNull] string agent, BlittableJsonR
         if (Debug)
             json[nameof(Debug)] = true;
 
+        if (HiddenAttachments.Count > 0)
+            json[nameof(HiddenAttachments)] = new DynamicJsonArray(HiddenAttachments);
+
         return json;
     }
 
@@ -322,6 +327,11 @@ public partial class ConversationDocument([NotNull] string agent, BlittableJsonR
         if (document.TryGet(nameof(SubConversationIds), out BlittableJsonReaderArray subConversationIds))
         {
             conversation.SubConversationIds = subConversationIds.Items.Select(m => ((LazyStringValue)m).ToString(CultureInfo.InvariantCulture)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
+        if (document.TryGet(nameof(HiddenAttachments), out BlittableJsonReaderArray hiddenAttachments))
+        {
+            conversation.HiddenAttachments = hiddenAttachments.Items.Select(m => m.ToString()).ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
 
         return conversation;

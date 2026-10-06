@@ -38,6 +38,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
     private readonly bool? _debug;
     private readonly bool _cancelPendingActionTools;
     private readonly AiOutputOptions _outputOptions;
+    private readonly ICollection<string> _hiddenAttachments;
 
     /// <summary>
     /// Initializes a new conversation step for the specified agent and conversation.
@@ -170,11 +171,13 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         Func<string, Task> streamedChunksCallback,
         AiOutputOptions outputOptions,
         bool? debug,
-        bool cancelPendingActionTools)
+        bool cancelPendingActionTools,
+        ICollection<string> hiddenAttachments = null)
         : this(agentId, conversationId, promptParts, actionResponses, artificialActions, options, changeVector, attachmentsCommands, streamPropertyPath, streamedChunksCallback, outputOptions)
     {
         _debug = debug;
         _cancelPendingActionTools = cancelPendingActionTools;
+        _hiddenAttachments = hiddenAttachments;
     }
 
     [Obsolete("Use the constructor that accepts a List or an Array instead. This is for backward compatibility.", error: false)]
@@ -271,7 +274,8 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
                 UserPrompt = _parent._promptParts,
                 CreationOptions = _parent._options,
                 AttachmentCommands = _parent._attachmentsCommands,
-                OutputOptions = _parent._outputOptions
+                OutputOptions = _parent._outputOptions,
+                HiddenAttachments = _parent._hiddenAttachments
             };
 
             var request = new HttpRequestMessage

@@ -601,6 +601,119 @@ public class AiAgentDebugTracing : RavenTestBase
         Assert.Equal(new[] { "heart.png", "star.png" }, first.AttachmentNames);
     }
 
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    public async Task Debug_HiddenAttachment_NotSentToModel(Options options, GenAiConfiguration config)
+    {
+        using var store = GetDocumentStore(options);
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+        var agent = new AiAgentConfiguration("debug-test-agent", config.ConnectionStringName,
+            "You are a helpful assistant. Describe images concisely.")
+        {
+            SampleObject = "{\"Answer\":\"answer here\"}"
+        };
+        var createResult = await store.AI.CreateAgentAsync(agent, OutputSchema.Instance);
+
+        var chat = store.AI.Conversation(createResult.Identifier, "chats/",
+            creationOptions: null, debug: true);
+        chat.AddAttachment("heart.png", new MemoryStream(Convert.FromBase64String(AiTestData.HeartPngBase64)), "image/png");
+        chat.AddAttachment("star.png", new MemoryStream(Convert.FromBase64String(AiTestData.StarPngBase64)), "image/png", sendToModel: false);
+        chat.SetUserPrompt("What do you see in this image?");
+        var r = await chat.RunAsync<OutputSchema>(CancellationToken.None);
+        Assert.Equal(AiConversationResult.Done, r.Status);
+
+        using (var session = store.OpenAsyncSession())
+        {
+            var traces = (await session.Advanced.LoadStartingWithAsync<DebugTraceDoc>($"{chat.Id}/{AiDebugTrace.TraceSegment}/")).ToList();
+            Assert.Single(traces);
+            Assert.Equal(new[] { "heart.png" }, traces[0].AttachmentNames);
+            Assert.DoesNotContain("star.png", traces[0].RequestBody);
+
+            var doc = await session.LoadAsync<ConversationDocShape>(chat.Id);
+            Assert.Equal(new[] { "star.png" }, doc.HiddenAttachments);
+            Assert.DoesNotContain(doc.Messages, m => m.ToString().Contains("star.png"));
+
+            var names = session.Advanced.Attachments.GetNames(doc).Select(a => a.Name).ToList();
+            Assert.Contains("heart.png", names);
+            Assert.Contains("star.png", names);
+        }
+
+        chat.SetUserPrompt("Which files do you have?");
+        r = await chat.RunAsync<OutputSchema>(CancellationToken.None);
+        Assert.Equal(AiConversationResult.Done, r.Status);
+
+        using (var session = store.OpenAsyncSession())
+        {
+            var traces = (await session.Advanced.LoadStartingWithAsync<DebugTraceDoc>($"{chat.Id}/{AiDebugTrace.TraceSegment}/")).ToList();
+            Assert.True(traces.Count >= 2);
+            Assert.All(traces, t => Assert.DoesNotContain("star.png", t.RequestBody));
+            Assert.Contains(traces, t => t.RequestBody.Contains("heart.png"));
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    public async Task Debug_HiddenAttachment_ReaddedVisible_Unhides(Options options, GenAiConfiguration config)
+    {
+        using var store = GetDocumentStore(options);
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+        var agent = new AiAgentConfiguration("debug-test-agent", config.ConnectionStringName,
+            "You are a helpful assistant. Describe images concisely.")
+        {
+            SampleObject = "{\"Answer\":\"answer here\"}"
+        };
+        var createResult = await store.AI.CreateAgentAsync(agent, OutputSchema.Instance);
+
+        var chat = store.AI.Conversation(createResult.Identifier, "chats/",
+            creationOptions: null, debug: true);
+        chat.AddAttachment("star.png", new MemoryStream(Convert.FromBase64String(AiTestData.StarPngBase64)), "image/png", sendToModel: false);
+        chat.SetUserPrompt("Say hello.");
+        await chat.RunAsync<OutputSchema>(CancellationToken.None);
+
+        int tracesBefore;
+        using (var countSession = store.OpenAsyncSession())
+            tracesBefore = (await countSession.Advanced.LoadStartingWithAsync<DebugTraceDoc>($"{chat.Id}/{AiDebugTrace.TraceSegment}/")).Count();
+
+        chat.AddAttachment("star.png", new MemoryStream(Convert.FromBase64String(AiTestData.StarPngBase64)), "image/png", sendToModel: false);
+        var error = await Assert.ThrowsAnyAsync<Exception>(() => chat.RunAsync<OutputSchema>(CancellationToken.None));
+        Assert.Contains("without open action calls or user prompt", error.ToString());
+
+        using (var countSession = store.OpenAsyncSession())
+            Assert.Equal(tracesBefore, (await countSession.Advanced.LoadStartingWithAsync<DebugTraceDoc>($"{chat.Id}/{AiDebugTrace.TraceSegment}/")).Count());
+
+        chat.AddAttachment("star.png", new MemoryStream(Convert.FromBase64String(AiTestData.StarPngBase64)), "image/png");
+        chat.SetUserPrompt("What do you see in this image?");
+        var r = await chat.RunAsync<OutputSchema>(CancellationToken.None);
+        Assert.Equal(AiConversationResult.Done, r.Status);
+
+        using var session = store.OpenAsyncSession();
+        var traces = (await session.Advanced.LoadStartingWithAsync<DebugTraceDoc>($"{chat.Id}/{AiDebugTrace.TraceSegment}/")).ToList();
+        Assert.Contains(traces, t => t.AttachmentNames?.Contains("star.png") == true);
+
+        var doc = await session.LoadAsync<ConversationDocShape>(chat.Id);
+        Assert.Empty(doc.HiddenAttachments);
+
+        var messages = await store.AI.GetConversationMessagesAsync(chat.Id);
+        Assert.Empty(messages.HiddenAttachments);
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public void HiddenAttachment_DuplicateNameInSameTurn_Throws()
+    {
+        using var store = GetDocumentStore();
+
+        var chat = store.AI.Conversation("debug-test-agent", "chats/", creationOptions: null);
+        chat.AddAttachment("a.png", new MemoryStream(Convert.FromBase64String(AiTestData.StarPngBase64)), "image/png", sendToModel: false);
+        Assert.Throws<InvalidOperationException>(() =>
+            chat.AddAttachment("a.png", new MemoryStream(Convert.FromBase64String(AiTestData.HeartPngBase64)), "image/png"));
+
+        var other = store.AI.Conversation("debug-test-agent", "chats/", creationOptions: null);
+        other.AddAttachment("b.png", new MemoryStream(Convert.FromBase64String(AiTestData.HeartPngBase64)), "image/png");
+        Assert.Throws<InvalidOperationException>(() => other.CopyAttachmentFrom("images/1", "B.PNG", sendToModel: false));
+    }
+
     // Subclass that exposes the conversation document ID so the test can load the trace docs by prefix.
     // Also allows the test to configure the MockLlm right after it is created (e.g. to inject
     // a ModifyPayload hook that fails serialization mid-write).
@@ -703,5 +816,7 @@ public class AiAgentDebugTracing : RavenTestBase
     {
         public bool Debug { get; set; }
         public HashSet<string> SubConversationIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        public List<string> HiddenAttachments { get; set; } = [];
+        public List<JObject> Messages { get; set; } = [];
     }
 }

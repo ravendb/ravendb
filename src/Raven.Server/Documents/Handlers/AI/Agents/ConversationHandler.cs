@@ -22,6 +22,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL.Providers.AI;
+using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Processors.MultiGet;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -109,7 +110,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 };
             }
 
-            if (RequestBody.HasUserPrompt(_request.Content) == false && _request.Attachments is { Count: > 0 } == false && _request.AttachmentCommands?.ParsedCommands is {Count: > 0} == false)
+            if (RequestBody.HasUserPrompt(_request.Content) == false && _request.Attachments is { Count: > 0 } == false && _request.AttachmentCommands?.ParsedCommands.Any(cmd => IsHiddenAttachment(cmd) == false) != true)
             {
                 throw new InvalidOperationException(
                     $"Cannot start a new conversation '{_conversationId}' without a user prompt.");
@@ -164,29 +165,44 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             using var it = _request.AttachmentCommands.AttachmentStreams?.GetEnumerator() ?? default;
             foreach (var cmd in _request.AttachmentCommands.ParsedCommands)
             {
+                var hidden = IsHiddenAttachment(cmd);
                 switch (cmd.Type)
                 {
                     case CommandType.AttachmentCOPY:
                         cmd.DestinationId = _document.Id;
-                        ConversationHandlerAttachments.RetrieveAndAddAttachment(database, context, _request, _conversationId, cmd.Name, cmd.Id);
+                        if (hidden == false)
+                            ConversationHandlerAttachments.RetrieveAndAddAttachment(database, context, _request, _conversationId, cmd.Name, cmd.Id);
                         break;
                     case CommandType.AttachmentPUT:
                         cmd.Id = _document.Id;
-                        if (it.MoveNext() == false) 
+                        if (it.MoveNext() == false)
                             throw new InvalidOperationException($"Missing attachment stream for '{cmd.Name}' in conversation '{_conversationId}'.");
 
                         it.Current.Stream.Position =0;
 
-                        ConversationHandlerAttachments.AddPutAttachmentFromStream(_request, it.Current.Stream, cmd.Name, cmd.ContentType);
+                        if (hidden == false)
+                            ConversationHandlerAttachments.AddPutAttachmentFromStream(_request, it.Current.Stream, cmd.Name, cmd.ContentType);
                         break;
 
                     default:
                         throw new NotSupportedException($"{cmd.Type} is not supported");
                 }
+
+                if (hidden)
+                    _document.HiddenAttachments.Add(GetStoredAttachmentName(cmd));
+                else
+                    _document.HiddenAttachments.Remove(GetStoredAttachmentName(cmd));
             }
         }
         _persistedAttachmentsNames = ConversationHandlerAttachments.GetConversationPersistedAttachmentsNames(database, context, _document.Id);
+        _persistedAttachmentsNames.RemoveAll(_document.HiddenAttachments.Contains);
     }
+
+    private bool IsHiddenAttachment(BatchRequestParser.CommandData cmd) =>
+        _request.HiddenAttachments?.Contains(GetStoredAttachmentName(cmd)) == true;
+
+    private static string GetStoredAttachmentName(BatchRequestParser.CommandData cmd) =>
+        cmd.Type == CommandType.AttachmentCOPY ? cmd.DestinationName ?? cmd.Name : cmd.Name;
 
     private void ValidateParameterValues(BlittableJsonReaderObject requestParameters)
     {
@@ -526,7 +542,15 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
     private void AddMessageWithAttachmentsName(JsonOperationContext context, bool isFirstIteration)
     {
-        var attachmentNames = string.Join(", ", _request.AttachmentCommands.ParsedCommands.Select(c => c.Name));
+        var visibleNames = _request.AttachmentCommands.ParsedCommands
+            .Where(c => IsHiddenAttachment(c) == false)
+            .Select(c => c.Name)
+            .ToList();
+
+        if (visibleNames.Count == 0)
+            return;
+
+        var attachmentNames = string.Join(", ", visibleNames);
         _document.AddMessage(context, context.ReadObject(new DynamicJsonValue
         {
             [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleUserValue,
@@ -544,7 +568,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docContext))
         using (docContext.OpenReadTransaction())
         {
-            ConversationHandlerAttachments.HandleInternalSystemActions(database, context, docContext, _document, _request, _conversationId, toolCalls);
+            ConversationHandlerAttachments.HandleInternalSystemActions(database, context, docContext, _document, _request, _conversationId, toolCalls, _persistedAttachmentsNames);
         }
     }
 

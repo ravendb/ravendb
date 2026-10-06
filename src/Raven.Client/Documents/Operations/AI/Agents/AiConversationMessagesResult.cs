@@ -68,6 +68,11 @@ public class AiConversationMessagesResult : IDynamicJson
     public List<string> Attachments { get; set; }
 
     /// <summary>
+    /// Attachments stored on the conversation that are never sent to the model.
+    /// </summary>
+    public List<string> HiddenAttachments { get; set; }
+
+    /// <summary>
     /// Serializes this result to a JSON structure.
     /// </summary>
     public DynamicJsonValue ToJson()
@@ -91,6 +96,7 @@ public class AiConversationMessagesResult : IDynamicJson
             [nameof(HasMoreMessages)] = HasMoreMessages,
             [nameof(SubConversationIds)] = SubConversationIds != null ? new DynamicJsonArray(SubConversationIds) : null,
             [nameof(Attachments)] = Attachments != null ? new DynamicJsonArray(Attachments) : null,
+            [nameof(HiddenAttachments)] = HiddenAttachments != null ? new DynamicJsonArray(HiddenAttachments) : null,
             [nameof(Messages)] = Messages != null ? new DynamicJsonArray(Messages) : null
         };
     }

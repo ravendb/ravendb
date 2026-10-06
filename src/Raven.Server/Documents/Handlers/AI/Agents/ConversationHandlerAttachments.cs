@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -42,18 +43,7 @@ internal static class ConversationHandlerAttachments
             null);
 
         if (attachment == null)
-        {
-            request.Attachments ??= new List<AiAttachment>();
-            request.Attachments.Add(new AiAttachment
-            {
-                Name = fileName,
-                Type = ChatCompletionClient.Constants.AttachmentsRequestFields.MediaTypeApplicationPdf,
-                Data = string.Empty,
-                Source = AiAttachmentSource.NotFound
-            });
-
-            return $"Attachment: {fileName}";
-        }
+            return AddNotFoundAttachment(request, fileName);
 
         var base64 = GetAttachmentDataAsBase64(attachment);
         var contentType = attachment.ContentType.ToString();
@@ -70,6 +60,20 @@ internal static class ConversationHandlerAttachments
         });
 
         return $"Attachment: {attachment.Name}";
+    }
+
+    private static string AddNotFoundAttachment(RequestBody request, string fileName)
+    {
+        request.Attachments ??= new List<AiAttachment>();
+        request.Attachments.Add(new AiAttachment
+        {
+            Name = fileName,
+            Type = ChatCompletionClient.Constants.AttachmentsRequestFields.MediaTypeApplicationPdf,
+            Data = string.Empty,
+            Source = AiAttachmentSource.NotFound
+        });
+
+        return $"Attachment: {fileName}";
     }
 
     public static void AddPutAttachmentFromStream(RequestBody request, Stream stream, string name, string contentType)
@@ -121,7 +125,8 @@ internal static class ConversationHandlerAttachments
         ConversationDocument document,
         RequestBody request,
         string conversationId,
-        List<AiAgentActionRequest> toolCalls)
+        List<AiAgentActionRequest> toolCalls,
+        List<string> retrievableAttachmentsNames)
     {
         foreach (var call in toolCalls)
         {
@@ -136,7 +141,10 @@ internal static class ConversationHandlerAttachments
                 {
                     foreach (var attachmentName in namesArray)
                     {
-                        result.Add(RetrieveAndAddAttachment(database, docContext, request, conversationId, attachmentName.ToString(), document.Id));
+                        var name = attachmentName.ToString();
+                        result.Add(retrievableAttachmentsNames?.Contains(name, StringComparer.OrdinalIgnoreCase) == true
+                            ? RetrieveAndAddAttachment(database, docContext, request, conversationId, name, document.Id)
+                            : AddNotFoundAttachment(request, name));
                     }
                 }
             }

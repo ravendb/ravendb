@@ -31,6 +31,7 @@ internal class AiConversation : IAiConversationOperations
     private readonly List<ContentPart> _promptParts = [];
     private string _changeVector;
     private readonly List<ICommandData> _attachmentsCommands = new();
+    private readonly HashSet<string> _hiddenAttachments = new(StringComparer.OrdinalIgnoreCase);
     private StringBuilder _jsonBuffer;
     private StringWriter _jsonWriter;
     
@@ -67,22 +68,52 @@ internal class AiConversation : IAiConversationOperations
         _cancelPendingActionTools = cancelPendingActionTools;
     }
 
-    public void AddAttachment(string name, Stream stream, string contentType)
+    public void AddAttachment(string name, Stream stream, string contentType) => AddAttachment(name, stream, contentType, sendToModel: true);
+
+    public void AddAttachment(string name, Stream stream, string contentType, bool sendToModel)
     {
         if (stream == null)
             throw new ArgumentNullException(nameof(stream));
 
         var attachmentName = name;
+        AssertNoAttachmentWithSameName(attachmentName);
         _attachmentsCommands.Add(new PutAttachmentCommandData("__this__", attachmentName, stream, contentType, changeVector: null));
+        TrackHiddenAttachment(attachmentName, sendToModel);
     }
 
-    public void CopyAttachmentFrom(string sourceDocumentId, string fileName)
+    public void CopyAttachmentFrom(string sourceDocumentId, string fileName) => CopyAttachmentFrom(sourceDocumentId, fileName, sendToModel: true);
+
+    public void CopyAttachmentFrom(string sourceDocumentId, string fileName, bool sendToModel)
     {
         ValidationMethods.AssertNotNullOrEmpty(sourceDocumentId, nameof(sourceDocumentId));
         ValidationMethods.AssertNotNullOrEmpty(fileName, nameof(fileName));
         ValidationMethods.AssertNotNullOrEmpty(sourceDocumentId, nameof(sourceDocumentId));
 
+        AssertNoAttachmentWithSameName(fileName);
         _attachmentsCommands.Add(new CopyAttachmentCommandData(sourceDocumentId, fileName, "__this__", fileName, changeVector: null));
+        TrackHiddenAttachment(fileName, sendToModel);
+    }
+
+    private void AssertNoAttachmentWithSameName(string name)
+    {
+        foreach (var command in _attachmentsCommands)
+        {
+            var existingName = command switch
+            {
+                PutAttachmentCommandData put => put.Name,
+                CopyAttachmentCommandData copy => copy.DestinationName,
+                _ => null
+            };
+
+            if (string.Equals(existingName, name, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"Can't add attachment '{name}' to conversation '{_conversationId}', there is already an attachment with '{name}' name added in this turn.");
+        }
+    }
+
+    private void TrackHiddenAttachment(string name, bool sendToModel)
+    {
+        if (sendToModel == false)
+            _hiddenAttachments.Add(name);
     }
 
     public IEnumerable<AiAgentActionRequest> RequiredActions() =>
@@ -445,7 +476,7 @@ internal class AiConversation : IAiConversationOperations
                 Status = AiConversationResult.Done
             };
         }
-        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, [.. _actionResponses.Values], _artificialActions, _options, _changeVector, _attachmentsCommands, streamPropertyPath, streamedChunksCallback, outputOptions, _debug, _cancelPendingActionTools);
+        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, [.. _actionResponses.Values], _artificialActions, _options, _changeVector, _attachmentsCommands, streamPropertyPath, streamedChunksCallback, outputOptions, _debug, _cancelPendingActionTools, _hiddenAttachments);
 
         try
         {
@@ -475,6 +506,7 @@ internal class AiConversation : IAiConversationOperations
             _actionResponses.Clear();
             _artificialActions.Clear();
             _attachmentsCommands.Clear();
+            _hiddenAttachments.Clear();
         }
     }
 
