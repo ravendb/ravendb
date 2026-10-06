@@ -14,6 +14,19 @@
     @include button-outline-variant($shard-color);
 }
 
+.btn-text {
+    --#{$prefix}btn-color: #{$text-color-var};
+    --#{$prefix}btn-hover-color: #{$text-emphasis-var};
+    --#{$prefix}btn-hover-bg: transparent;
+    --#{$prefix}btn-active-color: #{$text-emphasis-var};
+    --#{$prefix}btn-active-bg: transparent;
+    --#{$prefix}btn-active-border-color: transparent;
+    --#{$prefix}btn-disabled-color: #{$text-muted-var};
+    --#{$prefix}btn-disabled-bg: transparent;
+    --#{$prefix}btn-disabled-border-color: transparent;
+    --#{$prefix}btn-focus-shadow-rgb: var(--#{$prefix}body-color-rgb);
+}
+
 .rounded-group {
     & > .btn {
         border-radius: $border-radius-lg;

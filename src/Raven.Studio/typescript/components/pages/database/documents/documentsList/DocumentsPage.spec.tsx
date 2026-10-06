@@ -185,6 +185,9 @@ describe("DocumentsPage", () => {
         expect(getSelectAllCheckbox(screen)).toBeChecked();
         expect(within(getSelectionActions(screen)).getByText("128")).toBeInTheDocument();
         expect(within(getSelectionActions(screen)).getByRole("button", { name: /Delete/ })).toBeEnabled();
+        expect(
+            within(getSelectionActions(screen)).queryByRole("button", { name: /Select all/ })
+        ).not.toBeInTheDocument();
 
         fireEvent.click(getDocumentCheckboxes(screen)[1]);
 
@@ -198,7 +201,7 @@ describe("DocumentsPage", () => {
         expect(getSelectionActions(screen)).not.toBeInTheDocument();
     });
 
-    it("selects the current page from the header checkbox when paginated and clears the selection on toggle", async () => {
+    it("selects the current page from the header checkbox when paginated and keeps the selection on toggle", async () => {
         const { screen } = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={1000} />);
 
         expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
@@ -210,9 +213,10 @@ describe("DocumentsPage", () => {
         fireEvent.click(await screen.findByRole("checkbox", { name: "Pagination" }));
 
         expect(await screen.findByText(/^1-\d+ of 1,000$/)).toBeInTheDocument();
-        expect(getSelectionActions(screen)).not.toBeInTheDocument();
-        expect(getSelectAllCheckbox(screen)).not.toBeChecked();
+        expect(within(getSelectionActions(screen)).getByText("128")).toBeInTheDocument();
+        expect(getSelectAllCheckbox(screen)).toBeChecked();
 
+        fireEvent.click(within(getSelectionActions(screen)).getByRole("button", { name: "Clear selection" }));
         fireEvent.click(getSelectAllCheckbox(screen));
 
         const pageCheckboxes = getDocumentCheckboxes(screen);
@@ -248,8 +252,42 @@ describe("DocumentsPage", () => {
         fireEvent.click(await screen.findByRole("checkbox", { name: "Pagination" }));
 
         expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
-        expect(getSelectionActions(screen)).not.toBeInTheDocument();
-        expect(getSelectAllCheckbox(screen)).not.toBeChecked();
+        expect(within(getSelectionActions(screen)).getByText(String(pageSize))).toBeInTheDocument();
+        expect(getRowCheckbox(screen, "orders/1-A")).toBeChecked();
+        expect(getSelectAllCheckbox(screen)).toBePartiallyChecked();
+    });
+
+    it("selects the documents of every page from the selection actions when paginated", async () => {
+        const { screen } = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={128} />);
+
+        expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
+
+        openDisplayDropdown(screen);
+        fireEvent.click(await screen.findByRole("checkbox", { name: "Pagination" }));
+
+        expect(await screen.findByText(/^1-\d+ of 128$/)).toBeInTheDocument();
+
+        fireEvent.click(getSelectAllCheckbox(screen));
+        fireEvent.click(within(getSelectionActions(screen)).getByRole("button", { name: "Select all 128" }));
+
+        expect(within(getSelectionActions(screen)).getByText("128")).toBeInTheDocument();
+        expect(
+            within(getSelectionActions(screen)).queryByRole("button", { name: /Select all/ })
+        ).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+        await flushFetches();
+
+        const secondPageCheckboxes = getDocumentCheckboxes(screen);
+        secondPageCheckboxes.forEach((checkbox) => expect(checkbox).toBeChecked());
+        expect(getSelectAllCheckbox(screen)).toBeChecked();
+
+        fireEvent.click(getSelectAllCheckbox(screen));
+
+        expect(
+            within(getSelectionActions(screen)).getByText(String(128 - secondPageCheckboxes.length))
+        ).toBeInTheDocument();
+        expect(within(getSelectionActions(screen)).getByRole("button", { name: "Select all 128" })).toBeInTheDocument();
     });
 
     it("selects a range of documents while holding shift and highlights the pending range", async () => {
@@ -554,7 +592,7 @@ describe("DocumentsPage", () => {
         expect(lastCall[5]).toEqual(["ShipTo"]);
 
         await openColumnSettings(secondVisit.screen);
-        fireEvent.click(secondVisit.screen.getByRole("button", { name: /Restart to default/ }));
+        fireEvent.click(secondVisit.screen.getByRole("button", { name: /Reset to default/ }));
 
         expect(secondVisit.screen.queryByRole("checkbox", { name: "City" })).not.toBeInTheDocument();
         expect(getColumnLayoutStorageKeys()).toHaveLength(1);

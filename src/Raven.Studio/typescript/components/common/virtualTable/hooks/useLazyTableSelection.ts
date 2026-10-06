@@ -13,11 +13,14 @@ export interface LazyTableSelection<T> {
     state: LazyTableSelectionState;
     selectionState: SelectionState;
     selectedCount: number;
+    totalCount: number | null;
+    canSelectAllPages: boolean;
     rowSelection: RowSelectionState;
     anchorRowIndex: number | null;
     canSelectRangeTo: (rowIndex: number) => boolean;
     toggleRow: (item: T, isRangeSelection: boolean) => void;
     toggleAll: () => void;
+    selectAll: () => void;
     clear: () => void;
 }
 
@@ -92,23 +95,33 @@ export function useLazyTableSelection<T>({
         setAnchorRowIndex(null);
     };
 
+    const selectAll = () => {
+        setState(ALL_SELECTION);
+        setAnchorRowIndex(null);
+    };
+
     const clear = () => {
         setState(EMPTY_SELECTION);
         setAnchorRowIndex(null);
     };
 
+    const selectedCount =
+        state.mode === "inclusive"
+            ? state.selectedIds.length
+            : Math.max(0, (totalCount ?? 0) - state.excludedIds.length);
+
     return {
         state,
         selectionState,
-        selectedCount:
-            state.mode === "inclusive"
-                ? state.selectedIds.length
-                : Math.max(0, (totalCount ?? 0) - state.excludedIds.length),
+        selectedCount,
+        totalCount,
+        canSelectAllPages: isPaginated && selectedCount < (totalCount ?? 0),
         rowSelection: Object.fromEntries(selectedRowIds.map((id) => [id, true])),
         anchorRowIndex,
         canSelectRangeTo,
         toggleRow,
         toggleAll,
+        selectAll,
         clear,
     };
 }

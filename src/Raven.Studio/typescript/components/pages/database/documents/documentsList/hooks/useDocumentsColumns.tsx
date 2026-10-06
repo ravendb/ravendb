@@ -305,7 +305,9 @@ function createMetadataColumns(databaseName: string, appUrl: AppUrl): ColumnDef<
 
                 return (
                     <CellWithCopy value={collection}>
-                        <a href={appUrl.forDocuments(collection, databaseName)}>{collection}</a>
+                        <a href={appUrl.forDocuments(collection, databaseName)} className="cell-link">
+                            {collection}
+                        </a>
                     </CellWithCopy>
                 );
             },
