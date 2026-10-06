@@ -18,6 +18,7 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
+using Voron.Data.Lookups;
 using Voron.Impl;
 using Constants = Corax.Constants;
 using EntryIdPaginationSupportStatus = Corax.EntryIdPaginationSupportStatus;
@@ -510,47 +511,109 @@ internal static partial class QueryPlanBuilder
             ? (ctx.Exec.CompoundExactFirst, ctx.Exec.CompoundExactSecond)
             : (ctx.Exec.CompoundExactSecond, ctx.Exec.CompoundExactFirst);
 
-        if (firstExec.PackedParamValue.ValueType != PackedParam.TypeString || secondExec.PackedParamValue.ValueType != PackedParam.TypeString)
-            return null;
-
         var boolTerms = ctx.Exec.Plan.Template.CompoundExactBoolTerms ??= [AnalyzeBoolLiterals(ref ctx, firstExec), AnalyzeBoolLiterals(ref ctx, secondExec)];
-        if (TryGetCompoundKeyComponent(ref ctx, walkerCtx, firstExec, boolTerms[0], out var first) == false ||
-            TryGetCompoundKeyComponent(ref ctx, walkerCtx, secondExec, boolTerms[1], out var second) == false)
+        Span<long> firstNumbers = stackalloc long[2], secondNumbers = stackalloc long[2];
+        if (TryGetCompoundKeyComponent(ref ctx, walkerCtx, firstExec, boolTerms[0], firstNumbers, out var firstText, out int firstCount) == false ||
+            TryGetCompoundKeyComponent(ref ctx, walkerCtx, secondExec, boolTerms[1], secondNumbers, out var secondText, out int secondCount) == false)
             return null;
 
-        int totalLen = first.Size + second.Size + 1;
+        int firstSize = firstText.HasValue ? firstText.Size : sizeof(long);
+        int secondSize = secondText.HasValue ? secondText.Size : sizeof(long);
+        int totalLen = firstSize + secondSize + 1;
         ctx.PlanParams.Allocator.Allocate(totalLen, out ByteString keyBuf);
         var keySpan = keyBuf.ToSpan();
-        first.AsReadOnlySpan().CopyTo(keySpan);
-        second.AsReadOnlySpan().CopyTo(keySpan.Slice(first.Size));
-        keySpan[totalLen - 1] = (byte)first.Size;
+        firstText.AsReadOnlySpan().CopyTo(keySpan);
+        secondText.AsReadOnlySpan().CopyTo(keySpan.Slice(firstSize));
+        keySpan[totalLen - 1] = (byte)firstSize;
 
         var compoundFieldMeta = indexSearcher.FieldMetadataBuilder(ctx.Exec.Plan.Template.CompoundExactName, hasBoost: false);
+        IQueryMatch result = null;
+        for (int i = 0; i < firstCount; i++)
+        {
+            if (firstText.HasValue == false)
+                BinaryPrimitives.WriteInt64BigEndian(keySpan, firstNumbers[i]);
+            for (int j = 0; j < secondCount; j++)
+            {
+                if (secondText.HasValue == false)
+                    BinaryPrimitives.WriteInt64BigEndian(keySpan.Slice(firstSize), secondNumbers[j]);
+                var term = indexSearcher.TermQuery(compoundFieldMeta, new Slice(keyBuf));
+                if (term.Count > 0)
+                    result = result is null ? term : new LazyOrMatch(indexSearcher.Allocator, result, term, ctx.Token);
+            }
+        }
 
-        return indexSearcher.TermQuery(compoundFieldMeta, new Slice(keyBuf));
+        return result ?? EmptyQueryMatch.Instance;
     }
 
-    // The key holds each value in its indexed type (numbers 8 bytes, bool 1 byte, char raw bytes, null/"" nothing), while the equality
-    // also matches other types through their text/-L/-D terms. So only text no other type can match is looked up: 2+ bytes, no 0 byte,
-    // not a bool literal, on an indexed field without numbers. Per execution: null shares the plan with strings, numbers come with docs.
-    private static bool TryGetCompoundKeyComponent(ref InstantiateContext ctx, ResolutionContext walkerCtx, ClauseExecution exec, (byte[] True, byte[] False) boolTerms, out Slice term)
+    // The key holds each value in its stored type (text analyzed, numbers 8 bytes, bool 1 byte, a char 1-2 raw bytes, null/"" nothing),
+    // while the equality also matches other types through their text/-L/-D terms. So text is looked up only where nothing else can match
+    // it: not what a char analyzes to (up to 2 bytes or one 3-byte letter), not a bool literal, on an indexed field without numbers, and
+    // without a 0 byte (the compound tree can miss such keys). Per execution: null shares the plan with strings.
+    private static bool TryGetCompoundKeyComponent(ref InstantiateContext ctx, ResolutionContext walkerCtx, ClauseExecution exec, (byte[] True, byte[] False) boolTerms,
+        scoped Span<long> numbers, out Slice text, out int count)
     {
-        term = default;
-        if (boolTerms.True is null)
+        text = default;
+        count = 1;
+        var fieldMeta = ResolveFieldMetadata(exec.Clause, walkerCtx); // analyze like the equality, exact() included
+        if (boolTerms.True is null || ctx.BuilderParams.IndexFieldsMapping.TryGetByFieldId(fieldMeta.FieldId, out var binding) == false)
             return false;
+
+        if (exec.PackedParamValue.ValueType != PackedParam.TypeString)
+            return TryGetNumericKeys(ref ctx, exec, fieldMeta, binding, numbers, out count);
 
         var indexSearcher = ctx.PlanParams.IndexSearcher;
-        var fieldMeta = ResolveFieldMetadata(exec.Clause, walkerCtx); // analyze like the equality, exact() included
-        if (indexSearcher.TryAnalyzeSingleToken(fieldMeta, ctx.Exec.StringValues[exec.PackedParamValue.Param1], out term) == false ||
-            term.Size is < 2 or > byte.MaxValue)
+        if (indexSearcher.TryAnalyzeSingleToken(fieldMeta, ctx.Exec.StringValues[exec.PackedParamValue.Param1], out text) == false ||
+            text.Size is < 3 or > byte.MaxValue)
             return false;
 
-        var bytes = term.AsReadOnlySpan();
-        if (bytes.Contains((byte)0) || bytes.SequenceEqual(boolTerms.True) || bytes.SequenceEqual(boolTerms.False))
-            return false;
-
-        return ctx.BuilderParams.IndexFieldsMapping.TryGetByFieldId(fieldMeta.FieldId, out var binding) &&
+        var bytes = text.AsReadOnlySpan();
+        return bytes is not [>= 0x80, _, _] && bytes.Contains((byte)0) == false &&
+               bytes.SequenceEqual(boolTerms.True) == false && bytes.SequenceEqual(boolTerms.False) == false &&
                indexSearcher.GetLongTermsFor(binding.FieldNameLong) is not { NumberOfEntries: > 0 }; // the writer creates it for text fields too
+    }
+
+    // A long compares by the integer part: its -L term holds the longs and the doubles truncated to it. A double compares exactly: its -D
+    // term holds the doubles and the longs equal to it. So the value's long and double keys are looked up, while the conversion is exact
+    // (|v| < 2^53), nothing else truncates to the long (its -L and -D counts agree), no other type keys the same 8 bytes, the field holds
+    // no time values (a DateTimeOffset keys its local ticks, -L the UTC ones), and no key starts with a 0 byte (0 included: -0 and 0 are
+    // one -D term): the compound tree can miss such keys.
+    private static bool TryGetNumericKeys(ref InstantiateContext ctx, ClauseExecution exec, in FieldMetadata fieldMeta, IndexFieldBinding binding, scoped Span<long> keys, out int count)
+    {
+        count = 0;
+        var packed = exec.PackedParamValue;
+        if (packed.ValueType is not (PackedParam.TypeLong or PackedParam.TypeDouble) ||
+            ctx.BuilderParams.Index.IndexFieldsPersistence.HasTimeValues(exec.Clause.ResolvedFieldName ?? exec.Clause.FieldName))
+            return false;
+
+        var searcher = ctx.PlanParams.IndexSearcher;
+        bool isLong = packed.ValueType == PackedParam.TypeLong;
+        double d = isLong ? ctx.Exec.LongValues[packed.Param1] : ctx.Exec.DoubleValues[packed.Param1];
+        if (d == 0 || (Math.Abs(d) < 1L << 53) == false ||
+            isLong && Docs<Int64LookupKey>(searcher.GetLongTermsFor(binding.FieldNameLong), (long)d) != Docs<DoubleLookupKey>(searcher.GetDoubleTermsFor(binding.FieldNameDouble), d))
+            return false;
+
+        var mask = ctx.BuilderParams.CompoundFieldNumericXorMask;
+        bool integral = d == Math.Truncate(d);
+        if (integral)
+            keys[count++] = (long)d ^ mask;
+        keys[count++] = Bits.DoubleToSortableLong(d);
+
+        var texts = searcher.GetTermsFor(fieldMeta.FieldName);
+        Span<byte> bytes = stackalloc byte[sizeof(long)];
+        for (int i = 0; i < count; i++)
+        {
+            BinaryPrimitives.WriteInt64BigEndian(bytes, keys[i]);
+            if (bytes[0] == 0 || texts?.TryGetValue(bytes, out _) == true ||
+                (i == 0 && integral
+                    ? searcher.GetDoubleTermsFor(binding.FieldNameDouble)?.TryGetValue(BitConverter.Int64BitsToDouble(keys[i] < 0 ? keys[i] ^ long.MaxValue : keys[i]), out _) == true
+                    : searcher.GetLongTermsFor(binding.FieldNameLong)?.TryGetValue(keys[i] ^ mask, out _) == true))
+                return false;
+        }
+
+        return true;
+
+        long Docs<TKey>(Lookup<TKey> tree, TKey key) where TKey : struct, ILookupKey =>
+            tree?.TryGetValue(key, out long id) == true ? searcher.NumberOfDocumentsUnderSpecificTerm(id) : 0;
     }
 
     // A bool is indexed as "true"/"false" through the field's own analyzer; fixed per index, so the template caches it
