@@ -1,13 +1,16 @@
 using System.Net;
+using System.Text.Json;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Client.Documents.Operations.CdcSink.Schema;
 using Raven.Quill.AiHelper;
 using Raven.Quill.AiHelper.Migration;
 using Raven.Quill.AiHelper.Migration.Planning;
 using Raven.Quill.Contracts;
 using Raven.Quill.Logging;
 using Raven.Quill.Wizard;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -232,17 +235,29 @@ public class MigrationServiceTests(ITestOutputHelper output) : RavenTestBase(out
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Start_sends_the_schema_and_prompt_without_a_conversation()
+    public async Task Start_sends_the_selected_tables_gzipped_and_the_prompt_without_a_conversation()
     {
         using var store = await StoreWithSchemaAsync();
         var handler = StubPlannerHandler.Replying(new DoneFrame { ConversationId = ConversationId });
 
-        await NewService(store, handler).StartAsync(new MigrationStartRequest(Slug, Prompt: "plan it"), Collect([]), CancellationToken.None);
+        await NewService(store, handler).StartAsync(
+            new MigrationStartRequest(Slug, SelectedTables: [new SelectedSourceTable("orders", "public")], Prompt: "plan it"),
+            Collect([]),
+            CancellationToken.None);
 
         Assert.Contains($"\"Slug\":\"{Slug}\"", handler.LastBody);
         Assert.Contains("\"Prompt\":\"plan it\"", handler.LastBody);
-        Assert.Contains("\"SourceTableName\":\"orders\"", handler.LastBody);
         Assert.DoesNotContain("\"ConversationId\":\"", handler.LastBody);
+
+        using var body = JsonDocument.Parse(handler.LastBody);
+        Assert.False(body.RootElement.TryGetProperty("Schema", out _));
+
+        var schemaJson = MigrationSamples.SentSchemaJson(handler.LastBody);
+
+        Assert.Equal(await ExpectedNarrowedSchemaJsonAsync(store, "orders"), schemaJson);
+        Assert.Contains("\"SourceTableName\":\"orders\"", schemaJson);
+        Assert.DoesNotContain("customers", schemaJson);
+        Assert.DoesNotContain("audit_log", schemaJson);
     }
 
     [RavenTheory(RavenTestCategory.Quill)]
@@ -306,6 +321,25 @@ public class MigrationServiceTests(ITestOutputHelper output) : RavenTestBase(out
         var store = GetDocumentStore();
         await MigrationSamples.SeedDiscoveredSchemaAsync(store, Slug, plan);
         return store;
+    }
+
+    private static async Task<string> ExpectedNarrowedSchemaJsonAsync(IDocumentStore store, string tableName)
+    {
+        CdcSinkSourceSchema discovered;
+        using (var session = store.OpenAsyncSession())
+            discovered = (await session.LoadAsync<WizardState>(WizardState.DocumentIdFor(Slug)))!.LastDiscoveredSchema!;
+
+        var narrowed = new CdcSinkSourceSchema
+        {
+            CatalogName = discovered.CatalogName,
+            Tables = discovered.Tables.Where(t => t.SourceTableName == tableName).ToList(),
+            Errors = [.. discovered.Errors],
+            HasPermissionToSetup = discovered.HasPermissionToSetup,
+            Warnings = [.. discovered.Warnings]
+        };
+
+        using var ctx = JsonOperationContext.ShortTermSingleUse();
+        return store.Conventions.Serialization.DefaultConverter.ToBlittable(narrowed, ctx).ToString();
     }
 
     private static MigrationService NewService(
