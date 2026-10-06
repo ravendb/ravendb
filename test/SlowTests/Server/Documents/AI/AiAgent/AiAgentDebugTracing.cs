@@ -631,7 +631,7 @@ public class AiAgentDebugTracing : RavenTestBase
             Assert.DoesNotContain("star.png", traces[0].RequestBody);
 
             var doc = await session.LoadAsync<ConversationDocShape>(chat.Id);
-            Assert.Equal(new[] { "star.png" }, doc.HiddenAttachments);
+            Assert.Equal(new[] { "star.png" }, doc.AttachmentsHiddenFromModel);
             Assert.DoesNotContain(doc.Messages, m => m.ToString().Contains("star.png"));
 
             var names = session.Advanced.Attachments.GetNames(doc).Select(a => a.Name).ToList();
@@ -650,6 +650,37 @@ public class AiAgentDebugTracing : RavenTestBase
             Assert.All(traces, t => Assert.DoesNotContain("star.png", t.RequestBody));
             Assert.Contains(traces, t => t.RequestBody.Contains("heart.png"));
         }
+
+        Assert.Equal(new[] { "star.png" }, (await store.AI.GetConversationMessagesAsync(chat.Id)).AttachmentsHiddenFromModel);
+
+        using (var session = store.OpenAsyncSession())
+        {
+            session.Advanced.Attachments.Delete(chat.Id, "star.png");
+            await session.SaveChangesAsync();
+        }
+
+        Assert.Empty((await store.AI.GetConversationMessagesAsync(chat.Id)).AttachmentsHiddenFromModel);
+    }
+
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    public async Task HiddenAttachment_OnlyHiddenOnNewConversation_ThrowsHiddenOnlyError(Options options, GenAiConfiguration config)
+    {
+        using var store = GetDocumentStore(options);
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+        var agent = new AiAgentConfiguration("debug-test-agent", config.ConnectionStringName,
+            "You are a helpful assistant. Describe images concisely.")
+        {
+            SampleObject = "{\"Answer\":\"answer here\"}"
+        };
+        var createResult = await store.AI.CreateAgentAsync(agent, OutputSchema.Instance);
+
+        var chat = store.AI.Conversation(createResult.Identifier, "chats/", creationOptions: null);
+        chat.AddAttachment("star.png", new MemoryStream(Convert.FromBase64String(AiTestData.StarPngBase64)), "image/png", sendToModel: false);
+
+        var error = await Assert.ThrowsAnyAsync<Exception>(() => chat.RunAsync<OutputSchema>(CancellationToken.None));
+        Assert.Contains("only attachments that are hidden from the model", error.ToString());
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -693,10 +724,73 @@ public class AiAgentDebugTracing : RavenTestBase
         Assert.Contains(traces, t => t.AttachmentNames?.Contains("star.png") == true);
 
         var doc = await session.LoadAsync<ConversationDocShape>(chat.Id);
-        Assert.Empty(doc.HiddenAttachments);
+        Assert.Empty(doc.AttachmentsHiddenFromModel);
 
         var messages = await store.AI.GetConversationMessagesAsync(chat.Id);
-        Assert.Empty(messages.HiddenAttachments);
+        Assert.Empty(messages.AttachmentsHiddenFromModel);
+    }
+
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    public async Task Debug_HiddenCopiedAttachment_NotSentToModel(Options options, GenAiConfiguration config)
+    {
+        using var store = GetDocumentStore(options);
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new { Name = "images" }, "images/1");
+            session.Advanced.Attachments.Store("images/1", "heart.png", new MemoryStream(Convert.FromBase64String(AiTestData.HeartPngBase64)), "image/png");
+            session.Advanced.Attachments.Store("images/1", "star.png", new MemoryStream(Convert.FromBase64String(AiTestData.StarPngBase64)), "image/png");
+            await session.SaveChangesAsync();
+        }
+
+        var agent = new AiAgentConfiguration("debug-test-agent", config.ConnectionStringName,
+            "You are a helpful assistant. Describe images concisely.")
+        {
+            SampleObject = "{\"Answer\":\"answer here\"}"
+        };
+        var createResult = await store.AI.CreateAgentAsync(agent, OutputSchema.Instance);
+
+        var chat = store.AI.Conversation(createResult.Identifier, "chats/",
+            creationOptions: null, debug: true);
+        chat.CopyAttachmentFrom("images/1", "heart.png");
+        chat.CopyAttachmentFrom("images/1", "star.png", sendToModel: false);
+        chat.SetUserPrompt("What do you see in this image?");
+        var r = await chat.RunAsync<OutputSchema>(CancellationToken.None);
+        Assert.Equal(AiConversationResult.Done, r.Status);
+
+        using (var session = store.OpenAsyncSession())
+        {
+            var traces = (await session.Advanced.LoadStartingWithAsync<DebugTraceDoc>($"{chat.Id}/{AiDebugTrace.TraceSegment}/")).ToList();
+            Assert.Single(traces);
+            Assert.Equal(new[] { "heart.png" }, traces[0].AttachmentNames);
+            Assert.DoesNotContain("star.png", traces[0].RequestBody);
+            Assert.DoesNotContain(AiTestData.StarPngBase64, traces[0].RequestBody);
+
+            var doc = await session.LoadAsync<ConversationDocShape>(chat.Id);
+            Assert.Equal(new[] { "star.png" }, doc.AttachmentsHiddenFromModel);
+            Assert.DoesNotContain(doc.Messages, m => m.ToString().Contains("star.png"));
+
+            var names = session.Advanced.Attachments.GetNames(doc).Select(a => a.Name).ToList();
+            Assert.Contains("heart.png", names);
+            Assert.Contains("star.png", names);
+        }
+
+        var messages = await store.AI.GetConversationMessagesAsync(chat.Id);
+        Assert.Equal(new[] { "star.png" }, messages.AttachmentsHiddenFromModel);
+
+        chat.SetUserPrompt("Which files do you have?");
+        r = await chat.RunAsync<OutputSchema>(CancellationToken.None);
+        Assert.Equal(AiConversationResult.Done, r.Status);
+
+        using (var session = store.OpenAsyncSession())
+        {
+            var traces = (await session.Advanced.LoadStartingWithAsync<DebugTraceDoc>($"{chat.Id}/{AiDebugTrace.TraceSegment}/")).ToList();
+            Assert.True(traces.Count >= 2);
+            Assert.All(traces, t => Assert.DoesNotContain("star.png", t.RequestBody));
+            Assert.Contains(traces, t => t.RequestBody.Contains("heart.png"));
+        }
     }
 
     [RavenFact(RavenTestCategory.Ai)]
@@ -816,7 +910,7 @@ public class AiAgentDebugTracing : RavenTestBase
     {
         public bool Debug { get; set; }
         public HashSet<string> SubConversationIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-        public List<string> HiddenAttachments { get; set; } = [];
+        public List<string> AttachmentsHiddenFromModel { get; set; } = [];
         public List<JObject> Messages { get; set; } = [];
     }
 }

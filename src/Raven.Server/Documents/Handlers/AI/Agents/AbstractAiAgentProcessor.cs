@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             body.TryGet(nameof(ConversionRequestBody.ArtificialActions), out BlittableJsonReaderArray artificialActions);
             body.TryGet(nameof(ConversionRequestBody.UserPrompt), out object userPrompt);
             body.TryGet(nameof(ConversionRequestBody.CreationOptions), out BlittableJsonReaderObject optionsBlittable);
-            body.TryGet(nameof(ConversionRequestBody.HiddenAttachments), out BlittableJsonReaderArray hiddenAttachments);
+            body.TryGet(nameof(ConversionRequestBody.AttachmentsHiddenFromModel), out BlittableJsonReaderArray hiddenAttachments);
 
             optionsBlittable.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject parameters);
             optionsBlittable.TryGet(nameof(AiConversationCreationOptions.ExpirationInSec), out int? conversationExpirationInSec);
@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 Parameters = parameters,
                 CreationOptions = options,
                 OutputOptions = AiServerOutputOptions.From(body),
-                HiddenAttachments = hiddenAttachments?.Select(x => x.ToString()).ToHashSet(StringComparer.OrdinalIgnoreCase)
+                AttachmentsHiddenFromModel = hiddenAttachments?.Select(x => x.ToString()).ToHashSet(StringComparer.OrdinalIgnoreCase)
             };
 
             return request;

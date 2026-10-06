@@ -110,10 +110,11 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 };
             }
 
-            if (RequestBody.HasUserPrompt(_request.Content) == false && _request.Attachments is { Count: > 0 } == false && _request.AttachmentCommands?.ParsedCommands.Any(cmd => IsHiddenAttachment(cmd) == false) != true)
+            if (RequestBody.HasUserPrompt(_request.Content) == false && _request.Attachments is { Count: > 0 } == false && HasVisibleAttachmentCommands() == false)
             {
-                throw new InvalidOperationException(
-                    $"Cannot start a new conversation '{_conversationId}' without a user prompt.");
+                throw new InvalidOperationException(_request.AttachmentCommands?.ParsedCommands is { Count: > 0 }
+                    ? $"Cannot start a new conversation '{_conversationId}' with only attachments that are hidden from the model (sendToModel: false). Provide a user prompt or an attachment that is sent to the model."
+                    : $"Cannot start a new conversation '{_conversationId}' without a user prompt.");
             }
 
             ValidateParameterValues(_request.Parameters);
@@ -189,17 +190,31 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 }
 
                 if (hidden)
-                    _document.HiddenAttachments.Add(GetStoredAttachmentName(cmd));
+                    _document.AttachmentsHiddenFromModel.Add(GetStoredAttachmentName(cmd));
                 else
-                    _document.HiddenAttachments.Remove(GetStoredAttachmentName(cmd));
+                    _document.AttachmentsHiddenFromModel.Remove(GetStoredAttachmentName(cmd));
             }
         }
         _persistedAttachmentsNames = ConversationHandlerAttachments.GetConversationPersistedAttachmentsNames(database, context, _document.Id);
-        _persistedAttachmentsNames.RemoveAll(_document.HiddenAttachments.Contains);
+        _persistedAttachmentsNames.RemoveAll(_document.AttachmentsHiddenFromModel.Contains);
+    }
+
+    private bool HasVisibleAttachmentCommands()
+    {
+        if (_request.AttachmentCommands?.ParsedCommands == null)
+            return false;
+
+        foreach (var cmd in _request.AttachmentCommands.ParsedCommands)
+        {
+            if (IsHiddenAttachment(cmd) == false)
+                return true;
+        }
+
+        return false;
     }
 
     private bool IsHiddenAttachment(BatchRequestParser.CommandData cmd) =>
-        _request.HiddenAttachments?.Contains(GetStoredAttachmentName(cmd)) == true;
+        _request.AttachmentsHiddenFromModel?.Contains(GetStoredAttachmentName(cmd)) == true;
 
     private static string GetStoredAttachmentName(BatchRequestParser.CommandData cmd) =>
         cmd.Type == CommandType.AttachmentCOPY ? cmd.DestinationName ?? cmd.Name : cmd.Name;
@@ -568,7 +583,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docContext))
         using (docContext.OpenReadTransaction())
         {
-            ConversationHandlerAttachments.HandleInternalSystemActions(database, context, docContext, _document, _request, _conversationId, toolCalls, _persistedAttachmentsNames);
+            ConversationHandlerAttachments.HandleInternalSystemActions(database, context, docContext, _document, _request, _conversationId, toolCalls);
         }
     }
 
@@ -582,7 +597,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         // Attachments cause single-turn spike in token usage.
         // which usually trigger chat reduction that is not needed
         // as the raw file data is not persisted on the messages we send to the LLM.
-        if (_request.AttachmentCommands?.ParsedCommands.Count > 0)
+        if (HasVisibleAttachmentCommands())
             return null;
 
         TimeSpan? historyExpiration = reduction.History?.HistoryExpirationInSec == null

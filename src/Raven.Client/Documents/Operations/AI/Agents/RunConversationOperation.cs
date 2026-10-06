@@ -275,7 +275,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
                 CreationOptions = _parent._options,
                 AttachmentCommands = _parent._attachmentsCommands,
                 OutputOptions = _parent._outputOptions,
-                HiddenAttachments = _parent._hiddenAttachments
+                AttachmentsHiddenFromModel = _parent._hiddenAttachments
             };
 
             var request = new HttpRequestMessage

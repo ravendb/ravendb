@@ -48,6 +48,8 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
             collector.Collect();
             var messages = collector.GetResults();
 
+            var attachments = ConversationHandlerAttachments.GetConversationPersistedAttachmentsNames(RequestHandler.Database, context, conversationId);
+
             var result = new AiConversationMessagesResult
             {
                 ConversationId = conversationId,
@@ -58,9 +60,8 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
                 HasMoreMessages = collector.HasMoreMessages,
                 SubConversationIds = conversation.SubConversationIds.ToList(),
                 Messages = messages,
-                Attachments = ConversationHandlerAttachments.GetConversationPersistedAttachmentsNames(
-                    RequestHandler.Database, context, conversationId),
-                HiddenAttachments = conversation.HiddenAttachments.ToList()
+                Attachments = attachments,
+                AttachmentsHiddenFromModel = attachments.Where(conversation.AttachmentsHiddenFromModel.Contains).ToList()
             };
 
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))

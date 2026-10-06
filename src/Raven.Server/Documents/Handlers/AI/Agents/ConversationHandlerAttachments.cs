@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -125,8 +124,7 @@ internal static class ConversationHandlerAttachments
         ConversationDocument document,
         RequestBody request,
         string conversationId,
-        List<AiAgentActionRequest> toolCalls,
-        List<string> retrievableAttachmentsNames)
+        List<AiAgentActionRequest> toolCalls)
     {
         foreach (var call in toolCalls)
         {
@@ -142,9 +140,9 @@ internal static class ConversationHandlerAttachments
                     foreach (var attachmentName in namesArray)
                     {
                         var name = attachmentName.ToString();
-                        result.Add(retrievableAttachmentsNames?.Contains(name, StringComparer.OrdinalIgnoreCase) == true
-                            ? RetrieveAndAddAttachment(database, docContext, request, conversationId, name, document.Id)
-                            : AddNotFoundAttachment(request, name));
+                        result.Add(document.AttachmentsHiddenFromModel.Contains(name)
+                            ? AddNotFoundAttachment(request, name)
+                            : RetrieveAndAddAttachment(database, docContext, request, conversationId, name, document.Id));
                     }
                 }
             }
