@@ -292,6 +292,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         Discord.AddBot(botToken, NewApplicationId(), NewBotUserId());
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Discord, agentId, null,
+            DisplayName: "Support bot",
             Discord: new(botToken, ParameterBindings: new Dictionary<string, ChannelParameterBinding>
             {
                 ["userId"] = new() { Source = ChannelParameterSource.Constant, Value = "users/1" },
