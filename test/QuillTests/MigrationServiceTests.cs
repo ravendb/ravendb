@@ -186,11 +186,49 @@ public class MigrationServiceTests(ITestOutputHelper output) : RavenTestBase(out
         Assert.Null(refusal);
         Assert.Equal(MigrationService.AskPath, handler.LastPath);
         Assert.Contains($"\"ConversationId\":\"{ConversationId}\"", handler.LastBody);
+        Assert.DoesNotContain("\"Schema\"", handler.LastBody);
 
         var plan = await MigrationSamples.LoadPlanAsync(store, Slug);
         Assert.Equal("Orders", Assert.Single(plan!.Entries).Collection);
         Assert.Equal(PropertyCase.SnakeCase, plan.Conventions.PropertyCase);
         Assert.Equal("Spanish", plan.Conventions.PropertyLanguage);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Ask_relays_even_when_the_selected_tables_are_gone_from_the_discovered_schema()
+    {
+        var stored = new MigrationPlan { ConversationId = ConversationId, SelectedTables = [new SelectedSourceTable("no_such_table", "public")] };
+        using var store = await StoreWithSchemaAsync();
+        await stored.SaveAsync(store, Slug);
+
+        var handler = StubPlannerHandler.Replying(new DoneFrame { ConversationId = ConversationId });
+
+        var refusal = await NewService(store, handler).AskAsync(new MigrationAskRequest(Slug, ConversationId, "go on"), Collect([]), CancellationToken.None);
+
+        Assert.Null(refusal);
+        Assert.Equal(MigrationService.AskPath, handler.LastPath);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_start_that_errors_after_its_reply_relays_both_and_keeps_the_previous_plan()
+    {
+        using var store = await StoreWithSchemaAsync(MigrationSamples.Plan("quill-cdc-planner/old", Entry("Products")));
+        var handler = StubPlannerHandler.Replying(
+            new CollectionFrame { Status = "registered", Collection = "Orders", Version = 1, Config = Orders() },
+            new ReplyFrame { Reply = "Here is the plan." },
+            new ErrorFrame { Message = "Could not store the schema (error id: 'x')" });
+        var frames = new List<MigrationFrame>();
+
+        await NewService(store, handler).StartAsync(new MigrationStartRequest(Slug), Collect(frames), CancellationToken.None);
+
+        Assert.Collection(frames,
+            f => Assert.IsType<CollectionFrame>(f),
+            f => Assert.IsType<ReplyFrame>(f),
+            f => Assert.Contains("error id", Assert.IsType<ErrorFrame>(f).Message));
+
+        var plan = await MigrationSamples.LoadPlanAsync(store, Slug);
+        Assert.Equal("quill-cdc-planner/old", plan!.ConversationId);
+        Assert.Equal("Products", Assert.Single(plan.Entries).Collection);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -211,6 +249,7 @@ public class MigrationServiceTests(ITestOutputHelper output) : RavenTestBase(out
     [InlineData(HttpStatusCode.Unauthorized, "consent")]
     [InlineData(HttpStatusCode.TooManyRequests, "quota")]
     [InlineData(HttpStatusCode.NotFound, "No planning session")]
+    [InlineData(HttpStatusCode.RequestEntityTooLarge, "too large")]
     [InlineData(HttpStatusCode.BadGateway, "HTTP 502")]
     public async Task A_refused_request_becomes_one_error_frame(HttpStatusCode status, string expected)
     {
