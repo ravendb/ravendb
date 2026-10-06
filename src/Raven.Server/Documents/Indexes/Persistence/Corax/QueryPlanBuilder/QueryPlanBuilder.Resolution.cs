@@ -545,10 +545,9 @@ internal static partial class QueryPlanBuilder
         return result ?? EmptyQueryMatch.Instance;
     }
 
-    // The key holds each value in its stored type (text analyzed, numbers 8 bytes, bool 1 byte, a char 1-2 raw bytes, null/"" nothing),
-    // while the equality also matches other types through their text/-L/-D terms. So text is looked up only where nothing else can match
-    // it: not what a char analyzes to (up to 2 bytes or one 3-byte letter), not a bool literal, on an indexed field without numbers, and
-    // without a 0 byte (the compound tree can miss such keys). Per execution: null shares the plan with strings.
+    // The key holds each value in its stored type, while the equality also matches other types by their text. So text is looked up only
+    // where nothing else can: 3+ bytes and not one 3-byte letter (a char's text), not a bool literal, no numbers in the field, no 0 byte
+    // (the compound tree can miss such keys).
     private static bool TryGetCompoundKeyComponent(ref InstantiateContext ctx, ResolutionContext walkerCtx, ClauseExecution exec, (byte[] True, byte[] False) boolTerms,
         scoped Span<long> numbers, out Slice text, out int count)
     {
@@ -572,11 +571,9 @@ internal static partial class QueryPlanBuilder
                indexSearcher.GetLongTermsFor(binding.FieldNameLong) is not { NumberOfEntries: > 0 }; // the writer creates it for text fields too
     }
 
-    // A long compares by the integer part: its -L term holds the longs and the doubles truncated to it. A double compares exactly: its -D
-    // term holds the doubles and the longs equal to it. So the value's long and double keys are looked up, while the conversion is exact
-    // (|v| < 2^53), nothing else truncates to the long (its -L and -D counts agree), no other type keys the same 8 bytes, the field holds
-    // no time values (a DateTimeOffset keys its local ticks, -L the UTC ones), and no key starts with a 0 byte (0 included: -0 and 0 are
-    // one -D term): the compound tree can miss such keys.
+    // A long matches by the integer part (-L holds doubles truncated), a double exactly (-D holds longs as doubles), so both keys are looked
+    // up. Turned down where that isn't exact: fractions truncated to the long (-L and -D counts differ), |v| >= 2^53, time values (a
+    // DateTimeOffset keys its local ticks), another type keying the same 8 bytes, 0 and keys starting with a 0 byte (the tree can miss them).
     private static bool TryGetNumericKeys(ref InstantiateContext ctx, ClauseExecution exec, in FieldMetadata fieldMeta, IndexFieldBinding binding, scoped Span<long> keys, out int count)
     {
         count = 0;

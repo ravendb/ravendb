@@ -249,7 +249,6 @@ namespace SlowTests.Data.RavenDB_27586
             AssertStrategy(options, strategy, ran);
         }
 
-        // a long that fractions truncate to, a third clause, a lone equality: a forced lookup must fall back to the bitmap, not answer differently or throw
         [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
         [RavenData("where Num == $v and Other == 7", 1L, new[] { 1.0, 1.1, 1.5, 1.8 }, SearchEngineMode = RavenSearchEngineMode.Corax)]
         [RavenData("where Name == 'ann' and Tag == 'red' and Num > $v", 1.2, new[] { 1.5, 1.8 }, SearchEngineMode = RavenSearchEngineMode.Corax)]
@@ -403,7 +402,7 @@ namespace SlowTests.Data.RavenDB_27586
             AssertNums(options, store, rql, "777", [1, 2], Bitmap);
         }
 
-        // a long compares by the integer part (-L: the longs, the doubles truncated to it), a double exactly (-D: the doubles, -0 as 0, the longs)
+        // a long matches by the integer part, a double exactly
         [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
         public void NumericLookupReturnsTheEqualitysRows()
         {
@@ -426,7 +425,6 @@ namespace SlowTests.Data.RavenDB_27586
             Assert.Equal([1, 1], Sorted(store, rql.Replace("$v", "1.0") + " order by Num as double", Lookup, null, out _));
         }
 
-        // the compound tree can miss a key starting with 0 bytes, a null pair being keyed as one
         [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
         public void NumericLookupTurnedDownForAKeyStartingWithAZeroByte()
         {
@@ -437,7 +435,7 @@ namespace SlowTests.Data.RavenDB_27586
             AssertIds(store, "from index 'Items/ByNumAndOther' where Num == $v and Other == 7", double.Epsilon, "e", Bitmap);
         }
 
-        // the key has no type tag: "@@@@@@@@" keys as the double 32.50196.., the long -4616189618054758400 as 1.0, the double -MaxValue as the long 2^52
+        // "@@@@@@@@" keys as the double 32.50196.., -4616189618054758400 as 1.0, -double.MaxValue as the long 2^52
         [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
         public void NumericLookupTurnedDownWhereAnotherTypeKeysTheSameBytes()
         {
@@ -452,7 +450,6 @@ namespace SlowTests.Data.RavenDB_27586
             AssertIds(store, rql, 4503599627370496L, "x", Bitmap);
         }
 
-        // a DateTimeOffset keys its local ticks, -L holds the UTC ones
         [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
         public void NumericLookupTurnedDownOnATimeField()
         {
@@ -481,7 +478,7 @@ namespace SlowTests.Data.RavenDB_27586
             AssertIds(store, rql, -0.5, "f", Lookup);
         }
 
-        // a char is indexed as its 1-2 raw bytes analyzed (U+BAC8: C8 BA, "Ⱥ", "ⱥ"), keyed by the other count of them
+        // a char is indexed as its raw bytes analyzed (U+BAC8 as "ⱥ"), keyed by the other count of them
         [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
         public void LookupTurnedDownForTextACharIsIndexedAs()
         {
