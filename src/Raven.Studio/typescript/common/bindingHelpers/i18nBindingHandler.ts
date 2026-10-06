@@ -24,7 +24,7 @@ type i18nAttrBindingValue = Record<string, i18nBindingValue>;
  *   <input data-bind="i18nAttr: { placeholder: 'editCustomSorter:namePlaceholder', title: 'common:cancel' }">
  *
  * Keys use the "namespace:key" form. `key`, `options` and option values may be observables.
- * Text is written to textContent, never innerHTML. Bindings re-evaluate on language change.
+ * Text is written to textContent, never innerHTML.
  * A null or undefined value clears the text or removes the attribute.
  */
 class i18nBindingHandler {
@@ -58,8 +58,6 @@ class i18nBindingHandler {
     }
 
     static resolve(value: i18nBindingValue): string | null {
-        i18nModule.currentLanguage();
-
         const unwrapped = ko.unwrap(value);
 
         if (unwrapped == null) {
@@ -81,7 +79,7 @@ class i18nBindingHandler {
         if (!key.includes(":")) {
             throw new Error(`[i18n] Knockout translation key must have a namespace: ${key}`);
         }
-        return i18nModule.i18n.t(key, { ...options, interpolation: { escapeValue: false } }) as string;
+        return i18nModule.i18n.t(key, options) as string;
     }
 }
 

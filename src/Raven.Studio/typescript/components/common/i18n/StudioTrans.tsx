@@ -33,7 +33,6 @@ export function StudioTrans<Ns extends TranslationNamespace>({
             context={context as string}
             count={count}
             values={values}
-            shouldUnescape
         />
     );
 }
