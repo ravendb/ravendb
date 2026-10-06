@@ -151,6 +151,7 @@ public static class WizardEndpoints
                 state.LastDiscoverAt = null;
                 state.LastMapConfiguration = null;
                 state.LastMapAt = null;
+                state.MigrationPlan = null;
             }
 
             state.Provider = factoryName;

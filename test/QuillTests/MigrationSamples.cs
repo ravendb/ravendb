@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -93,6 +94,16 @@ public static class MigrationSamples
 
     public static MigrationPlan Plan(string conversationId, params PlanEntry[] entries) =>
         new() { ConversationId = conversationId, Entries = [.. entries] };
+
+    public static string SentSchemaJson(string startRequestBody)
+    {
+        using var body = JsonDocument.Parse(startRequestBody);
+        var compressed = Convert.FromBase64String(body.RootElement.GetProperty("SchemaGzip").GetString()!);
+
+        using var gzip = new GZipStream(new MemoryStream(compressed), CompressionMode.Decompress);
+        using var reader = new StreamReader(gzip, Encoding.UTF8);
+        return reader.ReadToEnd();
+    }
 
     public static string Sse(params MigrationFrame[] frames) =>
         ": keepalive\n\n" + string.Concat(frames.Select(f => $"data: {JsonSerializer.Serialize(f, WireOptions)}\n\n: keepalive\n\n"));
