@@ -47,7 +47,20 @@ class globalSettings extends abstractSettings {
     }
 
     get storageKey() {
+        return globalSettings.storageKey;
+    }
+
+    static get storageKey() {
         return storageKeyProvider.storageKeyFor("settings");
+    }
+
+    static readStoredLanguage(): i18nResources.StudioLanguage {
+        try {
+            const language = JSON.parse(localStorage.getItem(globalSettings.storageKey))?.language;
+            return i18nResources.isStudioLanguage(language) ? language : "en";
+        } catch {
+            return "en";
+        }
     }
 
     protected fetchConfigDocument(): JQueryPromise<Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration> {

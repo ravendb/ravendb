@@ -126,11 +126,6 @@ class conflicts extends shardViewModelBase {
 
         grid.init((_skip, take) => this.fetchConflicts(take), () => this.createColumns(grid));
 
-        this.registerDisposable(i18nModule.currentLanguage.subscribe(() => {
-            grid.markColumnsDirty();
-            this.reloadGrid();
-        }));
-
         this.columnPreview.install(".conflicts-grid", ".js-conflict-details-tooltip",
             (details: replicationConflictListItemDto, column: virtualColumn, e: JQuery.TriggeredEvent,
              onValue: (context: any, valueToCopy?: string) => void) => {

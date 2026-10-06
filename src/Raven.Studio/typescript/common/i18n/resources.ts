@@ -20,8 +20,6 @@ export const languageNames: Record<StudioLanguage, string> = {
     pl: "Polski",
 };
 
-export const defaultNS = "common";
-
 export const en = {
     aboutView,
     common,
@@ -37,9 +35,9 @@ export type TranslationResources = typeof en;
 
 export type TranslationNamespace = keyof TranslationResources;
 
-type Widen<T> = { [K in keyof T]: T[K] extends string ? string : Widen<T[K]> };
+type PartialResources<T> = { [K in keyof T]?: T[K] extends string ? string : PartialResources<T[K]> };
 
-export type LanguageResources = Widen<TranslationResources>;
+export type LanguageResources = PartialResources<TranslationResources>;
 
 export const languageLoaders: Record<Exclude<StudioLanguage, "en">, () => Promise<LanguageResources>> = {
     pl: async () => (await import("./locales/pl")).default,

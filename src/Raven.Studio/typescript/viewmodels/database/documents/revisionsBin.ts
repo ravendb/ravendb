@@ -123,11 +123,6 @@ class revisionsBin extends shardViewModelBase {
         
         grid.init((s) => this.fetchRevisionsBinEntries(s), () => this.createColumns(grid));
 
-        this.registerDisposable(i18nModule.currentLanguage.subscribe(() => {
-            grid.markColumnsDirty();
-            grid.reset(false);
-        }));
-
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 
         this.columnPreview.install(".documents-grid", ".js-revisions-bin-tooltip", 

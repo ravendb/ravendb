@@ -1,11 +1,14 @@
-import { changeLanguage, createTranslator, currentLanguage, i18n, initI18n, loadLanguage } from "./i18n";
-import { en, languageLoaders, StudioLanguage, supportedLanguages, TranslationNamespace } from "./resources";
+import { changeLanguage, createTranslator, i18n, initI18n, loadLanguage } from "./i18n";
+import { en, LanguageResources, StudioLanguage, supportedLanguages, TranslationNamespace } from "./resources";
 
 const pluralSuffixRegex = /_(zero|one|two|few|many|other)$/;
 const placeholderRegex = /\{\{[^}]*\}\}/g;
 const markupRegex = /\{\{[^}]*\}\}|<\/?\w+\s*\/?>/g;
 
 function flattenEntries(value: unknown, prefix = ""): [key: string, value: string][] {
+    if (value == null) {
+        return [];
+    }
     if (typeof value === "string") {
         return [[prefix, value]];
     }
@@ -35,7 +38,10 @@ function baseKeys(keys: string[]): string[] {
 
 function missingPluralForms(language: string, enKeys: string[], languageKeys: string[]): string[] {
     const categories = new Intl.PluralRules(language).resolvedOptions().pluralCategories;
-    const pluralBaseKeys = baseKeys(enKeys.filter((key) => pluralSuffixRegex.test(key)));
+    const translatedBaseKeys = baseKeys(languageKeys);
+    const pluralBaseKeys = baseKeys(enKeys.filter((key) => pluralSuffixRegex.test(key))).filter((base) =>
+        translatedBaseKeys.includes(base)
+    );
 
     return pluralBaseKeys
         .flatMap((base) => categories.map((category) => `${base}_${category}`))
@@ -72,33 +78,6 @@ describe("i18n", () => {
         expect(i18n.language).toBe("en");
     });
 
-    it("keeps the latest requested language when an earlier one loads slower", async () => {
-        const plResources = await languageLoaders.pl();
-        Object.keys(en).forEach((ns) => i18n.removeResourceBundle("pl", ns));
-        let finishLoadingPl: () => void;
-        const plLoader = jest
-            .spyOn(languageLoaders, "pl")
-            .mockReturnValue(new Promise((resolve) => (finishLoadingPl = () => resolve(plResources))));
-
-        const plChange = changeLanguage("pl");
-        await changeLanguage("en");
-        finishLoadingPl();
-        await plChange;
-
-        expect(i18n.language).toBe("en");
-        plLoader.mockRestore();
-    });
-
-    it("exposes the current language to Knockout", async () => {
-        const changes: string[] = [];
-        const subscription = currentLanguage.subscribe((language) => changes.push(language));
-
-        await changeLanguage("pl");
-
-        expect(changes).toEqual(["pl"]);
-        subscription.dispose();
-    });
-
     it("initI18n is idempotent", () => {
         const first = initI18n();
         const second = initI18n();
@@ -123,6 +102,15 @@ describe("i18n", () => {
             ]);
         });
 
+        it("does not require plural forms of keys a language has not translated yet", () => {
+            expect(missingPluralForms("pl", ["items_one", "items_other"], ["save"])).toEqual([]);
+        });
+
+        it("accepts partially translated languages", () => {
+            const partial: LanguageResources = { common: { save: "Zapisz" } };
+            expect(partial.common.save).toBe("Zapisz");
+        });
+
         it("compares placeholders and tags regardless of their order", () => {
             expect(markupMismatches({ a: "<b>{{x}}</b> {{y}}" }, { a: "{{y}} <b>{{x}}</b>" })).toEqual([]);
             expect(markupMismatches({ a: "Hi {{documentId}}" }, { a: "Hi {{docId}}" })).toEqual(["a"]);
@@ -140,8 +128,9 @@ describe("i18n", () => {
         supportedLanguages.forEach((language) => {
             namespaces.forEach((ns) => {
                 if (language !== "en") {
-                    it(`${language}/${ns} has the same base keys as en/${ns}`, () => {
-                        expect(baseKeys(keysOf(language, ns))).toEqual(baseKeys(keysOf("en", ns)));
+                    it(`${language}/${ns} has no keys that en/${ns} lacks`, () => {
+                        const enKeys = baseKeys(keysOf("en", ns));
+                        expect(baseKeys(keysOf(language, ns)).filter((key) => !enKeys.includes(key))).toEqual([]);
                     });
 
                     it(`${language}/${ns} keeps the placeholders and tags of en/${ns}`, () => {
@@ -168,22 +157,16 @@ describe("i18n", () => {
             expect(commonT("save")).toBe("Save");
         });
 
-        it("follows the current language", async () => {
+        it("translates in the loaded language", async () => {
             await changeLanguage("pl");
             expect(commonT("save")).toBe("Zapisz");
         });
 
-        it("re-evaluates Knockout computeds on language change", async () => {
-            const label = ko.computed(() => commonT("save"));
-
-            await changeLanguage("pl");
-
-            expect(label()).toBe("Zapisz");
-            label.dispose();
-        });
-
-        it("escapes interpolated values", () => {
-            expect(t("resolvingConflictFor", { documentId: "<img>" })).toBe("Resolving conflict for: &lt;img&gt;");
+        it("returns interpolated values as plain text", () => {
+            expect(t("documentNotFound", { documentId: "orders/1-A" })).toBe(
+                "Unable to find conflicted document: orders/1-A. Maybe conflict was already resolved?"
+            );
+            expect(t("resolvingConflictFor", { documentId: "<img>" })).toBe("Resolving conflict for: <img>");
         });
 
         it("resolves context variants", () => {

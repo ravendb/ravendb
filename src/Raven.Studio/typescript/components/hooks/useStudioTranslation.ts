@@ -7,8 +7,7 @@ export function useStudioTranslation<Ns extends TranslationNamespace>(ns: Ns): S
     const { t } = useTranslation(ns);
 
     return useCallback(
-        ((key: string, options?: TranslateOptions) =>
-            t(key, { ...options, interpolation: { escapeValue: false } }) as string) as StudioTranslate<Ns>,
+        ((key: string, options?: TranslateOptions) => t(key, options) as string) as StudioTranslate<Ns>,
         [t]
     );
 }

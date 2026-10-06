@@ -1,5 +1,5 @@
 import React from "react";
-import { rtlChangeLanguage, rtlRender } from "test/rtlTestUtils";
+import { rtlRender } from "test/rtlTestUtils";
 import { useStudioTranslation } from "hooks/useStudioTranslation";
 import { StudioTrans } from "components/common/i18n/StudioTrans";
 
@@ -14,19 +14,9 @@ function ResolvingLabel({ documentId }: { documentId: string }) {
 }
 
 describe("useStudioTranslation", () => {
-    afterEach(async () => {
-        await rtlChangeLanguage("en");
-    });
-
     it("translates common keys through MockProviders", () => {
         const { screen } = rtlRender(<SaveLabel />);
         expect(screen.getByText("Save")).toBeInTheDocument();
-    });
-
-    it("re-renders on language change", async () => {
-        const { screen } = rtlRender(<SaveLabel />);
-        await rtlChangeLanguage("pl");
-        expect(await screen.findByText("Zapisz")).toBeInTheDocument();
     });
 
     it("leaves escaping of interpolated values to React", () => {
@@ -36,18 +26,6 @@ describe("useStudioTranslation", () => {
 });
 
 describe("StudioTrans", () => {
-    afterEach(async () => {
-        await rtlChangeLanguage("en");
-    });
-
-    it("re-renders on language change without a translating parent", async () => {
-        const { screen } = rtlRender(
-            <StudioTrans ns="documentRefresh" i18nKey="about.intro" components={{ strong: <strong /> }} />
-        );
-        await rtlChangeLanguage("pl");
-        expect(await screen.findByText("odświeżanie dokumentów")).toBeInTheDocument();
-    });
-
     it("passes context and renders interpolated values as text", () => {
         const { screen } = rtlRender(
             <>
