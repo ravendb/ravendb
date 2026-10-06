@@ -1751,6 +1751,68 @@ namespace SlowTests.Authentication
         }
 
         [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public async Task SsoServerCertRenewal_CanDeleteExpiredCert_AfterRenewedOneWasRegistered()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+            var ssoUserId = "delete.expired@example.com";
+
+            var expiredSsoServerCert = CreateRenewedSsoServerCert(ssoCerts, DateTimeOffset.UtcNow.AddDays(-100), DateTimeOffset.UtcNow.AddDays(-10));
+            var renewedSsoServerCert = CreateRenewedSsoServerCert(ssoCerts, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(89));
+            var ssoUserCert = Certificates.CreateSsoUserCertificateWithEmbeddedSsoServerCert(renewedSsoServerCert, (RSA)ssoCerts.SsoServerPrivateKey, ssoUserId);
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, expiredSsoServerCert, "sso-prod");
+                Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite });
+
+                using (var ssoStore = new DocumentStore
+                {
+                    Urls = new[] { Server.WebUrl },
+                    Database = dbName,
+                    Certificate = ssoUserCert,
+                    Conventions = new DocumentConventions { DisposeCertificate = false, DisableTopologyUpdates = true }
+                }.Initialize())
+                {
+                    using (var session = ssoStore.OpenSession())
+                    {
+                        session.Store(new { Name = "Renewed" }, "test/1");
+                        session.SaveChanges();
+                    }
+
+                    var registered = await WaitForValueAsync(async () =>
+                    {
+                        var certs = await adminStore.Maintenance.Server.SendAsync(new GetCertificatesMetadataOperation());
+                        return certs.Any(c => c.Thumbprint == renewedSsoServerCert.Thumbprint);
+                    }, true);
+                    Assert.True(registered);
+
+                    // The renewed certificate carries the same key, so the bound user is not orphaned by deleting the expired one.
+                    await adminStore.Maintenance.Server.SendAsync(new DeleteCertificateOperation(expiredSsoServerCert.Thumbprint));
+
+                    using (var session = ssoStore.OpenSession())
+                    {
+                        session.Store(new { Name = "Renewed" }, "test/2");
+                        session.SaveChanges();
+                    }
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
         public async Task SsoServerCertRenewal_EmbeddedOlderCert_IsNotRegistered()
         {
             var certificates = Certificates.SetupServerAuthentication();
