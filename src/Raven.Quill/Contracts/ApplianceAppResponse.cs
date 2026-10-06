@@ -1,3 +1,5 @@
+using Raven.Quill.Channels;
+
 namespace Raven.Quill.Contracts;
 
 public sealed record ApplianceAppResponse(
@@ -12,7 +14,7 @@ public sealed record ApplianceAppResponse(
     int ChannelsCount,
     int AdaptersCount,
     int AgentsCount,
-    string? ChannelsLabel,
+    IReadOnlyList<ChannelType> ChannelTypes,
     string? StatusSubtitle,
     DateTime CreatedAt,
     DateTime UpdatedAt);

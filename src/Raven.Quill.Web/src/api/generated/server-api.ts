@@ -1189,7 +1189,7 @@ export interface components {
             adaptersCount: number;
             /** Format: int32 */
             agentsCount: number;
-            channelsLabel: null | string;
+            channelTypes: components["schemas"]["ChannelType"][];
             statusSubtitle: null | string;
             /** Format: date-time */
             createdAt: string;

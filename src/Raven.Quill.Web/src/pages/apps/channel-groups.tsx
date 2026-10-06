@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { Heading, Text } from "@/components/typography";
 import { Timestamp } from "@/components/data/timestamp";
 import { appRoutes } from "@/lib/app-routes";
+import { CHANNEL_TYPE_LABELS } from "@/lib/channel-type-labels";
 import { cn } from "@/lib/utils";
 import { DiscordIcon, SlackIcon } from "@/pages/apps/channels/channel-brand-icons";
 import { DeleteChannelDialog } from "@/pages/apps/channels/delete-channel-dialog";
@@ -24,17 +25,16 @@ import { GenerateEmbedLinkDialog } from "@/pages/apps/channels/generate-embed-li
 
 type ChannelGroupConfig = {
     type: NonNullable<ChannelType>;
-    label: string;
     icon: ComponentType<SVGProps<SVGSVGElement>>;
 };
 
 // Order and icons mirror the "Add channel" menu so the page reads the same way channels are created.
 const CHANNEL_GROUPS: ChannelGroupConfig[] = [
-    { type: "IFrame", label: "Embedded chat", icon: CodeXml },
-    { type: "Telegram", label: "Telegram", icon: Send },
-    { type: "WhatsApp", label: "WhatsApp", icon: MessageCircle },
-    { type: "Slack", label: "Slack", icon: SlackIcon },
-    { type: "Discord", label: "Discord", icon: DiscordIcon },
+    { type: "IFrame", icon: CodeXml },
+    { type: "Telegram", icon: Send },
+    { type: "WhatsApp", icon: MessageCircle },
+    { type: "Slack", icon: SlackIcon },
+    { type: "Discord", icon: DiscordIcon },
 ];
 
 type ChannelTypeFilter = NonNullable<ChannelType> | "all";
@@ -77,12 +77,14 @@ export function ChannelGroups({ slug }: { slug: string }) {
     const knownTypes = new Set<NonNullable<ChannelType>>(CHANNEL_GROUPS.map((group) => group.type));
     const groups = [
         ...CHANNEL_GROUPS.map((group) => ({
-            label: group.label,
+            type: group.type,
+            label: CHANNEL_TYPE_LABELS[group.type],
             icon: group.icon,
             channels: filteredChannels.filter((channel) => channel.type === group.type),
         })),
         // Catch-all so an unknown or untyped channel is never silently dropped.
         {
+            type: null,
             label: "Other",
             icon: Cable,
             channels: filteredChannels.filter((channel) => channel.type == null || !knownTypes.has(channel.type)),
@@ -125,7 +127,7 @@ export function ChannelGroups({ slug }: { slug: string }) {
                                             <group.icon className="size-4 text-muted-foreground" aria-hidden="true" />
                                             <Heading variant="label">{group.label}</Heading>
                                             <CountBadge>{group.channels.length}</CountBadge>
-                                            {group.label === "Embedded chat" && (
+                                            {group.type === "IFrame" && (
                                                 <Button asChild variant="outline">
                                                     <Link to={appRoutes.app(slug, "chat-widget/default-customize")}>
                                                         <Palette aria-hidden="true" />
@@ -203,7 +205,10 @@ function ChannelsToolbar({
                 <FilterSelect
                     value={typeFilter}
                     onChange={onTypeFilterChange}
-                    options={CHANNEL_GROUPS.map((group) => ({ value: group.type, label: group.label }))}
+                    options={CHANNEL_GROUPS.map((group) => ({
+                        value: group.type,
+                        label: CHANNEL_TYPE_LABELS[group.type],
+                    }))}
                     allLabel="All channels"
                     ariaLabel="Filter by type"
                 />
