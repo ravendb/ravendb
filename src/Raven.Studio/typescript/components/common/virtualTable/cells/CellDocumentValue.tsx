@@ -38,7 +38,9 @@ export default function CellDocumentValue({
     if (hasHyperlinkForIds && documentLink) {
         return (
             <CellWithCopy value={value} resolvePreviewValue={resolvePreviewValue}>
-                <a href={documentLink}>{String(value)}</a>
+                <a href={documentLink} className="cell-link">
+                    {String(value)}
+                </a>
             </CellWithCopy>
         );
     }
@@ -47,7 +49,9 @@ export default function CellDocumentValue({
     if (url) {
         return (
             <CellWithCopy value={url} resolvePreviewValue={resolvePreviewValue}>
-                <a href={url}>{url}</a>
+                <a href={url} className="cell-link">
+                    {url}
+                </a>
             </CellWithCopy>
         );
     }

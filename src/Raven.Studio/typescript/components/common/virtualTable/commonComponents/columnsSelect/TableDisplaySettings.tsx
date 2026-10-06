@@ -404,9 +404,9 @@ function TableDisplaySettingsSheet({
             </ViewSheet.Body>
             <ViewSheet.Footer>
                 <div className="d-flex justify-content-between w-100">
-                    <Button variant="outline" title="Restart to default" onClick={handleReset}>
+                    <Button variant="outline" title="Reset to default" onClick={handleReset}>
                         <Icon icon="reset" />
-                        Restart to default
+                        Reset to default
                     </Button>
                     <Button title="Apply changes" onClick={handleApply} className="rounded-pill">
                         <Icon icon="save" />

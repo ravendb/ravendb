@@ -106,17 +106,12 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
         lazyRows.reload();
     };
 
-    const changePagination = (value: boolean) => {
-        selection.clear();
-        setIsPaginated(value);
-    };
-
     return (
         <div ref={bodyRef} className="vstack min-height-0">
             <DocumentsListToolbar
                 collectionName={collectionName}
                 isPaginated={isPaginated}
-                onIsPaginatedChange={changePagination}
+                onIsPaginatedChange={setIsPaginated}
                 isCustomLayout={columns.isCustomLayout}
                 onOpenColumnSettings={openColumnSettings}
                 getVisibleColumnFields={() => columns.getExportFields(table)}
@@ -127,7 +122,7 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
                 table={table}
                 lazyRows={lazyRows}
                 isPaginated={isPaginated}
-                onIsPaginatedChange={changePagination}
+                onIsPaginatedChange={setIsPaginated}
                 itemsName="documents"
                 emptyMessage={
                     collectionName === null ? "There are no documents in the database" : "Collection is empty"

@@ -294,7 +294,9 @@ function useCompareExchangeColumns({
 
                 return (
                     <CellWithCopy value={value}>
-                        <a href={appUrl.forEditCmpXchg(value, databaseName)}>{String(value)}</a>
+                        <a href={appUrl.forEditCmpXchg(value, databaseName)} className="cell-link">
+                            {String(value)}
+                        </a>
                     </CellWithCopy>
                 );
             },

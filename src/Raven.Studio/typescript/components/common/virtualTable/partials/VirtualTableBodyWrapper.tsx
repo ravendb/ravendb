@@ -58,6 +58,7 @@ export default function VirtualTableBodyWrapper<T>({
             />
 
             <div className="position-relative">
+                {overlay}
                 <div
                     ref={tableContainerRef}
                     className={classNames("table-container", { "rounded-0": isRoundingDisabled })}
@@ -72,7 +73,6 @@ export default function VirtualTableBodyWrapper<T>({
                         {children}
                     </Table>
                 </div>
-                {overlay}
                 {isScrolledFromTop && (
                     <Button
                         variant="secondary"

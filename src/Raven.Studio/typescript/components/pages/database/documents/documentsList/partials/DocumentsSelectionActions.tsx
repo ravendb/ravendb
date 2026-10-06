@@ -35,7 +35,6 @@ interface DocumentsSelectionActionsProps {
 }
 
 const COPY_LIMIT = 100;
-const ACTION_BUTTON_CLASS_NAME = "text-reset text-decoration-none";
 
 export default function DocumentsSelectionActions({
     collectionName,
@@ -56,7 +55,7 @@ export default function DocumentsSelectionActions({
     const [copyModalData, setCopyModalData] = useState<CopyDocumentsModalData>(null);
 
     const isAllDocuments = collectionName === null;
-    const { state, selectedCount, clear } = selection;
+    const { state, selectedCount, totalCount, canSelectAllPages, selectAll, clear } = selection;
 
     const latestStateRef = useRef(state);
     latestStateRef.current = state;
@@ -193,6 +192,14 @@ export default function DocumentsSelectionActions({
                     <span className="px-1">
                         <strong>{selectedCount.toLocaleString()}</strong> selected
                     </span>
+                    {canSelectAllPages && (
+                        <>
+                            <div className="vr" />
+                            <Button variant="text" onClick={selectAll}>
+                                Select all {totalCount.toLocaleString()}
+                            </Button>
+                        </>
+                    )}
                     <div className="vr" />
                     <ConditionalPopover
                         conditions={{
@@ -202,8 +209,7 @@ export default function DocumentsSelectionActions({
                     >
                         <Dropdown as={ButtonGroup}>
                             <ButtonWithSpinner
-                                variant="link"
-                                className={ACTION_BUTTON_CLASS_NAME}
+                                variant="text"
                                 icon="copy"
                                 onClick={asyncCopyDocuments.execute}
                                 isSpinning={asyncCopyDocuments.loading}
@@ -213,9 +219,8 @@ export default function DocumentsSelectionActions({
                             </ButtonWithSpinner>
                             <div className="vr my-1" />
                             <Dropdown.Toggle
-                                variant="link"
+                                variant="text"
                                 as={CustomDropdownToggle}
-                                className={ACTION_BUTTON_CLASS_NAME}
                                 disabled={isCopyDisabled}
                                 title="More copy options"
                             />
@@ -227,9 +232,8 @@ export default function DocumentsSelectionActions({
                     <div className="vr" />
                     <AccessPopover accessRequired="DatabaseReadWrite">
                         <ButtonWithSpinner
-                            variant="link"
-                            className={ACTION_BUTTON_CLASS_NAME}
-                            icon="trash"
+                            variant="text"
+                            icon={{ icon: "trash", color: "danger" }}
                             onClick={handleDelete}
                             isSpinning={asyncDeleteSelectedIds.loading || isExclusiveDeleteRunning}
                             disabled={!hasDatabaseWriteAccess || isExclusiveDeleteRunning}
@@ -238,7 +242,7 @@ export default function DocumentsSelectionActions({
                         </ButtonWithSpinner>
                     </AccessPopover>
                     <div className="vr" />
-                    <Button variant="link" className={ACTION_BUTTON_CLASS_NAME} onClick={clear}>
+                    <Button variant="text" onClick={clear}>
                         Clear selection
                     </Button>
                 </div>

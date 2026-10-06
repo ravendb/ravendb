@@ -79,7 +79,12 @@ function createColumns(
 
                 return (
                     <CellWithCopy value={id}>
-                        <a href={appUrl.forViewDocumentAtRevision(id, changeVector, databaseName)}>{id}</a>
+                        <a
+                            href={appUrl.forViewDocumentAtRevision(id, changeVector, databaseName)}
+                            className="cell-link"
+                        >
+                            {id}
+                        </a>
                     </CellWithCopy>
                 );
             },
@@ -92,7 +97,9 @@ function createColumns(
 
                 return (
                     <CellWithCopy value={collection}>
-                        <a href={appUrl.forDocuments(collection, databaseName)}>{collection}</a>
+                        <a href={appUrl.forDocuments(collection, databaseName)} className="cell-link">
+                            {collection}
+                        </a>
                     </CellWithCopy>
                 );
             },
