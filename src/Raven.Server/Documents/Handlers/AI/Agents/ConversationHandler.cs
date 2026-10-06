@@ -96,6 +96,19 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
         using var __ = context.OpenReadTransaction();
         var conversation = database.DocumentsStorage.Get(context, _conversationId);
+
+        // every parameter the agent declares must have a value before any work on the conversation starts,
+        // so that the model can never be the one to supply it
+        var suppliedParameters = conversation == null
+            ? _request.Parameters
+            : conversation.Data.TryGet(nameof(ConversationDocument.Parameters), out BlittableJsonReaderObject storedParameters) ? storedParameters : null;
+
+        foreach (var declared in _configuration.Parameters ?? [])
+        {
+            if (suppliedParameters == null || suppliedParameters.TryGetMember(declared.Name, out _) == false)
+                throw new MissingAiAgentParameterException($"Parameter '{declared.Name}' is missing.");
+        }
+
         if (conversation == null)
         {
             if (string.IsNullOrEmpty(_changeVector) == false)
@@ -154,14 +167,6 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
                 _document.ChangeVector = conversation.ChangeVector;
             }
-        }
-
-        // every parameter the agent declares must have a value, on creation and on every later request,
-        // so that the model can never be the one to supply it
-        foreach (var declared in _configuration.Parameters ?? [])
-        {
-            if (_document.Parameters == null || _document.Parameters.TryGetMember(declared.Name, out _) == false)
-                throw new MissingAiAgentParameterException($"Parameter '{declared.Name}' is missing.");
         }
 
         if (_debugOverride.HasValue)
