@@ -60,6 +60,8 @@ namespace FastTests
 
         private static readonly ConcurrentSet<string> GlobalPathsToDelete = new(StringComparer.OrdinalIgnoreCase);
 
+        private static readonly string NuGetPackagesPath;
+
         private readonly ConcurrentSet<string> _localPathsToDelete = new(StringComparer.OrdinalIgnoreCase);
 
         private static RavenServer _globalServer;
@@ -139,7 +141,7 @@ namespace FastTests
             RestorePointsBase.FileNameRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2})?(-[0-9]{7})?)", RegexOptions.Compiled);
 
             var packagesPath = new PathSetting(RavenTestHelper.NewDataPath("NuGetPackages", 0, forceCreateDir: true));
-            GlobalPathsToDelete.Add(packagesPath.FullPath);
+            NuGetPackagesPath = packagesPath.FullPath;
             MultiSourceNuGetFetcher.ForIndexes.Initialize(packagesPath, "https://api.nuget.org/v3/index.json", allowPreleasePackages: true);
             MultiSourceNuGetFetcher.ForLogging.Initialize(packagesPath, "https://api.nuget.org/v3/index.json", allowPreleasePackages: true);
 
@@ -422,6 +424,15 @@ namespace FastTests
                     var exceptionAggregator = new ExceptionAggregator("Failed to cleanup test databases");
 
                     RavenTestHelper.DeletePaths(GlobalPathsToDelete, exceptionAggregator);
+
+                    try
+                    {
+                        Directory.Delete(NuGetPackagesPath, recursive: true);
+                    }
+                    catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+                    {
+                        // assemblies loaded from NuGet packages stay locked on Windows until the process exits
+                    }
 
                     exceptionAggregator.ThrowIfNeeded();
                 }
