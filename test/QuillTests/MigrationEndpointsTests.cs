@@ -60,7 +60,7 @@ public class MigrationEndpointsTests(ITestOutputHelper output) : QuillTestBase(o
 
         // the schema the planner was handed is the one discovery stored
         var sent = JsonNode.Parse(planner.LastBody)!;
-        Assert.Equal(3, sent["Schema"]!["Tables"]!.AsArray().Count);
+        Assert.Equal(3, JsonNode.Parse(MigrationSamples.SentSchemaJson(planner.LastBody))!["Tables"]!.AsArray().Count);
         Assert.Equal(MigrationService.DefaultStartPrompt, (string?)sent["Prompt"]);
     }
 
@@ -81,7 +81,7 @@ public class MigrationEndpointsTests(ITestOutputHelper output) : QuillTestBase(o
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
 
         var sent = JsonNode.Parse(planner.LastBody)!;
-        Assert.Equal("orders", (string?)Assert.Single(sent["Schema"]!["Tables"]!.AsArray())!["SourceTableName"]);
+        Assert.Equal("orders", (string?)Assert.Single(JsonNode.Parse(MigrationSamples.SentSchemaJson(planner.LastBody))!["Tables"]!.AsArray())!["SourceTableName"]);
         Assert.Equal("just orders please", (string?)sent["Prompt"]);
     }
 
@@ -194,7 +194,7 @@ public class MigrationEndpointsTests(ITestOutputHelper output) : QuillTestBase(o
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Ask_sends_the_plan_the_user_removals_and_only_the_tables_selected_at_start()
+    public async Task Ask_sends_the_plan_and_the_user_removals_without_a_schema()
     {
         var planner = StubPlannerHandler.Replying(new DoneFrame { ConversationId = ConversationId });
         await using var host = await NewMigrationHostAsync(planner);
@@ -214,7 +214,8 @@ public class MigrationEndpointsTests(ITestOutputHelper output) : QuillTestBase(o
         await ReadFramesAsync(resp);
 
         var sent = JsonNode.Parse(planner.LastBody)!;
-        Assert.Equal(["orders"], sent["Schema"]!["Tables"]!.AsArray().Select(t => (string?)t!["SourceTableName"]));
+        Assert.Null(sent["Schema"]);
+        Assert.Null(sent["SchemaGzip"]);
         Assert.Equal(["Orders"], sent["Plan"]!["Entries"]!.AsArray().Select(e => (string?)e!["Collection"]));
         Assert.Equal(["Customers"], sent["RemovedByUser"]!.AsArray().Select(c => (string?)c));
 

@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -63,7 +64,7 @@ public sealed class MigrationService(
 
         await RelayAsync(
             StartPath,
-            new PlannerStartRequest { Slug = request.Slug, Schema = schema, Prompt = prompt },
+            new PlannerStartRequest { Slug = request.Slug, SchemaGzip = GzipSchema(schema!), Prompt = prompt },
             request.Slug,
             conversationId: null,
             new MigrationPlan { SelectedTables = request.SelectedTables },
@@ -336,6 +337,15 @@ public sealed class MigrationService(
         return store.Conventions.Serialization.DefaultConverter.ToBlittable(request, ctx).ToString();
     }
 
+    private byte[] GzipSchema(CdcSinkSourceSchema schema)
+    {
+        var json = Encoding.UTF8.GetBytes(SerializeRequest(schema));
+        using var buffer = new MemoryStream();
+        using (var gzip = new GZipStream(buffer, CompressionLevel.Optimal, leaveOpen: true))
+            gzip.Write(json);
+        return buffer.ToArray();
+    }
+
     /// <summary>
     /// Narrows the plan to the collections the operator kept. Naming one the plan does not hold is
     /// a mistake worth reporting rather than quietly ignoring - it usually means the caller is
@@ -403,7 +413,7 @@ public sealed class MigrationService(
     {
         public string? Slug { get; init; }
 
-        public CdcSinkSourceSchema? Schema { get; init; }
+        public byte[]? SchemaGzip { get; init; }
 
         public string? Prompt { get; init; }
     }
