@@ -37,12 +37,19 @@ internal static partial class QueryPlanBuilder
 
         switch (effective)
         {
-            case ExecutionStrategy.CompoundKeyLookup:
+            case ExecutionStrategy.CompoundKeyLookup when compiledPlan.Template.OptimizationFlags.HasFlag(PlanOptimizationFlags.CompoundExactCandidate):
             {
-                var innerMatch = ConstructCompoundExact(ref ctx);
+                var innerMatch = ConstructCompoundExact(ref ctx, walkerCtx);
                 if (innerMatch is null) goto default;
                 exec.ActualStrategy = ExecutionStrategy.CompoundKeyLookup;
-                return (innerMatch, innerMatch);
+                if (orderByFields is null)
+                    return (innerMatch, innerMatch);
+                // SortingMatch streams and learns with the plan only over a bitmap
+                IQueryMatch toSort = orderByFields.Length == 1 && innerMatch is not IBitmapQueryMatch ? new LazyOrMatch(ctx.PlanParams.IndexSearcher.Allocator, innerMatch, EmptyQueryMatch.Instance, token) : innerMatch;
+                var sorted = OrderBy(builderParameters, toSort, orderByFields);
+                if (sorted is SortingMatch sortingMatch)
+                    sortingMatch.StreamScanInflation = compiledPlan.GetOrCreateStreamScanInflation();
+                return (ApplyForcedSort(sorted, forcedSort), innerMatch);
             }
             // On the cases rather than in SelectExecutionStrategy: a forced $rvn_corax_strategy skips selection.
             case ExecutionStrategy.CompoundSortedScan when orderByFields != null && compiledPlan.SortElisionDiverged == false: // no order by -> bitmap is more efficient 
@@ -111,17 +118,9 @@ internal static partial class QueryPlanBuilder
 
             if (ctx.Plan.Template.OptimizationFlags.HasFlag(PlanOptimizationFlags.CompoundExactCandidate))
             {
-                if (TryCreateCompoundExactMatch(ref ctx, out ctx.RejectReason))
-                {
-                    // No trail entry on success: CompoundKeyLookup has no per-execution cost gate, so there is
-                    // no decision to record — the chosen strategy is already surfaced via StrategyCandidate.
-                    // A rejection IS recorded below: it explains why a structurally-available optimization
-                    // did not apply (encoding failed / boosted clause).
-                    ctx.Plan.Strategy = ExecutionStrategy.CompoundKeyLookup;
-                    return;
-                }
-
-                ctx.Plan.DecisionTrail.Record("CompoundKeyLookup", false, ctx.RejectReason ?? "rejected");
+                // the value-dependent checks run per execution, in ConstructCompoundExact
+                ctx.Plan.Strategy = ExecutionStrategy.CompoundKeyLookup;
+                return;
             }
 
             // No ORDER BY: nothing to decide about a sort strategy, so no trail entry — just stop here.
