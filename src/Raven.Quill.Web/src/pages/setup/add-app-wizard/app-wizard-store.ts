@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { MigrationFrame } from "@/api/custom-services/migration-service";
 import type { DiscoverResponse } from "@/api/generated/server-api";
+import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import {
     getAncestorTablePaths,
     type MapActiveTable,
@@ -76,6 +77,7 @@ export type SetupWizardState = {
      */
     plannerMessages: PlannerMessage[];
     plannerConversationId: string | null;
+    plannerSelectedTables: AppFormData["verifySchema"]["tables"] | null;
     /** Registered collections, keyed by name so a re-emit replaces rather than appends. */
     plannerCollections: Record<string, PlannerCollection>;
     plannerProposal: PlannerProposal | null;
@@ -89,6 +91,7 @@ export type SetupWizardState = {
     plannerAppliedKey: string | null;
     appendPlannerMessage: (message: PlannerMessage) => void;
     setPlannerConversationId: (conversationId: string) => void;
+    setPlannerSelectedTables: (tables: AppFormData["verifySchema"]["tables"]) => void;
     setPlannerProposal: (proposal: PlannerProposal) => void;
     upsertPlannerCollection: (collection: PlannerCollection) => void;
     removePlannerCollection: (collection: string) => void;
@@ -138,6 +141,7 @@ const initialState: Pick<
     | "isMapTablesRawContentValid"
     | "plannerMessages"
     | "plannerConversationId"
+    | "plannerSelectedTables"
     | "plannerCollections"
     | "plannerProposal"
     | "plannerDeselected"
@@ -162,6 +166,7 @@ const initialState: Pick<
     isMapTablesRawContentValid: true,
     plannerMessages: [],
     plannerConversationId: null,
+    plannerSelectedTables: null,
     plannerCollections: {},
     plannerProposal: null,
     plannerDeselected: {},
@@ -235,6 +240,7 @@ export const useSetupWizardStore = create<SetupWizardState>((set) => ({
 
     appendPlannerMessage: (message) => set((state) => ({ plannerMessages: [...state.plannerMessages, message] })),
     setPlannerConversationId: (conversationId) => set({ plannerConversationId: conversationId }),
+    setPlannerSelectedTables: (tables) => set({ plannerSelectedTables: tables }),
     setPlannerProposal: (proposal) => set({ plannerProposal: proposal }),
 
     // Keyed by name because add_collection is an upsert: a re-emit after a convention change
@@ -266,6 +272,7 @@ export const useSetupWizardStore = create<SetupWizardState>((set) => ({
         set({
             plannerMessages: [],
             plannerConversationId: null,
+            plannerSelectedTables: null,
             plannerCollections: {},
             plannerProposal: null,
             plannerDeselected: {},

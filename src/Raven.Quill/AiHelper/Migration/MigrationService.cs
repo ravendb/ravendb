@@ -63,7 +63,7 @@ public sealed class MigrationService(
 
         await RelayAsync(
             StartPath,
-            new PlannerRequest { Slug = request.Slug, Schema = schema, Prompt = prompt },
+            new PlannerStartRequest { Slug = request.Slug, Schema = schema, Prompt = prompt },
             request.Slug,
             conversationId: null,
             new MigrationPlan { SelectedTables = request.SelectedTables },
@@ -93,21 +93,16 @@ public sealed class MigrationService(
         if (plan is null)
             return new Refusal("no planning session found for that conversation");
 
-        var (_, schema, selectionRefusal) = await LoadWizardAsync(request.Slug, plan.SelectedTables, token);
-        if (selectionRefusal is not null)
-            return selectionRefusal;
-
         var consent = await RequireConsentAsync(token);
         if (consent is not null)
             return consent;
 
         await RelayAsync(
             AskPath,
-            new PlannerRequest
+            new PlannerAskRequest
             {
                 Slug = request.Slug,
                 ConversationId = request.ConversationId,
-                Schema = schema,
                 Prompt = request.Prompt,
                 Plan = new PlannerPlan { Conventions = plan.Conventions, Entries = plan.CurrentEntries() },
                 RemovedByUser = plan.PendingUserRemovals.ToList()
@@ -208,7 +203,7 @@ public sealed class MigrationService(
 
     private async Task RelayAsync(
         string path,
-        PlannerRequest request,
+        object request,
         string slug,
         string? conversationId,
         MigrationPlan plan,
@@ -331,10 +326,11 @@ public sealed class MigrationService(
         HttpStatusCode.TooManyRequests => "The monthly AI token quota is used up.",
         HttpStatusCode.NotFound => "No planning session found for that conversation.",
         HttpStatusCode.BadRequest => "The AI service rejected the planning request.",
+        HttpStatusCode.RequestEntityTooLarge => "The selected schema is too large for the AI service. Select fewer tables.",
         _ => $"The AI service failed (HTTP {(int)statusCode})."
     };
 
-    private string SerializeRequest(PlannerRequest request)
+    private string SerializeRequest(object request)
     {
         using var ctx = JsonOperationContext.ShortTermSingleUse();
         return store.Conventions.Serialization.DefaultConverter.ToBlittable(request, ctx).ToString();
@@ -403,13 +399,20 @@ public sealed class MigrationService(
         };
     }
 
-    private sealed class PlannerRequest
+    private sealed class PlannerStartRequest
+    {
+        public string? Slug { get; init; }
+
+        public CdcSinkSourceSchema? Schema { get; init; }
+
+        public string? Prompt { get; init; }
+    }
+
+    private sealed class PlannerAskRequest
     {
         public string? Slug { get; init; }
 
         public string? ConversationId { get; init; }
-
-        public CdcSinkSourceSchema? Schema { get; init; }
 
         public string? Prompt { get; init; }
 
