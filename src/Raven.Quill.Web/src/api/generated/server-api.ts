@@ -413,7 +413,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Per-channel connection health for the app's Slack channels: bot token validity (cached a few minutes) plus the live Socket Mode connection state and the inbound and send activity seen since the last restart. */
+        /** @description Per-channel connection health for the app's Slack channels: bot token validity plus the live Socket Mode connection state and the inbound and send activity seen since the channel's socket last started. */
         get: operations["slack.health"];
         put?: never;
         post?: never;
@@ -430,7 +430,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Per-channel connection health for the app's Discord channels: bot token validity (cached a few minutes) plus the live gateway connection state and the inbound and send activity seen since the last restart. */
+        /** @description Per-channel connection health for the app's Discord channels: bot token validity plus the live gateway connection state and the inbound and send activity seen since the channel's gateway last started. */
         get: operations["discord.health"];
         put?: never;
         post?: never;
