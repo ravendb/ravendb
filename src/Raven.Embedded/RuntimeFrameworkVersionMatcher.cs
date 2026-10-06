@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 
 namespace Raven.Embedded
 {
@@ -87,6 +89,7 @@ namespace Raven.Embedded
             }
 
             var standardErrorTask = process.StandardError.ReadToEndAsync();
+            _ = standardErrorTask.IgnoreUnobservedExceptions();
 
             var insideRuntimes = false;
             var runtimeLines = new List<string>();
@@ -116,25 +119,39 @@ namespace Raven.Embedded
                 runtimes.Add(new RuntimeFrameworkVersion(values[1]));
             }
 
-            var standardError = await standardErrorTask.ConfigureAwait(false);
-            if (runtimes.Count == 0)
+            if (runtimes.Count != 0)
+                return runtimes;
+
+            // Allow exit notification and trailing stderr up to five seconds after stdout closes.
+            var diagnosticsTimeout = Task.Delay(TimeSpan.FromSeconds(5));
+            var exited = await Task.Run(() => process.WaitForExit(milliseconds: 5000)).ConfigureAwait(false);
+            int? exitCode = exited ? process.ExitCode : null;
+            if (exitCode == 0)
+                return runtimes;
+
+            await Task.WhenAny(standardErrorTask, diagnosticsTimeout).ConfigureAwait(false);
+            var standardError = "<reading standard error did not complete within 5 seconds>";
+            if (standardErrorTask.IsCompleted)
             {
-                await Task.Run(process.WaitForExit).ConfigureAwait(false);
-                if (process.ExitCode != 0)
+                try
                 {
-                    var message = new StringBuilder();
-                    message.AppendLine("Unable to discover installed .NET runtimes: dotnet --info failed.");
-                    message.AppendLine($"Command: \"{processStartInfo.FileName}\" {processStartInfo.Arguments}");
-                    message.AppendLine($"Exit code: {process.ExitCode} (0x{process.ExitCode:X8})");
-                    message.AppendLine("Standard output:");
-                    message.AppendLine(string.IsNullOrEmpty(standardOutput) ? "<empty>" : standardOutput);
-                    message.AppendLine("Standard error:");
-                    message.AppendLine(string.IsNullOrEmpty(standardError) ? "<empty>" : standardError);
-                    throw new InvalidOperationException(message.ToString());
+                    standardError = await standardErrorTask.ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    standardError = $"<could not read standard error: {e.Message}>";
                 }
             }
 
-            return runtimes;
+            var message = new StringBuilder();
+            message.AppendLine($"Unable to discover installed .NET runtimes: dotnet --info {(exited ? "failed." : "did not exit within 5 seconds after standard output closed.")}");
+            message.AppendLine($"Command: \"{processStartInfo.FileName}\" {processStartInfo.Arguments}");
+            message.AppendLine(exitCode.HasValue ? $"Exit code: {exitCode.Value.ToString(CultureInfo.InvariantCulture)} (0x{exitCode.Value:X8})" : "Exit code: <not available: process exit was not observed>");
+            message.AppendLine("Standard output:");
+            message.AppendLine(string.IsNullOrEmpty(standardOutput) ? "<empty>" : standardOutput);
+            message.AppendLine("Standard error:");
+            message.AppendLine(string.IsNullOrEmpty(standardError) ? "<empty>" : standardError);
+            throw new InvalidOperationException(message.ToString());
         }
 
         internal sealed class RuntimeFrameworkVersion
