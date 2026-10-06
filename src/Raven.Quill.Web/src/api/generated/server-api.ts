@@ -1412,7 +1412,7 @@ export interface components {
             discord?: null | components["schemas"]["DiscordSummaryResponse"];
         };
         /** @enum {unknown} */
-        ChannelType: "IFrame" | "Telegram" | "WhatsApp" | "Slack" | "Discord" | null;
+        ChannelType: "IFrame" | "Telegram" | "WhatsApp" | "Slack" | "Discord";
         ChatRequest: {
             agentId: string;
             prompt: string;
