@@ -708,6 +708,10 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 throw new InvalidOperationException("Not supported expression type.");
             }
+            catch (IndexCompilationException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 throw new IndexCompilationException(ex.Message, ex)
