@@ -24,8 +24,6 @@ using Raven.Server.Documents.ETL.Test;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.Documents.Handlers.Processors.Attachments.Strategies;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
@@ -359,7 +357,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
             if (ConversationHandler.TryGetValueType(property.Value, out _, out var unsupportedType) == false)
             {
-                AssertNoQueryUsesContextProperty(property.Name, unsupportedType);
+                AssertNoQueryBindsContextProperty(property.Name, unsupportedType);
                 continue;
             }
 
@@ -369,20 +367,23 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         return context.ReadObject(parameters, "genai/query-parameters");
     }
 
-    private void AssertNoQueryUsesContextProperty(string name, string unsupportedType)
-    {
-        foreach (var query in Configuration.Queries ?? [])
-        {
-            var parsed = QueryMetadata.ParseQuery(query.Query, QueryType.Select);
-            if (parsed.Parameters.Select(x => x.Value).Contains(name) == false)
-                continue;
+    private List<(string Name, HashSet<string> Parameters)> _queryParameterNames;
 
-            throw new InvalidOperationException(
-                $"Query '{query.Name}' of Gen AI task '{Configuration.Name}' uses the parameter ${name}, " +
-                $"but the context property '{name}' holds {unsupportedType}, and a query parameter only takes " +
-                $"a scalar value. Put a scalar under that name in the context, or stop referencing ${name} " +
-                $"in the query - the whole context still reaches the model through the prompt either way.");
-        }
+    private void AssertNoQueryBindsContextProperty(string name, string unsupportedType)
+    {
+        // the queries belong to the task, so they are parsed once rather than per document
+        _queryParameterNames ??= (Configuration.Queries ?? [])
+            .Select(q => (q.Name, Parameters: ConversationHandler.GetQueryParameterNames(q.Query)))
+            .ToList();
+
+        if (ConversationHandler.FindQueryBinding(_queryParameterNames, name) is not { } query)
+            return;
+
+        throw new InvalidOperationException(
+            $"Query '{query}' of Gen AI task '{Configuration.Name}' uses the parameter ${name}, " +
+            $"but the context property '{name}' holds {unsupportedType}, and a query parameter only takes " +
+            $"a scalar value. Put a scalar under that name in the context, or stop referencing ${name} " +
+            $"in the query - the whole context still reaches the model through the prompt either way.");
     }
 
     private List<Exception> ProcessModelResults(List<GenAiResultItem> items, JsonOperationContext context, List<Task<GenAiHandlerResult>> tasks, GenAiStatsScope statsScope)
