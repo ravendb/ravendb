@@ -650,13 +650,14 @@ namespace Raven.Server.Documents.Indexes.Static
                 fieldNamesValidator.Validate(map, expression);
                 methodsDetector.Visit(expression);
                 
+                stackDepthRetriever.VisitInvocationChains(expression);
                 stackDepthRetriever.Visit(expression);
                 stackDepthRetriever.VisitMethodQuery(map);
 
-                if (stackDepthRetriever.LinqChainDepth > MaxChainDepth)
+                if (stackDepthRetriever.MaxInvocationChainDepth > MaxChainDepth)
                 {
                     throw new IndexCompilationException(
-                        $"Index map contains a deeply chained sequence of LINQ method calls ({stackDepthRetriever.LinqChainDepth} levels deep). " +
+                        $"Index map contains a deeply chained sequence of LINQ method calls ({stackDepthRetriever.MaxInvocationChainDepth} levels deep). " +
                         $"This will cause a StackOverflowException at indexing time because each chained call (Concat, Where, Select, etc.) " +
                         $"creates a nested iterator that recurses on MoveNext(). " +
                         $"Replace chained calls with a flat array + SelectMany, e.g.: " +
