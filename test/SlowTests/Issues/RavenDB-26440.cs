@@ -36,6 +36,25 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.Indexes)]
+        public void Reduce_With_Method_Call_Chain_Above_The_Limit_Should_Fail_Compilation()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var chainDepth = IndexCompiler.MaxAllowedInvocationChainDepth + 1;
+                var concatChain = string.Concat(Enumerable.Repeat(".Concat(g.SelectMany(x => x.Tags))", chainDepth - 2)); // plus the opening SelectMany() and the closing ToArray()
+                var indexDefinition = new IndexDefinition
+                {
+                    Name = "DeepChainMapReduceIndex",
+                    Maps = { "from user in docs.Users select new { user.Name, user.Tags }" },
+                    Reduce = $"from result in results group result by result.Name into g select new {{ Name = g.Key, Tags = g.SelectMany(x => x.Tags){concatChain}.ToArray() }}"
+                };
+
+                var ex = Assert.Throws<IndexCompilationException>(() => store.Maintenance.Send(new PutIndexesOperation(indexDefinition)));
+                Assert.Contains($"The reduce function contains a chain of {chainDepth} method calls", ex.Message);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Map_With_Method_Call_Chain_At_The_Limit_Should_Compile_And_Index()
         {
             using (var store = GetDocumentStore())
