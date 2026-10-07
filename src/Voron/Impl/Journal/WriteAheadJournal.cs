@@ -510,10 +510,7 @@ namespace Voron.Impl.Journal
                         journalPager.Dispose(); // need to close it before we open the journal writer
                     }
 
-                    bool isHardLinked = _env.Options.IsJournalHardLinked(journalNumber);
-
-
-                    if (_env.Options.RootJournal is null || isHardLinked == false)
+                    if (IsLinkedToRootCurrentFile(journalNumber) == false)
                     {
                         // We could have switched from non-shared to shared journals mode, or vice versa - two kinds of leftover journal can show up here:
 
@@ -526,6 +523,7 @@ namespace Voron.Impl.Journal
                         // write to them, but we track them in journalFiles so the normal flush/sync path reclaims them instead of
                         // leaking them as orphans.
 
+                        bool isHardLinked = _env.Options.IsJournalHardLinked(journalNumber);
                         var jrnlWriter = isHardLinked
                             ? _env.Options.CreateReadOnlyJournalWriter(journalNumber, journalPagerState.TotalAllocatedSize)
                             : _env.Options.CreateJournalWriter(journalNumber, journalPagerState.TotalAllocatedSize);
@@ -876,6 +874,16 @@ namespace Voron.Impl.Journal
             }
 
             return journals;
+        }
+
+        // the root's current file is adopted by EnsureRegistered - a done-writing entry for it would delete the link under the root's writer
+        private bool IsLinkedToRootCurrentFile(long journalNumber)
+        {
+            string rootCurrentPath = _env.Options.RootJournal?.CurrentFile?.JournalWriter?.FileName.FullPath;
+            if (rootCurrentPath == null)
+                return false;
+
+            return _env.Options.IsLinked(journalNumber, rootCurrentPath, out _);
         }
 
         // Set when recovery stopped early while later journals hold acknowledged transactions of ours
