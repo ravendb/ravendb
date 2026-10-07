@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -56,10 +57,12 @@ public partial class ConversationDocument([NotNull] string agent, BlittableJsonR
             if (p.SendToModel == false)
                 continue;
 
-            // a declared parameter with no value is rejected in ConversationHandler.InitializeDocumentAsync,
-            // so this is a safety net rather than a state we expect to reach
             if (Parameters == null || Parameters.TryGet(p.Name, out object value) == false)
+            {
+                // System.Diagnostics.Debug spelled out: the type is shadowed by this class's own Debug field
+                System.Diagnostics.Debug.Assert(false, $"Parameter '{p.Name}' has no value, ConversationHandler.InitializeDocumentAsync should have rejected the conversation");
                 continue;
+            }
 
             var param = ConversationHandler.GetAiConversationParameter(p.Name, value);
             if (param.SendToModel)

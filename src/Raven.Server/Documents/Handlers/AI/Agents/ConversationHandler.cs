@@ -97,17 +97,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         using var __ = context.OpenReadTransaction();
         var conversation = database.DocumentsStorage.Get(context, _conversationId);
 
-        // every parameter the agent declares must have a value before any work on the conversation starts,
-        // so that the model can never be the one to supply it
-        var suppliedParameters = conversation == null
-            ? _request.Parameters
-            : conversation.Data.TryGet(nameof(ConversationDocument.Parameters), out BlittableJsonReaderObject storedParameters) ? storedParameters : null;
-
-        foreach (var declared in _configuration.Parameters ?? [])
-        {
-            if (suppliedParameters == null || suppliedParameters.TryGetMember(declared.Name, out _) == false)
-                throw new MissingAiAgentParameterException($"Parameter '{declared.Name}' is missing.");
-        }
+        ValidateDeclaredParametersAreSupplied(conversation);
 
         if (conversation == null)
         {
@@ -199,6 +189,20 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             }
         }
         _persistedAttachmentsNames = ConversationHandlerAttachments.GetConversationPersistedAttachmentsNames(database, context, _document.Id);
+    }
+
+    // runs before any work on the conversation, so that a missing value can never be filled in by the model
+    private void ValidateDeclaredParametersAreSupplied(Document conversation)
+    {
+        var suppliedParameters = conversation == null
+            ? _request.Parameters
+            : conversation.Data.TryGet(nameof(ConversationDocument.Parameters), out BlittableJsonReaderObject storedParameters) ? storedParameters : null;
+
+        foreach (var declared in _configuration.Parameters ?? [])
+        {
+            if (suppliedParameters == null || suppliedParameters.TryGetMember(declared.Name, out _) == false)
+                throw new MissingAiAgentParameterException($"Parameter '{declared.Name}' is missing.");
+        }
     }
 
     private void ValidateParameterValues(BlittableJsonReaderObject requestParameters)
