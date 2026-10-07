@@ -51,13 +51,16 @@ export function initI18n(options?: InitI18nOptions): I18nInstance {
     return i18n;
 }
 
+const loadedLanguages = new Set<StudioLanguage>();
+
 export async function loadLanguage(language: StudioLanguage): Promise<void> {
-    if (language === "en" || namespaces.some((ns) => i18n.hasResourceBundle(language, ns))) {
+    if (language === "en" || loadedLanguages.has(language)) {
         return;
     }
 
     const resources = await languageLoaders[language]();
     Object.entries(resources).forEach(([ns, bundle]) => i18n.addResourceBundle(language, ns, bundle));
+    loadedLanguages.add(language);
 }
 
 export async function changeLanguage(language: StudioLanguage): Promise<void> {
