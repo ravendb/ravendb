@@ -1,8 +1,10 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
+using Raven.Server.Documents.Indexes.Static;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,29 +18,71 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.Indexes)]
-        public void Index_With_Deeply_Chained_Linq_Should_Fail_Compilation()
+        public void Map_With_Method_Call_Chain_Above_The_Limit_Should_Fail_Compilation()
         {
             using (var store = GetDocumentStore())
             {
-                var concatChain = string.Join("",
-                    Enumerable.Range(0, 150).Select(_ => ".Concat(doc.Tags ?? Enumerable.Empty<string>())"));
-
-                var map = $@"from doc in docs.Users
-select new
-{{
-    Values = (doc.Tags ?? Enumerable.Empty<string>()){concatChain}.ToArray()
-}}";
-
+                var chainDepth = IndexCompiler.MaxAllowedInvocationChainDepth + 1;
                 var indexDefinition = new IndexDefinition
                 {
-                    Name = "DeepConcatIndex",
-                    Maps = { map }
+                    Name = "DeepChainIndex",
+                    Maps = { CreateMapWithConcatChain(concatCalls: chainDepth - 1) }
                 };
 
-                var ex = Assert.Throws<IndexCompilationException>(() =>
-                    store.Maintenance.Send(new Raven.Client.Documents.Operations.Indexes.PutIndexesOperation(indexDefinition)));
-                Assert.Contains("deeply chained", ex.Message, StringComparison.OrdinalIgnoreCase);
+                var ex = Assert.Throws<IndexCompilationException>(() => store.Maintenance.Send(new PutIndexesOperation(indexDefinition)));
+                Assert.Contains($"The map function contains a chain of {chainDepth} method calls", ex.Message);
+                Assert.Contains($"maximum allowed chain depth of {IndexCompiler.MaxAllowedInvocationChainDepth}", ex.Message);
             }
+        }
+
+        [RavenFact(RavenTestCategory.Indexes)]
+        public void Map_With_Method_Call_Chain_At_The_Limit_Should_Compile_And_Index()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var indexDefinition = new IndexDefinition
+                {
+                    Name = "DeepChainIndex",
+                    Maps = { CreateMapWithConcatChain(concatCalls: IndexCompiler.MaxAllowedInvocationChainDepth - 1) }
+                };
+
+                store.Maintenance.Send(new PutIndexesOperation(indexDefinition));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "John", Tags = new List<string> { "a", "b" } });
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { indexDefinition.Name }));
+                Assert.Empty(indexErrors[0].Errors);
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Advanced.DocumentQuery<User>(indexDefinition.Name)
+                        .WhereEquals("Values", "a")
+                        .ToList();
+
+                    Assert.Equal(1, users.Count);
+                    Assert.Equal("John", users[0].Name);
+                }
+            }
+        }
+
+        private static string CreateMapWithConcatChain(int concatCalls)
+        {
+            // the chain depth seen by the index compiler is concatCalls + 1, the closing ToArray() is a call in the same chain
+            var concatChain = string.Concat(Enumerable.Repeat(".Concat(user.Tags ?? Enumerable.Empty<string>())", concatCalls));
+            return $"from user in docs.Users select new {{ Values = (user.Tags ?? Enumerable.Empty<string>()){concatChain}.ToArray() }}";
+        }
+
+        private class User
+        {
+            public string Name { get; set; }
+
+            public List<string> Tags { get; set; }
         }
     }
 }

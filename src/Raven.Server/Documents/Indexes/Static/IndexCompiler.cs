@@ -27,7 +27,6 @@ using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.Counters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries;
 using Sparrow.Logging;
-using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -55,7 +54,18 @@ namespace Raven.Server.Documents.Indexes.Static
         [ThreadStatic]
         private static bool DisableMatchingAdditionalAssembliesByNameValue;
 
-        private static readonly int MaxChainDepth = PlatformDetails.Is32Bits ? 64 : 16;
+        /// <summary>
+        /// The longest chain of method calls allowed in a single map or reduce expression, e.g. 'x.Concat(a).Concat(b).Concat(c)...' (RavenDB-26440).
+        /// The receiver of such a chain is 'dynamic' in the generated index code, so every call is a dynamic call site and the JIT keeps every
+        /// intermediate value of the chain in the stack frame of the generated method. The frame grows quadratically with the chain length
+        /// (measured on x64: about 17 bytes * depth^2, i.e. 174 KB for 100 calls and 661 KB for 200) and it is allocated when the method is entered,
+        /// before any code runs, so a runtime guard such as RuntimeHelpers.EnsureSufficientExecutionStack() cannot catch it.
+        /// Measured crash points for a chain of 'Concat' calls with a '??' argument each: 300 calls on a 1.5 MB stack (the 64-bit default),
+        /// 240 on a 1 MB stack and 240 on the 512 KB stack that indexing threads get on 32-bit (see PoolOfThreads).
+        /// A limit of 128 keeps a single chain at roughly a quarter of the stack on the tightest configuration and three such chains in one
+        /// expression still fit, while no reasonable index definition comes anywhere near it.
+        /// </summary>
+        internal const int MaxAllowedInvocationChainDepth = 128;
 
         static IndexCompiler()
         {
@@ -649,19 +659,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 // must run before NormalizeWhitespace() and the rewriters below, they recurse over the tree and cannot handle an extremely deep chain
                 stackDepthRetriever.VisitInvocationChains(parsedExpression);
-                if (stackDepthRetriever.MaxInvocationChainDepth > MaxChainDepth)
-                {
-                    throw new IndexCompilationException(
-                        $"Index map contains a deeply chained sequence of LINQ method calls ({stackDepthRetriever.MaxInvocationChainDepth} levels deep). " +
-                        $"This will cause a StackOverflowException at indexing time because each chained call (Concat, Where, Select, etc.) " +
-                        $"creates a nested iterator that recurses on MoveNext(). " +
-                        $"Replace chained calls with a flat array + SelectMany, e.g.: " +
-                        $"new[] {{ col1, col2, col3 }}.Where(x => x != null).SelectMany(x => x).ToArray()")
-                    {
-                        IndexDefinitionProperty = nameof(IndexDefinition.Maps),
-                        ProblematicText = map
-                    };
-                }
+                ThrowIfInvocationChainIsTooDeep(stackDepthRetriever, "map", map, nameof(IndexDefinition.Maps));
 
                 var expression = parsedExpression.NormalizeWhitespace();
 
@@ -724,6 +722,24 @@ namespace Raven.Server.Documents.Indexes.Static
                     ProblematicText = map
                 };
             }
+        }
+
+        private static void ThrowIfInvocationChainIsTooDeep(StackDepthRetriever stackDepthRetriever, string functionName, string code, string indexDefinitionProperty)
+        {
+            var depth = stackDepthRetriever.MaxInvocationChainDepth;
+            if (depth <= MaxAllowedInvocationChainDepth)
+                return;
+
+            throw new IndexCompilationException(
+                $"The {functionName} function contains a chain of {depth} method calls in a single expression, which exceeds the maximum allowed chain depth of {MaxAllowedInvocationChainDepth}. " +
+                "The generated index code invokes these calls dynamically and the stack frame of the compiled method grows quadratically with the length of such a chain, " +
+                "so a chain this long would overflow the stack of the indexing thread and crash the server with a StackOverflowException. " +
+                "Split the chain into shorter parts, for example collect the values into an array and flatten it: " +
+                "new[] { col1, col2, col3 }.Where(x => x != null).SelectMany(x => x).ToArray()")
+            {
+                IndexDefinitionProperty = indexDefinitionProperty,
+                ProblematicText = code
+            };
         }
 
         private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, StackDepthRetriever stackDepthRetriever, out CompiledIndexField[] groupByFields)
