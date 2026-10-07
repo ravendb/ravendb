@@ -42,7 +42,10 @@ export function useLazyRows<T, TResult extends pagedResultWithToken<T> = pagedRe
 }: UseLazyRowsProps<T, TResult>): LazyRows<T> {
     const options = { fetchData, fetchMode, minFetchCount, onResult, onReset };
     const [loader] = useState(() => new LazyRowsLoader<T, TResult>(options));
-    loader.setOptions(options);
+
+    useLayoutEffect(() => {
+        loader.setOptions(options);
+    });
 
     const snapshot = useSyncExternalStore(loader.subscribe, loader.getSnapshot);
 

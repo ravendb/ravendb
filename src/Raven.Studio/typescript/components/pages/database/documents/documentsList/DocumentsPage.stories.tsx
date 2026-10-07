@@ -77,6 +77,22 @@ export const CollectionStory: StoryObj<CollectionStoryArgs> = {
     },
 };
 
+export const CollectionsLoadFailedStory: StoryObj = {
+    name: "Collections load failed",
+    render: () => {
+        const { name } = mockStore.databases.withActiveDatabase();
+        mockStore.accessManager.with_databaseAccess({ [name]: "DatabaseAdmin" });
+        mockStore.collectionsTracker.with_CollectionsLoadFailed(name);
+        mockServices.databasesService.withDocumentsPreview();
+
+        return (
+            <div style={{ height: "600px" }}>
+                <DocumentsPage queryParams={{}} />
+            </div>
+        );
+    },
+};
+
 // the preview trims long values, hovering such a cell fetches the whole document for the preview popover
 export const TrimmedValuesStory: StoryObj = {
     name: "Trimmed values",

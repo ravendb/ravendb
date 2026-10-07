@@ -231,6 +231,30 @@ describe("LazyRowsLoader", () => {
             expect(fetches[2]).toMatchObject({ skip: 12, take: 8 });
         });
 
+        it("drops the rows far from the range once the cache is full and fetches them again when needed", async () => {
+            const { loader, fetches } = createLoader("skipTake", 10);
+            const totalResultCount = 100_000;
+
+            loader.reset(true);
+            loader.setRange({ start: 0, end: 6000 });
+            await resolveFetch(fetches[0], { totalResultCount });
+
+            loader.setRange({ start: 50_000, end: 56_000 });
+            await resolveFetch(fetches[1], { totalResultCount });
+
+            expect(loader.getItem(0)).toBe("Item 0");
+
+            loader.setRange({ start: 50_000, end: 50_010 });
+
+            expect(loader.getItem(0)).toBeUndefined();
+            expect(loader.getItem(50_000)).toBe("Item 50000");
+            expect(fetches).toHaveLength(2);
+
+            loader.setRange({ start: 0, end: 10 });
+
+            expect(fetches[2]).toMatchObject({ skip: 0, take: 10 });
+        });
+
         it("drops an in flight result after cancel", async () => {
             const { loader, fetches } = createLoader();
 
@@ -307,6 +331,23 @@ describe("LazyRowsLoader", () => {
 
             expect(fetches[1]).toMatchObject({ skip: 10, continuationToken: "token-1" });
             expect(loader.getRows()).toHaveLength(0);
+        });
+
+        it("keeps the rows far from the range since they cannot be fetched by offset", async () => {
+            const { loader, fetches } = createLoader("continuationToken", 6000);
+            const totalResultCount = 100_000;
+
+            loader.reset(true);
+            loader.setRange({ start: 0, end: 10 });
+            await resolveFetch(fetches[0], { totalResultCount, continuationToken: "token-1" });
+
+            loader.setRange({ start: 11_990, end: 12_000 });
+            await resolveFetch(fetches[1], { totalResultCount, continuationToken: "token-2" });
+
+            loader.setRange({ start: 11_000, end: 11_010 });
+
+            expect(loader.getRows()[0]).toEqual({ index: 11_000, item: "Item 11000" });
+            expect(loader.getItem(0)).toBe("Item 0");
         });
 
         it("starts from the first row on a soft reset", async () => {

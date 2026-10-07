@@ -12,6 +12,11 @@ global.ko = knockout;
 global.$ = jquery;
 global.jQuery = jquery;
 
+const toMachineLocaleString = Number.prototype.toLocaleString;
+Number.prototype.toLocaleString = function (locales = "en-US", options) {
+    return toMachineLocaleString.call(this, locales, options);
+};
+
 require("bootstrap/dist/js/bootstrap");
 
 require("../typescript/test/mocks");

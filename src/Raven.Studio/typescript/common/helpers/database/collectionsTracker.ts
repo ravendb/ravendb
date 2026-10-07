@@ -66,12 +66,25 @@ class collectionsTracker {
         return this.loadStatsTask;
     }
 
+    reloadStats() {
+        this.loadStats(this.db);
+    }
+
     private loadStats(db: database) {
-        this.loadStatsTask = new getCollectionsStatsCommand(db)
-            .execute()
+        storeCompat.globalDispatch(collectionsTrackerSlice.collectionsTrackerActions.collectionsLoadStarted());
+
+        const task = new getCollectionsStatsCommand(db).execute();
+        this.loadStatsTask = task;
+
+        task
             .done(stats => {
-                if (db === this.db) {
+                if (task === this.loadStatsTask) {
                     this.collectionsLoaded(stats, db);
+                }
+            })
+            .fail(() => {
+                if (task === this.loadStatsTask) {
+                    storeCompat.globalDispatch(collectionsTrackerSlice.collectionsTrackerActions.collectionsLoadFailed(db.name));
                 }
             });
     }

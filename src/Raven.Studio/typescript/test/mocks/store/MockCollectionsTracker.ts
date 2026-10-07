@@ -74,4 +74,8 @@ export class MockCollectionsTracker {
             })
         );
     }
+
+    with_CollectionsLoadFailed(databaseName = DatabasesStubs.nonShardedSingleNodeDatabase().name) {
+        globalDispatch(collectionsTrackerActions.collectionsLoadFailed(databaseName));
+    }
 }

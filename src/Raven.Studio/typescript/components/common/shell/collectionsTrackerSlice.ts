@@ -24,6 +24,7 @@ export interface Collection {
 
 interface CollectionsTrackerState {
     databaseName: string | null;
+    loadFailedDatabaseName: string | null;
     collections: EntityState<Collection, CollectionName>;
     globalChangeVector: string | null;
 }
@@ -41,6 +42,7 @@ const collectionsSelectors = collectionsAdapter.getSelectors();
 
 const initialState: CollectionsTrackerState = {
     databaseName: null,
+    loadFailedDatabaseName: null,
     collections: collectionsAdapter.getInitialState(),
     globalChangeVector: null,
 };
@@ -49,6 +51,12 @@ export const collectionsTrackerSlice = createSlice({
     initialState,
     name: "collectionsTracker",
     reducers: {
+        collectionsLoadStarted: (state) => {
+            state.loadFailedDatabaseName = null;
+        },
+        collectionsLoadFailed: (state, { payload: databaseName }: PayloadAction<string>) => {
+            state.loadFailedDatabaseName = databaseName;
+        },
         collectionsLoaded: (state, { payload }: PayloadAction<CollectionsLoadedPayload>) => {
             state.databaseName = payload.databaseName;
             collectionsAdapter.setAll(state.collections, payload.collections);
@@ -73,6 +81,7 @@ const selectUserCollectionNames = createSelector(selectCollectionNames, (collect
 
 export const collectionsTrackerSelectors = {
     databaseName: (store: RootState) => store.collectionsTracker.databaseName,
+    loadFailedDatabaseName: (store: RootState) => store.collectionsTracker.loadFailedDatabaseName,
     collections: (store: RootState) => collectionsSelectors.selectAll(store.collectionsTracker.collections),
     collectionByName: (name: CollectionName) => (store: RootState) =>
         collectionsSelectors.selectById(store.collectionsTracker.collections, name) ?? null,
