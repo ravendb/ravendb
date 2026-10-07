@@ -21,6 +21,8 @@ using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
+using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.Handlers.Processors.MultiGet;
 using Raven.Server.Extensions;
@@ -221,7 +223,13 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             var expectedType = configParam.Type;
 
             if (expectedType == AiAgentParameterValueType.Default)
+            {
+                if (value is not BlittableJsonReaderArray { Length: 0 } &&
+                    TryGetValueType(value, out _, out var unsupported) == false)
+                    AssertNoQueryBindsParameter(configParam.Name, unsupported);
+
                 continue;
+            }
 
             if (value is BlittableJsonReaderArray { Length: 0 })
             {
@@ -249,6 +257,27 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                     $"Actual: {actualType}, " +
                     $"Value: {value}");
         }
+    }
+
+    internal static HashSet<string> GetQueryParameterNames(string query) =>
+        QueryMetadata.ParseQuery(query, QueryType.Select).Parameters
+            .Select(x => x.Value)
+            .ToHashSet(StringComparer.Ordinal);
+
+    internal static string FindQueryBinding(IEnumerable<(string Name, HashSet<string> Parameters)> queries, string name) =>
+        queries.FirstOrDefault(q => q.Parameters.Contains(name)).Name;
+
+    private void AssertNoQueryBindsParameter(string name, string unsupportedType)
+    {
+        var queries = (_configuration.Queries ?? []).Select(q => (q.Name, Parameters: GetQueryParameterNames(q.Query)));
+
+        if (FindQueryBinding(queries, name) is not { } query)
+            return;
+
+        throw new InvalidOperationException(
+            $"Query '{query}' of agent '{_configuration.Identifier}' uses the parameter ${name}, " +
+            $"but the value supplied for '{name}' holds {unsupportedType}, and a query parameter only takes " +
+            $"a scalar value. Supply a scalar for '{name}'.");
     }
 
     internal static bool TryGetValueType(object value, out AiAgentParameterValueType type, out string unsupportedType)

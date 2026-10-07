@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -59,7 +58,6 @@ public partial class ConversationDocument([NotNull] string agent, BlittableJsonR
 
             if (Parameters == null || Parameters.TryGet(p.Name, out object value) == false)
             {
-                // System.Diagnostics.Debug spelled out: the type is shadowed by this class's own Debug field
                 System.Diagnostics.Debug.Assert(false, $"Parameter '{p.Name}' has no value, ConversationHandler.InitializeDocumentAsync should have rejected the conversation");
                 continue;
             }

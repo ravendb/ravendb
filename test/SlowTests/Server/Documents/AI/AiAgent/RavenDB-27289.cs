@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -13,6 +14,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -104,6 +106,16 @@ public class RavenDB_27289(ITestOutputHelper output) : RavenTestBase(output)
         return parameters;
     }
 
+    private static BlittableJsonReaderObject SuppliedObjectParameter(JsonOperationContext context)
+    {
+        var creation = new AiConversationCreationOptions()
+            .AddParameter("TelegramUsername", new DynamicJsonValue { ["Handle"] = OwnHandle });
+
+        var blittable = context.ReadObject(creation.ToJson(), "conversation-params");
+        blittable.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject parameters);
+        return parameters;
+    }
+
     private static RequestBody Request(BlittableJsonReaderObject parameters) => new()
     {
         Parameters = parameters,
@@ -168,6 +180,52 @@ public class RavenDB_27289(ITestOutputHelper output) : RavenTestBase(output)
             () => store.Maintenance.SendAsync(AddOrUpdateAiAgentOperation.Create(agent, AiAgentBasics.OutputSchema.Instance)));
 
         Assert.Contains("TelegramUsername", e.Message);
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task ObjectSuppliedForAParameterAQueryBindsIsRejected()
+    {
+        using var store = GetDocumentStore();
+        await SeedAsync(store);
+
+        // the parameter carries no explicit Type, so the type checks below are skipped and an object used to reach
+        // the query binder, which takes it without complaint - the query then matched nothing and the caller was
+        // told there were no tickets. A scope that cannot be bound is an error, not an empty result
+        var agent = CreateAgent(sendToModel: false);
+        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        {
+            var handler = HandlerCallingToolOnce(Server.ServerStore, database, "{}");
+            handler.Initialize(agent, "Dummy", Request(SuppliedObjectParameter(context)), changeVector: null);
+
+            var e = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => handler.HandleRequestAsync(context, CancellationToken.None));
+
+            Assert.Contains("$TelegramUsername", e.Message);
+            Assert.Contains("only takes a scalar value", e.Message);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task ObjectSuppliedForAParameterNoQueryBindsIsLeftAlone()
+    {
+        using var store = GetDocumentStore();
+        await SeedAsync(store);
+
+        // a parameter can exist only to be read by the model, and then its value never has to bind to anything
+        var agent = CreateAgent(sendToModel: true);
+        agent.Queries = [];
+
+        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        {
+            var handler = HandlerThatOnlyAnswers(Server.ServerStore, database);
+            handler.Initialize(agent, "Dummy", Request(SuppliedObjectParameter(context)), changeVector: null);
+
+            var r = await handler.HandleRequestAsync(context, CancellationToken.None);
+
+            Assert.DoesNotContain(Secret, r.Response.ToString());
+        }
     }
 
     // ---- controls and bounds ---------------------------------------------
