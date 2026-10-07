@@ -22,7 +22,7 @@ public sealed class StackDepthRetriever : CSharpSyntaxRewriter
 
     public int LinqChainDepth => _linqChainDepth;
 
-    public int StackSizeLetCounter => _letCounter + _selectDepth;
+    public int LetAndSelectDepth => _letCounter + _selectDepth;
 
     public void Clear()
     {

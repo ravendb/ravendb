@@ -550,7 +550,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 var map = maps[i];
                 statements.AddRange(HandleMap(definition.SourceType, map, fieldNamesValidator, methodDetector, stackDepthRetriever, ref members));
                 
-                maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.StackSizeLetCounter);
+                maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.LetAndSelectDepth);
                 stackDepthRetriever.Clear();
             }
 
@@ -564,7 +564,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.GroupByFields)).Assign(groupByFieldsArray).AsExpressionStatement());
                 
-                maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.StackSizeLetCounter);
+                maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.LetAndSelectDepth);
             }
 
             var fields = GetIndexedFields(definition, fieldNamesValidator);
@@ -577,7 +577,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var methods = methodDetector.Methods;
 
-            statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.LetClausesDepth)).Assign(SyntaxFactory.ParseExpression($"{maxDepthInRecursiveLinqQuery}")).AsExpressionStatement());
+            statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.StackSizeInSelectClause)).Assign(SyntaxFactory.ParseExpression($"{maxDepthInRecursiveLinqQuery}")).AsExpressionStatement());
             
             if (methods.HasCreateField)
                 statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.HasDynamicFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
