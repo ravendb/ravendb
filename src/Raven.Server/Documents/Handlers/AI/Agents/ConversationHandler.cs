@@ -226,7 +226,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             {
                 if (value is not BlittableJsonReaderArray { Length: 0 } &&
                     TryGetValueType(value, out _, out var unsupported) == false)
-                    AssertNoQueryBindsParameter(configParam.Name, unsupported);
+                    AssertNoQueryBindsName(
+                        (_configuration.Queries ?? []).Select(q => (q.Name, Parameters: GetQueryParameterNames(q.Query))),
+                        configParam.Name, unsupported);
 
                 continue;
             }
@@ -264,20 +266,15 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             .Select(x => x.Value)
             .ToHashSet(StringComparer.Ordinal);
 
-    internal static string FindQueryBinding(IEnumerable<(string Name, HashSet<string> Parameters)> queries, string name) =>
-        queries.FirstOrDefault(q => q.Parameters.Contains(name)).Name;
-
-    private void AssertNoQueryBindsParameter(string name, string unsupportedType)
+    internal static void AssertNoQueryBindsName(IEnumerable<(string Name, HashSet<string> Parameters)> queries, string name, string unsupportedType)
     {
-        var queries = (_configuration.Queries ?? []).Select(q => (q.Name, Parameters: GetQueryParameterNames(q.Query)));
-
-        if (FindQueryBinding(queries, name) is not { } query)
+        if (queries.FirstOrDefault(q => q.Parameters.Contains(name)).Name is not { } query)
             return;
 
         throw new InvalidOperationException(
-            $"Query '{query}' of agent '{_configuration.Identifier}' uses the parameter ${name}, " +
-            $"but the value supplied for '{name}' holds {unsupportedType}, and a query parameter only takes " +
-            $"a scalar value. Supply a scalar for '{name}'.");
+            $"Query '{query}' uses the parameter ${name}, but the value for '{name}' holds {unsupportedType}, " +
+            $"and a query parameter only takes a scalar value. Supply a scalar for '{name}', or stop " +
+            $"referencing ${name} in the query.");
     }
 
     internal static bool TryGetValueType(object value, out AiAgentParameterValueType type, out string unsupportedType)
