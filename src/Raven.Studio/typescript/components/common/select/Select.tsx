@@ -57,11 +57,12 @@ export default function Select<
     return (
         <ReactSelect
             menuPortalTarget={document.body}
+            menuPlacement="auto"
             styles={styles}
             {...rest}
             classNamePrefix="react-select"
             className={classNames("bs5 react-select-container", { "rounded-pill": isRoundedPill }, className)}
-            classNames={{ menuPortal: () => "bs5 react-select-container", ...classNamesProp }}
+            classNames={{ menuPortal: () => "bs5", ...classNamesProp }}
         />
     );
 }
