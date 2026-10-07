@@ -396,39 +396,44 @@ if ($input.doc) {
         }
     }
 
-    // === Query-tool binding: scalars bind and override the model; objects are model context only, never bound. ===
+    // === Query-tool binding: scalars bind and override the model; objects are model context only and a query that
+    // references one is refused, since nothing but the model could supply the value. ===
 
     [RavenFact(RavenTestCategory.Ai)]
-    public async Task GenAi_OmittedObject_NoModelArgument_ThrowsNativeMissingParameter()
+    public async Task GenAi_OmittedObject_QueryReferencingIt_IsRejectedWithATaskLevelError()
     {
-        // 'brand' is an object -> omitted from RequestBody.Parameters (filtered). The query references $brand and the
-        // model supplies no 'brand', so RavenDB produces its NATIVE missing-parameter error - no custom exception.
-        var (error, _) = await RunGenAiQueryToolAsync(
+        // 'brand' is an object -> omitted from RequestBody.Parameters (filtered), so $brand can never be bound.
+        // The task refuses the item itself and names what the author can act on - the query, the parameter and the
+        // type the context property holds - rather than leaving the agent validator to complain about an agent
+        // configuration the author never wrote.
+        var (error, toolResults) = await RunGenAiQueryToolAsync(
             contexts: [new DynamicJsonValue { ["brand"] = new DynamicJsonValue { ["Name"] = "TechNova" } }],
             queryRql: "from Products where Brand = $brand",
             modelToolArgs: "{}",
             seed: null);
 
         Assert.NotNull(error);
-        Assert.Contains("was not provided", error.ToString()); // native missing-parameter error, not a custom exception
-        Assert.Contains("brand", error.ToString());
+        Assert.Contains("$brand", error.ToString());
+        Assert.Contains("only takes a scalar value", error.ToString());
+        Assert.Empty(toolResults); // refused before the model was asked to do anything
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public async Task GenAi_OmittedObject_ModelSuppliesScalar_QueryUsesModelValue_AcceptedTradeoff()
+    public async Task GenAi_OmittedObject_ModelSuppliesScalar_IsRejectedAndTheModelValueIsNeverUsed()
     {
-        // ACCEPTED SEMANTIC TRADEOFF of the minimal filtered design: because the object-valued 'brand' is omitted from
-        // Parameters (this design deliberately does NOT remember omitted names), the normal query-binding path leaves
-        // the MODEL-supplied scalar 'brand' in place and the query completes using it. This is deliberate and is NOT
-        // context-override protection - the object context simply does not participate in query binding.
+        // The model offers a 'brand' of its own and a matching product exists. Until RavenDB-27289 the query ran on
+        // that value - recorded here as an accepted tradeoff of the filtered design. It is a data-scope escape: the
+        // model decided which products the task reads. The item is now refused instead, and the model-supplied value
+        // reaches no query.
         var (error, toolResults) = await RunGenAiQueryToolAsync(
             contexts: [new DynamicJsonValue { ["brand"] = new DynamicJsonValue { ["Name"] = "TechNova" } }],
             queryRql: "from Products where Brand = $brand",
             modelToolArgs: "{\"brand\":\"model-brand\"}",
             seed: s => s.Store(new Product { Brand = "model-brand" }));
 
-        Assert.Null(error);                                            // the query completed using the model-supplied scalar
-        Assert.Contains(toolResults, r => r.Contains("model-brand"));  // the model's value matched the seeded product
+        Assert.NotNull(error);
+        Assert.Contains("$brand", error.ToString());
+        Assert.DoesNotContain(toolResults, r => r.Contains("model-brand"));
     }
 
     [RavenFact(RavenTestCategory.Ai)]
