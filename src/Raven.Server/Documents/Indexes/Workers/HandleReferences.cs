@@ -80,6 +80,8 @@ namespace Raven.Server.Documents.Indexes.Workers
     {
         private readonly ReferencesState _referencesState = new ReferencesState();
 
+        private bool _canHandleReferences;
+
         private readonly Logger _logger;
 
         private readonly Index _index;
@@ -108,6 +110,9 @@ namespace Raven.Server.Documents.Indexes.Workers
         public (bool MoreWorkFound, Index.CanContinueBatchResult BatchContinuationResult) Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperationBase> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
+            if (CanHandleReferences(queryContext, indexContext, stats) == false)
+                return (false, Index.CanContinueBatchResult.None);
+
             const long pageSize = long.MaxValue;
             var maxTimeForDocumentTransactionToRemainOpen = Debugger.IsAttached == false
                             ? _configuration.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan
@@ -396,6 +401,44 @@ namespace Raven.Server.Documents.Indexes.Workers
                 _referencesState.Clear(actionType);
 
             return (moreWorkFound, batchContinuationResult);
+        }
+
+        private bool CanHandleReferences(QueryOperationContext queryContext, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        {
+            if (_canHandleReferences)
+                return true;
+
+            // a new index first maps everything that existed when it was created and only then starts to handle references,
+            // so the initial indexing isn't spent on re-mapping items whose references changed in the meantime.
+            // the map is done with those items once the last indexed etag of every collection reached the database etag
+            // recorded on index creation, or the last etag of the collection when the collection has no newer items
+
+            using (queryContext.OpenReadTransaction())
+            {
+                foreach (var collection in _index.Collections)
+                {
+                    var lastIndexedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
+                    if (lastIndexedEtag >= _indexStorage.LastDatabaseEtagOnIndexCreation)
+                        continue;
+
+                    var lastItemEtag = _index.GetLastItemEtagInCollection(queryContext, collection);
+                    if (lastIndexedEtag >= lastItemEtag)
+                        continue;
+
+                    var reason = $"Skipped handling references because the map of collection '{collection}' hasn't reached the database etag recorded on index creation ({_indexStorage.LastDatabaseEtagOnIndexCreation:#,#;;0}) yet. " +
+                                 $"Last indexed etag: {lastIndexedEtag:#,#;;0}, last etag in collection: {lastItemEtag:#,#;;0}";
+
+                    stats.RecordBatchCompletedReason(IndexingWorkType.References, reason);
+
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"{reason}. Index: '{_index.Name}'");
+
+                    return false;
+                }
+            }
+
+            _canHandleReferences = true;
+            return true;
         }
 
         private void UpdateReferences(string collection, IndexingStatsScope stats, QueryOperationContext queryContext, TransactionOperationContext indexContext)

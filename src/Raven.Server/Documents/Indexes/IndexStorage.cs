@@ -280,6 +280,8 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public long LastDatabaseEtagOnIndexCreation => _lastDatabaseEtagOnIndexCreation;
+
         public bool LowerThanLastDatabaseEtagOnIndexCreation(long currentEtag)
         {
             return _lastDatabaseEtagOnIndexCreation >= currentEtag;
