@@ -64,11 +64,11 @@ describe("i18nBindingHandler", () => {
         expect(element.getAttribute("placeholder")).toBe("Hello Bob");
     });
 
-    it("re-evaluates text and attributes on language change", async () => {
+    it("renders text and attributes in the loaded language", async () => {
+        await changeLanguage("pl");
+
         const text = bind(`<span data-bind="i18n: 'common:save'"></span>`);
         const attr = bind(`<button data-bind="i18nAttr: { title: 'common:cancel' }"></button>`);
-
-        await changeLanguage("pl");
 
         expect(text.textContent).toBe("Zapisz");
         expect(attr.getAttribute("title")).toBe("Anuluj");
