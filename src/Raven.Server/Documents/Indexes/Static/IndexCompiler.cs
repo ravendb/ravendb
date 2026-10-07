@@ -645,15 +645,10 @@ namespace Raven.Server.Documents.Indexes.Static
             try
             {
                 map = NormalizeFunction(map);
-                var expression = SyntaxFactory.ParseExpression(map).NormalizeWhitespace();
+                var parsedExpression = SyntaxFactory.ParseExpression(map);
 
-                fieldNamesValidator.Validate(map, expression);
-                methodsDetector.Visit(expression);
-                
-                stackDepthRetriever.VisitInvocationChains(expression);
-                stackDepthRetriever.Visit(expression);
-                stackDepthRetriever.VisitMethodQuery(map);
-
+                // must run before NormalizeWhitespace() and the rewriters below, they recurse over the tree and cannot handle an extremely deep chain
+                stackDepthRetriever.VisitInvocationChains(parsedExpression);
                 if (stackDepthRetriever.MaxInvocationChainDepth > MaxChainDepth)
                 {
                     throw new IndexCompilationException(
@@ -667,6 +662,14 @@ namespace Raven.Server.Documents.Indexes.Static
                         ProblematicText = map
                     };
                 }
+
+                var expression = parsedExpression.NormalizeWhitespace();
+
+                fieldNamesValidator.Validate(map, expression);
+                methodsDetector.Visit(expression);
+                
+                stackDepthRetriever.Visit(expression);
+                stackDepthRetriever.VisitMethodQuery(map);
 
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
