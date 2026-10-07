@@ -72,6 +72,18 @@ describe("i18n", () => {
         expect(i18n.t("common:save")).toBe("Save");
     });
 
+    it("falls back to English for keys a partial language has not translated", async () => {
+        i18n.addResourceBundle("en", "partialSpec", { translated: "Translated", untranslated: "Untranslated" });
+        i18n.addResourceBundle("pl", "partialSpec", { translated: "Przetłumaczone" });
+        await changeLanguage("pl");
+
+        expect(i18n.t("partialSpec:translated")).toBe("Przetłumaczone");
+        expect(i18n.t("partialSpec:untranslated")).toBe("Untranslated");
+
+        i18n.removeResourceBundle("en", "partialSpec");
+        i18n.removeResourceBundle("pl", "partialSpec");
+    });
+
     it("switches to English when asked for a language it does not support", async () => {
         await changeLanguage("pl");
         await changeLanguage("de" as StudioLanguage);

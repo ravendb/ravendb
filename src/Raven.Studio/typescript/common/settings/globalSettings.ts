@@ -56,7 +56,8 @@ class globalSettings extends abstractSettings {
 
     static readStoredLanguage(): i18nResources.StudioLanguage {
         try {
-            const language = JSON.parse(localStorage.getItem(globalSettings.storageKey))?.language;
+            const storedLanguage = JSON.parse(localStorage.getItem(globalSettings.storageKey))?.language;
+            const language = JSON.parse(storedLanguage);
             return i18nResources.isStudioLanguage(language) ? language : "en";
         } catch {
             return "en";
