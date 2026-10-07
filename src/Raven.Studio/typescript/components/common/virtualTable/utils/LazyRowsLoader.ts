@@ -39,6 +39,8 @@ interface FetchRequest {
     isSequential: boolean;
 }
 
+const MAX_CACHED_ROWS = 10_000;
+
 const INITIAL_SNAPSHOT: LazyRowsSnapshot = {
     range: { start: 0, end: 0 },
     version: 0,
@@ -93,6 +95,7 @@ export class LazyRowsLoader<T, TResult extends pagedResultWithToken<T> = pagedRe
 
     setRange = (range: RowRange) => {
         if (!isSameRange(range, this.snapshot.range)) {
+            this.evictRowsAwayFrom(range);
             this.update({ range, error: null });
         }
 
@@ -247,6 +250,21 @@ export class LazyRowsLoader<T, TResult extends pagedResultWithToken<T> = pagedRe
             totalCount: isLastBatch ? Math.min(nextTotalCount, loadedEnd) : nextTotalCount,
             isFetching: false,
         });
+    }
+
+    private evictRowsAwayFrom({ start, end }: RowRange) {
+        const canFetchRowsAgain = this.options.fetchMode === "skipTake";
+        if (!canFetchRowsAgain || this.items.size <= MAX_CACHED_ROWS) {
+            return;
+        }
+
+        const retainedRowsAroundRange = MAX_CACHED_ROWS / 2;
+
+        for (const rowIndex of this.items.keys()) {
+            if (rowIndex < start - retainedRowsAroundRange || rowIndex >= end + retainedRowsAroundRange) {
+                this.items.delete(rowIndex);
+            }
+        }
     }
 
     private update(changes: Partial<LazyRowsSnapshot>) {

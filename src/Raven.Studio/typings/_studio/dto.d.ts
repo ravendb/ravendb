@@ -1079,6 +1079,8 @@ interface ReactInKnockoutOptions<T> {
     component: T;
     props?: Parameters<T>[0];
     dirtyFlag?: ReactDirtyFlag;
+    isPageView?: boolean;
+    databaseName?: string;
 }
 
 type ReactInKnockout<T> = KnockoutComputed<ReactInKnockoutOptions<T>>;

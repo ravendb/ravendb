@@ -4,11 +4,14 @@ import * as Stories from "./DocumentsPage.stories";
 import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
 import appUrl from "common/appUrl";
+import collectionsTracker from "common/helpers/database/collectionsTracker";
 import messagePublisher from "common/messagePublisher";
+import notificationCenter from "common/notifications/notificationCenter";
+import documentModel from "models/database/documents/document";
 import router from "plugins/router";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
-const { CollectionStory, AllDocumentsStory, TrimmedValuesStory } = composeStories(Stories);
+const { CollectionStory, AllDocumentsStory, CollectionsLoadFailedStory, TrimmedValuesStory } = composeStories(Stories);
 
 type Screen = ReturnType<typeof rtlRender>["screen"];
 
@@ -43,6 +46,11 @@ const addCustomCityColumn = async (screen: Screen) => {
 };
 
 const TABLE_WIDTH_IN_PX = 600;
+const DATABASE_NAME = DatabasesStubs.nonShardedSingleNodeDatabase().name;
+
+const selectDocuments = (screen: Screen, documentIds: string[]) => {
+    documentIds.forEach((documentId) => fireEvent.click(getRowCheckbox(screen, documentId)));
+};
 
 const getColumnLayoutStorageKeys = () =>
     Object.keys(localStorage).filter((key) => key.includes("custom-columns-") && key.includes("[Orders]"));
@@ -486,6 +494,31 @@ describe("DocumentsPage", () => {
         expect(getDocumentsPreview.mock.calls.length).toBeGreaterThan(fetchCount);
     });
 
+    it("verifies every stats update with the server in a sharded database", async () => {
+        const shardedDatabaseName = DatabasesStubs.shardedDatabase().name;
+        const updateStats = () =>
+            act(() => {
+                mockStore.collectionsTracker.with_Collections([], shardedDatabaseName);
+            });
+
+        const { screen } = rtlRender(<CollectionStory collection="Orders" isSharded totalCount={5} />);
+
+        expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
+
+        const getDocumentsPreview = mockServices.databasesService.getMock("getDocumentsPreview");
+
+        updateStats();
+        await flushFetches();
+
+        expect(getDocumentsPreview).toHaveBeenLastCalledWith(shardedDatabaseName, 0, 0, "Orders");
+        expect(screen.queryByTestId("data-changed-alert")).not.toBeInTheDocument();
+
+        getDocumentsPreview.mockResolvedValueOnce({ ...DatabasesStubs.documentsPreview(), resultEtag: "2" });
+        updateStats();
+
+        expect(await screen.findByTestId("data-changed-alert")).toBeInTheDocument();
+    });
+
     it("exports the collection to a file with the chosen format and columns", async () => {
         const submit = jest.spyOn(HTMLFormElement.prototype, "submit").mockImplementation(() => {});
         const { screen } = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={5} />);
@@ -605,6 +638,34 @@ describe("DocumentsPage", () => {
         expect(getColumnLayoutStorageKeys()).toHaveLength(0);
     });
 
+    it("shows an error with a retry when the collections fail to load", async () => {
+        const reloadStats = jest
+            .spyOn(collectionsTracker.default, "reloadStats")
+            .mockImplementation(() => mockStore.collectionsTracker.with_Collections());
+        const { screen } = rtlRender(<CollectionsLoadFailedStory />);
+
+        expect(screen.getByText("Unable to load the collections")).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("button", { name: /Refresh/ }));
+
+        expect(reloadStats).toHaveBeenCalledTimes(1);
+        expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
+        expect(screen.queryByText("Unable to load the collections")).not.toBeInTheDocument();
+    });
+
+    it("shows an error with a retry when the documents fail to load", async () => {
+        mockServices.databasesService.getMock("getDocumentsPreview").mockRejectedValueOnce(new Error("failed"));
+        const { screen } = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={5} />);
+
+        const errorBanner = await screen.findByTestId("fetch-error-banner");
+        expect(errorBanner).toHaveTextContent("Unable to load the documents.");
+
+        fireEvent.click(within(errorBanner).getByRole("button", { name: "Retry" }));
+
+        expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
+        expect(screen.queryByTestId("fetch-error-banner")).not.toBeInTheDocument();
+    });
+
     it("shows the empty messages for an empty collection and an empty database", async () => {
         const collectionView = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={0} />);
         expect(await collectionView.screen.findByText("Collection is empty")).toBeInTheDocument();
@@ -699,5 +760,138 @@ describe("DocumentsPage", () => {
         expect(scrollContainer.scrollTop).toBe(0);
         fireEvent.scroll(scrollContainer, { target: { scrollTop: 0 } });
         expect(screen.queryByRole("button", { name: "Scroll to top" })).not.toBeInTheDocument();
+    });
+
+    describe("selection actions", () => {
+        const renderOrders = async () => {
+            const view = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={5} />);
+            expect(await view.screen.findByText("orders/1-A")).toBeInTheDocument();
+            return view;
+        };
+
+        const getSelectionActionButton = (screen: Screen, name: string | RegExp) =>
+            within(getSelectionActions(screen)).getByRole("button", { name });
+
+        it("deletes the selected documents after a confirmation", async () => {
+            const deleteDocuments = mockServices.databasesService
+                .getMock("deleteDocuments")
+                .mockResolvedValue(undefined);
+            const reportSuccess = jest.spyOn(messagePublisher, "reportSuccess").mockImplementation(() => {});
+            const { screen } = await renderOrders();
+
+            selectDocuments(screen, ["orders/1-A", "orders/2-A"]);
+            fireEvent.click(getSelectionActionButton(screen, /Delete/));
+
+            const dialog = await screen.findByRole("dialog");
+            expect(within(dialog).getByText("Delete 2 documents?")).toBeInTheDocument();
+            expect(within(dialog).getByText("orders/2-A")).toBeInTheDocument();
+            expect(deleteDocuments).not.toHaveBeenCalled();
+
+            const getDocumentsPreview = mockServices.databasesService.getMock("getDocumentsPreview");
+            const fetchCount = getDocumentsPreview.mock.calls.length;
+
+            fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+            await waitFor(() => expect(reportSuccess).toHaveBeenCalledWith("Deleted 2 documents"));
+            expect(deleteDocuments).toHaveBeenCalledWith(["orders/1-A", "orders/2-A"], DATABASE_NAME);
+            expect(getDocumentsPreview.mock.calls.length).toBeGreaterThan(fetchCount);
+            expect(getSelectionActions(screen)).not.toBeInTheDocument();
+        });
+
+        it("deletes the documents selected across the collection and waits for the operation", async () => {
+            const deleteCollectionTask = $.Deferred<operationIdDto>();
+            const deleteCollection = mockServices.databasesService
+                .getMock("deleteCollection")
+                .mockReturnValue(deleteCollectionTask);
+            const deleteOperationTask = $.Deferred<void>();
+            jest.spyOn(notificationCenter.instance, "openDetailsForOperationById").mockImplementation(() => {});
+            jest.spyOn(notificationCenter.instance, "monitorOperation").mockReturnValue(deleteOperationTask);
+            const reportSuccess = jest.spyOn(messagePublisher, "reportSuccess").mockImplementation(() => {});
+            const { screen } = await renderOrders();
+
+            fireEvent.click(getSelectAllCheckbox(screen));
+            selectDocuments(screen, ["orders/2-A"]);
+            fireEvent.click(getSelectionActionButton(screen, /Delete/));
+
+            const dialog = await screen.findByRole("dialog");
+            expect(dialog).toHaveTextContent(
+                "Selected documents from collection Orders will be deleted (127 documents)."
+            );
+
+            fireEvent.change(within(dialog).getByPlaceholderText("DELETE"), { target: { value: "DELETE" } });
+            fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+            expect(deleteCollection).toHaveBeenCalledWith("Orders", DATABASE_NAME, ["orders/2-A"]);
+
+            act(() => {
+                deleteCollectionTask.resolve({ OperationId: 1 });
+            });
+
+            expect(getSelectionActionButton(screen, /Delete/)).toBeDisabled();
+
+            await act(async () => {
+                deleteOperationTask.resolve();
+            });
+
+            expect(reportSuccess).toHaveBeenCalledWith("Deleted 127 documents from Orders");
+            expect(getSelectionActions(screen)).not.toBeInTheDocument();
+        });
+
+        it("copies the selected documents and warns about the ones that no longer exist", async () => {
+            const getDocumentsWithMetadata = mockServices.databasesService
+                .getMock("getDocumentsWithMetadata")
+                .mockResolvedValue([
+                    new documentModel({
+                        "@metadata": { "@id": "orders/1-A", "@collection": "Orders" },
+                        Company: "companies/1-A",
+                    }),
+                    null,
+                ]);
+            const reportWarning = jest.spyOn(messagePublisher, "reportWarning").mockImplementation(() => {});
+            const { screen } = await renderOrders();
+
+            selectDocuments(screen, ["orders/1-A", "orders/2-A"]);
+            fireEvent.click(getSelectionActionButton(screen, "Copy"));
+
+            const dialog = await screen.findByRole("dialog");
+            expect(dialog).toHaveTextContent("companies/1-A");
+            expect(getDocumentsWithMetadata).toHaveBeenCalledWith(["orders/1-A", "orders/2-A"], DATABASE_NAME);
+            expect(reportWarning).toHaveBeenCalledWith("Documents no longer exist: orders/2-A");
+        });
+
+        it("copies the ids of the documents selected across the collection", async () => {
+            const { screen } = await renderOrders();
+
+            act(() => {
+                mockStore.collectionsTracker.with_Collections([{ name: "Orders", documentCount: 5 }]);
+            });
+
+            fireEvent.click(getSelectAllCheckbox(screen));
+            selectDocuments(screen, ["orders/2-A"]);
+            fireEvent.click(getSelectionActionButton(screen, "More copy options"));
+            fireEvent.click(await screen.findByText("Copy IDs"));
+
+            const dialog = await screen.findByRole("dialog");
+            expect(dialog).toHaveTextContent('"orders/1-A", "orders/3-A", "orders/4-A", "orders/5-A"');
+            expect(mockServices.databasesService.getMock("getDocumentsPreview")).toHaveBeenLastCalledWith(
+                DATABASE_NAME,
+                0,
+                101,
+                "Orders"
+            );
+        });
+
+        it("does not copy more documents than the limit", async () => {
+            const { screen } = await renderOrders();
+
+            fireEvent.click(getSelectAllCheckbox(screen));
+
+            const copyButton = getSelectionActionButton(screen, "Copy");
+            expect(copyButton).toBeDisabled();
+
+            fireEvent.mouseEnter(copyButton.closest(".w-fit-content"));
+
+            expect(await screen.findByText("You can only copy up to 100 documents")).toBeInTheDocument();
+        });
     });
 });
