@@ -35,10 +35,11 @@ export default function SelectCreatable<
             styles={styles}
             formatCreateLabel={(value) => value ?? ""}
             menuPortalTarget={document.body}
+            menuPlacement="auto"
             {...rest}
             classNamePrefix="react-select"
             className={classNames("bs5 react-select-container", { "rounded-pill": isRoundedPill }, className)}
-            classNames={{ menuPortal: () => "bs5 react-select-container", ...classNamesProp }}
+            classNames={{ menuPortal: () => "bs5", ...classNamesProp }}
             value={isClearedAfterSelect ? null : rest.value}
         />
     );
