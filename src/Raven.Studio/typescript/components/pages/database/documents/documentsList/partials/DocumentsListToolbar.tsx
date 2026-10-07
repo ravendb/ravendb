@@ -108,52 +108,56 @@ export default function DocumentsListToolbar({
                         </Button>
                     </RichAlert>
                 )}
-                <Button variant="secondary" onClick={navigateToQuery} title="Query current collection">
-                    <Icon icon="query" />
-                    Query
-                </Button>
-                {collectionName && (
-                    <ExportDocumentsDropdown
-                        collectionName={collectionName}
-                        getVisibleColumnFields={getVisibleColumnFields}
-                    />
-                )}
-                <Dropdown>
-                    <Dropdown.Toggle
-                        as={CustomDropdownToggle}
-                        variant="secondary"
-                        active={isCustomLayout}
-                        title={isCustomLayout ? "Using custom columns and their order" : "Display settings"}
-                    >
-                        <Icon icon="table" />
-                        Display
-                    </Dropdown.Toggle>
-                    <Dropdown.Menu align="end">
-                        <Dropdown.Item onClick={onOpenColumnSettings}>
+                <div className="d-flex align-items-center gap-2 flex-wrap">
+                    <Button variant="secondary" onClick={navigateToQuery} title="Query current collection">
+                        <Icon icon="query" />
+                        Query
+                    </Button>
+                    {collectionName && (
+                        <ExportDocumentsDropdown
+                            collectionName={collectionName}
+                            getVisibleColumnFields={getVisibleColumnFields}
+                        />
+                    )}
+                    <Dropdown>
+                        <Dropdown.Toggle
+                            as={CustomDropdownToggle}
+                            variant="secondary"
+                            active={isCustomLayout}
+                            title={isCustomLayout ? "Using custom columns and their order" : "Display settings"}
+                        >
                             <Icon icon="table" />
-                            Column layout settings
-                        </Dropdown.Item>
-                        <Dropdown.Divider />
-                        <Dropdown.ItemText>
-                            <ConditionalPopover
-                                conditions={{
-                                    isActive: isSharded,
-                                    message: "Pagination is not available in a sharded database",
-                                }}
-                            >
-                                <Switch
-                                    selected={isPaginated}
-                                    toggleSelection={() => onIsPaginatedChange(!isPaginated)}
-                                    color="primary"
-                                    title={isSharded ? null : "Show the documents page by page instead of scrolling"}
-                                    disabled={isSharded}
+                            Display
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu align="end">
+                            <Dropdown.Item onClick={onOpenColumnSettings}>
+                                <Icon icon="table" />
+                                Column layout settings
+                            </Dropdown.Item>
+                            <Dropdown.Divider />
+                            <Dropdown.ItemText>
+                                <ConditionalPopover
+                                    conditions={{
+                                        isActive: isSharded,
+                                        message: "Pagination is not available in a sharded database",
+                                    }}
                                 >
-                                    Pagination
-                                </Switch>
-                            </ConditionalPopover>
-                        </Dropdown.ItemText>
-                    </Dropdown.Menu>
-                </Dropdown>
+                                    <Switch
+                                        selected={isPaginated}
+                                        toggleSelection={() => onIsPaginatedChange(!isPaginated)}
+                                        color="primary"
+                                        title={
+                                            isSharded ? null : "Show the documents page by page instead of scrolling"
+                                        }
+                                        disabled={isSharded}
+                                    >
+                                        Pagination
+                                    </Switch>
+                                </ConditionalPopover>
+                            </Dropdown.ItemText>
+                        </Dropdown.Menu>
+                    </Dropdown>
+                </div>
             </div>
         </div>
     );
