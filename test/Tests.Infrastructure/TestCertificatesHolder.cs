@@ -271,7 +271,7 @@ namespace FastTests
                 }
                 catch (CryptographicException e)
                 {
-                    throw new CryptographicException($"Failed to load the test client certificate ({index}) from {path}.", e);
+                    throw new CryptographicException($"Failed to load the test client certificate ({index}) from {path()}.", e);
                 }
             });
         }
