@@ -130,7 +130,7 @@ public partial class ConversationDocument
         /// </summary>
         internal object AsSerializable() => (object)_messagesList ?? _messagesArray;
 
-        private List<BlittableJsonReaderObject> Materialize()
+        internal List<BlittableJsonReaderObject> Materialize()
         {
             if (_messagesList != null)
                 return _messagesList;
