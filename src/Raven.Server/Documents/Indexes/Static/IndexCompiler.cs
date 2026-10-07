@@ -747,7 +747,13 @@ namespace Raven.Server.Documents.Indexes.Static
             try
             {
                 reduce = NormalizeFunction(reduce);
-                var expression = SyntaxFactory.ParseExpression(reduce).NormalizeWhitespace();
+                var parsedExpression = SyntaxFactory.ParseExpression(reduce);
+
+                // must run before NormalizeWhitespace() and the rewriters below, they recurse over the tree and cannot handle an extremely deep chain
+                stackDepthRetriever.VisitInvocationChains(parsedExpression);
+                ThrowIfInvocationChainIsTooDeep(stackDepthRetriever, "reduce", reduce, nameof(IndexDefinition.Reduce));
+
+                var expression = parsedExpression.NormalizeWhitespace();
                 fieldNamesValidator?.Validate(reduce, expression);
                 methodsDetector.Visit(expression);
                 
@@ -796,6 +802,10 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
 
                 return result;
+            }
+            catch (IndexCompilationException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
