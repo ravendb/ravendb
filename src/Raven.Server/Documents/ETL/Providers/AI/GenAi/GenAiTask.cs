@@ -376,14 +376,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             .Select(q => (q.Name, Parameters: ConversationHandler.GetQueryParameterNames(q.Query)))
             .ToList();
 
-        if (ConversationHandler.FindQueryBinding(_queryParameterNames, name) is not { } query)
-            return;
-
-        throw new InvalidOperationException(
-            $"Query '{query}' of Gen AI task '{Configuration.Name}' uses the parameter ${name}, " +
-            $"but the context property '{name}' holds {unsupportedType}, and a query parameter only takes " +
-            $"a scalar value. Put a scalar under that name in the context, or stop referencing ${name} " +
-            $"in the query - the whole context still reaches the model through the prompt either way.");
+        ConversationHandler.AssertNoQueryBindsName(_queryParameterNames, name, unsupportedType);
     }
 
     private List<Exception> ProcessModelResults(List<GenAiResultItem> items, JsonOperationContext context, List<Task<GenAiHandlerResult>> tasks, GenAiStatsScope statsScope)
