@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+using System.Collections.Generic;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Replication;
@@ -8,7 +7,6 @@ using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Stats;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.Replication
 {
@@ -24,20 +22,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         protected override RavenCommand<ReplicationActiveConnectionsPreview> CreateCommandForNode(string nodeTag) => new GetReplicationActiveConnectionsInfoCommand(nodeTag);
     }
 
+    [UsedImplicitly(Reason = "Instantiated by the generated Blittable JSON deserializer.")]
     public sealed class ReplicationActiveConnectionsPreview : IFillFromBlittableJson
     {
         public List<IncomingConnectionInfo> IncomingConnections;
 
         public List<ReplicationNode> OutgoingConnections;
-
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(IncomingConnections)] = new DynamicJsonArray(IncomingConnections.Select(i => i.ToJson())),
-                [nameof(OutgoingConnections)] = new DynamicJsonArray(OutgoingConnections.Select(o => o.ToJson()))
-            };
-        }
 
         public void FillFromBlittableJson(BlittableJsonReaderObject json)
         {
