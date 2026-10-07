@@ -60,6 +60,9 @@ public sealed class AiConnectionString : ConnectionString
     /// </summary>
     public VertexSettings VertexSettings { get; set; }
 
+    /// <summary>Anthropic (native Claude) provider configuration. Chat model type only.</summary>
+    public AnthropicSettings AnthropicSettings { get; set; }
+
     /// <summary>
     /// The connection string type. Always <see cref="ConnectionStringType.Ai"/> for this class.
     /// </summary>
@@ -81,7 +84,8 @@ public sealed class AiConnectionString : ConnectionString
             GoogleSettings,
             HuggingFaceSettings,
             MistralAiSettings,
-            VertexSettings
+            VertexSettings,
+            AnthropicSettings
         };
 
         var configuredSettings = allSettings.Where(s => s != null).ToArray();
@@ -100,6 +104,9 @@ public sealed class AiConnectionString : ConnectionString
                 errors.Add($"Only one of the following settings can be set: {string.Join(", ", configuredSettingsNames)}");
                 break;
         }
+
+        if (AnthropicSettings != null && ModelType == AiModelType.TextEmbeddings)
+            errors.Add($"'{nameof(AiConnectorType.Anthropic)}' does not support the '{nameof(AiModelType.TextEmbeddings)}' model type; it can only be used for '{nameof(AiModelType.Chat)}'.");
     }
 
     internal string GenerateIdentifier() => EmbeddingsGenerationConfiguration.GenerateIdentifier(Name);
@@ -163,6 +170,7 @@ public sealed class AiConnectionString : ConnectionString
             AiConnectorType.HuggingFace => HuggingFaceSettings.Compare(newConnectionString.HuggingFaceSettings),
             AiConnectorType.MistralAi => MistralAiSettings.Compare(newConnectionString.MistralAiSettings),
             AiConnectorType.Vertex => VertexSettings.Compare(newConnectionString.VertexSettings),
+            AiConnectorType.Anthropic => AnthropicSettings.Compare(newConnectionString.AnthropicSettings),
             _ => AiSettingsCompareDifferences.All
         };
 
@@ -185,6 +193,9 @@ public sealed class AiConnectionString : ConnectionString
             case AiConnectorType.HuggingFace:
                 // Endpoint is optional for HuggingFace, it will use the default endpoint if not provided, which is HTTPS
                 return string.IsNullOrWhiteSpace(this.HuggingFaceSettings.Endpoint) || this.HuggingFaceSettings.Endpoint.StartsWith("https");
+            case AiConnectorType.Anthropic:
+                // Endpoint is optional for Anthropic, it will use the default endpoint if not provided, which is HTTPS
+                return string.IsNullOrWhiteSpace(this.AnthropicSettings.Endpoint) || this.AnthropicSettings.Endpoint.StartsWith("https");
             case AiConnectorType.Embedded:
             case AiConnectorType.Google:
             case AiConnectorType.Vertex:
@@ -217,6 +228,8 @@ public sealed class AiConnectionString : ConnectionString
             return AiConnectorType.MistralAi;
         if (VertexSettings != null)
             return AiConnectorType.Vertex;
+        if (AnthropicSettings != null)
+            return AiConnectorType.Anthropic;
 
         return AiConnectorType.None;
     }
@@ -257,6 +270,7 @@ public sealed class AiConnectionString : ConnectionString
             AiConnectorType.HuggingFace => HuggingFaceSettings.Compare(aiConnectionString.HuggingFaceSettings) == AiSettingsCompareDifferences.None,
             AiConnectorType.MistralAi => MistralAiSettings.Compare(aiConnectionString.MistralAiSettings) == AiSettingsCompareDifferences.None,
             AiConnectorType.Vertex => VertexSettings.Compare(aiConnectionString.VertexSettings) == AiSettingsCompareDifferences.None,
+            AiConnectorType.Anthropic => AnthropicSettings.Compare(aiConnectionString.AnthropicSettings) == AiSettingsCompareDifferences.None,
             AiConnectorType.None => true,
             _ => false
         };
@@ -280,6 +294,7 @@ public sealed class AiConnectionString : ConnectionString
         json[nameof(HuggingFaceSettings)] = HuggingFaceSettings?.ToJson();
         json[nameof(MistralAiSettings)] = MistralAiSettings?.ToJson();
         json[nameof(VertexSettings)] = VertexSettings?.ToJson();
+        json[nameof(AnthropicSettings)] = AnthropicSettings?.ToJson();
 
         return json;
     }
@@ -299,6 +314,7 @@ public sealed class AiConnectionString : ConnectionString
                GoogleSettings ??
                HuggingFaceSettings ??
                VertexSettings ??
+               AnthropicSettings ??
                (AbstractAiSettings)MistralAiSettings;
     }
 }

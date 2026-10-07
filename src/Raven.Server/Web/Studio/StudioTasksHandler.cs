@@ -344,27 +344,27 @@ namespace Raven.Server.Web.Studio
 
                 var request = JsonDeserializationServer.AiModelsRequest(json);
 
-                AbstractChatCompletionClientSettings settings = null;
+                AbstractChatCompletionProvider provider = null;
                 switch (request.ConnectorType)
                 {
                     case AiConnectorType.OpenAi:
-                        settings = new OpenAiChatCompletionClientSettings(request.OpenAiSettings);
+                        provider = new OpenAiChatCompletionProvider(request.OpenAiSettings);
                         break;
                     case AiConnectorType.Google:
-                        settings = new GoogleChatCompletionClientSettings(request.GoogleSettings);
+                        provider = new GoogleChatCompletionProvider(request.GoogleSettings);
                         break;
                     case AiConnectorType.AzureOpenAi:
-                        settings = new AzureOpenAiChatCompletionClientSettings(request.AzureOpenAiSettings);
+                        provider = new AzureOpenAiChatCompletionProvider(request.AzureOpenAiSettings);
                         break;
                     case AiConnectorType.Ollama:
-                        settings = new OllamaChatCompletionClientSettings(request.OllamaSettings);
+                        provider = new OllamaChatCompletionProvider(request.OllamaSettings);
                         break;
                     default:
                         throw new NotSupportedException($"Unsupported connector type: {request.ConnectorType}");
                 }
 
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
-                using (var chat = new ChatCompletionClient(ServerStore.ContextPool, settings))
+                using (var chat = new ChatCompletionClient(ServerStore.ContextPool, provider))
                 {
                     await chat.ProxyModelsAsync(HttpContext.Response, cts.Token);
                 }

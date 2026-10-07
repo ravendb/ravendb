@@ -39,7 +39,7 @@ public class AiAgentErrors : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google | RavenAiIntegration.Anthropic, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task BadParameters(Options options, GenAiConfiguration config)
     {
         const string agentParametersSampleObject = "{\"name\": [\"the name you search by\"]}"; // valid parameter: "{\"name\": \"the name you search by\"}" (not array)
