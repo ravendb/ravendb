@@ -24,6 +24,8 @@ using Raven.Server.Documents.ETL.Test;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.Documents.Handlers.Processors.Attachments.Strategies;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
@@ -278,6 +280,9 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 // the agent declares exactly the context values the query binder can take, so what is declared
                 // and what is supplied cannot drift apart - the rest reaches the model through the prompt
                 var queryParameters = FilterSupportedGenAiQueryParameters(context, item.ContextOutput.Context);
+                if (queryParameters.Count != item.ContextOutput.Context.Count)
+                    AssertQueriesDoNotUseUnboundContextProperties(item.ContextOutput.Context, queryParameters);
+
                 var agentConfiguration = CreateAgentConfiguration(context, queryParameters);
                 var handler = new GenAiConversationHandler(Database.ServerStore, Database, Configuration)
                 {
@@ -345,6 +350,33 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
         AddOrUpdateAiAgentCommand.ValidateConfiguration(context, agentConfiguration);
         return agentConfiguration;
+    }
+
+    private void AssertQueriesDoNotUseUnboundContextProperties(BlittableJsonReaderObject rawContext, BlittableJsonReaderObject queryParameters)
+    {
+        BlittableJsonReaderObject.PropertyDetails property = default;
+        for (var i = 0; i < rawContext.Count; i++)
+        {
+            rawContext.GetPropertyByIndex(i, ref property);
+
+            if (queryParameters.TryGetMember(property.Name, out _))
+                continue;
+
+            ConversationHandler.TryGetValueType(property.Value, out _, out var unsupportedType);
+
+            foreach (var query in Configuration.Queries ?? [])
+            {
+                var parsed = QueryMetadata.ParseQuery(query.Query, QueryType.Select);
+                if (parsed.Parameters.Select(x => x.Value).Contains(property.Name) == false)
+                    continue;
+
+                throw new InvalidOperationException(
+                    $"Query '{query.Name}' of Gen AI task '{Configuration.Name}' uses the parameter ${property.Name}, " +
+                    $"but the context property '{property.Name}' holds {unsupportedType}, and a query parameter only takes " +
+                    $"a scalar value. Put a scalar under that name in the context, or stop referencing ${property.Name} " +
+                    $"in the query - the whole context still reaches the model through the prompt either way.");
+            }
+        }
     }
 
     private static BlittableJsonReaderObject FilterSupportedGenAiQueryParameters(JsonOperationContext context, BlittableJsonReaderObject rawContext)
