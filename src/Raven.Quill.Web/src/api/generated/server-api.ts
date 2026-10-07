@@ -1089,6 +1089,7 @@ export interface components {
             huggingFaceSettings?: components["schemas"]["HuggingFaceSettings"];
             mistralAiSettings?: components["schemas"]["MistralAiSettings"];
             vertexSettings?: components["schemas"]["VertexSettings"];
+            anthropicSettings?: components["schemas"]["AnthropicSettings"];
             modelType?: components["schemas"]["AiModelType"];
             name?: null | string;
         };
@@ -1116,7 +1117,7 @@ export interface components {
         /** @enum {unknown} */
         AiConnectionStringUsageKind: "AiAgent" | "GenAi" | "EmbeddingsGeneration";
         /** @enum {unknown} */
-        AiConnectorType: "None" | "OpenAi" | "AzureOpenAi" | "Ollama" | "Embedded" | "Google" | "HuggingFace" | "MistralAi" | "Vertex";
+        AiConnectorType: "None" | "OpenAi" | "AzureOpenAi" | "Ollama" | "Embedded" | "Google" | "HuggingFace" | "MistralAi" | "Vertex" | "Anthropic";
         AiConversationMessage: {
             role?: components["schemas"]["AiMessageRole"];
             content?: null | string;
@@ -1161,6 +1162,18 @@ export interface components {
             cachedTokens?: number;
             /** Format: int64 */
             reasoningTokens?: number;
+        };
+        AnthropicSettings: {
+            apiKey?: null | string;
+            model?: null | string;
+            endpoint?: null | string;
+            /** Format: int32 */
+            maxOutputTokens?: null | number;
+            reasoningEffort?: null | string;
+            enablePromptCache?: null | boolean;
+            apiVersion?: null | string;
+            /** Format: int32 */
+            embeddingsMaxConcurrentBatches?: null | number;
         };
         ApiErrorResponse: {
             error?: null | string;
@@ -4451,6 +4464,7 @@ export type AiModelsResponse = components["schemas"]["AiModelsResponse"];
 export type AiModelType = components["schemas"]["AiModelType"];
 export type AiToolCallResult = components["schemas"]["AiToolCallResult"];
 export type AiUsage = components["schemas"]["AiUsage"];
+export type AnthropicSettings = components["schemas"]["AnthropicSettings"];
 export type ApiErrorResponse = components["schemas"]["ApiErrorResponse"];
 export type AppCdcConfigurationResponse = components["schemas"]["AppCdcConfigurationResponse"];
 export type ApplianceAppResponse = components["schemas"]["ApplianceAppResponse"];
