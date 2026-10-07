@@ -12,13 +12,13 @@ using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.AI.Settings;
 
-internal class GoogleChatCompletionClientSettings : AbstractOpenAiChatCompletionClientSettings
+internal class GoogleChatCompletionProvider : AbstractOpenAiChatCompletionProvider
 {
     private readonly string _aiVersion;
     public override bool SupportStrictTools => false;  // Google AI does not support strict tools, so we set this to false by default.
     public override bool EnablePromptCaching => _settings.EnablePromptCache ?? false; // Google AI returns errors if we send this
 
-    public GoogleChatCompletionClientSettings(GoogleSettings settings) : base(settings)
+    public GoogleChatCompletionProvider(GoogleSettings settings) : base(settings)
     {
         var aiVersion = settings.AiVersion ?? GoogleAIVersion.V1_Beta; // if AiVersion is not set, default to V1_Beta
         _aiVersion = GetAiVersion(aiVersion);
@@ -41,7 +41,7 @@ internal class GoogleChatCompletionClientSettings : AbstractOpenAiChatCompletion
         }
     }
 
-    internal override IToolCallState CreateToolCallState()
+    protected override IToolCallState CreateStreamToolCallState()
     {
         return new GoogleToolCallState();
     }
@@ -222,7 +222,7 @@ internal class GoogleChatCompletionClientSettings : AbstractOpenAiChatCompletion
         // Guarded so GetRefusal is safe to call on any response: content or tool calls means an answer, and
         // "length" is a token-limit stop that the shared length handling classifies.
         if (message != null
-            && ChatCompletionClient.HasContentOrToolCalls(message) == false
+            && HasContentOrToolCalls(message) == false
             && string.Equals(finishReason, ChatCompletionClient.Constants.ResponseFields.FinishReasonLength, StringComparison.OrdinalIgnoreCase) == false)
             return "The model refused to answer";
 
