@@ -201,6 +201,7 @@ namespace SlowTests.Server.Documents.Revisions
         public async Task ConflictOnSystemCollectionStillCreatesRevisions(Options options)
         {
             const int minToKeep = 2;
+            const int conflictRevisions = 3; // the two divergent copies plus the resolved one
             const string userId = "users/1";
             const string systemId = "embeddings/1";
 
@@ -230,14 +231,15 @@ namespace SlowTests.Server.Documents.Revisions
             await AssertWaitForTrueAsync(() => HasResolvedRevisionAsync(store2, userId));
             await AssertWaitForTrueAsync(() => HasResolvedRevisionAsync(store2, systemId));
 
-            // the user collection behaves as RavenDB-26296 expects: conflict revisions obey the regular
-            // configuration, so they are trimmed down to MinimumRevisionsToKeep
-            Assert.Equal(minToKeep, await CountRevisionsAsync(store2, userId));
+            // since RavenDB-26296 the conflict flags are checked before the database wide default, so everything
+            // a conflict produces falls under ConflictConfiguration.Default (MinimumRevisionsToKeep = 1024) and
+            // the user's MinimumRevisionsToKeep does not trim it: both conflicting copies and the resolved
+            // revision survive
+            Assert.Equal(conflictRevisions, await CountRevisionsAsync(store2, userId));
 
-            // the system collection does not: revisions are created despite the system-collection rule, and
-            // they are not trimmed to the user's Default either
-            var systemCount = await CountRevisionsAsync(store2, systemId);
-            Assert.True(systemCount > minToKeep, $"expected more than {minToKeep} revisions for the system collection, but got {systemCount}");
+            // the system-collection rule of this ticket applies to the database wide default, which a conflict
+            // never reaches, so a system collection keeps its conflict revisions as well
+            Assert.Equal(conflictRevisions, await CountRevisionsAsync(store2, systemId));
 
             using (var session = store2.OpenAsyncSession(new SessionOptions { NoCaching = true }))
             {
@@ -245,7 +247,7 @@ namespace SlowTests.Server.Documents.Revisions
                     .Select(m => m.GetString(Constants.Documents.Metadata.Flags) ?? string.Empty)
                     .ToList();
 
-                Assert.Equal(3, flags.Count);
+                Assert.Equal(conflictRevisions, flags.Count);
                 Assert.Contains("Resolved", flags[0]);
                 Assert.Contains("Conflicted", flags[1]);
                 Assert.Contains("Conflicted", flags[2]);
