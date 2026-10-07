@@ -1,4 +1,5 @@
 import { Search } from "lucide-react";
+import { FilterCount } from "@/components/data/filter-count";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/shadcn/ui/input-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/shadcn/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/shadcn/ui/toggle-group";
@@ -96,10 +97,6 @@ export function ConversationsToolbar({
             </div>
         </div>
     );
-}
-
-function FilterCount({ value }: { value: number }) {
-    return <span className="text-muted-foreground tabular-nums">{value}</span>;
 }
 
 function FilterSelect({
