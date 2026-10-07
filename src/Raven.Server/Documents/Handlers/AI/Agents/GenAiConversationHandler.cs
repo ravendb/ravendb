@@ -34,6 +34,10 @@ internal class GenAiConversationHandler(ServerStore server, DocumentDatabase dat
         return result;
     }
 
+    // No prompt caching for GenAI on Anthropic: a cache write costs more than plain input there. Other providers are unchanged.
+    internal override string GetPromptCacheKey(string conversationId) =>
+        configuration.Connection?.GetActiveProvider() == AiConnectorType.Anthropic ? null : base.GetPromptCacheKey(conversationId);
+
     protected override Task<string> TryPersistAsync(JsonOperationContext context, List<BlittableJsonReaderObject> historyDocs)
     {
         if (configuration.EnableTracing == false || configuration.TestMode)

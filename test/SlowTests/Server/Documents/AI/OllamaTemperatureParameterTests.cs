@@ -52,7 +52,14 @@ namespace SlowTests.Server.Documents.AI
             using (var stream = new MemoryStream())
             await using (var writer = new AsyncBlittableJsonTextWriter(context, stream))
             {
-                client.WriteCompletionRequestPayload(writer, context, [], [], [], true, false, ChatCompletionClient.EmptySchema);
+                client.ForTestingPurposesOnly().Provider.WritePayload(writer, context, new AiChatRequest
+                {
+                    Messages = [],
+                    Attachments = [],
+                    PreparedTools = [],
+                    UseTools = true,
+                    Schema = ChatCompletionClient.EmptySchema
+                }, streaming: false);
                 await writer.FlushAsync();
                 
                 capturedParameters = Encoding.UTF8.GetString(stream.ToArray());
