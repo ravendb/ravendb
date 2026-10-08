@@ -16,9 +16,7 @@ internal static class ChannelServiceCollectionExtensions
             .Validate(o => o.ChannelSenderQueueCapacity > 0, "ChannelSenderQueueCapacity must be positive")
             .Validate(o => o.ChannelSenderIdleTimeout > TimeSpan.Zero, "ChannelSenderIdleTimeout must be positive");
 
-        return services
-            .AddSingleton<ChannelManager>()
-            .AddSingleton<IChannelManager>(sp => sp.GetRequiredService<ChannelManager>());
+        return services.AddSingleton<ChannelManager>();
     }
 
     public static IServiceCollection AddChannelProvider<TFactory, TTurns, TMessage, TBot>(
@@ -41,6 +39,6 @@ internal static class ChannelServiceCollectionExtensions
                     sp.GetRequiredService<QuillLogger<TTurns>>().RavenLogger,
                     o.ChannelSenderQueueCapacity, o.ChannelSenderIdleTimeout);
             })
-            .AddSingleton<IChannelChats>(sp => sp.GetRequiredService<ChannelChats<TMessage>>())
+            .AddHostedService(sp => sp.GetRequiredService<ChannelChats<TMessage>>())
             .AddSingleton<IChannelRuntimeFactory, TFactory>();
 }

@@ -20,7 +20,7 @@ internal static class TelegramChannelRegistration
             .Validate(o => o.Telegram.PollBackoffMax > TimeSpan.Zero, "Telegram PollBackoffMax must be positive");
 
         services.AddHttpClient(TelegramBotClientFactory.HttpClientName);
-        services.AddSingleton<ITelegramBotClientFactory, TelegramBotClientFactory>();
+        services.AddSingleton<TelegramBotClientFactory>();
 
         return services.AddChannelProvider<TelegramRuntimeFactory, TelegramTurns, TelegramMessage, TelegramBot>();
     }

@@ -26,13 +26,8 @@ internal interface IChatTurns<in TMessage>
     Task NotifyBufferFullAsync(TMessage message, CancellationToken ct);
 }
 
-internal interface IChannelChats
-{
-    Task StopAsync(CancellationToken cancellationToken);
-}
-
 internal sealed class ChannelChats<TMessage>(
-    IChatTurns<TMessage> turns, IRavenLogger logger, int capacity, TimeSpan idleTimeout) : IChannelChats
+    IChatTurns<TMessage> turns, IRavenLogger logger, int capacity, TimeSpan idleTimeout) : IHostedService
     where TMessage : IChannelMessage
 {
     private static readonly TimeSpan StopDrainTimeout = TimeSpan.FromSeconds(10);
@@ -68,6 +63,8 @@ internal sealed class ChannelChats<TMessage>(
             return;
         }
     }
+
+    public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {

@@ -109,7 +109,7 @@ public static class AppsEndpoints
     private static async Task<IResult> DeleteAppAsync(
         string slug,
         IDocumentStore store,
-        IChannelManager channelManager,
+        ChannelManager channelManager,
         QuillLogger<AppsLogger> logger,
         HttpContext ctx,
         CancellationToken ct)

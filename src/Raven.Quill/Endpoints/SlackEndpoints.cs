@@ -30,7 +30,7 @@ public static class SlackEndpoints
         string slug,
         IDocumentStore store,
         ISlackClient slackClient,
-        IChannelManager channelManager,
+        ChannelManager channelManager,
         CancellationToken ct)
     {
         var app = await AppLookup.LoadAppAsync(store, slug, ct);

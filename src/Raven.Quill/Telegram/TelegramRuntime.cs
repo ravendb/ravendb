@@ -51,7 +51,7 @@ internal sealed class TelegramRuntime : IChannelRuntime
     public string? ChannelChangeVector { get; }
 
     public static TelegramRuntime Start(
-        string database, Channel channel, string? channelChangeVector, ITelegramBotClientFactory botFactory,
+        string database, Channel channel, string? channelChangeVector, TelegramBotClientFactory botFactory,
         ChannelChats<TelegramMessage> chats, TelegramOptions options, QuillLogger<TelegramRuntime> logger)
     {
         var runtime = new TelegramRuntime(

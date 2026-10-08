@@ -67,8 +67,8 @@ public static class ChannelsEndpoints
         string slug,
         ProvisionChannelRequest body,
         IDocumentStore store,
-        IChannelManager channelManager,
-        ITelegramBotClientFactory botFactory,
+        ChannelManager channelManager,
+        TelegramBotClientFactory botFactory,
         ISlackClient slackClient,
         IDiscordClient discordClient,
         QuillLogger<ChannelsLogger> logger,
@@ -185,8 +185,8 @@ public static class ChannelsEndpoints
         App app,
         ProvisionChannelRequest body,
         IDocumentStore store,
-        IChannelManager channelManager,
-        ITelegramBotClientFactory botFactory,
+        ChannelManager channelManager,
+        TelegramBotClientFactory botFactory,
         QuillLogger<ChannelsLogger> logger,
         HttpContext ctx,
         CancellationToken ct)
@@ -286,7 +286,7 @@ public static class ChannelsEndpoints
         ProvisionChannelRequest body,
         IDocumentStore store,
         ISlackClient slackClient,
-        IChannelManager channelManager,
+        ChannelManager channelManager,
         QuillLogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -403,7 +403,7 @@ public static class ChannelsEndpoints
         ProvisionChannelRequest body,
         IDocumentStore store,
         IDiscordClient discordClient,
-        IChannelManager channelManager,
+        ChannelManager channelManager,
         QuillLogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -521,8 +521,8 @@ public static class ChannelsEndpoints
         string channelId,
         UpdateChannelRequest body,
         IDocumentStore store,
-        IChannelManager channelManager,
-        ITelegramBotClientFactory botFactory,
+        ChannelManager channelManager,
+        TelegramBotClientFactory botFactory,
         ISlackClient slackClient,
         IDiscordClient discordClient,
         QuillLogger<ChannelsLogger> logger,
@@ -605,8 +605,8 @@ public static class ChannelsEndpoints
         App app,
         string channelId,
         IDocumentStore store,
-        IChannelManager channelManager,
-        ITelegramBotClientFactory botFactory,
+        ChannelManager channelManager,
+        TelegramBotClientFactory botFactory,
         QuillLogger<ChannelsLogger> logger,
         HttpContext ctx,
         CancellationToken ct)
@@ -741,7 +741,7 @@ public static class ChannelsEndpoints
         string channelId,
         IDocumentStore store,
         ISlackClient slackClient,
-        IChannelManager channelManager,
+        ChannelManager channelManager,
         QuillLogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -832,7 +832,7 @@ public static class ChannelsEndpoints
         string channelId,
         IDocumentStore store,
         IDiscordClient discordClient,
-        IChannelManager channelManager,
+        ChannelManager channelManager,
         QuillLogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -897,7 +897,7 @@ public static class ChannelsEndpoints
         string slug,
         string channelId,
         IDocumentStore store,
-        IChannelManager channelManager,
+        ChannelManager channelManager,
         QuillLogger<ChannelsLogger> logger,
         HttpContext ctx,
         CancellationToken ct)
@@ -949,7 +949,7 @@ public static class ChannelsEndpoints
         App app,
         string channelId,
         IDocumentStore store,
-        IChannelManager channelManager,
+        ChannelManager channelManager,
         QuillLogger<ChannelsLogger> logger,
         HttpContext ctx,
         CancellationToken ct)
@@ -977,7 +977,7 @@ public static class ChannelsEndpoints
         App app,
         string channelId,
         IDocumentStore store,
-        IChannelManager channelManager,
+        ChannelManager channelManager,
         QuillLogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -1000,7 +1000,7 @@ public static class ChannelsEndpoints
         App app,
         string channelId,
         IDocumentStore store,
-        IChannelManager channelManager,
+        ChannelManager channelManager,
         QuillLogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
