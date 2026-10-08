@@ -108,6 +108,14 @@
     </None>
   </ItemGroup>
   <ItemGroup Condition="'$(Client_IncludeZstd)' == '' OR '$(Client_IncludeZstd)' == 'true'">
+    <None Include="..\..\libs\libzstd\libzstd.win.arm64.dll" Link="libzstd.win.arm64.dll">
+      <PackagePath>runtimes/win-arm64/native/</PackagePath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <PackageCopyToOutput>true</PackageCopyToOutput>
+      <Pack>true</Pack>
+    </None>
+  </ItemGroup>
+  <ItemGroup Condition="'$(Client_IncludeZstd)' == '' OR '$(Client_IncludeZstd)' == 'true'">
     <None Include="..\..\libs\libzstd\libzstd.linux.x64.so" Link="libzstd.linux.x64.so">
       <PackagePath>runtimes/linux-x64/native/</PackagePath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

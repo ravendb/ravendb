@@ -42,6 +42,12 @@
     <None Include="..\..\libs\libzstd\libzstd.win.x86.dll" Link="libzstd.win.x86.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\libs\librvnpal\librvnpal.win.arm64.dll" Link="librvnpal.win.arm64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\libs\libzstd\libzstd.win.arm64.dll" Link="libzstd.win.arm64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="..\..\libs\librvnpal\librvnpal.linux.x64.so" Link="librvnpal.linux.x64.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
