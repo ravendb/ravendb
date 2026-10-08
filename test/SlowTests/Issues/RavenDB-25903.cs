@@ -1218,6 +1218,52 @@ namespace SlowTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task AppendToRollupOfIncrementalSeriesShouldReplaceNotAccumulate()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var rawName = Constants.Headers.IncrementalTimeSeriesPrefix + "Views";
+            var rollupName = $"{rawName}@{RollupPolicyName}";
+            var baseline = DateTime.UtcNow.Date.AddDays(-1);
+
+            await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(new TimeSeriesConfiguration
+            {
+                Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                {
+                    ["Books"] = new TimeSeriesCollectionConfiguration
+                    {
+                        Policies = new List<TimeSeriesPolicy> { new TimeSeriesPolicy(RollupPolicyName, TimeSpan.FromHours(1)) }
+                    }
+                }
+            }));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                session.IncrementalTimeSeriesFor(bookId1, rawName).Increment(baseline, 50);
+                await session.SaveChangesAsync();
+            }
+
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+            await database.TimeSeriesPolicyRunner.RunRollups();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                // a rollup is not incremental (the server treats it as a regular series), so the append replaces the rolled-up value
+                var tsf = session.TimeSeriesFor(bookId1, rollupName);
+                Assert.NotNull(await tsf.GetAsync());
+                tsf.Append(baseline, new[] { 7d, 7d, 7d, 7d, 7d, 1d });
+
+                var inSession = await tsf.GetAsync();
+                await session.SaveChangesAsync();
+                var saved = await session.TimeSeriesFor(bookId1, rollupName).GetAsync();
+
+                Assert.Equal(new[] { 7d, 7d, 7d, 7d, 7d, 1d }, saved.Single().Values);
+                Assert.Equal(saved.Single().Values, inSession.Single().Values);
+            }
+        }
+
         private const string RollupPolicyName = "By1Hour";
 
         // rollup series cannot be created by a client append, only by the policy runner
@@ -2033,6 +2079,28 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task UncachedPagedReadWithManyDeletedHolesAndLocalAppendShouldStillPageCorrectly()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.Date.AddDays(-1);
+            await StoreMinuteEntries(store, bookId1, baseline, 100);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                for (int i = 2; i <= 80; i += 2)
+                    tsf.Delete(baseline.AddMinutes(i));
+                tsf.Append(baseline.AddMinutes(200), 999);
+
+                var tse = await tsf.GetAsync(baseline, baseline.AddDays(1), start: 2, pageSize: 10);
+
+                var expected = Enumerable.Range(1, 100).Where(i => i > 80 || i % 2 == 1).Skip(2).Take(10).Select(i => (double)i);
+                Assert.Equal(expected, tse.Select(e => e.Value));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public async Task UncachedReadOfRangeDeletedInSessionShouldNotGoToServer()
         {
             using var store = GetDocumentStore();
@@ -2119,6 +2187,78 @@ namespace SlowTests.Issues
                 var page = await tsf.GetAsync(baseline.AddMinutes(45), baseline.AddMinutes(100), start: 0, pageSize: 10);
 
                 Assert.Equal(Enumerable.Range(45, 10).Select(i => (double)i), page.Select(e => e.Value));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task CachedPagedReadWithInSessionDeleteShouldNotFetchWholeGaps()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.Date.AddDays(-1);
+            await StoreMinuteEntries(store, bookId1, baseline, 1000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                await tsf.GetAsync(baseline.AddMinutes(10), baseline.AddMinutes(20));
+                tsf.Delete(baseline.AddMinutes(30), baseline.AddMinutes(40));
+
+                var page = await tsf.GetAsync(baseline, baseline.AddMinutes(1000), start: 15, pageSize: 10);
+
+                var expected = Enumerable.Range(1, 1000).Where(i => i < 30 || i > 40).Skip(15).Take(10).Select(i => (double)i);
+                Assert.Equal(expected, page.Select(e => e.Value));
+                Assert.True(CachedEntriesCount(session, bookId1) <= 40, $"fetched {CachedEntriesCount(session, bookId1)} entries for a page of 10 at offset 15");
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task CachedPagedReadAcrossDeletedHoleWithLocalAppendShouldKeepCacheConsistent()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.Date.AddDays(-1);
+            await StoreMinuteEntries(store, bookId1, baseline, 100);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                await tsf.GetAsync(baseline.AddMinutes(10), baseline.AddMinutes(20));
+                await tsf.GetAsync(baseline.AddMinutes(60), baseline.AddMinutes(70));
+                tsf.Delete(baseline.AddMinutes(31), baseline.AddMinutes(40));
+                tsf.Append(baseline.AddMinutes(35), 1035);
+
+                var server = Enumerable.Range(1, 100).Where(i => i is < 31 or > 40).Select(i => (Minute: i, Value: (double)i));
+                var all = server.Append((Minute: 35, Value: 1035d)).OrderBy(e => e.Minute).Select(e => e.Value).ToList();
+
+                var page = await tsf.GetAsync(baseline, baseline.AddMinutes(100), start: 25, pageSize: 10);
+                Assert.Equal(all.Skip(25).Take(10), page.Select(e => e.Value));
+
+                var full = await tsf.GetAsync(baseline, baseline.AddMinutes(100));
+                Assert.Equal(all, full.Select(e => e.Value));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task CachedReadWhoseMissingPartWasDeletedInSessionShouldNotGoToServer()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.Date.AddDays(-1);
+            await StoreMinuteEntries(store, bookId1, baseline, 30);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                await tsf.GetAsync(baseline.AddMinutes(1), baseline.AddMinutes(10));
+                await tsf.GetAsync(baseline.AddMinutes(21), baseline.AddMinutes(30));
+                tsf.Delete(baseline.AddMinutes(10), baseline.AddMinutes(21));
+
+                var requestsBefore = session.Advanced.NumberOfRequests;
+                var tse = await tsf.GetAsync(baseline.AddMinutes(1), baseline.AddMinutes(30));
+
+                Assert.Equal(requestsBefore, session.Advanced.NumberOfRequests);
+                Assert.Equal(Enumerable.Range(1, 30).Where(i => i is < 10 or > 21).Select(i => (double)i), tse.Select(e => e.Value));
             }
         }
 

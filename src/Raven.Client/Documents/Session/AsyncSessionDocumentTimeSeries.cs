@@ -58,9 +58,8 @@ namespace Raven.Client.Documents.Session
             var rangeFrom = from ?? DateTime.MinValue;
             var rangeTo = to ?? DateTime.MaxValue;
 
-            // local entries only add to the server entries, so the first start + pageSize server entries are enough to page the merged result.
-            // deleted entries are filtered out client side, so the server entries are fetched in full when a delete intersects the range
-            var needed = HasDeletedRangeIntersecting(rangeFrom, rangeTo) ? int.MaxValue : PageSizeToCoverMerge(start, pageSize);
+            // local entries only add to the server entries, so the first start + pageSize server entries are enough to page the merged result
+            var needed = PageSizeToCoverMerge(start, pageSize);
 
             var resultToUser = await ServeFromCache(rangeFrom, rangeTo, needed, includes, token).ConfigureAwait(false);
 
@@ -284,17 +283,18 @@ namespace Raven.Client.Documents.Session
             // the server pages the live ranges exactly, unless local entries have to be merged in
             var pageClientSide = hasLocalEntries;
 
-            if (liveRanges?.Count > MaxLiveRangesPerRequest)
+            var fetchWholeRange = liveRanges?.Count > MaxLiveRangesPerRequest;
+            if (fetchWholeRange)
             {
                 // too many holes for a single request, fetch the whole range and filter it client side
                 liveRanges = null;
                 pageClientSide = true;
             }
 
+            // deleted entries are filtered out after fetching, so a fetch that includes them can't be bounded by the page
             var serverStart = pageClientSide ? 0 : start;
-            var serverPageSize = pageClientSide ? PageSizeToCoverMerge(start, pageSize) : pageSize;
-            if (pageClientSide && hasLocalEntries == false)
-                serverPageSize = int.MaxValue;
+            var serverPageSize = fetchWholeRange ? int.MaxValue
+                : pageClientSide ? PageSizeToCoverMerge(start, pageSize) : pageSize;
 
             var rangeResults = liveRanges == null
                 ? await GetSingleRange<TTValues>(from, to, serverStart, serverPageSize, includes, token).ConfigureAwait(false)
@@ -444,7 +444,8 @@ namespace Raven.Client.Documents.Session
             return false;
         }
 
-        private bool IsIncremental => Name.StartsWith(Constants.Headers.IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase);
+        // mirrors the server's CheckIfIncrementalTs: a rollup of an incremental series is a regular series
+        private bool IsIncremental => Name.StartsWith(Constants.Headers.IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase) && Name.Contains('@') == false;
 
         private List<TEntry> MergeSorted<TEntry>(IReadOnlyList<TEntry> a, IReadOnlyList<TEntry> b)
             where TEntry : TimeSeriesEntry
@@ -570,6 +571,7 @@ namespace Raven.Client.Documents.Session
             var fromRangeIndex = -1;
 
             List<TimeSeriesRange> rangesToGetFromServer = default;
+            List<(DateTime From, DateTime To)> missingParts = default;
 
             for (toRangeIndex = 0; toRangeIndex < ranges.Count; toRangeIndex++)
             {
@@ -596,20 +598,25 @@ namespace Raven.Client.Documents.Session
                 // can't get the entire range from cache
 
                 rangesToGetFromServer ??= new List<TimeSeriesRange>();
+                missingParts ??= new List<(DateTime From, DateTime To)>();
 
                 // add the missing part [f, t] between current range start (or 'from')
                 // and previous range end (or 'to') to the list of ranges we need to get from server
 
+                var startsAtCachedRange = toRangeIndex > 0 && ranges[toRangeIndex - 1].To >= from;
+                var endsAtCachedRange = ranges[toRangeIndex].From <= to;
+
                 rangesToGetFromServer.Add(new TimeSeriesRange
                 {
                     Name = Name,
-                    From = toRangeIndex == 0 || ranges[toRangeIndex - 1].To < from
-                        ? from
-                        : ranges[toRangeIndex - 1].To,
-                    To = ranges[toRangeIndex].From <= to
-                        ? ranges[toRangeIndex].From
-                        : to
+                    From = startsAtCachedRange ? ranges[toRangeIndex - 1].To : from,
+                    To = endsAtCachedRange ? ranges[toRangeIndex].From : to
                 });
+
+                // the cached ranges already hold their boundary entries
+                missingParts.Add((
+                    From: startsAtCachedRange ? ranges[toRangeIndex - 1].To.AddMilliseconds(1) : from,
+                    To: endsAtCachedRange ? ranges[toRangeIndex].From.AddMilliseconds(-1) : to));
 
                 if (ranges[toRangeIndex].To >= to)
                     break;
@@ -629,23 +636,29 @@ namespace Raven.Client.Documents.Session
                     To = to
                 });
 
+                missingParts ??= new List<(DateTime From, DateTime To)>();
+                missingParts.Add((ranges[ranges.Count - 1].To.AddMilliseconds(1), to));
             }
 
-            // get all the missing parts from server
-
-            Session.IncrementRequestCount();
-
-            // the server pages the missing parts together, so 'needed' entries from them are enough to complete the first 'needed' entries
-            var details = await Session.Operations.SendAsync(
-                    new GetMultipleTimeSeriesOperation(DocId, rangesToGetFromServer, start: 0, needed, includes), Session._sessionInfo, token: token)
-                .ConfigureAwait(false);
-
-            if (includes != null)
+            // get the live entries of the missing parts from server: the parts deleted in the session are skipped,
+            // so every entry we get counts towards 'needed'
+            var liveRanges = new List<TimeSeriesRange>();
+            foreach (var part in missingParts)
             {
-                RegisterIncludes(details);
+                if (part.From <= part.To)
+                    liveRanges.AddRange(GetRangesExcludingDeleted(part.From, part.To));
             }
 
-            var resultFromServer = details.Values[Name];
+            if (liveRanges.Count > MaxLiveRangesPerRequest || (liveRanges.Count == 0 && includes != null))
+            {
+                // fetch the missing parts in full, deleted entries are filtered client side
+                liveRanges = rangesToGetFromServer;
+                needed = int.MaxValue;
+            }
+
+            var resultFromServer = liveRanges.Count == 0
+                ? new List<TimeSeriesRangeResult>()
+                : await GetMissingParts(liveRanges, needed, includes, token).ConfigureAwait(false);
 
             // merge all the missing parts we got from server
             // with all the ranges in cache that are between 'fromRange' and 'toRange'
@@ -653,7 +666,8 @@ namespace Raven.Client.Documents.Session
             var mergedValues = MergeRangesWithResults(from, to, ranges, fromRangeIndex, toRangeIndex,
                 resultFromServer, out var resultToUser);
 
-            var cacheTo = resultFromServer.Max(ts => ts.To);
+            // the bounds of the missing parts as requested, the cache merges them with the adjacent cached ranges
+            var cacheTo = rangesToGetFromServer[rangesToGetFromServer.Count - 1].To.Value;
             var cacheToRangeIndex = toRangeIndex;
 
             if (TryGetPagingCutoff(resultFromServer, needed, out var cutoff))
@@ -670,7 +684,7 @@ namespace Raven.Client.Documents.Session
 
             if (Session.NoTracking == false)
             {
-                from = resultFromServer.Min(ts => ts.From);
+                from = rangesToGetFromServer[0].From.Value;
                 InMemoryDocumentSessionOperations.AddToCache(Name, from, cacheTo, fromRangeIndex, cacheToRangeIndex, ranges, cache, mergedValues);
             }
 
@@ -688,6 +702,22 @@ namespace Raven.Client.Documents.Session
             var lastRange = resultFromServer.Last(r => r.Entries.Length > 0);
             cutoff = lastRange.Entries[lastRange.Entries.Length - 1].Timestamp;
             return true;
+        }
+
+        // the server pages the ranges of a single request together, so 'needed' entries from them are enough to complete the first 'needed' entries
+        private async Task<List<TimeSeriesRangeResult>> GetMissingParts(List<TimeSeriesRange> ranges, int needed, Action<ITimeSeriesIncludeBuilder> includes,
+            CancellationToken token)
+        {
+            Session.IncrementRequestCount();
+
+            var details = await Session.Operations.SendAsync(
+                    new GetMultipleTimeSeriesOperation(DocId, ranges, start: 0, needed, includes), Session._sessionInfo, token: token)
+                .ConfigureAwait(false);
+
+            if (includes != null)
+                RegisterIncludes(details);
+
+            return details.Values[Name];
         }
 
         private void RegisterIncludes(TimeSeriesDetails details)
@@ -752,10 +782,11 @@ namespace Raven.Client.Documents.Session
                     continue;
                 }
 
-                if (currentResultIndex < resultFromServer.Count &&
-                    resultFromServer[currentResultIndex].From < ranges[i].From)
+                while (currentResultIndex < resultFromServer.Count &&
+                       resultFromServer[currentResultIndex].From < ranges[i].From)
                 {
-                    // add current result from server to the merged list
+                    // add the results from server that come before the current range to the merged list
+                    // (a missing part is split into several results around the ranges deleted in the session)
                     // skip its first item only if it duplicates the last merged entry
                     // (ranges don't always share a boundary entry)
 
@@ -793,7 +824,7 @@ namespace Raven.Client.Documents.Session
                 AddRangeFrom(mergedValues, cachedEntries, DuplicatesLastMerged(cachedEntries, mergedValues) ? 1 : 0);
             }
 
-            if (currentResultIndex < resultFromServer.Count)
+            while (currentResultIndex < resultFromServer.Count)
             {
                 // the requested range ends after all the ranges in cache,
                 // so the last missing part is from server
