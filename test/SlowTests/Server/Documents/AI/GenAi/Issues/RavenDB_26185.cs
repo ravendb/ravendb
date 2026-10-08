@@ -180,7 +180,7 @@ public class RavenDB_26185(ITestOutputHelper output) : RavenTestBase(output)
             var request = new AiChatRequest
             {
                 Messages = [system, user],
-                PreparedTools = [CreateLiveTool(ctx)],
+                Tools = [CreateLiveTool(ctx)],
                 UseTools = true,
                 Schema = null
             };

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -85,6 +86,17 @@ internal abstract class AbstractChatCompletionProvider
     // 'request' is resolved by the client: internal messages filtered, tools in this provider's shape.
     public abstract void WritePayload(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, AiChatRequest request, bool streaming);
 
+    // Converts the canonical (OpenAI-shaped) messages and the attachments into this provider's message format.
+    protected abstract ProviderMessages NormalizeMessages(JsonOperationContext ctx, IEnumerable<BlittableJsonReaderObject> messages, List<AiAttachment> attachments);
+
+    protected sealed class ProviderMessages
+    {
+        public IEnumerable<object> Messages;
+
+        // For providers that take the system prompt outside the message list; null otherwise.
+        public string System;
+    }
+
     public abstract AiResponse ParseResponse(JsonOperationContext ctx, HttpResponseMessage response, BlittableJsonReaderObject content, AiUsage usage, bool structuredOutput);
 
     // A new state for one streamed response; ProcessStreamEvent and BuildStreamedResponse receive the instance created here.
@@ -93,6 +105,17 @@ internal abstract class AbstractChatCompletionProvider
     public abstract StreamEventResult ProcessStreamEvent(JsonOperationContext ctx, BlittableJsonReaderObject sseEvent, ChatStreamState state, AiUsage usage);
 
     public abstract AiResponse BuildStreamedResponse(JsonOperationContext streamingCtx, ChatStreamState state, HttpResponseMessage response);
+
+    protected static TState AsStreamState<TState>(ChatStreamState state) where TState : ChatStreamState
+    {
+        var typed = state as TState;
+        Debug.Assert(typed != null, $"Expected {typeof(TState).Name} but got '{state?.GetType().Name}'");
+
+        if (typed == null)
+            throw new InvalidOperationException($"Expected {typeof(TState).Name} but got '{state?.GetType().Name}'");
+
+        return typed;
+    }
 
     public abstract TimeSpan? GetRetryAfter(HttpResponseMessage response, AiError error);
 
@@ -132,7 +155,8 @@ internal abstract class AbstractChatCompletionProvider
         };
     }
 
-    // The assistant turn as RavenDB stores it in the conversation (canonical, OpenAI-shaped), whatever the provider.
+    // These two build the assistant turn we persist in the conversation (canonical, OpenAI-shaped, whatever the provider).
+    // OpenAI-compatible providers send this shape as is; the others convert it in NormalizeMessages.
     protected static BlittableJsonReaderObject CreateAssistantMessage(JsonOperationContext ctx, object content, string debugTag) =>
         ctx.ReadObject(new DynamicJsonValue
         {

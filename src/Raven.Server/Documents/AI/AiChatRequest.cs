@@ -7,12 +7,13 @@ namespace Raven.Server.Documents.AI;
 // A provider-independent chat-completion request; the selected provider translates it into its own wire format.
 public sealed record AiChatRequest
 {
+    // Canonical (OpenAI-shaped) messages; each provider converts them in NormalizeMessages.
     public IEnumerable<BlittableJsonReaderObject> Messages;
 
     public List<AiAttachment> Attachments;
 
     // Provider-shaped tools, prepared once per conversation call (see ChatCompletionClient.PrepareTools).
-    public List<BlittableJsonReaderObject> PreparedTools;
+    public List<BlittableJsonReaderObject> Tools;
 
     public bool UseTools;
 

@@ -217,7 +217,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 var request = new AiChatRequest
                 {
                     Messages = [Msg(ctx, "user", "Hi")],
-                    PreparedTools = client.PrepareTools(ctx, [new AiToolDescriptor("get_weather", "Get the weather", toolSchema)]),
+                    Tools = client.PrepareTools(ctx, [new AiToolDescriptor("get_weather", "Get the weather", toolSchema)]),
                     UseTools = false,
                     Schema = EmptySchema()
                 };

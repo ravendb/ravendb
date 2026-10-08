@@ -164,18 +164,18 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
 
         List<LazyStringValue> filterProperties = [ctx.GetLazyString(ConversationDocument.DateProperty), ctx.GetLazyString(ConversationDocument.UsageProperty), ctx.GetLazyString(ConversationDocument.OutputSchemaProperty)];
 
-        writer.WriteArray(ctx, ChatCompletionClient.Constants.RequestFields.Messages, WithAttachments(ctx, request.Messages, request.Attachments), (w, context, message) =>
+        writer.WriteArray(ctx, ChatCompletionClient.Constants.RequestFields.Messages, NormalizeMessages(ctx, request.Messages, request.Attachments).Messages, (w, context, message) =>
         {
             w.WriteStartObject();
-            w.WriteObjectWithFilter(message, filterProperties.Contains);
+            w.WriteObjectWithFilter((BlittableJsonReaderObject)message, filterProperties.Contains);
             w.WriteEndObject();
         });
 
         // Optional
-        if (request.PreparedTools?.Count > 0 && (request.UseTools || SupportsToolChoiceNone))
+        if (request.Tools?.Count > 0 && (request.UseTools || SupportsToolChoiceNone))
         {
             writer.WriteComma();
-            writer.WriteArray(ChatCompletionClient.Constants.RequestFields.Tools, request.PreparedTools);
+            writer.WriteArray(ChatCompletionClient.Constants.RequestFields.Tools, request.Tools);
 
             if (request.UseTools is false)
             {
@@ -230,6 +230,10 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
             return ctx.Sync.ReadForMemory(stream, "json");
         }
     }
+
+    // The canonical form is already OpenAI's, so the messages pass through as they are.
+    protected override ProviderMessages NormalizeMessages(JsonOperationContext ctx, IEnumerable<BlittableJsonReaderObject> messages, List<AiAttachment> attachments) =>
+        new() { Messages = WithAttachments(ctx, messages, attachments) };
 
     private IEnumerable<BlittableJsonReaderObject> WithAttachments(JsonOperationContext context, IEnumerable<BlittableJsonReaderObject> messages, List<AiAttachment> attachments)
     {
