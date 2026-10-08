@@ -187,28 +187,13 @@ namespace Raven.Client.Documents.Session
         // when the session's deletes cover the whole timeline and nothing was appended back
         private bool IsWholeSeriesDeletedInSession()
         {
-            if (TryGetDeletedRanges(out var ranges) == false)
+            if (TryGetDeletedRanges(out _) == false)
                 return false;
 
             if (TryGetLocalEntries(out _) && DeletesApplyToLocalEntries() == false)
                 return false;
 
-            var end = DateTime.MaxValue.EnsureMilliseconds();
-            var firstUncovered = DateTime.MinValue;
-
-            foreach (var range in ranges.OrderBy(r => r.From))
-            {
-                if (range.From > firstUncovered)
-                    return false;
-
-                if (range.To >= end)
-                    return true;
-
-                if (range.To >= firstUncovered)
-                    firstUncovered = range.To.AddMilliseconds(1);
-            }
-
-            return false;
+            return GetRangesExcludingDeleted(DateTime.MinValue, DateTime.MaxValue).Count == 0;
         }
 
         internal async Task<TimeSeriesEntry<TEntry>[]> GetTypedFromCache<TEntry>(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start,
@@ -288,59 +273,142 @@ namespace Raven.Client.Documents.Session
             }
 
             var hasLocalEntries = cachedEntries != null && cachedEntries.Count > 0;
-            var hasDeletesInRange = HasDeletedRangeIntersecting(from ?? DateTime.MinValue, to ?? DateTime.MaxValue);
-            var serveClientSide = hasLocalEntries || hasDeletesInRange;
-            var serverStart = serveClientSide ? 0 : start;
-            var serverPageSize = hasDeletesInRange
-                ? int.MaxValue
-                : hasLocalEntries ? PageSizeToCoverMerge(start, pageSize) : pageSize;
+            var liveRanges = HasDeletedRangeIntersecting(from ?? DateTime.MinValue, to ?? DateTime.MaxValue)
+                ? GetRangesExcludingDeleted(from ?? DateTime.MinValue, to ?? DateTime.MaxValue)
+                : null;
 
-            Session.IncrementRequestCount();
+            if (liveRanges?.Count == 0)
+            {
+                // the whole requested range was deleted in the session, only local entries can be there
+                return (cachedEntries ?? Enumerable.Empty<TTValues>()).Skip(start).Take(pageSize).ToArray();
+            }
 
-            var rangeResult = await Session.Operations.SendAsync(
-                    new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, serverStart, serverPageSize, includes), Session._sessionInfo, token: token)
-                .ConfigureAwait(false);
+            // the server pages the live ranges exactly, unless local entries have to be merged in
+            var pageClientSide = hasLocalEntries;
 
-            if (rangeResult == null)
+            if (liveRanges?.Count > MaxLiveRangesPerRequest)
+            {
+                // too many holes for a single request, fetch the whole range and filter it client side
+                liveRanges = null;
+                pageClientSide = true;
+            }
+
+            var serverStart = pageClientSide ? 0 : start;
+            var serverPageSize = pageClientSide ? PageSizeToCoverMerge(start, pageSize) : pageSize;
+            if (pageClientSide && hasLocalEntries == false)
+                serverPageSize = int.MaxValue;
+
+            var rangeResults = liveRanges == null
+                ? await GetSingleRange<TTValues>(from, to, serverStart, serverPageSize, includes, token).ConfigureAwait(false)
+                : await GetLiveRanges(liveRanges, serverStart, serverPageSize, includes, token).ConfigureAwait(false);
+
+            if (rangeResults == null)
             {
                 if (cachedEntries == null)
-                    return null;
+                    return HasDeletedRangeIntersecting(from ?? DateTime.MinValue, to ?? DateTime.MaxValue) ? Array.Empty<TTValues>() : null;
 
                 return cachedEntries.Skip(start).Take(pageSize).ToArray();
             }
 
-            var serverEntries = RemoveDeletedTimeSeries(rangeResult.Entries ?? Array.Empty<TTValues>());
+            var serverEntries = RemoveDeletedTimeSeries(rangeResults.SelectMany(r => r.Entries ?? Array.Empty<TimeSeriesEntry>())
+                .Select(ConvertCachedEntry<TTValues>)
+                .ToList());
             var entriesResult = MergeSorted(serverEntries, cachedEntries);
 
-            if (serveClientSide)
+            if (pageClientSide)
                 entriesResult = entriesResult.Skip(start).Take(pageSize).ToList();
 
             if (Session.NoTracking == false)
             {
-                HandleIncludes(rangeResult);
-
-                if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) == false)
+                foreach (var rangeResult in rangeResults)
                 {
-                    Session.TimeSeriesByDocId[DocId] = cache = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
-                }
-
-                if (cache.TryGetValue(Name, out var ranges) && ranges.Count > 0)
-                {
-                    int index = ranges.Count;
-                    while (index > 0 && ranges[index - 1].From > rangeResult.From)
-                        index--;
-                    ranges.Insert(index, rangeResult);
-                }
-                else
-                {
-                    cache[Name] = new List<TimeSeriesRangeResult>
-                    {
-                        rangeResult
-                    };
+                    HandleIncludes(rangeResult);
+                    AddToCache(rangeResult);
                 }
             }
 
             return entriesResult.ToArray();
+        }
+
+        // more ranges than this would make the request's query string too long
+        private const int MaxLiveRangesPerRequest = 32;
+
+        private async Task<IReadOnlyList<TimeSeriesRangeResult>> GetSingleRange<TTValues>(DateTime? from, DateTime? to, int start, int pageSize,
+            Action<ITimeSeriesIncludeBuilder> includes, CancellationToken token) where TTValues : TimeSeriesEntry
+        {
+            Session.IncrementRequestCount();
+
+            var rangeResult = await Session.Operations.SendAsync(
+                    new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, start, pageSize, includes), Session._sessionInfo, token: token)
+                .ConfigureAwait(false);
+
+            if (rangeResult == null)
+                return null;
+
+            // the typed result hides the base Entries, which the session cache reads
+            ((TimeSeriesRangeResult)rangeResult).Entries ??= rangeResult.Entries;
+            return new TimeSeriesRangeResult[] { rangeResult };
+        }
+
+        // the server shares start and pageSize across the ranges of a single request, so the live ranges are paged exactly
+        private async Task<IReadOnlyList<TimeSeriesRangeResult>> GetLiveRanges(List<TimeSeriesRange> liveRanges, int start, int pageSize,
+            Action<ITimeSeriesIncludeBuilder> includes, CancellationToken token)
+        {
+            Session.IncrementRequestCount();
+
+            var details = await Session.Operations.SendAsync(
+                    new GetMultipleTimeSeriesOperation(DocId, liveRanges, start, pageSize, includes), Session._sessionInfo, token: token)
+                .ConfigureAwait(false);
+
+            if (details?.Values == null || details.Values.TryGetValue(Name, out var rangeResults) == false)
+                return null;
+
+            return rangeResults;
+        }
+
+        private void AddToCache(TimeSeriesRangeResult rangeResult)
+        {
+            if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) == false)
+                Session.TimeSeriesByDocId[DocId] = cache = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
+
+            if (cache.TryGetValue(Name, out var ranges) == false)
+                cache[Name] = ranges = new List<TimeSeriesRangeResult>();
+
+            int index = ranges.Count;
+            while (index > 0 && ranges[index - 1].From > rangeResult.From)
+                index--;
+            ranges.Insert(index, rangeResult);
+        }
+
+        // [from, to] minus the in-session deleted ranges, as inclusive millisecond ranges
+        private List<TimeSeriesRange> GetRangesExcludingDeleted(DateTime from, DateTime to)
+        {
+            var result = new List<TimeSeriesRange>();
+            var last = to.EnsureMilliseconds();
+            var next = from;
+
+            if (TryGetDeletedRanges(out var deletedRanges))
+            {
+                foreach (var deleted in deletedRanges.OrderBy(r => r.From))
+                {
+                    if (deleted.To < next)
+                        continue;
+
+                    if (deleted.From > last)
+                        break;
+
+                    if (deleted.From > next)
+                        result.Add(new TimeSeriesRange { Name = Name, From = next, To = deleted.From.AddMilliseconds(-1) });
+
+                    if (deleted.To >= last)
+                        return result;
+
+                    next = deleted.To.AddMilliseconds(1);
+                }
+            }
+
+            result.Add(new TimeSeriesRange { Name = Name, From = next, To = to });
+            return result;
         }
 
         private static int PageSizeToCoverMerge(int start, int pageSize)
