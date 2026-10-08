@@ -33,7 +33,7 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
         {
             Messages = document.Messages,
             Attachments = attachments,
-            PreparedTools = _preparedTools,
+            Tools = _preparedTools,
             UseTools = document.RemainingToolIterations-- > 0,
             Schema = schema,
             PromptCacheKey = handler.GetPromptCacheKey(document.Id)

@@ -93,7 +93,7 @@ namespace SlowTests.Server.Documents.AI
                     client.ForTestingPurposesOnly().Provider.WritePayload(writer, ctx, new AiChatRequest
                     {
                         Messages = [UserMessage(ctx, "hi")],
-                        PreparedTools = tools,
+                        Tools = tools,
                         UseTools = true,
                         Schema = ChatCompletionClient.EmptySchema
                     }, streaming: false);

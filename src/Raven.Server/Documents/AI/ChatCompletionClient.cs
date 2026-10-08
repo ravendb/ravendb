@@ -258,7 +258,7 @@ public class ChatCompletionClient : IDisposable
             using var request = CreateCompletionRequest(context, new AiChatRequest
             {
                 Messages = [userMessage],
-                PreparedTools = PrepareTools(context, descriptors),
+                Tools = PrepareTools(context, descriptors),
                 UseTools = true,
                 Schema = null
             }, streaming: false, trace: null);

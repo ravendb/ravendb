@@ -28,7 +28,7 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider
 
     public override StreamEventResult ProcessStreamEvent(JsonOperationContext ctx, BlittableJsonReaderObject sseEvent, ChatStreamState chatState, AiUsage usage)
     {
-        var state = (OpenAiStreamState)chatState;
+        var state = AsStreamState<OpenAiStreamState>(chatState);
 
         if (sseEvent.TryGet(ChatCompletionClient.Constants.ResponseFields.Usage, out BlittableJsonReaderObject streamedUsage) && streamedUsage is not null)
             usage.UpdateFrom(streamedUsage);
@@ -93,7 +93,7 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider
 
     public override AiResponse BuildStreamedResponse(JsonOperationContext streamingCtx, ChatStreamState chatState, HttpResponseMessage response)
     {
-        var state = (OpenAiStreamState)chatState;
+        var state = AsStreamState<OpenAiStreamState>(chatState);
 
         // [DONE] closes the tool call still being merged; a stream cut before [DONE] leaves it out.
         if (state.SawStop)

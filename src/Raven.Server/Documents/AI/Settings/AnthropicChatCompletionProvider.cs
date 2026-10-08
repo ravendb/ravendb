@@ -73,7 +73,7 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
 
         AppendReasoning(body, ref outputConfig);
 
-        var turns = NormalizeTurns(ctx, request.Messages, request.Attachments);
+        var turns = NormalizeMessages(ctx, request.Messages, request.Attachments);
 
         if (turns.System != null)
             body[Wire.System] = turns.System;
@@ -81,12 +81,9 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
         body[Wire.Messages] = turns.Messages;
 
         // Anthropic honours tool_choice "none", so the tools stay in the request even when they are disabled.
-        if (request.PreparedTools?.Count > 0)
+        if (request.Tools?.Count > 0)
         {
-            var tools = new DynamicJsonArray();
-            foreach (var tool in request.PreparedTools)
-                tools.Add(tool);
-            body[Wire.Tools] = tools;
+            body[Wire.Tools] = request.Tools;
 
             if (request.UseTools == false)
                 body[Wire.ToolChoice] = new DynamicJsonValue { [Wire.Type] = Wire.ToolChoiceNone };
@@ -99,20 +96,14 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
         if (outputConfig != null)
             body[Wire.OutputConfig] = outputConfig;
 
-        // Only agent conversations carry a cache key; a one-off GenAI request would pay the cache write and never read it.
+        // Agent conversations carry a cache key; GenAI requests on Anthropic don't, so they aren't cached.
         if (request.PromptCacheKey != null && EnablePromptCaching)
             body[Wire.CacheControl] = new DynamicJsonValue { [Wire.Type] = Wire.CacheEphemeral };
 
         ctx.Write(writer, body);
     }
 
-    private sealed class NormalizedTurns
-    {
-        public DynamicJsonArray Messages;
-        public string System;
-    }
-
-    private NormalizedTurns NormalizeTurns(JsonOperationContext ctx, IEnumerable<BlittableJsonReaderObject> payloadMessages, List<AiAttachment> attachments)
+    protected override ProviderMessages NormalizeMessages(JsonOperationContext ctx, IEnumerable<BlittableJsonReaderObject> payloadMessages, List<AiAttachment> attachments)
     {
         var systemText = new StringBuilder();
         var messages = new DynamicJsonArray();
@@ -148,7 +139,8 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
                 continue;
             }
 
-            FlushToolResults(messages, ref pendingToolResults);
+            FlushToolResults(messages, pendingToolResults);
+            pendingToolResults = null;
 
             if (role == Canonical.RequestFields.RoleAssistantValue)
             {
@@ -167,7 +159,7 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
             messages.Add(new DynamicJsonValue { [Wire.Role] = Wire.RoleUser, [Wire.Content] = userBlocks });
         }
 
-        FlushToolResults(messages, ref pendingToolResults);
+        FlushToolResults(messages, pendingToolResults);
 
         AppendAttachments(messages, attachments);
 
@@ -177,7 +169,7 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
                 "A turn whose content is an empty string (or whose parts are all empty) produces no content block, and Anthropic " +
                 "rejects an empty text block, so such turns are dropped rather than padded.");
 
-        return new NormalizedTurns
+        return new ProviderMessages
         {
             Messages = messages,
             System = systemText.Length > 0 ? systemText.ToString() : null
@@ -231,13 +223,12 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
     }
 
     // Consecutive tool results go back as one user turn.
-    private static void FlushToolResults(DynamicJsonArray messages, ref DynamicJsonArray pendingToolResults)
+    private static void FlushToolResults(DynamicJsonArray messages, DynamicJsonArray pendingToolResults)
     {
         if (pendingToolResults == null)
             return;
 
         messages.Add(new DynamicJsonValue { [Wire.Role] = Wire.RoleUser, [Wire.Content] = pendingToolResults });
-        pendingToolResults = null;
     }
 
     private static bool TryBuildAssistantTurn(JsonOperationContext ctx, BlittableJsonReaderObject message, out DynamicJsonValue turn)
@@ -384,12 +375,13 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
             throw UnexpectedResponseException.Create("No text content in response", response, content, GetRequestId(response.Headers));
 
         // Unstructured (no schema): the text IS the answer, returned as a string without parsing.
-        object result = text.ToString();
+        var answer = text.ToString();
+        object result = answer;
         if (structuredOutput)
         {
             try
             {
-                result = ctx.Sync.ReadForMemory(text.ToString(), "ai/output");
+                result = ctx.Sync.ReadForMemory(answer, "ai/output");
             }
             catch (Exception e) when (e is InvalidDataException or InvalidStartOfObjectException or EndOfStreamException)
             {

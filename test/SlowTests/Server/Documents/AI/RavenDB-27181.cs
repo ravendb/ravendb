@@ -212,7 +212,7 @@ public class RavenDB_27181(ITestOutputHelper output) : RavenTestBase(output)
                 {
                     Messages = [],
                     Attachments = [],
-                    PreparedTools = null,
+                    Tools = null,
                     UseTools = true,
                     Schema = ChatCompletionClient.EmptySchema
                 }, streaming: false);
@@ -278,7 +278,7 @@ public class RavenDB_27181(ITestOutputHelper output) : RavenTestBase(output)
             {
                 Messages = [],
                 Attachments = [],
-                PreparedTools = null,
+                Tools = null,
                 UseTools = true,
                 Schema = ChatCompletionClient.EmptySchema
             }, streaming: false);

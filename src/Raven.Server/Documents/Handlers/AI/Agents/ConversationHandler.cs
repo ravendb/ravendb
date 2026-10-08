@@ -856,7 +856,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         var request = new AiChatRequest
         {
             Messages = messages,
-            PreparedTools = client.PrepareTools(context, BuildToolDescriptors(context, configuration)),
+            Tools = client.PrepareTools(context, BuildToolDescriptors(context, configuration)),
             UseTools = false,
             Schema = SummarizationOutputSchema
         };

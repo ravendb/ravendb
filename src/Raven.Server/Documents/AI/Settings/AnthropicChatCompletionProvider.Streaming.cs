@@ -19,7 +19,7 @@ internal sealed partial class AnthropicChatCompletionProvider
 {
     public override StreamEventResult ProcessStreamEvent(JsonOperationContext ctx, BlittableJsonReaderObject sseEvent, ChatStreamState state, AiUsage usage)
     {
-        var progress = (AnthropicStreamState)state;
+        var progress = AsStreamState<AnthropicStreamState>(state);
         var blocks = progress.Blocks;
 
         if (sseEvent.TryGet(Wire.Type, out string eventType) == false)
@@ -127,7 +127,7 @@ internal sealed partial class AnthropicChatCompletionProvider
         if (lengthTruncated && state.StructuredOutput)
             throw new TooManyTokensException($"The model stopped because it ran out of room (stop_reason='{state.StopReason}').") { RequestId = GetRequestId(response.Headers) };
 
-        var blocks = ((AnthropicStreamState)state).Blocks;
+        var blocks = AsStreamState<AnthropicStreamState>(state).Blocks;
         var ordered = blocks.OrderBy(kv => kv.Key).Select(kv => kv.Value).ToList();
         var hasToolUse = ordered.Any(b => b.Type == Wire.TypeToolUse);
 
