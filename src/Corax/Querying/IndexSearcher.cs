@@ -35,6 +35,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private const long BitmapAndFillDensityDivisor = 256;
     private const long BitmapOrFillDensityDivisor = 32;
     internal const int BitmapAndFillSingleBatchThreshold = 4096;
+    internal const int BitmapDrainBufferSize = 4096;
     
     internal readonly Transaction _transaction;
     private Dictionary<string, Slice> _dynamicFieldNameMapping;
