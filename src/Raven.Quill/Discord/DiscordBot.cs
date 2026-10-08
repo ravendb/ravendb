@@ -14,8 +14,6 @@ internal sealed class DiscordBot(
     DiscordOptions options,
     QuillLogger<DiscordTurns> logger) : IChannelBot
 {
-    public ChannelReplies Replies => ChannelReplies.Default;
-
     public ChannelConnectionHealth? Health => health;
 
     public Task SendAsync(string text, CancellationToken ct) =>

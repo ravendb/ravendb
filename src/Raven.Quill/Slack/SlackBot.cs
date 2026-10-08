@@ -14,8 +14,6 @@ internal sealed class SlackBot(
     SlackOptions options,
     QuillLogger<SlackTurns> logger) : IChannelBot
 {
-    public ChannelReplies Replies => ChannelReplies.Default;
-
     public ChannelConnectionHealth? Health => health;
 
     public ISlackClient Client => slack;

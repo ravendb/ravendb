@@ -36,20 +36,12 @@ internal interface IChannelRuntimeFactory
     IChannelRuntime Start(string database, Channel channel, string? changeVector);
 }
 
-internal interface IChannelManager
-{
-    void Wake();
-
-    ChannelConnectionHealth? HealthFor(string database, string channelId);
-}
-
 internal sealed class ChannelManager(
     IDocumentStore store,
     IEnumerable<IChannelRuntimeFactory> factories,
-    IEnumerable<IChannelChats> chats,
     IOptions<ApplianceOptions> options,
     IServerReady ready,
-    QuillLogger<ChannelManager> logger) : BackgroundService, IChannelManager
+    QuillLogger<ChannelManager> logger) : BackgroundService
 {
     private static readonly TimeSpan StopDrainTimeout = TimeSpan.FromSeconds(15);
 
@@ -228,7 +220,5 @@ internal sealed class ChannelManager(
             if (logger.IsWarnEnabled)
                 logger.Warn($"Channel runtimes did not drain within {StopDrainTimeout}");
         }
-
-        await Task.WhenAll(chats.Select(c => c.StopAsync(cancellationToken)));
     }
 }

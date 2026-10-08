@@ -27,7 +27,7 @@ public static class DiscordEndpoints
         string slug,
         IDocumentStore store,
         IDiscordClient discordClient,
-        IChannelManager channelManager,
+        ChannelManager channelManager,
         CancellationToken ct)
     {
         var app = await AppLookup.LoadAppAsync(store, slug, ct);

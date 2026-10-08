@@ -7,7 +7,7 @@ using Raven.Quill.Logging;
 namespace Raven.Quill.Telegram;
 
 internal sealed class TelegramRuntimeFactory(
-    ITelegramBotClientFactory botFactory,
+    TelegramBotClientFactory botFactory,
     ChannelChats<TelegramMessage> chats,
     IOptions<ApplianceOptions> options,
     QuillLogger<TelegramRuntime> logger) : IChannelRuntimeFactory

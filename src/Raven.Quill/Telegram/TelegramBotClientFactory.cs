@@ -6,14 +6,9 @@ using TelegramUser = Telegram.Bot.Types.User;
 
 namespace Raven.Quill.Telegram;
 
-internal interface ITelegramBotClientFactory
-{
-    ITelegramBotClient Create(string botToken);
-}
-
 internal sealed class TelegramBotClientFactory(
     IOptions<ApplianceOptions> options,
-    IHttpClientFactory httpClientFactory) : ITelegramBotClientFactory
+    IHttpClientFactory httpClientFactory)
 {
     internal const string HttpClientName = "telegram";
 
@@ -27,7 +22,7 @@ internal sealed class TelegramBotClientFactory(
 internal static class TelegramBotTokenValidation
 {
     public static async Task<(TelegramUser? Bot, string? Error)> ValidateBotTokenAsync(
-        this ITelegramBotClientFactory botFactory, string botToken, CancellationToken ct)
+        this TelegramBotClientFactory botFactory, string botToken, CancellationToken ct)
     {
         try
         {

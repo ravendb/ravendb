@@ -32,8 +32,6 @@ internal sealed class TelegramBot(
     public ChannelReplies Replies =>
         new(Messages.SomethingWentWrong, Messages.ConversationExpired, Messages.Overloaded);
 
-    public ChannelConnectionHealth? Health => null;
-
     public Task SendAsync(string text, CancellationToken ct) =>
         client.SendMessage(chatId, text, cancellationToken: ct);
 
@@ -47,8 +45,6 @@ internal sealed class TelegramBot(
             cancellationToken: ct);
 
     public ChannelStreamingReply CreateReply() => new TelegramStreamingReply(client, chatId, options, logger);
-
-    public string? DescribeApiFailure(Exception e) => null;
 
     public async Task TypingAsync(CancellationToken ct)
     {

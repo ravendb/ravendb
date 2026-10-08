@@ -21,15 +21,15 @@ internal sealed record ChannelReplies(string Error, string ConversationExpired, 
 
 internal interface IChannelBot : IAsyncDisposable
 {
-    ChannelReplies Replies { get; }
+    ChannelReplies Replies => ChannelReplies.Default;
 
-    ChannelConnectionHealth? Health { get; }
+    ChannelConnectionHealth? Health => null;
 
     Task SendAsync(string text, CancellationToken ct);
 
     ChannelStreamingReply CreateReply();
 
-    string? DescribeApiFailure(Exception e);
+    string? DescribeApiFailure(Exception e) => null;
 
     Task TypingAsync(CancellationToken ct) => Task.CompletedTask;
 }
