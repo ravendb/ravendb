@@ -57,7 +57,7 @@ namespace SlowTests.Server.Documents.AI
                 {
                     Messages = [],
                     Attachments = [],
-                    PreparedTools = [],
+                    Tools = [],
                     UseTools = true,
                     Schema = ChatCompletionClient.EmptySchema
                 }, streaming: false);
