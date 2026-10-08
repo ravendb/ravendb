@@ -182,13 +182,18 @@ namespace Raven.Client.Documents.Session
                     .EnsureMilliseconds()
             };
 
-            if (Session.DeletedTimeSeries.TryGetValue(DocId, out var cache) == false)
-                Session.DeletedTimeSeries[DocId] = cache = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
+            GetOrAddForSeries(Session.DeletedTimeSeries).Add(range);
+        }
 
-            if (cache.TryGetValue(Name, out var ranges) == false)
-                cache[Name] = ranges = new List<TimeSeriesRangeResult>();
+        protected TValue GetOrAddForSeries<TValue>(Dictionary<string, Dictionary<string, TValue>> byDocId) where TValue : new()
+        {
+            if (byDocId.TryGetValue(DocId, out var byName) == false)
+                byDocId[DocId] = byName = new Dictionary<string, TValue>(StringComparer.OrdinalIgnoreCase);
 
-            ranges.Add(range);
+            if (byName.TryGetValue(Name, out var value) == false)
+                byName[Name] = value = new TValue();
+
+            return value;
         }
 
         protected bool TryGetLocalEntries(out SortedList<DateTime, TimeSeriesEntry> entries)
@@ -286,13 +291,7 @@ namespace Raven.Client.Documents.Session
                 IsRollup = Name.Contains(TimeSeriesConfiguration.TimeSeriesRollupSeparator)
             };
 
-            if (Session.LocalTimeSeries.TryGetValue(DocId, out var byName) == false)
-                Session.LocalTimeSeries[DocId] = byName = new Dictionary<string, SortedList<DateTime, TimeSeriesEntry>>(StringComparer.OrdinalIgnoreCase);
-
-            if (byName.TryGetValue(Name, out var entries) == false)
-                byName[Name] = entries = new SortedList<DateTime, TimeSeriesEntry>();
-
-            entries[utcTimestamp] = entry;
+            GetOrAddForSeries(Session.LocalTimeSeries)[utcTimestamp] = entry;
         }
 
         private double[] CurrentLocalDeltaAt(DateTime utcTimestamp)

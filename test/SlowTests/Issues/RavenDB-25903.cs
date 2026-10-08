@@ -1532,7 +1532,7 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
-        public async Task AppendWithLocalKindTimestampAfterDeleteShouldNotBeFiltered()
+        public async Task AppendWithLocalKindTimestampShouldBeReturnedAtItsUtcTimestamp()
         {
             using var store = GetDocumentStore();
             var bookId1 = "books/1";
@@ -2097,6 +2097,72 @@ namespace SlowTests.Issues
 
                 var expected = Enumerable.Range(1, 100).Where(i => i > 80 || i % 2 == 1).Skip(2).Take(10).Select(i => (double)i);
                 Assert.Equal(expected, tse.Select(e => e.Value));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task TypedUncachedPagedReadWithInSessionDeleteShouldReturnTypedEntries()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.Date.AddDays(-1);
+            await StoreMinuteEntries(store, bookId1, baseline, 100);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var tsf = session.TimeSeriesFor<HeartRateMeasure>(bookId1, nameof(Book));
+                tsf.Delete(baseline.AddMinutes(11), baseline.AddMinutes(20));
+
+                var tse = await tsf.GetAsync(baseline, baseline.AddDays(1), start: 5, pageSize: 10);
+
+                var expected = Enumerable.Range(1, 100).Where(i => i is < 11 or > 20).Skip(5).Take(10).Select(i => (double)i);
+                Assert.Equal(expected, tse.Select(e => e.Value.HeartRate));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task UncachedReadOfRangeDeletedInSessionShouldStillLoadIncludes()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.Date.AddDays(-1);
+            await StoreMinuteEntries(store, bookId1, baseline, 10);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                tsf.Delete(baseline.AddMinutes(2), baseline.AddMinutes(5));
+
+                var tse = await tsf.GetAsync(baseline.AddMinutes(2), baseline.AddMinutes(5), includes: i => i.IncludeDocument());
+                Assert.Empty(tse);
+
+                var requestsBefore = session.Advanced.NumberOfRequests;
+                await session.LoadAsync<Book>(bookId1);
+                Assert.Equal(requestsBefore, session.Advanced.NumberOfRequests);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task CachedReadOfRangeDeletedInSessionShouldStillLoadIncludes()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.Date.AddDays(-1);
+            await StoreMinuteEntries(store, bookId1, baseline, 10);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                await tsf.GetAsync(baseline.AddMinutes(1), baseline.AddMinutes(3));
+                await tsf.GetAsync(baseline.AddMinutes(8), baseline.AddMinutes(10));
+                tsf.Delete(baseline.AddMinutes(3), baseline.AddMinutes(8));
+
+                var tse = await tsf.GetAsync(baseline.AddMinutes(1), baseline.AddMinutes(10), includes: i => i.IncludeDocument());
+                Assert.Equal(new[] { 1d, 2d, 9d, 10d }, tse.Select(e => e.Value));
+
+                var requestsBefore = session.Advanced.NumberOfRequests;
+                await session.LoadAsync<Book>(bookId1);
+                Assert.Equal(requestsBefore, session.Advanced.NumberOfRequests);
             }
         }
 
