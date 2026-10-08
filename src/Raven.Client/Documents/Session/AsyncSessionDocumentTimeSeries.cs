@@ -52,21 +52,19 @@ namespace Raven.Client.Documents.Session
             if (IsWholeSeriesDeletedInSession())
                 return null;
 
+            if (pageSize == 0)
+                return new List<TimeSeriesEntry>();
+
             var rangeFrom = from ?? DateTime.MinValue;
             var rangeTo = to ?? DateTime.MaxValue;
-            var hasLocalOverlay = HasLocalEntriesInRange(rangeFrom, rangeTo);
-            var serveClientSide = hasLocalOverlay || HasDeletedRangeIntersecting(rangeFrom, rangeTo);
-            var serveStart = serveClientSide ? 0 : start;
-            var servePageSize = serveClientSide ? int.MaxValue : pageSize;
 
-            var resultToUser =
-                await ServeFromCache(rangeFrom, rangeTo, serveStart, servePageSize, includes, token)
-                    .ConfigureAwait(false);
+            // local entries only add to the server entries, so the first start + pageSize server entries are enough to page the merged result.
+            // deleted entries are filtered out client side, so the server entries are fetched in full when a delete intersects the range
+            var needed = HasDeletedRangeIntersecting(rangeFrom, rangeTo) ? int.MaxValue : PageSizeToCoverMerge(start, pageSize);
 
-            if (serveClientSide == false)
-                return resultToUser.Take(pageSize).ToList();
+            var resultToUser = await ServeFromCache(rangeFrom, rangeTo, needed, includes, token).ConfigureAwait(false);
 
-            if (hasLocalOverlay)
+            if (HasLocalEntriesInRange(rangeFrom, rangeTo))
                 resultToUser = OverlayLocalEntries(resultToUser, rangeFrom, rangeTo);
 
             return resultToUser.Skip(start).Take(pageSize).ToList();
@@ -320,9 +318,22 @@ namespace Raven.Client.Documents.Session
 
             if (Session.NoTracking == false)
             {
+                var hasCutoff = TryGetPagingCutoff(rangeResults, serverPageSize, out var cutoff);
+
                 foreach (var rangeResult in rangeResults)
                 {
                     HandleIncludes(rangeResult);
+
+                    if (hasCutoff)
+                    {
+                        // nothing after the last entry we got is known
+                        if (rangeResult.From > cutoff)
+                            continue;
+
+                        if (rangeResult.To > cutoff)
+                            rangeResult.To = cutoff;
+                    }
+
                     AddToCache(rangeResult);
                 }
             }
@@ -535,12 +546,12 @@ namespace Raven.Client.Documents.Session
             return values;
         }
 
+        // returns the live entries of [from, to] in order, of which at least the first 'needed' are guaranteed to be complete
         private async Task<IEnumerable<TimeSeriesEntry>>
             ServeFromCache(
                 DateTime from,
                 DateTime to,
-                int start,
-                int pageSize,
+                int needed,
                 Action<ITimeSeriesIncludeBuilder> includes,
                 CancellationToken token)
         {
@@ -564,13 +575,18 @@ namespace Raven.Client.Documents.Session
             {
                 if (ranges[toRangeIndex].From <= from)
                 {
-                    if (((ranges[toRangeIndex].To >= to) || (ranges[toRangeIndex].Entries.Length - start >= pageSize)))
+                    if (ranges[toRangeIndex].To >= to)
                     {
                         // we have the entire range in cache
-                        // we have all the range we need
-                        // or that we have all the results we need in smaller range
+                        return ChopRelevantRange(ranges[toRangeIndex], from, to, needed);
+                    }
 
-                        return ChopRelevantRange(ranges[toRangeIndex], from, to, start, pageSize);
+                    if (needed != int.MaxValue)
+                    {
+                        // or we have all the results we need in a smaller range
+                        var chopped = ChopRelevantRange(ranges[toRangeIndex], from, to, needed).ToList();
+                        if (chopped.Count == needed)
+                            return chopped;
                     }
 
                     fromRangeIndex = toRangeIndex;
@@ -619,8 +635,9 @@ namespace Raven.Client.Documents.Session
 
             Session.IncrementRequestCount();
 
+            // the server pages the missing parts together, so 'needed' entries from them are enough to complete the first 'needed' entries
             var details = await Session.Operations.SendAsync(
-                    new GetMultipleTimeSeriesOperation(DocId, rangesToGetFromServer, start, pageSize, includes), Session._sessionInfo, token: token)
+                    new GetMultipleTimeSeriesOperation(DocId, rangesToGetFromServer, start: 0, needed, includes), Session._sessionInfo, token: token)
                 .ConfigureAwait(false);
 
             if (includes != null)
@@ -628,20 +645,49 @@ namespace Raven.Client.Documents.Session
                 RegisterIncludes(details);
             }
 
+            var resultFromServer = details.Values[Name];
+
             // merge all the missing parts we got from server
             // with all the ranges in cache that are between 'fromRange' and 'toRange'
 
             var mergedValues = MergeRangesWithResults(from, to, ranges, fromRangeIndex, toRangeIndex,
-                resultFromServer: details.Values[Name], out var resultToUser);
+                resultFromServer, out var resultToUser);
+
+            var cacheTo = resultFromServer.Max(ts => ts.To);
+            var cacheToRangeIndex = toRangeIndex;
+
+            if (TryGetPagingCutoff(resultFromServer, needed, out var cutoff))
+            {
+                // the page ended inside a missing part, so nothing after the last entry we got is known:
+                // keep the result and the cache up to it, the cached ranges after it stay as they are
+                mergedValues = mergedValues.TakeWhile(e => e.Timestamp <= cutoff).ToArray();
+                resultToUser = resultToUser.TakeWhile(e => e.Timestamp <= cutoff);
+                cacheTo = cutoff;
+                cacheToRangeIndex = ranges.FindIndex(r => r.From > cutoff);
+                if (cacheToRangeIndex == -1)
+                    cacheToRangeIndex = ranges.Count;
+            }
 
             if (Session.NoTracking == false)
             {
-                from = details.Values[Name].Min(ts => ts.From);
-                to = details.Values[Name].Max(ts => ts.To);
-                InMemoryDocumentSessionOperations.AddToCache(Name, from, to, fromRangeIndex, toRangeIndex, ranges, cache, mergedValues);
+                from = resultFromServer.Min(ts => ts.From);
+                InMemoryDocumentSessionOperations.AddToCache(Name, from, cacheTo, fromRangeIndex, cacheToRangeIndex, ranges, cache, mergedValues);
             }
 
             return FilterDeletedEntries(resultToUser);
+        }
+
+        // the server stops once it returned 'pageSize' entries, and does not always mark the range it stopped in as partial
+        private static bool TryGetPagingCutoff(IReadOnlyList<TimeSeriesRangeResult> resultFromServer, int pageSize, out DateTime cutoff)
+        {
+            cutoff = default;
+
+            if (pageSize == int.MaxValue || resultFromServer.Sum(r => r.Entries.Length) < pageSize)
+                return false;
+
+            var lastRange = resultFromServer.Last(r => r.Entries.Length > 0);
+            cutoff = lastRange.Entries[lastRange.Entries.Length - 1].Timestamp;
+            return true;
         }
 
         private void RegisterIncludes(TimeSeriesDetails details)
@@ -767,7 +813,7 @@ namespace Raven.Client.Documents.Session
             return mergedValues.ToArray();
         }
 
-        private IEnumerable<TimeSeriesEntry> ChopRelevantRange(TimeSeriesRangeResult range, DateTime from, DateTime to, int start, int pageSize)
+        private IEnumerable<TimeSeriesEntry> ChopRelevantRange(TimeSeriesRangeResult range, DateTime from, DateTime to, int pageSize)
         {
             if (range.IsDeleted)
                 yield break;
@@ -783,9 +829,6 @@ namespace Raven.Client.Documents.Session
                     continue;
 
                 if (deletedRanges != null && IsInDeletedRange(value.Timestamp, deletedRanges))
-                    continue;
-
-                if (start-- > 0)
                     continue;
 
                 if (pageSize-- <= 0)

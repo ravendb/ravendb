@@ -8,6 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
+using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
@@ -2050,6 +2051,119 @@ namespace SlowTests.Issues
 
                 Assert.Equal(requestsBefore, session.Advanced.NumberOfRequests);
                 Assert.Equal(new[] { 103d }, tse.Select(e => e.Value));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task PagedReadAcrossCachedRangesShouldReturnTheRequestedPage()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.Date.AddDays(-1);
+            await StoreMinuteEntries(store, bookId1, baseline, 100);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                await tsf.GetAsync(baseline.AddMinutes(10), baseline.AddMinutes(20));
+                await tsf.GetAsync(baseline.AddMinutes(50), baseline.AddMinutes(60));
+
+                var first = await tsf.GetAsync(baseline, baseline.AddMinutes(100), start: 0, pageSize: 5);
+                Assert.Equal(new[] { 1d, 2d, 3d, 4d, 5d }, first.Select(e => e.Value));
+
+                var middle = await tsf.GetAsync(baseline, baseline.AddMinutes(100), start: 12, pageSize: 5);
+                Assert.Equal(new[] { 13d, 14d, 15d, 16d, 17d }, middle.Select(e => e.Value));
+
+                var acrossCachedRange = await tsf.GetAsync(baseline, baseline.AddMinutes(100), start: 45, pageSize: 10);
+                Assert.Equal(Enumerable.Range(46, 10).Select(i => (double)i), acrossCachedRange.Select(e => e.Value));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task PagedReadAcrossCachedRangesShouldNotCacheUnfetchedGaps()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.Date.AddDays(-1);
+            await StoreMinuteEntries(store, bookId1, baseline, 100);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                await tsf.GetAsync(baseline.AddMinutes(10), baseline.AddMinutes(20));
+                await tsf.GetAsync(baseline.AddMinutes(50), baseline.AddMinutes(60));
+                await tsf.GetAsync(baseline, baseline.AddMinutes(100), start: 0, pageSize: 5);
+                await tsf.GetAsync(baseline, baseline.AddMinutes(100), start: 12, pageSize: 5);
+
+                var all = await tsf.GetAsync(baseline, baseline.AddMinutes(100));
+
+                Assert.Equal(Enumerable.Range(1, 100).Select(i => (double)i), all.Select(e => e.Value));
+                var ranges = ((InMemoryDocumentSessionOperations)session).TimeSeriesByDocId[bookId1][nameof(Book)];
+                Assert.All(ranges, r => Assert.Equal(r.Entries.Select(e => e.Timestamp).Distinct().Count(), r.Entries.Length));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task PagedReadStartingInsideCachedRangeShouldContinuePastIt()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.Date.AddDays(-1);
+            await StoreMinuteEntries(store, bookId1, baseline, 100);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                await tsf.GetAsync(baseline.AddMinutes(1), baseline.AddMinutes(50));
+
+                var page = await tsf.GetAsync(baseline.AddMinutes(45), baseline.AddMinutes(100), start: 0, pageSize: 10);
+
+                Assert.Equal(Enumerable.Range(45, 10).Select(i => (double)i), page.Select(e => e.Value));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task PageEndingAtSegmentBoundaryShouldNotCacheTheRestOfTheRange()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.Date.AddDays(-10);
+            const int count = 3000;
+
+            using (var session = store.OpenAsyncSession())
+            {
+                // random values compress poorly, so the series spans several segments
+                var random = new Random(25903);
+                await session.StoreAsync(new Book { Id = bookId1, Title = "Book1" }, bookId1);
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                for (int i = 1; i <= count; i++)
+                    tsf.Append(baseline.AddMinutes(i), random.NextDouble());
+                await session.SaveChangesAsync();
+            }
+
+            // the server does not mark a range as partial when the page fills exactly at the end of a segment
+            var firstSegmentSize = await GetFirstSegmentSize(store, bookId1);
+            Assert.True(firstSegmentSize < count, "test needs more than one segment");
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                var page = await tsf.GetAsync(baseline, baseline.AddMinutes(count), start: 0, pageSize: firstSegmentSize);
+                Assert.Equal(firstSegmentSize, page.Length);
+
+                var all = await tsf.GetAsync(baseline, baseline.AddMinutes(count));
+                Assert.Equal(count, all.Length);
+            }
+        }
+
+        private async Task<int> GetFirstSegmentSize(IDocumentStore store, string documentId)
+        {
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var reader = database.DocumentsStorage.TimeSeriesStorage.GetReader(context, documentId, nameof(Book), DateTime.MinValue, DateTime.MaxValue);
+                return reader.SegmentsOrValues().First().Segment.Summary.NumberOfLiveEntries;
             }
         }
 
