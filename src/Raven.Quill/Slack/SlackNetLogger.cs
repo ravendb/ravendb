@@ -3,7 +3,7 @@ using SlackNet;
 
 namespace Raven.Quill.Slack;
 
-internal sealed class SlackNetLogger(string shortChannelId, QuillLogger<SlackChannelManager> logger) : SlackNet.ILogger
+internal sealed class SlackNetLogger(string shortChannelId, QuillLogger<SlackRuntime> logger) : SlackNet.ILogger
 {
     public void Log(ILogEvent logEvent)
     {

@@ -9,7 +9,7 @@ internal sealed class SlackStreamingReply(
     string botToken,
     string dmChannel,
     SlackOptions options,
-    QuillLogger<SlackInboundProcessor> logger) : ChannelStreamingReply(options.MessageLimit, options.EditDebounce)
+    QuillLogger<SlackTurns> logger) : ChannelStreamingReply(options.MessageLimit, options.EditDebounce)
 {
     private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(60);
 

@@ -27,7 +27,7 @@ public static class DiscordEndpoints
         string slug,
         IDocumentStore store,
         IDiscordClient discordClient,
-        IDiscordChannelManager discordManager,
+        IChannelManager channelManager,
         CancellationToken ct)
     {
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
@@ -55,7 +55,7 @@ public static class DiscordEndpoints
         {
             var channel = discordChannels[i];
             var settings = channel.Discord!;
-            var health = discordManager.HealthFor(app.Database, channel.ShortId);
+            var health = channelManager.HealthFor(app.Database, channel.ShortId);
             rows[i] = new DiscordChannelHealthResponse(
                 channel.ShortId,
                 settings.ApplicationId,

@@ -8,7 +8,7 @@ using Raven.Quill.Hosting;
 
 namespace Raven.Quill.Discord;
 
-internal sealed class DiscordGatewayRuntime
+internal sealed class DiscordRuntime : IChannelRuntime
 {
     private const int DirectMessagesIntent = 1 << 12;
     private const int DefaultMessageType = 0;
@@ -20,14 +20,13 @@ internal sealed class DiscordGatewayRuntime
     private static readonly JsonSerializerOptions JsonOptions = new();
 
     private readonly string _database;
-    private readonly string _shortChannelId;
-    private readonly string _channelDocId;
+    private readonly Channel _channel;
     private readonly string _botToken;
     private readonly string _botUserId;
     private readonly DiscordOptions _options;
-    private readonly DiscordInboundProcessor _processor;
+    private readonly ChannelChats<DiscordMessage> _chats;
     private readonly IServiceScopeFactory _scopes;
-    private readonly QuillLogger<DiscordChannelManager> _logger;
+    private readonly QuillLogger<DiscordRuntime> _logger;
 
     private readonly CancellationTokenSource _cts = new();
     private readonly SemaphoreSlim _sendLock = new(1, 1);
@@ -44,17 +43,16 @@ internal sealed class DiscordGatewayRuntime
     private string? _sessionId;
     private string? _resumeUrl;
 
-    private DiscordGatewayRuntime(
+    private DiscordRuntime(
         string database, Channel channel, string? channelChangeVector, DiscordSettings settings,
-        DiscordInboundProcessor processor, IServiceScopeFactory scopes,
-        DiscordOptions options, QuillLogger<DiscordChannelManager> logger)
+        ChannelChats<DiscordMessage> chats, IServiceScopeFactory scopes,
+        DiscordOptions options, QuillLogger<DiscordRuntime> logger)
     {
         _database = database;
-        _shortChannelId = channel.ShortId;
-        _channelDocId = channel.Id!;
+        _channel = channel;
         _botToken = settings.BotToken;
         _botUserId = settings.BotUserId;
-        _processor = processor;
+        _chats = chats;
         _scopes = scopes;
         _options = options;
         _logger = logger;
@@ -76,16 +74,19 @@ internal sealed class DiscordGatewayRuntime
         }
     }
 
-    public static DiscordGatewayRuntime Start(
-        string database, Channel channel, string? channelChangeVector, DiscordInboundProcessor processor,
-        IServiceScopeFactory scopes, DiscordOptions options, QuillLogger<DiscordChannelManager> logger)
+    public static DiscordRuntime Start(
+        string database, Channel channel, string? channelChangeVector, ChannelChats<DiscordMessage> chats,
+        IServiceScopeFactory scopes, DiscordOptions options, QuillLogger<DiscordRuntime> logger)
     {
-        var runtime = new DiscordGatewayRuntime(
-            database, channel, channelChangeVector, channel.Discord!, processor, scopes, options, logger);
+        var runtime = new DiscordRuntime(
+            database, channel, channelChangeVector, channel.Discord!, chats, scopes, options, logger);
 
         runtime._run = Task.Run(runtime.RunAsync);
         return runtime;
     }
+
+    public bool IsRestartDue(DateTime now) =>
+        CanRestart && ExitedAt is { } exitedAt && now - exitedAt >= _options.GatewayRestartDelay;
 
     public async Task StopAsync()
     {
@@ -104,7 +105,7 @@ internal sealed class DiscordGatewayRuntime
         catch (TimeoutException)
         {
             if (_logger.IsWarnEnabled)
-                _logger.Warn($"Discord gateway for channel {_shortChannelId} did not stop within {_options.GatewayStopTimeout}");
+                _logger.Warn($"Discord gateway for channel {_channel.ShortId} did not stop within {_options.GatewayStopTimeout}");
             throw;
         }
     }
@@ -146,21 +147,21 @@ internal sealed class DiscordGatewayRuntime
                 fatal = null;
                 Health.MarkDisconnected(e.Message);
                 if (_logger.IsWarnEnabled)
-                    _logger.Warn($"Discord gateway attempt failed for channel {_shortChannelId}: {e.Message}");
+                    _logger.Warn($"Discord gateway attempt failed for channel {_channel.ShortId}: {e.Message}");
             }
 
             if (fatal is not null)
             {
                 Health.MarkDisconnected(fatal);
                 if (_logger.IsErrorEnabled)
-                    _logger.Error($"Discord gateway stopped for channel {_shortChannelId}: {fatal}");
+                    _logger.Error($"Discord gateway stopped for channel {_channel.ShortId}: {fatal}");
                 return;
             }
 
             if (++_attemptsSinceConnected >= AttemptsBeforeSessionReset && _sessionId is not null)
             {
                 if (_logger.IsWarnEnabled)
-                    _logger.Warn($"Discord gateway for channel {_shortChannelId} dropped its cached session after {_attemptsSinceConnected} " +
+                    _logger.Warn($"Discord gateway for channel {_channel.ShortId} dropped its cached session after {_attemptsSinceConnected} " +
                         "attempts that never connected");
                 ForgetSession();
             }
@@ -302,7 +303,7 @@ internal sealed class DiscordGatewayRuntime
         _attemptsSinceConnected = 0;
         Health.MarkConnected();
         if (_logger.IsInfoEnabled)
-            _logger.Info($"Discord gateway connected for channel {_shortChannelId} (bot {_botUserId})");
+            _logger.Info($"Discord gateway connected for channel {_channel.ShortId} (bot {_botUserId})");
     }
 
     private void OnMessage(JsonElement? data)
@@ -324,13 +325,13 @@ internal sealed class DiscordGatewayRuntime
             return;
 
         var content = message.Content ?? "";
-        var kind = message.Attachments is { Length: > 0 } || content.Trim().Length == 0
-            ? "unsupported"
-            : "text";
+        var unsupported = message.Attachments is { Length: > 0 } || content.Trim().Length == 0;
 
-        _processor.Enqueue(
-            _database, _channelDocId, Health, author.Id, author.Username, message.ChannelId,
-            message.Id ?? "", kind, content);
+        Health.MarkReceived();
+        _chats.Enqueue(
+            message.Id ?? "",
+            new DiscordMessage(
+                _database, _channel, Health, author.Id, author.Username, message.ChannelId, unsupported, content));
     }
 
     private async Task HeartbeatLoopAsync(ClientWebSocket socket, TimeSpan interval, CancellationToken ct)
@@ -344,7 +345,7 @@ internal sealed class DiscordGatewayRuntime
                 if (Interlocked.Exchange(ref _awaitingAck, 1) == 1)
                 {
                     if (_logger.IsWarnEnabled)
-                        _logger.Warn($"Discord gateway heartbeat went unacknowledged for channel {_shortChannelId}; reconnecting");
+                        _logger.Warn($"Discord gateway heartbeat went unacknowledged for channel {_channel.ShortId}; reconnecting");
                     socket.Abort();
                     return;
                 }
@@ -359,7 +360,7 @@ internal sealed class DiscordGatewayRuntime
         catch (Exception e)
         {
             if (_logger.IsDebugEnabled)
-                _logger.Debug($"Discord gateway heartbeat stopped for channel {_shortChannelId}: {e.Message}");
+                _logger.Debug($"Discord gateway heartbeat stopped for channel {_channel.ShortId}: {e.Message}");
             socket.Abort();
         }
     }
@@ -400,7 +401,7 @@ internal sealed class DiscordGatewayRuntime
             catch (JsonException e)
             {
                 if (_logger.IsDebugEnabled)
-                    _logger.Debug($"Dropped an unparseable Discord gateway frame for channel {_shortChannelId}: {e.Message}");
+                    _logger.Debug($"Dropped an unparseable Discord gateway frame for channel {_channel.ShortId}: {e.Message}");
             }
         }
     }

@@ -13,6 +13,7 @@ using Polly;
 using Raven.Quill.Agents;
 using Raven.Quill.AiHelper;
 using Raven.Quill.Auth;
+using Raven.Quill.Channels;
 using Raven.Quill.Embed;
 using Raven.Quill.Endpoints;
 using Raven.Quill.Feedback;
@@ -92,21 +93,18 @@ builder.Services.AddSingleton(typeof(QuillLogger<>), typeof(QuillLogger<>));
 builder.Services.AddOptions<ApplianceOptions>()
     .Configure(options =>
     {
-        ReadEnv(Constants.Configuration.RavenUrl, v => options.RavenUrl = v);
-        ReadEnv(Constants.Configuration.WebListenUrl, v => options.WebListenUrl = v);
-        ReadEnv(Constants.Configuration.ConfigDatabase, v => options.ConfigDatabase = v);
-        ReadEnv(Constants.Configuration.SetupPackagePath, v => options.SetupPackagePath = v);
-        ReadEnv(Constants.Configuration.RavenDbS6Service, v => options.RavenDbS6Service = v);
-        ReadEnv(Constants.Configuration.TelegramApiUrl, v => options.Telegram.ApiUrl = v);
-        ReadEnv(Constants.Configuration.SlackApiUrl, v => options.Slack.ApiUrl = v);
-        ReadEnv(Constants.Configuration.DiscordApiUrl, v => options.Discord.ApiUrl = v);
-        ReadEnv(Constants.Configuration.LicenseKey, v => options.LicenseKey = v);
-        ReadEnv(Constants.Configuration.ApiKey, v => options.ApiKey = v);
-        ReadEnv(Constants.Configuration.RavenDbInternalPort, v =>
+        EnvironmentVariables.Read(Constants.Configuration.RavenUrl, v => options.RavenUrl = v);
+        EnvironmentVariables.Read(Constants.Configuration.WebListenUrl, v => options.WebListenUrl = v);
+        EnvironmentVariables.Read(Constants.Configuration.ConfigDatabase, v => options.ConfigDatabase = v);
+        EnvironmentVariables.Read(Constants.Configuration.SetupPackagePath, v => options.SetupPackagePath = v);
+        EnvironmentVariables.Read(Constants.Configuration.RavenDbS6Service, v => options.RavenDbS6Service = v);
+        EnvironmentVariables.Read(Constants.Configuration.LicenseKey, v => options.LicenseKey = v);
+        EnvironmentVariables.Read(Constants.Configuration.ApiKey, v => options.ApiKey = v);
+        EnvironmentVariables.Read(Constants.Configuration.RavenDbInternalPort, v =>
         {
             if (int.TryParse(v, out var p)) options.RavenInternalPort = p;
         });
-        ReadEnv(Constants.Configuration.AiAssistTimeoutSeconds, v =>
+        EnvironmentVariables.Read(Constants.Configuration.AiAssistTimeoutSeconds, v =>
         {
             if (int.TryParse(v, out var s) && s > 0) options.AiAssistTimeout = TimeSpan.FromSeconds(s);
         });
@@ -117,51 +115,13 @@ builder.Services.AddOptions<ApplianceOptions>()
         ParseEnv(Constants.Configuration.ReadinessOverallTimeoutSeconds, ParsePositiveSeconds,
             t => options.ReadinessOverallTimeout = t);
 
-        ReadEnv(Constants.Configuration.LogsConfigPath, v => options.Logs.ConfigPath = v.Trim());
+        EnvironmentVariables.Read(Constants.Configuration.LogsConfigPath, v => options.Logs.ConfigPath = v.Trim());
         ParseEnv(Constants.Configuration.LogsPath, ParseAbsolutePath, p => options.Logs.Path = p);
         ParseEnv(Constants.Configuration.SecurityAuditLogPath, ParseAbsolutePath,
             p => options.Logs.AuditPath = p);
         ParseEnv(Constants.Configuration.LogsMinLevel, ParseLogLevel, l => options.Logs.MinLevel = l);
     })
     .ValidateDataAnnotations()
-    .Validate(o => string.IsNullOrEmpty(o.Telegram.ApiUrl) ||
-                   Uri.TryCreate(o.Telegram.ApiUrl, UriKind.Absolute, out var u) &&
-                   (u.Scheme == Uri.UriSchemeHttp || u.Scheme == Uri.UriSchemeHttps),
-        "Telegram ApiUrl must be an absolute http(s) URL")
-    .Validate(o => o.Telegram.MessageLimit is > 0 and <= TelegramOptions.ApiMessageLimit,
-        $"Telegram MessageLimit must be between 1 and {TelegramOptions.ApiMessageLimit}")
-    .Validate(o => o.Telegram.ChatQueueCapacity > 0, "Telegram ChatQueueCapacity must be positive")
-    .Validate(o => o.Telegram.EditDebounce > TimeSpan.Zero, "Telegram EditDebounce must be positive")
-    .Validate(o => o.Telegram.ApplyChangesInterval > TimeSpan.Zero, "Telegram ApplyChangesInterval must be positive")
-    .Validate(o => o.Telegram.ChatIdleTimeout > TimeSpan.Zero, "Telegram ChatIdleTimeout must be positive")
-    .Validate(o => o.Telegram.PollBackoffMax > TimeSpan.Zero, "Telegram PollBackoffMax must be positive")
-    .Validate(o => Uri.TryCreate(o.Slack.ApiUrl, UriKind.Absolute, out var u) &&
-                   (u.Scheme == Uri.UriSchemeHttp || u.Scheme == Uri.UriSchemeHttps),
-        "Slack ApiUrl must be an absolute http(s) URL")
-    .Validate(o => o.Slack.RequestTimeout > TimeSpan.Zero, "Slack RequestTimeout must be positive")
-    .Validate(o => o.Slack.MessageLimit > 0 &&
-                   o.Slack.MessageLimit <= SlackOptions.MarkdownBlockLimit &&
-                   o.Slack.MessageLimit <= SlackOptions.ApiMessageLimit / SlackApiClient.MaxEscapeExpansion,
-        $"Slack MessageLimit must be between 1 and {Math.Min(SlackOptions.MarkdownBlockLimit, SlackOptions.ApiMessageLimit / SlackApiClient.MaxEscapeExpansion)}, " +
-        "so the markdown block and the worst-case escaped fallback text both stay within Slack's caps")
-    .Validate(o => o.Slack.EditDebounce > TimeSpan.Zero, "Slack EditDebounce must be positive")
-    .Validate(o => o.Slack.SenderQueueCapacity > 0, "Slack SenderQueueCapacity must be positive")
-    .Validate(o => o.Slack.ApplyChangesInterval > TimeSpan.Zero, "Slack ApplyChangesInterval must be positive")
-    .Validate(o => o.Slack.SocketRestartDelay > TimeSpan.Zero, "Slack SocketRestartDelay must be positive")
-    .Validate(o => Uri.TryCreate(o.Discord.ApiUrl, UriKind.Absolute, out var u) &&
-                   (u.Scheme == Uri.UriSchemeHttp || u.Scheme == Uri.UriSchemeHttps),
-        "Discord ApiUrl must be an absolute http(s) URL")
-    .Validate(o => o.Discord.RequestTimeout > TimeSpan.Zero, "Discord RequestTimeout must be positive")
-    .Validate(o => o.Discord.MessageLimit is > 0 and <= DiscordOptions.ApiMessageLimit,
-        $"Discord MessageLimit must be between 1 and {DiscordOptions.ApiMessageLimit}")
-    .Validate(o => o.Discord.EditDebounce > TimeSpan.Zero, "Discord EditDebounce must be positive")
-    .Validate(o => o.Discord.SenderQueueCapacity > 0, "Discord SenderQueueCapacity must be positive")
-    .Validate(o => o.Discord.ApplyChangesInterval > TimeSpan.Zero, "Discord ApplyChangesInterval must be positive")
-    .Validate(o => o.Discord.GatewayBackoffMax > TimeSpan.Zero, "Discord GatewayBackoffMax must be positive")
-    .Validate(o => o.Discord.GatewayHandshakeTimeout > TimeSpan.Zero,
-        "Discord GatewayHandshakeTimeout must be positive")
-    .Validate(o => o.Discord.GatewayRestartDelay > TimeSpan.Zero, "Discord GatewayRestartDelay must be positive")
-    .Validate(o => o.Discord.MaxGatewayFrameBytes > 0, "Discord MaxGatewayFrameBytes must be positive")
     .Validate(o => o.ChannelConversationIdleWindow is not { } idleWindow ||
                    (idleWindow > TimeSpan.Zero && idleWindow.TotalSeconds <= int.MaxValue),
         "ChannelConversationIdleWindow must be positive and at most int.MaxValue seconds; " +
@@ -188,25 +148,15 @@ builder.Services.AddSingleton(sp => WidgetAssets.Load(
     sp.GetRequiredService<QuillLogger<WidgetAssets>>()));
 builder.Services.AddTransient<IFeedbackSender, FeedbackSender>();
 builder.Services.AddTransient<ILicenseStatsProvider, LicenseStatsProvider>();
-builder.Services.AddSingleton<ITelegramBotClientFactory, TelegramBotClientFactory>();
-builder.Services.AddSingleton<SlackUserDirectory>();
-builder.Services.AddSingleton<SlackInboundProcessor>();
-builder.Services.AddSingleton<SlackChannelManager>();
-builder.Services.AddSingleton<ISlackChannelManager>(sp => sp.GetRequiredService<SlackChannelManager>());
-builder.Services.AddSingleton<DiscordInboundProcessor>();
-builder.Services.AddSingleton<DiscordChannelManager>();
-builder.Services.AddSingleton<IDiscordChannelManager>(sp => sp.GetRequiredService<DiscordChannelManager>());
-builder.Services.AddSingleton<TelegramChannelManager>();
-builder.Services.AddSingleton<ITelegramChannelManager>(sp => sp.GetRequiredService<TelegramChannelManager>());
+builder.Services.AddChannels()
+    .AddSlackChannel()
+    .AddDiscordChannel()
+    .AddTelegramChannel();
 if (!isOpenApiDocumentGeneration)
 {
     builder.Services.AddHostedService<RavenReadinessService>();
     builder.Services.AddHostedService<ApplianceActivationService>();
-    builder.Services.AddHostedService(sp => sp.GetRequiredService<TelegramChannelManager>());
-    builder.Services.AddHostedService(sp => sp.GetRequiredService<SlackInboundProcessor>());
-    builder.Services.AddHostedService(sp => sp.GetRequiredService<SlackChannelManager>());
-    builder.Services.AddHostedService(sp => sp.GetRequiredService<DiscordInboundProcessor>());
-    builder.Services.AddHostedService(sp => sp.GetRequiredService<DiscordChannelManager>());
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<ChannelManager>());
 }
 
 builder.Services.ConfigureHttpClientDefaults(httpBuilder =>
@@ -219,20 +169,6 @@ builder.Services.ConfigureHttpClientDefaults(httpBuilder =>
 
 builder.Services.AddHttpClient(WebhookActionExecutor.ClientName,
     static http => http.Timeout = TimeSpan.FromSeconds(30));
-
-builder.Services.AddHttpClient(SlackSdk.HttpClientName, static (sp, http) =>
-{
-    http.Timeout = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value.Slack.RequestTimeout;
-});
-builder.Services.AddSingleton<SlackSdk>();
-builder.Services.AddTransient<ISlackClient, SlackApiClient>();
-
-builder.Services.AddHttpClient<IDiscordClient, DiscordApiClient>(static (sp, http) =>
-{
-    var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value.Discord;
-    http.BaseAddress = new Uri(opts.ApiUrl.EndsWith('/') ? opts.ApiUrl : opts.ApiUrl + "/");
-    http.Timeout = opts.RequestTimeout;
-});
 
 builder.Services.AddHttpClient<IAiHelperClient, AiHelperInternalClient>(static (sp, http) =>
     {
@@ -390,11 +326,6 @@ app.Run();
 
 return;
 
-static void ReadEnv(string name, Action<string> apply)
-{
-    var v = Environment.GetEnvironmentVariable(name);
-    if (!string.IsNullOrEmpty(v)) apply(v);
-}
 
 // For a value that has to be parsed before it can be assigned. The parser is handed the variable
 // name so a rejection can quote it, which is why the call site names it only once: two copies drift,

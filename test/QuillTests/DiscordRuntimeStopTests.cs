@@ -10,7 +10,7 @@ using Xunit;
 
 namespace QuillTests;
 
-public class DiscordGatewayRuntimeStopTests(ITestOutputHelper output) : NoDisposalNeeded(output)
+public class DiscordRuntimeStopTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Stop_timeout_throws_and_the_late_exit_still_cleans_up()
@@ -34,9 +34,9 @@ public class DiscordGatewayRuntimeStopTests(ITestOutputHelper output) : NoDispos
         };
 
         var options = new DiscordOptions { GatewayStopTimeout = TimeSpan.FromMilliseconds(250) };
-        var runtime = DiscordGatewayRuntime.Start(
-            "db", channel, channelChangeVector: null, processor: null!,
-            services.GetRequiredService<IServiceScopeFactory>(), options, new QuillLogger<DiscordChannelManager>());
+        var runtime = DiscordRuntime.Start(
+            "db", channel, channelChangeVector: null, chats: null!,
+            services.GetRequiredService<IServiceScopeFactory>(), options, new QuillLogger<DiscordRuntime>());
 
         await client.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
 

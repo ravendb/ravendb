@@ -12,7 +12,7 @@ internal sealed class TelegramStreamingReply(
     ITelegramBotClient bot,
     long chatId,
     TelegramOptions options,
-    QuillLogger<TelegramChannelManager> logger) : ChannelStreamingReply(options.MessageLimit, options.EditDebounce)
+    QuillLogger<TelegramTurns> logger) : ChannelStreamingReply(options.MessageLimit, options.EditDebounce)
 {
     private int _currentMessageId;
 
