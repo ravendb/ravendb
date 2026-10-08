@@ -276,6 +276,58 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenFact(RavenTestCategory.Ai)]
+        public async Task Request_SeparateToolCallRounds_EachKeepItsOwnToolResults()
+        {
+            await WithClient(_ => Ok(TextResponse), async (client, ctx) =>
+            {
+                var firstRound = ctx.ReadObject(new DynamicJsonValue
+                {
+                    ["role"] = "assistant",
+                    ["content"] = null,
+                    ["tool_calls"] = new DynamicJsonArray { ToolCall("call_1", "get_weather", "{}") }
+                }, "assistant-1");
+
+                var secondRound = ctx.ReadObject(new DynamicJsonValue
+                {
+                    ["role"] = "assistant",
+                    ["content"] = null,
+                    ["tool_calls"] = new DynamicJsonArray
+                    {
+                        ToolCall("call_2", "get_time", "{}"),
+                        ToolCall("call_3", "get_date", "{}")
+                    }
+                }, "assistant-2");
+
+                var request = new AiChatRequest
+                {
+                    Messages =
+                    [
+                        Msg(ctx, "user", "Hi"),
+                        firstRound,
+                        Msg(ctx, "tool", "sunny", toolCallId: "call_1"),
+                        secondRound,
+                        Msg(ctx, "tool", "noon", toolCallId: "call_2"),
+                        Msg(ctx, "tool", "monday", toolCallId: "call_3")
+                    ],
+                    Schema = EmptySchema()
+                };
+
+                await client.CompleteAsync(ctx, request, new AiUsage(), null, CancellationToken.None);
+
+                var messages = (JArray)JObject.Parse(client.LastRequestBody)["messages"];
+                var toolResultTurns = messages.Where(m => (string)m["role"] == "user" &&
+                                                          m["content"] is JArray c && c.Count > 0 && (string)c[0]["type"] == "tool_result")
+                                              .Select(m => (JArray)m["content"])
+                                              .ToList();
+
+                // The first round's results must survive the second round being collected.
+                Assert.Equal(2, toolResultTurns.Count);
+                Assert.Equal(["call_1"], toolResultTurns[0].Select(b => (string)b["tool_use_id"]));
+                Assert.Equal(["call_2", "call_3"], toolResultTurns[1].Select(b => (string)b["tool_use_id"]));
+            });
+        }
+
+        [RavenFact(RavenTestCategory.Ai)]
         public async Task Request_ReplaysPriorStructuredAssistantAnswer_AsText_NotEmpty()
         {
             await WithClient(_ => Ok(TextResponse), async (client, ctx) =>
