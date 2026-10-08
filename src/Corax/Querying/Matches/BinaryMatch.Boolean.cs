@@ -30,15 +30,19 @@ namespace Corax.Querying.Matches
                     
                     ref var inner = ref match._inner;
                     ref var outer = ref match._outer;
-                    while (inner.Fill(matches) is var read and > 0)
+                    Span<long> drainBuffer = matches;
+                    using var _ = matches.Length < Querying.IndexSearcher.BitmapDrainBufferSize
+                        ? match._ctx.Allocate(Querying.IndexSearcher.BitmapDrainBufferSize, out drainBuffer)
+                        : default;
+                    while (inner.Fill(drainBuffer) is var read and > 0)
                     {
-                        innerBitmap.AddRange(matches.Slice(0, read));
+                        innerBitmap.AddRange(drainBuffer.Slice(0, read));
                         match._token.ThrowIfCancellationRequested();
                     }
 
-                    while (outer.Fill(matches) is var read and > 0)
+                    while (outer.Fill(drainBuffer) is var read and > 0)
                     {
-                        outerBitmap.AddRange(matches.Slice(0, read));
+                        outerBitmap.AddRange(drainBuffer.Slice(0, read));
                         match._token.ThrowIfCancellationRequested();
                     }
                     
@@ -206,15 +210,19 @@ namespace Corax.Querying.Matches
                     var unionBitmap = new GrowableBitArray(match._indexSearcher.Allocator, match._indexSearcher.LastEntryId);
                     ref var inner = ref match._inner;
                     ref var outer = ref match._outer;
-                    while (inner.Fill(matches) is var read and > 0)
+                    Span<long> drainBuffer = matches;
+                    using var _ = matches.Length < Querying.IndexSearcher.BitmapDrainBufferSize
+                        ? match._ctx.Allocate(Querying.IndexSearcher.BitmapDrainBufferSize, out drainBuffer)
+                        : default;
+                    while (inner.Fill(drainBuffer) is var read and > 0)
                     {
-                        unionBitmap.AddRange(matches.Slice(0, read));
+                        unionBitmap.AddRange(drainBuffer.Slice(0, read));
                         match._token.ThrowIfCancellationRequested();
                     }
 
-                    while (outer.Fill(matches) is var read and > 0)
+                    while (outer.Fill(drainBuffer) is var read and > 0)
                     {
-                        unionBitmap.AddRange(matches.Slice(0, read));
+                        unionBitmap.AddRange(drainBuffer.Slice(0, read));
                         match._token.ThrowIfCancellationRequested();
                     }
 
