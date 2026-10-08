@@ -45,7 +45,6 @@ namespace Corax.Querying.Matches
         private bool _excludedBitmapInitialized;
         private bool _excludedBitmapIsEmpty;
         private bool _bitmapExhausted;
-        private const int AndWithDrainBufferSize = 4096;
 
         public SkipSortingResult AttemptToSkipSorting()
         {
@@ -295,7 +294,7 @@ namespace Corax.Querying.Matches
                 return 0;
 
             if (_excludedBitmapInitialized == false)
-                MaterializeExcludedBitmapForAndWith();
+                MaterializeExcludedBitmap(Span<long>.Empty);
 
             if (_excludedBitmapIsEmpty)
                 return results;
@@ -304,14 +303,17 @@ namespace Corax.Querying.Matches
             return _excludedBitmap.Subtract(buffer.Slice(0, results));
         }
 
-        private void MaterializeExcludedBitmap(Span<long> drainBuffer)
+        private void MaterializeExcludedBitmap(Span<long> workingBuffer)
         {
             _excludedBitmapInitialized = true;
             _excludedBitmap = new GrowableBitArray(_context, _lastEntryId);
 
-            while (_outer.Fill(drainBuffer) is var read and > 0)
+            using var _ = workingBuffer.Length < Querying.IndexSearcher.BitmapDrainBufferSize
+                ? _context.Allocate(Querying.IndexSearcher.BitmapDrainBufferSize, out workingBuffer)
+                : default;
+            while (_outer.Fill(workingBuffer) is var read and > 0)
             {
-                _excludedBitmap.AddRange(drainBuffer.Slice(0, read));
+                _excludedBitmap.AddRange(workingBuffer.Slice(0, read));
                 _token.ThrowIfCancellationRequested();
             }
 
@@ -320,12 +322,6 @@ namespace Corax.Querying.Matches
                 _excludedBitmapIsEmpty = true;
                 _excludedBitmap.Dispose();
             }
-        }
-
-        private void MaterializeExcludedBitmapForAndWith()
-        {
-            using (_context.Allocate(AndWithDrainBufferSize, out Span<long> buffer))
-                MaterializeExcludedBitmap(buffer);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Score(Span<long> matches, Span<float> scores, float boostFactor)
