@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Session.TimeSeries;
 using Sparrow.Json;
 
@@ -16,7 +15,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public long? TotalResults;
         internal string Hash;
 
-        [JsonIgnore] internal bool IsDeleted { get; set; }
+        internal bool IsDeleted { get; set; }
 
         public BlittableJsonReaderObject Includes;
         internal List<string> MissingIncludes;

@@ -10,16 +10,16 @@ namespace Raven.Client.Documents.Session
     public sealed class SessionDocumentTimeSeries<TValues> : ISessionDocumentTimeSeries, ISessionDocumentRollupTypedTimeSeries<TValues>,
         ISessionDocumentTypedTimeSeries<TValues>, ISessionDocumentIncrementalTimeSeries, ISessionDocumentTypedIncrementalTimeSeries<TValues> where TValues : new()
     {
-        private readonly AsyncSessionDocumentTimeSeries<TimeSeriesEntry> _asyncSessionTimeSeries;
+        private readonly AsyncSessionDocumentTimeSeries<TValues> _asyncSessionTimeSeries;
 
         public SessionDocumentTimeSeries(InMemoryDocumentSessionOperations session, string documentId, string name)
         {
-            _asyncSessionTimeSeries = new AsyncSessionDocumentTimeSeries<TimeSeriesEntry>(session, documentId, name);
+            _asyncSessionTimeSeries = new AsyncSessionDocumentTimeSeries<TValues>(session, documentId, name);
         }
 
         public SessionDocumentTimeSeries(InMemoryDocumentSessionOperations session, object entity, string name)
         {
-            _asyncSessionTimeSeries = new AsyncSessionDocumentTimeSeries<TimeSeriesEntry>(session, entity, name);
+            _asyncSessionTimeSeries = new AsyncSessionDocumentTimeSeries<TValues>(session, entity, name);
         }
 
         /// <inheritdoc cref="ISessionDocumentAppendTimeSeriesBase.Append"/>

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.Loaders;
@@ -31,7 +32,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc cref="IAsyncSessionDocumentTimeSeries.GetAsync(DateTime?, DateTime?, Action{ITimeSeriesIncludeBuilder}, int, int, CancellationToken)"/>
-        public async Task<TimeSeriesEntry[]> GetAsync(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default) 
+        public async Task<TimeSeriesEntry[]> GetAsync(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default)
         {
             if (NotInCache(from, to))
             {
@@ -48,6 +49,9 @@ namespace Raven.Client.Documents.Session
         private async Task<List<TimeSeriesEntry>> ServeFromCacheAndOverlay(DateTime? from, DateTime? to, int start, int pageSize,
             Action<ITimeSeriesIncludeBuilder> includes, CancellationToken token)
         {
+            if (IsWholeSeriesDeletedInSession())
+                return null;
+
             var rangeFrom = from ?? DateTime.MinValue;
             var rangeTo = to ?? DateTime.MaxValue;
             var hasLocalOverlay = HasLocalEntriesInRange(rangeFrom, rangeTo);
@@ -58,9 +62,6 @@ namespace Raven.Client.Documents.Session
             var resultToUser =
                 await ServeFromCache(rangeFrom, rangeTo, serveStart, servePageSize, includes, token)
                     .ConfigureAwait(false);
-
-            if (resultToUser == null)
-                return GetLocalEntriesForDeletedRange(from, to, start, pageSize);
 
             if (serveClientSide == false)
                 return resultToUser.Take(pageSize).ToList();
@@ -97,11 +98,15 @@ namespace Raven.Client.Documents.Session
                 return null;
 
             var result = new List<TTValues>();
+            var deletedRanges = DeletesApplyToLocalEntries() && TryGetDeletedRanges(out var ranges) ? ranges : null;
 
             var keys = entries.Keys;
             var values = entries.Values;
             for (int i = FindStartIndex(keys, from); i < entries.Count && keys[i] <= to; i++)
             {
+                if (deletedRanges != null && IsInDeletedRange(keys[i], deletedRanges))
+                    continue;
+
                 var converted = ConvertCachedEntry<TTValues>(values[i]);
                 if (converted != null)
                     result.Add(converted);
@@ -144,7 +149,9 @@ namespace Raven.Client.Documents.Session
             return false;
         }
 
-        internal List<TEntry> RemoveDeletedTimeSeries<TEntry>(List<TEntry> entries) where TEntry : TimeSeriesEntry
+        // in-session deletes are applied to server entries before the local entries are overlaid,
+        // see DeletesApplyToLocalEntries for when they hide local entries as well
+        private IReadOnlyList<TEntry> RemoveDeletedTimeSeries<TEntry>(IReadOnlyList<TEntry> entries) where TEntry : TimeSeriesEntry
         {
             if (entries == null || entries.Count == 0)
                 return entries;
@@ -163,21 +170,53 @@ namespace Raven.Client.Documents.Session
             return result;
         }
 
-        private List<TimeSeriesEntry> GetLocalEntriesForDeletedRange(DateTime? from, DateTime? to, int start, int pageSize)
+        // mirrors SaveChanges: appends and deletes share one command, in which the server runs the deletes first,
+        // so a delete never hides an append. Increments are sent as a separate command, and the commands run in
+        // the order they were first deferred - when the increments go first, the deletes wipe them as well
+        private bool DeletesApplyToLocalEntries()
         {
-            var localOnly = GetCachedEntriesInRange<TimeSeriesEntry>(from ?? DateTime.MinValue, to ?? DateTime.MaxValue);
-            if (localOnly == null || localOnly.Count == 0)
-                return null;
+            if (IsIncremental == false)
+                return false;
 
-            return RemoveDeletedTimeSeries(localOnly).Skip(start).Take(pageSize).ToList();
+            return Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeriesWithIncrements, Name), out var increments) &&
+                   Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeries, Name), out var deletes) &&
+                   Session.IsDeferredBefore(increments, deletes);
+        }
+
+        // the server answers null for a series that does not exist, which is the state after SaveChanges
+        // when the session's deletes cover the whole timeline and nothing was appended back
+        private bool IsWholeSeriesDeletedInSession()
+        {
+            if (TryGetDeletedRanges(out var ranges) == false)
+                return false;
+
+            if (TryGetLocalEntries(out _) && DeletesApplyToLocalEntries() == false)
+                return false;
+
+            var end = DateTime.MaxValue.EnsureMilliseconds();
+            var firstUncovered = DateTime.MinValue;
+
+            foreach (var range in ranges.OrderBy(r => r.From))
+            {
+                if (range.From > firstUncovered)
+                    return false;
+
+                if (range.To >= end)
+                    return true;
+
+                if (range.To >= firstUncovered)
+                    firstUncovered = range.To.AddMilliseconds(1);
+            }
+
+            return false;
         }
 
         internal async Task<TimeSeriesEntry<TEntry>[]> GetTypedFromCache<TEntry>(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start,
             int pageSize, CancellationToken token = default) where TEntry : new()
         {
-            // RavenDB-16060 
+            // RavenDB-16060
             // Typed TimeSeries results need special handling when served from cache
-            // since we cache the results untyped 
+            // since we cache the results untyped
 
             var asList = await ServeFromCacheAndOverlay(from, to, start, pageSize, includes, token)
                 .ConfigureAwait(false);
@@ -228,6 +267,9 @@ namespace Raven.Client.Documents.Session
 
         internal async Task<TTValues[]> GetTimeSeriesAndIncludes<TTValues>(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start, int pageSize, CancellationToken token = default) where TTValues : TimeSeriesEntry
         {
+            if (IsWholeSeriesDeletedInSession())
+                return null;
+
             from = from?.EnsureUtc();
             to = to?.EnsureUtc();
             var cachedEntries = GetCachedEntriesInRange<TTValues>(from ?? DateTime.MinValue, to ?? DateTime.MaxValue);
@@ -242,7 +284,7 @@ namespace Raven.Client.Documents.Session
                 if (cachedEntries == null || cachedEntries.Count == 0)
                     return Array.Empty<TTValues>();
 
-                return RemoveDeletedTimeSeries(cachedEntries).Skip(start).Take(pageSize).ToArray();
+                return cachedEntries.Skip(start).Take(pageSize).ToArray();
             }
 
             var hasLocalEntries = cachedEntries != null && cachedEntries.Count > 0;
@@ -264,13 +306,11 @@ namespace Raven.Client.Documents.Session
                 if (cachedEntries == null)
                     return null;
 
-                return RemoveDeletedTimeSeries(cachedEntries).Skip(start).Take(pageSize).ToArray();
+                return cachedEntries.Skip(start).Take(pageSize).ToArray();
             }
 
-            var serverEntries = rangeResult.Entries ?? Array.Empty<TTValues>();
-
-            var entriesResult = MergeSorted<TTValues>(serverEntries, cachedEntries);
-            entriesResult = RemoveDeletedTimeSeries(entriesResult);
+            var serverEntries = RemoveDeletedTimeSeries(rangeResult.Entries ?? Array.Empty<TTValues>());
+            var entriesResult = MergeSorted(serverEntries, cachedEntries);
 
             if (serveClientSide)
                 entriesResult = entriesResult.Skip(start).Take(pageSize).ToList();
@@ -385,7 +425,7 @@ namespace Raven.Client.Documents.Session
 
         private void HandleIncludes(TimeSeriesRangeResult rangeResult)
         {
-            if (rangeResult.Includes == null) 
+            if (rangeResult.Includes == null)
                 return;
 
             using (rangeResult.Includes)
@@ -458,16 +498,11 @@ namespace Raven.Client.Documents.Session
                 {
                     if (((ranges[toRangeIndex].To >= to) || (ranges[toRangeIndex].Entries.Length - start >= pageSize)))
                     {
-                        if (ranges[toRangeIndex].IsDeleted == false)
-                        {
-                            // we have the entire range in cache 
-                            // we have all the range we need
-                            // or that we have all the results we need in smaller range
+                        // we have the entire range in cache
+                        // we have all the range we need
+                        // or that we have all the results we need in smaller range
 
-                            return ChopRelevantRange(ranges[toRangeIndex], from, to, start, pageSize);
-                        }
-
-                        return null;
+                        return ChopRelevantRange(ranges[toRangeIndex], from, to, start, pageSize);
                     }
 
                     fromRangeIndex = toRangeIndex;

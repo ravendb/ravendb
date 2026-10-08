@@ -1378,12 +1378,17 @@ more responsive application.
             DocumentsById.Clear();
             _knownMissingIds.Clear();
             _countersByDocId?.Clear();
+            _timeSeriesByDocId?.Clear();
+            _localTimeSeries?.Clear();
+            _deletedTimeSeries?.Clear();
             DeferredCommands.Clear();
             DeferredCommandsDictionary.Clear();
             ClearClusterSession();
             PendingLazyOperations.Clear();
             JsonConverter.Clear();
         }
+
+        internal bool IsDeferredBefore(ICommandData first, ICommandData second) => DeferredCommands.IndexOf(first) < DeferredCommands.IndexOf(second);
 
         /// <summary>
         ///     Defer commands to be executed on SaveChanges()
