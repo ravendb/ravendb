@@ -81,7 +81,7 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
     }
 
     public void EnqueueTextMessage(string token, long chatId, long fromUserId, string text,
-        string? username = null, string chatType = "private", int copies = 1)
+        string? username = null, string chatType = "private")
     {
         lock (_lock)
         {
@@ -113,8 +113,7 @@ public sealed class MockTelegramBotApi : IAsyncDisposable
 
             if (_updateQueues.TryGetValue(token, out var queue) == false)
                 _updateQueues[token] = queue = [];
-            for (var i = 0; i < copies; i++)
-                queue.Add(update.DeepClone().AsObject());
+            queue.Add(update);
         }
     }
 

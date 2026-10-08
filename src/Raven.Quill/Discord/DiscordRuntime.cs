@@ -329,7 +329,6 @@ internal sealed class DiscordRuntime : IChannelRuntime
 
         Health.MarkReceived();
         _chats.Enqueue(
-            message.Id ?? "",
             new DiscordMessage(
                 _database, _channel, Health, author.Id, author.Username, message.ChannelId, unsupported, content));
     }

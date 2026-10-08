@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using System.Globalization;
 using Raven.Quill.Channels;
 using Raven.Quill.Hosting;
 using Telegram.Bot;
@@ -107,8 +106,7 @@ internal sealed class TelegramRuntime : IChannelRuntime
             return Task.CompletedTask;
         }
 
-        _chats.Enqueue(
-            update.Id.ToString(CultureInfo.InvariantCulture), new TelegramMessage(_database, _channel, Client, message));
+        _chats.Enqueue(new TelegramMessage(_database, _channel, Client, message));
         return Task.CompletedTask;
     }
 

@@ -228,29 +228,6 @@ public class ChannelChatsTests(ITestOutputHelper output) : NoDisposalNeeded(outp
         await stop.WaitAsync(WaitTimeout);
     }
 
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task A_duplicate_id_is_dispatched_once()
-    {
-        await using var chats = new TestChats();
-
-        chats.Send("a", "hold");
-        await chats.WaitEnteredAsync();
-
-        chats.Send("a", "x", dedupeId: "1");
-        chats.Send("a", "x again", dedupeId: "1");
-        chats.Send("a", "y", dedupeId: "2");
-        chats.Send("a", "no id");
-        chats.Send("a", "no id again");
-        chats.Proceed.Release();
-
-        await chats.WaitEnteredAsync();
-        chats.Proceed.Release();
-
-        Assert.Equal(
-            new[] { new[] { "hold" }, new[] { "x", "y", "no id", "no id again" } },
-            chats.Turns.Select(t => t.Texts));
-    }
-
     private sealed record TestMessage(string SenderId, string? Text, bool RunsAlone, Channel Channel)
         : IChannelMessage
     {
@@ -283,9 +260,8 @@ public class ChannelChatsTests(ITestOutputHelper output) : NoDisposalNeeded(outp
 
         public int ActiveChatCount => _chats.ActiveChatCount;
 
-        public void Send(
-            string senderId, string text, bool runsAlone = false, string channelId = "channels/c1", string dedupeId = "") =>
-            _chats.Enqueue(dedupeId, new TestMessage(senderId, text, runsAlone, new Channel { Id = channelId }));
+        public void Send(string senderId, string text, bool runsAlone = false, string channelId = "channels/c1") =>
+            _chats.Enqueue(new TestMessage(senderId, text, runsAlone, new Channel { Id = channelId }));
 
         public Task StopAsync() => _chats.StopAsync(CancellationToken.None);
 

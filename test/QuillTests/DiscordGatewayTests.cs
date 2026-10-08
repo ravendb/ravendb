@@ -119,20 +119,6 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Redelivered_message_ids_dispatch_once()
-    {
-        await using var app = await NewAppAsync();
-        await NewChannelAsync(app);
-
-        await Discord.DispatchDmAsync("msg-dupe", DmChannel, Sender, "only once");
-        await Discord.DispatchDmAsync("msg-dupe", DmChannel, Sender, "only once");
-
-        await Discord.WaitUntilAsync(() => Router.Requests.Count == 1, "the single agent dispatch");
-        await Task.Delay(250);
-        Assert.Single(Router.Requests);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
     public async Task Bot_authors_self_messages_and_guild_messages_are_ignored()
     {
         await using var app = await NewAppAsync();
