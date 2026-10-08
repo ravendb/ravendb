@@ -440,7 +440,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     public async Task Idle_chat_is_evicted_and_the_next_message_revives_it()
     {
         await using var host = await NewHostAsync(configure: opts =>
-            opts.Telegram.ChatIdleTimeout = TimeSpan.FromMilliseconds(700));
+            opts.ChannelSenderIdleTimeout = TimeSpan.FromMilliseconds(700));
         var app = await NewAppAsync(host);
         await using var appGuard = app;
 
@@ -458,15 +458,13 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
             ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(token)));
         var channelId = created.ChannelId;
 
-        var manager = host.Services.GetRequiredService<TelegramChannelManager>();
+        var chats = host.Services.GetRequiredService<ChannelChats<TelegramMessage>>();
 
         const long chatId = 800;
         Mock.EnqueueTextMessage(token, chatId, fromUserId: 800, "first");
-        await Mock.WaitUntilAsync(
-            () => manager.GetActiveChatCount(app.Slug, channelId) == 1, "the chat worker");
+        await Mock.WaitUntilAsync(() => chats.ActiveChatCount == 1, "the chat worker");
 
-        await Mock.WaitUntilAsync(
-            () => manager.GetActiveChatCount(app.Slug, channelId) == 0, "the idle eviction");
+        await Mock.WaitUntilAsync(() => chats.ActiveChatCount == 0, "the idle eviction");
 
         Mock.EnqueueTextMessage(token, chatId, fromUserId: 800, "second");
         await Mock.WaitUntilAsync(() => Router.Requests.Count >= 2, "the revived chat's run");
@@ -791,6 +789,68 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
             Assert.NotNull(await session.LoadAsync<object>(conversationId));
             Assert.NotNull(await session.LoadAsync<object>(ConversationPreview.IdFor(conversationId)));
         }
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Editing_the_channel_does_not_cancel_a_running_turn()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        const long chatId = 660;
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt == "hold" ? gate.Task : Task.CompletedTask;
+
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 660, "hold");
+        await Mock.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+        await Mock.WaitUntilAsync(() => Mock.LastGetUpdatesOffset(token) > 0, "the update to be confirmed");
+
+        await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, null,
+            new(Messages: new TelegramChannelMessages { Greeting = "Witaj!" })));
+        await Mock.WaitUntilAsync(
+            () => Mock.LastGetUpdatesOffset(token) is null or 0, "the runtime swap after the update");
+
+        gate.SetResult();
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.ChatId == chatId && m.Text.Contains("fake agent")) ||
+                  Mock.EditedMessages.Any(e => e.ChatId == chatId && e.Text.Contains("fake agent")),
+            "the held turn's reply");
+        Assert.DoesNotContain(Mock.SentMessages, m => m.ChatId == chatId && m.Text.StartsWith("Sorry"));
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_redelivered_update_dispatches_once()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        const long chatId = 670;
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: 670, "only once", copies: 2);
+        await Mock.WaitUntilAsync(() => Router.Requests.Count >= 1, "the agent run");
+        await Mock.WaitUntilAsync(() => Mock.PendingUpdateCount(token) == 0, "both copies to be confirmed");
+        await Task.Delay(400);
+
+        Assert.Equal("only once", Assert.Single(Router.Requests).Prompt);
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_timed_out_agent_call_gets_the_error_reply()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        Router.Failure = new TaskCanceledException("the agent call timed out");
+        Mock.EnqueueTextMessage(token, chatId: 410, fromUserId: 410, "slow question");
+
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.ChatId == 410 && m.Text == ChannelReplies.Default.Error),
+            "the error reply");
 
         await app.DeleteChannelAsync(channelId);
     }
