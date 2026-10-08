@@ -214,6 +214,10 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         if (_configuration.Parameters == null || requestParameters == null)
             return;
 
+        var queryParameterNames = (_configuration.Queries ?? [])
+            .Select(q => (q.Name, Parameters: GetQueryParameterNames(q.Query)))
+            .ToList();
+
         foreach (var configParam in _configuration.Parameters)
         {
             if (requestParameters.TryGetMember(configParam.Name, out object value) == false)
@@ -226,9 +230,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             {
                 if (value is not BlittableJsonReaderArray { Length: 0 } &&
                     TryGetValueType(value, out _, out var unsupported) == false)
-                    AssertNoQueryBindsName(
-                        (_configuration.Queries ?? []).Select(q => (q.Name, Parameters: GetQueryParameterNames(q.Query))),
-                        configParam.Name, unsupported);
+                    AssertNoQueryBindsName(queryParameterNames, configParam.Name, unsupported);
 
                 continue;
             }
