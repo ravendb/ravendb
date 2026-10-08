@@ -823,23 +823,6 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task A_redelivered_update_dispatches_once()
-    {
-        var (app, channelId, token) = await ProvisionAsync();
-        await using var appGuard = app;
-
-        const long chatId = 670;
-        Mock.EnqueueTextMessage(token, chatId, fromUserId: 670, "only once", copies: 2);
-        await Mock.WaitUntilAsync(() => Router.Requests.Count >= 1, "the agent run");
-        await Mock.WaitUntilAsync(() => Mock.PendingUpdateCount(token) == 0, "both copies to be confirmed");
-        await Task.Delay(400);
-
-        Assert.Equal("only once", Assert.Single(Router.Requests).Prompt);
-
-        await app.DeleteChannelAsync(channelId);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
     public async Task A_timed_out_agent_call_gets_the_error_reply()
     {
         var (app, channelId, token) = await ProvisionAsync();

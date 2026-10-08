@@ -192,20 +192,6 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Redelivered_event_ids_dispatch_once()
-    {
-        await using var app = await NewAppAsync();
-        var channel = await NewChannelAsync(app);
-
-        await Slack.DispatchEventAsync(channel.TeamId, "Ev-same", DmMessage(Sender, "only once"));
-        await Slack.DispatchEventAsync(channel.TeamId, "Ev-same", DmMessage(Sender, "only once"));
-
-        await Slack.WaitUntilAsync(() => Router.Requests.Count >= 1, "the first dispatch");
-        await Task.Delay(250);
-        Assert.Single(Router.Requests);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
     public async Task Bot_echoes_foreign_teams_and_non_dm_events_are_ignored()
     {
         await using var app = await NewAppAsync();

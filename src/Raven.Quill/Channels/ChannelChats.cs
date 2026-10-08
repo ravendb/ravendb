@@ -35,8 +35,6 @@ internal sealed class ChannelChats<TMessage>(
     IChatTurns<TMessage> turns, IRavenLogger logger, int capacity, TimeSpan idleTimeout) : IChannelChats
     where TMessage : IChannelMessage
 {
-    private const int DedupeCapacity = 4096;
-    private static readonly TimeSpan DedupeTtl = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan StopDrainTimeout = TimeSpan.FromSeconds(10);
 
     private readonly IChatTurns<TMessage> _turns = turns;
@@ -45,56 +43,12 @@ internal sealed class ChannelChats<TMessage>(
     private readonly ConcurrentDictionary<string, Chat> _chats = new();
     private readonly CancellationTokenSource _stopping = new();
 
-    private readonly HashSet<string> _seenIds = new(StringComparer.Ordinal);
-    private readonly Queue<(string Id, DateTime SeenAt)> _seenOrder = new();
-    private readonly object _dedupeLock = new();
-
     internal int ActiveChatCount => _chats.Count;
 
-    public void Enqueue(string dedupeId, TMessage message)
+    public void Enqueue(TMessage message)
     {
-        var key = ChatKey(message);
-        if (dedupeId.Length > 0 && IsDuplicate($"{key}/{dedupeId}"))
-            return;
+        var key = $"{message.Database}/{message.Channel.ShortId}/{message.SenderId}";
 
-        Post(key, message);
-    }
-
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            await StopChatsAsync().WaitAsync(StopDrainTimeout, cancellationToken);
-        }
-        catch (TimeoutException)
-        {
-            if (logger.IsWarnEnabled)
-                logger.Warn($"chats did not drain within {StopDrainTimeout}");
-        }
-    }
-
-    private static string ChatKey(TMessage message) =>
-        $"{message.Database}/{message.Channel.ShortId}/{message.SenderId}";
-
-    private bool IsDuplicate(string id)
-    {
-        lock (_dedupeLock)
-        {
-            var now = DateTime.UtcNow;
-            while (_seenOrder.Count > 0 &&
-                   (_seenOrder.Count > DedupeCapacity || now - _seenOrder.Peek().SeenAt > DedupeTtl))
-                _seenIds.Remove(_seenOrder.Dequeue().Id);
-
-            if (_seenIds.Add(id) == false)
-                return true;
-
-            _seenOrder.Enqueue((id, now));
-            return false;
-        }
-    }
-
-    private void Post(string key, TMessage message)
-    {
         while (true)
         {
             var chat = _chats.GetOrAdd(key, k => new Chat(this, k));
@@ -112,6 +66,19 @@ internal sealed class ChannelChats<TMessage>(
                 logger.Warn($"sender {key} dropped a message: queue full");
             chat.NotifyBufferFullOnce(message);
             return;
+        }
+    }
+
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await StopChatsAsync().WaitAsync(StopDrainTimeout, cancellationToken);
+        }
+        catch (TimeoutException)
+        {
+            if (logger.IsWarnEnabled)
+                logger.Warn($"chats did not drain within {StopDrainTimeout}");
         }
     }
 

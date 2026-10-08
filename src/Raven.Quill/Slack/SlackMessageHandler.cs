@@ -33,7 +33,6 @@ internal sealed class SlackMessageHandler(
 
         health.MarkReceived();
         chats.Enqueue(
-            callback.EventId ?? "",
             new SlackMessage(database, channel, health, message.User, message.Channel, unsupported.Value, message.Text));
         return Task.CompletedTask;
     }
