@@ -258,6 +258,10 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             var certificate = RavenServer.GetCertificateForAuthorization(Database.ServerStore.Server.Certificate.ClientCertificate);
             var authentication = Database.ServerStore.Server.AuthenticateConnectionCertificate(certificate, $"GenAI access for '{Name}'");
 
+            var queryParameterNames = (Configuration.Queries ?? [])
+                .Select(q => (q.Name, Parameters: ConversationHandler.GetQueryParameterNames(q.Query)))
+                .ToList();
+
             foreach (var item in items)
             {
                 statsScope.NumberOfContextObjects++;
@@ -277,7 +281,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
                 // the agent declares exactly the context values the query binder can take, so what is declared
                 // and what is supplied cannot drift apart - the rest reaches the model through the prompt
-                var queryParameters = FilterSupportedGenAiQueryParameters(context, item.ContextOutput.Context);
+                var queryParameters = FilterSupportedGenAiQueryParameters(context, item.ContextOutput.Context, queryParameterNames);
                 var agentConfiguration = CreateAgentConfiguration(context, queryParameters);
                 var handler = new GenAiConversationHandler(Database.ServerStore, Database, Configuration)
                 {
@@ -347,7 +351,8 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         return agentConfiguration;
     }
 
-    private BlittableJsonReaderObject FilterSupportedGenAiQueryParameters(JsonOperationContext context, BlittableJsonReaderObject rawContext)
+    private static BlittableJsonReaderObject FilterSupportedGenAiQueryParameters(JsonOperationContext context, BlittableJsonReaderObject rawContext,
+        List<(string Name, HashSet<string> Parameters)> queryParameterNames)
     {
         var parameters = new DynamicJsonValue();
         BlittableJsonReaderObject.PropertyDetails property = default;
@@ -357,7 +362,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
             if (ConversationHandler.TryGetValueType(property.Value, out _, out var unsupportedType) == false)
             {
-                AssertNoQueryBindsContextProperty(property.Name, unsupportedType);
+                ConversationHandler.AssertNoQueryBindsName(queryParameterNames, property.Name, unsupportedType);
                 continue;
             }
 
@@ -365,18 +370,6 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         }
 
         return context.ReadObject(parameters, "genai/query-parameters");
-    }
-
-    private List<(string Name, HashSet<string> Parameters)> _queryParameterNames;
-
-    private void AssertNoQueryBindsContextProperty(string name, string unsupportedType)
-    {
-        // the queries belong to the task, so they are parsed once rather than per document
-        _queryParameterNames ??= (Configuration.Queries ?? [])
-            .Select(q => (q.Name, Parameters: ConversationHandler.GetQueryParameterNames(q.Query)))
-            .ToList();
-
-        ConversationHandler.AssertNoQueryBindsName(_queryParameterNames, name, unsupportedType);
     }
 
     private List<Exception> ProcessModelResults(List<GenAiResultItem> items, JsonOperationContext context, List<Task<GenAiHandlerResult>> tasks, GenAiStatsScope statsScope)
