@@ -44,7 +44,6 @@ namespace Corax.Querying.Matches
         private bool _excludedBitmapInitialized;
         private bool _excludedBitmapIsEmpty;
         private bool _bitmapExhausted;
-        private const int AndWithDrainBufferSize = 4096;
 
         public SkipSortingResult AttemptToSkipSorting()
         {
@@ -228,7 +227,12 @@ namespace Corax.Querying.Matches
                 return 0;
 
             if (_excludedBitmapInitialized == false)
-                MaterializeExcludedBitmap(matches);
+            {
+                if (matches.Length < Querying.IndexSearcher.BitmapDrainBufferSize)
+                    MaterializeExcludedBitmapWithOwnBuffer();
+                else
+                    MaterializeExcludedBitmap(matches);
+            }
 
             if (_excludedBitmapIsEmpty)
             {
@@ -294,7 +298,7 @@ namespace Corax.Querying.Matches
                 return 0;
 
             if (_excludedBitmapInitialized == false)
-                MaterializeExcludedBitmapForAndWith();
+                MaterializeExcludedBitmapWithOwnBuffer();
 
             if (_excludedBitmapIsEmpty)
                 return results;
@@ -321,9 +325,9 @@ namespace Corax.Querying.Matches
             }
         }
 
-        private void MaterializeExcludedBitmapForAndWith()
+        private void MaterializeExcludedBitmapWithOwnBuffer()
         {
-            using (_context.Allocate(AndWithDrainBufferSize, out Span<long> buffer))
+            using (_context.Allocate(Querying.IndexSearcher.BitmapDrainBufferSize, out Span<long> buffer))
                 MaterializeExcludedBitmap(buffer);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
