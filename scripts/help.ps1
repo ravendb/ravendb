@@ -6,6 +6,9 @@ function Help () {
     Write-Host -NoNewline -ForegroundColor Cyan "-WinX86    "
     Write-Host " - build only Windows x86 artifacts"
 
+    Write-Host -NoNewline -ForegroundColor Cyan "-WinArm64  "
+    Write-Host " - build only Windows Arm64 artifacts"
+
     Write-Host -NoNewline -ForegroundColor Cyan "-LinuxX64  "
     Write-Host " - build only Linux x64 artifacts"
 

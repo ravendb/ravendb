@@ -3,6 +3,7 @@ using System.IO;
 using System.Security.Cryptography;
 using Confluent.Kafka;
 using Raven.Client.Documents.Operations.QueueSink;
+using Raven.Server.Documents.ETL.Providers.Queue;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.QueueSink;
@@ -15,6 +16,8 @@ public sealed class KafkaQueueSink : QueueSinkProcess
 
     protected override IQueueSinkConsumer CreateConsumer()
     {
+        QueueBrokerConnectionHelper.EnsureKafkaIsSupported();
+
         var consumerConfig = new ConsumerConfig
         {
             BootstrapServers = Configuration.Connection.KafkaConnectionSettings.BootstrapServers,
