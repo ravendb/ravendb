@@ -47,7 +47,7 @@ internal static partial class QueryPlanBuilder
             switch (dispatch)
             {
                 case MatchDispatch.QueryMatch:
-                    matches.Add(ResolveInTerm(clauseExec, termIndex, root, walkerCtx));
+                    matches.Add(Boosted(ResolveInTerm(clauseExec, termIndex, root, walkerCtx)));
                     leaves.Add(new LeafResolveInfo { Kind = LeafResolveKind.PreResolved });
                     return;
                 default: 
@@ -71,7 +71,7 @@ internal static partial class QueryPlanBuilder
                     var indexSearcher = walkerCtx.IndexSearcher;
                     FieldMetadata nullMeta = ResolveFieldMetadata(clauseExec.Clause, walkerCtx);
                     if (clauseExec.HasNullTerm)
-                        matches.Add(indexSearcher.TermQuery(nullMeta, null));
+                        matches.Add(Boosted(indexSearcher.TermQuery(nullMeta, null)));
                     else if (clauseExec.ClauseType == ClauseType.AllIn && clauseExec.InTermCount > 0)
                         matches.Add(indexSearcher.AllEntries()); // ALL IN → AND → identity is "everything", as below
                     else
@@ -105,10 +105,7 @@ internal static partial class QueryPlanBuilder
             {
                 case MatchDispatch.QueryMatch:
                 {
-                    IQueryMatch match = ResolveClause(clauseExec, root, walkerCtx);
-                    if (clauseExec.BoostFactor is not 0)
-                        match = walkerCtx.IndexSearcher.Boost(match, clauseExec.BoostFactor);
-                    matches.Add(match);
+                    matches.Add(Boosted(ResolveClause(clauseExec, root, walkerCtx)));
                     leaves.Add(new LeafResolveInfo { Kind = LeafResolveKind.PreResolved });
                     break;
                 }
@@ -140,6 +137,8 @@ internal static partial class QueryPlanBuilder
                     throw new ArgumentOutOfRangeException(dispatch.ToString());
             }
         }
+
+        IQueryMatch Boosted(IQueryMatch match) => clauseExec.BoostFactor is not 0 ? walkerCtx.IndexSearcher.Boost(match, clauseExec.BoostFactor) : match;
 
         static bool IsCalibratedRangeClause(ClauseType type) => type switch
         {
