@@ -24,6 +24,7 @@ export interface OngoingTaskNodeEtlProgressDetails {
     completed: boolean;
     processedPerSecond: number;
     transactionalId?: string;
+    estimated: boolean;
 }
 
 export interface OngoingTaskNodeReplicationProgressDetails {
@@ -36,6 +37,7 @@ export interface OngoingTaskNodeReplicationProgressDetails {
     revisions: Progress;
     timeSeriesDeletedRanges: Progress;
     timeSeries: Progress;
+    estimated: boolean;
 }
 
 export interface OngoingTaskNodeInternalReplicationProgressDetails extends OngoingTaskNodeReplicationProgressDetails {

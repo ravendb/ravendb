@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.ETL
 
         public abstract OngoingTaskConnectionStatus GetConnectionStatus();
 
-        public abstract EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext);
+        public abstract EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext, bool exact);
 
         internal abstract bool IsRunning { get; }
 
@@ -1361,7 +1361,7 @@ namespace Raven.Server.Documents.ETL
             });
         }
 
-        public override EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext)
+        public override EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext, bool exact)
         {
             var result = new EtlProcessProgress
             {
@@ -1379,25 +1379,16 @@ namespace Raven.Server.Documents.ETL
             var overallDuration = Stopwatch.StartNew();
             foreach (var collection in collections)
             {
-                result.NumberOfDocumentsToProcess += Database.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext, collection, lastProcessedEtag, out var total, overallDuration);
-                result.TotalNumberOfDocuments += total;
-
-                result.NumberOfDocumentTombstonesToProcess += Database.DocumentsStorage.GetNumberOfTombstonesToProcess(documentsContext, collection, lastProcessedEtag, out total, overallDuration);
-                result.TotalNumberOfDocumentTombstones += total;
+                result.AddDocuments(Database.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact));
+                result.AddDocumentTombstones(Database.DocumentsStorage.GetNumberOfTombstonesToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact));
 
                 if (ShouldTrackCounters())
-                {
-                    result.NumberOfCounterGroupsToProcess += Database.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(documentsContext, collection, lastProcessedEtag, out total, overallDuration);
-                    result.TotalNumberOfCounterGroups += total;
-                }
+                    result.AddCounterGroups(Database.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact));
 
                 if (ShouldTrackTimeSeries())
                 {
-                    result.NumberOfTimeSeriesSegmentsToProcess += Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(documentsContext, collection, lastProcessedEtag, out total, overallDuration);
-                    result.TotalNumberOfTimeSeriesSegments += total;
-
-                    result.NumberOfTimeSeriesDeletedRangesToProcess += Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(documentsContext, collection, lastProcessedEtag, out total, overallDuration);
-                    result.TotalNumberOfTimeSeriesDeletedRanges += total;
+                    result.AddTimeSeriesSegments(Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact));
+                    result.AddTimeSeriesDeletedRanges(Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(documentsContext, collection, lastProcessedEtag, overallDuration, exact));
                 }
             }
 

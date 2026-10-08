@@ -17,6 +17,10 @@ interface ActionStatsLoaded {
 interface ActionProgressLoaded {
     location: databaseLocationSpecifier;
     progress: IndexProgress[];
+    // when set, only the listed indexes are updated (the response covers just a subset of the indexes)
+    scope?: string[];
+    // when set, the listed indexes are left untouched (their progress comes from a separate, exact request)
+    exclude?: string[];
     type: "ProgressLoaded";
 }
 
@@ -165,6 +169,8 @@ function markProgressAsCompleted(progress: Draft<IndexProgressInfo>) {
         c.documents.processed = c.documents.total;
         c.tombstones.processed = c.tombstones.total;
         c.deletedTimeSeries.processed = c.deletedTimeSeries.total;
+        // the counts are final once the index caught up
+        c.estimated = false;
     });
 }
 
@@ -178,6 +184,7 @@ function mapProgress(progress: IndexProgress): IndexProgressInfo {
         const stats = progress.Collections[name];
         return {
             name,
+            estimated: stats.Estimated,
             documents: {
                 processedPerSecond: 0,
                 total: stats.TotalNumberOfItems,
@@ -222,6 +229,14 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
 
             return produce(state, (draft) => {
                 draft.indexes.forEach((index) => {
+                    if (action.scope && !action.scope.includes(index.name)) {
+                        return;
+                    }
+
+                    if (action.exclude && action.exclude.includes(index.name)) {
+                        return;
+                    }
+
                     const itemToUpdate = index.nodesInfo.find((x) =>
                         databaseLocationComparator(x.location, incomingLocation)
                     );
