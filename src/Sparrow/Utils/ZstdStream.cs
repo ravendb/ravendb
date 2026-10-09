@@ -30,7 +30,7 @@ namespace Sparrow.Utils
         private ZstdStream(Stream inner, bool compression, int level, bool leaveOpen)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-            _compressContext = new ZstdLib.CompressContext(level);
+            _compressContext = new ZstdLib.CompressContext(level, pooled: true);
             _compression = compression;
             _leaveOpen = leaveOpen;
 
