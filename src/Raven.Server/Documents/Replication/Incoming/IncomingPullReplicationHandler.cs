@@ -53,6 +53,9 @@ namespace Raven.Server.Documents.Replication.Incoming
             AfterItemsReadFromStream = ValidateIncomingReplicationItemsPaths;
         }
 
+        protected override string ConnectionEstablishedLogDetails =>
+            $"{base.ConnectionEstablishedLogDetails}, Direction={IncomingPullReplicationParams.Mode}, ChangeVectorWireMode={ChangeVectorWireMode}, CertificateThumbprint={CertificateThumbprint}";
+
         public override string FromToString => base.FromToString +
                                                $"{(IncomingPullReplicationParams?.Name == null ? null : $"(pull definition: {IncomingPullReplicationParams?.Name})")}";
 
@@ -135,6 +138,18 @@ namespace Raven.Server.Documents.Replication.Incoming
             {
                 doc.Data = ctx.ReadObject(doc.Data, doc.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             }
+        }
+
+        public override DynamicJsonValue GetConnectionInfoAsJson()
+        {
+            var json = base.GetConnectionInfoAsJson();
+
+            json[nameof(ChangeVectorWireMode)] = ChangeVectorWireMode;
+            json[nameof(PullReplicationMode)] = IncomingPullReplicationParams.Mode;
+            json[nameof(ConnectionInfo.SourceDatabaseId)] = ConnectionInfo.SourceDatabaseId;
+            json[nameof(ReplicationInitialRequest.PullReplicationDefinitionName)] = IncomingPullReplicationParams.Name;
+
+            return json;
         }
     }
 }

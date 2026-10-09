@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using Raven.Client.Documents.Replication;
 using Raven.Server.Documents.Replication.Stats;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Replication.Incoming
 {
@@ -13,5 +14,6 @@ namespace Raven.Server.Documents.Replication.Incoming
         public IncomingReplicationPerformanceStats[] GetReplicationPerformance();
         public IncomingReplicationStatsAggregator GetLatestReplicationPerformance();
         public LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType();
+        public DynamicJsonValue GetConnectionInfoAsJson();
     }
 }
