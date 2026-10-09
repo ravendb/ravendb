@@ -1,0 +1,11 @@
+.overridable-field-control {
+    flex: 1 1 8rem;
+    min-width: 0;
+}
+
+.overridable-field-switch {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+}

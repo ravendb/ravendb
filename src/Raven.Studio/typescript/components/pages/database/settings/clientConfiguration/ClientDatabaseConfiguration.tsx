@@ -1,13 +1,21 @@
 import { useEffect } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import Card from "react-bootstrap/Card";
-import InputGroup from "react-bootstrap/InputGroup";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { FormCheckbox, FormInput, FormRadioToggleWithIcon, FormSelect, FormSwitch } from "components/common/Form";
+import { FormGroup, FormInput, FormRadioToggleWithIcon, FormSelect } from "components/common/Form";
+import OverridableField from "components/common/OverridableField";
+import FieldLabel from "components/common/FieldLabel";
+import {
+    IdentityPartsSeparatorTooltip,
+    LoadBalanceBehaviorTooltip,
+    LoadBalancerSeedTooltip,
+    MaximumNumberOfRequestsTooltip,
+    ReadBalanceBehaviorTooltip,
+} from "components/common/clientConfiguration/ClientConfigurationTooltips";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
@@ -35,7 +43,6 @@ import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUti
 import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 export default function ClientDatabaseConfiguration() {
@@ -179,7 +186,7 @@ export default function ClientDatabaseConfiguration() {
 
                             <Row>
                                 {globalConfig && (
-                                    <Col>
+                                    <Col className="d-flex flex-column">
                                         <h4 className="mb-3">
                                             <Icon icon="server" />
                                             Server Configuration
@@ -194,142 +201,95 @@ export default function ClientDatabaseConfiguration() {
                                                 </a>
                                             )}
                                         </h4>
-                                        <Card className={canEditDatabaseConfig && "item-disabled"}>
-                                            <div className="p-4">
-                                                <div className="md-label">
-                                                    Identity parts separator{" "}
-                                                    <PopoverWithHoverWrapper
-                                                        placement="right"
-                                                        message={
-                                                            <>
-                                                                Set the default separator for automatically generated
-                                                                document IDs (<i>Identity</i>, <i>HiLo</i>, and{" "}
-                                                                <i>Server-side</i>).
-                                                                <br />
-                                                                Use any character except <code>&apos;|&apos;</code>{" "}
-                                                                (pipe).
-                                                            </>
-                                                        }
+                                        <Card
+                                            className={classNames("flex-grow-1", {
+                                                "item-disabled": canEditDatabaseConfig,
+                                            })}
+                                        >
+                                            <div className="p-4 vstack gap-3">
+                                                <FormGroup marginClass="">
+                                                    <FieldLabel
+                                                        tooltip={<IdentityPartsSeparatorTooltip />}
+                                                        tooltipPlacement="right"
                                                     >
-                                                        <Icon icon="info" color="info" />
-                                                    </PopoverWithHoverWrapper>
-                                                </div>
-                                                <Form.Control
-                                                    defaultValue={globalConfig.identityPartsSeparatorValue}
-                                                    disabled
-                                                    placeholder={
-                                                        globalConfig.identityPartsSeparatorValue || "'/' (default)"
-                                                    }
-                                                />
-                                                <div className="md-label mt-4">
-                                                    Maximum number of requests per session{" "}
-                                                    <PopoverWithHoverWrapper
-                                                        placement="right"
-                                                        message={
-                                                            <>
-                                                                Set this number to restrict the number of requests (
-                                                                <code>Reads</code> & <code>Writes</code>) per session in
-                                                                the client API.
-                                                            </>
+                                                        Identity parts separator
+                                                    </FieldLabel>
+                                                    <Form.Control
+                                                        defaultValue={globalConfig.identityPartsSeparatorValue}
+                                                        disabled
+                                                        placeholder={
+                                                            globalConfig.identityPartsSeparatorValue || "Default ('/')"
                                                         }
+                                                    />
+                                                </FormGroup>
+                                                <FormGroup marginClass="">
+                                                    <FieldLabel
+                                                        tooltip={<MaximumNumberOfRequestsTooltip />}
+                                                        tooltipPlacement="right"
                                                     >
-                                                        <Icon icon="info" color="info" />
-                                                    </PopoverWithHoverWrapper>
-                                                </div>
-                                                <Form.Control
-                                                    defaultValue={globalConfig.maximumNumberOfRequestsValue}
-                                                    disabled
-                                                    placeholder={
-                                                        globalConfig.maximumNumberOfRequestsValue
-                                                            ? globalConfig.maximumNumberOfRequestsValue.toLocaleString()
-                                                            : "30 (default)"
-                                                    }
-                                                />
+                                                        Maximum number of requests per session
+                                                    </FieldLabel>
+                                                    <Form.Control
+                                                        defaultValue={globalConfig.maximumNumberOfRequestsValue}
+                                                        disabled
+                                                        placeholder={
+                                                            globalConfig.maximumNumberOfRequestsValue
+                                                                ? globalConfig.maximumNumberOfRequestsValue.toLocaleString()
+                                                                : "Default (30)"
+                                                        }
+                                                    />
+                                                </FormGroup>
                                             </div>
                                         </Card>
                                     </Col>
                                 )}
-                                <Col>
+                                <Col className="d-flex flex-column">
                                     <h4 className="mb-3">
                                         <Icon icon="database" />
                                         Database Configuration
                                     </h4>
-                                    <Card className={classNames({ "item-disabled": !canEditDatabaseConfig })}>
-                                        <div className="p-4">
-                                            <div className="md-label">
-                                                Identity parts separator{" "}
-                                                <PopoverWithHoverWrapper
-                                                    placement="right"
-                                                    message={
-                                                        <>
-                                                            Set the default separator for automatically generated
-                                                            document IDs (<i>Identity</i>, <i>HiLo</i>, and{" "}
-                                                            <i>Server-side</i>).
-                                                            <br />
-                                                            Use any character except <code>&apos;|&apos;</code> (pipe).
-                                                        </>
-                                                    }
-                                                >
-                                                    <Icon icon="info" color="info" />
-                                                </PopoverWithHoverWrapper>
-                                            </div>
-                                            <InputGroup>
-                                                <div className="toggle-field-checkbox">
-                                                    <FormCheckbox
+                                    <Card
+                                        className={classNames("flex-grow-1", {
+                                            "item-disabled": !canEditDatabaseConfig,
+                                        })}
+                                    >
+                                        <div className="p-4 vstack gap-3">
+                                            <OverridableField
+                                                control={control}
+                                                overrideName="identityPartsSeparatorEnabled"
+                                                tooltipPlacement="right"
+                                                label="Identity parts separator"
+                                                tooltip={<IdentityPartsSeparatorTooltip />}
+                                                disabled={!canEditDatabaseConfig}
+                                            >
+                                                {({ isDisabled }) => (
+                                                    <FormInput
+                                                        type="text"
                                                         control={control}
-                                                        name="identityPartsSeparatorEnabled"
-                                                        disabled={!canEditDatabaseConfig}
-                                                        color="primary"
+                                                        name="identityPartsSeparatorValue"
+                                                        placeholder="Default ('/')"
+                                                        disabled={isDisabled}
                                                     />
-                                                </div>
-                                                <FormInput
-                                                    type="text"
-                                                    control={control}
-                                                    name="identityPartsSeparatorValue"
-                                                    placeholder="'/' (default)"
-                                                    disabled={
-                                                        !formValues.identityPartsSeparatorEnabled ||
-                                                        !canEditDatabaseConfig
-                                                    }
-                                                    className="d-flex"
-                                                />
-                                            </InputGroup>
-                                            <div className="md-label mt-4">
-                                                Maximum number of requests per session{" "}
-                                                <PopoverWithHoverWrapper
-                                                    placement="right"
-                                                    message={
-                                                        <>
-                                                            {" "}
-                                                            Set this number to restrict the number of requests
-                                                            <br />(<code>Reads</code> & <code>Writes</code>) per session
-                                                            in the client API.
-                                                        </>
-                                                    }
-                                                >
-                                                    <Icon icon="info" color="info" />
-                                                </PopoverWithHoverWrapper>
-                                            </div>
-                                            <InputGroup>
-                                                <div className="toggle-field-checkbox">
-                                                    <FormCheckbox
+                                                )}
+                                            </OverridableField>
+                                            <OverridableField
+                                                control={control}
+                                                overrideName="maximumNumberOfRequestsEnabled"
+                                                tooltipPlacement="right"
+                                                label="Maximum number of requests per session"
+                                                tooltip={<MaximumNumberOfRequestsTooltip />}
+                                                disabled={!canEditDatabaseConfig}
+                                            >
+                                                {({ isDisabled }) => (
+                                                    <FormInput
+                                                        type="number"
                                                         control={control}
-                                                        name="maximumNumberOfRequestsEnabled"
-                                                        disabled={!canEditDatabaseConfig}
-                                                        color="primary"
+                                                        name="maximumNumberOfRequestsValue"
+                                                        placeholder="Default (30)"
+                                                        disabled={isDisabled}
                                                     />
-                                                </div>
-                                                <FormInput
-                                                    type="number"
-                                                    control={control}
-                                                    name="maximumNumberOfRequestsValue"
-                                                    placeholder="30 (default)"
-                                                    disabled={
-                                                        !formValues.maximumNumberOfRequestsEnabled ||
-                                                        !canEditDatabaseConfig
-                                                    }
-                                                />
-                                            </InputGroup>
+                                                )}
+                                            </OverridableField>
                                         </div>
                                     </Card>
                                 </Col>
@@ -352,238 +312,125 @@ export default function ClientDatabaseConfiguration() {
 
                             <Row>
                                 {globalConfig && (
-                                    <Col>
-                                        <Card className={classNames("p-4", { "item-disabled": canEditDatabaseConfig })}>
-                                            <div className="md-label">
-                                                Load Balance Behavior{" "}
-                                                <PopoverWithHoverWrapper
-                                                    message={
-                                                        <>
-                                                            <span className="d-inline-block mb-1">
-                                                                Set the Load balance method for <strong>Read</strong> &{" "}
-                                                                <strong>Write</strong> requests.
-                                                            </span>
-                                                            <ul>
-                                                                <li className="mb-1">
-                                                                    <code>None</code>
-                                                                    <br />
-                                                                    <strong>Read</strong> requests - the node the client
-                                                                    will target will be based on Read balance behavior
-                                                                    configuration.
-                                                                    <br />
-                                                                    <strong>Write</strong> requests - will be sent to
-                                                                    the preferred node.
-                                                                </li>
-                                                                <li className="mb-1">
-                                                                    <code>Use session context</code>
-                                                                    <br />
-                                                                    Sessions that are assigned the same context will
-                                                                    have all their <strong>Read & Write</strong>{" "}
-                                                                    requests routed to the same node.
-                                                                    <br />
-                                                                    The session context is hashed from a context string
-                                                                    (given by the client) and an optional seed.
-                                                                </li>
-                                                            </ul>
-                                                        </>
-                                                    }
+                                    <Col className="d-flex flex-column">
+                                        <Card
+                                            className={classNames("p-4 vstack gap-3", "flex-grow-1", {
+                                                "item-disabled": canEditDatabaseConfig,
+                                            })}
+                                        >
+                                            <FormGroup marginClass="">
+                                                <FieldLabel
+                                                    tooltip={<LoadBalanceBehaviorTooltip />}
+                                                    tooltipPlacement="right"
                                                 >
-                                                    <Icon icon="info" color="info" />
-                                                </PopoverWithHoverWrapper>
-                                            </div>
-                                            <Form.Control
-                                                defaultValue={globalConfig.loadBalancerValue}
-                                                disabled
-                                                placeholder="None"
-                                            />
+                                                    Load Balance Behavior
+                                                </FieldLabel>
+                                                <Form.Control
+                                                    defaultValue={globalConfig.loadBalancerValue}
+                                                    disabled
+                                                    placeholder="None"
+                                                />
+                                            </FormGroup>
                                             {(globalConfig?.loadBalancerSeedValue ||
                                                 formValues.loadBalancerValue === "UseSessionContext") && (
-                                                <>
-                                                    <div className="md-label mt-4">
-                                                        {" "}
+                                                <FormGroup marginClass="">
+                                                    <FieldLabel
+                                                        tooltip={<LoadBalancerSeedTooltip />}
+                                                        tooltipPlacement="right"
+                                                    >
                                                         Seed
-                                                        <PopoverWithHoverWrapper
-                                                            placement="right"
-                                                            message={
-                                                                <>
-                                                                    An optional seed number.
-                                                                    <br />
-                                                                    Used when hashing the session context.
-                                                                </>
-                                                            }
-                                                        >
-                                                            <Icon icon="info" color="info" />
-                                                        </PopoverWithHoverWrapper>
-                                                    </div>
+                                                    </FieldLabel>
                                                     <Form.Control
                                                         defaultValue={globalConfig.loadBalancerSeedValue}
                                                         disabled
-                                                        placeholder="0 (default)"
+                                                        placeholder="Default (0)"
                                                     />
-                                                </>
+                                                </FormGroup>
                                             )}
-                                            <div className="md-label mt-4">
-                                                Read Balance Behavior{" "}
-                                                <PopoverWithHoverWrapper
-                                                    placement="right"
-                                                    message={
-                                                        <>
-                                                            Set the Read balance method the client will use when
-                                                            accessing a node with <code>Read</code> requests.
-                                                            <br />
-                                                            <code>Write</code> requests are sent to the preferred node.
-                                                        </>
-                                                    }
+                                            <FormGroup marginClass="">
+                                                <FieldLabel
+                                                    tooltip={<ReadBalanceBehaviorTooltip />}
+                                                    tooltipPlacement="right"
                                                 >
-                                                    <Icon icon="info" color="info" />
-                                                </PopoverWithHoverWrapper>
-                                            </div>
-                                            <Form.Control
-                                                defaultValue={globalConfig.readBalanceBehaviorValue}
-                                                placeholder="None"
-                                                disabled
-                                            />
+                                                    Read Balance Behavior
+                                                </FieldLabel>
+                                                <Form.Control
+                                                    defaultValue={globalConfig.readBalanceBehaviorValue}
+                                                    placeholder="None"
+                                                    disabled
+                                                />
+                                            </FormGroup>
                                         </Card>
                                     </Col>
                                 )}
-                                <Col>
-                                    <Card className={classNames("p-4", { "item-disabled": !canEditDatabaseConfig })}>
-                                        <div className="md-label">
-                                            Load Balance Behavior{" "}
-                                            <PopoverWithHoverWrapper
-                                                placement="right"
-                                                message={
-                                                    <>
-                                                        <span className="d-inline-block mb-1">
-                                                            Set the Load balance method for <strong>Read</strong> &{" "}
-                                                            <strong>Write</strong> requests.
-                                                        </span>
-                                                        <ul>
-                                                            <li className="mb-1">
-                                                                <code>None</code>
-                                                                <br />
-                                                                <strong>Read</strong> requests - the node the client
-                                                                will target will be based on Read balance behavior
-                                                                configuration.
-                                                                <br />
-                                                                <strong>Write</strong> requests - will be sent to the
-                                                                preferred node.
-                                                            </li>
-                                                            <li className="mb-1">
-                                                                <code>Use session context</code>
-                                                                <br />
-                                                                Sessions that are assigned the same context will have
-                                                                all their <strong>Read & Write</strong> requests routed
-                                                                to the same node.
-                                                                <br />
-                                                                The session context is hashed from a context string
-                                                                (given by the client) and an optional seed.
-                                                            </li>
-                                                        </ul>
-                                                    </>
-                                                }
-                                            >
-                                                <Icon icon="info" color="info" />
-                                            </PopoverWithHoverWrapper>
-                                        </div>
-                                        <InputGroup>
-                                            <div className="toggle-field-checkbox">
-                                                <FormCheckbox
+                                <Col className="d-flex flex-column">
+                                    <Card
+                                        className={classNames("p-4 vstack gap-3", "flex-grow-1", {
+                                            "item-disabled": !canEditDatabaseConfig,
+                                        })}
+                                    >
+                                        <OverridableField
+                                            control={control}
+                                            overrideName="loadBalancerEnabled"
+                                            tooltipPlacement="right"
+                                            label="Load Balance Behavior"
+                                            tooltip={<LoadBalanceBehaviorTooltip />}
+                                            disabled={!canEditDatabaseConfig}
+                                        >
+                                            {({ isDisabled, controlId }) => (
+                                                <FormSelect
                                                     control={control}
-                                                    name="loadBalancerEnabled"
-                                                    disabled={!canEditDatabaseConfig}
-                                                    color="primary"
+                                                    name="loadBalancerValue"
+                                                    isDisabled={isDisabled}
+                                                    inputId={controlId}
+                                                    options={ClientConfigurationUtils.getLoadBalanceBehaviorOptions()}
+                                                    isSearchable={false}
                                                 />
-                                            </div>
-                                            <FormSelect
-                                                control={control}
-                                                name="loadBalancerValue"
-                                                isDisabled={!formValues.loadBalancerEnabled || !canEditDatabaseConfig}
-                                                options={ClientConfigurationUtils.getLoadBalanceBehaviorOptions()}
-                                                isSearchable={false}
-                                            />
-                                        </InputGroup>
+                                            )}
+                                        </OverridableField>
                                         {(globalConfig?.loadBalancerSeedValue ||
                                             formValues.loadBalancerValue === "UseSessionContext") && (
-                                            <>
-                                                <div className="md-label mt-4">
-                                                    {" "}
-                                                    Seed
-                                                    <PopoverWithHoverWrapper
-                                                        placement="right"
-                                                        message={
-                                                            <>
-                                                                An optional seed number.
-                                                                <br />
-                                                                Used when hashing the session context.
-                                                            </>
-                                                        }
-                                                    >
-                                                        <Icon icon="info" color="info" />
-                                                    </PopoverWithHoverWrapper>
-                                                </div>
-
-                                                <div className="hstack gap-3">
-                                                    <FormSwitch
-                                                        control={control}
-                                                        name="loadBalancerSeedEnabled"
-                                                        color="primary"
-                                                        disabled={
-                                                            formValues.loadBalancerValue !== "UseSessionContext" ||
-                                                            !canEditDatabaseConfig
-                                                        }
-                                                        className="small"
-                                                    ></FormSwitch>
-                                                    <InputGroup>
-                                                        <FormInput
-                                                            type="number"
-                                                            control={control}
-                                                            name="loadBalancerSeedValue"
-                                                            placeholder="0 (default)"
-                                                            disabled={
-                                                                !formValues.loadBalancerSeedEnabled ||
-                                                                !canEditDatabaseConfig
-                                                            }
-                                                        />
-                                                    </InputGroup>
-                                                </div>
-                                            </>
-                                        )}
-                                        <div className="md-label mt-4">
-                                            Read Balance Behavior{" "}
-                                            <PopoverWithHoverWrapper
-                                                placement="right"
-                                                message={
-                                                    <>
-                                                        Set the Read balance method the client will use when accessing a
-                                                        node with <code> Read</code> requests.
-                                                        <br />
-                                                        <code>Write</code> requests are sent to the preferred node.
-                                                    </>
+                                            <OverridableField
+                                                control={control}
+                                                overrideName="loadBalancerSeedEnabled"
+                                                tooltipPlacement="right"
+                                                label="Seed"
+                                                tooltip={<LoadBalancerSeedTooltip />}
+                                                disabled={
+                                                    formValues.loadBalancerValue !== "UseSessionContext" ||
+                                                    !canEditDatabaseConfig
                                                 }
                                             >
-                                                <Icon icon="info" color="info" />
-                                            </PopoverWithHoverWrapper>
-                                        </div>
-                                        <InputGroup>
-                                            <div className="toggle-field-checkbox">
-                                                <FormCheckbox
+                                                {({ isDisabled }) => (
+                                                    <FormInput
+                                                        type="number"
+                                                        control={control}
+                                                        name="loadBalancerSeedValue"
+                                                        placeholder="Default (0)"
+                                                        disabled={isDisabled}
+                                                    />
+                                                )}
+                                            </OverridableField>
+                                        )}
+                                        <OverridableField
+                                            control={control}
+                                            overrideName="readBalanceBehaviorEnabled"
+                                            tooltipPlacement="right"
+                                            label="Read Balance Behavior"
+                                            tooltip={<ReadBalanceBehaviorTooltip />}
+                                            disabled={!canEditDatabaseConfig}
+                                        >
+                                            {({ isDisabled, controlId }) => (
+                                                <FormSelect
                                                     control={control}
-                                                    name="readBalanceBehaviorEnabled"
-                                                    disabled={!canEditDatabaseConfig}
-                                                    color="primary"
+                                                    name="readBalanceBehaviorValue"
+                                                    isDisabled={isDisabled}
+                                                    inputId={controlId}
+                                                    options={ClientConfigurationUtils.getReadBalanceBehaviorOptions()}
+                                                    isSearchable={false}
                                                 />
-                                            </div>
-                                            <FormSelect
-                                                control={control}
-                                                name="readBalanceBehaviorValue"
-                                                isDisabled={
-                                                    !formValues.readBalanceBehaviorEnabled || !canEditDatabaseConfig
-                                                }
-                                                options={ClientConfigurationUtils.getReadBalanceBehaviorOptions()}
-                                                isSearchable={false}
-                                            />
-                                        </InputGroup>
+                                            )}
+                                        </OverridableField>
                                     </Card>
                                 </Col>
                             </Row>

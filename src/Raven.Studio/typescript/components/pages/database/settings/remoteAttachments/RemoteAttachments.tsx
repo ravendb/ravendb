@@ -12,7 +12,8 @@ import Form from "react-bootstrap/Form";
 import { AboutViewHeading } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import Card from "react-bootstrap/Card";
-import { FormGroup, FormInput, FormSwitch } from "components/common/Form";
+import { FormInput, FormSwitch } from "components/common/Form";
+import OverridableField from "components/common/OverridableField";
 import { Icon } from "components/common/Icon";
 import React, { useEffect } from "react";
 import {
@@ -239,93 +240,71 @@ function RemoteAttachmentsSettingsCard() {
     const { control, formState } = useFormContext<RemoteAttachmentsFormData>();
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const formValues = useWatch({ control });
+    const isSettingsDisabled =
+        !hasDatabaseAdminAccess || formState.isSubmitting || !formValues.isRemoteAttachmentsEnabled;
+
     return (
         <Card>
-            <Card.Body>
+            <Card.Body className="vstack gap-3">
                 <FormSwitch
                     name="isRemoteAttachmentsEnabled"
                     control={control}
                     color="primary"
-                    className="mb-2"
                     disabled={!hasDatabaseAdminAccess || formState.isSubmitting}
                 >
                     Enable Remote Attachments
                 </FormSwitch>
-                <FormGroup data-testid="retireFrequency">
-                    <FormSwitch
-                        name="isCheckFrequencyInSecEnabled"
-                        control={control}
-                        color="primary"
-                        disabled={
-                            !hasDatabaseAdminAccess || formState.isSubmitting || !formValues.isRemoteAttachmentsEnabled
-                        }
-                    >
-                        Set interval between remote attachments task runs
-                    </FormSwitch>
-                    <FormInput
-                        name="checkFrequencyInSec"
-                        type="number"
-                        control={control}
-                        addon="seconds"
-                        placeholder="Default (60)"
-                        disabled={
-                            !hasDatabaseAdminAccess ||
-                            formState.isSubmitting ||
-                            !formValues.isCheckFrequencyInSecEnabled ||
-                            !formValues.isRemoteAttachmentsEnabled
-                        }
-                    />
-                </FormGroup>
-                <FormGroup>
-                    <FormSwitch
-                        name="isMaxItemsToProcessEnabled"
-                        control={control}
-                        color="primary"
-                        disabled={
-                            !hasDatabaseAdminAccess || formState.isSubmitting || !formValues.isRemoteAttachmentsEnabled
-                        }
-                    >
-                        Set max number of attachments to process in a single run
-                    </FormSwitch>
-                    <FormInput
-                        name="maxItemsToProcess"
-                        control={control}
-                        type="number"
-                        placeholder="Default (unlimited)"
-                        disabled={
-                            !hasDatabaseAdminAccess ||
-                            formState.isSubmitting ||
-                            !formValues.isRemoteAttachmentsEnabled ||
-                            !formValues.isMaxItemsToProcessEnabled
-                        }
-                        addon="attachments"
-                    />
-                </FormGroup>
-                <FormGroup marginClass="mb-0">
-                    <FormSwitch
-                        name="isConcurrentUploadsEnabled"
-                        control={control}
-                        color="primary"
-                        disabled={
-                            !hasDatabaseAdminAccess || formState.isSubmitting || !formValues.isRemoteAttachmentsEnabled
-                        }
-                    >
-                        Set max number of concurrent uploads
-                    </FormSwitch>
-                    <FormInput
-                        name="concurrentUploads"
-                        control={control}
-                        type="number"
-                        disabled={
-                            !hasDatabaseAdminAccess ||
-                            formState.isSubmitting ||
-                            !formValues.isRemoteAttachmentsEnabled ||
-                            !formValues.isConcurrentUploadsEnabled
-                        }
-                        placeholder="Default (8)"
-                        addon="attachments"
-                    />
-                </FormGroup>
+                <OverridableField
+                    control={control}
+                    overrideName="isCheckFrequencyInSecEnabled"
+                    label="Interval between remote attachments task runs"
+                    disabled={isSettingsDisabled}
+                >
+                    {({ isDisabled }) => (
+                        <FormInput
+                            name="checkFrequencyInSec"
+                            type="number"
+                            control={control}
+                            addon="seconds"
+                            placeholder="Default (60)"
+                            disabled={isDisabled}
+                        />
+                    )}
+                </OverridableField>
+                <OverridableField
+                    control={control}
+                    overrideName="isMaxItemsToProcessEnabled"
+                    label="Max number of attachments to process in a single run"
+                    disabled={isSettingsDisabled}
+                >
+                    {({ isDisabled }) => (
+                        <FormInput
+                            name="maxItemsToProcess"
+                            control={control}
+                            type="number"
+                            placeholder="Default (unlimited)"
+                            disabled={isDisabled}
+                            addon="attachments"
+                        />
+                    )}
+                </OverridableField>
+                <OverridableField
+                    control={control}
+                    overrideName="isConcurrentUploadsEnabled"
+                    label="Max number of concurrent uploads"
+                    disabled={isSettingsDisabled}
+                >
+                    {({ isDisabled }) => (
+                        <FormInput
+                            name="concurrentUploads"
+                            control={control}
+                            type="number"
+                            disabled={isDisabled}
+                            placeholder="Default (8)"
+                            addon="attachments"
+                        />
+                    )}
+                </OverridableField>
             </Card.Body>
         </Card>
     );
