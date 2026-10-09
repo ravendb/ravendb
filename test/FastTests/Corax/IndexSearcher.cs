@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Corax;
 using Corax.Analyzers;
 using Corax.Querying;
@@ -314,6 +315,36 @@ namespace FastTests.Corax
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(0, andMatch.Fill(ids));
             }
+        }
+
+        [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(BitmapAndFillMode.Auto)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void KnownEmptySideIsNotDrained(BitmapAndFillMode bitmapAndFillMode)
+        {
+            var entries = Enumerable.Range(1, 1_000).Select(i => new IndexEntry {Id = $"entry/{i}", Content = new string[] {"road"}}).ToArray();
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, entries, CreateKnownFields(bsc));
+
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
+            Span<long> ids = stackalloc long[16];
+
+            var and = searcher.And(searcher.StartWithQuery("Content", "r"), searcher.TermQuery("Id", "Maciej"));
+            Assert.Equal(0, and.Fill(ids));
+            Assert.Equal("0", and.Inspect().Children[0].Parameters[Constants.QueryInspectionNode.Count]);
+
+            var andWithEmptyMultiTerm = searcher.And(searcher.StartWithQuery("Content", "r"), searcher.StartWithQuery("Missing", "x"));
+            Assert.Equal(0, andWithEmptyMultiTerm.Fill(ids));
+            Assert.Equal("0", andWithEmptyMultiTerm.Inspect().Children[0].Parameters[Constants.QueryInspectionNode.Count]);
+
+            var andNot = searcher.AndNot(searcher.TermQuery("Id", "Maciej"), searcher.StartWithQuery("Content", "r"));
+            Assert.Equal(0, andNot.Fill(ids));
+            Assert.Equal("0", andNot.Inspect().Children[1].Parameters[Constants.QueryInspectionNode.Count]);
+
+            var scoredAnd = searcher.And(searcher.StartWithQuery("Content", "r", hasBoost: true), searcher.TermQuery("Id", "Maciej"));
+            Assert.Equal(0, scoredAnd.Fill(ids));
+            Assert.Equal("0", scoredAnd.Inspect().Children[0].Parameters[Constants.QueryInspectionNode.Count]);
         }
 
         [RavenTheory(RavenTestCategory.Corax)]
@@ -1262,6 +1293,28 @@ namespace FastTests.Corax
                 Assert.Equal(3, match.Fill(ids));
                 Assert.Equal(0, match.Fill(ids));
             }
+        }
+
+        [RavenFact(RavenTestCategory.Corax)]
+        public void ScoringMultiTermMatchObservesCancellation()
+        {
+            var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "Testing"};
+            var entry2 = new IndexSingleEntry {Id = "entry/2", Content = "Running"};
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
+
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+            var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex, hasBoost: true);
+            using var cts = new CancellationTokenSource();
+            var match = searcher.ContainsQuery(contentMetadata, "ing", token: cts.Token);
+
+            var ids = new long[16];
+            var read = match.Fill(ids);
+            Assert.Equal(2, read);
+
+            cts.Cancel();
+            Assert.Throws<OperationCanceledException>(() => match.Score(ids.AsSpan(0, read), new float[read], 1f));
         }
 
         [RavenFact(RavenTestCategory.Corax)]

@@ -35,7 +35,9 @@ public partial class CoraxQueryBuilder
         public readonly bool HasDynamics;
         public readonly Lazy<List<string>> DynamicFields;
         public readonly ByteStringContext Allocator;
-        public readonly bool HasBoost;
+        public readonly bool QueryHasBoost;
+        public readonly bool AllowImplicitScoreOrdering;
+        internal int NegationDepth;
         public readonly bool DeduplicationDisabled;
         public readonly IndexReadOperationBase IndexReadOperation;
         public StreamingOptimization StreamingDisabled;
@@ -45,7 +47,7 @@ public partial class CoraxQueryBuilder
 
         internal Parameters(IndexSearcher searcher, ByteStringContext allocator, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext,
             IndexQueryServerSide query, Index index, BlittableJsonReaderObject queryParameters, QueryBuilderFactories factories, IndexFieldsMapping indexFieldsMapping,
-            FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, bool deduplicationDisabled, IndexReadOperationBase indexReadOperation = null, List<string> buildSteps = null, QueryTimeScope queryTime = null, QueryTimingsScope queryTimings = null, CancellationToken token = default)
+            FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, bool deduplicationDisabled, IndexReadOperationBase indexReadOperation = null, List<string> buildSteps = null, QueryTimeScope queryTime = null, QueryTimingsScope queryTimings = null, CancellationToken token = default, bool allowImplicitScoreOrdering = true)
         {
             QueryTime = queryTime;
             QueryTimings = queryTimings;
@@ -70,12 +72,17 @@ public partial class CoraxQueryBuilder
                 ? new Lazy<List<string>>(() => IndexSearcher.GetFields())
                 : null;
 
+            AllowImplicitScoreOrdering = allowImplicitScoreOrdering
+                                         && (index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved
+                                             || (Metadata.HasVectorSearch && index.Configuration.CoraxVectorSearchOrderByScoreAutomatically));
+
             // in case when we've implicit boosting we've built primitives with scoring enabled
-            HasBoost = index.HasBoostedFields
-                       || query.Metadata.HasBoost
-                       || IsVectorSingleClause
-                       || (query.Metadata.HasVectorSearch && index.Configuration.CoraxVectorSearchOrderByScoreAutomatically)
-                       || HasBoostingAsOrderingType(query.Metadata.OrderBy);
+            QueryHasBoost = (index.HasBoostedFields
+                        || query.Metadata.HasBoost
+                        || IsVectorSingleClause
+                        || (query.Metadata.HasVectorSearch && index.Configuration.CoraxVectorSearchOrderByScoreAutomatically)
+                        || HasBoostingAsOrderingType(query.Metadata.OrderBy))
+                       && (query.Metadata.HasVectorSearch || ScoresAreConsumed(query, AllowImplicitScoreOrdering));
             Allocator = allocator;
             IndexReadOperation = indexReadOperation;
             DeduplicationDisabled = deduplicationDisabled;
@@ -83,6 +90,20 @@ public partial class CoraxQueryBuilder
         
         public bool NeedsScoresBuffer() => HasBoost
             && (Index.Configuration.CoraxIncludeDocumentScore || (IndexReadOperation.IsSharded && Metadata.HasVectorSearch));
+
+        // AndNotMatch never scores its excluded side
+        public bool HasBoost => QueryHasBoost && NegationDepth == 0;
+
+        private static bool ScoresAreConsumed(IndexQueryServerSide query, bool allowImplicitScoreOrdering)
+        {
+            if (query.PageSize == 0)
+                return false;
+
+            if (query.Metadata.OrderBy is not null)
+                return HasBoostingAsOrderingType(query.Metadata.OrderBy);
+
+            return allowImplicitScoreOrdering;
+        }
 
         private static bool HasBoostingAsOrderingType(OrderByField[] orderBy)
         {

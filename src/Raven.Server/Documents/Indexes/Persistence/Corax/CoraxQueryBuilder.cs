@@ -493,7 +493,9 @@ public static partial class CoraxQueryBuilder
             }
 
             //e.g. or (not exists(Field))
+            builderParameters.NegationDepth++;
             var inner = ToCoraxQuery(builderParameters, ne.Expression, ref builderParameters.StreamingDisabled, exact);
+            builderParameters.NegationDepth--;
             inner = MaterializeWhenNeeded(builderParameters, inner, ref builderParameters.StreamingDisabled);
             return builderParameters.IndexSearcher.AndNot(builderParameters.IndexSearcher.AllEntries(), inner);
         }
@@ -576,7 +578,9 @@ public static partial class CoraxQueryBuilder
         if (left is CoraxWhenQuery)
             left = builderParameters.AllEntries.Replay();
 
+        builderParameters.NegationDepth++;
         IQueryMatch right = ToCoraxQuery(builderParameters, rightExpr.Expression, ref builderParameters.StreamingDisabled, exact);
+        builderParameters.NegationDepth--;
         Materialize(builderParameters, ref left, ref right, ref builderParameters.StreamingDisabled);
 
         return right is CoraxWhenQuery
@@ -930,6 +934,9 @@ public static partial class CoraxQueryBuilder
                     metadata.QueryText, queryParameters);
         }
 
+        if (float.IsFinite(boost) == false || boost < 0)
+            throw new InvalidQueryException($"The boost value must be a finite, non-negative number, but was {val}", metadata.QueryText, queryParameters);
+
 
         var query = ToCoraxQuery(builderParameters, expression.Arguments[0], ref builderParameters.StreamingDisabled, exact);
 
@@ -1282,13 +1289,11 @@ public static partial class CoraxQueryBuilder
 
         if (orderByFields == null)
         {
-            if (builderParameters.HasBoost && (
-                    index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved 
-                    || index.Configuration.CoraxVectorSearchOrderByScoreAutomatically))
+            if (builderParameters.HasBoost && builderParameters.AllowImplicitScoreOrdering)
             {
-                // in case when we've single vector clause and we exose the score, we have to go through 
-                // order by primitive to retrieve them; however scores are detected as natively sorted
-                if (builderParameters.IsVectorSingleClause && index.Configuration.CoraxIncludeDocumentScore == false)
+                // in case when we've single vector clause and we exose the score or documents are boosted, we have to go through 
+                // order by primitive to retrieve or boost them; otherwise scores are detected as natively sorted
+                if (builderParameters.IsVectorSingleClause && index.Configuration.CoraxIncludeDocumentScore == false && builderParameters.IndexSearcher.DocumentsAreBoosted == false)
                     return null;
                 
                 if (builderParameters.Metadata.HasVectorSearch == false)
