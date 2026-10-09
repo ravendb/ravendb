@@ -9,21 +9,20 @@ using Channel = Raven.Quill.Channels.Channel;
 
 namespace Raven.Quill.Slack;
 
-internal sealed class SlackSocketRuntime
+internal sealed class SlackRuntime : IChannelRuntime
 {
     private const string SocketModeDisabledError =
         "slack disabled Socket Mode for this app; turn it on under the app's Socket Mode page";
 
     private const int PassesBeforeConnectionLost = 2;
 
-    private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(10);
-
     private readonly string _shortChannelId;
     private readonly string _botUserId;
     private readonly SlackOptions _options;
-    private readonly QuillLogger<SlackChannelManager> _logger;
+    private readonly QuillLogger<SlackRuntime> _logger;
     private readonly ISlackSocketModeClient _client;
     private readonly IDisposable _frames;
+    private readonly ChannelChats<SlackMessage> _chats;
     private readonly CancellationTokenSource _cts = new();
     private readonly object _exitLock = new();
 
@@ -34,10 +33,10 @@ internal sealed class SlackSocketRuntime
     private TimeSpan _restartDelay;
     private long _exitedAtTicks;
 
-    private SlackSocketRuntime(
+    private SlackRuntime(
         string database, Channel channel, string? channelChangeVector, SlackSdk sdk,
-        SlackInboundProcessor processor, SlackOptions options,
-        QuillLogger<SlackChannelManager> logger)
+        ChannelChats<SlackMessage> chats, SlackOptions options,
+        QuillLogger<SlackRuntime> logger)
     {
         var settings = channel.Slack!;
 
@@ -46,8 +45,9 @@ internal sealed class SlackSocketRuntime
         _options = options;
         _logger = logger;
         ChannelChangeVector = channelChangeVector;
+        _chats = chats;
 
-        var handler = new SlackMessageHandler(database, channel.Id!, settings, processor, Health);
+        var handler = new SlackMessageHandler(database, channel, chats, Health);
         var socket = sdk.NewSocketClient(settings.AppToken, handler, new SlackNetLogger(channel.ShortId, logger));
         _client = socket.Client;
         _frames = socket.RawMessages.Subscribe(OnRawMessage);
@@ -77,13 +77,13 @@ internal sealed class SlackSocketRuntime
         }
     }
 
-    public static SlackSocketRuntime Start(
+    public static SlackRuntime Start(
         string database, Channel channel, string? channelChangeVector, SlackSdk sdk,
-        SlackInboundProcessor processor, SlackOptions options,
-        QuillLogger<SlackChannelManager> logger)
+        ChannelChats<SlackMessage> chats, SlackOptions options,
+        QuillLogger<SlackRuntime> logger)
     {
-        var runtime = new SlackSocketRuntime(
-            database, channel, channelChangeVector, sdk, processor, options, logger);
+        var runtime = new SlackRuntime(
+            database, channel, channelChangeVector, sdk, chats, options, logger);
 
         runtime._run = Task.Run(runtime.ConnectAsync);
         return runtime;
@@ -108,18 +108,8 @@ internal sealed class SlackSocketRuntime
     {
         await _cts.CancelAsync();
         _frames.Dispose();
-
-        try
-        {
-            await Task.WhenAll(_run, _client.DisposeAsync().AsTask()).WaitAsync(StopTimeout);
-        }
-        catch (TimeoutException)
-        {
-            if (_logger.IsWarnEnabled)
-                _logger.Warn($"Slack socket for channel {_shortChannelId} did not stop within {StopTimeout}");
-            return;
-        }
-
+        await Task.WhenAll(_run, _client.DisposeAsync().AsTask(), _chats.StopAsync())
+            .ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         _cts.Dispose();
     }
 

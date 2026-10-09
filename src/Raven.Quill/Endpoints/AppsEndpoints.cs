@@ -10,14 +10,13 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Quill.Agents;
 using Raven.Quill.AiHelper;
 using Raven.Quill.Cdc;
+using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
-using Raven.Quill.Discord;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Hosting;
 using Raven.Quill.Logging;
 using Raven.Quill.Live;
 using Raven.Quill.Raven;
-using Raven.Quill.Telegram;
 using Raven.Quill.Wizard;
 using Raven.Server.Logging;
 
@@ -110,8 +109,7 @@ public static class AppsEndpoints
     private static async Task<IResult> DeleteAppAsync(
         string slug,
         IDocumentStore store,
-        ITelegramChannelManager telegramManager,
-        IDiscordChannelManager discordManager,
+        ChannelManager channelManager,
         QuillLogger<AppsLogger> logger,
         HttpContext ctx,
         CancellationToken ct)
@@ -131,8 +129,7 @@ public static class AppsEndpoints
         if (logger.AuditEnabled)
             logger.Audit("DELETE", $"App '{slug}' (database={slug})", ctx);
 
-        telegramManager.Wake();
-        discordManager.Wake();
+        channelManager.Wake();
 
         return Results.NoContent();
     }

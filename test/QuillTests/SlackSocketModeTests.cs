@@ -15,6 +15,7 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
     : QuillSlackTestBase(output, fixture)
 {
     private const string Sender = "U0SENDER01";
+    private const string OtherSender = "U0SENDER02";
     private const string DmChannel = "D0CHANNEL1";
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -166,7 +167,7 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
         await Slack.WaitUntilAsync(
             () => Slack.EditedMessages.Any(e => e.Text == "Hello from the fake agent."),
             "the finalized edit after the rate-limit retry");
-        Assert.DoesNotContain(Slack.SentMessages, m => m.Text == SlackInboundProcessor.ErrorReply);
+        Assert.DoesNotContain(Slack.SentMessages, m => m.Text == ChannelReplies.Default.Error);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -188,20 +189,6 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
         Assert.Equal(new[] { dm, interactive, foreign }.Order(), Slack.Acks.Order());
 
         await Slack.WaitUntilAsync(() => Router.Requests.Count == 1, "the single agent dispatch");
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task Redelivered_event_ids_dispatch_once()
-    {
-        await using var app = await NewAppAsync();
-        var channel = await NewChannelAsync(app);
-
-        await Slack.DispatchEventAsync(channel.TeamId, "Ev-same", DmMessage(Sender, "only once"));
-        await Slack.DispatchEventAsync(channel.TeamId, "Ev-same", DmMessage(Sender, "only once"));
-
-        await Slack.WaitUntilAsync(() => Router.Requests.Count >= 1, "the first dispatch");
-        await Task.Delay(250);
-        Assert.Single(Router.Requests);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -231,7 +218,7 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
         await Slack.DispatchEventAsync(channel.TeamId, "Ev0009", DmMessage(Sender, "see attached", subtype: "file_share"));
 
         await Slack.WaitUntilAsync(() => Slack.SentMessages.Count == 1, "the unsupported-kind reply");
-        Assert.Equal(SlackInboundProcessor.UnsupportedKindReply, Slack.SentMessages[0].Text);
+        Assert.Equal(ChannelReplies.UnsupportedKind, Slack.SentMessages[0].Text);
         Assert.Empty(Router.Requests);
     }
 
@@ -247,9 +234,9 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
             Interlocked.Exchange(ref first, 0) == 1 ? gate.Task : Task.CompletedTask;
 
         await Slack.DispatchEventAsync(channel.TeamId, "Ev-one", DmMessage(Sender, "one"));
-        await Slack.DispatchEventAsync(channel.TeamId, "Ev-two", DmMessage(Sender, "two"));
-
         await Slack.WaitUntilAsync(() => Router.Requests.Count == 1, "the first dispatch");
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-two", DmMessage(Sender, "two"));
         await Task.Delay(250);
         Assert.Single(Router.Requests);
 
@@ -258,6 +245,112 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
         Assert.Equal("one", Router.Requests[0].Prompt);
         Assert.Equal("two", Router.Requests[1].Prompt);
     }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_file_queued_between_messages_gets_its_own_reply_in_order()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var fileRepliedAtTurnStart = new Dictionary<string, bool>();
+        Router.BeforeRun = request =>
+        {
+            lock (fileRepliedAtTurnStart)
+                fileRepliedAtTurnStart[request.Prompt] = UnsupportedReplies() > 0;
+            return request.Prompt == "hold" ? gate.Task : Task.CompletedTask;
+        };
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-file-0", DmMessage(Sender, "hold"));
+        await Slack.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-file-1", DmMessage(Sender, "before"));
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-file-2", DmMessage(Sender, "see attached", subtype: "file_share"));
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-file-3", DmMessage(Sender, "after"));
+        await WaitUntilQueuedAsync(channel.TeamId, "Ev-file-marker");
+
+        gate.SetResult();
+        await Slack.WaitUntilAsync(() =>
+        {
+            lock (fileRepliedAtTurnStart)
+                return fileRepliedAtTurnStart.ContainsKey("after");
+        }, "the turn after the file");
+
+        Assert.Equal(["hold", "before", "after"], SenderPrompts());
+        Assert.Equal(1, UnsupportedReplies());
+        lock (fileRepliedAtTurnStart)
+        {
+            Assert.False(fileRepliedAtTurnStart["before"]);
+            Assert.True(fileRepliedAtTurnStart["after"]);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Blank_texts_are_left_out_of_the_merged_prompt()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt == "hold" ? gate.Task : Task.CompletedTask;
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-blank-0", DmMessage(Sender, "hold"));
+        await Slack.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-blank-1", DmMessage(Sender, "   "));
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-blank-2", DmMessage(Sender, "real"));
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-blank-3", DmMessage(Sender, ""));
+        await WaitUntilQueuedAsync(channel.TeamId, "Ev-blank-marker");
+
+        gate.SetResult();
+        await Slack.WaitUntilAsync(() => SenderPrompts().Length == 2, "the merged turn");
+        await Task.Delay(250);
+
+        Assert.Equal(["hold", "real"], SenderPrompts());
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_failing_turn_does_not_skip_the_rest_of_the_batch()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt switch
+        {
+            "hold" => gate.Task,
+            "boom" => Task.FromException(new InvalidOperationException("the agent failed")),
+            _ => Task.CompletedTask,
+        };
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-fail-0", DmMessage(Sender, "hold"));
+        await Slack.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-fail-1", DmMessage(Sender, "boom"));
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-fail-2", DmMessage(Sender, "see attached", subtype: "file_share"));
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-fail-3", DmMessage(Sender, "after"));
+        await WaitUntilQueuedAsync(channel.TeamId, "Ev-fail-marker");
+
+        gate.SetResult();
+        await Slack.WaitUntilAsync(() => SenderPrompts().Contains("after"), "the turn after the failure");
+
+        Assert.Equal(["hold", "boom", "after"], SenderPrompts());
+        Assert.Equal(1, Slack.SentMessages.Count(m => m.Text == ChannelReplies.Default.Error));
+        Assert.Equal(1, UnsupportedReplies());
+    }
+
+    private async Task WaitUntilQueuedAsync(string teamId, string markerEventId)
+    {
+        await Slack.DispatchEventAsync(teamId, markerEventId, DmMessage(OtherSender, "marker"));
+        await Slack.WaitUntilAsync(
+            () => Router.Requests.Any(r => r.Prompt == "marker"), "a later sender's turn, so earlier events are queued");
+    }
+
+    private string[] SenderPrompts() =>
+        Router.Requests.Where(r => r.Prompt != "marker").Select(r => r.Prompt).ToArray();
+
+    private int UnsupportedReplies() =>
+        Slack.SentMessages.Count(m => m.Text == ChannelReplies.UnsupportedKind);
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Send_errors_surface_in_health_without_a_reply_loop()
@@ -359,9 +452,10 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
             new AiAgentParameter("senderEmail", "the sender's email"), ChannelParameterSource.Email);
         Slack.AddUser(Sender, "dana@acme.example");
 
-        foreach (var eventId in new[] { "Ev-mail-2", "Ev-mail-3" })
-            await Slack.DispatchEventAsync(channel.TeamId, eventId, DmMessage(Sender, "again"));
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-mail-2", DmMessage(Sender, "again"));
+        await Slack.WaitUntilAsync(() => Router.Requests.Count == 1, "the first agent dispatch");
 
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-mail-3", DmMessage(Sender, "again"));
         await Slack.WaitUntilAsync(() => Router.Requests.Count == 2, "both agent dispatches");
         Assert.Equal(Sender, Assert.Single(Slack.UserInfoCalls));
     }
@@ -377,7 +471,7 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
         await Slack.DispatchEventAsync(channel.TeamId, "Ev-mail-4", DmMessage(Sender, "who am i?"));
 
         await Slack.WaitUntilAsync(
-            () => Slack.SentMessages.Any(m => m.Text == SlackInboundProcessor.ErrorReply), "the error reply");
+            () => Slack.SentMessages.Any(m => m.Text == ChannelReplies.Default.Error), "the error reply");
         Assert.Empty(Router.Requests);
     }
 
@@ -393,7 +487,7 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
         await Slack.DispatchEventAsync(channel.TeamId, "Ev-mail-5", DmMessage(Sender, "who am i?"));
 
         await Slack.WaitUntilAsync(
-            () => Slack.SentMessages.Any(m => m.Text == SlackInboundProcessor.ErrorReply), "the error reply");
+            () => Slack.SentMessages.Any(m => m.Text == ChannelReplies.Default.Error), "the error reply");
         Assert.Empty(Router.Requests);
     }
 

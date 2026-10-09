@@ -67,11 +67,10 @@ public static class ChannelsEndpoints
         string slug,
         ProvisionChannelRequest body,
         IDocumentStore store,
-        ITelegramChannelManager telegramManager,
+        ChannelManager channelManager,
+        TelegramBotClientFactory botFactory,
         ISlackClient slackClient,
-        ISlackChannelManager slackManager,
         IDiscordClient discordClient,
-        IDiscordChannelManager discordManager,
         QuillLogger<ChannelsLogger> logger,
         HttpContext ctx,
         CancellationToken ct)
@@ -91,10 +90,10 @@ public static class ChannelsEndpoints
         return body.Type switch
         {
             ChannelType.IFrame => await ProvisionIFrameAsync(app, body, store, logger, ctx, ct),
-            ChannelType.Telegram => await ProvisionTelegramAsync(app, body, store, telegramManager, logger, ctx, ct),
+            ChannelType.Telegram => await ProvisionTelegramAsync(app, body, store, channelManager, botFactory, logger, ctx, ct),
             ChannelType.WhatsApp => ProvisionWhatsAppAsync(),
-            ChannelType.Slack => await ProvisionSlackAsync(app, body, store, slackClient, slackManager, logger, ct),
-            ChannelType.Discord => await ProvisionDiscordAsync(app, body, store, discordClient, discordManager, logger, ct),
+            ChannelType.Slack => await ProvisionSlackAsync(app, body, store, slackClient, channelManager, logger, ct),
+            ChannelType.Discord => await ProvisionDiscordAsync(app, body, store, discordClient, channelManager, logger, ct),
             null => Results.BadRequest(new ApiErrorResponse("type is required")),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{body.Type}'")),
         };
@@ -186,7 +185,8 @@ public static class ChannelsEndpoints
         App app,
         ProvisionChannelRequest body,
         IDocumentStore store,
-        ITelegramChannelManager telegramManager,
+        ChannelManager channelManager,
+        TelegramBotClientFactory botFactory,
         QuillLogger<ChannelsLogger> logger,
         HttpContext ctx,
         CancellationToken ct)
@@ -208,7 +208,7 @@ public static class ChannelsEndpoints
             return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
 
         var botToken = body.Telegram.BotToken.Trim();
-        var (bot, botError) = await telegramManager.ValidateBotTokenAsync(botToken, ct);
+        var (bot, botError) = await botFactory.ValidateBotTokenAsync(botToken, ct);
         if (bot is null)
             return Results.BadRequest(new ApiErrorResponse(botError!));
 
@@ -274,7 +274,7 @@ public static class ChannelsEndpoints
         if (logger.AuditEnabled)
             logger.Audit("PROVISION", $"Channel '{channelId}' in App '{app.Slug}'", ctx);
 
-        telegramManager.Wake();
+        channelManager.Wake();
 
         return Results.Ok(new ProvisionChannelResponse(channelId));
     }
@@ -286,7 +286,7 @@ public static class ChannelsEndpoints
         ProvisionChannelRequest body,
         IDocumentStore store,
         ISlackClient slackClient,
-        ISlackChannelManager slackManager,
+        ChannelManager channelManager,
         QuillLogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -390,7 +390,7 @@ public static class ChannelsEndpoints
             return Results.BadRequest(new ApiErrorResponse(SlackBotAlreadyConnected(auth.TeamName, auth.BotUserId, null)));
         }
 
-        slackManager.Wake();
+        channelManager.Wake();
 
         if (logger.IsInfoEnabled)
             logger.Info($"Provisioned Slack channel slug={app.Slug} channelId={channelId} agentId={config.Identifier} teamId={auth.TeamId} botUserId={auth.BotUserId}");
@@ -403,7 +403,7 @@ public static class ChannelsEndpoints
         ProvisionChannelRequest body,
         IDocumentStore store,
         IDiscordClient discordClient,
-        IDiscordChannelManager discordManager,
+        ChannelManager channelManager,
         QuillLogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -487,7 +487,7 @@ public static class ChannelsEndpoints
                 DiscordBotAlreadyConnected(identity.BotUsername, null)));
         }
 
-        discordManager.Wake();
+        channelManager.Wake();
 
         if (logger.IsInfoEnabled)
             logger.Info($"Provisioned Discord channel slug={app.Slug} channelId={channelId} agentId={config.Identifier} applicationId={identity.ApplicationId} botUserId={identity.BotUserId}");
@@ -521,11 +521,10 @@ public static class ChannelsEndpoints
         string channelId,
         UpdateChannelRequest body,
         IDocumentStore store,
-        ITelegramChannelManager telegramManager,
+        ChannelManager channelManager,
+        TelegramBotClientFactory botFactory,
         ISlackClient slackClient,
-        ISlackChannelManager slackManager,
         IDiscordClient discordClient,
-        IDiscordChannelManager discordManager,
         QuillLogger<ChannelsLogger> logger,
         HttpContext ctx,
         CancellationToken ct)
@@ -548,10 +547,10 @@ public static class ChannelsEndpoints
         return channel.Type switch
         {
             ChannelType.IFrame => await UpdateIFrameChannelAsync(session, channel, body, app.Slug, channelId, logger, ctx, ct),
-            ChannelType.Telegram => await UpdateTelegramChannelAsync(session, channel, body, app, channelId, store, telegramManager, logger, ctx, ct),
+            ChannelType.Telegram => await UpdateTelegramChannelAsync(session, channel, body, app, channelId, store, channelManager, botFactory, logger, ctx, ct),
             ChannelType.WhatsApp => UpdateWhatsAppChannelAsync(),
-            ChannelType.Slack => await UpdateSlackChannelAsync(session, channel, body, app, channelId, store, slackClient, slackManager, logger, ct),
-            ChannelType.Discord => await UpdateDiscordChannelAsync(session, channel, body, app, channelId, store, discordClient, discordManager, logger, ct),
+            ChannelType.Slack => await UpdateSlackChannelAsync(session, channel, body, app, channelId, store, slackClient, channelManager, logger, ct),
+            ChannelType.Discord => await UpdateDiscordChannelAsync(session, channel, body, app, channelId, store, discordClient, channelManager, logger, ct),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
     }
@@ -606,7 +605,8 @@ public static class ChannelsEndpoints
         App app,
         string channelId,
         IDocumentStore store,
-        ITelegramChannelManager telegramManager,
+        ChannelManager channelManager,
+        TelegramBotClientFactory botFactory,
         QuillLogger<ChannelsLogger> logger,
         HttpContext ctx,
         CancellationToken ct)
@@ -629,7 +629,7 @@ public static class ChannelsEndpoints
         if (string.IsNullOrWhiteSpace(body.Telegram?.BotToken) == false)
         {
             var botToken = body.Telegram.BotToken.Trim();
-            var (bot, botError) = await telegramManager.ValidateBotTokenAsync(botToken, ct);
+            var (bot, botError) = await botFactory.ValidateBotTokenAsync(botToken, ct);
             if (bot is null)
                 return Results.BadRequest(new ApiErrorResponse(botError!));
 
@@ -710,7 +710,7 @@ public static class ChannelsEndpoints
             }
 
             await TryReleaseBotAsync(store, rotatedBot.Id, app.Database, channel.Id!);
-            telegramManager.Wake();
+            channelManager.Wake();
             return Results.BadRequest(new ApiErrorResponse(AlreadyConnected(rotatedBot.Username, null)));
         }
 
@@ -726,7 +726,7 @@ public static class ChannelsEndpoints
         if (logger.AuditEnabled)
             logger.Audit("UPDATE", $"Channel '{channelId}' in App '{app.Slug}'", ctx);
 
-        telegramManager.Wake();
+        channelManager.Wake();
 
         return Results.Ok(ChannelSummaryResponse.From(channel));
     }
@@ -741,7 +741,7 @@ public static class ChannelsEndpoints
         string channelId,
         IDocumentStore store,
         ISlackClient slackClient,
-        ISlackChannelManager slackManager,
+        ChannelManager channelManager,
         QuillLogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -816,7 +816,7 @@ public static class ChannelsEndpoints
 
         await session.SaveChangesAsync(ct);
 
-        slackManager.Wake();
+        channelManager.Wake();
 
         if (logger.IsInfoEnabled)
             logger.Info($"Updated Slack channel slug={app.Slug} channelId={channelId} enabled={channel.Enabled} tokenRotated={tokenRotated} appTokenRotated={appTokenRotated}");
@@ -832,7 +832,7 @@ public static class ChannelsEndpoints
         string channelId,
         IDocumentStore store,
         IDiscordClient discordClient,
-        IDiscordChannelManager discordManager,
+        ChannelManager channelManager,
         QuillLogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -884,7 +884,7 @@ public static class ChannelsEndpoints
 
         await session.SaveChangesAsync(ct);
 
-        discordManager.Wake();
+        channelManager.Wake();
 
         if (logger.IsInfoEnabled)
             logger.Info($"Updated Discord channel slug={app.Slug} channelId={channelId} enabled={channel.Enabled} tokenRotated={tokenRotated}");
@@ -897,9 +897,7 @@ public static class ChannelsEndpoints
         string slug,
         string channelId,
         IDocumentStore store,
-        ITelegramChannelManager telegramManager,
-        ISlackChannelManager slackManager,
-        IDiscordChannelManager discordManager,
+        ChannelManager channelManager,
         QuillLogger<ChannelsLogger> logger,
         HttpContext ctx,
         CancellationToken ct)
@@ -916,11 +914,11 @@ public static class ChannelsEndpoints
         return channel.Type switch
         {
                 ChannelType.IFrame => await DeleteIFrameChannelAsync(session, channel, app.Slug, channelId, logger, ctx, ct),
-            ChannelType.Telegram => await DeleteTelegramChannelAsync(session, channel, app, channelId, store, telegramManager, logger, ctx, ct),
+            ChannelType.Telegram => await DeleteTelegramChannelAsync(session, channel, app, channelId, store, channelManager, logger, ctx, ct),
             ChannelType.WhatsApp => DeleteWhatsAppChannelAsync(),
-            ChannelType.Slack => await DeleteSlackChannelAsync(session, channel, app, channelId, store, slackManager, logger, ct),
+            ChannelType.Slack => await DeleteSlackChannelAsync(session, channel, app, channelId, store, channelManager, logger, ct),
             ChannelType.Discord => await DeleteDiscordChannelAsync(
-                session, channel, app, channelId, store, discordManager, logger, ct),
+                session, channel, app, channelId, store, channelManager, logger, ct),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
     }
@@ -951,7 +949,7 @@ public static class ChannelsEndpoints
         App app,
         string channelId,
         IDocumentStore store,
-        ITelegramChannelManager telegramManager,
+        ChannelManager channelManager,
         QuillLogger<ChannelsLogger> logger,
         HttpContext ctx,
         CancellationToken ct)
@@ -962,7 +960,7 @@ public static class ChannelsEndpoints
         if (channel.Telegram?.BotId is > 0)
             await TryReleaseBotAsync(store, channel.Telegram.BotId, app.Database, channel.Id!);
 
-        telegramManager.Wake();
+        channelManager.Wake();
 
         if (logger.IsInfoEnabled)
             logger.Info($"Deleted Telegram channel slug={app.Slug} channelId={channelId}");
@@ -979,7 +977,7 @@ public static class ChannelsEndpoints
         App app,
         string channelId,
         IDocumentStore store,
-        ISlackChannelManager slackManager,
+        ChannelManager channelManager,
         QuillLogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -989,7 +987,7 @@ public static class ChannelsEndpoints
         if (channel.Slack is { TeamId.Length: > 0, BotUserId.Length: > 0 } settings)
             await TryReleaseSlackAsync(store, settings.TeamId, settings.BotUserId, app.Database, channel.Id!);
 
-        slackManager.Wake();
+        channelManager.Wake();
 
         if (logger.IsInfoEnabled)
             logger.Info($"Deleted Slack channel slug={app.Slug} channelId={channelId}");
@@ -1002,7 +1000,7 @@ public static class ChannelsEndpoints
         App app,
         string channelId,
         IDocumentStore store,
-        IDiscordChannelManager discordManager,
+        ChannelManager channelManager,
         QuillLogger<ChannelsLogger> logger,
         CancellationToken ct)
     {
@@ -1012,7 +1010,7 @@ public static class ChannelsEndpoints
         if (channel.Discord is { BotUserId.Length: > 0 } settings)
             await TryReleaseDiscordAsync(store, settings.BotUserId, app.Database, channel.Id!);
 
-        discordManager.Wake();
+        channelManager.Wake();
 
         if (logger.IsInfoEnabled)
             logger.Info($"Deleted Discord channel slug={app.Slug} channelId={channelId}");

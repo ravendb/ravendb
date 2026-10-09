@@ -28,6 +28,8 @@ public sealed class QuillLogger<TCategory>
 
     private readonly RavenAuditLogger _audit = RavenLogManager.Instance.GetAuditLoggerForQuill();
 
+    internal RavenLogger RavenLogger => _logger;
+
     public bool AuditEnabled => _audit.IsAuditEnabled;
 
     /// <summary>
