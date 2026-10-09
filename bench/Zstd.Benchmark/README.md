@@ -82,6 +82,23 @@ Per run, a result is reported as faster/slower only when the 99.9% confidence in
 by more than `--threshold` (default 3%). With `--confirm-with`, an effect is confirmed only when both runs give the same
 verdict; disagreements are reported as inconsistent.
 
+## Building libzstd variants
+
+`native-build/` builds libzstd with the production build functions (`src/Raven.Pal/build-libs/zstd.sh`) in the same
+Ubuntu 18.04 toolchain as `zstd-build.Dockerfile` (minus the macOS stage, which needs the private SDK tarball).
+Rebuilding v1.4.4 this way reproduces the shipped Linux/ARM binaries byte for byte, and the Windows ones up to the PE timestamp.
+
+```bash
+docker build -t ravendb-zstd-bench-build bench/Zstd.Benchmark/native-build
+# /scripts: build scripts, /zstd-src: a zstd clone holding the refs, /out: output
+MSYS_NO_PATHCONV=1 docker run --rm \
+    -v "$PWD/src/Raven.Pal/build-libs:/scripts:ro" \
+    -v "<facebook/zstd clone>:/zstd-src:ro" \
+    -v "<output dir>:/out" \
+    -v "$PWD/bench/Zstd.Benchmark/native-build:/bench:ro" \
+    ravendb-zstd-bench-build bash /bench/build-variants.sh 1.5.7=v1.5.7 1.5.7-Os=v1.5.7:win64os
+```
+
 ## Reports
 
 ```bash
