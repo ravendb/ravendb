@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -1542,6 +1542,7 @@ namespace Raven.Server.Documents
             bool excludeIndexes = false,
             int? maxReadOpsPerSecond = null,
             Action<(string Message, int FilesCount)> infoNotify = null,
+            int zstdWorkers = 0,
             CancellationToken cancellationToken = default)
         {
             SmugglerResult smugglerResult;
@@ -1642,7 +1643,7 @@ namespace Raven.Server.Documents
 
                 infoNotify?.Invoke(("Backed up database values", 1));
 
-                BackupMethods.Full.ToFile(GetAllStoragesForBackup(excludeIndexes), zipArchive, compressionAlgorithm, compressionLevel, maxReadOpsPerSecond, infoNotify, cancellationToken);
+                BackupMethods.Full.ToFile(GetAllStoragesForBackup(excludeIndexes), zipArchive, compressionAlgorithm, compressionLevel, maxReadOpsPerSecond, infoNotify, zstdWorkers, cancellationToken);
             }
 
             return smugglerResult;

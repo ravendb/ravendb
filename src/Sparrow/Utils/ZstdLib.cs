@@ -1,9 +1,12 @@
-﻿using System;
+using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security;
+using System.Threading;
+using Sparrow.LowMemory;
 using Sparrow.Platform;
 
 namespace Sparrow.Utils
@@ -68,7 +71,25 @@ namespace Sparrow.Utils
         private static extern UIntPtr ZSTD_freeCCtx(void* cctx);
 
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
+        private static extern UIntPtr ZSTD_CCtx_reset(void* cctx, ZSTD_ResetDirective reset);
+
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
+        private static extern UIntPtr ZSTD_sizeof_CCtx(void* cctx);
+
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
+        private static extern UIntPtr ZSTD_CCtx_refCDict(void* cctx, void* cdict);
+
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
+        private static extern UIntPtr ZSTD_compress2(void* cctx, byte* dst, UIntPtr dstCapacity, byte* src, UIntPtr srcSize);
+
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         private static extern void* ZSTD_createDCtx();
+
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
+        private static extern UIntPtr ZSTD_DCtx_reset(void* dctx, ZSTD_ResetDirective reset);
+
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
+        private static extern UIntPtr ZSTD_sizeof_DCtx(void* dctx);
 
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         private static extern UIntPtr ZSTD_freeDCtx(void* dctx);
@@ -156,7 +177,19 @@ namespace Sparrow.Utils
                               * Special: value 0 means "use default windowLog".
                               * Note: Using a windowLog greater than ZSTD_WINDOWLOG_LIMIT_DEFAULT
                               *       requires explicitly allowing such size at streaming decompression stage. */
+            ZSTD_c_dictIDFlag = 202, /* When applicable, dictionary's ID is written into frame header (default:1) */
+            ZSTD_c_nbWorkers = 400,  /* Select how many threads will be spawned to compress in parallel.
+                              * When nbWorkers >= 1, triggers asynchronous mode when invoking ZSTD_compressStream*().
+                              * Only available when the library is compiled with ZSTD_MULTITHREAD, otherwise setting
+                              * a value >= 1 returns an error. */
         };
+
+        internal enum ZSTD_ResetDirective
+        {
+            ZSTD_reset_session_only = 1,
+            ZSTD_reset_parameters = 2,
+            ZSTD_reset_session_and_parameters = 3
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void AssertZstdSuccess(UIntPtr v)
@@ -192,19 +225,32 @@ namespace Sparrow.Utils
         internal sealed class CompressContext : IDisposable
         {
             private readonly int _level;
+            private readonly int _workers;
+            private readonly bool _pooled;
             private void* _cctx;
             public void* Compression => _cctx != null ? _cctx : (_cctx = CreateCompression());
             private void* _dctx;
             public void* Decompression => _dctx != null ? _dctx : (_dctx = CreateDecompression());
 
-            public CompressContext(int level)
+            /// <param name="level">Compression level, 0 means the zstd default (3).</param>
+            /// <param name="workers">Worker threads for streaming compression. Ignored on 32 bits and when the native library is single threaded.</param>
+            /// <param name="pooled">Take the native contexts from <see cref="ContextPool"/> and give them back on dispose. Use for short-lived owners.</param>
+            public CompressContext(int level, int workers = 0, bool pooled = false)
             {
                 _level = level;
+                _workers = workers;
+                // multi-threaded contexts own worker threads, those aren't kept around idle
+                _pooled = pooled && workers == 0;
             }
+
+            /// <summary>
+            /// Worker threads the compression context actually got, 0 when it compresses on the calling thread.
+            /// </summary>
+            public int Workers { get; private set; }
 
             private void* CreateCompression()
             {
-                var cctx = ZSTD_createCCtx();
+                var cctx = _pooled ? ContextPool.Instance.RentCompression() : ZSTD_createCCtx();
                 if (cctx == null)
                 {
                     throw new OutOfMemoryException("Unable to create compression context");
@@ -216,11 +262,20 @@ namespace Sparrow.Utils
                     AssertZstdSuccess(rc);
                 }
 
+                // Voron writes the dictionary id next to each compressed value, no need to also have zstd write it into every frame
+                AssertZstdSuccess(ZSTD_CCtx_setParameter(cctx, ZSTD_cParameter.ZSTD_c_dictIDFlag, 0));
+
                 if (PlatformDetails.Is32Bits)
                 {
-                    // set windowLog size to 256KB 
+                    // set windowLog size to 256KB
                     var rc = ZSTD_CCtx_setParameter(cctx, ZSTD_cParameter.ZSTD_c_windowLog, 16);
                     AssertZstdSuccess(rc);
+                }
+                else if (_workers > 0)
+                {
+                    // the native library might be built without multi-threading support, then we compress on the calling thread
+                    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_cParameter.ZSTD_c_nbWorkers, _workers)) == 0)
+                        Workers = _workers;
                 }
 
                 return cctx;
@@ -228,7 +283,7 @@ namespace Sparrow.Utils
 
             private void* CreateDecompression()
             {
-                var dctx = ZSTD_createDCtx();
+                var dctx = _pooled ? ContextPool.Instance.RentDecompression() : ZSTD_createDCtx();
                 if (dctx == null)
                 {
                     throw new OutOfMemoryException("Unable to create compression context");
@@ -239,23 +294,144 @@ namespace Sparrow.Utils
 
             public void Dispose()
             {
+                Release(returnToPool: true);
+                GC.SuppressFinalize(this);
+            }
+
+            private void Release(bool returnToPool)
+            {
                 if (_cctx != null)
                 {
-                    ZSTD_freeCCtx(_cctx);
+                    if (_pooled && returnToPool)
+                        ContextPool.Instance.ReturnCompression(_cctx);
+                    else
+                        ZSTD_freeCCtx(_cctx);
                     _cctx = null;
                 }
 
                 if (_dctx != null)
                 {
-                    ZSTD_freeDCtx(_dctx);
+                    if (_pooled && returnToPool)
+                        ContextPool.Instance.ReturnDecompression(_dctx);
+                    else
+                        ZSTD_freeDCtx(_dctx);
                     _dctx = null;
                 }
-                GC.SuppressFinalize(this);
             }
 
             ~CompressContext()
             {
-                Dispose();
+                Release(returnToPool: false);
+            }
+        }
+
+        /// <summary>
+        /// Setting up a native context is expensive: the first use allocates and initializes its window and match-finder tables
+        /// (megabytes, tens of microseconds). Short-lived streams (HTTP bodies, small exports) reuse contexts instead.
+        /// Contexts that grew large (high compression levels, large windows) are freed instead of being kept idle, and the pool
+        /// empties itself on low memory.
+        /// </summary>
+        internal sealed class ContextPool : ILowMemoryHandler
+        {
+            public static readonly ContextPool Instance = new();
+
+            internal const int MaxPooledContexts = 16;
+            internal const long MaxPooledContextSize = 16 * 1024 * 1024;
+            internal const long MaxPooledBytes = 64 * 1024 * 1024;
+
+            private readonly Pool _compression = new();
+            private readonly Pool _decompression = new();
+
+            private ContextPool()
+            {
+                LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
+            }
+
+            public void* RentCompression()
+            {
+                if (_compression.TryRent(out var cctx) == false)
+                    return ZSTD_createCCtx();
+
+                // the previous owner may have left parameters or an unfinished frame behind
+                AssertZstdSuccess(ZSTD_CCtx_reset(cctx, ZSTD_ResetDirective.ZSTD_reset_session_and_parameters));
+                return cctx;
+            }
+
+            public void ReturnCompression(void* cctx)
+            {
+                if (_compression.TryReturn(cctx, (long)ZSTD_sizeof_CCtx(cctx)) == false)
+                    ZSTD_freeCCtx(cctx);
+            }
+
+            public void* RentDecompression()
+            {
+                if (_decompression.TryRent(out var dctx) == false)
+                    return ZSTD_createDCtx();
+
+                AssertZstdSuccess(ZSTD_DCtx_reset(dctx, ZSTD_ResetDirective.ZSTD_reset_session_and_parameters));
+                return dctx;
+            }
+
+            public void ReturnDecompression(void* dctx)
+            {
+                if (_decompression.TryReturn(dctx, (long)ZSTD_sizeof_DCtx(dctx)) == false)
+                    ZSTD_freeDCtx(dctx);
+            }
+
+            public void LowMemory(LowMemorySeverity lowMemorySeverity)
+            {
+                while (_compression.TryRent(out var cctx))
+                    ZSTD_freeCCtx(cctx);
+
+                while (_decompression.TryRent(out var dctx))
+                    ZSTD_freeDCtx(dctx);
+            }
+
+            public void LowMemoryOver()
+            {
+            }
+
+            private sealed class Pool
+            {
+                private readonly ConcurrentQueue<(IntPtr Context, long Size)> _contexts = new();
+                private int _count;
+                private long _bytes;
+
+                public bool TryRent(out void* context)
+                {
+                    if (_contexts.TryDequeue(out var item) == false)
+                    {
+                        context = null;
+                        return false;
+                    }
+
+                    Interlocked.Decrement(ref _count);
+                    Interlocked.Add(ref _bytes, -item.Size);
+                    context = (void*)item.Context;
+                    return true;
+                }
+
+                public bool TryReturn(void* context, long size)
+                {
+                    if (size > MaxPooledContextSize)
+                        return false;
+
+                    if (Interlocked.Increment(ref _count) > MaxPooledContexts)
+                    {
+                        Interlocked.Decrement(ref _count);
+                        return false;
+                    }
+
+                    if (Interlocked.Add(ref _bytes, size) > MaxPooledBytes)
+                    {
+                        Interlocked.Decrement(ref _count);
+                        Interlocked.Add(ref _bytes, -size);
+                        return false;
+                    }
+
+                    _contexts.Enqueue(((IntPtr)context, size));
+                    return true;
+                }
             }
         }
 
@@ -276,8 +452,18 @@ namespace Sparrow.Utils
                 }
                 else
                 {
-                    result = ZSTD_compress_usingCDict(_threadCompressContext.Compression, dst,
-                        (UIntPtr)dstLen, src, (UIntPtr)srcLen, dictionary.Compression);
+                    // unlike ZSTD_compress_usingCDict, this applies the context parameters, so the frame doesn't carry the dictionary id
+                    var ctx = _threadCompressContext.Compression;
+                    AssertSuccess(ZSTD_CCtx_refCDict(ctx, dictionary.Compression), dictionary);
+                    try
+                    {
+                        result = ZSTD_compress2(ctx, dst, (UIntPtr)dstLen, src, (UIntPtr)srcLen);
+                    }
+                    finally
+                    {
+                        // don't keep a reference to a dictionary that may be disposed
+                        ZSTD_CCtx_refCDict(ctx, null);
+                    }
                 }
 
                 AssertSuccess(result, dictionary);

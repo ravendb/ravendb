@@ -1,7 +1,10 @@
 using System;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Json;
 using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
@@ -71,6 +74,55 @@ namespace FastTests.Sparrow
             // would mean the compression buffer was released from under it while it was still writing.
             var error = await Assert.ThrowsAnyAsync<Exception>(() => write);
             Assert.IsType<ObjectDisposedException>(error);
+        }
+
+        /// <summary>
+        /// Parsing the TCP negotiation reads from the transport into a <see cref="JsonOperationContext.MemoryBuffer"/> and can read past the
+        /// negotiation message. Whatever is left unconsumed in that buffer is the beginning of the peer's compressed stream, so it has to be
+        /// decompressed before anything read from the transport afterwards.
+        /// </summary>
+        [RavenTheory(RavenTestCategory.Core)]
+        [InlineData(1)]
+        [InlineData(100)]
+        [InlineData(-1)] // everything the peer sent was already read
+        public unsafe void BytesAlreadyReadFromTheTransportAreDecompressedFirst(int readAhead)
+        {
+            var payload = Encoding.UTF8.GetBytes(string.Concat(Enumerable.Range(0, 2_000).Select(i => $"{{\"Id\":\"orders/{i}-A\",\"Lines\":[{i % 7},{i % 11}]}},")));
+
+            var wire = new MemoryStream();
+            using (var sender = new ReadWriteCompressedStream(wire))
+            {
+                sender.Write(payload, 0, payload.Length);
+                sender.Flush();
+            }
+
+            var compressed = wire.ToArray();
+            if (readAhead < 0)
+                readAhead = compressed.Length;
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (context.GetMemoryBuffer(out var buffer))
+            {
+                // the negotiation message itself was consumed, the rest of what was read belongs to the compressed stream
+                const int negotiationMessageSize = 42;
+                Assert.True(negotiationMessageSize + readAhead <= buffer.Size, $"Compressed payload ({compressed.Length}) doesn't fit the buffer ({buffer.Size})");
+
+                compressed.AsSpan(0, readAhead).CopyTo(new Span<byte>(buffer.Address + negotiationMessageSize, readAhead));
+                buffer.Used = negotiationMessageSize;
+                buffer.Valid = negotiationMessageSize + readAhead;
+
+                var transport = new MemoryStream(compressed, readAhead, compressed.Length - readAhead);
+                using (var receiver = new ReadWriteCompressedStream(transport, buffer))
+                {
+                    Assert.Equal(0, buffer.Valid - buffer.Used);
+
+                    var received = new byte[payload.Length];
+                    receiver.ReadExactly(received);
+                    Assert.Equal(payload, received);
+                }
+
+                Assert.False(transport.CanRead, "Disposing the compressed stream must dispose the transport.");
+            }
         }
 
         private static byte[] Incompressible(int size)
