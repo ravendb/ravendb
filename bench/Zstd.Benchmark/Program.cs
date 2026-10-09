@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using BenchmarkDotNet.Running;
+using Zstd.Benchmark.EndToEnd;
 using Zstd.Benchmark.Infrastructure;
 using Zstd.Benchmark.Reporting;
 
@@ -39,6 +41,12 @@ namespace Zstd.Benchmark
 
               libinfo [--lib <id>=<path>]...
                   prints version and multithreading support of binaries
+
+              e2e --server <path to Raven.Server.dll> [--work <dir>] [--size-gb 3] [--workers 0,2,4] [--levels Fastest,Optimal]
+                  [--rounds 2] [--iterations 3] [--no-restore] [--affinity pcores|none|<hexmask>] [--port 8095] [--out <dir>]
+                  export, logical backup and snapshot (plus restore and import at Fastest) of a generated database through a
+                  server process started per configuration with Backup/Export.Compression.Zstd.Workers and the compression levels
+                  set; the server needs a license (RAVEN_License) to use more than 3 cores
             """;
 
         public static int Main(string[] args)
@@ -56,6 +64,8 @@ namespace Zstd.Benchmark
                     return Compare(rest);
                 case "libinfo":
                     return LibInfo(rest);
+                case "e2e":
+                    return EndToEnd(rest);
                 case "help":
                 case "--help":
                     Console.WriteLine(Usage);
@@ -221,6 +231,67 @@ namespace Zstd.Benchmark
             foreach (LibraryUnderTest library in libraries)
                 Console.WriteLine($"{library.Id}: {new ZstdNativeLibrary(library.Path).Describe()}");
             return 0;
+        }
+
+        private static int EndToEnd(List<string> args)
+        {
+            EndToEndOptions options = new() { WorkDirectory = "e2e" };
+            for (int i = 0; i < args.Count; i++)
+            {
+                switch (args[i])
+                {
+                    case "--server":
+                        options.ServerPath = args[++i];
+                        break;
+                    case "--work":
+                        options.WorkDirectory = args[++i];
+                        break;
+                    case "--out":
+                        options.ResultsDirectory = args[++i];
+                        break;
+                    case "--size-gb":
+                        options.DatasetGiB = double.Parse(args[++i], CultureInfo.InvariantCulture);
+                        break;
+                    case "--workers":
+                        options.Workers.AddRange(args[++i].Split(',').Select(x => int.Parse(x, CultureInfo.InvariantCulture)));
+                        break;
+                    case "--levels":
+                        options.Levels.AddRange(args[++i].Split(',').Select(Enum.Parse<CompressionLevel>));
+                        break;
+                    case "--rounds":
+                        options.Rounds = int.Parse(args[++i], CultureInfo.InvariantCulture);
+                        break;
+                    case "--iterations":
+                        options.Iterations = int.Parse(args[++i], CultureInfo.InvariantCulture);
+                        break;
+                    case "--no-restore":
+                        options.RestoreAndImport = false;
+                        break;
+                    case "--affinity":
+                        options.Affinity = args[++i];
+                        break;
+                    case "--port":
+                        options.Port = int.Parse(args[++i], CultureInfo.InvariantCulture);
+                        break;
+                    default:
+                        throw new ArgumentException($"Unknown argument '{args[i]}'");
+                }
+            }
+
+            if (options.ServerPath == null)
+            {
+                Console.WriteLine(Usage);
+                return 1;
+            }
+
+            if (options.Workers.Count == 0)
+                options.Workers.AddRange(new[] { 0, 2, 4 });
+            if (options.Levels.Count == 0)
+                options.Levels.AddRange(new[] { CompressionLevel.Fastest, CompressionLevel.Optimal });
+            if (options.Workers.Contains(0) == false)
+                options.Workers.Insert(0, 0);
+
+            return EndToEndRunner.RunAsync(options).GetAwaiter().GetResult();
         }
 
         private static LibraryUnderTest ParseLibrary(string value)
