@@ -49,17 +49,20 @@ export default function Select<
     Option,
     IsMulti extends boolean = false,
     Group extends GroupBase<Option> = GroupBase<Option>,
->({ isRoundedPill, className, styles = {}, ...rest }: SelectProps<Option, IsMulti, Group>) {
+>({ isRoundedPill, className, styles = {}, classNames: classNamesProp, ...rest }: SelectProps<Option, IsMulti, Group>) {
     if (isRoundedPill) {
         applyRoundedPillStyle(styles);
     }
 
     return (
         <ReactSelect
+            menuPortalTarget={document.body}
+            menuPlacement="auto"
             styles={styles}
             {...rest}
             classNamePrefix="react-select"
             className={classNames("bs5 react-select-container", { "rounded-pill": isRoundedPill }, className)}
+            classNames={{ menuPortal: () => "bs5", ...classNamesProp }}
         />
     );
 }

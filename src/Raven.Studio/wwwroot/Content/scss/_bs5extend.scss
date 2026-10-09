@@ -471,12 +471,13 @@ select {
                 padding: 0;
             }
         }
-        .react-select__menu {
-            text-align: left;
-            min-width: 120px;
-            width: auto;
-        }
     }
+}
+
+.react-select__menu.time-window-select-menu {
+    text-align: left;
+    min-width: 120px;
+    width: auto;
 }
 
 .input-group {

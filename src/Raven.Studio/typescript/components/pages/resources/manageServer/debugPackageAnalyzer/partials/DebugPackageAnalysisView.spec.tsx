@@ -73,7 +73,7 @@ describe("DebugPackageAnalysisView rail", () => {
         await screen.findByText("Node B"); // an option only rendered once the menu is open
 
         // one count badge per node option in the open menu
-        expect(container.querySelectorAll(".react-select__menu .analysis-scope-count")).toHaveLength(nodeCount);
+        expect(screen.getByRole("listbox").querySelectorAll(".analysis-scope-count")).toHaveLength(nodeCount);
     });
 
     it("shows the selected database's issue count on the database selector, not on the Database scope tab", async () => {
