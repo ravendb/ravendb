@@ -1960,7 +1960,7 @@ namespace Voron
             if (uptoTxIdExclusive == 0)
                 uptoTxIdExclusive = long.MaxValue;
 
-            List<(long Start, long Count)> sparseRegions = null;
+            List<(long FreedInTransaction, List<(long Start, long Count)> Regions)> sparseRegions = null;
             var scratchBuffers = _cachedScratchBuffers;
             scratchBuffers.Clear();
             bool found = false;
@@ -1974,21 +1974,20 @@ namespace Voron
 
                     Debug.Assert(record is not null);
 
-                    if(sparseRegions is not null)
-                    {
-                        MergeSparseRegions(sparseRegions);
-                    }
-
                     return new ApplyLogsToDataFileState(scratchBuffers, sparseRegions, record);
                 }
                 Debug.Assert(mabye is not null && mabye.TransactionId < uptoTxIdExclusive);
-                
+
                 record = mabye;
 
-                if(record.SparseRegions is not null)
+                if (record.SparseRegions is { Count: > 0 })
                 {
+                    // the flush subtracts in place, and the record's list is unsorted (its sections come from a hash set)
+                    List<(long Start, long Count)> regions = new List<(long Start, long Count)>(record.SparseRegions);
+                    MergeSparseRegions(regions);
+
                     sparseRegions ??= [];
-                    sparseRegions.AddRange(record.SparseRegions);
+                    sparseRegions.Add((record.TransactionId, regions));
                 }
 
                 foreach (var pageFromScratch in record.PagesAllocatedInTransaction)
