@@ -53,6 +53,7 @@ export const DefaultStory: StoryObj<StoryArgs> = {
         if (args.isDatabaseSelected) {
             databases.withActiveDatabase(db1);
             databasesService.withDocumentsMetadataByIDPrefix();
+            databasesService.withRevisionsIds();
             indexesService.withGetSampleStats();
             tasksService.withGetTasks();
             collectionsTracker.with_Collections();

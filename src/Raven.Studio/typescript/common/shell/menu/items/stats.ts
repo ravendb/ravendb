@@ -11,6 +11,11 @@ import shard = require("models/resources/shard");
 export = getStatsMenuItem;
 
 function getStatsMenuItem(appUrls: computedAppUrls) {
+    const isShardedDatabase = () => {
+        const db = activeDatabaseTracker.default.database();
+        return db instanceof shardedDatabase || db instanceof shard;
+    };
+
     const statsItems: menuItem[] = [
         new leafMenuItem({
             route: 'databases/status',
@@ -53,15 +58,12 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             shardingMode: "allShards",
             title: 'Buckets Report',
             tooltip: "Buckets Report",
-            nav: ko.pureComputed(() => {
-                const db = activeDatabaseTracker.default.database();
-                if (!db) {
-                    return false;
-                }
-                return (db instanceof shardedDatabase) || (db instanceof shard);
-            }),
+            nav: ko.pureComputed(isShardedDatabase),
             css: 'icon-storage', //TODO:
-            dynamicHash: appUrls.statusBucketsReport
+            dynamicHash: appUrls.statusBucketsReport,
+            search: {
+                isExcluded: !isShardedDatabase()
+            }
         }),
         new leafMenuItem({
             route: "virtual", // here we only redirect to global section with proper db set in url
