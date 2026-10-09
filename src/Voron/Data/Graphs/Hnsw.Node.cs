@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Compression;
@@ -104,14 +105,18 @@ public partial class Hnsw
 
         public static NodeReader Decode(LowLevelTransaction llt, Span<byte> span)
         {
-            var postingListId = VariableSizeEncoding.Read<long>(span, out var pos);
-            var offset = pos;
-            var vectorId = VariableSizeEncoding.Read<long>(span, out pos, offset);
-            offset += pos;
-            var countOfLevels = VariableSizeEncoding.Read<int>(span, out pos, offset);
-            offset += pos;
+            var offset = 0;
+            var postingListId = NodeReader.ReadBoundedVarInt(span, ref offset);
+            var vectorId = NodeReader.ReadBoundedVarInt(span, ref offset);
+            var countOfLevels = NodeReader.ReadBoundedVarInt(span, ref offset);
 
-            return new NodeReader(llt.Allocator, span[offset..]) { PostingListId = postingListId, VectorId = vectorId, CountOfLevels = countOfLevels };
+            // Every level costs at least one byte: its edge-count varint. A valid record is at
+            // least countOfLevels bytes longer than its fixed prefix. The count is persisted
+            // bytes sizing a native allocation. It is untrusted until this holds.
+            if (countOfLevels < 0 || countOfLevels > span.Length - offset)
+                throw new InvalidDataException($"Corrupt HNSW node record: countOfLevels {countOfLevels} does not fit the {span.Length - offset} bytes remaining in the record");
+
+            return new NodeReader(llt.Allocator, span[offset..]) { PostingListId = postingListId, VectorId = vectorId, CountOfLevels = (int)countOfLevels };
         }
 
         public Span<byte> Encode(ref ContextBoundNativeList<byte> buffer)
