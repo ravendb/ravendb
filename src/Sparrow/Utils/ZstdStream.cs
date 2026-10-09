@@ -345,7 +345,9 @@ namespace Sparrow.Utils
                     return 1;
 #if NET6_0_OR_GREATER
                 case CompressionLevel.SmallestSize:
-                    return 22;
+                    // the highest level without zstd's "ultra" levels (20-22): level 22 needs a ~870MB compression context per
+                    // stream (GBs with worker threads) and ~135MB to decompress, for output only ~0.3% smaller than level 19
+                    return 19;
 #endif
                 case CompressionLevel.NoCompression:
                 default:
