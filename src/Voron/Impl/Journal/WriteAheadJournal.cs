@@ -1155,9 +1155,9 @@ namespace Voron.Impl.Journal
                     Pager.State dataPagerState;
 
                     // the flushed page ranges are needed only when there are sparse regions to subtract them from
-                    List<(long Start, long Count)> flushedPageRanges = null;
+                    List<(long Start, long Count, long AllocatedInTransaction)> flushedPageRanges = null;
                     if (_applyLogsToDataFileStateFromPreviousFailedAttempt.SparseRegions is { Count: > 0 } || _pendingSparseRegions.Count > 0)
-                        flushedPageRanges = new List<(long Start, long Count)>();
+                        flushedPageRanges = new List<(long Start, long Count, long AllocatedInTransaction)>();
 
                     try
                     {
@@ -1194,15 +1194,25 @@ namespace Voron.Impl.Journal
 
                     // update pending _before_ ApplyJournalStateAfterFlush: that method can re-enter on this thread and run a queued sync's
                     // punch (WaitForJournalStateToBeUpdated -> RunTaskIfNotAlreadyRan), so pending must already include this flush's frees
-                    // and exclude the pages it just wrote
-                    if (currentState.SparseRegions is { Count: > 0 } freedRegions)
+                    // and exclude the pages a later transaction reallocated
+                    if (flushedPageRanges != null)
                     {
-                        _pendingSparseRegions.AddRange(freedRegions);
-                        StorageEnvironment.MergeSparseRegions(_pendingSparseRegions);
+                        // pending frees predate every page written here
+                        SubtractRanges(_pendingSparseRegions, flushedPageRanges, freedInTransaction: _lastFlushed.TransactionId);
                     }
 
-                    if (flushedPageRanges != null)
-                        SubtractRanges(_pendingSparseRegions, flushedPageRanges);
+                    if (currentState.SparseRegions != null)
+                    {
+                        foreach ((long freedInTransaction, List<(long Start, long Count)> regions) in currentState.SparseRegions)
+                        {
+                            if (flushedPageRanges != null)
+                                SubtractRanges(regions, flushedPageRanges, freedInTransaction);
+
+                            _pendingSparseRegions.AddRange(regions);
+                        }
+
+                        StorageEnvironment.MergeSparseRegions(_pendingSparseRegions);
+                    }
 
                     Volatile.Write(ref _pendingSparseRegionsCount, _pendingSparseRegions.Count);
 
@@ -1907,7 +1917,7 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            private Pager.State ApplyPagesToDataFileFromScratch(ApplyLogsToDataFileState state, List<(long Start, long Count)> flushedPageRanges)
+            private Pager.State ApplyPagesToDataFileFromScratch(ApplyLogsToDataFileState state, List<(long Start, long Count, long AllocatedInTransaction)> flushedPageRanges)
             {
                 long written = 0;
                 var sp = Stopwatch.StartNew();
@@ -1922,17 +1932,11 @@ namespace Voron.Impl.Journal
                     _flushBuffers.EnsureCapacity(state.Buffers.Count);
                     try
                     {
-                        Span<Pal.page_to_write> pages = GetSortedPages(ref txState, state, out written);
+                        Span<Pal.page_to_write> pages = GetSortedPages(ref txState, state, flushedPageRanges, out written);
                         if (pages.IsEmpty)
                             return dataPagerState;
 
                         pagesFlushed = pages.Length;
-
-                        if (flushedPageRanges != null)
-                        {
-                            foreach (var page in pages)
-                                flushedPageRanges.Add((page.page_num, page.count_of_pages));
-                        }
 
                         dataPager.EnsureContinuous(ref dataPagerState, pages[^1].page_num, pages[^1].count_of_pages);
                         (dataPagerState.TotalAllocatedSize, dataPagerState.TotalPhysicalSpace) = dataPager.GetFileSize(dataPagerState);
@@ -1967,7 +1971,7 @@ namespace Voron.Impl.Journal
             }
 
             // Caller must hold _flushingLock and have synced first - punching a clean section is much cheaper on Windows (RavenDB-26910).
-            // Pending holds flushed frees (older than every reader, per the flush's uptoTxIdExclusive bound) minus pages later flushes rewrote.
+            // Pending holds flushed frees (older than every reader, per the flush's uptoTxIdExclusive bound) minus pages a later transaction rewrote.
             // Space reclamation only (cf. DisableSparseRegions) - failures are swallowed and never fail the sync.
             //
             // Being clean is not enough on Windows: FSCTL_SET_ZERO_DATA makes NTFS walk the whole mapped section, so a
@@ -2040,8 +2044,9 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            // both lists must be sorted by Start and non-overlapping
-            internal static void SubtractRanges(List<(long Start, long Count)> sparseRegions, List<(long Start, long Count)> flushedPageRanges)
+            // both lists must be sorted by Start and non-overlapping; only ranges written by a transaction newer than
+            // freedInTransaction are subtracted, an older write of a freed page leaves it free
+            internal static void SubtractRanges(List<(long Start, long Count)> sparseRegions, List<(long Start, long Count, long AllocatedInTransaction)> flushedPageRanges, long freedInTransaction)
             {
                 if (sparseRegions.Count == 0 || flushedPageRanges.Count == 0)
                     return;
@@ -2064,10 +2069,14 @@ namespace Voron.Impl.Journal
                         continue;
                     }
 
-                    var (fStart, fCount) = flushedPageRanges[j];
+                    (long fStart, long fCount, long fAllocatedInTransaction) = flushedPageRanges[j];
                     long fEnd = fStart + fCount;
 
-                    if (fEnd <= sStart)
+                    if (fAllocatedInTransaction <= freedInTransaction)
+                    {
+                        j++;
+                    }
+                    else if (fEnd <= sStart)
                     {
                         // flushed range is entirely before the current sparse region
                         j++;
@@ -2119,7 +2128,7 @@ namespace Voron.Impl.Journal
             }
 
             private Span<Pal.page_to_write> GetSortedPages(ref Pager.PagerTransactionState txState, ApplyLogsToDataFileState state,
-                out long written)
+                List<(long Start, long Count, long AllocatedInTransaction)> flushedPageRanges, out long written)
             {
                 written = 0;
                 var lastFlushedTx = _lastFlushed.TransactionId;
@@ -2168,6 +2177,7 @@ namespace Voron.Impl.Journal
 
                         index--;
                         written -= (long)pagesBuffer[index].count_of_pages * Constants.Storage.PageSize;
+                        flushedPageRanges?.RemoveAt(flushedPageRanges.Count - 1);
                     }
 
                     written += countOfPages * Constants.Storage.PageSize;
@@ -2177,6 +2187,7 @@ namespace Voron.Impl.Journal
                         ptr = page.Pointer,
                         count_of_pages = countOfPages
                     };
+                    flushedPageRanges?.Add((page.PageNumber, countOfPages, pageValue.AllocatedInTransaction));
                     lastEndPage = page.PageNumber + countOfPages;
                     lastTx = pageValue.AllocatedInTransaction;
                 }
