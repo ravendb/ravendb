@@ -939,14 +939,15 @@ namespace Raven.Server.Documents.Revisions
                     _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, in keys, changeVector, lastModifiedTicks, flags);
                 }
 
-                Table writeTable = null;
-                if (TryReadRevision(table, in keys.Revision, out var tvr) && table.IsOwned(tvr.Id))
+                Table writeTable;
+                if (table.IsOwned(revision.StorageId))
                 {
                     writeTable = table;
                 }
                 else
                 {
                     // We request to delete revision with the wrong collection
+                    table.DirectRead(revision.StorageId, out var tvr);
                     var revisionData = TableValueToRevision(context, ref tvr, DocumentFields.Data).Data;
 
                     var collection = _documentsStorage.ExtractCollectionName(context, revisionData);
@@ -956,7 +957,9 @@ namespace Raven.Server.Documents.Revisions
                         writeTables[collection.Name] = writeTable;
                     }
                 }
-                DeleteRevisionByKey(writeTable, in keys.Revision);
+
+                // by id, not by key: a legacy raw-PK row and a hashed row can share the same key
+                writeTable.Delete(revision.StorageId);
             }
 
             revision.Dispose();
