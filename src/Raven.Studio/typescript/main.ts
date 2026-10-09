@@ -56,10 +56,11 @@ shellSetup.commonInit();
 
 app.start().then(async () => {
     if ("WebSocket" in window) {
+        await changeLanguage(globalSettings.readStoredLanguage()).catch((error: unknown) =>
+            console.error("Failed to load Studio language", error)
+        );
+
         if (window.location.pathname.startsWith("/studio")) {
-            await changeLanguage(globalSettings.readStoredLanguage()).catch((error: unknown) =>
-                console.error("Failed to load Studio language", error)
-            );
             const shell = require("viewmodels/shell");
             app.setRoot(shell);
         } else if (window.location.pathname.startsWith("/eula")) {
