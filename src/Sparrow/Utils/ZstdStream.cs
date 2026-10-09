@@ -10,12 +10,15 @@ namespace Sparrow.Utils
 #if NETCOREAPP3_1_OR_GREATER
     internal sealed class ZstdStream : Stream
     {
+        // ZSTD_CStreamOutSize() / ZSTD_DStreamInSize() are a full block (~128KB): one call into zstd and one inner read / write per block
+        internal const int BufferSize = 128 * 1024;
+
         private readonly Stream _inner;
         private readonly bool _compression;
         private readonly bool _leaveOpen;
         private readonly bool _continueOnCapturedContext;
         private ZstdLib.CompressContext _compressContext;
-        private byte[] _tempBuffer = ArrayPool<byte>.Shared.Rent(1024);
+        private byte[] _tempBuffer = ArrayPool<byte>.Shared.Rent(BufferSize);
         private Memory<byte> _decompressionInput = Memory<byte>.Empty;
         private long _compressedBytesCount;
         private long _uncompressedBytesCount;
@@ -72,6 +75,7 @@ namespace Sparrow.Utils
             }
         }
 
+        /// <returns>Done is true when zstd has nothing left in its internal buffers for this directive (the return value is 0).</returns>
         private unsafe (int OutputPosition, int InputPosition, bool Done) CompressStep(ReadOnlySpan<byte> buffer, ZstdLib.ZSTD_EndDirective directive)
         {
             lock (this)
@@ -207,15 +211,19 @@ namespace Sparrow.Utils
             }
         }
 
-        private void FlushInternal()
+        private void FlushInternal() => FlushInternal(ZstdLib.ZSTD_EndDirective.ZSTD_e_flush);
+
+        /// <param name="directive">ZSTD_e_flush to emit everything buffered so far, ZSTD_e_end to also close the frame.</param>
+        private void FlushInternal(ZstdLib.ZSTD_EndDirective directive)
         {
-            while (true)
+            // loop until zstd reports nothing is left: with worker threads a call can return before all pending output is ready
+            bool done;
+            do
             {
-                var (outputBytes, _, _) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_flush);
-                if (outputBytes == 0)
-                    break;
-                _inner.Write(_tempBuffer, 0, outputBytes);
-            }
+                (int outputBytes, _, done) = CompressStep(ReadOnlySpan<byte>.Empty, directive);
+                if (outputBytes > 0)
+                    _inner.Write(_tempBuffer, 0, outputBytes);
+            } while (done == false);
 
             _inner.Flush();
         }
@@ -228,16 +236,17 @@ namespace Sparrow.Utils
             }
         }
 
-        private async Task FlushInternalAsync(CancellationToken cancellationToken = default)
-        {
-            while (true)
-            {
-                var (outputBytes, _, _) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_flush);
-                if (outputBytes == 0)
-                    break;
+        private Task FlushInternalAsync(CancellationToken cancellationToken = default) => FlushInternalAsync(ZstdLib.ZSTD_EndDirective.ZSTD_e_flush, cancellationToken);
 
-                await _inner.WriteAsync(_tempBuffer, 0, outputBytes, cancellationToken).ConfigureAwait(_continueOnCapturedContext);
-            }
+        private async Task FlushInternalAsync(ZstdLib.ZSTD_EndDirective directive, CancellationToken cancellationToken = default)
+        {
+            bool done;
+            do
+            {
+                (int outputBytes, _, done) = CompressStep(ReadOnlySpan<byte>.Empty, directive);
+                if (outputBytes > 0)
+                    await _inner.WriteAsync(_tempBuffer, 0, outputBytes, cancellationToken).ConfigureAwait(_continueOnCapturedContext);
+            } while (done == false);
 
             await _inner.FlushAsync(cancellationToken).ConfigureAwait(_continueOnCapturedContext);
         }
@@ -254,21 +263,9 @@ namespace Sparrow.Utils
 
                 _disposed = true;
 
-                if (_compressContext != null)
-                {
-                    if (_compression)
-                        await FlushInternalAsync().ConfigureAwait(_continueOnCapturedContext);
-
-                    while (_compression)
-                    {
-                        var (outputBytes, _, done) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_end);
-
-                        await _inner.WriteAsync(_tempBuffer, 0, outputBytes).ConfigureAwait(_continueOnCapturedContext);
-
-                        if (done)
-                            break;
-                    }
-                }
+                // closing the frame flushes everything that is still buffered
+                if (_compressContext != null && _compression)
+                    await FlushInternalAsync(ZstdLib.ZSTD_EndDirective.ZSTD_e_end).ConfigureAwait(_continueOnCapturedContext);
 
                 if (_leaveOpen == false)
                     await _inner.DisposeAsync().ConfigureAwait(_continueOnCapturedContext);
@@ -303,21 +300,9 @@ namespace Sparrow.Utils
 
                 _disposed = true;
 
-                if (flush && _compressContext != null)
-                {
-                    if (_compression)
-                        FlushInternal();
-
-                    while (_compression)
-                    {
-                        var (outputBytes, _, done) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_end);
-
-                        _inner.Write(_tempBuffer, 0, outputBytes);
-
-                        if (done)
-                            break;
-                    }
-                }
+                // closing the frame flushes everything that is still buffered
+                if (flush && _compressContext != null && _compression)
+                    FlushInternal(ZstdLib.ZSTD_EndDirective.ZSTD_e_end);
 
                 if (_leaveOpen == false)
                     _inner.Dispose();
