@@ -383,7 +383,6 @@ class shell extends viewModelBase {
                         (_name, setting: simpleStudioSetting<string>) =>
                             shell.applyMonospaceFont(setting.getValue())
                     );
-
                     // bind event handles before we connect to server wide notification center
                     // (connection will be started after executing this method) - it was just scheduled 2 lines above
                     // please notice we don't wait here for connection to be established

@@ -1,0 +1,4 @@
+export default {
+    heading: "About this view",
+    description: "Learn more about this view",
+} as const;
