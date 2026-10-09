@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -16,6 +16,19 @@ namespace Raven.Server.Config.Categories
     [ConfigurationCategory(ConfigurationCategoryType.Backup)]
     public sealed class BackupConfiguration : ConfigurationCategory
     {
+        public BackupConfiguration()
+        {
+            ZstdCompressionWorkers = GetDefaultZstdCompressionWorkers(Environment.ProcessorCount);
+        }
+
+        // compressing in parallel takes cores away from the database, worth it only when there are enough of them
+        internal static int GetDefaultZstdCompressionWorkers(int processorCount) => processorCount switch
+        {
+            < 8 => 0,
+            <= 16 => 2,
+            _ => 4
+        };
+
         [Description("Local backups can only be created under this root path.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Backup.LocalRootPath", ConfigurationEntryScope.ServerWideOnly)]
@@ -88,6 +101,12 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(CompressionLevel.Fastest)]
         [ConfigurationEntry("Backup.Snapshot.Compression.Level", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public CompressionLevel SnapshotCompressionLevel { get; set; }
+
+        [Description("Number of worker threads compressing a backup (logical and snapshot) with Zstd, in parallel with reading the data. 0 compresses on the backup thread. Each worker needs its own compression context, so memory grows with the number of workers and the compression level. Default: 0 below 8 cores, 2 for 8-16 cores, 4 above.")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [MinValue(0)]
+        [ConfigurationEntry("Backup.Compression.Zstd.Workers", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int ZstdCompressionWorkers { get; set; }
 
         [Description("Number of minutes, after which we will switch to a new responsible node for backup.")]
         [DefaultValue(30)]

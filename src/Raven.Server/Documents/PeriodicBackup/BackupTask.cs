@@ -630,7 +630,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                                                     $"file{(BackupResult.SnapshotBackup.ReadCount > 1 ? "s" : string.Empty)}");
                                             sw.Restart();
                                         }
-                                    }, TaskCancelToken.Token);
+                                    }, Database.Configuration.Backup.ZstdCompressionWorkers, TaskCancelToken.Token);
 
                                 FlushToDisk(uploader.Stream);
 
@@ -797,7 +797,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                         {
                             outputStream = GetOutputStream(uploader.Stream);
                             var smugglerSource = Database.Smuggler.CreateSource(startDocumentEtag.Value, startRaftIndex.Value, _logger);
-                            var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource, Database.Configuration.Backup.CompressionAlgorithm.ToExportCompressionAlgorithm(), Database.Configuration.Backup.CompressionLevel);
+                            var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource, Database.Configuration.Backup.CompressionAlgorithm.ToExportCompressionAlgorithm(), Database.Configuration.Backup.CompressionLevel,
+                                Database.Configuration.Backup.ZstdCompressionWorkers);
                             var smuggler = Database.Smuggler.Create(
                                 smugglerSource,
                                 smugglerDestination,
