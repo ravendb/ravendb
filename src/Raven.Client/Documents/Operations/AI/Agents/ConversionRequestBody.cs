@@ -17,6 +17,7 @@ internal class ConversionRequestBody
     public AiConversationCreationOptions CreationOptions { get; set; }
     public List<ICommandData> AttachmentCommands { get; set; }
     public AiOutputOptions OutputOptions { get; set; }
+    public ICollection<string> AttachmentsHiddenFromModel { get; set; }
 
     public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
     {
@@ -30,6 +31,9 @@ internal class ConversionRequestBody
 
         if (OutputOptions != null)
             json[nameof(OutputOptions)] = OutputOptions.ToJson(conventions, context);
+
+        if (AttachmentsHiddenFromModel is { Count: > 0 })
+            json[nameof(AttachmentsHiddenFromModel)] = new DynamicJsonArray(AttachmentsHiddenFromModel);
 
         return json;
     }

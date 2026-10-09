@@ -22,6 +22,8 @@ public class RequestBody
 
     public AiServerOutputOptions OutputOptions { get; set; }
 
+    public HashSet<string> AttachmentsHiddenFromModel { get; set; }
+
     public object Content
     {
         get

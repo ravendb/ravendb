@@ -42,18 +42,7 @@ internal static class ConversationHandlerAttachments
             null);
 
         if (attachment == null)
-        {
-            request.Attachments ??= new List<AiAttachment>();
-            request.Attachments.Add(new AiAttachment
-            {
-                Name = fileName,
-                Type = ChatCompletionClient.Constants.AttachmentsRequestFields.MediaTypeApplicationPdf,
-                Data = string.Empty,
-                Source = AiAttachmentSource.NotFound
-            });
-
-            return $"Attachment: {fileName}";
-        }
+            return AddNotFoundAttachment(request, fileName);
 
         var base64 = GetAttachmentDataAsBase64(attachment);
         var contentType = attachment.ContentType.ToString();
@@ -70,6 +59,20 @@ internal static class ConversationHandlerAttachments
         });
 
         return $"Attachment: {attachment.Name}";
+    }
+
+    private static string AddNotFoundAttachment(RequestBody request, string fileName)
+    {
+        request.Attachments ??= new List<AiAttachment>();
+        request.Attachments.Add(new AiAttachment
+        {
+            Name = fileName,
+            Type = ChatCompletionClient.Constants.AttachmentsRequestFields.MediaTypeApplicationPdf,
+            Data = string.Empty,
+            Source = AiAttachmentSource.NotFound
+        });
+
+        return $"Attachment: {fileName}";
     }
 
     public static void AddPutAttachmentFromStream(RequestBody request, Stream stream, string name, string contentType)
@@ -136,7 +139,10 @@ internal static class ConversationHandlerAttachments
                 {
                     foreach (var attachmentName in namesArray)
                     {
-                        result.Add(RetrieveAndAddAttachment(database, docContext, request, conversationId, attachmentName.ToString(), document.Id));
+                        var name = attachmentName.ToString();
+                        result.Add(document.AttachmentsHiddenFromModel.Contains(name)
+                            ? AddNotFoundAttachment(request, name)
+                            : RetrieveAndAddAttachment(database, docContext, request, conversationId, name, document.Id));
                     }
                 }
             }

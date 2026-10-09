@@ -158,6 +158,7 @@ const runChat = createAsyncThunk(
                     Content: x.arguments,
                 })),
                 AttachmentCommands: null,
+                AttachmentsHiddenFromModel: null,
                 attachments: formValues.attachments,
                 CreationOptions: {
                     Parameters: createParametersDto(conversationId, formValues.parameters),
