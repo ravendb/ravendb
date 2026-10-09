@@ -27,18 +27,23 @@ namespace Sparrow.Utils
 
         internal static readonly AsyncLocal<bool> CaptureContextOnAwait = new();
 
-        private ZstdStream(Stream inner, bool compression, int level, bool leaveOpen)
+        private ZstdStream(Stream inner, bool compression, int level, bool leaveOpen, int workers)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-            _compressContext = new ZstdLib.CompressContext(level, pooled: true);
+            _compressContext = new ZstdLib.CompressContext(level, workers, pooled: true);
             _compression = compression;
             _leaveOpen = leaveOpen;
 
             _continueOnCapturedContext = CaptureContextOnAwait.Value;
         }
 
-        public static ZstdStream Compress(Stream stream, CompressionLevel compressionLevel = CompressionLevel.Optimal, bool leaveOpen = false) => new(stream, compression: true, ToZstdLevel(compressionLevel), leaveOpen);
-        public static ZstdStream Decompress(Stream stream, bool leaveOpen = false) => new(stream, compression: false, 0, leaveOpen);
+        public static ZstdStream Compress(Stream stream, CompressionLevel compressionLevel = CompressionLevel.Optimal, bool leaveOpen = false) => new(stream, compression: true, ToZstdLevel(compressionLevel), leaveOpen, workers: 0);
+
+        /// <param name="workers">Threads compressing in parallel with the writer. Uses more CPU and memory, worth it for long streams only.
+        /// Falls back to compressing on the calling thread when the native library is single threaded.</param>
+        public static ZstdStream Compress(Stream stream, CompressionLevel compressionLevel, bool leaveOpen, int workers) => new(stream, compression: true, ToZstdLevel(compressionLevel), leaveOpen, workers);
+
+        public static ZstdStream Decompress(Stream stream, bool leaveOpen = false) => new(stream, compression: false, 0, leaveOpen, workers: 0);
 
         public override bool CanRead => _compression == false;
         public override bool CanSeek => false;
@@ -47,6 +52,11 @@ namespace Sparrow.Utils
         public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
         public long CompressedBytesCount { get => _compressedBytesCount; }
         public long UncompressedBytesCount { get => _uncompressedBytesCount; }
+
+        /// <summary>
+        /// Worker threads compressing this stream, 0 when compressing on the calling thread. Known after the first write.
+        /// </summary>
+        internal int Workers => _compressContext?.Workers ?? 0;
         public override long Seek(long offset, SeekOrigin origin)
         {
             throw new NotSupportedException();
