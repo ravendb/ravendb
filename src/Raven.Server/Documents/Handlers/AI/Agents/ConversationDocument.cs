@@ -57,7 +57,10 @@ public partial class ConversationDocument([NotNull] string agent, BlittableJsonR
                 continue;
 
             if (Parameters == null || Parameters.TryGet(p.Name, out object value) == false)
-                throw new MissingAiAgentParameterException($"Parameter '{p.Name}' is missing.");
+            {
+                System.Diagnostics.Debug.Assert(false, $"Parameter '{p.Name}' has no value, ConversationHandler.InitializeDocumentAsync should have rejected the conversation");
+                continue;
+            }
 
             var param = ConversationHandler.GetAiConversationParameter(p.Name, value);
             if (param.SendToModel)

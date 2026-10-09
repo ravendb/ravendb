@@ -258,6 +258,10 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             var certificate = RavenServer.GetCertificateForAuthorization(Database.ServerStore.Server.Certificate.ClientCertificate);
             var authentication = Database.ServerStore.Server.AuthenticateConnectionCertificate(certificate, $"GenAI access for '{Name}'");
 
+            var queryParameterNames = (Configuration.Queries ?? [])
+                .Select(q => (q.Name, Parameters: ConversationHandler.GetQueryParameterNames(q.Query)))
+                .ToList();
+
             foreach (var item in items)
             {
                 statsScope.NumberOfContextObjects++;
@@ -275,7 +279,10 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 string json = item.ContextOutput.Context.ToString();
                 Task<GenAiHandlerResult> task;
 
-                var agentConfiguration = CreateAgentConfiguration(context, item);
+                // the agent declares exactly the context values the query binder can take, so what is declared
+                // and what is supplied cannot drift apart - the rest reaches the model through the prompt
+                var queryParameters = FilterSupportedGenAiQueryParameters(context, item.ContextOutput.Context, queryParameterNames);
+                var agentConfiguration = CreateAgentConfiguration(context, queryParameters);
                 var handler = new GenAiConversationHandler(Database.ServerStore, Database, Configuration)
                 {
                     Authentication = authentication
@@ -283,7 +290,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
                 handler.Initialize(agentConfiguration, $"{Configuration.Identifier}/{item.DocumentId}/", new RequestBody
                 {
-                    Parameters = FilterSupportedGenAiQueryParameters(context, item.ContextOutput.Context),
+                    Parameters = queryParameters,
                     CreationOptions = new AiConversationCreationOptions
                     {
                         ExpirationInSec = Configuration.ExpirationInSec
@@ -323,11 +330,10 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         }
     }
 
-    private AiAgentConfiguration CreateAgentConfiguration(JsonOperationContext context, GenAiResultItem item)
+    private AiAgentConfiguration CreateAgentConfiguration(JsonOperationContext context, BlittableJsonReaderObject queryParameters)
     {
         var agentParameters = new List<AiAgentParameter>();
-        var contextObjPropNames = item.ContextOutput.Context.GetPropertyNames();
-        foreach (var name in contextObjPropNames)
+        foreach (var name in queryParameters.GetPropertyNames())
         {
             agentParameters.Add(new AiAgentParameter(name) { SendToModel = false });
         }
@@ -345,7 +351,8 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         return agentConfiguration;
     }
 
-    private static BlittableJsonReaderObject FilterSupportedGenAiQueryParameters(JsonOperationContext context, BlittableJsonReaderObject rawContext)
+    private static BlittableJsonReaderObject FilterSupportedGenAiQueryParameters(JsonOperationContext context, BlittableJsonReaderObject rawContext,
+        List<(string Name, HashSet<string> Parameters)> queryParameterNames)
     {
         var parameters = new DynamicJsonValue();
         BlittableJsonReaderObject.PropertyDetails property = default;
@@ -353,8 +360,11 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         {
             rawContext.GetPropertyByIndex(i, ref property);
 
-            if (ConversationHandler.TryGetValueType(property.Value, out _, out _) == false)
+            if (ConversationHandler.TryGetValueType(property.Value, out _, out var unsupportedType) == false)
+            {
+                ConversationHandler.AssertNoQueryBindsName(queryParameterNames, property.Name, unsupportedType);
                 continue;
+            }
 
             parameters[property.Name] = property.Value; // raw value, no AiConversationParameter wrapper
         }
