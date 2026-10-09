@@ -198,6 +198,10 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         );
     }
 
+    withRevisionsIds(dto?: MockedValue<{ Results: { Id: string }[] }>) {
+        return this.mockResolvedValue(this.mocks.getRevisionsIds, dto, { Results: [] });
+    }
+
     withIdentities(dto?: MockedValue<Record<string, number>>) {
         return this.mockResolvedValue(this.mocks.getIdentities, dto, DatabasesStubs.getIdentities(5));
     }
