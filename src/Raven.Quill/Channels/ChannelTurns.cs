@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Options;
+using System.Threading.Channels;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Agents;
@@ -19,142 +19,159 @@ internal sealed record ChannelReplies(string Error, string ConversationExpired, 
         "I'm still working through your earlier messages, so that one didn't make it. Please resend it once I've replied.");
 }
 
-internal interface IChannelBot : IAsyncDisposable
+internal interface IPlatformTurns<TMessage>
+    where TMessage : IChannelMessage
 {
     ChannelReplies Replies => ChannelReplies.Default;
 
-    ChannelConnectionHealth? Health => null;
+    Task SendAsync(TMessage replyTo, string text, CancellationToken ct);
 
-    Task SendAsync(string text, CancellationToken ct);
+    ChannelStreamingReply CreateReply(TMessage replyTo);
 
-    ChannelStreamingReply CreateReply();
+    Task TypingAsync(TMessage replyTo, CancellationToken ct) => Task.CompletedTask;
 
     string? DescribeApiFailure(Exception e) => null;
 
-    Task TypingAsync(CancellationToken ct) => Task.CompletedTask;
+    Task HandleCommandAsync(TMessage message, CancellationToken ct) =>
+        throw new NotSupportedException($"{GetType().Name} has no commands");
+
+    Task<Dictionary<string, string>?> BindAsync(AiAgentConfiguration config, TMessage message, CancellationToken ct);
 }
 
-internal interface IPlatformTurns<TMessage, TBot>
-    where TMessage : IChannelMessage
-    where TBot : class, IChannelBot
-{
-    ChannelType Type { get; }
-
-    TBot OpenBot(Channel channel, TMessage message);
-
-    Task<bool> TryHandleAsync(TBot bot, Channel channel, TMessage message, CancellationToken ct) =>
-        Task.FromResult(false);
-
-    Task<Dictionary<string, string>?> BindAsync(
-        TBot bot, Channel channel, AiAgentConfiguration config, TMessage message, CancellationToken ct);
-}
-
-internal sealed class ChannelTurns<TMessage, TBot>(
-    IPlatformTurns<TMessage, TBot> platform,
+internal sealed class ChannelTurns<TMessage>(
+    IPlatformTurns<TMessage> platform,
+    string database,
+    Channel channel,
+    ChannelConnectionHealth? health,
     IDocumentStore store,
     IAgentRouter router,
-    IOptions<ApplianceOptions> options,
+    ApplianceOptions options,
     IRavenLogger logger) : IChatTurns<TMessage>
     where TMessage : IChannelMessage
-    where TBot : class, IChannelBot
 {
-    public async Task RunTurnAsync(IReadOnlyList<TMessage> messages, CancellationToken ct)
+    // merge queued prompts, by design
+    public async Task RunBatchAsync(ChannelReader<TMessage> queue, CancellationToken ct)
     {
-        var last = messages[^1];
-        var channel = last.Channel;
+        var prompts = new List<TMessage>();
 
-        await using var bot = platform.OpenBot(channel, last);
-
-        if (messages is [{ RunsAlone: true } only])
+        while (queue.TryRead(out var message))
         {
-            if (only.IsUnsupported)
+            if (message.Kind == ChannelMessageKind.Prompt)
             {
-                await TrySendAsync(bot, channel, ChannelReplies.UnsupportedKind, ct);
-                return;
+                if (string.IsNullOrWhiteSpace(message.Text) == false)
+                    prompts.Add(message);
+                continue;
             }
 
-            if (await platform.TryHandleAsync(bot, channel, only, ct))
-                return;
+            await RunTurnAsync(prompts, ct);
+            await RunTurnAsync([message], ct);
         }
 
-        var prompt = string.Join('\n', messages.Select(m => (m.Text ?? "").Trim()).Where(t => t.Length > 0));
-        if (prompt.Length == 0)
+        await RunTurnAsync(prompts, ct);
+    }
+
+    private async Task RunTurnAsync(List<TMessage> prompts, CancellationToken ct)
+    {
+        if (prompts.Count == 0)
             return;
 
-        var config = await AgentLookup.FindAsync(store, last.Database, channel.AgentId, ct)
+        var last = prompts[^1];
+        try
+        {
+            switch (last.Kind)
+            {
+                case ChannelMessageKind.Prompt:
+                    await RunAgentAsync(prompts, ct);
+                    break;
+
+                case ChannelMessageKind.Command:
+                    await platform.HandleCommandAsync(last, ct);
+                    break;
+
+                case ChannelMessageKind.Unsupported:
+                    await TrySendAsync(last, ChannelReplies.UnsupportedKind, ct);
+                    break;
+            }
+        }
+        catch (Exception e) when (ct.IsCancellationRequested == false)
+        {
+            if (logger.IsWarnEnabled)
+                logger.Warn($"{channel.Type} turn failed for channel {channel.ShortId} sender {last.SenderId}: {e.Message}");
+
+            await TrySendAsync(last, platform.Replies.Error, ct);
+
+            if (platform.DescribeApiFailure(e) is { } failure)
+                health?.MarkSendFailed(failure);
+        }
+        finally
+        {
+            prompts.Clear();
+        }
+    }
+
+    private async Task RunAgentAsync(IReadOnlyList<TMessage> messages, CancellationToken ct)
+    {
+        var last = messages[^1];
+        var prompt = string.Join('\n', messages.Select(m => m.Text!.Trim()));
+
+        var config = await AgentLookup.FindAsync(store, database, channel.AgentId, ct)
                      ?? throw new InvalidOperationException(
                          $"agent '{channel.AgentId}' is no longer registered in this app");
 
-        try
-        {
-            var parameters = await platform.BindAsync(bot, channel, config, last, ct);
-            if (parameters is null)
-                return;
+        var parameters = await platform.BindAsync(config, last, ct);
+        if (parameters is null)
+            return;
 
-            var conversationId = ChannelConversationId.For(platform.Type, channel.ShortId, last.SenderId, parameters);
+        var conversationId = ChannelConversationId.For(channel.Type, channel.ShortId, last.SenderId, parameters);
 
-            await bot.TypingAsync(ct);
-            var reply = bot.CreateReply();
+        await platform.TypingAsync(last, ct);
+        var reply = platform.CreateReply(last);
 
-            var result = await router.RunAsync(
-                new AgentRequest(last.Database, config.Identifier, conversationId, prompt, channel.Id!,
-                    parameters.ToDictionary(
-                        parameter => parameter.Key,
-                        parameter => AgentParameterValue.FromString(parameter.Value)),
-                    options.Value.ChannelConversationIdleWindow),
-                chunk => reply.OnChunkAsync(chunk, ct), config, ct);
+        var result = await router.RunAsync(
+            new AgentRequest(database, config.Identifier, conversationId, prompt, channel.Id!,
+                parameters.ToDictionary(
+                    parameter => parameter.Key,
+                    parameter => AgentParameterValue.FromString(parameter.Value)),
+                options.ChannelConversationIdleWindow),
+            chunk => reply.OnChunkAsync(chunk, ct), config, ct);
 
-            await reply.FinalizeAsync(ct);
-            bot.Health?.MarkSendSucceeded();
+        await reply.FinalizeAsync(ct);
+        health?.MarkSendSucceeded();
 
-            if (result.StartedFresh)
-                await TrySendAsync(bot, channel, bot.Replies.ConversationExpired, ct);
+        if (result.StartedFresh)
+            await TrySendAsync(last, platform.Replies.ConversationExpired, ct);
 
-            if (reply.IsEmpty && logger.IsWarnEnabled)
-                logger.Warn($"{platform.Type} agent turn produced an empty reply for channel {channel.Id}");
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception e)
-        {
-            if (bot.DescribeApiFailure(e) is { } failure)
-                bot.Health?.MarkSendFailed(failure);
-
-            await TrySendAsync(bot, channel, bot.Replies.Error, ct);
-            throw;
-        }
+        if (reply.IsEmpty && logger.IsWarnEnabled)
+            logger.Warn($"{channel.Type} agent turn produced an empty reply for channel {channel.Id}");
     }
 
     public async Task NotifyBufferFullAsync(TMessage message, CancellationToken ct)
     {
         try
         {
-            await using var bot = platform.OpenBot(message.Channel, message);
-            await TrySendAsync(bot, message.Channel, bot.Replies.Overloaded, ct);
+            await TrySendAsync(message, platform.Replies.Overloaded, ct);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
             if (logger.IsDebugEnabled)
-                logger.Debug($"{platform.Type} overload notice failed for channel {message.Channel.Id}: {e.Message}");
+                logger.Debug($"{channel.Type} overload notice failed for channel {channel.Id}: {e.Message}");
         }
     }
 
-    private async Task TrySendAsync(TBot bot, Channel channel, string text, CancellationToken ct)
+    private async Task TrySendAsync(TMessage replyTo, string text, CancellationToken ct)
     {
         try
         {
-            await bot.SendAsync(text, ct);
-            bot.Health?.MarkSendSucceeded();
+            await platform.SendAsync(replyTo, text, ct);
+            health?.MarkSendSucceeded();
         }
         catch (Exception e) when (ct.IsCancellationRequested == false)
         {
-            if (bot.DescribeApiFailure(e) is { } failure)
-                bot.Health?.MarkSendFailed(failure);
+            if (platform.DescribeApiFailure(e) is { } failure)
+                health?.MarkSendFailed(failure);
 
             if (logger.IsWarnEnabled)
-                logger.Warn($"{platform.Type} send failed for channel {channel.ShortId}: {e.Message}");
+                logger.Warn($"{channel.Type} send failed for channel {channel.ShortId}: {e.Message}");
         }
     }
 }

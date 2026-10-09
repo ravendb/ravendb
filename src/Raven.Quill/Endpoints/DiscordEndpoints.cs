@@ -64,7 +64,7 @@ public static class DiscordEndpoints
                 channel.Enabled,
                 checks[i].Valid,
                 checks[i].Error,
-                health?.IsConnected ?? false,
+                channelManager.IsConnectedFor(app.Database, channel.ShortId),
                 health?.LastConnectedAt,
                 health?.LastConnectionError,
                 health?.LastInboundAt,

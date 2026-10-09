@@ -46,7 +46,7 @@ public class ChannelStreamingReplyTests(ITestOutputHelper output) : NoDisposalNe
         var client = new RateLimitingDiscordClient();
         var options = new DiscordOptions { EditDebounce = TimeSpan.Zero };
         var reply = new DiscordStreamingReply(
-            client, "bot-token", "dm-channel", options, new QuillLogger<DiscordTurns>());
+            client, "bot-token", "dm-channel", options, new QuillLogger<DiscordRuntime>());
 
         await reply.OnChunkAsync("a", CancellationToken.None);
 

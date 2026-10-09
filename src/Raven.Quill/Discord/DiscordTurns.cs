@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Options;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Hosting;
@@ -8,32 +7,27 @@ using Raven.Quill.Logging;
 namespace Raven.Quill.Discord;
 
 internal sealed record DiscordMessage(
-    string Database, Channel Channel, ChannelConnectionHealth Health, string SenderId, string? SenderUsername,
-    string DmChannel, bool IsUnsupported, string? Text) : IChannelMessage
-{
-    public bool RunsAlone => IsUnsupported;
-}
+    string SenderId, string? SenderUsername, string DmChannel, ChannelMessageKind Kind, string? Text) : IChannelMessage;
 
 internal sealed class DiscordTurns(
-    IServiceScopeFactory scopes,
-    IOptions<ApplianceOptions> options,
-    QuillLogger<DiscordTurns> logger) : IPlatformTurns<DiscordMessage, DiscordBot>
+    DiscordSettings settings,
+    IHttpClientFactory httpFactory,
+    DiscordOptions options,
+    QuillLogger<DiscordRuntime> logger) : IPlatformTurns<DiscordMessage>
 {
-    public ChannelType Type => ChannelType.Discord;
+    public Task SendAsync(DiscordMessage replyTo, string text, CancellationToken ct) =>
+        DiscordApiClient.Create(httpFactory).CreateMessageAsync(settings.BotToken, replyTo.DmChannel, text, ct);
 
-    public DiscordBot OpenBot(Channel channel, DiscordMessage message)
-    {
-        var scope = scopes.CreateAsyncScope();
-        var discord = scope.ServiceProvider.GetRequiredService<IDiscordClient>();
-        return new DiscordBot(
-            scope, discord, channel.Discord!, message.Health, message.DmChannel, options.Value.Discord, logger);
-    }
+    public ChannelStreamingReply CreateReply(DiscordMessage replyTo) =>
+        new DiscordStreamingReply(DiscordApiClient.Create(httpFactory), settings.BotToken, replyTo.DmChannel, options, logger);
+
+    public string? DescribeApiFailure(Exception e) => e is DiscordApiException apiError ? apiError.Message : null;
 
     public Task<Dictionary<string, string>?> BindAsync(
-        DiscordBot bot, Channel channel, AiAgentConfiguration config, DiscordMessage message, CancellationToken ct)
+        AiAgentConfiguration config, DiscordMessage message, CancellationToken ct)
     {
         var (parameters, bindError) = DiscordParameterBindings.Bind(
-            config, channel.Discord!.ParameterBindings, message.SenderId, message.SenderUsername);
+            config, settings.ParameterBindings, message.SenderId, message.SenderUsername);
         return Task.FromResult(parameters ?? throw new InvalidOperationException(bindError));
     }
 }

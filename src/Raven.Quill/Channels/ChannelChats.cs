@@ -1,139 +1,86 @@
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using Raven.Quill.Hosting;
 using Sparrow.Logging;
 
 namespace Raven.Quill.Channels;
 
 internal interface IChannelMessage
 {
-    string Database { get; }
-
-    Channel Channel { get; }
-
     string SenderId { get; }
 
     string? Text { get; }
 
-    bool RunsAlone { get; }
-
-    bool IsUnsupported { get; }
+    ChannelMessageKind Kind { get; }
 }
 
-internal interface IChatTurns<in TMessage>
+internal enum ChannelMessageKind
 {
-    Task RunTurnAsync(IReadOnlyList<TMessage> messages, CancellationToken ct);
+    Prompt,
+    Command,
+    Unsupported,
+}
+
+internal interface IChatTurns<TMessage>
+{
+    Task RunBatchAsync(ChannelReader<TMessage> queue, CancellationToken ct);
 
     Task NotifyBufferFullAsync(TMessage message, CancellationToken ct);
 }
 
+// By design: no redelivery dedupe, StopAsync drops queued turns, a retiring chat may briefly overlap its successor.
 internal sealed class ChannelChats<TMessage>(
-    IChatTurns<TMessage> turns, IRavenLogger logger, int capacity, TimeSpan idleTimeout) : IHostedService
+    Channel channel, IChatTurns<TMessage> turns, ApplianceOptions options, IRavenLogger logger)
     where TMessage : IChannelMessage
 {
-    private static readonly TimeSpan StopDrainTimeout = TimeSpan.FromSeconds(10);
-
-    private readonly IChatTurns<TMessage> _turns = turns;
-    private readonly int _capacity = capacity;
-    private readonly TimeSpan _idleTimeout = idleTimeout;
+    private readonly string _channelId = channel.ShortId;
+    private readonly int _capacity = options.ChannelSenderQueueCapacity;
+    private readonly TimeSpan _idleTimeout = options.ChannelSenderIdleTimeout;
     private readonly ConcurrentDictionary<string, Chat> _chats = new();
     private readonly CancellationTokenSource _stopping = new();
+    private readonly IRavenLogger _logger = logger;
 
     internal int ActiveChatCount => _chats.Count;
 
     public void Enqueue(TMessage message)
     {
-        var key = $"{message.Database}/{message.Channel.ShortId}/{message.SenderId}";
+        var key = message.SenderId;
 
-        while (true)
+        while (_stopping.IsCancellationRequested == false)
         {
             var chat = _chats.GetOrAdd(key, k => new Chat(this, k));
 
-            if (chat.TryPost(message))
-                return;
-
-            if (chat.IsRetired)
+            switch (chat.TryPost(message))
             {
-                OnChatRetired(key, chat);
-                continue;
+                case ChatPostResult.Retired:
+                    _chats.TryRemove(new(key, chat));
+                    continue;
+                case ChatPostResult.Overloaded:
+                    if (_logger.IsWarnEnabled)
+                        _logger.Warn($"channel {_channelId} sender {key} is dropping messages: queue full");
+                    _ = turns.NotifyBufferFullAsync(message, _stopping.Token);
+                    break;
             }
 
-            if (logger.IsWarnEnabled)
-                logger.Warn($"sender {key} dropped a message: queue full");
-            chat.NotifyBufferFullOnce(message);
             return;
         }
     }
 
-    public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            await StopChatsAsync().WaitAsync(StopDrainTimeout, cancellationToken);
-        }
-        catch (TimeoutException)
-        {
-            if (logger.IsWarnEnabled)
-                logger.Warn($"chats did not drain within {StopDrainTimeout}");
-        }
-    }
-
-    private async Task RunBatchAsync(string key, IReadOnlyList<TMessage> messages)
-    {
-        var merged = new List<TMessage>();
-
-        foreach (var message in messages)
-        {
-            if (message.RunsAlone == false)
-            {
-                if (string.IsNullOrWhiteSpace(message.Text) == false)
-                    merged.Add(message);
-                continue;
-            }
-
-            await FlushAsync(key, merged);
-            await RunTurnSafeAsync(key, [message]);
-        }
-
-        await FlushAsync(key, merged);
-    }
-
-    private Task FlushAsync(string key, List<TMessage> merged)
-    {
-        if (merged.Count == 0)
-            return Task.CompletedTask;
-
-        var turn = merged.ToArray();
-        merged.Clear();
-        return RunTurnSafeAsync(key, turn);
-    }
-
-    private async Task RunTurnSafeAsync(string key, IReadOnlyList<TMessage> messages)
-    {
-        try
-        {
-            await _turns.RunTurnAsync(messages, _stopping.Token);
-        }
-        catch (Exception e)
-        {
-            OnTurnFailed(key, e);
-        }
-    }
-
-    private async Task StopChatsAsync()
+    public async Task StopAsync()
     {
         await _stopping.CancelAsync();
-        await Task.WhenAll(_chats.Values.Select(c => c.Completion));
+        await Task.WhenAll(_chats.Values.Select(c => c.Worker))
+            .ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
     }
 
-    private void OnChatRetired(string key, Chat chat) =>
-        _chats.TryRemove(new KeyValuePair<string, Chat>(key, chat));
+    private Task RunBatchAsync(ChannelReader<TMessage> queue) => turns.RunBatchAsync(queue, _stopping.Token);
 
-    private void OnTurnFailed(string key, Exception e)
+    private enum ChatPostResult
     {
-        if (_stopping.IsCancellationRequested == false && logger.IsWarnEnabled)
-            logger.Warn($"sender {key} turn failed: {e.Message}");
+        Posted,
+        Overloaded,
+        Dropped,
+        Retired,
     }
 
     private sealed class Chat
@@ -141,9 +88,8 @@ internal sealed class ChannelChats<TMessage>(
         private readonly ChannelChats<TMessage> _owner;
         private readonly string _key;
         private readonly Channel<TMessage> _queue;
-
-        private int _bufferFullNotified;
-        private int _retired;
+        private volatile bool _closed;
+        private int _notified;
 
         public Chat(ChannelChats<TMessage> owner, string key)
         {
@@ -156,62 +102,67 @@ internal sealed class ChannelChats<TMessage>(
                     FullMode = BoundedChannelFullMode.Wait,
                 });
 
-            Completion = Task.Run(RunAsync, CancellationToken.None);
+            Worker = Task.Run(RunAsync, CancellationToken.None);
         }
 
-        public Task Completion { get; }
+        public Task Worker { get; }
 
-        public bool IsRetired => Volatile.Read(ref _retired) == 1;
-
-        public bool TryPost(TMessage message) => _queue.Writer.TryWrite(message);
-
-        public void NotifyBufferFullOnce(TMessage message)
+        public ChatPostResult TryPost(TMessage message)
         {
-            if (Interlocked.Exchange(ref _bufferFullNotified, 1) != 0)
-                return;
+            if (_queue.Writer.TryWrite(message))
+                return ChatPostResult.Posted;
 
-            _ = _owner._turns.NotifyBufferFullAsync(message, _owner._stopping.Token);
+            if (_closed)
+                return ChatPostResult.Retired;
+
+            return Interlocked.Exchange(ref _notified, 1) == 0 ? ChatPostResult.Overloaded : ChatPostResult.Dropped;
         }
 
         private async Task RunAsync()
         {
             try
             {
-                while (await WaitForMessageAsync())
+                while (true)
                 {
-                    var messages = new List<TMessage>();
-                    while (_queue.Reader.TryRead(out var message))
-                        messages.Add(message);
+                    using (var idle = CancellationTokenSource.CreateLinkedTokenSource(_owner._stopping.Token))
+                    {
+                        idle.CancelAfter(_owner._idleTimeout);
+                        await _queue.Reader.WaitToReadAsync(idle.Token);
+                    }
 
-                    await _owner.RunBatchAsync(_key, messages);
-
-                    Interlocked.Exchange(ref _bufferFullNotified, 0);
+                    await RunBatchSafelyAsync();
                 }
             }
-            catch (OperationCanceledException) when (_owner._stopping.IsCancellationRequested)
+            finally
             {
+                _closed = true;
+                _queue.Writer.TryComplete();
+
+                if (_owner._stopping.IsCancellationRequested == false)
+                    await RunBatchSafelyAsync();
+
+                _owner._chats.TryRemove(new(_key, this));
             }
         }
 
-        private async Task<bool> WaitForMessageAsync()
+        private async Task RunBatchSafelyAsync()
         {
-            var wait = _queue.Reader.WaitToReadAsync(_owner._stopping.Token).AsTask();
             try
             {
-                return await wait.WaitAsync(_owner._idleTimeout);
+                await _owner.RunBatchAsync(_queue.Reader);
             }
-            catch (TimeoutException)
+            catch (Exception e)
             {
-                Retire();
-                return await wait;
-            }
-        }
+                if (_owner._stopping.IsCancellationRequested)
+                    return;
 
-        private void Retire()
-        {
-            Interlocked.Exchange(ref _retired, 1);
-            _queue.Writer.TryComplete();
-            _owner.OnChatRetired(_key, this);
+                if (_owner._logger.IsWarnEnabled)
+                    _owner._logger.Warn($"channel {_owner._channelId} sender {_key} turn batch failed: {e.Message}");
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _notified, 0);
+            }
         }
     }
 }

@@ -9,7 +9,7 @@ internal sealed class DiscordStreamingReply(
     string botToken,
     string dmChannelId,
     DiscordOptions options,
-    QuillLogger<DiscordTurns> logger) : ChannelStreamingReply(options.MessageLimit, options.EditDebounce)
+    QuillLogger<DiscordRuntime> logger) : ChannelStreamingReply(options.MessageLimit, options.EditDebounce)
 {
     private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(60);
 

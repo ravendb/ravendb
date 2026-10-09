@@ -18,9 +18,7 @@ internal interface IChannelRuntime
 
     ChannelConnectionHealth? Health => null;
 
-    void CheckConnection()
-    {
-    }
+    bool IsConnected => Health?.IsConnected ?? false;
 
     bool IsRestartDue(DateTime now) => false;
 
@@ -43,8 +41,6 @@ internal sealed class ChannelManager(
     IServerReady ready,
     QuillLogger<ChannelManager> logger) : BackgroundService
 {
-    private static readonly TimeSpan StopDrainTimeout = TimeSpan.FromSeconds(15);
-
     private readonly Dictionary<ChannelType, IChannelRuntimeFactory> _factories = factories.ToDictionary(f => f.Type);
     private readonly ConcurrentDictionary<(string Database, string ChannelId), IChannelRuntime> _runtimes = new();
 
@@ -54,8 +50,12 @@ internal sealed class ChannelManager(
 
     public void Wake() => _wake?.Set();
 
-    public ChannelConnectionHealth? HealthFor(string database, string channelId) =>
-        _runtimes.TryGetValue((database, channelId), out var runtime) ? runtime.Health : null;
+    public ChannelConnectionHealth? HealthFor(string database, string channelId) => RuntimeFor(database, channelId)?.Health;
+
+    public bool IsConnectedFor(string database, string channelId) => RuntimeFor(database, channelId)?.IsConnected ?? false;
+
+    internal IChannelRuntime? RuntimeFor(string database, string channelId) =>
+        _runtimes.GetValueOrDefault((database, channelId));
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -135,9 +135,6 @@ internal sealed class ChannelManager(
             }
         }
 
-        foreach (var runtime in _runtimes.Values)
-            runtime.CheckConnection();
-
         var now = DateTime.UtcNow;
         var stopping = new List<((string Database, string ChannelId) Key, IChannelRuntime Runtime)>();
 
@@ -186,15 +183,13 @@ internal sealed class ChannelManager(
     {
         try
         {
-            await runtime.StopAsync();
+            await runtime.StopAsync().WaitAsync(options.Value.ChannelRuntimeStopTimeout);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
-            _runtimes.TryAdd(key, runtime);
             if (logger.IsWarnEnabled)
                 logger.Warn(
-                    $"Runtime stop failed for channel {key.ChannelId} on {key.Database}: {e.Message}; " +
-                    "keeping it to retry");
+                    $"Runtime for channel {key.ChannelId} on {key.Database} did not stop: {e.Message}; giving up on it");
             return;
         }
 
@@ -210,15 +205,16 @@ internal sealed class ChannelManager(
         var runtimes = _runtimes.Values.ToArray();
         _runtimes.Clear();
 
+        var timeout = options.Value.ChannelRuntimeStopTimeout;
         try
         {
             await Task.WhenAll(runtimes.Select(r => r.StopAsync()))
-                .WaitAsync(StopDrainTimeout, cancellationToken);
+                .WaitAsync(timeout, cancellationToken);
         }
         catch (Exception e) when (e is TimeoutException or OperationCanceledException)
         {
             if (logger.IsWarnEnabled)
-                logger.Warn($"Channel runtimes did not drain within {StopDrainTimeout}");
+                logger.Warn($"Channel runtimes did not drain within {timeout}");
         }
     }
 }

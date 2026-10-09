@@ -19,7 +19,6 @@ internal sealed class TelegramRuntime : IChannelRuntime
 
     private readonly ConcurrentDictionary<long, bool> _refusedGroupChats = new();
     private readonly CancellationTokenSource _cts = new();
-    private readonly string _database;
     private readonly Channel _channel;
     private readonly string _groupChatRefusal;
     private readonly ChannelChats<TelegramMessage> _chats;
@@ -31,17 +30,17 @@ internal sealed class TelegramRuntime : IChannelRuntime
 
     private TelegramRuntime(
         string database, Channel channel, string? channelChangeVector, ITelegramBotClient client,
-        ChannelChats<TelegramMessage> chats, TelegramOptions options, QuillLogger<TelegramRuntime> logger)
+        ResolvedTelegramMessages messages, TelegramTurns turns, ChannelChatsFactory chats, TelegramOptions options,
+        QuillLogger<TelegramRuntime> logger)
     {
         Client = client;
         ChannelChangeVector = channelChangeVector;
-        _database = database;
         _channel = channel;
-        _groupChatRefusal = ResolvedTelegramMessages.Resolve(channel.Telegram!.Messages).GroupChatRefusal;
-        _chats = chats;
+        _groupChatRefusal = messages.GroupChatRefusal;
+        _chats = chats.Create(database, channel, turns, health: null, logger.RavenLogger);
         _options = options;
         _logger = logger;
-        _acceptsContactShares = channel.Telegram.ParameterBindings.Values
+        _acceptsContactShares = channel.Telegram!.ParameterBindings.Values
             .Any(binding => binding.Source == ChannelParameterSource.PhoneNumber);
     }
 
@@ -50,13 +49,15 @@ internal sealed class TelegramRuntime : IChannelRuntime
     /// The channel document's change vector at start; the manager restarts the bot when it moves.
     public string? ChannelChangeVector { get; }
 
+    internal int ActiveChatCount => _chats.ActiveChatCount;
+
     public static TelegramRuntime Start(
-        string database, Channel channel, string? channelChangeVector, TelegramBotClientFactory botFactory,
-        ChannelChats<TelegramMessage> chats, TelegramOptions options, QuillLogger<TelegramRuntime> logger)
+        string database, Channel channel, string? channelChangeVector, ITelegramBotClient client,
+        ResolvedTelegramMessages messages, TelegramTurns turns, ChannelChatsFactory chats, TelegramOptions options,
+        QuillLogger<TelegramRuntime> logger)
     {
         var runtime = new TelegramRuntime(
-            database, channel, channelChangeVector, botFactory.Create(channel.Telegram!.BotToken),
-            chats, options, logger);
+            database, channel, channelChangeVector, client, messages, turns, chats, options, logger);
 
         runtime.Run();
         return runtime;
@@ -106,7 +107,7 @@ internal sealed class TelegramRuntime : IChannelRuntime
             return Task.CompletedTask;
         }
 
-        _chats.Enqueue(new TelegramMessage(_database, _channel, Client, message));
+        _chats.Enqueue(new TelegramMessage(message));
         return Task.CompletedTask;
     }
 
@@ -154,32 +155,8 @@ internal sealed class TelegramRuntime : IChannelRuntime
     {
         Client.OnApiResponseReceived -= OnApiResponseReceived;
         await _cts.CancelAsync();
-
-        try
-        {
-            await DrainAsync().WaitAsync(TimeSpan.FromSeconds(10));
-        }
-        catch (TimeoutException)
-        {
-            _logger.Warn(
-                $"Telegram bot for channel {_channel.Id} did not drain within 10s");
-            return;
-        }
-        catch (OperationCanceledException)
-        {
-        }
-
+        await Task.WhenAll(_receive, _chats.StopAsync())
+            .ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         _cts.Dispose();
-    }
-
-    private async Task DrainAsync()
-    {
-        try
-        {
-            await _receive;
-        }
-        catch (OperationCanceledException)
-        {
-        }
     }
 }
