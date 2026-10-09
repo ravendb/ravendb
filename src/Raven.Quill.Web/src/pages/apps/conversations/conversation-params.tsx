@@ -1,7 +1,7 @@
 import { SlidersHorizontal } from "lucide-react";
 import type { ConversationParam } from "@/api/generated/server-api";
 import { Parameters } from "@/components/data/parameters";
-import { TranscriptDisclosure } from "@/pages/apps/conversations/transcript-disclosure";
+import { TranscriptDisclosure } from "@/components/chat/transcript-disclosure";
 
 export function ConversationParams({ disclosureKey, params }: { disclosureKey: string; params: ConversationParam[] }) {
     return (
