@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -56,7 +56,8 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
             };
 
             await using (var outputStream = await GetOutputStreamAsync(RequestHandler.ResponseBodyStream(), options))
-            await using (var writer = new AsyncBlittableJsonTextWriter(jsonOperationContext, BackupUtils.GetCompressionStream(outputStream, options.CompressionAlgorithm ?? RequestHandler.DatabaseContext.Configuration.ExportImport.CompressionAlgorithm, RequestHandler.DatabaseContext.Configuration.ExportImport.CompressionLevel)))
+            await using (var writer = new AsyncBlittableJsonTextWriter(jsonOperationContext, BackupUtils.GetCompressionStream(outputStream, options.CompressionAlgorithm ?? RequestHandler.DatabaseContext.Configuration.ExportImport.CompressionAlgorithm, RequestHandler.DatabaseContext.Configuration.ExportImport.CompressionLevel,
+                       RequestHandler.DatabaseContext.Configuration.ExportImport.ZstdCompressionWorkers)))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("BuildVersion");
