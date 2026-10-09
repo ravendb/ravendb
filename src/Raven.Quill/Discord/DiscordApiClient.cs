@@ -7,7 +7,11 @@ namespace Raven.Quill.Discord;
 
 internal sealed class DiscordApiClient(HttpClient http) : IDiscordClient
 {
+    internal const string HttpClientName = "discord";
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    internal static DiscordApiClient Create(IHttpClientFactory httpFactory) => new(httpFactory.CreateClient(HttpClientName));
 
     public async Task<(DiscordBotIdentity? Identity, string? Error, bool DiscordResponded)> GetBotIdentityAsync(
         string botToken, CancellationToken ct)

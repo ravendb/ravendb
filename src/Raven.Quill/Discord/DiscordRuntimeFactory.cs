@@ -7,8 +7,8 @@ using Raven.Quill.Logging;
 namespace Raven.Quill.Discord;
 
 internal sealed class DiscordRuntimeFactory(
-    ChannelChats<DiscordMessage> chats,
-    IServiceScopeFactory scopes,
+    IHttpClientFactory httpFactory,
+    ChannelChatsFactory chats,
     IOptions<ApplianceOptions> options,
     QuillLogger<DiscordRuntime> logger) : IChannelRuntimeFactory
 {
@@ -16,6 +16,11 @@ internal sealed class DiscordRuntimeFactory(
 
     public bool CanStart(Channel channel) => channel.Discord is { BotToken.Length: > 0 };
 
-    public IChannelRuntime Start(string database, Channel channel, string? changeVector) =>
-        DiscordRuntime.Start(database, channel, changeVector, chats, scopes, options.Value.Discord, logger);
+    public IChannelRuntime Start(string database, Channel channel, string? changeVector)
+    {
+        var turns = new DiscordTurns(channel.Discord!, httpFactory, options.Value.Discord, logger);
+
+        return DiscordRuntime.Start(database, channel, changeVector, turns, chats,
+            httpFactory, options.Value.Discord, logger);
+    }
 }

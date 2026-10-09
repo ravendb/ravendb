@@ -59,6 +59,8 @@ public sealed class MockSlackApi : IAsyncDisposable
 
     public string? SocketOpenError { get; set; }
 
+    public string? NextSocketOpenError { get; set; }
+
     public TimeSpan? SocketOpenRetryAfter { get; set; }
 
     private MockSlackApi(WebApplication app, string baseAddress, string socketUrl)
@@ -153,6 +155,7 @@ public sealed class MockSlackApi : IAsyncDisposable
         NextUpdateRateLimit429 = false;
         UsersReadScopeGranted = true;
         SocketOpenError = null;
+        NextSocketOpenError = null;
         SocketOpenRetryAfter = null;
     }
 
@@ -309,6 +312,12 @@ public sealed class MockSlackApi : IAsyncDisposable
         {
             _socketOpenCalls.Add(token);
             known = _appTokens.Contains(token);
+        }
+
+        if (NextSocketOpenError is { } once)
+        {
+            NextSocketOpenError = null;
+            return SlackError(once);
         }
 
         if (SocketOpenError is { } error)

@@ -1,4 +1,5 @@
 using FastTests;
+using Raven.Quill.Agents;
 using Raven.Quill.Channels;
 using Tests.Infrastructure;
 using Xunit;
@@ -7,6 +8,17 @@ namespace QuillTests;
 
 public class ChannelConversationIdTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
+    [RavenFact(RavenTestCategory.Quill)]
+    public void Derived_id_passes_the_router_normalizer_and_never_ends_with_a_separator()
+    {
+        var id = ChannelConversationId.For(ChannelType.Telegram, "abc123", "-1001234567890", new Dictionary<string, string>());
+
+        Assert.Matches("^chats/telegram/abc123/-1001234567890/[0-9a-f]{16}$", id);
+        Assert.True(AgentRouter.TryNormalizeConversationId(id, out var normalized, out var error));
+        Assert.Null(error);
+        Assert.Equal(id, normalized);
+    }
+
     [RavenFact(RavenTestCategory.Quill)]
     public void Fingerprint_canonical_form_is_pinned()
     {

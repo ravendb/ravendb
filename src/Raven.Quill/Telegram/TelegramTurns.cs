@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Agents;
@@ -8,80 +7,103 @@ using Raven.Quill.Hosting;
 using Raven.Quill.Metrics;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
 using Raven.Quill.Logging;
 
 namespace Raven.Quill.Telegram;
 
-internal sealed record TelegramMessage(string Database, Channel Channel, ITelegramBotClient Client, Message Message)
-    : IChannelMessage
+internal sealed record TelegramMessage(Message Message) : IChannelMessage
 {
+    private static readonly string[] Commands = ["/start", "/clear"];
+
     public string SenderId => Message.Chat.Id.ToString(CultureInfo.InvariantCulture);
 
     public string? Text => Message.Text;
 
-    public bool RunsAlone =>
-        Message.Contact is not null || (Message.Text is { } text && text.TrimStart().StartsWith('/'));
+    public ChannelMessageKind Kind =>
+        Message.Contact is not null || Commands.Any(IsCommand)
+            ? ChannelMessageKind.Command
+            : ChannelMessageKind.Prompt;
 
-    public bool IsUnsupported => false;
+    public bool IsCommand(string command) =>
+        Message.Text is { } text &&
+        text.StartsWith(command, StringComparison.OrdinalIgnoreCase) &&
+        (text.Length == command.Length || char.IsWhiteSpace(text[command.Length]) || text[command.Length] == '@');
 }
 
 internal sealed class TelegramTurns(
+    string database,
+    Channel channel,
+    ITelegramBotClient client,
+    ResolvedTelegramMessages messages,
     IDocumentStore store,
-    IOptions<ApplianceOptions> options,
-    QuillLogger<TelegramTurns> logger) : IPlatformTurns<TelegramMessage, TelegramBot>
+    TelegramOptions options,
+    QuillLogger<TelegramRuntime> logger) : IPlatformTurns<TelegramMessage>
 {
-    public ChannelType Type => ChannelType.Telegram;
+    private readonly Channel _channel = channel;
+    private readonly TelegramSettings _settings = channel.Telegram!;
+    private readonly ResolvedTelegramMessages _messages = messages;
 
-    public TelegramBot OpenBot(Channel channel, TelegramMessage message) =>
-        new(message.Database, channel, channel.Telegram!, message.Client, message.Message.Chat.Id,
-            options.Value.Telegram, logger);
+    public ChannelReplies Replies { get; } =
+        new(messages.SomethingWentWrong, messages.ConversationExpired, messages.Overloaded);
 
-    public async Task<bool> TryHandleAsync(
-        TelegramBot bot, Channel channel, TelegramMessage only, CancellationToken ct)
+    public Task SendAsync(TelegramMessage replyTo, string text, CancellationToken ct) =>
+        client.SendMessage(replyTo.Message.Chat.Id, text, cancellationToken: ct);
+
+    public ChannelStreamingReply CreateReply(TelegramMessage replyTo) =>
+        new TelegramStreamingReply(client, replyTo.Message.Chat.Id, options, logger);
+
+    public async Task TypingAsync(TelegramMessage replyTo, CancellationToken ct)
     {
-        var message = only.Message;
-
-        if (message.Contact is not null)
+        try
         {
-            await HandleContactAsync(bot, message, ct);
-            return true;
+            await client.SendChatAction(replyTo.Message.Chat.Id, ChatAction.Typing, cancellationToken: ct);
         }
-
-        var prompt = message.Text!.Trim();
-
-        if (IsCommand(bot, prompt, "clear"))
+        catch (Exception e) when (e is not OperationCanceledException)
         {
-            await ClearConversationsAsync(
-                bot, TelegramConversationId.ChatPrefix(channel.ShortId, bot.ChatId), ct);
-            await bot.SendAsync(bot.Messages.ConversationCleared, ct);
-            return true;
         }
-
-        if (IsCommand(bot, prompt, "start") == false)
-            return false;
-
-        var config = await AgentLookup.FindAsync(store, bot.Database, channel.AgentId, ct);
-        if (config is null)
-            throw new InvalidOperationException($"agent '{channel.AgentId}' is no longer registered in this app");
-
-        await bot.SendAsync(bot.Messages.Greeting, ct);
-        await BindParametersAsync(bot, config, message, ct);
-        return true;
     }
 
-    public Task<Dictionary<string, string>?> BindAsync(
-        TelegramBot bot, Channel channel, AiAgentConfiguration config, TelegramMessage message, CancellationToken ct) =>
-        BindParametersAsync(bot, config, message.Message, ct);
-
-    private async Task<Dictionary<string, string>?> BindParametersAsync(
-        TelegramBot bot, AiAgentConfiguration config, Message message, CancellationToken ct)
+    public async Task HandleCommandAsync(TelegramMessage only, CancellationToken ct)
     {
+        if (only.Message.Contact is not null)
+        {
+            await HandleContactAsync(only, ct);
+            return;
+        }
+
+        if (only.IsCommand("/clear"))
+        {
+            await ClearConversationsAsync(
+                ChannelConversationId.ChatPrefix(_channel.Type, _channel.ShortId, only.SenderId), ct);
+            await SendAsync(only, _messages.ConversationCleared, ct);
+            return;
+        }
+
+        if (only.IsCommand("/start"))
+        {
+            var config = await AgentLookup.FindAsync(store, database, _channel.AgentId, ct)
+                         ?? throw new InvalidOperationException(
+                             $"agent '{_channel.AgentId}' is no longer registered in this app");
+
+            await SendAsync(only, _messages.Greeting, ct);
+            await BindAsync(config, only, ct);
+            return;
+        }
+
+        throw new InvalidOperationException($"no handler for the Telegram command in '{only.Text}'");
+    }
+
+    public async Task<Dictionary<string, string>?> BindAsync(
+        AiAgentConfiguration config, TelegramMessage last, CancellationToken ct)
+    {
+        var message = last.Message;
         var parameters = new Dictionary<string, string>();
         string? phoneNumber = null;
 
-        foreach (var (name, binding) in bot.Settings.ParameterBindings)
+        foreach (var (name, binding) in _settings.ParameterBindings)
         {
             if (binding is null)
                 continue;
@@ -101,7 +123,7 @@ internal sealed class TelegramTurns(
                     var username = message.From?.Username;
                     if (string.IsNullOrEmpty(username))
                     {
-                        await bot.SendAsync(bot.Messages.UsernameMissing, ct);
+                        await SendAsync(last, _messages.UsernameMissing, ct);
                         return null;
                     }
 
@@ -109,10 +131,10 @@ internal sealed class TelegramTurns(
                     break;
 
                 case ChannelParameterSource.PhoneNumber:
-                    phoneNumber ??= await LoadPhoneNumberAsync(bot, message, ct);
+                    phoneNumber ??= await LoadPhoneNumberAsync(message, ct);
                     if (phoneNumber is null)
                     {
-                        await bot.RequestContactAsync(bot.Messages.PhoneNumberRequest, ct);
+                        await RequestContactAsync(last, _messages.PhoneNumberRequest, ct);
                         return null;
                     }
 
@@ -127,7 +149,7 @@ internal sealed class TelegramTurns(
             .ToArray();
         if (unbound.Length > 0)
         {
-            await bot.SendAsync(bot.Messages.NotConfigured, ct);
+            await SendAsync(last, _messages.NotConfigured, ct);
             if (logger.IsWarnEnabled)
                 logger.Warn($"Telegram agent '{config.Identifier}' has unbound parameter(s): {string.Join(", ", unbound)}");
             return null;
@@ -136,58 +158,55 @@ internal sealed class TelegramTurns(
         return parameters;
     }
 
-    private static bool IsCommand(TelegramBot bot, string text, string name)
+    private async Task HandleContactAsync(TelegramMessage only, CancellationToken ct)
     {
-        var separator = text.IndexOfAny([' ', '\t', '\r', '\n']);
-        var command = separator < 0 ? text : text[..separator];
-
-        if (command.Equals($"/{name}", StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        var username = bot.Settings.BotUsername;
-        return string.IsNullOrEmpty(username) == false &&
-               command.Equals($"/{name}@{username}", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private async Task HandleContactAsync(TelegramBot bot, Message message, CancellationToken ct)
-    {
+        var message = only.Message;
         var contact = message.Contact!;
         var senderId = message.From?.Id ?? message.Chat.Id;
 
         if (contact.UserId != senderId || string.IsNullOrEmpty(contact.PhoneNumber))
         {
-            await bot.RequestContactAsync(bot.Messages.OwnContactRequired, ct);
+            await RequestContactAsync(only, _messages.OwnContactRequired, ct);
             return;
         }
 
-        using (var session = store.OpenAsyncSession(bot.Database))
+        using (var session = store.OpenAsyncSession(database))
         {
             await session.StoreAsync(new TelegramLink
             {
-                Id = TelegramLink.IdFor(bot.Channel.ShortId, senderId),
+                Id = TelegramLink.IdFor(_channel.ShortId, senderId),
                 PhoneNumber = contact.PhoneNumber,
                 SharedAt = DateTime.UtcNow,
             }, ct);
             await session.SaveChangesAsync(ct);
         }
 
-        await bot.Client.SendMessage(bot.ChatId,
-            bot.Messages.PhoneNumberReceived,
+        await client.SendMessage(message.Chat.Id,
+            _messages.PhoneNumberReceived,
             replyMarkup: new ReplyKeyboardRemove(), cancellationToken: ct);
     }
 
-    private async Task<string?> LoadPhoneNumberAsync(TelegramBot bot, Message message, CancellationToken ct)
+    private Task RequestContactAsync(TelegramMessage replyTo, string text, CancellationToken ct) =>
+        client.SendMessage(replyTo.Message.Chat.Id, text,
+            replyMarkup: new ReplyKeyboardMarkup(KeyboardButton.WithRequestContact(_messages.SharePhoneNumberButton))
+            {
+                ResizeKeyboard = true,
+                OneTimeKeyboard = true,
+            },
+            cancellationToken: ct);
+
+    private async Task<string?> LoadPhoneNumberAsync(Message message, CancellationToken ct)
     {
         var senderId = message.From?.Id ?? message.Chat.Id;
-        using var session = store.OpenAsyncSession(bot.Database);
+        using var session = store.OpenAsyncSession(database);
         var stored = await session.LoadAsync<TelegramLink>(
-            TelegramLink.IdFor(bot.Channel.ShortId, senderId), ct);
+            TelegramLink.IdFor(_channel.ShortId, senderId), ct);
         return string.IsNullOrEmpty(stored?.PhoneNumber) ? null : stored.PhoneNumber;
     }
 
-    private async Task ClearConversationsAsync(TelegramBot bot, string conversationIdPrefix, CancellationToken ct)
+    private async Task ClearConversationsAsync(string conversationIdPrefix, CancellationToken ct)
     {
-        using var session = store.OpenAsyncSession(bot.Database);
+        using var session = store.OpenAsyncSession(database);
         var conversations = await session.Advanced.LoadStartingWithAsync<object>(
             conversationIdPrefix, pageSize: 1024, token: ct);
         var previews = await session.Advanced.LoadStartingWithAsync<object>(

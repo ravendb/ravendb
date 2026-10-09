@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.DependencyInjection;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -458,13 +459,13 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
             ChannelType.Telegram, agentId, null, DisplayName: "Support bot", Telegram: new(token)));
         var channelId = created.ChannelId;
 
-        var chats = host.Services.GetRequiredService<ChannelChats<TelegramMessage>>();
-
         const long chatId = 800;
         Mock.EnqueueTextMessage(token, chatId, fromUserId: 800, "first");
-        await Mock.WaitUntilAsync(() => chats.ActiveChatCount == 1, "the chat worker");
+        await Mock.WaitUntilAsync(
+            () => RuntimeFor(app, channelId) is TelegramRuntime { ActiveChatCount: 1 }, "the chat worker");
 
-        await Mock.WaitUntilAsync(() => chats.ActiveChatCount == 0, "the idle eviction");
+        await Mock.WaitUntilAsync(
+            () => RuntimeFor(app, channelId) is TelegramRuntime { ActiveChatCount: 0 }, "the idle eviction");
 
         Mock.EnqueueTextMessage(token, chatId, fromUserId: 800, "second");
         await Mock.WaitUntilAsync(() => Router.Requests.Count >= 2, "the revived chat's run");
@@ -575,14 +576,14 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await Mock.WaitUntilAsync(
             () => Mock.LastGetUpdatesOffset(token) > 0, "the first update to be confirmed");
 
+        var before = RuntimeFor(app, channelId);
         await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, null,
             new TelegramUpdateRequest(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
             {
                 ["customerId"] = new() { Source = ChannelParameterSource.Constant, Value = "users/2" },
             })));
 
-        await Mock.WaitUntilAsync(
-            () => Mock.LastGetUpdatesOffset(token) is null or 0, "the runtime swap after the update");
+        await WaitForRuntimeSwapAsync(app, channelId, before);
 
         Mock.EnqueueTextMessage(token, chatId, fromUserId: 640, "second question");
         await Mock.WaitUntilAsync(() => Router.Requests.Count >= 2, "the second agent run");
@@ -601,8 +602,8 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await using var appGuard = app;
 
         const long chatId = 300;
-        var chatPrefix = TelegramConversationId.ChatPrefix(channelId, chatId);
-        var currentId = TelegramConversationId.For(channelId, chatId, new());
+        var chatPrefix = ChannelConversationId.ChatPrefix(ChannelType.Telegram, channelId, chatId.ToString(CultureInfo.InvariantCulture));
+        var currentId = ChannelConversationId.For(ChannelType.Telegram, channelId, chatId.ToString(CultureInfo.InvariantCulture), new());
         var supersededId = chatPrefix + "aaaaaaaaaaaaaaaa";
         var legacyDatedId = chatPrefix + "2026-08-17/bbbbbbbbbbbbbbbb";
         using (var session = app.Store.OpenAsyncSession(app.Slug))
@@ -748,7 +749,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         const long groupChatId = -520;
         const long supergroupChatId = -521;
         const long channelChatId = -522;
-        var conversationId = TelegramConversationId.For(channelId, supergroupChatId, new());
+        var conversationId = ChannelConversationId.For(ChannelType.Telegram, channelId, supergroupChatId.ToString(CultureInfo.InvariantCulture), new());
         using (var session = app.Store.OpenAsyncSession(app.Slug))
         {
             await session.StoreAsync(new ConversationPreview { ConversationId = conversationId },
@@ -794,7 +795,7 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Editing_the_channel_does_not_cancel_a_running_turn()
+    public async Task Editing_the_channel_cancels_a_running_turn_silently()
     {
         var (app, channelId, token) = await ProvisionAsync();
         await using var appGuard = app;
@@ -807,19 +808,91 @@ public class TelegramPollingTests(ITestOutputHelper output, QuillTelegramFixture
         await Mock.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
         await Mock.WaitUntilAsync(() => Mock.LastGetUpdatesOffset(token) > 0, "the update to be confirmed");
 
+        var before = RuntimeFor(app, channelId);
         await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, null,
             new(Messages: new TelegramChannelMessages { Greeting = "Witaj!" })));
-        await Mock.WaitUntilAsync(
-            () => Mock.LastGetUpdatesOffset(token) is null or 0, "the runtime swap after the update");
+        await WaitForRuntimeSwapAsync(app, channelId, before);
 
         gate.SetResult();
-        await Mock.WaitUntilAsync(
-            () => Mock.SentMessages.Any(m => m.ChatId == chatId && m.Text.Contains("fake agent")) ||
-                  Mock.EditedMessages.Any(e => e.ChatId == chatId && e.Text.Contains("fake agent")),
-            "the held turn's reply");
-        Assert.DoesNotContain(Mock.SentMessages, m => m.ChatId == chatId && m.Text.StartsWith("Sorry"));
+        await Task.Delay(400);
+
+        Assert.DoesNotContain(Mock.SentMessages, m => m.ChatId == chatId);
+        Assert.DoesNotContain(Mock.EditedMessages, e => e.ChatId == chatId);
 
         await app.DeleteChannelAsync(channelId);
+    }
+
+    private static IChannelRuntime? RuntimeFor(QuillApp app, string channelId) =>
+        app.Host.Services.GetRequiredService<ChannelManager>().RuntimeFor(app.Slug, channelId);
+
+    private Task WaitForRuntimeSwapAsync(QuillApp app, string channelId, IChannelRuntime? before) =>
+        Mock.WaitUntilAsync(
+            () => RuntimeFor(app, channelId) is { } now && now != before, "the runtime swap after the update");
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Disabling_the_channel_drops_its_queued_turns()
+    {
+        var (app, channelId, token) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        const long chatId = 670;
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt == "hold" ? gate.Task : Task.CompletedTask;
+
+        await HoldATurnAndQueueBehindItAsync(token, chatId, "queued");
+
+        await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, Enabled: false));
+        await WaitForPollingToSettleAsync(token);
+
+        gate.SetResult();
+        await Task.Delay(400);
+
+        Assert.DoesNotContain(Router.Requests, r => r.Prompt == "queued");
+        Assert.DoesNotContain(Mock.SentMessages, m => m.ChatId == chatId);
+        Assert.DoesNotContain(Mock.EditedMessages, e => e.ChatId == chatId);
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Rotating_the_bot_token_drops_queued_turns_and_answers_on_the_new_token()
+    {
+        var (app, channelId, oldToken) = await ProvisionAsync();
+        await using var appGuard = app;
+
+        const long chatId = 680;
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt == "hold" ? gate.Task : Task.CompletedTask;
+
+        await HoldATurnAndQueueBehindItAsync(oldToken, chatId, "queued");
+
+        var before = RuntimeFor(app, channelId);
+        var newToken = NewBotToken();
+        await app.UpdateChannelAsync(channelId, new UpdateChannelRequest(null, null, null, new(newToken)));
+        await WaitForRuntimeSwapAsync(app, channelId, before);
+        gate.SetResult();
+
+        Mock.EnqueueTextMessage(newToken, chatId, fromUserId: chatId, "after");
+        await Mock.WaitUntilAsync(
+            () => Mock.SentMessages.Any(m => m.Token == newToken && m.ChatId == chatId && m.Text.Contains("fake agent")) ||
+                  Mock.EditedMessages.Any(e => e.Token == newToken && e.ChatId == chatId && e.Text.Contains("fake agent")),
+            "the reply on the new token");
+
+        Assert.DoesNotContain(Router.Requests, r => r.Prompt == "queued");
+        Assert.DoesNotContain(Mock.SentMessages, m => m.Token == oldToken && m.ChatId == chatId);
+
+        await app.DeleteChannelAsync(channelId);
+    }
+
+    private async Task HoldATurnAndQueueBehindItAsync(string token, long chatId, string queuedText)
+    {
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: chatId, "hold");
+        await Mock.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+        await Mock.WaitUntilAsync(() => Mock.LastGetUpdatesOffset(token) > 0, "the held update to be confirmed");
+
+        var confirmed = Mock.LastGetUpdatesOffset(token);
+        Mock.EnqueueTextMessage(token, chatId, fromUserId: chatId, queuedText);
+        await Mock.WaitUntilAsync(() => Mock.LastGetUpdatesOffset(token) > confirmed, "the message to queue behind the held turn");
     }
 
     [RavenFact(RavenTestCategory.Quill)]

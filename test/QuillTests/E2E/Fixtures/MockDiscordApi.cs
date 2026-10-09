@@ -61,6 +61,8 @@ public sealed class MockDiscordApi : IAsyncDisposable
 
     public int? SendErrorStatus { get; set; }
 
+    public int? EditErrorStatus { get; set; }
+
     public bool NextEditRateLimit429 { get; set; }
 
     public bool SuppressHeartbeatAck { get; set; }
@@ -144,6 +146,7 @@ public sealed class MockDiscordApi : IAsyncDisposable
         Volatile.Write(ref _connects, 0);
         Down = false;
         SendErrorStatus = null;
+        EditErrorStatus = null;
         NextEditRateLimit429 = false;
         SuppressHeartbeatAck = false;
         InvalidateResume = false;
@@ -578,6 +581,9 @@ public sealed class MockDiscordApi : IAsyncDisposable
                 },
                 statusCode: 429);
         }
+
+        if (EditErrorStatus is { } editStatus)
+            return DiscordError(editStatus, $"{editStatus}: edit refused by the test");
 
         if (SendErrorStatus is { } status)
             return DiscordError(status, $"{status}: edit refused by the test");

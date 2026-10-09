@@ -6,7 +6,6 @@ using Channel = Raven.Quill.Channels.Channel;
 namespace Raven.Quill.Slack;
 
 internal sealed class SlackMessageHandler(
-    string database,
     Channel channel,
     ChannelChats<SlackMessage> chats,
     ChannelConnectionHealth health) : IEventHandler
@@ -22,18 +21,17 @@ internal sealed class SlackMessageHandler(
             string.IsNullOrEmpty(message.Channel))
             return Task.CompletedTask;
 
-        bool? unsupported = message switch
+        ChannelMessageKind? kind = message switch
         {
-            SlackNet.Events.FileShare => true,
-            { Subtype: null or "" } => false,
+            SlackNet.Events.FileShare => ChannelMessageKind.Unsupported,
+            { Subtype: null or "" } => ChannelMessageKind.Prompt,
             _ => null,
         };
-        if (unsupported is null)
+        if (kind is null)
             return Task.CompletedTask;
 
         health.MarkReceived();
-        chats.Enqueue(
-            new SlackMessage(database, channel, health, message.User, message.Channel, unsupported.Value, message.Text));
+        chats.Enqueue(new SlackMessage(message.User, message.Channel, kind.Value, message.Text));
         return Task.CompletedTask;
     }
 }

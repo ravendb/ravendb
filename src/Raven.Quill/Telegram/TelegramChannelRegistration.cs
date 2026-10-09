@@ -22,6 +22,6 @@ internal static class TelegramChannelRegistration
         services.AddHttpClient(TelegramBotClientFactory.HttpClientName);
         services.AddSingleton<TelegramBotClientFactory>();
 
-        return services.AddChannelProvider<TelegramRuntimeFactory, TelegramTurns, TelegramMessage, TelegramBot>();
+        return services.AddSingleton<IChannelRuntimeFactory, TelegramRuntimeFactory>();
     }
 }

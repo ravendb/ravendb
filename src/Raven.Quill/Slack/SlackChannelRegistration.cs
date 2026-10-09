@@ -30,6 +30,6 @@ internal static class SlackChannelRegistration
         services.AddTransient<ISlackClient, SlackApiClient>();
         services.AddSingleton<SlackUserDirectory>();
 
-        return services.AddChannelProvider<SlackRuntimeFactory, SlackTurns, SlackMessage, SlackBot>();
+        return services.AddSingleton<IChannelRuntimeFactory, SlackRuntimeFactory>();
     }
 }
