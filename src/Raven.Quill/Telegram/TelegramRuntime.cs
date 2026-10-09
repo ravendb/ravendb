@@ -50,6 +50,8 @@ internal sealed class TelegramRuntime : IChannelRuntime
     /// The channel document's change vector at start; the manager restarts the bot when it moves.
     public string? ChannelChangeVector { get; }
 
+    internal int ActiveChatCount => _chats.ActiveChatCount;
+
     public static TelegramRuntime Start(
         string database, Channel channel, string? channelChangeVector, TelegramBotClientFactory botFactory,
         ChannelChats<TelegramMessage> chats, TelegramOptions options, QuillLogger<TelegramRuntime> logger)
@@ -154,32 +156,8 @@ internal sealed class TelegramRuntime : IChannelRuntime
     {
         Client.OnApiResponseReceived -= OnApiResponseReceived;
         await _cts.CancelAsync();
-
-        try
-        {
-            await DrainAsync().WaitAsync(TimeSpan.FromSeconds(10));
-        }
-        catch (TimeoutException)
-        {
-            _logger.Warn(
-                $"Telegram bot for channel {_channel.Id} did not drain within 10s");
-            return;
-        }
-        catch (OperationCanceledException)
-        {
-        }
-
+        await Task.WhenAll(_receive, _chats.StopAsync())
+            .ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         _cts.Dispose();
-    }
-
-    private async Task DrainAsync()
-    {
-        try
-        {
-            await _receive;
-        }
-        catch (OperationCanceledException)
-        {
-        }
     }
 }

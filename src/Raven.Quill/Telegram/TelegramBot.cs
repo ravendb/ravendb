@@ -56,6 +56,4 @@ internal sealed class TelegramBot(
         {
         }
     }
-
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }

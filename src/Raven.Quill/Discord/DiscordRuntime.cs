@@ -25,7 +25,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
     private readonly string _botUserId;
     private readonly DiscordOptions _options;
     private readonly ChannelChats<DiscordMessage> _chats;
-    private readonly IServiceScopeFactory _scopes;
+    private readonly IHttpClientFactory _httpFactory;
     private readonly QuillLogger<DiscordRuntime> _logger;
 
     private readonly CancellationTokenSource _cts = new();
@@ -45,7 +45,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
 
     private DiscordRuntime(
         string database, Channel channel, string? channelChangeVector, DiscordSettings settings,
-        ChannelChats<DiscordMessage> chats, IServiceScopeFactory scopes,
+        ChannelChats<DiscordMessage> chats, IHttpClientFactory httpFactory,
         DiscordOptions options, QuillLogger<DiscordRuntime> logger)
     {
         _database = database;
@@ -53,7 +53,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
         _botToken = settings.BotToken;
         _botUserId = settings.BotUserId;
         _chats = chats;
-        _scopes = scopes;
+        _httpFactory = httpFactory;
         _options = options;
         _logger = logger;
         ChannelChangeVector = channelChangeVector;
@@ -64,6 +64,8 @@ internal sealed class DiscordRuntime : IChannelRuntime
     public ChannelConnectionHealth Health { get; } = new();
 
     public bool CanRestart => _canRestart;
+
+    public TimeSpan RestartDelay => _options.GatewayRestartDelay;
 
     public DateTime? ExitedAt
     {
@@ -76,38 +78,23 @@ internal sealed class DiscordRuntime : IChannelRuntime
 
     public static DiscordRuntime Start(
         string database, Channel channel, string? channelChangeVector, ChannelChats<DiscordMessage> chats,
-        IServiceScopeFactory scopes, DiscordOptions options, QuillLogger<DiscordRuntime> logger)
+        IHttpClientFactory httpFactory, DiscordOptions options, QuillLogger<DiscordRuntime> logger)
     {
         var runtime = new DiscordRuntime(
-            database, channel, channelChangeVector, channel.Discord!, chats, scopes, options, logger);
+            database, channel, channelChangeVector, channel.Discord!, chats, httpFactory, options, logger);
 
         runtime._run = Task.Run(runtime.RunAsync);
         return runtime;
     }
 
-    public bool IsRestartDue(DateTime now) =>
-        CanRestart && ExitedAt is { } exitedAt && now - exitedAt >= _options.GatewayRestartDelay;
-
     public async Task StopAsync()
     {
-        try
-        {
-            await _cts.CancelAsync();
-        }
-        catch (ObjectDisposedException)
-        {
-        }
-
-        try
-        {
-            await _run.WaitAsync(_options.GatewayStopTimeout);
-        }
-        catch (TimeoutException)
-        {
-            if (_logger.IsWarnEnabled)
-                _logger.Warn($"Discord gateway for channel {_channel.ShortId} did not stop within {_options.GatewayStopTimeout}");
-            throw;
-        }
+        await _cts.CancelAsync();
+        await Task.WhenAll(_run, _chats.StopAsync())
+            .ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        _cts.Dispose();
+        _sendLock.Dispose();
+        _frameBuffer.Dispose();
     }
 
     private async Task RunAsync()
@@ -119,9 +106,6 @@ internal sealed class DiscordRuntime : IChannelRuntime
         finally
         {
             Interlocked.Exchange(ref _exitedAtTicks, DateTime.UtcNow.Ticks);
-            _cts.Dispose();
-            _sendLock.Dispose();
-            _frameBuffer.Dispose();
         }
     }
 
@@ -405,12 +389,8 @@ internal sealed class DiscordRuntime : IChannelRuntime
         }
     }
 
-    private async Task<string> DiscoverGatewayUrlAsync()
-    {
-        await using var scope = _scopes.CreateAsyncScope();
-        var discord = scope.ServiceProvider.GetRequiredService<IDiscordClient>();
-        return await discord.GetGatewayUrlAsync(_botToken, _cts.Token);
-    }
+    private Task<string> DiscoverGatewayUrlAsync() =>
+        DiscordApiClient.Create(_httpFactory).GetGatewayUrlAsync(_botToken, _cts.Token);
 
     private Task SendHeartbeatAsync(ClientWebSocket socket, CancellationToken ct)
     {

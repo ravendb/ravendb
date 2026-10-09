@@ -6,7 +6,6 @@ using Raven.Quill.Logging;
 namespace Raven.Quill.Slack;
 
 internal sealed class SlackBot(
-    AsyncServiceScope scope,
     ISlackClient slack,
     SlackSettings settings,
     ChannelConnectionHealth health,
@@ -28,6 +27,4 @@ internal sealed class SlackBot(
 
     public string? DescribeApiFailure(Exception e) =>
         SlackApiErrors.IsApiFailure(e) ? SlackApiErrors.Describe(e) : null;
-
-    public ValueTask DisposeAsync() => scope.DisposeAsync();
 }

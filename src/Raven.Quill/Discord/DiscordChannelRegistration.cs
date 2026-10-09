@@ -23,12 +23,13 @@ internal static class DiscordChannelRegistration
             .Validate(o => o.Discord.GatewayRestartDelay > TimeSpan.Zero, "Discord GatewayRestartDelay must be positive")
             .Validate(o => o.Discord.MaxGatewayFrameBytes > 0, "Discord MaxGatewayFrameBytes must be positive");
 
-        services.AddHttpClient<IDiscordClient, DiscordApiClient>(static (sp, http) =>
+        services.AddHttpClient(DiscordApiClient.HttpClientName, static (sp, http) =>
         {
             var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value.Discord;
             http.BaseAddress = new Uri(opts.ApiUrl.EndsWith('/') ? opts.ApiUrl : opts.ApiUrl + "/");
             http.Timeout = opts.RequestTimeout;
         });
+        services.AddTransient<IDiscordClient>(sp => DiscordApiClient.Create(sp.GetRequiredService<IHttpClientFactory>()));
 
         return services.AddChannelProvider<DiscordRuntimeFactory, DiscordTurns, DiscordMessage, DiscordBot>();
     }

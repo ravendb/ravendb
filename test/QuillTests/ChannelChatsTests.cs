@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using FastTests;
 using QuillTests.E2E.Fixtures;
 using Raven.Quill.Channels;
+using Raven.Quill.Hosting;
 using Raven.Quill.Logging;
 using Tests.Infrastructure;
 using Xunit;
@@ -110,90 +111,6 @@ public class ChannelChatsTests(ITestOutputHelper output) : NoDisposalNeeded(outp
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task A_run_alone_message_flushes_the_merge_and_gets_its_own_turn()
-    {
-        await using var chats = new TestChats();
-
-        chats.Send("a", "hold");
-        await chats.WaitEnteredAsync();
-
-        chats.Send("a", "t1");
-        chats.Send("a", "t2");
-        chats.Send("a", "/cmd", runsAlone: true);
-        chats.Send("a", "t3");
-        chats.Proceed.Release();
-
-        for (var turn = 0; turn < 3; turn++)
-        {
-            await chats.WaitEnteredAsync();
-            chats.Proceed.Release();
-        }
-
-        Assert.Equal(
-            new[] { new[] { "hold" }, new[] { "t1", "t2" }, new[] { "/cmd" }, new[] { "t3" } },
-            chats.Turns.Select(t => t.Texts));
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task Blank_texts_are_skipped()
-    {
-        await using var chats = new TestChats();
-
-        chats.Send("a", "hold");
-        await chats.WaitEnteredAsync();
-
-        chats.Send("a", " ");
-        chats.Send("a", "a1");
-        chats.Send("a", "");
-        chats.Proceed.Release();
-
-        await chats.WaitEnteredAsync();
-        chats.Proceed.Release();
-
-        Assert.Equal(new[] { new[] { "hold" }, new[] { "a1" } }, chats.Turns.Select(t => t.Texts));
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task A_throwing_turn_does_not_stop_the_chat()
-    {
-        await using var chats = new TestChats(throwOn: "boom");
-
-        chats.Send("a", "boom");
-        await chats.WaitEnteredAsync();
-        chats.Proceed.Release();
-
-        chats.Send("a", "ok");
-        await chats.WaitEnteredAsync();
-        chats.Proceed.Release();
-
-        Assert.Equal(new[] { new[] { "boom" }, new[] { "ok" } }, chats.Turns.Select(t => t.Texts));
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task A_failing_turn_does_not_skip_the_rest_of_the_batch()
-    {
-        await using var chats = new TestChats(throwOn: "boom");
-
-        chats.Send("a", "hold");
-        await chats.WaitEnteredAsync();
-
-        chats.Send("a", "t1");
-        chats.Send("a", "boom", runsAlone: true);
-        chats.Send("a", "t2");
-        chats.Proceed.Release();
-
-        for (var turn = 0; turn < 3; turn++)
-        {
-            await chats.WaitEnteredAsync();
-            chats.Proceed.Release();
-        }
-
-        Assert.Equal(
-            new[] { new[] { "hold" }, new[] { "t1" }, new[] { "boom" }, new[] { "t2" } },
-            chats.Turns.Select(t => t.Texts));
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
     public async Task An_idle_chat_retires_and_the_next_message_starts_a_new_one()
     {
         await using var chats = new TestChats(idleTimeout: TimeSpan.FromMilliseconds(200));
@@ -214,24 +131,42 @@ public class ChannelChatsTests(ITestOutputHelper output) : NoDisposalNeeded(outp
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Stop_waits_for_the_running_turn()
+    public async Task Stop_cancels_the_running_turn_and_drops_the_waiting_messages()
     {
         await using var chats = new TestChats();
 
         chats.Send("a", "m1");
         await chats.WaitEnteredAsync();
+        chats.Send("a", "m2");
 
-        var stop = chats.StopAsync();
-        Assert.False(stop.IsCompleted);
+        await chats.StopAsync().WaitAsync(WaitTimeout);
 
-        chats.Proceed.Release();
-        await stop.WaitAsync(WaitTimeout);
+        Assert.Equal(new[] { new[] { "m1" } }, chats.Turns.Select(t => t.Texts));
+        Assert.Equal(0, chats.ActiveChatCount);
     }
 
-    private sealed record TestMessage(string SenderId, string? Text, bool RunsAlone, Channel Channel)
-        : IChannelMessage
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Stop_retires_every_chat_and_later_messages_are_dropped()
+    {
+        await using var chats = new TestChats();
+
+        chats.Send("a", "m1");
+        await chats.WaitEnteredAsync();
+        chats.Proceed.Release();
+        await chats.StopAsync().WaitAsync(WaitTimeout);
+
+        Assert.Equal(0, chats.ActiveChatCount);
+
+        chats.Send("a", "late");
+        Assert.Equal(0, chats.ActiveChatCount);
+        Assert.Single(chats.Turns);
+    }
+
+    private sealed record TestMessage(string SenderId, string? Text, Channel Channel) : IChannelMessage
     {
         public string Database => "db";
+
+        public bool RunsAlone => false;
 
         public bool IsUnsupported => false;
     }
@@ -240,14 +175,17 @@ public class ChannelChatsTests(ITestOutputHelper output) : NoDisposalNeeded(outp
     {
         private readonly SemaphoreSlim _entered = new(0);
         private readonly ChannelChats<TestMessage> _chats;
-        private readonly string? _throwOn;
 
-        public TestChats(int capacity = 10, TimeSpan? idleTimeout = null, string? throwOn = null)
+        public TestChats(int capacity = 10, TimeSpan? idleTimeout = null)
         {
-            _throwOn = throwOn;
             _chats = new ChannelChats<TestMessage>(
-                this, new QuillLogger<ChannelChatsTests>().RavenLogger, capacity,
-                idleTimeout ?? TimeSpan.FromMinutes(1));
+                this,
+                new ApplianceOptions
+                {
+                    ChannelSenderQueueCapacity = capacity,
+                    ChannelSenderIdleTimeout = idleTimeout ?? TimeSpan.FromMinutes(1),
+                },
+                new QuillLogger<ChannelChatsTests>().RavenLogger);
         }
 
         public ValueTask DisposeAsync() => new(StopAsync());
@@ -260,22 +198,23 @@ public class ChannelChatsTests(ITestOutputHelper output) : NoDisposalNeeded(outp
 
         public int ActiveChatCount => _chats.ActiveChatCount;
 
-        public void Send(string senderId, string text, bool runsAlone = false, string channelId = "channels/c1") =>
-            _chats.Enqueue(new TestMessage(senderId, text, runsAlone, new Channel { Id = channelId }));
+        public void Send(string senderId, string text, string channelId = "channels/c1") =>
+            _chats.Enqueue(new TestMessage(senderId, text, new Channel { Id = channelId }));
 
-        public Task StopAsync() => _chats.StopAsync(CancellationToken.None);
+        public Task StopAsync() => _chats.StopAsync();
 
         public async Task WaitEnteredAsync() =>
             Assert.True(await _entered.WaitAsync(WaitTimeout), "no turn started");
 
-        public async Task RunTurnAsync(IReadOnlyList<TestMessage> messages, CancellationToken ct)
+        public async Task RunBatchAsync(System.Threading.Channels.ChannelReader<TestMessage> queue, CancellationToken ct)
         {
+            var messages = new List<TestMessage>();
+            while (queue.TryRead(out var message))
+                messages.Add(message);
+
             Turns.Enqueue((messages[0].SenderId, messages.Select(m => m.Text!).ToArray()));
             _entered.Release();
-            await Proceed.WaitAsync();
-
-            if (_throwOn is not null && messages.Any(m => m.Text == _throwOn))
-                throw new InvalidOperationException("turn failed");
+            await Proceed.WaitAsync(ct);
         }
 
         public Task NotifyBufferFullAsync(TestMessage message, CancellationToken ct)

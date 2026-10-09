@@ -285,6 +285,60 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
         }
     }
 
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Blank_texts_are_left_out_of_the_merged_prompt()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt == "hold" ? gate.Task : Task.CompletedTask;
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-blank-0", DmMessage(Sender, "hold"));
+        await Slack.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-blank-1", DmMessage(Sender, "   "));
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-blank-2", DmMessage(Sender, "real"));
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-blank-3", DmMessage(Sender, ""));
+        await WaitUntilQueuedAsync(channel.TeamId, "Ev-blank-marker");
+
+        gate.SetResult();
+        await Slack.WaitUntilAsync(() => SenderPrompts().Length == 2, "the merged turn");
+        await Task.Delay(250);
+
+        Assert.Equal(["hold", "real"], SenderPrompts());
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_failing_turn_does_not_skip_the_rest_of_the_batch()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt switch
+        {
+            "hold" => gate.Task,
+            "boom" => Task.FromException(new InvalidOperationException("the agent failed")),
+            _ => Task.CompletedTask,
+        };
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-fail-0", DmMessage(Sender, "hold"));
+        await Slack.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-fail-1", DmMessage(Sender, "boom"));
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-fail-2", DmMessage(Sender, "see attached", subtype: "file_share"));
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-fail-3", DmMessage(Sender, "after"));
+        await WaitUntilQueuedAsync(channel.TeamId, "Ev-fail-marker");
+
+        gate.SetResult();
+        await Slack.WaitUntilAsync(() => SenderPrompts().Contains("after"), "the turn after the failure");
+
+        Assert.Equal(["hold", "boom", "after"], SenderPrompts());
+        Assert.Equal(1, Slack.SentMessages.Count(m => m.Text == ChannelReplies.Default.Error));
+        Assert.Equal(1, UnsupportedReplies());
+    }
+
     private async Task WaitUntilQueuedAsync(string teamId, string markerEventId)
     {
         await Slack.DispatchEventAsync(teamId, markerEventId, DmMessage(OtherSender, "marker"));

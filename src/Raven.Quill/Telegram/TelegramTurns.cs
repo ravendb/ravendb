@@ -54,7 +54,7 @@ internal sealed class TelegramTurns(
         if (IsCommand(bot, prompt, "clear"))
         {
             await ClearConversationsAsync(
-                bot, TelegramConversationId.ChatPrefix(channel.ShortId, bot.ChatId), ct);
+                bot, ChannelConversationId.ChatPrefix(Type, channel.ShortId, only.SenderId), ct);
             await bot.SendAsync(bot.Messages.ConversationCleared, ct);
             return true;
         }

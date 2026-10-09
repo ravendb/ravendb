@@ -8,7 +8,7 @@ namespace Raven.Quill.Telegram;
 
 internal sealed class TelegramRuntimeFactory(
     TelegramBotClientFactory botFactory,
-    ChannelChats<TelegramMessage> chats,
+    IChatTurns<TelegramMessage> turns,
     IOptions<ApplianceOptions> options,
     QuillLogger<TelegramRuntime> logger) : IChannelRuntimeFactory
 {
@@ -17,5 +17,6 @@ internal sealed class TelegramRuntimeFactory(
     public bool CanStart(Channel channel) => channel.Telegram is { BotToken.Length: > 0 };
 
     public IChannelRuntime Start(string database, Channel channel, string? changeVector) =>
-        TelegramRuntime.Start(database, channel, changeVector, botFactory, chats, options.Value.Telegram, logger);
+        TelegramRuntime.Start(database, channel, changeVector, botFactory,
+            new ChannelChats<TelegramMessage>(turns, options.Value, logger.RavenLogger), options.Value.Telegram, logger);
 }

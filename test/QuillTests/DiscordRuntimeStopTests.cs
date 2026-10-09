@@ -1,7 +1,6 @@
 using FastTests;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Quill.Channels;
-using Raven.Quill.Contracts;
 using Raven.Quill.Discord;
 using Raven.Quill.Hosting;
 using Raven.Quill.Logging;
@@ -12,14 +11,17 @@ namespace QuillTests;
 
 public class DiscordRuntimeStopTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
+    private static readonly TimeSpan WaitTimeout = TimeSpan.FromSeconds(10);
+
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Stop_timeout_throws_and_the_late_exit_still_cleans_up()
+    public async Task Stop_waits_for_the_gateway_to_exit_and_then_cleans_up()
     {
         var hang = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var client = new HangingDiscordClient(hang.Task);
-        await using var services = new ServiceCollection()
-            .AddSingleton<IDiscordClient>(client)
-            .BuildServiceProvider();
+        var handler = new HangingHandler(hang.Task);
+        var services = new ServiceCollection();
+        services.AddHttpClient(DiscordApiClient.HttpClientName, http => http.BaseAddress = new Uri("http://discord.test/"))
+            .ConfigurePrimaryHttpMessageHandler(() => handler);
+        await using var provider = services.BuildServiceProvider();
 
         var channel = new Channel
         {
@@ -33,45 +35,32 @@ public class DiscordRuntimeStopTests(ITestOutputHelper output) : NoDisposalNeede
             Discord = new DiscordSettings { BotToken = "bot-token", BotUserId = "1", BotUsername = "d2" },
         };
 
-        var options = new DiscordOptions { GatewayStopTimeout = TimeSpan.FromMilliseconds(250) };
         var runtime = DiscordRuntime.Start(
-            "db", channel, channelChangeVector: null, chats: null!,
-            services.GetRequiredService<IServiceScopeFactory>(), options, new QuillLogger<DiscordRuntime>());
+            "db", channel, channelChangeVector: null,
+            new ChannelChats<DiscordMessage>(turns: null!, new ApplianceOptions(), new QuillLogger<DiscordRuntime>().RavenLogger),
+            provider.GetRequiredService<IHttpClientFactory>(), new DiscordOptions(), new QuillLogger<DiscordRuntime>());
 
-        await client.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await handler.Started.Task.WaitAsync(WaitTimeout);
 
-        await Assert.ThrowsAsync<TimeoutException>(() => runtime.StopAsync());
+        var stop = runtime.StopAsync();
+        Assert.False(stop.IsCompleted);
         Assert.Null(runtime.ExitedAt);
 
         hang.SetResult();
 
-        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
-        while (runtime.ExitedAt is null && DateTime.UtcNow < deadline)
-            await Task.Delay(25);
+        await stop.WaitAsync(WaitTimeout);
         Assert.NotNull(runtime.ExitedAt);
-
-        await runtime.StopAsync();
     }
 
-    private sealed class HangingDiscordClient(Task hang) : IDiscordClient
+    private sealed class HangingHandler(Task hang) : HttpMessageHandler
     {
         public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public async Task<string> GetGatewayUrlAsync(string botToken, CancellationToken ct)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
             Started.TrySetResult();
             await hang;
             throw new OperationCanceledException();
         }
-
-        public Task<(DiscordBotIdentity? Identity, string? Error, bool DiscordResponded)> GetBotIdentityAsync(
-            string botToken, CancellationToken ct) => throw new NotSupportedException();
-
-        public Task<string> CreateMessageAsync(string botToken, string channelId, string content, CancellationToken ct) =>
-            throw new NotSupportedException();
-
-        public Task EditMessageAsync(
-            string botToken, string channelId, string messageId, string content, CancellationToken ct) =>
-            throw new NotSupportedException();
     }
 }

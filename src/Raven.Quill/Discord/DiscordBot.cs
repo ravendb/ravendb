@@ -6,7 +6,6 @@ using Raven.Quill.Logging;
 namespace Raven.Quill.Discord;
 
 internal sealed class DiscordBot(
-    AsyncServiceScope scope,
     IDiscordClient discord,
     DiscordSettings settings,
     ChannelConnectionHealth health,
@@ -23,6 +22,4 @@ internal sealed class DiscordBot(
         new DiscordStreamingReply(discord, settings.BotToken, dmChannel, options, logger);
 
     public string? DescribeApiFailure(Exception e) => e is DiscordApiException apiError ? apiError.Message : null;
-
-    public ValueTask DisposeAsync() => scope.DisposeAsync();
 }

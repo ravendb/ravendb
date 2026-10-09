@@ -15,20 +15,15 @@ internal sealed record SlackMessage(
 }
 
 internal sealed class SlackTurns(
-    IServiceScopeFactory scopes,
+    ISlackClient slack,
     SlackUserDirectory users,
     IOptions<ApplianceOptions> options,
     QuillLogger<SlackTurns> logger) : IPlatformTurns<SlackMessage, SlackBot>
 {
     public ChannelType Type => ChannelType.Slack;
 
-    public SlackBot OpenBot(Channel channel, SlackMessage message)
-    {
-        var scope = scopes.CreateAsyncScope();
-        var slack = scope.ServiceProvider.GetRequiredService<ISlackClient>();
-        return new SlackBot(
-            scope, slack, channel.Slack!, message.Health, message.DmChannel, options.Value.Slack, logger);
-    }
+    public SlackBot OpenBot(Channel channel, SlackMessage message) =>
+        new(slack, channel.Slack!, message.Health, message.DmChannel, options.Value.Slack, logger);
 
     public async Task<Dictionary<string, string>?> BindAsync(
         SlackBot bot, Channel channel, AiAgentConfiguration config, SlackMessage message, CancellationToken ct)

@@ -1,67 +1,10 @@
 using FastTests;
-using Raven.Quill.Agents;
-using Raven.Quill.Channels;
 using Raven.Quill.Hosting;
-using Raven.Quill.Telegram;
+using Raven.Quill.Channels;
 using Tests.Infrastructure;
 using Xunit;
 
 namespace QuillTests;
-
-public class TelegramConversationIdTests(ITestOutputHelper output) : NoDisposalNeeded(output)
-{
-    private const string ChannelId = "0f8fad5b0d1d4d0dbc9df1b0a3e0c9a1";
-
-    private static readonly Dictionary<string, string> NoParameters = new();
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public void Derives_chats_prefixed_id_with_channel_chat_and_parameters()
-    {
-        var id = TelegramConversationId.For(ChannelId, 42, NoParameters);
-
-        Assert.Matches($"^chats/telegram/{ChannelId}/42/[0-9a-f]{{16}}$", id);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public void Same_chat_and_parameters_derive_the_same_id_across_days()
-    {
-        var first = TelegramConversationId.For(ChannelId, 42, NoParameters);
-        var second = TelegramConversationId.For(ChannelId, 42, NoParameters);
-
-        Assert.Equal(first, second);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public void Changing_a_parameter_value_derives_a_new_id()
-    {
-        var before = TelegramConversationId.For(ChannelId, 42,
-            new Dictionary<string, string> { ["userId"] = "users/1" });
-        var after = TelegramConversationId.For(ChannelId, 42,
-            new Dictionary<string, string> { ["userId"] = "users/2" });
-
-        Assert.NotEqual(before, after);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public void Negative_group_chat_ids_are_preserved()
-    {
-        var id = TelegramConversationId.For(ChannelId, -1001234567890, NoParameters);
-
-        Assert.Matches($"^chats/telegram/{ChannelId}/-1001234567890/[0-9a-f]{{16}}$", id);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public void Derived_id_passes_the_router_normalizer_and_never_ends_with_a_separator()
-    {
-        var id = TelegramConversationId.For(ChannelId, 42, NoParameters);
-
-        Assert.True(AgentRouter.TryNormalizeConversationId(id, out var normalized, out var error));
-        Assert.Null(error);
-        Assert.Equal(id, normalized);
-        Assert.False(id.EndsWith('/'));
-        Assert.False(id.EndsWith('|'));
-    }
-}
 
 public class MessageSplitterTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {

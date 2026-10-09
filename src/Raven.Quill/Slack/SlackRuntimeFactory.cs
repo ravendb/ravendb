@@ -8,7 +8,7 @@ namespace Raven.Quill.Slack;
 
 internal sealed class SlackRuntimeFactory(
     SlackSdk sdk,
-    ChannelChats<SlackMessage> chats,
+    IChatTurns<SlackMessage> turns,
     IOptions<ApplianceOptions> options,
     QuillLogger<SlackRuntime> logger) : IChannelRuntimeFactory
 {
@@ -17,5 +17,6 @@ internal sealed class SlackRuntimeFactory(
     public bool CanStart(Channel channel) => channel.Slack is { AppToken.Length: > 0 };
 
     public IChannelRuntime Start(string database, Channel channel, string? changeVector) =>
-        SlackRuntime.Start(database, channel, changeVector, sdk, chats, options.Value.Slack, logger);
+        SlackRuntime.Start(database, channel, changeVector, sdk,
+            new ChannelChats<SlackMessage>(turns, options.Value, logger.RavenLogger), options.Value.Slack, logger);
 }

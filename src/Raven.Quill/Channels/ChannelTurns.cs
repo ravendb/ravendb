@@ -1,3 +1,4 @@
+using System.Threading.Channels;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -19,7 +20,7 @@ internal sealed record ChannelReplies(string Error, string ConversationExpired, 
         "I'm still working through your earlier messages, so that one didn't make it. Please resend it once I've replied.");
 }
 
-internal interface IChannelBot : IAsyncDisposable
+internal interface IChannelBot
 {
     ChannelReplies Replies => ChannelReplies.Default;
 
@@ -58,28 +59,64 @@ internal sealed class ChannelTurns<TMessage, TBot>(
     where TMessage : IChannelMessage
     where TBot : class, IChannelBot
 {
-    public async Task RunTurnAsync(IReadOnlyList<TMessage> messages, CancellationToken ct)
+    public async Task RunBatchAsync(ChannelReader<TMessage> queue, CancellationToken ct)
     {
-        var last = messages[^1];
-        var channel = last.Channel;
+        var merged = new List<TMessage>();
 
-        await using var bot = platform.OpenBot(channel, last);
-
-        if (messages is [{ RunsAlone: true } only])
+        while (queue.TryRead(out var message))
         {
-            if (only.IsUnsupported)
+            if (message.RunsAlone)
             {
-                await TrySendAsync(bot, channel, ChannelReplies.UnsupportedKind, ct);
-                return;
+                await RunTurnAsync(merged, ct);
+                await RunTurnAsync([message], ct);
             }
-
-            if (await platform.TryHandleAsync(bot, channel, only, ct))
-                return;
+            else if (string.IsNullOrWhiteSpace(message.Text) == false)
+                merged.Add(message);
         }
 
-        var prompt = string.Join('\n', messages.Select(m => (m.Text ?? "").Trim()).Where(t => t.Length > 0));
-        if (prompt.Length == 0)
+        await RunTurnAsync(merged, ct);
+    }
+
+    private async Task RunTurnAsync(List<TMessage> messages, CancellationToken ct)
+    {
+        if (messages.Count == 0)
             return;
+
+        var last = messages[^1];
+        try
+        {
+            var channel = last.Channel;
+            var bot = platform.OpenBot(channel, last);
+
+            if (last.RunsAlone)
+            {
+                if (last.IsUnsupported)
+                {
+                    await TrySendAsync(bot, channel, ChannelReplies.UnsupportedKind, ct);
+                    return;
+                }
+
+                if (await platform.TryHandleAsync(bot, channel, last, ct))
+                    return;
+            }
+
+            await RunAgentAsync(bot, channel, messages, ct);
+        }
+        catch (Exception e) when (ct.IsCancellationRequested == false)
+        {
+            if (logger.IsWarnEnabled)
+                logger.Warn($"{platform.Type} turn failed for channel {last.Channel.ShortId} sender {last.SenderId}: {e.Message}");
+        }
+        finally
+        {
+            messages.Clear();
+        }
+    }
+
+    private async Task RunAgentAsync(TBot bot, Channel channel, IReadOnlyList<TMessage> messages, CancellationToken ct)
+    {
+        var last = messages[^1];
+        var prompt = string.Join('\n', messages.Select(m => m.Text!.Trim()));
 
         var config = await AgentLookup.FindAsync(store, last.Database, channel.AgentId, ct)
                      ?? throw new InvalidOperationException(
@@ -131,7 +168,7 @@ internal sealed class ChannelTurns<TMessage, TBot>(
     {
         try
         {
-            await using var bot = platform.OpenBot(message.Channel, message);
+            var bot = platform.OpenBot(message.Channel, message);
             await TrySendAsync(bot, message.Channel, bot.Replies.Overloaded, ct);
         }
         catch (Exception e) when (e is not OperationCanceledException)

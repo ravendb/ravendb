@@ -53,6 +53,8 @@ public sealed class ApplianceOptions
 
     public TimeSpan ChannelSenderIdleTimeout { get; set; } = TimeSpan.FromMinutes(15);
 
+    public TimeSpan ChannelRuntimeStopTimeout { get; set; } = TimeSpan.FromSeconds(10);
+
     public TimeSpan ReadinessInitialDelay { get; set; } = TimeSpan.FromSeconds(15);
 
     public TimeSpan ReadinessAttemptTimeout { get; set; } = TimeSpan.FromSeconds(2);

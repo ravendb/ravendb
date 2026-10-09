@@ -15,19 +15,15 @@ internal sealed record DiscordMessage(
 }
 
 internal sealed class DiscordTurns(
-    IServiceScopeFactory scopes,
+    IHttpClientFactory httpFactory,
     IOptions<ApplianceOptions> options,
     QuillLogger<DiscordTurns> logger) : IPlatformTurns<DiscordMessage, DiscordBot>
 {
     public ChannelType Type => ChannelType.Discord;
 
-    public DiscordBot OpenBot(Channel channel, DiscordMessage message)
-    {
-        var scope = scopes.CreateAsyncScope();
-        var discord = scope.ServiceProvider.GetRequiredService<IDiscordClient>();
-        return new DiscordBot(
-            scope, discord, channel.Discord!, message.Health, message.DmChannel, options.Value.Discord, logger);
-    }
+    public DiscordBot OpenBot(Channel channel, DiscordMessage message) =>
+        new(DiscordApiClient.Create(httpFactory), channel.Discord!, message.Health, message.DmChannel,
+            options.Value.Discord, logger);
 
     public Task<Dictionary<string, string>?> BindAsync(
         DiscordBot bot, Channel channel, AiAgentConfiguration config, DiscordMessage message, CancellationToken ct)

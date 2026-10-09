@@ -14,7 +14,8 @@ internal static class ChannelServiceCollectionExtensions
         services.AddOptions<ApplianceOptions>()
             .Validate(o => o.ChannelApplyChangesInterval > TimeSpan.Zero, "ChannelApplyChangesInterval must be positive")
             .Validate(o => o.ChannelSenderQueueCapacity > 0, "ChannelSenderQueueCapacity must be positive")
-            .Validate(o => o.ChannelSenderIdleTimeout > TimeSpan.Zero, "ChannelSenderIdleTimeout must be positive");
+            .Validate(o => o.ChannelSenderIdleTimeout > TimeSpan.Zero, "ChannelSenderIdleTimeout must be positive")
+            .Validate(o => o.ChannelRuntimeStopTimeout > TimeSpan.Zero, "ChannelRuntimeStopTimeout must be positive");
 
         return services.AddSingleton<ChannelManager>();
     }
@@ -27,18 +28,9 @@ internal static class ChannelServiceCollectionExtensions
         where TBot : class, IChannelBot =>
         services
             .AddSingleton<TTurns>()
-            .AddSingleton(sp => new ChannelTurns<TMessage, TBot>(
+            .AddSingleton<IChatTurns<TMessage>>(sp => new ChannelTurns<TMessage, TBot>(
                 sp.GetRequiredService<TTurns>(), sp.GetRequiredService<IDocumentStore>(),
                 sp.GetRequiredService<IAgentRouter>(), sp.GetRequiredService<IOptions<ApplianceOptions>>(),
                 sp.GetRequiredService<QuillLogger<TTurns>>().RavenLogger))
-            .AddSingleton(sp =>
-            {
-                var o = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value;
-                return new ChannelChats<TMessage>(
-                    sp.GetRequiredService<ChannelTurns<TMessage, TBot>>(),
-                    sp.GetRequiredService<QuillLogger<TTurns>>().RavenLogger,
-                    o.ChannelSenderQueueCapacity, o.ChannelSenderIdleTimeout);
-            })
-            .AddHostedService(sp => sp.GetRequiredService<ChannelChats<TMessage>>())
             .AddSingleton<IChannelRuntimeFactory, TFactory>();
 }

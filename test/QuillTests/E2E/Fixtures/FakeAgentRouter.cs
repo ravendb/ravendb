@@ -30,7 +30,7 @@ internal sealed class FakeAgentRouter : IAgentRouter
             _requests.Add(request);
 
         if (BeforeRun is not null)
-            await BeforeRun(request);
+            await BeforeRun(request).WaitAsync(ct);
 
         if (Failure is not null)
             throw Failure;

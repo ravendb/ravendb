@@ -16,14 +16,13 @@ internal sealed class SlackRuntime : IChannelRuntime
 
     private const int PassesBeforeConnectionLost = 2;
 
-    private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(10);
-
     private readonly string _shortChannelId;
     private readonly string _botUserId;
     private readonly SlackOptions _options;
     private readonly QuillLogger<SlackRuntime> _logger;
     private readonly ISlackSocketModeClient _client;
     private readonly IDisposable _frames;
+    private readonly ChannelChats<SlackMessage> _chats;
     private readonly CancellationTokenSource _cts = new();
     private readonly object _exitLock = new();
 
@@ -46,6 +45,7 @@ internal sealed class SlackRuntime : IChannelRuntime
         _options = options;
         _logger = logger;
         ChannelChangeVector = channelChangeVector;
+        _chats = chats;
 
         var handler = new SlackMessageHandler(database, channel, chats, Health);
         var socket = sdk.NewSocketClient(settings.AppToken, handler, new SlackNetLogger(channel.ShortId, logger));
@@ -89,9 +89,6 @@ internal sealed class SlackRuntime : IChannelRuntime
         return runtime;
     }
 
-    public bool IsRestartDue(DateTime now) =>
-        CanRestart && ExitedAt is { } exitedAt && now - exitedAt >= RestartDelay;
-
     public void CheckConnection()
     {
         if (_connected == false || ExitedAt is not null)
@@ -111,18 +108,8 @@ internal sealed class SlackRuntime : IChannelRuntime
     {
         await _cts.CancelAsync();
         _frames.Dispose();
-
-        try
-        {
-            await Task.WhenAll(_run, _client.DisposeAsync().AsTask()).WaitAsync(StopTimeout);
-        }
-        catch (TimeoutException)
-        {
-            if (_logger.IsWarnEnabled)
-                _logger.Warn($"Slack socket for channel {_shortChannelId} did not stop within {StopTimeout}");
-            return;
-        }
-
+        await Task.WhenAll(_run, _client.DisposeAsync().AsTask(), _chats.StopAsync())
+            .ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         _cts.Dispose();
     }
 
