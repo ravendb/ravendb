@@ -262,7 +262,7 @@ void *do_ring_work(void *arg)
                     if (result != 0)
                     {
                         cur->submittion->error = true;
-                        cur->submittion->result = result;
+                        cur->submittion->result = -result; // cqe->res is -errno
                     }
                     notify_work_completed(ring, cur);
                     break;
@@ -312,11 +312,9 @@ void *do_ring_work(void *arg)
                     else
                     {
                         cur->submittion->error = true;
-                        if (result == 0)
-                        {
-                            // this usually happens if we a disk full, or some
-                            cur->submittion->result = ENOSPC;
-                        }
+                        // cqe->res is -errno (e.g. -ENOSPC when a punched region cannot get blocks on a full disk),
+                        // a write of zero bytes usually means the disk is full as well
+                        cur->submittion->result = result == 0 ? ENOSPC : -result;
                     }
                     notify_work_completed(ring, cur);
                     break;
@@ -409,7 +407,9 @@ wait_for_work_completion(struct handle *handle_ptr, struct submittion *submittio
 
     if (submittion->error)
     {
-        *detailed_error_code = submittion->result;
+        // never report a failed operation as a success, even if its error code was lost
+        *detailed_error_code = submittion->result ? submittion->result : EIO;
+        return FAIL_IO_RING_WRITE_RESULT;
     }
     return SUCCESS;
 }
