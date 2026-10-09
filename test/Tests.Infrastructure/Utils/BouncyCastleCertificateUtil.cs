@@ -604,66 +604,6 @@ namespace Tests.Infrastructure.Utils
             return new SecureRandom(new CryptoApiRandomGenerator());
         }
 
-        public static string GetServerUrlFromCertificate(X509Certificate2 cert, SetupInfo setupInfo, string nodeTag, int port, int tcpPort, out string publicTcpUrl, out string domain)
-        {
-            publicTcpUrl = null;
-            var node = setupInfo.NodeSetupInfos[nodeTag];
-
-            var subjectAlternativeNames = GetCertificateAlternativeNames(cert).ToList();
-            var subject = subjectAlternativeNames.FirstOrDefault();
-
-            // fallback to common name
-            if (string.IsNullOrEmpty(subject))
-                subject = cert.GetNameInfo(X509NameType.SimpleName, false);
-            Debug.Assert(string.IsNullOrEmpty(subject) == false, nameof(subject) + " is null or empty");
-            if (subject[0] == '*')
-            {
-                var parts = subject.Split("*.");
-                if (parts.Length != 2)
-                    throw new FormatException($"{subject} is not a valid wildcard name for a certificate.");
-
-                domain = parts[1];
-
-                publicTcpUrl = node.ExternalTcpPort != Constants.Network.ZeroValue
-                    ? $"tcp://{nodeTag.ToLower()}.{domain}:{node.ExternalTcpPort}"
-                    : $"tcp://{nodeTag.ToLower()}.{domain}:{tcpPort}";
-
-                if (setupInfo.NodeSetupInfos[nodeTag].ExternalPort != Constants.Network.ZeroValue)
-                    return $"https://{nodeTag.ToLower()}.{domain}:{node.ExternalPort}";
-
-                return port == Constants.Network.DefaultSecuredRavenDbHttpPort
-                    ? $"https://{nodeTag.ToLower()}.{domain}"
-                    : $"https://{nodeTag.ToLower()}.{domain}:{port}";
-            }
-
-            domain = subject; //default for one node case
-
-            foreach (var value in subjectAlternativeNames)
-            {
-                if (value.StartsWith(nodeTag + ".", StringComparison.OrdinalIgnoreCase) == false)
-                    continue;
-
-                domain = value;
-                break;
-            }
-
-            var url = $"https://{domain}";
-
-            if (node.ExternalPort != Constants.Network.ZeroValue)
-                url += ":" + node.ExternalPort;
-            else if (port != Constants.Network.DefaultSecuredRavenDbHttpPort)
-                url += ":" + port;
-
-            publicTcpUrl = node.ExternalTcpPort != Constants.Network.ZeroValue
-                ? $"tcp://{domain}:{node.ExternalTcpPort}"
-                : $"tcp://{domain}:{tcpPort}";
-
-            node.PublicServerUrl = url;
-            node.PublicTcpServerUrl = publicTcpUrl;
-
-            return url;
-        }
-
         public static IEnumerable<string> GetCertificateAlternativeNames(X509Certificate2 cert)
         {
             // If we have alternative names, find the appropriate url using the node tag

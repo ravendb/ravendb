@@ -78,6 +78,15 @@ export function SetupWizardNodeAddressStep() {
         return cn.replace("*", tag);
     };
 
+    const getDefaultDnsName = (tag: string): string => {
+        if (securityOption !== "ownCertificate" || isWildcardCertificate) {
+            return undefined;
+        }
+
+        const tagPrefix = `${tag.toLowerCase()}.`;
+        return cns.find((cn) => cn.toLowerCase().startsWith(tagPrefix)) ?? cns[0];
+    };
+
     const handleDefaultNodeUrlConfiguration = () => {
         if (securityOption === "letsEncrypt") {
             return fullDomain;
@@ -108,7 +117,7 @@ export function SetupWizardNodeAddressStep() {
                     ipAddress: asyncGetSetupParameters.result?.IsDocker ? "" : "127.0.0.1",
                 },
             ],
-            dnsName: securityOption === "ownCertificate" && !isWildcardCertificate ? cns[0] : undefined,
+            dnsName: getDefaultDnsName(availableNodeTag),
             isEditing: true,
             isNewlyAdded: true,
         });
@@ -124,7 +133,7 @@ export function SetupWizardNodeAddressStep() {
                         ipAddress: asyncGetSetupParameters.result?.IsDocker ? "" : "127.0.0.1",
                     },
                 ],
-                dnsName: securityOption === "ownCertificate" && !isWildcardCertificate ? cns[0] : undefined,
+                dnsName: getDefaultDnsName("A"),
                 isEditing: true, // the first node should be added with default values and in editing mode
                 isNewlyAdded: false,
                 isPassive: false,
@@ -1531,6 +1540,24 @@ export const nodeEditFormSchema = yup.object({
             }
 
             return true;
+        })
+        .test("unique", "DNS name must be unique across nodes", function (value) {
+            const { securityOption, isWildcardCertificate, nodeAddressStep, currentIndex } = this.options.context as {
+                securityOption: SetupWizardSecurityOption;
+                isWildcardCertificate: boolean;
+                nodeAddressStep: SetupWizardFormData["nodeAddressStep"];
+                currentIndex: number;
+            };
+
+            if (securityOption !== "ownCertificate" || isWildcardCertificate || !value || !nodeAddressStep?.nodes) {
+                return true;
+            }
+
+            return (
+                nodeAddressStep.nodes.findIndex(
+                    (node, idx) => idx !== currentIndex && node.dnsName?.toLowerCase() === value.toLowerCase()
+                ) === -1
+            );
         }),
     httpPort: yup
         .number()
