@@ -329,7 +329,7 @@ if ($input.doc) {
 
     private static MockLlm NewAnswerMock(Raven.Server.Documents.DocumentDatabase database, ConcurrentQueue<string> payloads) =>
         new(database.DocumentsStorage.ContextPool,
-            new OpenAiChatCompletionClientSettings(new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o")),
+            new OpenAiChatCompletionProvider(new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o")),
             onRequest: payload =>
             {
                 payloads.Enqueue(payload.ToString());
@@ -753,7 +753,7 @@ if ($input.doc) {
             var toolResults = new List<string>();
             using var mock = new MockLlm(
                 database.DocumentsStorage.ContextPool,
-                new OpenAiChatCompletionClientSettings(new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o")),
+                new OpenAiChatCompletionProvider(new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o")),
                 onRequest: payload =>
                 {
                     var messages = payload["messages"];

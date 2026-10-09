@@ -366,6 +366,8 @@ namespace Raven.Server.Json
 
         internal static readonly Func<BlittableJsonReaderObject, MistralAiSettings> MistralAiSettings = GenerateJsonDeserializationRoutine<MistralAiSettings>();
 
+        internal static readonly Func<BlittableJsonReaderObject, AnthropicSettings> AnthropicSettings = GenerateJsonDeserializationRoutine<AnthropicSettings>();
+
         internal static readonly Func<BlittableJsonReaderObject, StudioTasksHandler.AiModelsRequest> AiModelsRequest = GenerateJsonDeserializationRoutine<StudioTasksHandler.AiModelsRequest>();
         
         internal static readonly Func<BlittableJsonReaderObject, AiAgentProcessorForTestConversation.AiAgentTestRequest> AiAgentTestRequest = GenerateJsonDeserializationRoutine<AiAgentProcessorForTestConversation.AiAgentTestRequest>();

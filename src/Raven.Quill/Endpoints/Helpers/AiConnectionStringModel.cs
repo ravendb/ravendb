@@ -11,5 +11,6 @@ internal static class AiConnectionStringModel
         ?? cs.GoogleSettings?.Model
         ?? cs.HuggingFaceSettings?.Model
         ?? cs.MistralAiSettings?.Model
-        ?? cs.VertexSettings?.Model;
+        ?? cs.VertexSettings?.Model
+        ?? cs.AnthropicSettings?.Model;
 }

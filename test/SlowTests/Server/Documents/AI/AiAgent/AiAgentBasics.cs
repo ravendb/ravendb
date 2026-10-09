@@ -44,7 +44,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google | RavenAiIntegration.Ollama | RavenAiIntegration.Anthropic, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanCreateAiAgent(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);
@@ -136,7 +136,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google | RavenAiIntegration.Ollama | RavenAiIntegration.Anthropic, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanResumeConversation(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);
@@ -186,7 +186,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenRetryTheory(RavenTestCategory.Ai, maxRetries: 3, delayBetweenRetriesMs: 10_000)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google | RavenAiIntegration.Ollama | RavenAiIntegration.Anthropic, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanRunTest(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);
@@ -239,7 +239,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google | RavenAiIntegration.Ollama | RavenAiIntegration.Anthropic, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanStreamTest(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);

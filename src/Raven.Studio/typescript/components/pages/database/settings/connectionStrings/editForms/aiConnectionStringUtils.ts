@@ -19,6 +19,7 @@ const getConnectorType = (connection: AiConnectionString): AiConnectorType => {
         OpenAiSettings: "OpenAi",
         MistralAiSettings: "MistralAi",
         VertexSettings: "Vertex",
+        AnthropicSettings: "Anthropic",
     };
 
     for (const key of Object.keys(mapping) as AiConnectionSetting[]) {
@@ -40,6 +41,7 @@ function mapAiConnectionStringToSettingsDto(connection: AiConnectionString): AiC
         connection.OpenAiSettings,
         connection.MistralAiSettings,
         connection.VertexSettings,
+        connection.AnthropicSettings,
     ].find(Boolean);
 
     if (!settings) {
@@ -295,6 +297,17 @@ const schema = yupObjectSchema<FormData>({
                 then: (schema) => schema.trim().required(),
             }),
         embeddingsMaxConcurrentBatches: getEmbeddingsMaxConcurrentBatchesSchema("mistralAiSettings"),
+    }),
+    anthropicSettings: yupObjectSchema<FormData["anthropicSettings"]>({
+        // No Studio form for Anthropic yet - the block only round-trips API-created connection strings.
+        apiKey: yup.string().nullable(),
+        model: yup.string().nullable(),
+        endpoint: yup.string().nullable(),
+        maxOutputTokens: yup.number().nullable(),
+        reasoningEffort: yup.string().nullable(),
+        enablePromptCache: yup.boolean().nullable(),
+        apiVersion: yup.string().nullable(),
+        embeddingsMaxConcurrentBatches: yup.number().nullable(),
     }),
     excludedDatabases: yup.array().of(yup.string()).optional(),
 });

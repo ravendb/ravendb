@@ -352,6 +352,19 @@ export function mapAiConnectionStringToDto(connection: AiConnection): AiConnecti
                       EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
                   }
                 : null,
+        AnthropicSettings:
+            connection.connectorType === "anthropicSettings"
+                ? {
+                      ApiKey: connection.anthropicSettings.apiKey,
+                      Model: connection.anthropicSettings.model,
+                      Endpoint: connection.anthropicSettings.endpoint,
+                      MaxOutputTokens: connection.anthropicSettings.maxOutputTokens,
+                      ReasoningEffort: connection.anthropicSettings.reasoningEffort,
+                      EnablePromptCache: connection.anthropicSettings.enablePromptCache,
+                      ApiVersion: connection.anthropicSettings.apiVersion,
+                      EmbeddingsMaxConcurrentBatches: null,
+                  }
+                : null,
     };
 }
 

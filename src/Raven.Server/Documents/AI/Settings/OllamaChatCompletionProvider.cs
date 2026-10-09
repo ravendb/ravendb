@@ -6,11 +6,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.AI.Settings;
 
-internal class OllamaChatCompletionClientSettings : AbstractChatCompletionClientSettings
+internal class OllamaChatCompletionProvider : AbstractOpenAiCompatibleChatCompletionProvider
 {
     private readonly OllamaSettings _settings;
 
-    public OllamaChatCompletionClientSettings(OllamaSettings settings) 
+    public OllamaChatCompletionProvider(OllamaSettings settings) 
         : base(settings)
     {
         _settings = settings;
@@ -38,14 +38,14 @@ internal class OllamaChatCompletionClientSettings : AbstractChatCompletionClient
         if (_settings.Think.HasValue)
         {
             writer.WriteComma();
-            writer.WritePropertyName(Constants.RequestFields.Think);
+            writer.WritePropertyName(Wire.RequestFields.Think);
             writer.WriteBool(_settings.Think.Value);
         }
 
         if (_settings.Temperature.HasValue)
         {
             writer.WriteComma();
-            writer.WritePropertyName(Constants.RequestFields.Temperature);
+            writer.WritePropertyName(Wire.RequestFields.Temperature);
             writer.WriteDouble(_settings.Temperature.Value);
         }
     }
