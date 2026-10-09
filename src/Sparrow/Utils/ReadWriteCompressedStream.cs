@@ -11,20 +11,29 @@ namespace Sparrow.Utils
 #if NETCOREAPP3_1_OR_GREATER
     internal sealed class ReadWriteCompressedStream : Stream
     {
+        // the transport: written to directly, provides the timeouts
         private readonly Stream _inner;
+        // what the decompressing side reads: the transport, possibly preceded by bytes already read from it; disposing it disposes the transport
+        private readonly Stream _innerInput;
         private readonly ZstdStream _input, _output;
         private readonly DisposeOnce<SingleAttempt> _dispose;
 
         public ReadWriteCompressedStream(Stream inner)
         {
-            _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+            _inner = _innerInput = inner ?? throw new ArgumentNullException(nameof(inner));
             _input = ZstdStream.Decompress(inner, leaveOpen: true);
             _output = ZstdStream.Compress(inner, leaveOpen: true);
             _dispose = new DisposeOnce<SingleAttempt>(DisposeInternal);
         }
 
+        /// <param name="inner">The transport.</param>
+        /// <param name="alreadyOnBuffer">Bytes read from the transport into this buffer but not consumed yet (e.g. read ahead while parsing the
+        /// connection negotiation) belong to the compressed stream, so they are decompressed first.</param>
         public unsafe ReadWriteCompressedStream(Stream inner, JsonOperationContext.MemoryBuffer alreadyOnBuffer)
         {
+            if (inner == null)
+                throw new ArgumentNullException(nameof(inner));
+
             Stream innerInput = inner;
             int valid = alreadyOnBuffer.Valid - alreadyOnBuffer.Used;
             if (valid > 0)
@@ -39,8 +48,9 @@ namespace Sparrow.Utils
                 alreadyOnBuffer.Valid = alreadyOnBuffer.Used = 0; // consume all the data from the buffer
             }
 
-            _inner = innerInput ?? throw new ArgumentNullException(nameof(inner));
-            _input = ZstdStream.Decompress(inner, leaveOpen: true);
+            _inner = inner;
+            _innerInput = innerInput;
+            _input = ZstdStream.Decompress(innerInput, leaveOpen: true);
             _output = ZstdStream.Compress(inner, leaveOpen: true);
             _dispose = new DisposeOnce<SingleAttempt>(DisposeInternal);
         }
@@ -201,7 +211,7 @@ namespace Sparrow.Utils
             // inner stream (which was already disposed).
             try
             {
-                _inner?.Dispose();
+                _innerInput?.Dispose();
             }
             finally
             {
