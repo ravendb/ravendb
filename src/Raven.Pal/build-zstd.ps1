@@ -41,16 +41,17 @@ if (Test-Path $workDir) {
     Remove-Item -Recurse -Force $workDir
 }
 
-git clone --branch ravendb --single-branch https://github.com/ravendb/zstd.git (Join-Path $workDir "zstd")
+# same source as build-libs/zstd-build-deps.sh (LIBZSTD_REPO / LIBZSTD_VER), keep them in sync
+git clone --branch v1.5.7 --depth 1 https://github.com/facebook/zstd.git (Join-Path $workDir "zstd")
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to clone zstd."
 }
 
 $buildDir = Join-Path $workDir "build"
 
+# multi-threaded like the other builds, Backup / Export.Compression.Zstd.Workers rely on it
 & $cmake -S (Join-Path $workDir "zstd\build\cmake") -B $buildDir -G "Visual Studio 18 2026" -A ARM64 `
-    -DCMAKE_POLICY_VERSION_MINIMUM="3.5" `
-    -DZSTD_MULTITHREAD_SUPPORT=OFF `
+    -DZSTD_MULTITHREAD_SUPPORT=ON `
     -DZSTD_BUILD_SHARED=ON `
     -DZSTD_BUILD_STATIC=OFF `
     -DZSTD_BUILD_PROGRAMS=OFF `
