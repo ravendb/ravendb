@@ -36,7 +36,7 @@ interface SurpassingIndex {
 
 interface MergeCandidateIndexItem {
     name: string;
-    lastQueryTime?: Date;
+    lastQueryingTime?: Date;
     lastIndexingTime?: Date;
 }
 
@@ -393,7 +393,7 @@ export const formatIndexCleanupDate = (date: Date) => {
     return (
         <>
             {genUtils.formatDurationByDate(moment.utc(date), true)}{" "}
-            <small className="text-muted">({moment.utc(date).format("MM/DD/YY, h:mma")})</small>
+            <small className="text-muted">({moment(date).format("MM/DD/YY, h:mma")})</small>
         </>
     );
 };
