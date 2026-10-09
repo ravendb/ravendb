@@ -29,6 +29,7 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import { FlexGrow } from "components/common/FlexGrow";
 import classNames from "classnames";
 import { Switch } from "components/common/Checkbox";
+import useBoolean from "components/hooks/useBoolean";
 
 type RevisionType = Raven.Server.Documents.Revisions.RevisionsStorage.RevisionType;
 
@@ -45,7 +46,7 @@ export default function AllRevisions() {
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const isSharded = useAppSelector(databaseSelectors.activeDatabase)?.isSharded;
 
-    const [isPaginated, setIsPaginated] = useState(false);
+    const { value: isPaginated, setValue: setIsPaginated, toggle: toggleIsPaginated } = useBoolean(false);
     const isSmallSample = allRevisionsUtils.isSmallSample(type.value, collection.value);
     const isPaginationAvailable = !isSharded && !isSmallSample;
 
@@ -144,7 +145,7 @@ export default function AllRevisions() {
                     {isPaginationAvailable && (
                         <Switch
                             selected={isPaginated}
-                            toggleSelection={() => setIsPaginated(!isPaginated)}
+                            toggleSelection={toggleIsPaginated}
                             color="primary"
                             title="Show the revisions page by page instead of scrolling"
                             className="mb-1"

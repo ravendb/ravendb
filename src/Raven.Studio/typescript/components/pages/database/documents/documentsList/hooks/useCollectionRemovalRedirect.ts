@@ -35,11 +35,6 @@ export function useCollectionRemovalRedirect(databaseName: string, collectionNam
         onCollectionDeletionFailed: () => {
             isRemovalExpectedRef.current = false;
         },
-        onEntireCollectionDeleted: (deletedCollectionName: string) => {
-            if (deletedCollectionName === collectionName) {
-                redirectToAllDocuments(databaseName);
-            }
-        },
     };
 }
 

@@ -9,6 +9,7 @@ import shard from "models/resources/shard";
 import { ajaxMock } from "test/mocks";
 import nonShardedDatabase from "models/resources/nonShardedDatabase";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
+import router from "plugins/router";
 
 function mockResponse(dto: StudioDatabasesResponse) {
     ajaxMock.mockImplementation((args: JQueryAjaxSettings) => {
@@ -184,6 +185,57 @@ describe("databasesManager", () => {
         expect(db1.shards())
             .toHaveLength(2);
     })
+
+    describe("switchDatabase", () => {
+        afterEach(() => {
+            jest.restoreAllMocks();
+            jest.clearAllMocks();
+            window.location.hash = "";
+        });
+
+        async function initWithTwoDatabases() {
+            const db2Dto = DatabasesStubs.nonShardedSingleNodeDatabaseDto();
+            db2Dto.Name = "db2";
+
+            mockResponse({
+                Databases: [DatabasesStubs.nonShardedSingleNodeDatabaseDto(), db2Dto],
+                Orchestrators: []
+            });
+
+            const manager = new databasesManager();
+            await manager.init();
+
+            const activate = jest.spyOn(manager, "activate").mockReturnValue($.Deferred<void>().resolve());
+
+            return { manager, activate };
+        }
+
+        function openPage(hash: string, queryParams: Record<string, string>) {
+            window.location.hash = hash;
+            jest.replaceProperty(router, "activeInstruction", (() => ({ queryParams })) as unknown as typeof router.activeInstruction);
+        }
+
+        it("goes through the router on a database page, so the page can keep unsaved changes", async () => {
+            const { manager, activate } = await initWithTwoDatabases();
+            openPage("#databases/documents?collection=Orders&database=db1", { collection: "Orders", database: "db1" });
+
+            manager.switchDatabase(manager.getDatabaseByName("db2"));
+
+            expect(router.navigate).toHaveBeenCalledWith("#databases/documents?collection=Orders&database=db2");
+            expect(activate).not.toHaveBeenCalled();
+        });
+
+        it("activates the database directly outside of database pages", async () => {
+            const { manager, activate } = await initWithTwoDatabases();
+            openPage("#databases", null);
+
+            const db2 = manager.getDatabaseByName("db2");
+            manager.switchDatabase(db2);
+
+            expect(activate).toHaveBeenCalledWith(db2);
+            expect(router.navigate).not.toHaveBeenCalled();
+        });
+    });
 })
 
 
