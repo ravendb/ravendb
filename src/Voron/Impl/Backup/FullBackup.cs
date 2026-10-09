@@ -1,4 +1,4 @@
-﻿using Sparrow.Binary;
+using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -65,6 +65,7 @@ namespace Voron.Impl.Backup
             CompressionLevel compressionLevel,
             int? maxReadOpsPerSecond = null,
             Action<(string Message, int FilesCount)> infoNotify = null,
+            int zstdWorkers = 0,
             CancellationToken cancellationToken = default)
         {
             infoNotify ??= (_ => { });
@@ -83,7 +84,7 @@ namespace Voron.Impl.Backup
                 if (ForTestingPurposes?.OnBeforeRateGateWaitToProceed != null)
                     copier.ForTestingPurposesOnly().OnBeforeRateGateWaitToProceed = ForTestingPurposes?.OnBeforeRateGateWaitToProceed;
 
-                Backup(env, compressionAlgorithm, compressionLevel, dataPager, archive, basePath, copier, infoNotify, cancellationToken);
+                Backup(env, compressionAlgorithm, compressionLevel, dataPager, archive, basePath, copier, infoNotify, zstdWorkers, cancellationToken);
             }
 
             infoNotify(("Voron backup db finished", 0));
@@ -98,6 +99,7 @@ namespace Voron.Impl.Backup
             string basePath,
             DataCopier copier,
             Action<(string Message, int FilesCount)> infoNotify,
+            int zstdWorkers = 0,
             CancellationToken cancellationToken = default)
         {
             var usedJournals = new List<JournalFile>();
@@ -106,7 +108,7 @@ namespace Voron.Impl.Backup
             LowLevelTransaction txr = null;
             var backupSuccess = false;
 
-            var package = new BackupZipArchive(zipArchive, compressionAlgorithm, compressionLevel);
+            var package = new BackupZipArchive(zipArchive, compressionAlgorithm, compressionLevel, zstdWorkers);
 
             try
             {

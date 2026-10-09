@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -61,23 +61,25 @@ namespace Raven.Server.Smuggler.Documents
         private readonly ISmugglerSource _source;
         private readonly CompressionLevel _compressionLevel;
         private readonly ExportCompressionAlgorithm _compressionAlgorithm;
+        private readonly int _zstdWorkers;
         private AsyncBlittableJsonTextWriter _writer;
         private DatabaseSmugglerOptionsServerSide _options;
         private Func<LazyStringValue, bool> _filterMetadataProperty;
         private HashSet<string> _attachmentStreamsAlreadyExported;
 
-        public StreamDestination(Stream stream, JsonOperationContext context, ISmugglerSource source, ExportCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel)
+        public StreamDestination(Stream stream, JsonOperationContext context, ISmugglerSource source, ExportCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel, int zstdWorkers = 0)
         {
             _stream = stream;
             _context = context;
             _source = source;
             _compressionAlgorithm = compressionAlgorithm;
             _compressionLevel = compressionLevel;
+            _zstdWorkers = zstdWorkers;
         }
 
         public ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress, long buildVersion)
         {
-            _outputStream = BackupUtils.GetCompressionStream(_stream, _compressionAlgorithm, _compressionLevel);
+            _outputStream = BackupUtils.GetCompressionStream(_stream, _compressionAlgorithm, _compressionLevel, _zstdWorkers);
             _writer = new AsyncBlittableJsonTextWriter(_context, _outputStream);
             _options = options;
 
