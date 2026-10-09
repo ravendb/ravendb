@@ -77,6 +77,12 @@ namespace Sparrow.Utils
         private static extern UIntPtr ZSTD_sizeof_CCtx(void* cctx);
 
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
+        private static extern UIntPtr ZSTD_CCtx_refCDict(void* cctx, void* cdict);
+
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
+        private static extern UIntPtr ZSTD_compress2(void* cctx, byte* dst, UIntPtr dstCapacity, byte* src, UIntPtr srcSize);
+
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         private static extern void* ZSTD_createDCtx();
 
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
@@ -171,6 +177,7 @@ namespace Sparrow.Utils
                               * Special: value 0 means "use default windowLog".
                               * Note: Using a windowLog greater than ZSTD_WINDOWLOG_LIMIT_DEFAULT
                               *       requires explicitly allowing such size at streaming decompression stage. */
+            ZSTD_c_dictIDFlag = 202, /* When applicable, dictionary's ID is written into frame header (default:1) */
             ZSTD_c_nbWorkers = 400,  /* Select how many threads will be spawned to compress in parallel.
                               * When nbWorkers >= 1, triggers asynchronous mode when invoking ZSTD_compressStream*().
                               * Only available when the library is compiled with ZSTD_MULTITHREAD, otherwise setting
@@ -254,6 +261,9 @@ namespace Sparrow.Utils
                     var rc = ZSTD_CCtx_setParameter(cctx, ZSTD_cParameter.ZSTD_c_compressionLevel, _level);
                     AssertZstdSuccess(rc);
                 }
+
+                // Voron writes the dictionary id next to each compressed value, no need to also have zstd write it into every frame
+                AssertZstdSuccess(ZSTD_CCtx_setParameter(cctx, ZSTD_cParameter.ZSTD_c_dictIDFlag, 0));
 
                 if (PlatformDetails.Is32Bits)
                 {
@@ -442,8 +452,18 @@ namespace Sparrow.Utils
                 }
                 else
                 {
-                    result = ZSTD_compress_usingCDict(_threadCompressContext.Compression, dst,
-                        (UIntPtr)dstLen, src, (UIntPtr)srcLen, dictionary.Compression);
+                    // unlike ZSTD_compress_usingCDict, this applies the context parameters, so the frame doesn't carry the dictionary id
+                    var ctx = _threadCompressContext.Compression;
+                    AssertSuccess(ZSTD_CCtx_refCDict(ctx, dictionary.Compression), dictionary);
+                    try
+                    {
+                        result = ZSTD_compress2(ctx, dst, (UIntPtr)dstLen, src, (UIntPtr)srcLen);
+                    }
+                    finally
+                    {
+                        // don't keep a reference to a dictionary that may be disposed
+                        ZSTD_CCtx_refCDict(ctx, null);
+                    }
                 }
 
                 AssertSuccess(result, dictionary);
