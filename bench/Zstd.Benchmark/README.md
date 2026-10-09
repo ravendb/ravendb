@@ -106,3 +106,22 @@ MSYS_NO_PATHCONV=1 docker run --rm \
 Zstd.Benchmark report [--lib path/to/libzstd.win.x64.dll] [--out report.md] [--no-sweep]
 Zstd.Benchmark libinfo --lib a=path1 --lib b=path2
 ```
+
+## End to end
+
+The microbenchmarks measure compression in isolation. `e2e` measures what a user sees: export, logical backup and snapshot
+of a generated database (mutated Northwind documents, a few GB) through a real server process, plus restore and import at
+`Fastest`. Every configuration of `Backup.Compression.Zstd.Workers` / `Export.Compression.Zstd.Workers` and compression
+level gets a fresh server; the harness checks the server really runs with those settings, pins it to the performance cores
+and records duration, server CPU time, peak private bytes and output size. Two rounds run the configurations in opposite
+order and an effect is only confirmed when both agree.
+
+```bash
+dotnet build src/Raven.Server -c Release
+Zstd.Benchmark e2e --server src/Raven.Server/bin/Release/net10.0/Raven.Server.dll --work <dir> \
+    [--size-gb 3] [--workers 0,2,4] [--levels Fastest,Optimal] [--rounds 2] [--iterations 3]
+```
+
+Without a license the server is limited to 3 cores, which would hide the effect of the workers; set `RAVEN_License`
+(on Windows the tests' `RAVEN_LICENSE` works too, environment variable names are case-insensitive there). The database is
+generated once per `--work` directory and reused while it matches `--size-gb`.
