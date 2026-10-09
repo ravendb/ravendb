@@ -1,0 +1,69 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeFrameworkVersion>10.0.12</RuntimeFrameworkVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>Zstd.Benchmark</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <PackageId>Zstd.Benchmark</PackageId>
+    <RuntimeIdentifiers>win-x64;win-x86;linux-x64</RuntimeIdentifiers>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\src\Raven.Server\Web\Studio\EmbeddedData\Northwind.ravendbdump" Link="Data\Northwind.ravendbdump">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\Micro.Benchmark\Data\monsters.json" Link="Data\monsters.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Sparrow.Server\Sparrow.Server.csproj" />
+    <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsWindows64)' == 'true'">
+    <None Include="..\..\libs\libzstd\libzstd.win.x64.dll" Link="libzstd.win.x64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsWindowsArm64)' == 'true'">
+    <None Include="..\..\libs\libzstd\libzstd.win.arm64.dll" Link="libzstd.win.arm64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsWindows32)' == 'true'">
+    <None Include="..\..\libs\libzstd\libzstd.win.x86.dll" Link="libzstd.win.x86.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsLinux64)' == 'true'">
+    <None Include="..\..\libs\libzstd\libzstd.linux.x64.so" Link="libzstd.linux.x64.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsLinuxArm64)' == 'true'">
+    <None Include="..\..\libs\libzstd\libzstd.arm.64.so" Link="libzstd.arm.64.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsLinuxArm32)' == 'true'">
+    <None Include="..\..\libs\libzstd\libzstd.arm.32.so" Link="libzstd.arm.32.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsMacOS)' == 'true'">
+    <None Include="..\..\libs\libzstd\libzstd.mac.x64.dylib" Link="libzstd.mac.x64.dylib">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\libs\libzstd\libzstd.mac.arm64.dylib" Link="libzstd.mac.arm64.dylib">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>
