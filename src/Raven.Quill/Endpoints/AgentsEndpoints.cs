@@ -42,6 +42,13 @@ public static class AgentsEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
             .Produces<ApiErrorResponse>(StatusCodes.Status500InternalServerError);
+
+        group.MapPost("/agent/test-query", TestQueryAsync)
+            .WithName("agents.testQuery")
+            .Accepts<TestQueryRequest>("application/json")
+            .Produces<TestQueryResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
     }
 
     private static async Task<IResult> ListAgentsAsync(
@@ -205,6 +212,29 @@ public static class AgentsEndpoints
         if (logger.AuditEnabled)
             logger.Audit("DELETE", $"AiAgentConfiguration '{agent.Identifier}' in App '{app.Slug}'", ctx);
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> TestQueryAsync(
+        string slug,
+        TestQueryRequest request,
+        IDocumentStore store,
+        CancellationToken ct)
+    {
+        var app = await AppLookup.LoadAppAsync(store, slug, ct);
+        if (app is null)
+            return Results.NotFound(new ApiErrorResponse($"no app with slug '{slug}'"));
+
+        if (string.IsNullOrWhiteSpace(request?.Query))
+            return Results.BadRequest(new ApiErrorResponse("query is required"));
+
+        try
+        {
+            return Results.Ok(await AgentQueryTester.RunAsync(store, app.Database, request, ct));
+        }
+        catch (RavenException ex)
+        {
+            return Results.BadRequest(new ApiErrorResponse(ex.Message));
+        }
     }
 
     private static async Task<int> CountBoundReferencesAsync(

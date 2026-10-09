@@ -11,6 +11,7 @@ type FormAceEditorProps<TFieldValues extends FieldValues, TName extends FieldPat
         description?: ReactNode;
         editorName?: string;
         label?: ReactNode;
+        labelAction?: ReactNode;
         labelClassName?: string;
     };
 
@@ -22,6 +23,7 @@ export function FormAceEditor<TFieldValues extends FieldValues, TName extends Fi
     disabled,
     editorName,
     label,
+    labelAction,
     mode,
     name,
     readOnly,
@@ -47,9 +49,12 @@ export function FormAceEditor<TFieldValues extends FieldValues, TName extends Fi
 
     return (
         <Field className={className} data-invalid={invalid}>
-            <FieldLabel htmlFor={inputId} className={labelClassName}>
-                {label}
-            </FieldLabel>
+            <div className="flex items-center justify-between gap-2">
+                <FieldLabel htmlFor={inputId} className={labelClassName}>
+                    {label}
+                </FieldLabel>
+                {labelAction}
+            </div>
             <AceEditor
                 aria-invalid={invalid}
                 mode={mode}

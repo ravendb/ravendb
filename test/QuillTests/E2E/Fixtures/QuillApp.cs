@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
@@ -52,6 +52,8 @@ public sealed class QuillApp : IAsyncDisposable
     public Task<ProvisionAgentResponse> EditAgentAsync(EditAgentRequest body) => Host.EditAgentAsync(Slug, body);
 
     public Task DeleteAgentAsync(string agentId) => Host.DeleteAgentAsync(Slug, agentId);
+
+    public Task<TestQueryResponse> TestQueryAsync(TestQueryRequest body) => Host.TestQueryAsync(Slug, body);
 
     /// A non-success AI status still returns HTTP 200 with the status on the payload.
     public Task<SuggestAgentResponse> SuggestAgentAsync(SuggestAgentRequest body) => Host.SuggestAgentAsync(Slug, body);
