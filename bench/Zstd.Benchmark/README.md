@@ -12,6 +12,7 @@ on realistic data. Use it before and after any change to the zstd binding, `Zstd
 | `LargeStreamBenchmarks` | Exports, logical and snapshot backups, restores, bulk insert: one long `ZstdStream`, 32KB async writes/reads | JSON vs blittable payload, Fastest/Optimal, in-memory vs syscall-per-call target |
 | `SmallStreamBenchmarks` | HTTP bodies: a new `ZstdStream` per request/response at `Fastest` (server `ZstdCompressionProvider`, client `BlittableJsonContent`, `RequestExecutor`) | body size |
 | `FlushingStreamBenchmarks` | `ReadWriteCompressedStream` on replication / subscription / cluster TCP: long-lived stream flushed after every batch | batch size, target |
+| `ParallelCompressionBenchmarks` | `ZstdStream` with worker threads (`ZSTD_c_nbWorkers`), the candidate for backups and exports; needs a multi-threaded libzstd | payload, level, workers |
 | `DocumentCompressionVariantsBenchmarks` | Raw libzstd ways of compressing with a dictionary without writing the dictionary id into every frame | dataset, variant |
 
 Methods named `*_Baseline` run a frozen copy of the code as it was before the zstd optimizations (`Baseline/BaselineZstdStream.cs`,

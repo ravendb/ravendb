@@ -171,6 +171,10 @@ namespace Sparrow.Utils
                               * Special: value 0 means "use default windowLog".
                               * Note: Using a windowLog greater than ZSTD_WINDOWLOG_LIMIT_DEFAULT
                               *       requires explicitly allowing such size at streaming decompression stage. */
+            ZSTD_c_nbWorkers = 400,  /* Select how many threads will be spawned to compress in parallel.
+                              * When nbWorkers >= 1, triggers asynchronous mode when invoking ZSTD_compressStream*().
+                              * Only available when the library is compiled with ZSTD_MULTITHREAD, otherwise setting
+                              * a value >= 1 returns an error. */
         };
 
         internal enum ZSTD_ResetDirective
@@ -214,6 +218,7 @@ namespace Sparrow.Utils
         internal sealed class CompressContext : IDisposable
         {
             private readonly int _level;
+            private readonly int _workers;
             private readonly bool _pooled;
             private void* _cctx;
             public void* Compression => _cctx != null ? _cctx : (_cctx = CreateCompression());
@@ -221,12 +226,20 @@ namespace Sparrow.Utils
             public void* Decompression => _dctx != null ? _dctx : (_dctx = CreateDecompression());
 
             /// <param name="level">Compression level, 0 means the zstd default (3).</param>
+            /// <param name="workers">Worker threads for streaming compression. Ignored on 32 bits and when the native library is single threaded.</param>
             /// <param name="pooled">Take the native contexts from <see cref="ContextPool"/> and give them back on dispose. Use for short-lived owners.</param>
-            public CompressContext(int level, bool pooled = false)
+            public CompressContext(int level, int workers = 0, bool pooled = false)
             {
                 _level = level;
-                _pooled = pooled;
+                _workers = workers;
+                // multi-threaded contexts own worker threads, those aren't kept around idle
+                _pooled = pooled && workers == 0;
             }
+
+            /// <summary>
+            /// Worker threads the compression context actually got, 0 when it compresses on the calling thread.
+            /// </summary>
+            public int Workers { get; private set; }
 
             private void* CreateCompression()
             {
@@ -247,6 +260,12 @@ namespace Sparrow.Utils
                     // set windowLog size to 256KB
                     var rc = ZSTD_CCtx_setParameter(cctx, ZSTD_cParameter.ZSTD_c_windowLog, 16);
                     AssertZstdSuccess(rc);
+                }
+                else if (_workers > 0)
+                {
+                    // the native library might be built without multi-threading support, then we compress on the calling thread
+                    if (ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_cParameter.ZSTD_c_nbWorkers, _workers)) == 0)
+                        Workers = _workers;
                 }
 
                 return cctx;
