@@ -59,7 +59,7 @@ export default function EditGenAiTaskModelFields() {
                     mode="text"
                     actions={[{ component: <AceEditor.FullScreenAction /> }]}
                     samplesPanel={{ tabs: promptSamplesTabs }}
-                    aiAssistantSlot={
+                    overlaySlot={
                         <>
                             {formValues.prompt?.length > 0 && (
                                 <AiAssistantButton handleClick={toggleIsAiAssistOpen} right="48px" />

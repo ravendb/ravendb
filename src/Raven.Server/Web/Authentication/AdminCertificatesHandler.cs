@@ -603,12 +603,13 @@ namespace Raven.Server.Web.Authentication
                 // to bind to: at auth time such a user (AllowAnySsoServer == false, none of its hashes matching a
                 // remaining SSO server) can never be accepted, and because SSO client entries have no expiry they
                 // are never purged. Block the delete and list them so the caller (API/CLI included) knows what to
-                // fix first. Users that still have another registered SSO server are left untouched.
+                // fix first. Users that still have another registered SSO server are left untouched - including another
+                // issuance of the same key (e.g. a renewed certificate), so an old issuance can be deleted once the new one is registered.
                 if (definition != null && definition.Usage == CertificateUsage.SsoServer && string.IsNullOrEmpty(definition.PublicKeyPinningHash) == false)
                 {
                     var remainingSsoHashes = new HashSet<string>(
                         ServerStore.Cluster.GetSsoServerCertificates(ctx)
-                            .Where(c => CertificateUtils.PinningHashEquals(c.PublicKeyPinningHash, definition.PublicKeyPinningHash) == false)
+                            .Where(c => string.Equals(c.Thumbprint, definition.Thumbprint, StringComparison.OrdinalIgnoreCase) == false)
                             .Select(c => c.PublicKeyPinningHash),
                         StringComparer.Ordinal);
 

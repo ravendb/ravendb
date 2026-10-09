@@ -36,7 +36,7 @@ interface SurpassingIndex {
 
 interface MergeCandidateIndexItem {
     name: string;
-    lastQueryTime?: Date;
+    lastQueryingTime?: Date;
     lastIndexingTime?: Date;
 }
 
@@ -341,7 +341,7 @@ function getNewer(date1: string, date2: string) {
         return date1;
     }
 
-    return date1.localeCompare(date2) ? date1 : date2;
+    return moment(date1).isAfter(date2) ? date1 : date2;
 }
 
 function findUnusedIndexes(stats: IndexStats): UnusedIndex[] {
@@ -393,7 +393,7 @@ export const formatIndexCleanupDate = (date: Date) => {
     return (
         <>
             {genUtils.formatDurationByDate(moment.utc(date), true)}{" "}
-            <small className="text-muted">({moment.utc(date).format("MM/DD/YY, h:mma")})</small>
+            <small className="text-muted">({moment(date).format("MM/DD/YY, h:mma")})</small>
         </>
     );
 };
