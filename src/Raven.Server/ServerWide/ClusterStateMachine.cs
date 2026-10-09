@@ -656,8 +656,7 @@ namespace Raven.Server.ServerWide
 
                     case nameof(PutServerWideConnectionStringCommand):
                         AssertServerWideFor(serverStore, LicenseAttribute.ServerWideConnectionStrings);
-                        var serverWideConnectionString = UpdateValue<ServerWideConnectionString>(context, type, cmd, index, skipNotifyValueChanged: true);
-                        UpdateDatabasesWithServerWideConnectionString(context, type, serverWideConnectionString, index);
+                        PutServerWideConnectionString(context, type, cmd, index);
                         break;
 
                     case nameof(RemoveServerWideConnectionStringCommand):
