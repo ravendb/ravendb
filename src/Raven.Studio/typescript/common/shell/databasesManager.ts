@@ -121,6 +121,17 @@ class databasesManager {
         return task;
     }
 
+    switchDatabase(db: database): void {
+        const currentPageUrlForDatabase = appUrl.getDatabaseNameFromUrl() ? appUrl.forCurrentPage(db) : null;
+
+        if (currentPageUrlForDatabase && currentPageUrlForDatabase !== window.location.hash) {
+            router.navigate(currentPageUrlForDatabase);
+            return;
+        }
+
+        this.activate(db);
+    }
+
     activate(db: database, opts: { waitForNotificationCenterWebSocket: boolean } = undefined): JQueryPromise<void> {
         const existingActivationTask = this.activeDatabaseTracker.getActivationTask(db);
         if (existingActivationTask) {

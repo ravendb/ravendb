@@ -19,7 +19,10 @@ export function useDocumentsDataChanged({
 
     const changeVector = isAllDocuments ? globalChangeVector : collection?.lastDocumentChangeVector;
     const statsEtag = collection && changeVector ? `${changeVector}/${collection.documentCount}` : null;
-    // Sharded stats do not merge the change vectors of the shards, so every stats update is verified on the server
+
+    // Sharded stats only sum the document counts of the shards. The collection change vector comes from a single
+    // shard and the global change vector is null, so an update on another shard may not change these stats at all.
+    // Keying on the collection object, recreated on every stats notification, verifies each one on the server.
     const statsVersion: unknown = isSharded ? collection : statsEtag;
 
     const [isDataChanged, setIsDataChanged] = useState(false);

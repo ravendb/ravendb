@@ -1,3 +1,4 @@
+import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import messagePublisher from "common/messagePublisher";
 import { AccessPopover } from "components/common/AccessPopover";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -84,7 +85,7 @@ export default function DocumentsSelectionActions({
         }
 
         const isConfirmed = await confirm({
-            title: `Delete ${state.selectedIds.length === 1 ? "document" : `${state.selectedIds.length} documents`}?`,
+            title: `Delete ${pluralizeHelpers.pluralize(state.selectedIds.length, "document", "documents")}?`,
             message: (
                 <ul className="overflow-auto m-0" style={{ maxHeight: "300px" }}>
                     {state.selectedIds.map((id) => (

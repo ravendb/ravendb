@@ -75,6 +75,7 @@ describe("DocumentsPage", () => {
 
     afterEach(() => {
         jest.restoreAllMocks();
+        jest.clearAllMocks();
     });
 
     it("can render collection documents with property columns", async () => {
@@ -835,6 +836,69 @@ describe("DocumentsPage", () => {
 
             expect(reportSuccess).toHaveBeenCalledWith("Deleted 127 documents from Orders");
             expect(getSelectionActions(screen)).not.toBeInTheDocument();
+        });
+
+        describe("deleting the entire collection", () => {
+            const startDeletingEntireCollection = async (screen: Screen) => {
+                const deleteCollectionTask = $.Deferred<operationIdDto>();
+                mockServices.databasesService.getMock("deleteCollection").mockReturnValue(deleteCollectionTask);
+                const deleteOperationTask = $.Deferred<void>();
+                jest.spyOn(notificationCenter.instance, "openDetailsForOperationById").mockImplementation(() => {});
+                jest.spyOn(notificationCenter.instance, "monitorOperation").mockReturnValue(deleteOperationTask);
+                jest.spyOn(messagePublisher, "reportSuccess").mockImplementation(() => {});
+
+                fireEvent.click(getSelectAllCheckbox(screen));
+                fireEvent.click(getSelectionActionButton(screen, /Delete/));
+
+                const dialog = await screen.findByRole("dialog");
+                fireEvent.change(within(dialog).getByPlaceholderText("DELETE"), { target: { value: "DELETE" } });
+                fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+
+                act(() => {
+                    deleteCollectionTask.resolve({ OperationId: 1 });
+                });
+
+                return { deleteOperationTask };
+            };
+
+            it("redirects to all documents without a warning once the collection is removed", async () => {
+                const navigate = jest.spyOn(router, "navigate").mockImplementation(() => true);
+                const reportWarning = jest.spyOn(messagePublisher, "reportWarning").mockImplementation(() => {});
+                const { screen } = await renderOrders();
+
+                const { deleteOperationTask } = await startDeletingEntireCollection(screen);
+
+                await act(async () => {
+                    deleteOperationTask.resolve();
+                });
+
+                expect(navigate).not.toHaveBeenCalled();
+
+                act(() => {
+                    mockStore.collectionsTracker.with_CollectionsExcept(["Orders"]);
+                });
+
+                expect(reportWarning).not.toHaveBeenCalled();
+                expect(navigate).toHaveBeenCalledWith(appUrl.forDocuments(null, DATABASE_NAME), {
+                    replace: true,
+                    trigger: true,
+                });
+            });
+
+            it("does not navigate away from the page the user moved to when the deletion finishes", async () => {
+                const navigate = jest.spyOn(router, "navigate").mockImplementation(() => true);
+                const { screen, unmount } = await renderOrders();
+
+                const { deleteOperationTask } = await startDeletingEntireCollection(screen);
+
+                unmount();
+
+                await act(async () => {
+                    deleteOperationTask.resolve();
+                });
+
+                expect(navigate).not.toHaveBeenCalled();
+            });
         });
 
         it("copies the selected documents and warns about the ones that no longer exist", async () => {

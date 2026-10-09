@@ -33,7 +33,7 @@ export default function DatabaseSwitcher() {
 
     const handleSelect = (option: DatabaseSwitcherOption) => {
         const db = databasesManager.default.getDatabaseByName(option.value);
-        databasesManager.default.activate(db);
+        databasesManager.default.switchDatabase(db);
     };
 
     return (
