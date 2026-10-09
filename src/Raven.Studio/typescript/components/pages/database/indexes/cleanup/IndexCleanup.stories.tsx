@@ -1,4 +1,4 @@
-import { Meta, StoryFn } from "@storybook/react-webpack5";
+import { Meta, StoryFn, StoryObj } from "@storybook/react-webpack5";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { IndexCleanup } from "./IndexCleanup";
@@ -65,4 +65,36 @@ export const LicenseRestricted: StoryFn = () => {
     indexesService.withGetIndexMergeSuggestions();
 
     return <IndexCleanup />;
+};
+
+interface CleanupSuggestionsInClusterArgs {
+    nodeTagWithLatestTimes: string;
+    latestTime: string;
+}
+
+export const CleanupSuggestionsInCluster: StoryObj<CleanupSuggestionsInClusterArgs> = {
+    render: ({ nodeTagWithLatestTimes, latestTime }) => {
+        const { databases, license } = mockStore;
+        databases.withActiveDatabase_NonSharded_Cluster();
+        license.with_License();
+
+        const { indexesService } = mockServices;
+
+        indexesService.withGetStatsPerLocation((stats, location) => {
+            if (location.nodeTag !== nodeTagWithLatestTimes) {
+                return;
+            }
+
+            const productSearch = stats.find((x) => x.Name === "Product/Search");
+            productSearch.LastQueryingTime = latestTime;
+            productSearch.LastIndexingTime = latestTime;
+        });
+        indexesService.withGetIndexMergeSuggestions();
+
+        return <IndexCleanup />;
+    },
+    args: {
+        nodeTagWithLatestTimes: "B",
+        latestTime: "2025-03-01T08:30:00.0000000Z",
+    },
 };

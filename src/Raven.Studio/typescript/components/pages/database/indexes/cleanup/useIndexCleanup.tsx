@@ -341,7 +341,7 @@ function getNewer(date1: string, date2: string) {
         return date1;
     }
 
-    return date1.localeCompare(date2) ? date1 : date2;
+    return moment(date1).isAfter(date2) ? date1 : date2;
 }
 
 function findUnusedIndexes(stats: IndexStats): UnusedIndex[] {
