@@ -458,8 +458,11 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             {
                 // this item cannot be processed, because it has too many items, and retrying isn't going to change that
                 case TooManyTokensException:
-                // the model refused to answer about this item, and is unlikely to change its mind    
+                // the model refused to answer about this item, and is unlikely to change its mind
                 case RefusedToAnswerException:
+                // this item's context holds a value a query parameter cannot take, and that won't change
+                // until the document does - at which point its context hash changes anyway
+                case UnsupportedAiQueryParameterException:
                     // in this case, we _intentionally_ want to update the hash so we will _not_ try to update this known bad
                     // item again in the future.
                     item.UpdateHash = true;

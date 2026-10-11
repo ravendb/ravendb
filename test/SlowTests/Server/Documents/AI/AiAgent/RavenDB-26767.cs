@@ -16,6 +16,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Settings;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi.Test;
 using Raven.Server.Documents.Handlers.AI.Agents;
@@ -403,9 +404,10 @@ if ($input.doc) {
     public async Task GenAi_OmittedObject_QueryReferencingIt_IsRejectedWithATaskLevelError()
     {
         // 'brand' is an object -> omitted from RequestBody.Parameters (filtered), so $brand can never be bound.
-        // The task refuses the item itself and names what the author can act on - the query, the parameter and the
-        // type the context property holds - rather than leaving the agent validator to complain about an agent
-        // configuration the author never wrote.
+        // The refusal names what the author can act on - the query, the parameter and the type the context property
+        // holds - rather than leaving the agent validator to complain about an agent configuration the author never
+        // wrote. It surfaces as a task-level error only because test mode rethrows; outside test mode it stays this
+        // item's failure, see GenAi_OneRefusedContext_FailsOnItsOwnAndTheRestOfTheBatchIsKept.
         var (error, toolResults) = await RunGenAiQueryToolAsync(
             contexts: [new DynamicJsonValue { ["brand"] = new DynamicJsonValue { ["Name"] = "TechNova" } }],
             queryRql: "from Products where Brand = $brand",
@@ -416,6 +418,57 @@ if ($input.doc) {
         Assert.Contains("$brand", error.ToString());
         Assert.Contains("only takes a scalar value", error.ToString());
         Assert.Empty(toolResults); // refused before the model was asked to do anything
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task GenAi_OneRefusedContext_FailsOnItsOwnAndTheRestOfTheBatchIsKept()
+    {
+        // Outside test mode a refused context must stay that item's failure. Test mode cannot show this: there
+        // HandleItemError rethrows, so a per-item failure and a whole-batch abort look the same.
+        var (error, _, items, statistics) = await RunGenAiBatchAsync(
+            contexts:
+            [
+                new DynamicJsonValue { ["brand"] = "TechNova" },                                // scalar, binds
+                new DynamicJsonValue { ["brand"] = new DynamicJsonValue { ["Name"] = "X" } },   // object, refused
+                new DynamicJsonValue { ["brand"] = "Contoso" }                                  // scalar, after the refusal
+            ],
+            queryRql: "from Products where Brand = $brand",
+            modelToolArgs: "{}",
+            seed: null,
+            testMode: false);
+
+        Assert.Null(error); // the refusal is the item's, so SendToModel returns instead of faulting the batch
+
+        Assert.NotNull(items[0].ModelOutput); // the answer we already paid for is kept
+        Assert.Null(items[1].ModelOutput);
+        Assert.NotNull(items[2].ModelOutput); // and the items behind the refused one are still attempted
+
+        Assert.Equal(1, statistics.LoadErrors); // the refusal is recorded against the item, not swallowed
+
+        // the refused item is deterministic, so its hash is updated and it is not retried until the document changes
+        Assert.True(items[1].UpdateHash);
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task GenAi_WholeBatchRefused_IsNotRetriedForever()
+    {
+        // When every attempted item is refused the batch must not be treated as a transient failure: that is
+        // AllAttemptedFailedNonDeterministically, which throws and has the task retry the same batch indefinitely.
+        var (error, _, items, statistics) = await RunGenAiBatchAsync(
+            contexts:
+            [
+                new DynamicJsonValue { ["brand"] = new DynamicJsonValue { ["Name"] = "X" } },
+                new DynamicJsonValue { ["brand"] = new DynamicJsonValue { ["Name"] = "Y" } }
+            ],
+            queryRql: "from Products where Brand = $brand",
+            modelToolArgs: "{}",
+            seed: null,
+            testMode: false);
+
+        Assert.Null(error);
+        Assert.All(items, item => Assert.True(item.UpdateHash));
+        Assert.False(GenAiTask.IsWholeAttemptedBatchFailure(items));
+        Assert.Equal(2, statistics.LoadErrors);
     }
 
     [RavenFact(RavenTestCategory.Ai)]
@@ -728,6 +781,13 @@ if ($input.doc) {
     private async Task<(Exception error, List<string> toolResults)> RunGenAiQueryToolAsync(
         List<DynamicJsonValue> contexts, string queryRql, string modelToolArgs, Action<IDocumentSession> seed)
     {
+        var (error, toolResults, _, _) = await RunGenAiBatchAsync(contexts, queryRql, modelToolArgs, seed, testMode: true);
+        return (error, toolResults);
+    }
+
+    private async Task<(Exception error, List<string> toolResults, List<GenAiResultItem> items, EtlProcessStatistics statistics)> RunGenAiBatchAsync(
+        List<DynamicJsonValue> contexts, string queryRql, string modelToolArgs, Action<IDocumentSession> seed, bool testMode)
+    {
         using var store = GetDocumentStore();
         if (seed != null)
         {
@@ -747,13 +807,14 @@ if ($input.doc) {
                 Collection = "Docs",
                 Prompt = "Use the query tool to answer.",
                 SampleObject = "{\"Answer\":\"a\"}",
-                TestMode = true,
+                TestMode = true,               // the constructor would otherwise reach for a real provider client
                 MaxConcurrency = 1,
                 GenAiTransformation = new GenAiTransformation { Script = "ai.genContext(this);" },
                 Queries = [new AiAgentToolQuery("Q", "run the query", queryRql) { ParametersSampleObject = "{}" }]
             };
 
             using var task = new GenAiTask(config.Transforms[0], config, database, database.ServerStore);
+            config.TestMode = testMode;
 
             var toolResults = new List<string>();
             using var mock = new MockLlm(
@@ -791,7 +852,7 @@ if ($input.doc) {
                 error = e;
             }
 
-            return (error, toolResults);
+            return (error, toolResults, input, task.Statistics);
         }
     }
 }
