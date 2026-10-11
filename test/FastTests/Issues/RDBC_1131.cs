@@ -22,6 +22,62 @@ namespace FastTests.Issues
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task Nested_IdKeyInDictionary_IsPreserved()
+        {
+            using var store = GetDocumentStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Order { Shipping = new ShippingAddress { City = "Hadera" } }, Id);
+                await session.SaveChangesAsync();
+            }
+
+            // '@id' is reserved only at the document root, in a nested object (e.g. JSON-LD) it is plain data
+            await store.Operations.SendAsync(new PatchOperation(Id, null, new PatchRequest { Script = "this.Shipping['@id'] = 'https://example.com/addresses/1';" }));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order = await session.LoadAsync<Order>(Id);
+                Assert.Equal(new[] { "@id" }, order.Shipping.Extra.Keys);
+
+                order.Shipping.City = "Haifa";
+                await session.SaveChangesAsync();
+            }
+
+            var shipping = (JObject)(await GetRawAsync(store, Id))["Shipping"];
+            Assert.Equal("Haifa", Get<string>(shipping, "City"));
+            Assert.Equal("https://example.com/addresses/1", Get<string>(shipping, "@id"));
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task Nested_IgnoredIdKeyIsWrittenAndMetadataIsNot()
+        {
+            using var store = GetDocumentStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                // the identity property is reserved only at the document root, '@metadata' is skipped at every level
+                await session.StoreAsync(new Team
+                {
+                    Lead = new IgnoredIdUser
+                    {
+                        Name = "Liel",
+                        Extra = new Dictionary<string, object>
+                        {
+                            ["Id"] = "employees/1",
+                            ["@metadata"] = new Dictionary<string, object> { ["@collection"] = "Users" }
+                        }
+                    }
+                }, Id);
+                await session.SaveChangesAsync();
+            }
+
+            var lead = (JObject)(await GetRawAsync(store, Id))["Lead"];
+            Assert.Equal("employees/1", Get<string>(lead, "Id"));
+            Assert.DoesNotContain("@metadata", PropertyNames(lead));
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Load_PopulatesExtensionDictionary()
         {
             using var store = GetDocumentStore();
@@ -689,6 +745,12 @@ namespace FastTests.Issues
         {
             public string Id { get; set; }
             public ShippingAddress Shipping { get; set; }
+        }
+
+        private class Team
+        {
+            public string Id { get; set; }
+            public IgnoredIdUser Lead { get; set; }
         }
 
         private class ShippingAddress

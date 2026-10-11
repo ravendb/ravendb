@@ -33,6 +33,9 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
         [ThreadStatic]
         internal static object RootEntity;
 
+        [ThreadStatic]
+        internal static object RootObject;
+
         public DefaultRavenContractResolver(ISerializationConventions conventions)
         {
             if (conventions == null)
@@ -105,17 +108,18 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             return new ClearExtensionData(null, getter);
         }
 
-        private static IEnumerable<KeyValuePair<object, object>> WithoutReservedKeys(IEnumerable<KeyValuePair<object, object>> extensionData, JsonPropertyCollection properties, string identityPropertyName)
+        private static IEnumerable<KeyValuePair<object, object>> WithoutReservedKeys(object o, IEnumerable<KeyValuePair<object, object>> extensionData, JsonPropertyCollection properties, string identityPropertyName)
         {
             if (extensionData == null)
                 yield break;
+
+            var isRoot = ReferenceEquals(o, RootObject);
 
             foreach (var kvp in extensionData)
             {
                 if (kvp.Key is string key &&
                     (key == Constants.Documents.Metadata.Key ||
-                     key == Constants.Documents.Metadata.Id ||
-                     key == identityPropertyName ||
+                     isRoot && (key == Constants.Documents.Metadata.Id || key == identityPropertyName) ||
                      properties.GetClosestMatchProperty(key) is { Ignored: false }))
                     continue;
 
@@ -157,7 +161,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             {
                 jsonObjectContract.ExtensionDataGetter = o =>
                 {
-                    var declaredData = WithoutReservedKeys(declaredGetter(o), jsonObjectContract.Properties, identityProperty?.Name).ToList();
+                    var declaredData = WithoutReservedKeys(o, declaredGetter(o), jsonObjectContract.Properties, identityProperty?.Name).ToList();
                     var missingProperties = missingPropertiesGetter(o);
                     if (missingProperties == null)
                         return declaredData;
@@ -168,7 +172,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             }
             else
             {
-                jsonObjectContract.ExtensionDataGetter = o => WithoutReservedKeys(declaredGetter(o), jsonObjectContract.Properties, identityProperty?.Name);
+                jsonObjectContract.ExtensionDataGetter = o => WithoutReservedKeys(o, declaredGetter(o), jsonObjectContract.Properties, identityProperty?.Name);
             }
 
             if (identityProperty != null)
