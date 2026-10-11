@@ -14,7 +14,6 @@ using Raven.Server.Documents.PeriodicBackup.Azure;
 using SlowTests.Server.Documents.PeriodicBackup;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using AzureClientHolder = SlowTests.Server.Documents.PeriodicBackup.Azure.AzureClientHolder;
 
 namespace SlowTests.Issues;
