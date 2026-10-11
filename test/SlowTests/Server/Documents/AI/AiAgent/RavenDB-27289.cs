@@ -166,6 +166,25 @@ public class RavenDB_27289(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenFact(RavenTestCategory.Ai)]
+    public async Task ConversationDocumentStillRefusesToBuildWithoutADeclaredValue()
+    {
+        // InitializeDocumentAsync rejects this earlier, but not on every path that reaches Initialize - the
+        // summarization rebuild, and the test-conversation endpoint when the caller supplies the document. A
+        // Debug.Assert here would compile away, leaving a release server to carry on with the parameter missing.
+        var agent = CreateAgent(sendToModel: true);
+
+        using var store = GetDocumentStore();
+        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        {
+            var conversation = new ConversationDocument(agent.Identifier, parameters: null);
+
+            Assert.Throws<MissingAiAgentParameterException>(
+                () => conversation.Initialize(context, agent, resetRemainingToolIterations: true, maxModelIterationsPerCall: 4));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task ToolSchemaDeclaringTheScopingParameterAsOptionalIsRejected()
     {
         using var store = GetDocumentStore();
