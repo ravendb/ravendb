@@ -40,6 +40,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
 
         AiAgentHelpers.AddDefaultValues(request.Configuration, RequestHandler.Configuration.Ai);
         AddOrUpdateAiAgentCommand.ValidateConfiguration(context, request.Configuration);
+        AiAgentHelpers.AssertAgentParametersAreNotToolArguments(context, request.Configuration);
 
         var handler = new TestConversationHandler(ServerStore, RequestHandler.Database, request)
         {
