@@ -279,29 +279,29 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 string json = item.ContextOutput.Context.ToString();
                 Task<GenAiHandlerResult> task;
 
-                // the agent declares exactly the context values the query binder can take, so what is declared
-                // and what is supplied cannot drift apart - the rest reaches the model through the prompt
-                var queryParameters = FilterSupportedGenAiQueryParameters(context, item.ContextOutput.Context, queryParameterNames);
-                var agentConfiguration = CreateAgentConfiguration(context, queryParameters);
-                var handler = new GenAiConversationHandler(Database.ServerStore, Database, Configuration)
-                {
-                    Authentication = authentication
-                };
-
-                handler.Initialize(agentConfiguration, $"{Configuration.Identifier}/{item.DocumentId}/", new RequestBody
-                {
-                    Parameters = queryParameters,
-                    CreationOptions = new AiConversationCreationOptions
-                    {
-                        ExpirationInSec = Configuration.ExpirationInSec
-                    },
-                    UserPrompt = json,
-                    Attachments = item.ContextOutput.Attachments
-                }, changeVector: null);
-
-                handler.SetClient(_chatCompletionClient);
                 try
                 {
+                    // the agent declares exactly the context values the query binder can take, so what is declared
+                    // and what is supplied cannot drift apart - the rest reaches the model through the prompt
+                    var queryParameters = FilterSupportedGenAiQueryParameters(context, item.ContextOutput.Context, queryParameterNames);
+                    var agentConfiguration = CreateAgentConfiguration(context, queryParameters);
+                    var handler = new GenAiConversationHandler(Database.ServerStore, Database, Configuration)
+                    {
+                        Authentication = authentication
+                    };
+
+                    handler.Initialize(agentConfiguration, $"{Configuration.Identifier}/{item.DocumentId}/", new RequestBody
+                    {
+                        Parameters = queryParameters,
+                        CreationOptions = new AiConversationCreationOptions
+                        {
+                            ExpirationInSec = Configuration.ExpirationInSec
+                        },
+                        UserPrompt = json,
+                        Attachments = item.ContextOutput.Attachments
+                    }, changeVector: null);
+
+                    handler.SetClient(_chatCompletionClient);
                     task = handler.HandleRequestAsync(Database.Configuration.Ai.GenAiSendToModelTimeout.AsTimeSpan, shutdown);
                 }
                 catch (Exception e)
