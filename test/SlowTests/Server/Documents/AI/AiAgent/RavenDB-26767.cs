@@ -443,7 +443,9 @@ if ($input.doc) {
         Assert.Null(items[1].ModelOutput);
         Assert.NotNull(items[2].ModelOutput); // and the items behind the refused one are still attempted
 
-        Assert.Equal(1, statistics.LoadErrors); // the refusal is recorded against the item, not swallowed
+        // the refusal is recorded against the document the author has to fix, which is what the task's error
+        // list shows them - and against that one only
+        Assert.Equal([items[1].DocumentId], statistics.ReadInMemoryItemErrors().Select(e => e.DocumentId));
 
         // the refused item is deterministic, so its hash is updated and it is not retried until the document changes
         Assert.True(items[1].UpdateHash);
@@ -469,7 +471,7 @@ if ($input.doc) {
         Assert.Null(error);
         Assert.All(items, item => Assert.True(item.UpdateHash));
         Assert.False(GenAiTask.IsWholeAttemptedBatchFailure(items));
-        Assert.Equal(2, statistics.LoadErrors);
+        Assert.Equal(items.Select(i => i.DocumentId), statistics.ReadInMemoryItemErrors().Select(e => e.DocumentId));
     }
 
     [RavenFact(RavenTestCategory.Ai)]
