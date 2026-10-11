@@ -185,7 +185,11 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                     case CommandType.AttachmentCOPY:
                         cmd.DestinationId = _document.Id;
                         if (options.SendToModel)
+                        {
                             attachment = ConversationHandlerAttachments.RetrieveAttachment(database, context, cmd.Name, cmd.Id);
+                            if (attachment.Source != AiAttachmentSource.NotFound)
+                                attachment.Name = storedName;
+                        }
                         break;
                     case CommandType.AttachmentPUT:
                         cmd.Id = _document.Id;
@@ -690,7 +694,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     {
         var visibleNames = _request.AttachmentCommands.ParsedCommands
             .Where(c => _request.GetAttachmentOptions(GetStoredAttachmentName(c)).SendToModel)
-            .Select(c => c.Name)
+            .Select(GetStoredAttachmentName)
             .ToList();
 
         if (visibleNames.Count == 0)

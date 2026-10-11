@@ -1282,6 +1282,101 @@ public class AiAgentDebugTracing : RavenTestBase
         Assert.Contains(traces, t => t.RequestBody.Contains(NoteText));
     }
 
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task CopiedAttachment_StoredUnderDifferentName_IsShownByStoredName()
+    {
+        using var store = GetDocumentStore();
+        await StoreImageDocument(store);
+
+        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+        var payloads = new List<JObject>();
+        string conversationId;
+
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        {
+            var copy = CreateCopyCommand(database, "images/1", "star.png");
+            copy.ParsedCommands.Array![0].DestinationName = "star(1).png";
+
+            var handler = CreateCapturingHandler(database, payloads);
+            handler.Initialize(CreateAttachmentsTestAgent(), "chats/", new RequestBody
+            {
+                CreationOptions = new AiConversationCreationOptions(),
+                UserPrompt = "What do you see in this image?",
+                AttachmentCommands = copy
+            }, changeVector: null, debugOverride: true);
+
+            await handler.HandleRequestAsync(context, CancellationToken.None);
+            conversationId = handler.ConversationDocId;
+        }
+
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        {
+            var handler = CreateCapturingHandler(database, payloads);
+            handler.Initialize(CreateAttachmentsTestAgent(), conversationId, new RequestBody
+            {
+                CreationOptions = new AiConversationCreationOptions(),
+                UserPrompt = "What color is it?"
+            }, changeVector: null);
+
+            await handler.HandleRequestAsync(context, CancellationToken.None);
+        }
+
+        using (var session = store.OpenAsyncSession())
+        {
+            var traces = (await session.Advanced.LoadStartingWithAsync<DebugTraceDoc>($"{conversationId}/{AiDebugTrace.TraceSegment}/")).ToList();
+            var attachmentTrace = Assert.Single(traces, t => t.AttachmentNames != null);
+            Assert.Equal(new[] { "star(1).png" }, attachmentTrace.AttachmentNames);
+        }
+
+        Assert.Equal(2, payloads.Count);
+        var secondTurn = payloads[1].ToString(Newtonsoft.Json.Formatting.None);
+        Assert.Contains("[Attachments: star(1).png]", secondTurn);
+        Assert.DoesNotContain("[Attachments: star.png]", secondTurn);
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task CopiedAttachment_StoredUnderDifferentName_OnDemandRetrieveUsesStoredName()
+    {
+        using var store = GetDocumentStore();
+        await StoreImageDocument(store);
+
+        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+        var payloads = new List<JObject>();
+
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        {
+            var copy = CreateCopyCommand(database, "images/1", "star.png");
+            copy.ParsedCommands.Array![0].DestinationName = "star(1).png";
+
+            var handler = new ExposableMockLlmHandler(Server.ServerStore, database, onRequest: payload =>
+            {
+                payloads.Add(payload);
+                var response = payloads.Count == 1
+                    ? MockLlm.CreateToolCallResponse(ChatCompletionClient.Constants.ToolNames.RetrieveAttachment, "{\"names\":[\"star(1).png\"]}")
+                    : MockLlm.CreateAnswerResponse("\"a star\"");
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(response) };
+            })
+            {
+                Authentication = null
+            };
+
+            handler.Initialize(CreateAttachmentsTestAgent(), "chats/", new RequestBody
+            {
+                CreationOptions = new AiConversationCreationOptions(),
+                UserPrompt = "What do you see in the attached file?",
+                AttachmentCommands = copy,
+                AttachmentOptions = new Dictionary<string, AttachmentOptions>(StringComparer.OrdinalIgnoreCase) { ["star(1).png"] = new() { SendImmediately = false } }
+            }, changeVector: null);
+
+            await handler.HandleRequestAsync(context, CancellationToken.None);
+        }
+
+        Assert.Equal(2, payloads.Count);
+        var toolMessage = ((JArray)payloads[1]["messages"]).Single(m => m["role"]?.ToString() == "tool");
+        Assert.Equal("Attachment: star(1).png", toolMessage["content"]?.ToString());
+        Assert.Contains(AiTestData.StarPngBase64, payloads[1].ToString(Newtonsoft.Json.Formatting.None));
+    }
+
     private static AiAgentConfiguration CreateAttachmentsTestAgent() =>
         new("attachments-test-agent", "fake-connection", "You are a helpful assistant.")
         {
