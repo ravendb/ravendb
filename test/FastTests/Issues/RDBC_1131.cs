@@ -6,8 +6,10 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -75,6 +77,32 @@ namespace FastTests.Issues
             var lead = (JObject)(await GetRawAsync(store, Id))["Lead"];
             Assert.Equal("employees/1", Get<string>(lead, "Id"));
             Assert.DoesNotContain("@metadata", PropertyNames(lead));
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ToBlittable_NonDocumentRoot_IdKeysArePreserved()
+        {
+            // '@id' and the identity name are reserved only at a document root, a plain conversion keeps them as data
+            var user = new IgnoredIdUser
+            {
+                Name = "Liel",
+                Extra = new Dictionary<string, object>
+                {
+                    ["Id"] = "employees/1",
+                    ["@id"] = "https://example.com/users/1",
+                    ["@metadata"] = new Dictionary<string, object> { ["@collection"] = "Users" }
+                }
+            };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (var json = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(user, context))
+            {
+                Assert.True(json.TryGet("Id", out string id));
+                Assert.Equal("employees/1", id);
+                Assert.True(json.TryGet("@id", out string jsonLdId));
+                Assert.Equal("https://example.com/users/1", jsonLdId);
+                Assert.DoesNotContain("@metadata", json.GetPropertyNames());
+            }
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
