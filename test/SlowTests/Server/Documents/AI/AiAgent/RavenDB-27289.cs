@@ -8,7 +8,9 @@ using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
 using Raven.Server.ServerWide.Commands.AI;
 using Raven.Server.Documents;
@@ -182,6 +184,37 @@ public class RavenDB_27289(ITestOutputHelper output) : RavenTestBase(output)
             Assert.Throws<MissingAiAgentParameterException>(
                 () => conversation.Initialize(context, agent, resetRemainingToolIterations: true, maxModelIterationsPerCall: 4));
         }
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task TheRefusalReachesTheClientAsItsOwnType()
+    {
+        // Over the wire the type survives only if the client can resolve it: ExceptionDispatcher calls
+        // Type.GetType on the bare FullName the server sent, and anything that is not a RavenException comes
+        // back wrapped as an inner exception instead. The other tests here catch the throw in-process.
+        using var store = GetDocumentStore();
+        await SeedAsync(store);
+
+        // the agent needs a connection string to be created; the refusal happens in InitializeDocumentAsync,
+        // before the provider is ever contacted, so nothing has to answer at that address
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(new AiConnectionString
+        {
+            Name = "fake-connection",
+            ModelType = AiModelType.Chat,
+            OpenAiSettings = new OpenAiSettings("fake-key", "http://localhost:1/", "fake-model")
+        }));
+
+        var agentId = (await store.AI.CreateAgentAsync(CreateAgent(sendToModel: false), AiAgentBasics.OutputSchema.Instance)).Identifier;
+
+        var chat = store.AI.Conversation(agentId, "chats/",
+            new AiConversationCreationOptions().AddParameter("TelegramUsername", new DynamicJsonValue { ["Handle"] = OwnHandle }));
+
+        chat.SetUserPrompt("show my tickets");
+
+        var e = await Assert.ThrowsAsync<UnsupportedAiQueryParameterException>(
+            () => chat.RunAsync<AiAgentBasics.OutputSchema>(CancellationToken.None));
+
+        Assert.Contains("$TelegramUsername", e.Message);
     }
 
     [RavenFact(RavenTestCategory.Ai)]
