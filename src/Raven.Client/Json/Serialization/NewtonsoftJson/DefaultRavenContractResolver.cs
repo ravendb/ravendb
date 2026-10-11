@@ -33,6 +33,9 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
         [ThreadStatic]
         internal static object RootEntity;
 
+        [ThreadStatic]
+        internal static object RootObject;
+
         public DefaultRavenContractResolver(ISerializationConventions conventions)
         {
             if (conventions == null)
@@ -105,6 +108,25 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             return new ClearExtensionData(null, getter);
         }
 
+        private static IEnumerable<KeyValuePair<object, object>> WithoutReservedKeys(object o, IEnumerable<KeyValuePair<object, object>> extensionData, JsonPropertyCollection properties, string identityPropertyName)
+        {
+            if (extensionData == null)
+                yield break;
+
+            var isRoot = ReferenceEquals(o, RootObject);
+
+            foreach (var kvp in extensionData)
+            {
+                if (kvp.Key is string key &&
+                    (key == Constants.Documents.Metadata.Key ||
+                     isRoot && (key == Constants.Documents.Metadata.Id || key == identityPropertyName) ||
+                     properties.GetClosestMatchProperty(key) is { Ignored: false }))
+                    continue;
+
+                yield return kvp;
+            }
+        }
+
         protected override JsonObjectContract CreateObjectContract(Type objectType)
         {
             var jsonObjectContract =
@@ -113,16 +135,46 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
                 ? new JsonObjectContract(objectType)
                 : base.CreateObjectContract(objectType);
 
+            var declaredSetter = jsonObjectContract.ExtensionDataSetter;
+            var declaredGetter = jsonObjectContract.ExtensionDataGetter;
+
             jsonObjectContract.ExtensionDataValueType = typeof(JToken);
-            jsonObjectContract.ExtensionDataSetter += (o, key, value) =>
+            jsonObjectContract.ExtensionDataSetter = (o, key, value) =>
             {
+                declaredSetter?.Invoke(o, key, value);
+
                 if (jsonObjectContract.Properties.Contains(key))
                     return;
                 _currentExtensionSetter?.Invoke(o, key, value);
             };
-            jsonObjectContract.ExtensionDataGetter += (o) => _currentExtensionGetter?.Invoke(o);
 
             var identityProperty = _conventions.Conventions.GetIdentityProperty(objectType);
+
+            ExtensionDataGetter missingPropertiesGetter = o => _currentExtensionGetter?.Invoke(o);
+
+            // assigned rather than chained with +=, because a multicast getter returns only the last delegate's result and the declared dictionary would be ignored
+            if (declaredGetter == null)
+            {
+                jsonObjectContract.ExtensionDataGetter = missingPropertiesGetter;
+            }
+            else if (declaredSetter == null)
+            {
+                jsonObjectContract.ExtensionDataGetter = o =>
+                {
+                    var declaredData = WithoutReservedKeys(o, declaredGetter(o), jsonObjectContract.Properties, identityProperty?.Name).ToList();
+                    var missingProperties = missingPropertiesGetter(o);
+                    if (missingProperties == null)
+                        return declaredData;
+
+                    var declaredKeys = new HashSet<object>(declaredData.Select(x => x.Key));
+                    return missingProperties.Where(x => declaredKeys.Contains(x.Key) == false).Concat(declaredData);
+                };
+            }
+            else
+            {
+                jsonObjectContract.ExtensionDataGetter = o => WithoutReservedKeys(o, declaredGetter(o), jsonObjectContract.Properties, identityProperty?.Name);
+            }
+
             if (identityProperty != null)
             {
                 var jsonProperty = jsonObjectContract.Properties.GetProperty(identityProperty.Name, StringComparison.Ordinal);
