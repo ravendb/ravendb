@@ -233,16 +233,17 @@ namespace SlowTests.Client.TimeSeries.Issues
                     Assert.Equal(res[0].Timestamp, baseline.AddMinutes(10), RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(3, session.Advanced.NumberOfRequests);
 
+                    // the previous read fetched the missing part from its start, so the whole series is cached
                     res = ts.Get(start: 0);
                     Assert.Equal(20, res.Length);
                     Assert.Equal(res[0].Timestamp, baseline, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(res[10].Timestamp, baseline.AddMinutes(10), RavenTestHelper.DateTimeComparer.Instance);
-                    Assert.Equal(4, session.Advanced.NumberOfRequests);
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
 
                     res = ts.Get(start: 10);
                     Assert.Equal(10, res.Length);
                     Assert.Equal(res[0].Timestamp, baseline.AddMinutes(10), RavenTestHelper.DateTimeComparer.Instance);
-                    Assert.Equal(4, session.Advanced.NumberOfRequests);
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
 
                     res = ts.Get(start: 20);
                     Assert.Empty(res);
