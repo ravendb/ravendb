@@ -273,7 +273,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         if (queries.FirstOrDefault(q => q.Parameters.Contains(name)).Name is not { } query)
             return;
 
-        throw new InvalidOperationException(
+        throw new UnsupportedAiQueryParameterException(
             $"Query '{query}' uses the parameter ${name}, but the value for '{name}' holds {unsupportedType}, " +
             $"and a query parameter only takes a scalar value. Supply a scalar for '{name}', or stop " +
             $"referencing ${name} in the query.");

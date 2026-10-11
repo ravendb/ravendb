@@ -198,7 +198,7 @@ public class RavenDB_27289(ITestOutputHelper output) : RavenTestBase(output)
             var handler = HandlerCallingToolOnce(Server.ServerStore, database, "{}");
             handler.Initialize(agent, "Dummy", Request(SuppliedObjectParameter(context)), changeVector: null);
 
-            var e = await Assert.ThrowsAsync<InvalidOperationException>(
+            var e = await Assert.ThrowsAsync<UnsupportedAiQueryParameterException>(
                 () => handler.HandleRequestAsync(context, CancellationToken.None));
 
             Assert.Contains("$TelegramUsername", e.Message);
