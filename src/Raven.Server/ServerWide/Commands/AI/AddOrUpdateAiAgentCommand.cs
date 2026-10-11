@@ -167,10 +167,11 @@ namespace Raven.Server.ServerWide.Commands.AI
 
                 string paramsSchema = ChatCompletionClient.GetSchemaForTool(tool.ParametersSchema, tool.ParametersSampleObject);
                 var schema = context.Sync.ReadForMemory(paramsSchema, "tool-schema");
-                if (schema.TryGet(ChatCompletionClient.Constants.JsonSchemaFields.Properties, out BlittableJsonReaderObject properties))
+                if (schema.TryGet(ChatCompletionClient.Constants.JsonSchemaFields.Required, out BlittableJsonReaderArray required))
                 {
-                    foreach (var queryArg in properties.GetPropertyNames())
+                    foreach (var arg in required)
                     {
+                        string queryArg = arg.ToString();
                         if (scopeParams.Contains(queryArg))
                             throw new InvalidOperationException($"Parameter {queryArg} is defined on both the agent level and the query level for {tool.Name}");
 

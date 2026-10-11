@@ -10,6 +10,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Exceptions;
+using Raven.Server.ServerWide.Commands.AI;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.ServerWide.Context;
@@ -180,6 +181,30 @@ public class RavenDB_27289(ITestOutputHelper output) : RavenTestBase(output)
             () => store.Maintenance.SendAsync(AddOrUpdateAiAgentOperation.Create(agent, AiAgentBasics.OutputSchema.Instance)));
 
         Assert.Contains("TelegramUsername", e.Message);
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task ToolSchemaDeclaringTheScopingParameterAsOptionalStillApplies()
+    {
+        // The rule above must not reach ValidateConfiguration, which AddOrUpdateAiAgentCommand.Initialize runs
+        // while applying an already committed Raft entry. Were it enforced there, a node on this build would fail
+        // to apply an entry that a node on an older build applied, and the two database records would diverge.
+        const string optionalScopingParameter =
+            "{\"type\":\"object\",\"properties\":{\"TelegramUsername\":{\"type\":\"string\"}},\"required\":[],\"additionalProperties\":false}";
+
+        var agent = CreateAgent(sendToModel: false, parametersSchema: optionalScopingParameter);
+
+        using var store = GetDocumentStore();
+        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        {
+            AiAgentHelpers.AddDefaultValues(agent, database.Configuration.Ai);
+
+            AddOrUpdateAiAgentCommand.ValidateConfiguration(context, agent);
+
+            Assert.Throws<InvalidOperationException>(
+                () => AiAgentHelpers.AssertAgentParametersAreNotToolArguments(context, agent));
+        }
     }
 
     [RavenFact(RavenTestCategory.Ai)]
