@@ -1,0 +1,119 @@
+using Raven.Quill.Logging;
+using Raven.Quill.Channels;
+using Raven.Quill.Hosting;
+using SlackNet;
+using SlackNet.SocketMode;
+using Channel = Raven.Quill.Channels.Channel;
+
+namespace Raven.Quill.Slack;
+
+internal sealed class SlackRuntime : IChannelRuntime
+{
+    private readonly string _shortChannelId;
+    private readonly string _botUserId;
+    private readonly SlackOptions _options;
+    private readonly QuillLogger<SlackRuntime> _logger;
+    private readonly ISlackSocketModeClient _client;
+    private readonly ChannelChats<SlackMessage> _chats;
+    private readonly CancellationTokenSource _cts = new();
+
+    private Task _run = Task.CompletedTask;
+    private volatile bool _canRestart = true;
+    private long _restartDueTicks;
+
+    private SlackRuntime(
+        string database, Channel channel, string? channelChangeVector, SlackSdk sdk, SlackTurns turns,
+        ChannelChatsFactory chats, SlackOptions options,
+        QuillLogger<SlackRuntime> logger)
+    {
+        var settings = channel.Slack!;
+
+        _shortChannelId = channel.ShortId;
+        _botUserId = settings.BotUserId;
+        _options = options;
+        _logger = logger;
+        ChannelChangeVector = channelChangeVector;
+        _chats = chats.Create(database, channel, turns, Health, logger.RavenLogger);
+
+        var handler = new SlackMessageHandler(channel, _chats, Health);
+        _client = sdk.NewSocketClient(settings.AppToken, handler, new SlackNetLogger(this, channel.ShortId, logger));
+    }
+
+    public string? ChannelChangeVector { get; }
+
+    public ChannelConnectionHealth Health { get; } = new();
+
+    public bool IsConnected => Health.IsConnected && _client.Connected;
+
+    public bool IsRestartDue(DateTime now)
+    {
+        var due = Interlocked.Read(ref _restartDueTicks);
+        return _canRestart && due != 0 && now.Ticks >= due;
+    }
+
+    private bool Exited => Interlocked.Read(ref _restartDueTicks) != 0;
+
+    public static SlackRuntime Start(
+        string database, Channel channel, string? channelChangeVector, SlackSdk sdk, SlackTurns turns,
+        ChannelChatsFactory chats, SlackOptions options,
+        QuillLogger<SlackRuntime> logger)
+    {
+        var runtime = new SlackRuntime(
+            database, channel, channelChangeVector, sdk, turns, chats, options, logger);
+
+        runtime._run = Task.Run(runtime.ConnectAsync);
+        return runtime;
+    }
+
+    public async Task StopAsync()
+    {
+        await _cts.CancelAsync();
+        await Task.WhenAll(_run, _client.DisposeAsync().AsTask(), _chats.StopAsync())
+            .ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        _cts.Dispose();
+    }
+
+    private async Task ConnectAsync()
+    {
+        try
+        {
+            await _client.Connect(new SocketModeConnectionOptions { NumberOfConnections = 1 }, _cts.Token);
+            if (Exited == false)
+                Health.MarkConnected();
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"Slack socket connected for channel {_shortChannelId} (bot {_botUserId})");
+        }
+        catch (OperationCanceledException) when (_cts.IsCancellationRequested)
+        {
+        }
+        catch (Exception e)
+        {
+            ExitAfterConnectFailure(e);
+        }
+    }
+
+    // link_disabled is deliberately unhandled
+    internal void ExitAfterReconnectFailure(Exception e) => ExitAfterFailure(e, TimeSpan.Zero);
+
+    private void ExitAfterConnectFailure(Exception e) => ExitAfterFailure(e, _options.SocketRestartDelay);
+
+    private void ExitAfterFailure(Exception e, TimeSpan transientRestartDelay)
+    {
+        var code = SlackApiErrors.ErrorCodeOf(e);
+        var tokenError = SlackApiErrors.DescribeAppTokenError(code);
+        _canRestart = tokenError is null || SlackApiErrors.AppTokenErrorIsFixableInSlack(code);
+        Exit(tokenError ?? SlackApiErrors.Describe(e),
+            tokenError is null ? transientRestartDelay : _options.SocketRestartDelay);
+    }
+
+    private void Exit(string error, TimeSpan restartDelay)
+    {
+        var due = (DateTime.UtcNow + restartDelay).Ticks;
+        if (Interlocked.CompareExchange(ref _restartDueTicks, due, 0) != 0)
+            return;
+
+        Health.MarkDisconnected(error);
+        if (_logger.IsWarnEnabled)
+            _logger.Warn($"Slack socket for channel {_shortChannelId} exited: {error}");
+    }
+}

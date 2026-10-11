@@ -14,9 +14,5 @@ public sealed class SlackOptions
 
     public TimeSpan EditDebounce { get; set; } = TimeSpan.FromSeconds(2);
 
-    public int SenderQueueCapacity { get; set; } = 8;
-
-    public TimeSpan ApplyChangesInterval { get; set; } = TimeSpan.FromSeconds(30);
-
     public TimeSpan SocketRestartDelay { get; set; } = TimeSpan.FromMinutes(5);
 }

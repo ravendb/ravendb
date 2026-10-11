@@ -193,7 +193,7 @@ public abstract class QuillTelegramTestBase(ITestOutputHelper output, QuillTeleg
     {
         opts.Telegram.ApiUrl = fixture.Mock.BaseAddress;
         opts.Telegram.EditDebounce = TimeSpan.FromMilliseconds(50);
-        opts.Telegram.ApplyChangesInterval = TimeSpan.FromMilliseconds(250);
+        opts.ChannelApplyChangesInterval = TimeSpan.FromMilliseconds(250);
     }
 
     public override async ValueTask InitializeAsync()
@@ -274,7 +274,7 @@ public abstract class QuillSlackTestBase(ITestOutputHelper output, QuillSlackFix
             {
                 opts.Slack.ApiUrl = fixture.Slack.BaseAddress;
                 opts.Slack.EditDebounce = TimeSpan.FromMilliseconds(50);
-                opts.Slack.ApplyChangesInterval = TimeSpan.FromSeconds(1);
+                opts.ChannelApplyChangesInterval = TimeSpan.FromSeconds(1);
                 opts.Slack.SocketRestartDelay = SocketRestartDelay;
                 configure?.Invoke(opts);
             },
@@ -346,7 +346,7 @@ public abstract class QuillDiscordTestBase(ITestOutputHelper output, QuillDiscor
             {
                 opts.Discord.ApiUrl = fixture.Discord.BaseAddress;
                 opts.Discord.EditDebounce = TimeSpan.FromMilliseconds(50);
-                opts.Discord.ApplyChangesInterval = TimeSpan.FromSeconds(1);
+                opts.ChannelApplyChangesInterval = TimeSpan.FromSeconds(1);
                 opts.Discord.GatewayBackoffMax = TimeSpan.FromMilliseconds(200);
                 opts.Discord.GatewayHandshakeTimeout = TimeSpan.FromSeconds(2);
                 opts.Discord.GatewayRestartDelay = GatewayRestartDelay;

@@ -1,33 +1,48 @@
-using Raven.Quill.Logging;
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions.Database;
-using Raven.Quill.Channels;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Hosting;
 using Raven.Quill.Raven;
 using Raven.Quill.Wizard;
 using Sparrow.Server;
 
-namespace Raven.Quill.Discord;
+using Raven.Quill.Logging;
 
-internal interface IDiscordChannelManager
+namespace Raven.Quill.Channels;
+
+internal interface IChannelRuntime
 {
-    void Wake();
+    string? ChannelChangeVector { get; }
 
-    ChannelConnectionHealth? HealthFor(string database, string channelId);
+    ChannelConnectionHealth? Health => null;
+
+    bool IsConnected => Health?.IsConnected ?? false;
+
+    bool IsRestartDue(DateTime now) => false;
+
+    Task StopAsync();
 }
 
-internal sealed class DiscordChannelManager(
+internal interface IChannelRuntimeFactory
+{
+    ChannelType Type { get; }
+
+    bool CanStart(Channel channel);
+
+    IChannelRuntime Start(string database, Channel channel, string? changeVector);
+}
+
+internal sealed class ChannelManager(
     IDocumentStore store,
-    DiscordInboundProcessor processor,
-    IServiceScopeFactory scopes,
+    IEnumerable<IChannelRuntimeFactory> factories,
     IOptions<ApplianceOptions> options,
     IServerReady ready,
-    QuillLogger<DiscordChannelManager> logger) : BackgroundService, IDiscordChannelManager
+    QuillLogger<ChannelManager> logger) : BackgroundService
 {
-    private readonly ConcurrentDictionary<(string Database, string ChannelId), DiscordGatewayRuntime> _runtimes = new();
+    private readonly Dictionary<ChannelType, IChannelRuntimeFactory> _factories = factories.ToDictionary(f => f.Type);
+    private readonly ConcurrentDictionary<(string Database, string ChannelId), IChannelRuntime> _runtimes = new();
 
     private volatile AsyncManualResetEvent? _wake;
 
@@ -35,8 +50,12 @@ internal sealed class DiscordChannelManager(
 
     public void Wake() => _wake?.Set();
 
-    public ChannelConnectionHealth? HealthFor(string database, string channelId) =>
-        _runtimes.TryGetValue((database, channelId), out var runtime) ? runtime.Health : null;
+    public ChannelConnectionHealth? HealthFor(string database, string channelId) => RuntimeFor(database, channelId)?.Health;
+
+    public bool IsConnectedFor(string database, string channelId) => RuntimeFor(database, channelId)?.IsConnected ?? false;
+
+    internal IChannelRuntime? RuntimeFor(string database, string channelId) =>
+        _runtimes.GetValueOrDefault((database, channelId));
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -61,16 +80,17 @@ internal sealed class DiscordChannelManager(
             catch (Exception e)
             {
                 if (logger.IsWarnEnabled)
-                    logger.Warn($"Discord apply-changes pass failed: {e.Message}");
+                    logger.Warn($"Channel apply-changes pass failed: {e.Message}");
             }
 
-            await wake.WaitAsync(options.Value.Discord.ApplyChangesInterval);
+            await wake.WaitAsync(options.Value.ChannelApplyChangesInterval);
         }
     }
 
     private async Task ApplyChangesAsync(CancellationToken ct)
     {
-        var desired = new Dictionary<(string Database, string ChannelId), (Channel Channel, string? ChangeVector)>();
+        var desired = new Dictionary<(string Database, string ChannelId),
+            (Channel Channel, string? ChangeVector, IChannelRuntimeFactory Factory)>();
 
         var unreadable = new HashSet<string>();
 
@@ -83,7 +103,7 @@ internal sealed class DiscordChannelManager(
         catch (Exception e) when (e is not OperationCanceledException)
         {
             if (logger.IsWarnEnabled)
-                logger.Warn($"Discord apply-changes could not list apps: {e.Message}");
+                logger.Warn($"Channel apply-changes could not list apps: {e.Message}");
             return;
         }
 
@@ -98,9 +118,10 @@ internal sealed class DiscordChannelManager(
 
                 foreach (var channel in channels)
                 {
-                    if (channel is { Type: ChannelType.Discord, Enabled: true, Discord.BotToken.Length: > 0 })
+                    if (channel.Enabled && _factories.TryGetValue(channel.Type, out var factory) &&
+                        factory.CanStart(channel))
                         desired[(app.Database, channel.ShortId)] =
-                            (channel, session.Advanced.GetChangeVectorFor(channel));
+                            (channel, session.Advanced.GetChangeVectorFor(channel), factory);
                 }
             }
             catch (DatabaseDoesNotExistException)
@@ -110,9 +131,12 @@ internal sealed class DiscordChannelManager(
             {
                 unreadable.Add(app.Database);
                 if (logger.IsWarnEnabled)
-                    logger.Warn($"Discord apply-changes skipped app {app.Slug}: {e.Message}");
+                    logger.Warn($"Channel apply-changes skipped app {app.Slug}: {e.Message}");
             }
         }
+
+        var now = DateTime.UtcNow;
+        var stopping = new List<((string Database, string ChannelId) Key, IChannelRuntime Runtime)>();
 
         foreach (var (key, runtime) in _runtimes)
         {
@@ -120,27 +144,14 @@ internal sealed class DiscordChannelManager(
                 continue;
 
             if (desired.TryGetValue(key, out var current) && runtime.ChannelChangeVector == current.ChangeVector &&
-                IsRestartDue(runtime) == false)
+                runtime.IsRestartDue(now) == false)
                 continue;
 
-            if (_runtimes.TryRemove(key, out _) == false)
-                continue;
-
-            try
-            {
-                await runtime.StopAsync();
-            }
-            catch (Exception e) when (e is not OperationCanceledException)
-            {
-                _runtimes.TryAdd(key, runtime);
-                if (logger.IsWarnEnabled)
-                    logger.Warn($"Discord gateway stop failed for channel {key.ChannelId} on {key.Database}: {e.Message}; keeping it to retry");
-                continue;
-            }
-
-            if (logger.IsInfoEnabled)
-                logger.Info($"Discord gateway stopped for channel {key.ChannelId} on {key.Database}");
+            if (_runtimes.TryRemove(key, out _))
+                stopping.Add((key, runtime));
         }
+
+        await Task.WhenAll(stopping.Select(s => StopRuntimeAsync(s.Key, s.Runtime)));
 
         foreach (var (key, entry) in desired)
         {
@@ -152,24 +163,39 @@ internal sealed class DiscordChannelManager(
 
             try
             {
-                _runtimes[key] = DiscordGatewayRuntime.Start(
-                    key.Database, entry.Channel, entry.ChangeVector, processor, scopes, options.Value.Discord, logger);
+                _runtimes[key] = entry.Factory.Start(key.Database, entry.Channel, entry.ChangeVector);
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
                 if (logger.IsWarnEnabled)
-                    logger.Warn($"Discord gateway failed to start for channel {key.ChannelId} on {key.Database}: {e.Message}");
+                    logger.Warn(
+                        $"{entry.Channel.Type} runtime failed to start for channel {key.ChannelId} on {key.Database}: " +
+                        $"{e.Message}");
                 continue;
             }
 
             if (logger.IsInfoEnabled)
-                logger.Info($"Discord gateway starting for channel {key.ChannelId} (bot {entry.Channel.Discord!.BotUserId}) on {key.Database}");
+                logger.Info($"{entry.Channel.Type} runtime started for channel {key.ChannelId} on {key.Database}");
         }
     }
 
-    private bool IsRestartDue(DiscordGatewayRuntime runtime) =>
-        runtime.CanRestart && runtime.ExitedAt is { } exitedAt &&
-        DateTime.UtcNow - exitedAt >= options.Value.Discord.GatewayRestartDelay;
+    private async Task StopRuntimeAsync((string Database, string ChannelId) key, IChannelRuntime runtime)
+    {
+        try
+        {
+            await runtime.StopAsync().WaitAsync(options.Value.ChannelRuntimeStopTimeout);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            if (logger.IsWarnEnabled)
+                logger.Warn(
+                    $"Runtime for channel {key.ChannelId} on {key.Database} did not stop: {e.Message}; giving up on it");
+            return;
+        }
+
+        if (logger.IsInfoEnabled)
+            logger.Info($"Runtime stopped for channel {key.ChannelId} on {key.Database}");
+    }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
@@ -179,15 +205,16 @@ internal sealed class DiscordChannelManager(
         var runtimes = _runtimes.Values.ToArray();
         _runtimes.Clear();
 
+        var timeout = options.Value.ChannelRuntimeStopTimeout;
         try
         {
             await Task.WhenAll(runtimes.Select(r => r.StopAsync()))
-                .WaitAsync(TimeSpan.FromSeconds(15), cancellationToken);
+                .WaitAsync(timeout, cancellationToken);
         }
         catch (Exception e) when (e is TimeoutException or OperationCanceledException)
         {
             if (logger.IsWarnEnabled)
-                logger.Warn("Discord runtimes did not drain within 15s");
+                logger.Warn($"Channel runtimes did not drain within {timeout}");
         }
     }
 }

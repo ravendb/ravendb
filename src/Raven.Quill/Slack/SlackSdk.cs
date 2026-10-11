@@ -6,8 +6,6 @@ using SlackNet.SocketMode;
 
 namespace Raven.Quill.Slack;
 
-internal sealed record SlackSocketClient(ISlackSocketModeClient Client, IObservable<RawSocketMessage> RawMessages);
-
 internal sealed class SlackSdk
 {
     internal const string HttpClientName = "slack";
@@ -29,7 +27,7 @@ internal sealed class SlackSdk
 
     public ISlackApiClient Api { get; }
 
-    public SlackSocketClient NewSocketClient(string appToken, IEventHandler handler, SlackNet.ILogger logger)
+    public ISlackSocketModeClient NewSocketClient(string appToken, IEventHandler handler, SlackNet.ILogger logger)
     {
         var services = new SlackServiceBuilder()
             .UseHttp(_ => _http)
@@ -42,10 +40,8 @@ internal sealed class SlackSdk
             new SlackNet.SlackApiClient(_http, _urlBuilder, Json, appToken),
             KeepAliveSockets.Instance, Json, Default.Scheduler, logger);
 
-        var client = new SlackSocketModeClient(
+        return new SlackSocketModeClient(
             core, Json, services.GetRequestListeners(), services.GetHandlerFactory(), logger);
-
-        return new SlackSocketClient(client, core.RawSocketMessages);
     }
 
     private sealed class BaseUrlBuilder(ISlackUrlBuilder inner, string apiUrl) : ISlackUrlBuilder

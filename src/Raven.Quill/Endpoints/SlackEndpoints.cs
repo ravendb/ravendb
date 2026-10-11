@@ -30,7 +30,7 @@ public static class SlackEndpoints
         string slug,
         IDocumentStore store,
         ISlackClient slackClient,
-        ISlackChannelManager slackManager,
+        ChannelManager channelManager,
         CancellationToken ct)
     {
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
@@ -65,7 +65,7 @@ public static class SlackEndpoints
         {
             var channel = slackChannels[i];
             var settings = channel.Slack!;
-            var health = slackManager.HealthFor(app.Database, channel.ShortId);
+            var health = channelManager.HealthFor(app.Database, channel.ShortId);
             rows[i] = new SlackChannelHealthResponse(
                 channel.ShortId,
                 settings.TeamId,
@@ -74,7 +74,7 @@ public static class SlackEndpoints
                 channel.Enabled,
                 checks[i].Valid,
                 checks[i].Error,
-                health?.IsConnected ?? false,
+                channelManager.IsConnectedFor(app.Database, channel.ShortId),
                 health?.LastConnectedAt,
                 settings.AppToken.Length == 0 ? AppTokenMissingError : health?.LastConnectionError,
                 health?.LastInboundAt,

@@ -47,6 +47,14 @@ public sealed class ApplianceOptions
 
     public TimeSpan? ChannelConversationIdleWindow { get; set; } = TimeSpan.FromHours(24);
 
+    public TimeSpan ChannelApplyChangesInterval { get; set; } = TimeSpan.FromSeconds(30);
+
+    public int ChannelSenderQueueCapacity { get; set; } = 8;
+
+    public TimeSpan ChannelSenderIdleTimeout { get; set; } = TimeSpan.FromMinutes(15);
+
+    public TimeSpan ChannelRuntimeStopTimeout { get; set; } = TimeSpan.FromSeconds(10);
+
     public TimeSpan ReadinessInitialDelay { get; set; } = TimeSpan.FromSeconds(15);
 
     public TimeSpan ReadinessAttemptTimeout { get; set; } = TimeSpan.FromSeconds(2);

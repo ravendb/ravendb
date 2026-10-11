@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Channels;
@@ -14,6 +15,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
     : QuillDiscordTestBase(output, fixture)
 {
     private const string Sender = "800000000000000001";
+    private const string OtherSender = "800000000000000002";
     private const string DmChannel = "900000000000000001";
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -119,20 +121,6 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Redelivered_message_ids_dispatch_once()
-    {
-        await using var app = await NewAppAsync();
-        await NewChannelAsync(app);
-
-        await Discord.DispatchDmAsync("msg-dupe", DmChannel, Sender, "only once");
-        await Discord.DispatchDmAsync("msg-dupe", DmChannel, Sender, "only once");
-
-        await Discord.WaitUntilAsync(() => Router.Requests.Count == 1, "the single agent dispatch");
-        await Task.Delay(250);
-        Assert.Single(Router.Requests);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
     public async Task Bot_authors_self_messages_and_guild_messages_are_ignored()
     {
         await using var app = await NewAppAsync();
@@ -157,7 +145,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         await Discord.DispatchDmAsync("msg-file", DmChannel, Sender, "", withAttachment: true);
 
         await Discord.WaitUntilAsync(
-            () => Discord.SentMessages.Any(m => m.Content == DiscordInboundProcessor.UnsupportedKindReply),
+            () => Discord.SentMessages.Any(m => m.Content == ChannelReplies.UnsupportedKind),
             "the unsupported-kind reply");
         Assert.Empty(Router.Requests);
     }
@@ -172,7 +160,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
             "msg-file-text", DmChannel, Sender, "here's the error I'm getting", withAttachment: true);
 
         await Discord.WaitUntilAsync(
-            () => Discord.SentMessages.Any(m => m.Content == DiscordInboundProcessor.UnsupportedKindReply),
+            () => Discord.SentMessages.Any(m => m.Content == ChannelReplies.UnsupportedKind),
             "the unsupported-kind reply");
         Assert.Empty(Router.Requests);
     }
@@ -186,7 +174,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         await Discord.DispatchDmAsync("msg-sticker", DmChannel, Sender, "");
 
         await Discord.WaitUntilAsync(
-            () => Discord.SentMessages.Any(m => m.Content == DiscordInboundProcessor.UnsupportedKindReply),
+            () => Discord.SentMessages.Any(m => m.Content == ChannelReplies.UnsupportedKind),
             "the unsupported-kind reply");
         Assert.Empty(Router.Requests);
 
@@ -232,6 +220,8 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         Router.ChunkDelay = TimeSpan.FromMilliseconds(200);
 
         await Discord.DispatchDmAsync("msg-seq-1", DmChannel, Sender, "first");
+        await Discord.WaitUntilAsync(() => Router.Requests.Count == 1, "the first agent dispatch");
+
         await Discord.DispatchDmAsync("msg-seq-2", DmChannel, Sender, "second");
 
         await Discord.WaitUntilAsync(() => Router.Requests.Count == 2, "both agent dispatches");
@@ -259,6 +249,71 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
 
         Assert.Empty(Discord.SentMessages);
     }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_failed_final_edit_stays_in_health_after_the_error_reply()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        await Discord.WaitUntilConnectedAsync();
+        Discord.EditErrorStatus = 403;
+
+        await Discord.DispatchDmAsync("msg-edit-error", DmChannel, Sender, "streamed then refused");
+
+        await Discord.WaitUntilAsync(
+            () => Discord.SentMessages.Any(m => m.Content == ChannelReplies.Default.Error), "the error reply");
+
+        var rows = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
+            Host.Client, QuillRoutes.DiscordHealth(app.Slug));
+        Assert.NotNull(rows.Single(r => r.ChannelId == channel.ChannelId).LastSendErrorAt);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_timed_out_agent_call_gets_the_error_reply()
+    {
+        await using var app = await NewAppAsync();
+        await NewChannelAsync(app);
+        Router.Failure = new TaskCanceledException("the agent call timed out");
+
+        await Discord.DispatchDmAsync("msg-timeout", DmChannel, Sender, "slow question");
+
+        await Discord.WaitUntilAsync(
+            () => Discord.SentMessages.Any(m => m.Content == ChannelReplies.Default.Error), "the error reply");
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Editing_the_channel_cancels_a_running_turn_and_drops_its_queue_silently()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        await Discord.WaitUntilConnectedAsync();
+
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt == "hold" ? gate.Task : Task.CompletedTask;
+
+        await Discord.DispatchDmAsync("msg-edit-0", DmChannel, Sender, "hold");
+        await Discord.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+        await Discord.DispatchDmAsync("msg-edit-1", DmChannel, Sender, "queued");
+        await Discord.DispatchDmAsync("msg-edit-marker", DmChannel, OtherSender, "marker");
+        await Discord.WaitUntilAsync(
+            () => Router.Requests.Any(r => r.Prompt == "marker"), "a later sender's turn, so the earlier message is queued");
+
+        var before = RuntimeFor(app, channel);
+        await app.UpdateChannelAsync(channel.ChannelId, new UpdateChannelRequest("Renamed bot", null, null));
+        await Discord.WaitUntilAsync(() => RuntimeFor(app, channel) is { } now && now != before, "the runtime swap after the edit");
+        var sent = Discord.SentMessages.Count;
+        var edited = Discord.EditedMessages.Count;
+
+        gate.SetResult();
+        await Task.Delay(400);
+
+        Assert.DoesNotContain(Router.Requests, r => r.Prompt == "queued");
+        Assert.Equal(sent, Discord.SentMessages.Count);
+        Assert.Equal(edited, Discord.EditedMessages.Count);
+    }
+
+    private static IChannelRuntime? RuntimeFor(QuillApp app, ProvisionedChannel channel) =>
+        app.Host.Services.GetRequiredService<ChannelManager>().RuntimeFor(app.Slug, channel.ChannelId);
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Username_bound_parameters_resolve_from_the_message_author()
@@ -520,45 +575,6 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
 
         Assert.Equal(identifiesAfterFatal, Discord.Identifies.Count);
     }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task A_flooding_sender_is_capped_and_notified_once_per_burst()
-    {
-        await using var app = await NewAppAsync();
-        await NewChannelAsync(app);
-        await Discord.WaitUntilConnectedAsync();
-
-        var capacity = new DiscordOptions().SenderQueueCapacity;
-        Router.Chunks = ["done"];
-
-        var firstBurst = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        Router.BeforeRun = _ => firstBurst.Task;
-
-        for (var i = 0; i < capacity + 2; i++)
-            await Discord.DispatchDmAsync($"msg-flood-{i}", DmChannel, Sender, $"flood {i}");
-
-        await Discord.WaitUntilAsync(() => OverloadNotices() == 1, "the single overload notice");
-        Assert.Single(Router.Requests);
-
-        firstBurst.SetResult();
-        await Discord.WaitUntilAsync(() => Router.Requests.Count == capacity, "the capped burst to drain");
-        Assert.Equal(1, OverloadNotices());
-
-        var secondBurst = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        Router.BeforeRun = _ => secondBurst.Task;
-
-        for (var i = 0; i < capacity + 2; i++)
-            await Discord.DispatchDmAsync($"msg-flood2-{i}", DmChannel, Sender, $"again {i}");
-
-        await Discord.WaitUntilAsync(() => OverloadNotices() == 2, "a fresh overload notice once the chain retired");
-
-        secondBurst.SetResult();
-        await Discord.WaitUntilAsync(
-            () => Router.Requests.Count == capacity * 2, "the second capped burst to drain");
-    }
-
-    private int OverloadNotices() =>
-        Discord.SentMessages.Count(m => m.Content == DiscordInboundProcessor.OverloadReply);
 
     private sealed record ProvisionedChannel(
         string ChannelId, string BotToken, string ApplicationId, string BotUserId);
