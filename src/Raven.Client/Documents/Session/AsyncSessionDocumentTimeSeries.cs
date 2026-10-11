@@ -50,7 +50,10 @@ namespace Raven.Client.Documents.Session
             Action<ITimeSeriesIncludeBuilder> includes, CancellationToken token)
         {
             if (IsWholeSeriesDeletedInSession())
+            {
+                await LoadIncludesOnly(from, to, includes, token).ConfigureAwait(false);
                 return null;
+            }
 
             if (pageSize == 0)
                 return new List<TimeSeriesEntry>();
@@ -242,7 +245,10 @@ namespace Raven.Client.Documents.Session
         internal async Task<TTValues[]> GetTimeSeriesAndIncludes<TTValues>(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start, int pageSize, CancellationToken token = default) where TTValues : TimeSeriesEntry
         {
             if (IsWholeSeriesDeletedInSession())
+            {
+                await LoadIncludesOnly(from, to, includes, token).ConfigureAwait(false);
                 return null;
+            }
 
             from = from?.EnsureUtc();
             to = to?.EnsureUtc();
@@ -360,6 +366,20 @@ namespace Raven.Client.Documents.Session
             if (rangeResult.Entries != null)
                 ((TimeSeriesRangeResult)rangeResult).Entries = rangeResult.Entries;
             return new TimeSeriesRangeResult[] { rangeResult };
+        }
+
+        // the entries are deleted in the session, so request a single one (the server answers nothing for page size 0) just to get the includes
+        private async Task LoadIncludesOnly(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, CancellationToken token)
+        {
+            if (includes == null || Session.NoTracking)
+                return;
+
+            var rangeResults = await GetSingleRange<TimeSeriesEntry>(from?.EnsureUtc(), to?.EnsureUtc(), start: 0, pageSize: 1, includes, token).ConfigureAwait(false);
+            if (rangeResults == null)
+                return;
+
+            foreach (var rangeResult in rangeResults)
+                HandleIncludes(rangeResult);
         }
 
         private async Task<List<TimeSeriesRangeResult>> GetRangesFromServer(List<TimeSeriesRange> ranges, int start, int pageSize,

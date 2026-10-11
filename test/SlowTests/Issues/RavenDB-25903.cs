@@ -2167,6 +2167,51 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task UncachedReadOfSeriesDeletedInSessionShouldStillLoadIncludes()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.Date.AddDays(-1);
+            await StoreMinuteEntries(store, bookId1, baseline, 10);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                tsf.Delete();
+
+                var tse = await tsf.GetAsync(baseline, baseline.AddMinutes(10), includes: i => i.IncludeDocument());
+                Assert.Null(tse);
+
+                var requestsBefore = session.Advanced.NumberOfRequests;
+                await session.LoadAsync<Book>(bookId1);
+                Assert.Equal(requestsBefore, session.Advanced.NumberOfRequests);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+        public async Task CachedReadOfSeriesDeletedInSessionShouldStillLoadIncludes()
+        {
+            using var store = GetDocumentStore();
+            var bookId1 = "books/1";
+            var baseline = DateTime.UtcNow.Date.AddDays(-1);
+            await StoreMinuteEntries(store, bookId1, baseline, 10);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var tsf = session.TimeSeriesFor(bookId1, nameof(Book));
+                await tsf.GetAsync(baseline, baseline.AddMinutes(10));
+                tsf.Delete();
+
+                var tse = await tsf.GetAsync(baseline, baseline.AddMinutes(10), includes: i => i.IncludeDocument());
+                Assert.Null(tse);
+
+                var requestsBefore = session.Advanced.NumberOfRequests;
+                await session.LoadAsync<Book>(bookId1);
+                Assert.Equal(requestsBefore, session.Advanced.NumberOfRequests);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public async Task UncachedReadOfRangeDeletedInSessionShouldNotGoToServer()
         {
             using var store = GetDocumentStore();
