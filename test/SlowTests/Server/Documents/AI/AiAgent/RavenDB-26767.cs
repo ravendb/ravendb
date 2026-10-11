@@ -452,8 +452,9 @@ if ($input.doc) {
     [RavenFact(RavenTestCategory.Ai)]
     public async Task GenAi_WholeBatchRefused_IsNotRetriedForever()
     {
-        // When every attempted item is refused the batch must not be treated as a transient failure: that is
-        // AllAttemptedFailedNonDeterministically, which throws and has the task retry the same batch indefinitely.
+        // When every attempted item is refused, each must still be marked as handled, so that the batch does not
+        // read as AllAttemptedFailedNonDeterministically - the state LoadInternal throws on and retries. What is
+        // pinned here is the input to that decision; LoadInternal itself needs the ETL machinery and is not run.
         var (error, _, items, statistics) = await RunGenAiBatchAsync(
             contexts:
             [
