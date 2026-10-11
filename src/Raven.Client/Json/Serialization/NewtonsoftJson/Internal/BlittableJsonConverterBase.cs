@@ -78,6 +78,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             {
                 DefaultRavenContractResolver.RootEntity = removeIdentityProperty && hasIdentityProperty ? entity : null;
                 DefaultRavenContractResolver.RemovedIdentityProperty = false;
+                DefaultRavenContractResolver.RootObject = entity;
 
                 // PERF: By moving the try..finally statement we forgo the need for prolog and epilog when it is not needed.
                 try
@@ -87,6 +88,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                 finally
                 {
                     DefaultRavenContractResolver.RootEntity = null;
+                    DefaultRavenContractResolver.RootObject = null;
                 }
             }
             else
