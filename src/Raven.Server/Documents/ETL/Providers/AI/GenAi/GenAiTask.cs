@@ -236,7 +236,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 continue; // cached items were not attempted in this batch
 
             attempted++;
-            if (item.UpdateHash == false)
+            if (item.UpdateHash == false && item.RefusedBeforeTheModel == false)
                 nonDeterministicFailures++;
         }
 
@@ -276,14 +276,13 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 var idx = Task.WaitAny(executingTasks, shutdown);
                 statsScope.TotalSentToModel++;
 
-                string json = item.ContextOutput.Context.ToString();
+                var contextObject = item.ContextOutput.Context;
+                string json = contextObject.ToString();
                 Task<GenAiHandlerResult> task;
 
                 try
                 {
-                    // the agent declares exactly the context values the query binder can take, so what is declared
-                    // and what is supplied cannot drift apart - the rest reaches the model through the prompt
-                    var queryParameters = FilterSupportedGenAiQueryParameters(context, item.ContextOutput.Context, queryParameterNames);
+                    var queryParameters = FilterSupportedGenAiQueryParameters(context, contextObject, queryParameterNames);
                     var agentConfiguration = CreateAgentConfiguration(context, queryParameters);
                     var handler = new GenAiConversationHandler(Database.ServerStore, Database, Configuration)
                     {
@@ -460,12 +459,14 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 case TooManyTokensException:
                 // the model refused to answer about this item, and is unlikely to change its mind
                 case RefusedToAnswerException:
-                // this item's context holds a value a query parameter cannot take, and that won't change
-                // until the document does - at which point its context hash changes anyway
-                case UnsupportedAiQueryParameterException:
                     // in this case, we _intentionally_ want to update the hash so we will _not_ try to update this known bad
                     // item again in the future.
                     item.UpdateHash = true;
+                    return null;
+                // nothing was asked of the model, so there is nothing to mark as processed
+                case UnsupportedAiQueryParameterException:
+                    item.UpdateHash = false;
+                    item.RefusedBeforeTheModel = true;
                     return null;
                 default:
                     // something bad happened, but this isn't the fault of this item (run out of rate limit, TCP error, etc.)

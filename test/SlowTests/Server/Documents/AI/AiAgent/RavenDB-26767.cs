@@ -13,6 +13,7 @@ using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Settings;
@@ -447,8 +448,33 @@ if ($input.doc) {
         // list shows them - and against that one only
         Assert.Equal([items[1].DocumentId], statistics.ReadInMemoryItemErrors().Select(e => e.DocumentId));
 
-        // the refused item is deterministic, so its hash is updated and it is not retried until the document changes
-        Assert.True(items[1].UpdateHash);
+        Assert.False(items[1].UpdateHash);
+        Assert.True(items[1].RefusedBeforeTheModel);
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public void GenAi_EditingAQueryIsAConfigurationChange()
+    {
+        // Compare decides whether a running task is restarted, so a query edit has to register as a difference
+        static GenAiConfiguration Config(string rql) => new()
+        {
+            Name = "genai-compare",
+            ConnectionStringName = "genai-cs",
+            Collection = "Docs",
+            Prompt = "Use the query tool to answer.",
+            SampleObject = "{\"Answer\":\"a\"}",
+            GenAiTransformation = new GenAiTransformation { Script = "ai.genContext(this);" },
+            Queries = [new AiAgentToolQuery("Q", "run the query", rql) { ParametersSampleObject = "{}" }]
+        };
+
+        var connectionStrings = new Dictionary<string, AiConnectionString>();
+        var original = Config("from Products where Brand = $brand");
+
+        var unchanged = original.Compare(Config("from Products where Brand = $brand"), connectionStrings);
+        var queryEdited = original.Compare(Config("from Products"), connectionStrings);
+
+        Assert.False(unchanged.HasFlag(EtlConfigurationCompareDifferences.Other));
+        Assert.True(queryEdited.HasFlag(EtlConfigurationCompareDifferences.Other));
     }
 
     [RavenFact(RavenTestCategory.Ai)]
@@ -469,7 +495,8 @@ if ($input.doc) {
             testMode: false);
 
         Assert.Null(error);
-        Assert.All(items, item => Assert.True(item.UpdateHash));
+        Assert.All(items, item => Assert.False(item.UpdateHash));
+        Assert.All(items, item => Assert.True(item.RefusedBeforeTheModel));
         Assert.False(GenAiTask.IsWholeAttemptedBatchFailure(items));
         Assert.Equal(items.Select(i => i.DocumentId), statistics.ReadInMemoryItemErrors().Select(e => e.DocumentId));
     }
