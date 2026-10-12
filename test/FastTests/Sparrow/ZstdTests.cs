@@ -85,7 +85,7 @@ namespace FastTests.Sparrow
             var expectedFastest = Compress(payload, CompressionLevel.Fastest);
             Assert.NotEqual(expectedOptimal, expectedFastest);
 
-            for (var i = 0; i < ZstdLib.ContextPool.MaxPooledContexts + 4; i++)
+            for (var i = 0; i < ZstdLib.ContextPool.SlotsPerCore + 4; i++)
             {
                 // a compression stream abandoned mid-frame gives its context back with an unfinished frame
                 var abandoned = ZstdStream.Compress(new MemoryStream(), CompressionLevel.Fastest, leaveOpen: true);
@@ -102,7 +102,10 @@ namespace FastTests.Sparrow
                 Assert.Equal(payload, Decompress(expectedOptimal));
 
                 if (i == 5)
+                {
                     ZstdLib.ContextPool.Instance.LowMemory(LowMemorySeverity.ExtremelyLow);
+                    ZstdLib.ContextPool.Instance.LowMemoryOver();
+                }
             }
 
             // a high level context grows too large to be kept, it must still work and leave the pool usable
