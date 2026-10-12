@@ -26,10 +26,7 @@ public static class AiAgentHelpers
         }
     }
 
-    // Deliberately kept out of AddOrUpdateAiAgentCommand.ValidateConfiguration, which the command runs while
-    // applying an already committed Raft entry: a rule that only some versions enforce would then let the same
-    // entry apply on one node and fail on another. Called from the request handlers instead, where a rejection
-    // still reaches the client and nothing has been committed.
+    // for the request handlers only - ValidateConfiguration also runs while applying a committed Raft entry
     public static void AssertAgentParametersAreNotToolArguments(JsonOperationContext context, AiAgentConfiguration configuration)
     {
         if (configuration.Parameters == null || configuration.Queries == null)

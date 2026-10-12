@@ -70,7 +70,9 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
 
                     if (item.UpdateHash == false)
                     {
-                        tuple.Refresh = true;
+                        if (item.RefusedBeforeTheModel == false)
+                            tuple.Refresh = true;
+
                         continue;
                     }
 
