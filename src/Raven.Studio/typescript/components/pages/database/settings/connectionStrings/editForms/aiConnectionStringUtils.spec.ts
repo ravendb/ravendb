@@ -79,4 +79,40 @@ describe("aiConnectionStringUtils", () => {
             await expect(isValid(openAiConnection)).resolves.toBe(true);
         });
     });
+
+    describe("Mistral AI schema", () => {
+        const mistralAiConnection: FormData = {
+            name: "mistral",
+            identifier: null,
+            modelType: "TextEmbeddings",
+            connectorType: "mistralAiSettings",
+            mistralAiSettings: {
+                apiKey: "mistral-key",
+                endpoint: "https://api.mistral.ai/v1/",
+                model: "mistral-embed",
+                embeddingsMaxConcurrentBatches: null,
+            },
+        };
+
+        const withMistralAiSettings = (settings: Partial<FormData["mistralAiSettings"]>): FormData => ({
+            ...mistralAiConnection,
+            mistralAiSettings: { ...mistralAiConnection.mistralAiSettings, ...settings },
+        });
+
+        it("accepts a connection with API key, endpoint and model", async () => {
+            await expect(isValid(mistralAiConnection)).resolves.toBe(true);
+        });
+
+        it("requires an API key", async () => {
+            await expect(isValid(withMistralAiSettings({ apiKey: null }))).resolves.toBe(false);
+        });
+
+        it("requires an endpoint", async () => {
+            await expect(isValid(withMistralAiSettings({ endpoint: null }))).resolves.toBe(false);
+        });
+
+        it("requires a model", async () => {
+            await expect(isValid(withMistralAiSettings({ model: null }))).resolves.toBe(false);
+        });
+    });
 });
