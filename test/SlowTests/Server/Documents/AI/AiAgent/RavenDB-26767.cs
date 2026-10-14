@@ -19,6 +19,7 @@ using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Settings;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi;
+using Raven.Server.Documents.ETL.Providers.AI.GenAi.Stats;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi.Test;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.ServerWide.Context;
@@ -776,6 +777,79 @@ if ($input.doc) {
             // the object/nested context was accepted and the conversation completed without a wrapper/serialization error
             Assert.True(product.Processed);
         }
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task GenAi_RefusedBeforeTheModel_IsNeitherSentNorAModelCallFailure()
+    {
+        // The refusal happens while the request is being built, so the provider is never contacted - which is why a
+        // deliberately unreachable endpoint is enough here and no credentials are needed. What is asserted is the
+        // bookkeeping: an item that produced no request is not 'sent to the model', and its failure is not a
+        // 'model call failure'.
+        using var store = GetDocumentStore();
+
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(new AiConnectionString
+        {
+            Name = "fake-connection",
+            Identifier = "fake-connection",
+            ModelType = AiModelType.Chat,
+            OpenAiSettings = new OpenAiSettings("fake-key", "http://localhost:1/", "fake-model")
+        }));
+
+        var configuration = new GenAiConfiguration
+        {
+            Name = "genai-26767-stats",
+            Identifier = "genai-26767-stats",
+            ConnectionStringName = "fake-connection",
+            Collection = "RealProviderProducts",
+            Prompt = "Summarize this product.",
+            SampleObject = JsonConvert.SerializeObject(new { Summary = "..." }),
+            UpdateScript = "this.Processed = true;",
+            MaxConcurrency = 1,
+            GenAiTransformation = new GenAiTransformation { Script = "ai.genContext({ brand: this.Brand });" },
+            Queries = [new AiAgentToolQuery("Q", "run the query", "from RealProviderProducts where Brand = $brand") { ParametersSampleObject = "{}" }]
+        };
+
+        store.Maintenance.Send(new AddGenAiOperation(configuration));
+
+        using (var session = store.OpenSession())
+        {
+            // 'brand' is an object, and the query binds $brand - so the item is refused before any request is built
+            session.Store(new RealProviderProduct
+            {
+                Title = "TechNova Phone X",
+                Brand = new RealProviderBrand { Name = "TechNova", Category = "Consumer Electronics" }
+            }, "products/1");
+            session.SaveChanges();
+        }
+
+        var refused = await WaitForValueAsync(async () =>
+        {
+            var errors = await Etl.GetItemLoadErrorsAsync(store.Database, configuration);
+            return errors.Any();
+        }, true, timeout: 60_000);
+
+        Assert.True(refused);
+
+        var database = await GetDatabase(store.Database);
+        var etlProcess = database.EtlLoader.Processes.FirstOrDefault() as GenAiTask;
+        Assert.NotNull(etlProcess);
+
+        var stats = etlProcess.GetPerformanceStats()
+            .Where(x => x.LastExtractedEtags[EtlItemType.Document] > 0)
+            .ToArray();
+
+        Assert.NotEmpty(stats);
+
+        var loadDetails = stats[0].Details.Operations[^1];
+        Assert.Equal("Load", loadDetails.Name);
+
+        var modelScope = loadDetails.Operations.FirstOrDefault(x => x.Name == GenAiOperations.LoadToModel) as GenAiPerformanceOperation;
+        Assert.NotNull(modelScope);
+
+        Assert.Equal(1, modelScope.NumberOfContextObjects);
+        Assert.Equal(0, modelScope.TotalSentToModel);
+        Assert.Equal(0, modelScope.ModelCallFailures);
     }
 
     private class PersistedConversation { }
