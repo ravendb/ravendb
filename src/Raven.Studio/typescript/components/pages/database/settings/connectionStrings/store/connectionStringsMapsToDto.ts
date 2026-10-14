@@ -373,7 +373,8 @@ function mapEmbeddingsMaxConcurrentBatchesToDto(connection: AiConnection): numbe
         return null;
     }
 
-    return connection[connection.connectorType].embeddingsMaxConcurrentBatches;
+    const settings = connection[connection.connectorType];
+    return "embeddingsMaxConcurrentBatches" in settings ? settings.embeddingsMaxConcurrentBatches : null;
 }
 
 function mapDimensionsToDto(connection: AiConnection): number {

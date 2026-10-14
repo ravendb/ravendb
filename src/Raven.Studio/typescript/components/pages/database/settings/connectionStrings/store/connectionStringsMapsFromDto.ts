@@ -469,7 +469,6 @@ function mapAiFromSingleDto(
             reasoningEffort: d.AnthropicSettings?.ReasoningEffort,
             enablePromptCache: d.AnthropicSettings?.EnablePromptCache,
             apiVersion: d.AnthropicSettings?.ApiVersion,
-            embeddingsMaxConcurrentBatches: d.AnthropicSettings?.EmbeddingsMaxConcurrentBatches,
         },
     } satisfies AiConnection;
 }

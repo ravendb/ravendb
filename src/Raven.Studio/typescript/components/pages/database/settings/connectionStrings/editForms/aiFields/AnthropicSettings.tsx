@@ -1,7 +1,7 @@
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
 import { FlexGrow } from "components/common/FlexGrow";
-import { FormInput, FormLabel, FormSelect, FormSelectAutocomplete } from "components/common/Form";
+import { FormInput, FormLabel, FormSelectAutocomplete } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import OptionalLabel from "components/common/OptionalLabel";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
@@ -17,7 +17,7 @@ import { connectionStringSelectors } from "components/pages/database/settings/co
 import { useFormContext, useWatch } from "react-hook-form";
 import { SelectOption } from "components/common/select/Select";
 import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
-import { promptCacheOptions } from "./PromptCacheField";
+import PromptCacheField from "./PromptCacheField";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -74,7 +74,11 @@ export default function AnthropicSettings({ isUsedByAnyTask }: { isUsedByAnyTask
                 return [];
             }
         },
-        [formValues.anthropicSettings.apiKey, formValues.anthropicSettings.endpoint],
+        [
+            formValues.anthropicSettings.apiKey,
+            formValues.anthropicSettings.endpoint,
+            formValues.anthropicSettings.apiVersion,
+        ],
         300
     );
 
@@ -174,36 +178,52 @@ export default function AnthropicSettings({ isUsedByAnyTask }: { isUsedByAnyTask
                     isClearable
                 />
             </div>
+            <PromptCacheField
+                baseName="anthropicSettings"
+                serverDefaultValue={true}
+                label="Prompt caching"
+                description={
+                    <>
+                        Caches the earlier part of an AI agent conversation, so each turn reads it from the cache
+                        instead of reprocessing it. Anthropic bills a cache write above the normal input price and a
+                        cache read well below it, so caching pays off when turns follow each other within the cache
+                        lifetime. GenAI tasks never use the cache.
+                        <br />
+                        <br />
+                        <ul className="mb-0">
+                            <li>
+                                <strong>Default:</strong> <code>True</code>
+                            </li>
+                            <li className="mt-1">
+                                <strong>True:</strong> Cache agent conversations.
+                            </li>
+                            <li className="mt-1">
+                                <strong>False:</strong> Never cache.
+                            </li>
+                        </ul>
+                    </>
+                }
+            />
             <div className="mb-2">
                 <FormLabel>
-                    Prompt caching
+                    API version <OptionalLabel />
                     <PopoverWithHoverWrapper
                         message={
                             <>
-                                Caches the earlier part of an AI agent conversation, so each turn reads it from the
-                                cache instead of reprocessing it. Anthropic bills a cache write above the normal input
-                                price and a cache read well below it, so caching pays off when turns follow each other
-                                within the cache lifetime. GenAI tasks never use the cache.
-                                <br />
-                                <br />
-                                <ul className="mb-0">
-                                    <li>
-                                        <strong>Default:</strong> <code>True</code>
-                                    </li>
-                                    <li className="mt-1">
-                                        <strong>True:</strong> Cache agent conversations.
-                                    </li>
-                                    <li className="mt-1">
-                                        <strong>False:</strong> Never cache.
-                                    </li>
-                                </ul>
+                                The Anthropic API version, sent as the <code>anthropic-version</code> header. If not
+                                set, <code>{defaultApiVersion}</code> is used.
                             </>
                         }
                     >
-                        <Icon icon="info" color="info" id="enablePromptCache" margin="ms-1" />
+                        <Icon icon="info" color="info" id="apiVersion" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </FormLabel>
-                <FormSelect control={control} name="anthropicSettings.enablePromptCache" options={promptCacheOptions} />
+                <FormInput
+                    control={control}
+                    name="anthropicSettings.apiVersion"
+                    type="text"
+                    placeholder={`Default: ${defaultApiVersion}`}
+                />
             </div>
             <div className="d-flex mb-2">
                 <FlexGrow />
@@ -222,6 +242,8 @@ export default function AnthropicSettings({ isUsedByAnyTask }: { isUsedByAnyTask
 }
 
 const defaultMaxOutputTokens = 16000;
+
+const defaultApiVersion = "2023-06-01";
 
 const endpointOptions: SelectOption[] = ["https://api.anthropic.com/v1/"].map((x) => ({ label: x, value: x }));
 

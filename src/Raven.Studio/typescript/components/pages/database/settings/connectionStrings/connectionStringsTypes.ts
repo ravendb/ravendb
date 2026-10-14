@@ -230,7 +230,6 @@ export interface AiConnection extends ConnectionBase {
         reasoningEffort?: string;
         enablePromptCache?: boolean;
         apiVersion?: string;
-        embeddingsMaxConcurrentBatches?: number;
     };
 }
 
