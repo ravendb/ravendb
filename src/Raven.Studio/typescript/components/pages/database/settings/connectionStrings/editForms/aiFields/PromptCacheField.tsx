@@ -67,7 +67,7 @@ export default function PromptCacheField({ baseName, serverDefaultValue }: Promp
     );
 }
 
-const promptCacheOptions: SelectOption<boolean | null>[] = [
+export const promptCacheOptions: SelectOption<boolean | null>[] = [
     { label: "Default", value: null },
     { label: "True", value: true },
     { label: "False", value: false },
