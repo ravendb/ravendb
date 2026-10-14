@@ -53,7 +53,10 @@ function mapAiConnectionStringToSettingsDto(connection: AiConnectionString): AiC
 
 type FormData = ConnectionFormData<AiConnection>;
 
+const chatOnlyConnectorTypes: FormData["connectorType"][] = ["anthropicSettings"];
+
 const chatConnectorTypes: FormData["connectorType"][] = [
+    ...chatOnlyConnectorTypes,
     "azureOpenAiSettings",
     "googleSettings",
     "ollamaSettings",
@@ -63,6 +66,7 @@ const chatConnectorTypes: FormData["connectorType"][] = [
 function getConnectorOptions(modelType: FormData["modelType"]): SelectOptionWithIcon<FormData["connectorType"]>[] {
     // Alphabetical order beside of Embedded
     const allOptions: SelectOptionWithIcon<FormData["connectorType"]>[] = [
+        { label: "Anthropic", value: "anthropicSettings", icon: "llm" },
         { label: "Azure OpenAI", value: "azureOpenAiSettings", icon: "openai" },
         { label: "Google AI", value: "googleSettings", icon: "google-gemini" },
         { label: "Hugging Face", value: "huggingFaceSettings", icon: "huggingface" },
@@ -74,10 +78,10 @@ function getConnectorOptions(modelType: FormData["modelType"]): SelectOptionWith
     ];
 
     if (modelType === "Chat") {
-        return [...allOptions.filter((x) => chatConnectorTypes.includes(x.value))];
+        return allOptions.filter((x) => chatConnectorTypes.includes(x.value));
     }
 
-    return allOptions;
+    return allOptions.filter((x) => !chatOnlyConnectorTypes.includes(x.value));
 }
 
 const getTemperatureSchema = (connectorType: FormData["connectorType"]) =>
@@ -299,11 +303,28 @@ const schema = yupObjectSchema<FormData>({
         embeddingsMaxConcurrentBatches: getEmbeddingsMaxConcurrentBatchesSchema("mistralAiSettings"),
     }),
     anthropicSettings: yupObjectSchema<FormData["anthropicSettings"]>({
-        // No Studio form for Anthropic yet - the block only round-trips API-created connection strings.
-        apiKey: yup.string().nullable(),
-        model: yup.string().nullable(),
+        apiKey: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "anthropicSettings",
+                then: (schema) => schema.trim().required(),
+            }),
+        model: yup
+            .string()
+            .nullable()
+            .when("$connectorType", {
+                is: "anthropicSettings",
+                then: (schema) => schema.trim().required(),
+            }),
         endpoint: yup.string().nullable(),
-        maxOutputTokens: yup.number().nullable(),
+        maxOutputTokens: yup
+            .number()
+            .nullable()
+            .when("$connectorType", {
+                is: "anthropicSettings",
+                then: (schema) => schema.integer().positive(),
+            }),
         reasoningEffort: yup.string().nullable(),
         enablePromptCache: yup.boolean().nullable(),
         apiVersion: yup.string().nullable(),
@@ -382,6 +403,16 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
                 model: null,
                 embeddingsMaxConcurrentBatches: null,
             } satisfies Required<FormData["mistralAiSettings"]>,
+            anthropicSettings: {
+                apiKey: null,
+                model: null,
+                endpoint: null,
+                maxOutputTokens: null,
+                reasoningEffort: null,
+                enablePromptCache: null,
+                apiVersion: null,
+                embeddingsMaxConcurrentBatches: null,
+            } satisfies Required<FormData["anthropicSettings"]>,
         };
     }
 
@@ -394,5 +425,4 @@ export const aiConnectionStringUtils = {
     getConnectorOptions,
     getDefaultValues,
     schema,
-    chatConnectorTypes,
 };

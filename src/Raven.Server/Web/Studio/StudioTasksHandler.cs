@@ -359,6 +359,9 @@ namespace Raven.Server.Web.Studio
                     case AiConnectorType.Ollama:
                         provider = new OllamaChatCompletionProvider(request.OllamaSettings);
                         break;
+                    case AiConnectorType.Anthropic:
+                        provider = new AnthropicChatCompletionProvider(request.AnthropicSettings);
+                        break;
                     default:
                         throw new NotSupportedException($"Unsupported connector type: {request.ConnectorType}");
                 }
@@ -382,6 +385,8 @@ namespace Raven.Server.Web.Studio
             public AzureOpenAiSettings AzureOpenAiSettings { get; set; }
 
             public GoogleSettings GoogleSettings { get; set; }
+
+            public AnthropicSettings AnthropicSettings { get; set; }
         }
 
         [RavenAction("/studio-tasks/convert-to-json-schema", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
