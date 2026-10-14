@@ -128,11 +128,11 @@ namespace Raven.Server.Documents
                         {
                             bool isRevision = name.StartsWith(revisionsPrefix,StringComparison.OrdinalIgnoreCase);
                             bool isCollection = name.StartsWith(collectionsPrefix, StringComparison.OrdinalIgnoreCase);
-                            schema.Compressed = 
+                            schema.Compressed =
                                 (isRevision && databaseRecord.DocumentsCompression?.CompressRevisions == true) ||
                                 (isCollection && databaseRecord.DocumentsCompression?.CompressAllCollections == true) ||
                                 compressedCollectionsTableNames?.Contains(name) == true;
-                        },_token);
+                        }, lowerId => ShardHelper.GetBucketFor(databaseRecord.Sharding, lowerId), _token);
                     }
 
                     result.TreeName = null;

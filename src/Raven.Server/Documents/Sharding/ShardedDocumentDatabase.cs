@@ -25,6 +25,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Utils;
+using Voron.Impl;
 
 namespace Raven.Server.Documents.Sharding;
 
@@ -48,6 +49,7 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
         ShardNumber = ShardHelper.GetShardNumberFromDatabaseName(name);
         ShardedDatabaseName = ShardHelper.ToDatabaseName(name);
         Smuggler = new ShardedDatabaseSmugglerFactory(this);
+        GetBucketFor = lowerId => ShardHelper.GetBucketFor(ShardingConfiguration, lowerId);
 
         _logger = LoggingSource.Instance.GetLogger<ShardedDocumentDatabase>(Name);
     }
@@ -92,6 +94,9 @@ public sealed class ShardedDocumentDatabase : DocumentDatabase
     }
 
     public ShardingConfiguration ShardingConfiguration;
+
+    // held rather than converted at each use: a method group would allocate a delegate on every transaction
+    public readonly BucketResolver GetBucketFor;
 
     private ConcurrentDictionary<long, Task> _confirmations = new ConcurrentDictionary<long, Task>();
 

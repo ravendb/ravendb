@@ -187,11 +187,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
     {
         var scope = tx.Allocator.Allocate(sizeof(long) + sizeof(int), out var buffer);
 
-        var span = new ReadOnlySpan<byte>(idPtr, idSize);
-        
-        var docsCtx = tx.Owner as DocumentsOperationContext;
-        var database = ShardedDocumentDatabase.CastToShardedDocumentDatabase(docsCtx?.DocumentDatabase);
-        var bucket = ShardHelper.GetBucketFor(database?.ShardingConfiguration, span);
+        var bucket = tx.GetBucketFor(new ReadOnlySpan<byte>(idPtr, idSize));
 
         *(int*)buffer.Ptr = Bits.SwapBytes(bucket);
         *(long*)(buffer.Ptr + sizeof(int)) = etag;
