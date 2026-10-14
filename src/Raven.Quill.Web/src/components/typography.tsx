@@ -21,7 +21,8 @@ import { cn } from "@/lib/utils";
 //   label      compact chrome / card-item / eyebrow header (semantically an h2/h3, visually small)
 //
 // <Text> — supporting copy. `body` (plain), `muted` (secondary), `caption` (xs metadata), `label`
-// (emphasized inline). Renders <p> by default.
+// (emphasized inline), `code` (xs monospace, for identifiers such as table and column names). Renders
+// <p> by default.
 //
 // Card/overlay titles are their own primitives kept visually aligned with this scale: CardTitle,
 // DialogTitle, SheetTitle, AlertDialogTitle all use text-base font-semibold tracking-tight. Use
@@ -72,6 +73,7 @@ const textVariants = cva("", {
             muted: "text-sm text-muted-foreground",
             caption: "text-xs text-muted-foreground",
             label: "text-sm font-medium",
+            code: "font-mono text-xs",
         },
     },
     defaultVariants: {

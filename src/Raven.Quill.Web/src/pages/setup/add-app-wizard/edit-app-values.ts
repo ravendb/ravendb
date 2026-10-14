@@ -8,7 +8,7 @@ import {
 } from "@/pages/setup/add-app-wizard/connection-string";
 import { resolveProviderFromSourceType } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-options";
 import { wrapDtoTablesToFormShape } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
-import { getSourceTableLabel } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
+import { getTableLabel } from "@/pages/setup/add-app-wizard/discover-utils";
 import type { EditedApp } from "@/pages/setup/add-app-wizard/app-wizard";
 
 export type EditAppSeed = {
@@ -55,9 +55,8 @@ export function buildEditAppSeed(
                 ...buildConnectionSeed(provider, cdc.connectionString ?? ""),
             },
             verifySchema: { tables: selectedTables },
-            map: { source: "manual", aiPrompt: "" },
             mapTables: { tables },
-            preview: { table: getSourceTableLabel(tables[0]) ?? "", maxRows: 1 },
+            preview: { table: getTableLabel(tables[0]), maxRows: 1 },
         },
         editedApp: {
             slug: app.slug,

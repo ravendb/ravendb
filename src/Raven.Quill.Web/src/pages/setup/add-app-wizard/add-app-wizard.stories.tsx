@@ -1,15 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { useState } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { FormProvider, useForm } from "react-hook-form";
-import type { AiHelperStatus, DiscoverResponse } from "@/api/generated/server-api";
-import { assistantMocks } from "@/mocks/assistant-mocks";
-import { AI_OUT_OF_TOKENS_MESSAGE } from "@/components/ai-consent/use-ai-consent";
-import { FormWizard } from "@/components/form/wizard/form-wizard";
+import type { DiscoverResponse } from "@/api/generated/server-api";
 import { RANGE_PREVIEW_ROW_CLASSNAME } from "@/components/table/row-range-selection";
-import { preventEnterKeySubmission } from "@/lib/form-utils";
 import { defaultApiMocks } from "@/mocks/default-mocks";
+import { plannerOpeningFrames, PLANNER_CONVERSATION_ID } from "@/mocks/migration-mocks";
 import {
     discoveryWithAllStates,
     failedCdcVerification,
@@ -20,13 +14,12 @@ import {
     setupMocks,
 } from "@/mocks/setup-mocks";
 import { AddAppWizard } from "./add-app-wizard";
-import { getAppFlow, useAppSteps } from "./app-wizard-flow";
 import { useSetupWizardStore } from "./app-wizard-store";
-import { isTableSupported } from "./discover-utils";
-import { appSchema, type AppFormData, type AppStepId } from "./app-wizard-validation";
-import { computeSourceKey } from "./steps/connect/use-connect-source-step";
-import { computeMapKey } from "./steps/map/use-map-schema-step";
-import { createEmptyRootTable, scaffoldRootTable } from "./steps/map-tables/map-tables-utils";
+import { AppWizardAtStep } from "./app-wizard-story-harness";
+import { discoverHandlers, replayPlannerTurns } from "./app-wizard-story-fixtures";
+import { type AppFormData } from "./app-wizard-validation";
+import { isTableSupported, MAX_SELECTED_TABLES } from "./discover-utils";
+import { createEmptyRootTable } from "./steps/map-tables/map-tables-utils";
 
 const meta = {
     title: "Setup/Add App Wizard",
@@ -43,131 +36,6 @@ type Story = StoryObj<typeof meta>;
 // The full wizard, mounted at the first step through the real entry component (form
 // creation, store reset, and provision mutation wired up).
 export const Default: Story = {};
-
-// Valid values for every step, so any step renders with realistic data and Next/Back keep
-// working against the default MSW mocks. The verify step's initial selection follows the
-// discovery being shown; map/preview always seed from the clean happy-path discovery.
-function buildSeed(discovery: DiscoverResponse): AppFormData {
-    return {
-        dataSource: { source: "external" },
-        externalConnection: {
-            appName: "AcmeShop",
-            slug: "acme-shop",
-            provider: "Npgsql",
-            mode: "fields",
-            fields: {
-                host: "localhost",
-                port: 5432,
-                database: "acme_shop",
-                username: "admin",
-                password: "secret",
-                ssl: "disable",
-            },
-            connectionString: "",
-        },
-        verifySchema: {
-            tables: discovery.tables
-                .filter((table) => isTableSupported(discovery, table))
-                .map((table) => ({
-                    sourceTableSchema: table.sourceTableSchema,
-                    sourceTableName: table.sourceTableName,
-                })),
-        },
-        map: { source: "ai-suggested", aiPrompt: "Embed order line items and link customers by id." },
-        mapTables: { tables: sampleDiscovery.tables.map((table) => scaffoldRootTable(sampleDiscovery, table)) },
-        preview: { table: "dbo.Customers", maxRows: 1 },
-    };
-}
-
-// Replaces the discover handler so re-discovery ("Customize schemas") stays consistent
-// with the seeded result, keeping the rest of the setup mocks intact.
-function discoverHandlers(discovery: DiscoverResponse) {
-    return { setup: [setupMocks.discover(discovery), ...defaultApiMocks.setup] };
-}
-
-function consentHandlers(status: AiHelperStatus) {
-    return { assistant: [assistantMocks.consent({ status }), ...defaultApiMocks.assistant] };
-}
-
-// Renders the real wizard jumped to a single step. The body components read the discovery
-// result and map-tables selection from the store, so seed both before they first render
-// (Default's AddAppWizard resets the store on mount, so this never leaks).
-function AppWizardAtStep({
-    initialStep,
-    discovery = sampleDiscovery,
-    isMappingApplied = true,
-    hasSelectedTables = true,
-    hasPlannerSession = false,
-    seedOverride,
-}: {
-    initialStep: AppStepId;
-    discovery?: DiscoverResponse;
-    /** When false, the map-tables step treats its seeded tables as stale and asks the AI again. */
-    isMappingApplied?: boolean;
-    /** When false, the verify step starts with nothing selected, as it does on a fresh discovery. */
-    hasSelectedTables?: boolean;
-    hasPlannerSession?: boolean;
-    seedOverride?: (seed: AppFormData) => AppFormData;
-}) {
-    const [seed] = useState(() => {
-        const built = buildSeed(discovery);
-        const values = hasSelectedTables ? built : { ...built, verifySchema: { tables: [] } };
-
-        return seedOverride ? seedOverride(values) : values;
-    });
-
-    useState(() =>
-        useSetupWizardStore.setState({
-            discoverResult: discovery,
-            discoverSchemas: [],
-            editedAppSlug: null,
-            initialSelectedTables: null,
-            connectKey: null,
-            appliedMapKey: isMappingApplied
-                ? computeMapKey({
-                      sourceKey: computeSourceKey(seed.externalConnection),
-                      source: seed.map.source,
-                      aiPrompt: seed.map.aiPrompt,
-                      selectedTables: seed.verifySchema.tables,
-                  })
-                : null,
-            mapTablesKey: null,
-            mapActiveTable: { type: "root", path: "mapTables.tables.0" },
-            mapExpandedPaths: {},
-            plannerConversationId: hasPlannerSession ? "quill-cdc-planner/1" : null,
-            plannerSelectedTables: hasPlannerSession ? seed.verifySchema.tables : null,
-        }),
-    );
-
-    const form = useForm<AppFormData>({
-        mode: "onChange",
-        defaultValues: seed,
-        resolver: zodResolver(appSchema),
-    });
-
-    return (
-        <FormProvider {...form}>
-            <form className="h-full" onSubmit={(event) => event.preventDefault()} onKeyDown={preventEnterKeySubmission}>
-                <AppWizardStepBody initialStep={initialStep} />
-            </form>
-        </FormProvider>
-    );
-}
-
-// useAppSteps reads the form via context, so it must run inside the provider above.
-function AppWizardStepBody({ initialStep }: { initialStep: AppStepId }) {
-    const steps = useAppSteps();
-
-    return (
-        <FormWizard
-            steps={steps}
-            flow={getAppFlow({ dataSource: "external" })}
-            initialStep={initialStep}
-            cancel={() => {}}
-            completion={{ type: "submit", label: "Create app & continue", busyLabel: "Creating app..." }}
-        />
-    );
-}
 
 /**
  * What the select-all box actually draws. `aria-checked` was already correct while a partial
@@ -384,7 +252,8 @@ export const VerifySchemaWithoutSelection: Story = {
     },
 };
 
-export const VerifySchemaSelectionLimit: Story = {
+// Below the selection limit, select-all takes every row.
+export const VerifySchemaRangeAndSelectAll: Story = {
     parameters: { msw: { handlers: discoverHandlers(manyTablesDiscovery) } },
     render: () => (
         <AppWizardAtStep initialStep="verifySchema" discovery={manyTablesDiscovery} hasSelectedTables={false} />
@@ -396,7 +265,8 @@ export const VerifySchemaSelectionLimit: Story = {
         const user = userEvent.setup();
         const rowCheckboxes = () => canvas.getAllByRole("checkbox", { name: "Select row" });
         const selectAll = () => canvas.getByRole("checkbox", { name: "Select all" });
-        const limitNotice = () => canvas.queryByText(/one app processes at most 64 tables/i);
+        const limitNotice = () =>
+            canvas.queryByText(`One app processes at most ${MAX_SELECTED_TABLES} tables`, { exact: false });
         const previewedRows = () => canvasElement.querySelectorAll(`.${RANGE_PREVIEW_ROW_CLASSNAME}`);
         const selectAllMark = () => readSelectAllMark(canvasElement);
 
@@ -420,14 +290,12 @@ export const VerifySchemaSelectionLimit: Story = {
         expect(selectAllMark()).toBe("dash");
 
         await user.click(selectAll());
-        await waitFor(() => expect(canvas.getByText(/64 out of 80 tables selected/)).toBeInTheDocument());
-        expect(limitNotice()).toBeInTheDocument();
-        // The limit stops select-all short of every row, so the selection stays partial.
-        expect(selectAllMark()).toBe("dash");
+        await waitFor(() => expect(canvas.getByText(/80 out of 80 tables selected/)).toBeInTheDocument());
+        expect(limitNotice()).not.toBeInTheDocument();
+        expect(selectAllMark()).toBe("check");
 
         await user.click(selectAll());
-        await waitFor(() => expect(limitNotice()).not.toBeInTheDocument());
-        expect(selectAllMark()).toBe("empty");
+        await waitFor(() => expect(selectAllMark()).toBe("empty"));
     },
 };
 
@@ -516,9 +384,18 @@ export const VerifySchemaCdcVerificationFailed: Story = {
     },
 };
 
+const withPlannerSession = (seed: AppFormData) =>
+    replayPlannerTurns([{ frames: plannerOpeningFrames }], seed.verifySchema.tables);
+
 // Changing the tables under a planner session asks before throwing the session away.
 export const VerifySchemaChangedUnderPlannerSession: Story = {
-    render: () => <AppWizardAtStep initialStep="verifySchema" hasPlannerSession />,
+    render: () => (
+        <AppWizardAtStep
+            initialStep="verifySchema"
+            seedOverride={(seed) => ({ ...seed, mapTables: { tables: [] } })}
+            seedStore={withPlannerSession}
+        />
+    ),
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
         const body = within(canvasElement.ownerDocument.body);
@@ -532,155 +409,53 @@ export const VerifySchemaChangedUnderPlannerSession: Story = {
         await userEvent.click(body.getByRole("button", { name: /cancel/i }));
         await waitFor(() => expect(body.queryByRole("alertdialog")).not.toBeInTheDocument());
         expect(canvas.getByRole("heading", { name: /verify your schema/i })).toBeInTheDocument();
-        expect(useSetupWizardStore.getState().plannerConversationId).toBe("quill-cdc-planner/1");
+        expect(useSetupWizardStore.getState().plannerConversationId).toBe(PLANNER_CONVERSATION_ID);
 
         await userEvent.click(canvas.getByRole("button", { name: /^next$/i }));
         await userEvent.click(await body.findByRole("button", { name: /start over/i }));
 
         await waitFor(() =>
-            expect(canvas.getByRole("heading", { name: /design your document model/i })).toBeInTheDocument(),
+            expect(canvas.getByRole("heading", { name: /plan your document model/i })).toBeInTheDocument(),
         );
-        expect(useSetupWizardStore.getState().plannerConversationId).toBeNull();
-        expect(useSetupWizardStore.getState().plannerSelectedTables).toBeNull();
+        // The planner starts over on the new selection.
+        expect(useSetupWizardStore.getState().plannerConversationId).not.toBe(PLANNER_CONVERSATION_ID);
+        expect(useSetupWizardStore.getState().plannerSelectedTables).toHaveLength(sampleDiscovery.tables.length - 1);
+    },
+};
+
+// The planner reads its tables as it opens, so a session still opening counts as one too.
+export const VerifySchemaChangedWhilePlannerOpens: Story = {
+    tags: ["!dev"],
+    render: () => (
+        <AppWizardAtStep
+            initialStep="verifySchema"
+            seedStore={(seed) => replayPlannerTurns([{ frames: [], isWorking: true }], seed.verifySchema.tables)}
+        />
+    ),
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const body = within(canvasElement.ownerDocument.body);
+
+        await userEvent.click(canvas.getAllByRole("checkbox", { name: "Select row" })[0]);
+        await userEvent.click(canvas.getByRole("button", { name: /^next$/i }));
+
+        await waitFor(() => expect(body.getByText("Start the planner over?")).toBeInTheDocument());
     },
 };
 
 // An unchanged selection moves on without asking.
 export const VerifySchemaUnchangedUnderPlannerSession: Story = {
     tags: ["!dev"],
-    render: () => <AppWizardAtStep initialStep="verifySchema" hasPlannerSession />,
+    render: () => <AppWizardAtStep initialStep="verifySchema" seedStore={withPlannerSession} />,
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
 
         await userEvent.click(canvas.getByRole("button", { name: /^next$/i }));
 
         await waitFor(() =>
-            expect(canvas.getByRole("heading", { name: /design your document model/i })).toBeInTheDocument(),
+            expect(canvas.getByRole("heading", { name: /plan your document model/i })).toBeInTheDocument(),
         );
-        expect(useSetupWizardStore.getState().plannerConversationId).toBe("quill-cdc-planner/1");
-    },
-};
-
-// Seeded with a prompt, so the field is already there and stepping back never hides it.
-export const MapSchema: Story = {
-    render: () => <AppWizardAtStep initialStep="map" />,
-    play: async ({ canvasElement }) => {
-        const canvas = within(canvasElement);
-
-        expect(canvas.getByRole("textbox", { name: /intent prompt/i })).toBeInTheDocument();
-    },
-};
-
-const withoutIntentPrompt = (seed: AppFormData): AppFormData => ({ ...seed, map: { ...seed.map, aiPrompt: "" } });
-
-// The real first-run state: AI mapping chosen, no prompt yet, so the step asks only the
-// AI-versus-manual question. Deliberately has no play - a story that clicks its own button is an
-// interaction test, and this one has to stay at rest to be worth looking at.
-export const MapSchemaWithoutIntentPrompt: Story = {
-    render: () => <AppWizardAtStep initialStep="map" seedOverride={withoutIntentPrompt} />,
-};
-
-/*
-   The three stories below drive the intent prompt's transitions. Each one ends up looking like a
-   state already on show above, so they are tagged "!dev" to keep them out of the sidebar - the
-   vitest addon selects on the "test" tag, so they still run.
-*/
-
-// Adding the field swaps the button for a focused textarea.
-export const MapSchemaAddIntentPrompt: Story = {
-    tags: ["!dev"],
-    render: () => <AppWizardAtStep initialStep="map" seedOverride={withoutIntentPrompt} />,
-    play: async ({ canvasElement }) => {
-        const canvas = within(canvasElement);
-
-        expect(canvas.queryByRole("textbox", { name: /intent prompt/i })).not.toBeInTheDocument();
-
-        await userEvent.click(canvas.getByRole("button", { name: /add an intent prompt/i }));
-
-        const prompt = await waitFor(() => canvas.getByRole("textbox", { name: /intent prompt/i }));
-        expect(prompt).toHaveFocus();
-        expect(canvas.queryByRole("button", { name: /add an intent prompt/i })).not.toBeInTheDocument();
-    },
-};
-
-// Removing takes the text with it, so nothing keeps steering the suggestion from a hidden field.
-export const MapSchemaRemoveIntentPrompt: Story = {
-    tags: ["!dev"],
-    render: () => <AppWizardAtStep initialStep="map" />,
-    play: async ({ canvasElement }) => {
-        const canvas = within(canvasElement);
-
-        expect(canvas.getByRole("textbox", { name: /intent prompt/i })).toHaveValue(
-            "Embed order line items and link customers by id.",
-        );
-
-        await userEvent.click(canvas.getByRole("button", { name: /remove/i }));
-
-        const addButton = await waitFor(() => canvas.getByRole("button", { name: /add an intent prompt/i }));
-        expect(addButton).toHaveFocus();
-
-        // Re-adding starts from empty rather than restoring the discarded prompt.
-        await userEvent.click(addButton);
-        await waitFor(() => expect(canvas.getByRole("textbox", { name: /intent prompt/i })).toHaveValue(""));
-    },
-};
-
-// Reaching for the prompt while "Manual" is selected asks for a mapping the prompt cannot steer,
-// so adding it moves the choice to AI Suggest.
-export const MapSchemaIntentPromptFromManual: Story = {
-    tags: ["!dev"],
-    render: () => (
-        <AppWizardAtStep
-            initialStep="map"
-            seedOverride={(seed) => ({ ...seed, map: { source: "manual", aiPrompt: "" } })}
-        />
-    ),
-    play: async ({ canvasElement }) => {
-        const canvas = within(canvasElement);
-
-        expect(canvas.getByRole("radio", { name: /manual/i })).toBeChecked();
-
-        await userEvent.click(canvas.getByRole("button", { name: /add an intent prompt/i }));
-        await waitFor(() => expect(canvas.getByRole("radio", { name: /ai suggest/i })).toBeChecked());
-        expect(canvas.getByRole("textbox", { name: /intent prompt/i })).toBeInTheDocument();
-    },
-};
-
-// No consent on file yet: the AI card stays on screen disabled, and "Next" waits until it is accepted.
-export const MapSchemaConsentRequired: Story = {
-    parameters: { msw: { handlers: consentHandlers("ConsentRequired") } },
-    render: () => <AppWizardAtStep initialStep="map" seedOverride={withoutIntentPrompt} />,
-    play: async ({ canvasElement }) => {
-        const canvas = within(canvasElement);
-
-        await waitFor(() => expect(canvas.getByRole("radio", { name: /ai suggest/i })).toBeDisabled());
-        expect(canvas.getByRole("button", { name: /^next$/i })).toBeDisabled();
-    },
-};
-
-// A license that rules AI out leaves nothing to accept, so only Manual can carry the wizard on.
-export const MapSchemaAiUnavailable: Story = {
-    parameters: { msw: { handlers: consentHandlers("InvalidCredentials") } },
-    render: () => <AppWizardAtStep initialStep="map" seedOverride={withoutIntentPrompt} />,
-    play: async ({ canvasElement }) => {
-        const canvas = within(canvasElement);
-
-        await waitFor(() => expect(canvas.getByRole("radio", { name: /ai suggest/i })).toBeDisabled());
-        expect(canvas.queryByRole("button", { name: /review the terms of use/i })).not.toBeInTheDocument();
-        expect(canvas.getByRole("button", { name: /^next$/i })).toBeDisabled();
-    },
-};
-
-// An exhausted quota also leaves nothing to accept, but unlike a license answer it offers a retry.
-export const MapSchemaAiOutOfTokens: Story = {
-    parameters: { msw: { handlers: consentHandlers("OutOfTokens") } },
-    render: () => <AppWizardAtStep initialStep="map" seedOverride={withoutIntentPrompt} />,
-    play: async ({ canvasElement }) => {
-        const canvas = within(canvasElement);
-
-        await waitFor(() => expect(canvas.getByRole("alert")).toHaveTextContent(AI_OUT_OF_TOKENS_MESSAGE));
-        expect(canvas.getByRole("radio", { name: /ai suggest/i })).toBeDisabled();
-        expect(canvas.getByRole("button", { name: /try again/i })).toBeEnabled();
+        expect(useSetupWizardStore.getState().plannerConversationId).toBe(PLANNER_CONVERSATION_ID);
     },
 };
 
@@ -725,13 +500,6 @@ export const MapTablesUnselectedTable: Story = {
         const canvas = within(canvasElement);
         expect(canvas.queryByText("1 deselected table will still be synced")).toBeInTheDocument();
     },
-};
-
-// The suggestion call routinely runs for more than a minute, so it is parked here to keep the
-// progress skeleton and its stage labels on screen.
-export const MapTablesSuggesting: Story = {
-    parameters: { msw: { handlers: { setup: [setupMocks.suggestCdcPending(), ...defaultApiMocks.setup] } } },
-    render: () => <AppWizardAtStep initialStep="mapTables" isMappingApplied={false} />,
 };
 
 export const Preview: Story = {

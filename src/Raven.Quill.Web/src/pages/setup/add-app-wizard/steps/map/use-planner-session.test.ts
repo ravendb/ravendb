@@ -1,61 +1,143 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { ApiError } from "@/api/http-client";
-import { useSetupWizardStore, type PlannerCollection } from "@/pages/setup/add-app-wizard/app-wizard-store";
-import {
-    consumePlannerFrame,
-    isPlannerConsentRefusal,
-} from "@/pages/setup/add-app-wizard/steps/map/use-planner-session";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { MigrationFrame } from "@/api/custom-services/migration-service";
+import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
+import { getLatestReply } from "@/pages/setup/add-app-wizard/steps/map/planner-state";
+import type { SelectedTables } from "@/pages/setup/add-app-wizard/steps/map/planner-types";
+import { createPlannerSession } from "@/pages/setup/add-app-wizard/steps/map/use-planner-session";
 
-const collection = (name: string, status: PlannerCollection["status"]): PlannerCollection => ({
-    collection: name,
-    version: 1,
-    status,
-    warnings: [],
-});
+const migration = vi.hoisted(() => ({ start: vi.fn(), ask: vi.fn() }));
 
-describe("isPlannerConsentRefusal", () => {
-    it("treats a 401 from the planner as a refusal the consent check has to answer", () => {
-        expect(isPlannerConsentRefusal(new ApiError("consent required", 401, undefined))).toBe(true);
+vi.mock("@/api/api", () => ({ api: { services: { migration } } }));
+
+const ORDERS: SelectedTables = [{ sourceTableSchema: "dbo", sourceTableName: "Orders" }];
+
+const CUSTOMERS: SelectedTables = [{ sourceTableSchema: "dbo", sourceTableName: "Customers" }];
+
+const DONE: MigrationFrame = { type: "done", conversationId: "planner/1" };
+
+async function* streamOf(...frames: MigrationFrame[]): AsyncGenerator<MigrationFrame> {
+    yield* frames;
+}
+
+async function* streamUntilAborted(signal: AbortSignal): AsyncGenerator<MigrationFrame> {
+    await new Promise<never>((_, reject) => {
+        if (signal.aborted) {
+            reject(new Error("aborted"));
+        }
+
+        signal.addEventListener("abort", () => reject(new Error("aborted")));
     });
 
-    it("leaves other failures alone", () => {
-        expect(isPlannerConsentRefusal(new ApiError("bad request", 400, undefined))).toBe(false);
-        expect(isPlannerConsentRefusal(new ApiError("unreachable", 502, undefined))).toBe(false);
-        expect(isPlannerConsentRefusal(new Error("network"))).toBe(false);
-    });
+    yield* [];
+}
+
+function newSession(getSelectedTables: () => SelectedTables = () => ORDERS) {
+    return createPlannerSession({ getSlug: () => "shop", getSelectedTables });
+}
+
+function latestStatus() {
+    return getLatestReply(useSetupWizardStore.getState().plannerTurns)?.status;
+}
+
+beforeEach(() => {
+    useSetupWizardStore.getState().reset();
+    migration.start.mockReset();
+    migration.ask.mockReset();
 });
 
-describe("dismissing a rejected collection", () => {
-    afterEach(() => useSetupWizardStore.getState().resetPlannerState());
+describe("createPlannerSession", () => {
+    it("sends the instructions written during the opening once the first plan is ready", async () => {
+        migration.start.mockImplementation(() => streamOf(DONE));
+        migration.ask.mockImplementation(() => streamOf(DONE));
+        useSetupWizardStore.getState().setPlannerDraft("Orders are read with their lines.");
 
-    it("removes only that card and keeps what the planner registered", () => {
-        const store = useSetupWizardStore.getState();
-        store.upsertPlannerCollection(collection("Loans", "registered"));
-        store.upsertPlannerCollection(collection("LoanProducts", "rejected"));
+        await newSession().start();
 
-        useSetupWizardStore.getState().removePlannerCollection("LoanProducts");
-
-        expect(Object.keys(useSetupWizardStore.getState().plannerCollections)).toEqual(["Loans"]);
+        expect(migration.ask).toHaveBeenCalledWith(
+            { slug: "shop", conversationId: "planner/1", prompt: "Orders are read with their lines." },
+            expect.any(AbortSignal),
+        );
+        expect(useSetupWizardStore.getState().plannerDraft).toBe("");
     });
-});
 
-describe("a turn that fails after its reply", () => {
-    afterEach(() => useSetupWizardStore.getState().resetPlannerState());
-
-    it("drops the reply's questions, since there is no conversation left to answer them in", () => {
-        consumePlannerFrame({
-            type: "reply",
-            reply: "Here is the plan.",
-            gaps: [],
-            openQuestions: [{ question: "Embed lines?", options: ["Yes", "No"], recommended: 0 }],
+    it("keeps the instructions for the next session when the tables changed while the planner opened", async () => {
+        let selectedTables = ORDERS;
+        migration.start.mockImplementation(() => {
+            selectedTables = CUSTOMERS;
+            return streamOf(DONE);
         });
-        expect(useSetupWizardStore.getState().plannerQuestions).toHaveLength(1);
+        useSetupWizardStore.getState().setPlannerDraft("Orders are read with their lines.");
 
-        consumePlannerFrame({ type: "error", message: "Could not store the schema (error id: 'x')" });
+        await newSession(() => selectedTables).start();
 
-        const state = useSetupWizardStore.getState();
-        expect(state.plannerQuestions).toEqual([]);
-        expect(state.plannerConversationId).toBeNull();
-        expect(state.plannerMessages.map((m) => m.role)).toEqual(["agent", "error"]);
+        expect(migration.ask).not.toHaveBeenCalled();
+        expect(useSetupWizardStore.getState().plannerDraft).toBe("Orders are read with their lines.");
+    });
+
+    it("marks a turn the operator stopped as stopped, not failed", async () => {
+        migration.start.mockImplementation((_request: unknown, signal: AbortSignal) => streamUntilAborted(signal));
+        const session = newSession();
+
+        const starting = session.start();
+        session.stop();
+        await starting;
+
+        expect(latestStatus()).toBe("stopped");
+    });
+
+    it("drops what a turn still streams once the session was started over", async () => {
+        let release = () => {};
+        const isReleased = new Promise<void>((resolve) => {
+            release = resolve;
+        });
+        migration.start.mockImplementation(async function* () {
+            yield { type: "note", text: "Reading the schema." } satisfies MigrationFrame;
+            await isReleased;
+            yield {
+                type: "collection",
+                status: "registered",
+                collection: "Orders",
+                version: 1,
+                warnings: [],
+            } satisfies MigrationFrame;
+            yield DONE;
+        });
+
+        const starting = newSession().start();
+        await vi.waitFor(() =>
+            expect(getLatestReply(useSetupWizardStore.getState().plannerTurns)?.activity).toHaveLength(1),
+        );
+        useSetupWizardStore.getState().startPlannerOver();
+        release();
+        await starting;
+
+        expect(useSetupWizardStore.getState().plannerCollections).toEqual({});
+        expect(useSetupWizardStore.getState().plannerTurns).toEqual([]);
+    });
+
+    it("sends what the operator wrote meanwhile along with the answers", async () => {
+        migration.start.mockImplementation(() =>
+            streamOf(
+                {
+                    type: "reply",
+                    reply: "One question first.",
+                    gaps: [],
+                    openQuestions: [{ question: "Embed lines?", options: ["Yes", "No"], recommended: 0 }],
+                },
+                DONE,
+            ),
+        );
+        migration.ask.mockImplementation(() => streamOf(DONE));
+        const session = newSession();
+        await session.start();
+        useSetupWizardStore.getState().setPlannerDraft("Keep it small.");
+
+        await session.answer([{ question: "Embed lines?", answer: "Yes" }], false);
+
+        expect(migration.ask).toHaveBeenCalledTimes(1);
+        const [{ prompt }] = migration.ask.mock.calls[0] as [{ prompt: string }];
+        expect(prompt).toContain("1. Embed lines?\n   Yes");
+        expect(prompt).toContain("Keep it small.");
+        expect(useSetupWizardStore.getState().plannerDraft).toBe("");
     });
 });

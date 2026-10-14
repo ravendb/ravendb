@@ -51,8 +51,6 @@ public sealed class MigrationPlan
 
     public void Remove(string collection) => Index().Remove(collection);
 
-    public bool Contains(string collection) => Index().ContainsKey(collection);
-
     public void RemoveByUser(string collection)
     {
         Remove(collection);

@@ -78,7 +78,7 @@ public static class WizardEndpoints
             .Accepts<MigrationAskRequest>("application/json");
         group.MapPost("/migration/remove", RemoveMigrationCollectionAsync)
             .WithName("setup.migrationRemoveCollection")
-            .WithDescription("Takes a registered collection out of the plan. The planner is told on the next turn.")
+            .WithDescription("Takes a collection out of the plan, also one the planner only proposed. The planner is told on the next turn.")
             .Accepts<MigrationRemoveCollectionRequest>("application/json")
             .Produces(StatusCodes.Status204NoContent)
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);

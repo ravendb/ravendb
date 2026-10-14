@@ -132,9 +132,6 @@ public sealed class MigrationService(
         if (plan is null)
             return new Refusal("no plan found for that conversation");
 
-        if (plan.Contains(request.Collection) == false)
-            return new Refusal($"the plan has no collection named {request.Collection}");
-
         plan.RemoveByUser(request.Collection);
         await plan.SaveAsync(store, request.Slug, token);
 

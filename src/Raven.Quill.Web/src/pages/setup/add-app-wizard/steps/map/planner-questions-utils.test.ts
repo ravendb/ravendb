@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-    areAllQuestionsAnswered,
+    answerSchema,
     composeAnswersPrompt,
+    CUSTOM_ANSWER,
+    getInitialAnswers,
     recommendedAnswers,
-    splitOpenQuestions,
-    type PlannerQuestion,
+    resolveAnswers,
 } from "@/pages/setup/add-app-wizard/steps/map/planner-questions-utils";
+import type { PlannerQuestion } from "@/pages/setup/add-app-wizard/steps/map/planner-types";
 
 const embedLines: PlannerQuestion = {
     question: "Embed order lines?",
@@ -15,51 +17,86 @@ const embedLines: PlannerQuestion = {
 const pricing: PlannerQuestion = {
     question: "Copy the unit price onto lines?",
     options: ["Copy it", "Reference the product", "Ignore"],
-    recommended: 1,
+    recommended: null,
 };
+const naming: PlannerQuestion = { question: "What should the app call a customer?", options: [], recommended: null };
 
-describe("splitOpenQuestions", () => {
-    it("sends questions with answers to the picker and the rest to the transcript", () => {
-        const result = splitOpenQuestions([
-            { question: "Embed order lines?", options: ["Embed", "Link", "Drop"], recommended: 0 },
-            { question: "Anything else?", options: [], recommended: null },
+describe("getInitialAnswers", () => {
+    it("preselects the recommendation, leaves a question without one open, and takes words where there are no options", () => {
+        expect(getInitialAnswers([embedLines, pricing, naming]).answers).toEqual([
+            { choice: "0", custom: "" },
+            { choice: "", custom: "" },
+            { choice: CUSTOM_ANSWER, custom: "" },
         ]);
-
-        expect(result.pickable).toEqual([embedLines]);
-        expect(result.freeForm).toEqual(["Anything else?"]);
-    });
-
-    it("treats a recommendation outside the answers as unanswerable by skipping", () => {
-        const result = splitOpenQuestions([{ question: "q", options: ["a", "b"], recommended: 5 }]);
-
-        expect(result.pickable).toEqual([]);
-        expect(result.freeForm).toEqual(["q"]);
     });
 });
 
-describe("areAllQuestionsAnswered", () => {
-    it("holds until every question has a pick", () => {
-        expect(areAllQuestionsAnswered([embedLines, pricing], [0, undefined])).toBe(false);
-        expect(areAllQuestionsAnswered([embedLines, pricing], [2, 0])).toBe(true);
+describe("answerSchema", () => {
+    it("takes a picked option or words, but not an empty answer", () => {
+        expect(answerSchema.safeParse({ choice: "2", custom: "" }).success).toBe(true);
+        expect(answerSchema.safeParse({ choice: CUSTOM_ANSWER, custom: "Client" }).success).toBe(true);
+        expect(answerSchema.safeParse({ choice: CUSTOM_ANSWER, custom: "  " }).success).toBe(false);
+        expect(answerSchema.safeParse({ choice: "", custom: "" }).success).toBe(false);
+    });
+});
+
+describe("resolveAnswers", () => {
+    it("pairs each question with the picked option or the operator's words", () => {
+        expect(
+            resolveAnswers(
+                [embedLines, naming],
+                [
+                    { choice: "1", custom: "" },
+                    { choice: CUSTOM_ANSWER, custom: " Client " },
+                ],
+            ),
+        ).toEqual([
+            { question: "Embed order lines?", answer: "Link" },
+            { question: "What should the app call a customer?", answer: "Client" },
+        ]);
+    });
+});
+
+describe("recommendedAnswers", () => {
+    it("answers every question with the planner's recommendation, whatever was picked", () => {
+        expect(recommendedAnswers([embedLines, pricing])).toEqual([
+            { question: "Embed order lines?", answer: "Embed" },
+            { question: "Copy the unit price onto lines?", answer: "No preference - use your judgement." },
+        ]);
     });
 });
 
 describe("composeAnswersPrompt", () => {
-    it("pairs each picked answer with its question", () => {
-        expect(composeAnswersPrompt([embedLines, pricing], [1, 2], false)).toBe(
+    const answers = [
+        { question: "Embed order lines?", answer: "Link" },
+        { question: "Copy the unit price onto lines?", answer: "Ignore" },
+    ];
+
+    it("repeats each question with its answer, since the planner reads the answers as a fresh message", () => {
+        expect(composeAnswersPrompt({ answers, isSkipped: false, instructions: null })).toBe(
             "Answers to your open questions:\n" +
                 "1. Embed order lines?\n   Link\n" +
                 "2. Copy the unit price onto lines?\n   Ignore",
         );
     });
 
-    it("applies the recommendations when skipped", () => {
-        const prompt = composeAnswersPrompt([embedLines, pricing], recommendedAnswers([embedLines, pricing]), true);
+    it("tells the planner the questions were skipped, so it can tell a skip from real answers", () => {
+        expect(composeAnswersPrompt({ answers, isSkipped: true, instructions: null })).toMatch(
+            /^I skipped your open questions - go with your recommendations:\n/,
+        );
+    });
 
-        expect(prompt).toBe(
-            "I skipped your open questions - go with your recommendations:\n" +
-                "1. Embed order lines?\n   Embed\n" +
-                "2. Copy the unit price onto lines?\n   Reference the product",
+    it("adds what the operator wrote for the planner meanwhile", () => {
+        expect(
+            composeAnswersPrompt({
+                answers: answers.slice(0, 1),
+                isSkipped: false,
+                instructions: { text: "Orders are always read with their lines.", mentions: ["Orders"] },
+            }),
+        ).toBe(
+            "Answers to your open questions:\n" +
+                "1. Embed order lines?\n   Link\n\n" +
+                "About the Orders collection: Orders are always read with their lines.",
         );
     });
 });

@@ -6,6 +6,7 @@ import { useAssistantStore } from "@/components/layout/assistant-store";
 import { FormTextarea } from "@/components/form/form-textarea";
 import { Button } from "@/components/shadcn/ui/button";
 import { Text } from "@/components/typography";
+import { isSendMessageKey } from "@/lib/form-utils";
 
 type PromptFormData = {
     prompt: string;
@@ -61,7 +62,7 @@ export function AssistantComposer() {
                     rows={2}
                     textareaClassName="max-h-40 min-h-12 resize-none pr-12"
                     onKeyDown={(event) => {
-                        if (event.key === "Enter" && !event.shiftKey) {
+                        if (isSendMessageKey(event)) {
                             event.preventDefault();
                             send();
                         }

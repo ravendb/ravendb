@@ -1,126 +1,208 @@
-import { useId, useState } from "react";
-import { X } from "lucide-react";
-import { Badge } from "@/components/shadcn/ui/badge";
+import { useId, useState, type KeyboardEvent, type Ref } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm, useWatch, type FieldErrors } from "react-hook-form";
+import { ArrowRight, ChevronLeft, ChevronRight, Sparkle } from "lucide-react";
+import { FormRadioList } from "@/components/form/form-radio-list";
+import { FormTextarea } from "@/components/form/form-textarea";
 import { Button } from "@/components/shadcn/ui/button";
-import { Label } from "@/components/shadcn/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/shadcn/ui/radio-group";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import { Heading, Text } from "@/components/typography";
+import { cn } from "@/lib/utils";
+import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import {
-    areAllQuestionsAnswered,
-    composeAnswersPrompt,
+    answerSchema,
+    answersFormSchema,
+    CUSTOM_ANSWER,
+    getInitialAnswers,
     recommendedAnswers,
-    type PlannerQuestion,
+    resolveAnswers,
+    type AnswersFormData,
 } from "@/pages/setup/add-app-wizard/steps/map/planner-questions-utils";
+import type { PlannerQuestion } from "@/pages/setup/add-app-wizard/steps/map/planner-types";
+import { useCanAnswerPlanner } from "@/pages/setup/add-app-wizard/steps/map/planner-workspace-context";
+import { usePlannerSession } from "@/pages/setup/add-app-wizard/steps/map/use-planner-session";
 
 /**
- * Takes the composer's place while the planner is waiting on a decision. Every question needs a
- * pick before the answers go out; closing the panel is the one way around that, and it answers
- * with the planner's own recommendations.
+ * The planner's questions, one at a time, in place of the composer. The recommended answer is preselected,
+ * number keys pick an option, and a question without options takes an answer in the operator's words.
+ * Anything the operator wrote for the planner meanwhile goes along with the answers.
  */
 export function PlannerQuestions({
     questions,
-    onAnswer,
+    className,
+    ref,
 }: {
     questions: PlannerQuestion[];
-    onAnswer: (prompt: string) => void;
+    className?: string;
+    ref?: Ref<HTMLElement>;
 }) {
-    const [answers, setAnswers] = useState<(number | undefined)[]>([]);
-    const isComplete = areAllQuestionsAnswered(questions, answers);
+    const session = usePlannerSession();
+    const canAnswer = useCanAnswerPlanner();
+    const titleId = useId();
+    const draft = useSetupWizardStore((state) => state.plannerDraft.trim());
+    const clearPlannerComposer = useSetupWizardStore((state) => state.clearPlannerComposer);
+    const [index, setIndex] = useState(0);
+    const form = useForm<AnswersFormData>({
+        defaultValues: getInitialAnswers(questions),
+        resolver: zodResolver(answersFormSchema),
+        mode: "onChange",
+    });
+    const answer = useWatch({ control: form.control, name: `answers.${index}` });
+
+    const question = questions[index];
+    const isLast = index === questions.length - 1;
+    const isAnswered = answerSchema.safeParse(answer).success;
+
+    const showFirstUnanswered = (errors: FieldErrors<AnswersFormData>) => {
+        const firstUnanswered = questions.findIndex((_, position) => errors.answers?.[position]);
+
+        setIndex(Math.max(firstUnanswered, 0));
+    };
+
+    const send = form.handleSubmit(
+        (values) => void session.answer(resolveAnswers(questions, values.answers), false),
+        showFirstUnanswered,
+    );
+
+    const skip = () => void session.answer(recommendedAnswers(questions), true);
+
+    const pick = (choice: string) => {
+        form.setValue(`answers.${index}.choice`, choice);
+        void form.trigger([`answers.${index}.choice`, `answers.${index}.custom`]);
+    };
+
+    const pickByNumber = (event: KeyboardEvent<HTMLElement>) => {
+        const number = Number(event.key);
+        const isTyping = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement;
+        const hasModifier = event.ctrlKey || event.metaKey || event.altKey;
+
+        if (isTyping || hasModifier || question.options.length === 0 || !Number.isInteger(number) || number < 1) {
+            return;
+        }
+
+        if (number <= question.options.length) {
+            event.preventDefault();
+            pick(String(number - 1));
+        } else if (number === question.options.length + 1) {
+            event.preventDefault();
+            pick(CUSTOM_ANSWER);
+            form.setFocus(`answers.${index}.custom`);
+        }
+    };
 
     return (
-        <div className="grid max-h-[60%] min-h-0 grid-rows-[auto_1fr_auto] border-t">
-            <div className="flex items-center gap-2 px-3 pt-3">
-                <Heading as="h3" variant="label" className="flex-1">
+        <section
+            ref={ref}
+            tabIndex={-1}
+            aria-labelledby={titleId}
+            className={cn(
+                "mx-auto flex w-full flex-col gap-3 rounded-xl border bg-card px-4 pt-3.5 pb-3 shadow-floating outline-none",
+                className,
+            )}
+            onKeyDown={pickByNumber}
+        >
+            <div className="flex items-center gap-2">
+                <Sparkle className="size-3 shrink-0 text-primary-strong" aria-hidden="true" />
+                <Text variant="muted" as="span">
                     {questions.length === 1
                         ? "The planner has a question"
                         : `The planner has ${questions.length} questions`}
-                </Heading>
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                type="button"
-                                size="icon-sm"
-                                variant="ghost"
-                                aria-label="Skip the questions and use the recommended answers"
-                                onClick={() =>
-                                    onAnswer(composeAnswersPrompt(questions, recommendedAnswers(questions), true))
-                                }
-                            >
-                                <X aria-hidden />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Skip - use the recommended answers</TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
+                </Text>
+                <Text variant="muted" as="span" className="ml-auto">
+                    {index + 1} of {questions.length}
+                </Text>
+                <div className="flex gap-0.5">
+                    <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-muted-foreground"
+                        aria-label="Previous question"
+                        disabled={index === 0}
+                        onClick={() => setIndex(index - 1)}
+                    >
+                        <ChevronLeft aria-hidden="true" />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-muted-foreground"
+                        aria-label="Next question"
+                        disabled={isLast}
+                        onClick={() => setIndex(index + 1)}
+                    >
+                        <ChevronRight aria-hidden="true" />
+                    </Button>
+                </div>
             </div>
 
-            <ol className="grid min-h-0 gap-4 overflow-y-auto p-3">
-                {questions.map((question, index) => (
-                    <PlannerQuestionItem
-                        key={`${index}-${question.question}`}
-                        index={index}
-                        question={question}
-                        answer={answers[index]}
-                        onAnswerChange={(answer) =>
-                            setAnswers((current) => {
-                                const next = [...current];
-                                next[index] = answer;
-                                return next;
-                            })
-                        }
-                    />
-                ))}
-            </ol>
+            <Heading as="h3" variant="subsection" id={titleId}>
+                {question.question}
+            </Heading>
 
-            <div className="flex justify-end px-3 pb-3">
+            {question.options.length > 0 ? (
+                <FormRadioList
+                    key={index}
+                    control={form.control}
+                    name={`answers.${index}.choice`}
+                    aria-labelledby={titleId}
+                    options={question.options.map((option, optionIndex) => ({
+                        value: String(optionIndex),
+                        label: optionIndex === question.recommended ? `${option} (Recommended)` : option,
+                        hint: <OptionKey>{optionIndex + 1}</OptionKey>,
+                    }))}
+                    other={{
+                        name: `answers.${index}.custom`,
+                        value: CUSTOM_ANSWER,
+                        label: "Something else",
+                        placeholder: "Something else…",
+                        hint: <OptionKey>{question.options.length + 1}</OptionKey>,
+                    }}
+                />
+            ) : (
+                <FormTextarea
+                    key={index}
+                    control={form.control}
+                    name={`answers.${index}.custom`}
+                    aria-labelledby={titleId}
+                    placeholder="Your answer"
+                    rows={2}
+                />
+            )}
+
+            {draft && (
+                <Text variant="muted">
+                    Your note goes with the answers: &ldquo;{draft}&rdquo;{" "}
+                    <Button variant="link" className="h-auto p-0" onClick={clearPlannerComposer}>
+                        Discard it
+                    </Button>
+                </Text>
+            )}
+
+            <div className="flex flex-wrap items-center gap-2">
+                <Button variant="ghost" className="text-muted-foreground" disabled={!canAnswer} onClick={skip}>
+                    Skip, use recommended answers
+                </Button>
                 <Button
-                    type="button"
-                    disabled={!isComplete}
-                    onClick={() => onAnswer(composeAnswersPrompt(questions, answers, false))}
+                    className="ml-auto"
+                    disabled={!isAnswered || (isLast && !canAnswer)}
+                    onClick={isLast ? send : () => setIndex(index + 1)}
                 >
-                    Submit answers
+                    {isLast ? "Send answers" : "Next"}
+                    <ArrowRight data-icon="inline-end" />
                 </Button>
             </div>
-        </div>
+        </section>
     );
 }
 
-function PlannerQuestionItem({
-    index,
-    question,
-    answer,
-    onAnswerChange,
-}: {
-    index: number;
-    question: PlannerQuestion;
-    answer: number | undefined;
-    onAnswerChange: (answer: number) => void;
-}) {
-    const id = useId();
-
+function OptionKey({ children }: { children: number }) {
     return (
-        <li className="grid gap-2">
-            <Text variant="label" as="p" id={`${id}-question`}>
-                {index + 1}. {question.question}
+        <kbd
+            aria-hidden="true"
+            className="inline-flex h-5.5 min-w-5.5 items-center justify-center rounded-sm border bg-muted px-1.5 text-muted-foreground"
+        >
+            <Text as="span" variant="code">
+                {children}
             </Text>
-            <RadioGroup
-                aria-labelledby={`${id}-question`}
-                value={answer === undefined ? "" : String(answer)}
-                onValueChange={(value) => onAnswerChange(Number(value))}
-                className="pl-4"
-            >
-                {question.options.map((option, optionIndex) => (
-                    <div key={option} className="flex items-center gap-2">
-                        <RadioGroupItem value={String(optionIndex)} id={`${id}-${optionIndex}`} />
-                        <Label htmlFor={`${id}-${optionIndex}`} className="font-normal">
-                            {option}
-                        </Label>
-                        {optionIndex === question.recommended && <Badge variant="info">Recommended</Badge>}
-                    </div>
-                ))}
-            </RadioGroup>
-        </li>
+        </kbd>
     );
 }

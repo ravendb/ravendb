@@ -245,7 +245,7 @@ public class MigrationEndpointsTests(ITestOutputHelper output) : QuillTestBase(o
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Removing_a_collection_the_plan_does_not_hold_is_refused()
+    public async Task Removing_a_collection_the_planner_only_proposed_queues_it_for_the_planner()
     {
         await using var host = await NewMigrationHostAsync(StubPlannerHandler.Replying());
         await SeedDiscoveredSchemaAsync(host);
@@ -258,9 +258,11 @@ public class MigrationEndpointsTests(ITestOutputHelper output) : QuillTestBase(o
             collection = "Products"
         });
 
-        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
-        var error = await resp.Content.ReadFromJsonAsync<ApiErrorResponse>();
-        Assert.Contains("no collection named Products", error!.Error);
+        Assert.Equal(HttpStatusCode.NoContent, resp.StatusCode);
+
+        var stored = await MigrationSamples.LoadPlanAsync(host.Config, QuillHost.DefaultWizardSlug);
+        Assert.Equal(["Orders"], stored!.Entries.Select(e => e.Collection));
+        Assert.Equal(["Products"], stored.PendingUserRemovals);
     }
 
     [RavenFact(RavenTestCategory.Quill)]

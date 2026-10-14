@@ -20,9 +20,9 @@ import { ExpandableTableNames } from "@/pages/setup/add-app-wizard/steps/map-tab
 import {
     collectMappedSourceTableKeys,
     getSourceTableKey,
-    getSourceTableLabel,
     scaffoldTables,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
+import { getTableLabel } from "@/pages/setup/add-app-wizard/discover-utils";
 import { useApplyMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-apply-map-tables";
 
 type UnmappedTable = {
@@ -64,10 +64,7 @@ export function UnmappedTablesAlert() {
             </AlertTitle>
             <AlertDescription>
                 <span>
-                    Changes to{" "}
-                    <ExpandableTableNames
-                        labels={unmappedTables.map(({ table }) => getSourceTableLabel(table) ?? "")}
-                    />{" "}
+                    Changes to <ExpandableTableNames labels={unmappedTables.map(({ table }) => getTableLabel(table))} />{" "}
                     will not be synced. Review your configuration to verify, map{" "}
                     {unmappedTables.length === 1 ? "it" : "them"} back, or go back and deselect{" "}
                     {unmappedTables.length === 1 ? "it" : "them"}.
@@ -148,7 +145,7 @@ function MapTablesDialogBody({
                             checked={selectedKeys.has(key)}
                             onCheckedChange={(value) => toggleTable(key, value === true)}
                         />
-                        <span className="truncate font-mono">{getSourceTableLabel(table)}</span>
+                        <span className="truncate font-mono">{getTableLabel(table)}</span>
                     </label>
                 ))}
             </div>

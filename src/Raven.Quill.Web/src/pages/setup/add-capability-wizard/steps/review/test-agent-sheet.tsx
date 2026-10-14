@@ -29,6 +29,7 @@ import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
 import { FormSwitch } from "@/components/form/form-switch";
 import { FormTextarea } from "@/components/form/form-textarea";
+import { isSendMessageKey } from "@/lib/form-utils";
 import AceEditor from "@/components/ace-editor/ace-editor";
 import { TestQueryToolCall } from "@/pages/setup/add-capability-wizard/steps/review/test-agent-tool-call";
 
@@ -390,7 +391,7 @@ function TestAgentPanel() {
                     rows={3}
                     disabled={isStreaming}
                     onKeyDown={(event) => {
-                        if (event.key === "Enter" && !event.shiftKey) {
+                        if (isSendMessageKey(event)) {
                             event.preventDefault();
                             event.stopPropagation();
                             handleSend();

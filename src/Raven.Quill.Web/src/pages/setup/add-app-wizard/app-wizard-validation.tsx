@@ -1,6 +1,6 @@
 import type { CdcColumnType, CdcSinkRelationType } from "@/api/generated/server-api";
 import { z } from "zod";
-import { MAX_SELECTED_TABLES } from "@/pages/setup/add-app-wizard/discover-utils";
+import { getTableLabel, MAX_SELECTED_TABLES } from "@/pages/setup/add-app-wizard/discover-utils";
 import { MAX_SLUG_LENGTH, toSlug } from "@/pages/setup/add-app-wizard/slugify";
 
 // Mirrors the generated CdcSinkTableConfig graph. Kept in sync with the API enums via `satisfies`.
@@ -44,9 +44,6 @@ const getSourceTableKey = (table: { sourceTableSchema?: string | null; sourceTab
 
     return `${table.sourceTableSchema?.trim().toLowerCase() ?? ""}::${name}`;
 };
-
-const getSourceTableLabel = (table: { sourceTableSchema?: string | null; sourceTableName?: string | null }) =>
-    table.sourceTableSchema ? `${table.sourceTableSchema}.${table.sourceTableName}` : table.sourceTableName;
 
 /** String list in the FormStringList shape: useFieldArray needs object items, not plain strings. */
 const requiredUniqueStringsSchema = (requiredMessage: string, uniqueMessage: string) =>
@@ -215,7 +212,7 @@ export const tablesSchema = z
             ctx.addIssue({
                 code: "custom",
                 path: [index, "sourceTableName"],
-                message: `Source table "${getSourceTableLabel(table)}" is already configured as another root table. A source table can be mapped only once.`,
+                message: `Source table "${getTableLabel(table)}" is already configured as another root table. A source table can be mapped only once.`,
             });
         });
     });
@@ -320,14 +317,7 @@ export const appSchema = z.object({
                 }),
             )
             .min(1, "At least one table is required")
-            .max(
-                MAX_SELECTED_TABLES,
-                `During the beta, at most ${MAX_SELECTED_TABLES} tables can be processed by one app`,
-            ),
-    }),
-    map: z.object({
-        source: z.union([z.literal("ai-suggested"), z.literal("manual")]),
-        aiPrompt: z.string(),
+            .max(MAX_SELECTED_TABLES, `At most ${MAX_SELECTED_TABLES} tables can be processed by one app`),
     }),
     mapTables: z.object({
         tables: tablesSchema,
@@ -339,4 +329,5 @@ export const appSchema = z.object({
 });
 
 export type AppFormData = z.infer<typeof appSchema>;
-export type AppStepId = keyof AppFormData;
+/** The map step produces its mapping with the planner rather than with form fields, so it has no section of its own. */
+export type AppStepId = keyof AppFormData | "map";

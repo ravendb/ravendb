@@ -11,6 +11,7 @@ import { discordMocks } from "./discord-mocks";
 import { dnsMocks } from "./dns-mocks";
 import { embedLinksMocks } from "./embed-links-mocks";
 import { iframeHandlers } from "./iframe-mocks";
+import { migrationMocks } from "./migration-mocks";
 import { settingsMocks } from "./settings-mocks";
 import { setupMocks } from "./setup-mocks";
 import { slackMocks } from "./slack-mocks";
@@ -84,9 +85,12 @@ export const defaultApiMocks = {
         setupMocks.discover(),
         setupMocks.verifyCdc(),
         setupMocks.map(),
-        setupMocks.suggestCdc(),
         setupMocks.testMapping(),
         setupMocks.provision(),
+        migrationMocks.start(),
+        migrationMocks.ask(),
+        migrationMocks.apply(),
+        migrationMocks.remove(),
     ],
 } satisfies Record<string, RequestHandler[]>;
 
