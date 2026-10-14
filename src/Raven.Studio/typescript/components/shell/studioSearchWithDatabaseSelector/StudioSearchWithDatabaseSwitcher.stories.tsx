@@ -22,6 +22,7 @@ export default {
 interface StoryArgs {
     hasMenuItems: boolean;
     isDatabaseSelected: boolean;
+    isSharded: boolean;
     isWhatsNewVisible: boolean;
 }
 
@@ -50,8 +51,10 @@ export const DefaultStory: StoryObj<StoryArgs> = {
             environment: "Development",
         };
 
+        const activeDatabase = args.isSharded ? db3 : db1;
+
         if (args.isDatabaseSelected) {
-            databases.withActiveDatabase(db1);
+            databases.withActiveDatabase(activeDatabase);
             databasesService.withDocumentsMetadataByIDPrefix();
             databasesService.withRevisionsIds();
             indexesService.withGetSampleStats();
@@ -63,7 +66,8 @@ export const DefaultStory: StoryObj<StoryArgs> = {
 
         const menuItems = args.hasMenuItems
             ? generateMenuItems({
-                  db: args.isDatabaseSelected ? db1.name : "",
+                  db: args.isDatabaseSelected ? activeDatabase.name : "",
+                  isSharded: args.isDatabaseSelected && activeDatabase.isSharded,
                   isWhatsNewVisible: args.isWhatsNewVisible,
               })
             : [];
@@ -74,5 +78,6 @@ export const DefaultStory: StoryObj<StoryArgs> = {
         hasMenuItems: true,
         isWhatsNewVisible: false,
         isDatabaseSelected: true,
+        isSharded: false,
     },
 };
