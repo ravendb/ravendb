@@ -972,7 +972,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Takes a registered collection out of the plan. The planner is told on the next turn. */
+        /** @description Takes a collection out of the plan, also one the planner only proposed. The planner is told on the next turn. */
         post: operations["setup.migrationRemoveCollection"];
         delete?: never;
         options?: never;

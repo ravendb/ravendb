@@ -1,9 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/api";
-import {
-    collectMappedSourceTables,
-    getSourceTableLabel,
-} from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
+import { getTableLabel } from "@/pages/setup/add-app-wizard/discover-utils";
+import { collectMappedSourceTables } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import { fetchVerifyCdc } from "@/pages/setup/add-app-wizard/steps/verify/verify-cdc-query";
 import { mapFormTablesToDto } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 import { parseRawTablesToForm } from "@/pages/setup/add-app-wizard/steps/map-tables/raw-tables";
@@ -67,7 +65,7 @@ export function useMapTablesStep() {
         });
 
         const firstTable = formTables[0];
-        setValue("preview.table", getSourceTableLabel(firstTable) ?? "");
+        setValue("preview.table", getTableLabel(firstTable));
         store.setMapTablesKey(mapTablesKey);
     };
 }

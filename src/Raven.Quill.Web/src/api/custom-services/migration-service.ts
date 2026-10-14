@@ -46,7 +46,7 @@ const migrationFrameSchema = z.discriminatedUnion("type", [
         collection: z.string(),
         version: z.number(),
         rationale: z.string().nullish(),
-        config: z.unknown().optional(),
+        config: z.custom<CdcSinkTableConfig>().nullish(),
         warnings: z.array(z.string()).default([]),
     }),
     z.object({

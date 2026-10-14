@@ -13,20 +13,14 @@ import {
     type WizardConfig,
 } from "@/pages/setup/add-app-wizard/config-io";
 import { parseConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
-import { isTableSupported, MAX_SELECTED_TABLES } from "@/pages/setup/add-app-wizard/discover-utils";
+import { getTableLabel, isTableSupported, MAX_SELECTED_TABLES } from "@/pages/setup/add-app-wizard/discover-utils";
 import { wrapDtoTablesToFormShape } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
-import {
-    findDiscoveredTable,
-    getSourceTableLabel,
-} from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
+import { findDiscoveredTable } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import { createDraftSlug, toSlug } from "@/pages/setup/add-app-wizard/slugify";
 import { discoverTables } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
-import {
-    computeConnectKey,
-    computeSourceKey,
-} from "@/pages/setup/add-app-wizard/steps/connect/use-connect-source-step";
+import { computeConnectKey } from "@/pages/setup/add-app-wizard/steps/connect/use-connect-source-step";
 import { toWizardStepError } from "@/components/form/wizard/wizard-step-error";
-import { computeMapKey } from "@/pages/setup/add-app-wizard/steps/map/use-map-schema-step";
+import { IMPORTED_MAP_ORIGIN, useAdoptMapTables } from "@/pages/setup/add-app-wizard/steps/map/use-adopt-map-tables";
 
 const IMPORT_PHASES = {
     reading: "Reading the configuration...",
@@ -57,6 +51,7 @@ function resolveImportSlug(connection: AppFormData["externalConnection"]): { slu
 
 export function useImportConfig() {
     const { setValue, getValues } = useFormContext<AppFormData>();
+    const adoptTables = useAdoptMapTables();
     const [progressLabel, setProgressLabel] = useState<string>(IMPORT_PHASES.reading);
 
     const importMutation = useMutation<ImportResult, Error, File>({
@@ -66,7 +61,7 @@ export function useImportConfig() {
 
             if (config.tables.length > MAX_SELECTED_TABLES) {
                 throw new Error(
-                    `The configuration maps ${config.tables.length} tables, but during the beta one app processes at most ${MAX_SELECTED_TABLES}. Support for unlimited tables is coming later.`,
+                    `The configuration maps ${config.tables.length} tables, but one app processes at most ${MAX_SELECTED_TABLES}. Support for unlimited tables is coming later.`,
                 );
             }
 
@@ -86,9 +81,17 @@ export function useImportConfig() {
                 provider: config.provider,
                 slug,
             });
+            const connectError = connectResult.success
+                ? null
+                : toWizardStepError(connectResult.errors, "Connection failed.");
 
-            if (!connectResult.success) {
-                throw toWizardStepError(connectResult.errors, "Connection failed.");
+            // The server now holds the imported source, also when the import goes no further.
+            useSetupWizardStore
+                .getState()
+                .setConnectionAttempt({ key: computeConnectKey(connection), error: connectError });
+
+            if (connectError) {
+                throw connectError;
             }
 
             // Discover every schema the configuration touches, not just the default one, so tables
@@ -110,7 +113,7 @@ export function useImportConfig() {
             if (unavailable.length > 0) {
                 throw new Error(
                     `These tables from the configuration are not available or supported on the connected database: ${unavailable
-                        .map((ref) => getSourceTableLabel(ref))
+                        .map((ref) => getTableLabel(ref))
                         .join(", ")}.`,
                 );
             }
@@ -144,28 +147,17 @@ export function useImportConfig() {
                 setValue("externalConnection.slug", slug, { shouldValidate: true });
             }
             setValue("verifySchema.tables", verifySchemaTables);
-            setValue("map.source", "manual");
-            setValue("map.aiPrompt", "");
-            setValue("mapTables.tables", formTables);
-            setValue("preview.table", getSourceTableLabel(formTables[0]) ?? "");
+            adoptTables(formTables, { source: "manual", key: IMPORTED_MAP_ORIGIN });
+            setValue("preview.table", getTableLabel(formTables[0]));
 
             const store = useSetupWizardStore.getState();
             store.setDiscoverResult(discoverResult, schemas);
-            store.resetMapTablesUiState();
 
             const connection = getValues("externalConnection");
             const connectKey = computeConnectKey(connection);
 
             store.setConnectKey(connectKey);
             store.setConnectionAttempt({ key: connectKey, error: null });
-            store.setAppliedMapKey(
-                computeMapKey({
-                    sourceKey: computeSourceKey(connection),
-                    source: "manual",
-                    aiPrompt: "",
-                    selectedTables: verifySchemaTables,
-                }),
-            );
             store.setInitialSelectedTables(verifySchemaTables);
         },
     });

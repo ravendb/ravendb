@@ -1,55 +1,75 @@
-import type { MigrationFrame } from "@/api/custom-services/migration-service";
+import { z } from "zod";
+import { composePlannerPrompt } from "@/pages/setup/add-app-wizard/steps/map/planner-prompts";
+import type {
+    PlannerAnswer,
+    PlannerAnswersTurn,
+    PlannerQuestion,
+} from "@/pages/setup/add-app-wizard/steps/map/planner-types";
 
-type OpenQuestionFrame = Extract<MigrationFrame, { type: "reply" }>["openQuestions"][number];
+/** The choice of an answer in the operator's own words rather than one of the options. */
+export const CUSTOM_ANSWER = "custom";
 
-/** A question the operator answers by picking. `recommended` indexes into `options`. */
-export type PlannerQuestion = { question: string; options: string[]; recommended: number };
+const NO_PREFERENCE = "No preference - use your judgement.";
 
-/** Questions offered with answers go to the picker; the rest stay in the transcript as prose. */
-export function splitOpenQuestions(openQuestions: OpenQuestionFrame[]): {
-    pickable: PlannerQuestion[];
-    freeForm: string[];
-} {
-    const pickable: PlannerQuestion[] = [];
-    const freeForm: string[] = [];
+/** `choice` is the picked option's index, `CUSTOM_ANSWER`, or empty while nothing is picked. */
+export const answerSchema = z
+    .object({ choice: z.string(), custom: z.string() })
+    .refine((answer) => answer.choice !== "" && (answer.choice !== CUSTOM_ANSWER || answer.custom.trim() !== ""), {
+        message: "Pick an answer, or write your own.",
+        path: ["custom"],
+    });
 
-    for (const { question, options, recommended } of openQuestions) {
-        if (options.length > 0 && recommended != null && recommended >= 0 && recommended < options.length) {
-            pickable.push({ question, options, recommended });
-        } else {
-            freeForm.push(question);
-        }
-    }
+export const answersFormSchema = z.object({ answers: z.array(answerSchema) });
 
-    return { pickable, freeForm };
+export type AnswersFormData = z.infer<typeof answersFormSchema>;
+
+/** The recommended option comes preselected, so accepting every recommendation takes no clicks. */
+export function getInitialAnswers(questions: PlannerQuestion[]): AnswersFormData {
+    return {
+        answers: questions.map((question) => ({ choice: getInitialChoice(question), custom: "" })),
+    };
 }
 
-/** The recommended answer for every question - what a skip applies. */
-export function recommendedAnswers(questions: PlannerQuestion[]): number[] {
-    return questions.map((question) => question.recommended);
+export function resolveAnswers(questions: PlannerQuestion[], answers: AnswersFormData["answers"]): PlannerAnswer[] {
+    return questions.map((question, index) => {
+        const { choice, custom } = answers[index];
+
+        return {
+            question: question.question,
+            answer: choice === CUSTOM_ANSWER ? custom.trim() : question.options[Number(choice)],
+        };
+    });
 }
 
-export function areAllQuestionsAnswered(questions: PlannerQuestion[], answers: (number | undefined)[]): boolean {
-    return questions.every((_, index) => answers[index] !== undefined);
+export function recommendedAnswers(questions: PlannerQuestion[]): PlannerAnswer[] {
+    return questions.map((question) => ({
+        question: question.question,
+        answer: question.recommended === null ? NO_PREFERENCE : question.options[question.recommended],
+    }));
 }
 
 /**
- * The operator's picks as the next turn. The question goes along with each answer because the
- * agent reads this as a fresh message, and "Link" on its own does not say what it answers.
+ * The answers as the next turn. The question goes along with each answer because the planner reads this
+ * as a fresh message, and "Link" on its own does not say what it answers.
  */
-export function composeAnswersPrompt(
-    questions: PlannerQuestion[],
-    answers: (number | undefined)[],
-    isSkipped: boolean,
-): string {
-    const lines = questions.map((question, index) => {
-        const answer = question.options[answers[index] ?? question.recommended];
-        return `${index + 1}. ${question.question}\n   ${answer}`;
-    });
-
+export function composeAnswersPrompt({
+    answers,
+    isSkipped,
+    instructions,
+}: Pick<PlannerAnswersTurn, "answers" | "isSkipped" | "instructions">): string {
     const heading = isSkipped
         ? "I skipped your open questions - go with your recommendations:"
         : "Answers to your open questions:";
+    const lines = answers.map(({ question, answer }, index) => `${index + 1}. ${question}\n   ${answer}`);
+    const answersPrompt = [heading, ...lines].join("\n");
 
-    return [heading, ...lines].join("\n");
+    return instructions ? `${answersPrompt}\n\n${composePlannerPrompt(instructions)}` : answersPrompt;
+}
+
+function getInitialChoice(question: PlannerQuestion): string {
+    if (question.options.length === 0) {
+        return CUSTOM_ANSWER;
+    }
+
+    return question.recommended === null ? "" : String(question.recommended);
 }

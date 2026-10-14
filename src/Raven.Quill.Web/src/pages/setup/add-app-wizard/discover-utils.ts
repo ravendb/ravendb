@@ -1,6 +1,6 @@
 import type { DiscoverColumnResponse, DiscoverResponse, DiscoverTableResponse } from "@/api/generated/server-api";
 
-/** How many source tables one app can process. Beta-only limit of the AI service; unlimited tables are planned. */
+/** How many source tables one app can process. Unlimited tables are planned. */
 export const MAX_SELECTED_TABLES = 10_000;
 
 /** A discovered table can be used when discovery succeeded, the table is supported, and CDC
@@ -44,12 +44,18 @@ export function isColumnSupported(
     return column.isCdcCapturable || Boolean(discoverResult?.hasPermissionToSetup && !table.isCdcEnabled);
 }
 
+export type SourceTableRef = { sourceTableSchema?: string | null; sourceTableName: string };
+
 /** Stable identity for a discovered table ("schema.table"), used as the react-table row id and selection key. */
-export function getTableKey(table: Pick<DiscoverTableResponse, "sourceTableName" | "sourceTableSchema">): string {
+export function getTableKey(table: SourceTableRef): string {
     return `${table.sourceTableSchema ?? ""}.${table.sourceTableName}`;
 }
 
-/** Human-readable table label: "schema.table", or just the table name when there is no schema. */
-export function getTableLabel(table: DiscoverTableResponse): string {
+/** Human-readable table label: "schema.table", the table name alone when there is no schema, or empty without a name. */
+export function getTableLabel(table: { sourceTableSchema?: string | null; sourceTableName?: string | null }): string {
+    if (!table.sourceTableName) {
+        return "";
+    }
+
     return table.sourceTableSchema ? `${table.sourceTableSchema}.${table.sourceTableName}` : table.sourceTableName;
 }
