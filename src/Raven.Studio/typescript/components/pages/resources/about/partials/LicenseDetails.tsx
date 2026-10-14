@@ -13,7 +13,7 @@ import { useRavenLink } from "hooks/useRavenLink";
 import Button from "react-bootstrap/Button";
 import Tooltip from "react-bootstrap/Tooltip";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import { allAiExternalProviders } from "components/utils/common";
+import { aiConnectionStringUtils } from "components/pages/database/settings/connectionStrings/editForms/aiConnectionStringUtils";
 
 export function LicenseDetails() {
     const licenseId = useAppSelector(licenseSelectors.statusValue("Id"));
@@ -901,8 +901,8 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 fieldInLicense: "HasEmbeddingsGeneration",
                 helperInfo: (
                     <ul>
-                        {allAiExternalProviders.map((provider) => (
-                            <li key={provider}>{provider}</li>
+                        {aiConnectionStringUtils.getExternalConnectorOptions().map((x) => (
+                            <li key={x.value}>{x.label}</li>
                         ))}
                     </ul>
                 ),
