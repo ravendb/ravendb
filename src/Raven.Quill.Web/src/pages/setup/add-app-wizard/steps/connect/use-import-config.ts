@@ -13,7 +13,12 @@ import {
     type WizardConfig,
 } from "@/pages/setup/add-app-wizard/config-io";
 import { parseConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
-import { getTableLabel, isTableSupported, MAX_SELECTED_TABLES } from "@/pages/setup/add-app-wizard/discover-utils";
+import {
+    getTableLabel,
+    isTableSupported,
+    MAX_SELECTED_TABLES,
+    resolveDefaultSchema,
+} from "@/pages/setup/add-app-wizard/discover-utils";
 import { wrapDtoTablesToFormShape } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 import { findDiscoveredTable } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import { createDraftSlug, toSlug } from "@/pages/setup/add-app-wizard/slugify";
@@ -105,8 +110,13 @@ export function useImportConfig() {
             }
 
             setProgressLabel(IMPORT_PHASES.verifying);
+            const defaultSchema = resolveDefaultSchema(config.provider, config.connectionString);
             const unavailable = collectSourceTableRefs(config.tables).filter((ref) => {
-                const discovered = findDiscoveredTable(discoverResult, ref.sourceTableSchema, ref.sourceTableName);
+                const discovered = findDiscoveredTable(
+                    discoverResult,
+                    ref.sourceTableSchema ?? defaultSchema,
+                    ref.sourceTableName,
+                );
                 return !discovered || !isTableSupported(discoverResult, discovered);
             });
 
