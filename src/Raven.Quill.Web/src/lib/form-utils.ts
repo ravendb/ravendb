@@ -25,6 +25,16 @@ export function getOptionLabel<TValue extends string>(
     return options.find((option) => option.value === value)?.label;
 }
 
+/**
+ * Enter without Shift sends a chat message, but not while an IME composes: there Enter confirms the
+ * composition, and Safari reports that keydown after the composition ended, as keyCode 229.
+ */
+export function isSendMessageKey(event: React.KeyboardEvent): boolean {
+    return (
+        event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229
+    );
+}
+
 export function preventEnterKeySubmission(e: React.KeyboardEvent<HTMLFormElement>) {
     const target = e.target;
     if (e.key === "Enter" && target instanceof HTMLInputElement) {
