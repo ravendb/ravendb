@@ -7,6 +7,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppUrls } from "hooks/useAppUrls";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "hooks/useRavenLink";
+import { aiConnectionStringUtils } from "components/pages/database/settings/connectionStrings/editForms/aiConnectionStringUtils";
 
 export function AiConnectionStringsInfoHub() {
     const { appUrl } = useAppUrls();
@@ -31,13 +32,9 @@ export function AiConnectionStringsInfoHub() {
                         <li className="mt-1">
                             Supported providers include:
                             <ul>
-                                <li>Azure OpenAI</li>
-                                <li>Google AI</li>
-                                <li>Hugging Face</li>
-                                <li>Ollama</li>
-                                <li>OpenAI</li>
-                                <li>Mistral AI</li>
-                                <li>The built-in local model (bge-micro-v2)</li>
+                                {aiConnectionStringUtils.allConnectorOptions.map((option) => (
+                                    <li key={option.value}>{option.label}</li>
+                                ))}
                             </ul>
                         </li>
                     </ul>
