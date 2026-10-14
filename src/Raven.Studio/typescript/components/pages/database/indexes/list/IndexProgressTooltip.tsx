@@ -163,7 +163,7 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
                         );
                     })}
                 {nodeInfo.progress && (exactProgress || nodeInfo.progress.collections.some((x) => x.estimated)) && (
-                    <div className="px-3 pb-2">
+                    <div className="full-row px-3 pb-2">
                         <a href="#" onClick={withPreventDefault(onToggleExactProgress)}>
                             {togglingExactProgress ? (
                                 <Spinner size="sm" className="me-1" />
