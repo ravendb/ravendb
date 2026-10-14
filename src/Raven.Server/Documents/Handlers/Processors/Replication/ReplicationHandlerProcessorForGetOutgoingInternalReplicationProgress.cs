@@ -38,6 +38,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
             var replicationTasks = new List<InternalReplicationTaskProgress>();
 
+            var isExact = IsExact();
+
             foreach (var handler in RequestHandler.Database.ReplicationLoader.OutgoingHandlers)
             {
                 if (handler is not OutgoingInternalReplicationHandler || 
@@ -51,7 +53,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
                     DestinationNodeTag = internalReplication.NodeTag,
                     ProcessesProgress = new List<ReplicationProcessProgress>
                     {
-                        RequestHandler.Database.ReplicationLoader.GetOutgoingReplicationProgress(context, handler)
+                        RequestHandler.Database.ReplicationLoader.GetOutgoingReplicationProgress(context, handler, isExact)
                     }
                 });
             }

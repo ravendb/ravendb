@@ -60,9 +60,22 @@ export function ReplicationTaskProgressTooltip(props: ReplicationTaskProgressToo
                 )}
                 {progress &&
                     progress.map((singleProgress, index) => {
+                        const replicationName = singleProgress.estimated ? (
+                            <>
+                                Replication{" "}
+                                <small
+                                    className="text-muted"
+                                    title="Estimated value. The exact count takes too long to calculate and will be skipped for performance."
+                                >
+                                    (~)
+                                </small>
+                            </>
+                        ) : (
+                            "Replication"
+                        );
                         return (
                             <div key={"progress-" + index} className="vstack">
-                                <NamedProgress name="Replication">
+                                <NamedProgress name={replicationName}>
                                     <NamedProgressItem progress={singleProgress.documents}>documents</NamedProgressItem>
                                     <NamedProgressItem progress={singleProgress.documentTombstones}>
                                         tombstones

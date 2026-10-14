@@ -191,6 +191,7 @@ function mapEtlProgress(taskProgress: EtlProcessProgress): OngoingTaskNodeEtlPro
         disabled: taskProgress.Disabled,
         processedPerSecond: taskProgress.AverageProcessedPerSecond,
         transactionalId: taskProgress.TransactionalId,
+        estimated: taskProgress.Estimated,
     };
 }
 
@@ -248,6 +249,7 @@ function mapReplicationProgress(taskProgress: ReplicationProcessProgress): Ongoi
             processed: taskProgress.TotalNumberOfTimeSeriesSegments - taskProgress.NumberOfTimeSeriesSegmentsToProcess,
             total: taskProgress.TotalNumberOfTimeSeriesSegments,
         },
+        estimated: taskProgress.Estimated,
     };
 }
 
