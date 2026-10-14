@@ -142,14 +142,14 @@ public class ChatCompletionClientTests : RavenTestBase
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(json)))
             {
                 var blt = await context.ReadForMemoryAsync(stream, "json");
-                Assert.True(AzureOpenAiChatCompletionClientSettings.GetFiltersMessage(blt, out var refusal));
+                Assert.True(AzureOpenAiChatCompletionProvider.GetFiltersMessage(blt, out var refusal));
                 Assert.Equal("Response blocked due to content policy: hate (high severity), protected_material_code (detected severity), violence (medium severity)", refusal);
             }
 
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(json2)))
             {
                 var blt = await context.ReadForMemoryAsync(stream, "json2");
-                Assert.False(AzureOpenAiChatCompletionClientSettings.GetFiltersMessage(blt, out var refusal));
+                Assert.False(AzureOpenAiChatCompletionProvider.GetFiltersMessage(blt, out var refusal));
                 Assert.Empty(refusal);
             }
         }

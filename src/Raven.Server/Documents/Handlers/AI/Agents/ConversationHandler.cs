@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -383,6 +384,53 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         return _client = ChatCompletionClient.CreateChatCompletionClient(database.DocumentsStorage.ContextPool, connection);
     }
 
+    internal virtual string GetPromptCacheKey(string conversationId) => conversationId;
+
+    internal List<AiToolDescriptor> BuildToolDescriptors(JsonOperationContext context, AiAgentConfiguration configuration)
+    {
+        // TryGetUserTools recognises the call through the configuration. Added once: this runs for the turn and again for the summary.
+        if (_persistedAttachmentsNames is { Count: > 0 } &&
+            configuration.Actions.Exists(a => a.Name == ChatCompletionClient.Constants.ToolNames.RetrieveAttachment) == false)
+        {
+            configuration.Actions.Add(new AiAgentToolAction
+            {
+                Name = ChatCompletionClient.Constants.ToolNames.RetrieveAttachment,
+                Description =
+                    $"Retrieves one or more attachments by their names. Use this to re-read files. {Environment.NewLine} Available Attachments: {string.Join(", ", _persistedAttachmentsNames)}",
+                ParametersSampleObject = "{\"names\": [\"**ATTENTION IMPORTANT INSTRUCTION**: use **ONLY** the names from the tool description\"]}",
+            });
+        }
+
+        var tools = new List<AiToolDescriptor>();
+
+        foreach (var q in configuration.Queries ?? [])
+        {
+            if (q.ShouldAllowModelQueries() == false)
+                continue;
+
+            var paramsSchema = ChatCompletionClient.GetSchemaForTool(q.ParametersSchema, q.ParametersSampleObject);
+            tools.Add(new AiToolDescriptor(q.Name, q.Description, paramsSchema));
+        }
+
+        foreach (var a in configuration.Actions ?? [])
+        {
+            var paramsSchema = ChatCompletionClient.GetSchemaForTool(a.ParametersSchema, a.ParametersSampleObject);
+            tools.Add(new AiToolDescriptor(a.Name, a.Description, paramsSchema));
+        }
+
+        foreach (var subAgent in configuration.SubAgents ?? [])
+        {
+            var subAgentConfiguration = GetAiAgentConfiguration(subAgent.Identifier);
+            var parameters = BuildSubAgentParameters(context, configuration, subAgentConfiguration);
+            var paramsSchema = GetSchemaForSubAgentTool(context, parameters);
+            var description = new StringBuilder(subAgent.Description).AppendLine();
+            subAgentConfiguration.AppendCapabilities(description);
+            tools.Add(new AiToolDescriptor(subAgent.Identifier, description.ToString(), paramsSchema));
+        }
+
+        return tools;
+    }
+
     public static int GetMaxModelIterationsPerCall(RequestBody body, AiAgentConfiguration configuration)
         => body.CreationOptions.MaxModelIterationsPerCall ?? configuration.MaxModelIterationsPerCall ?? DefaultMaxModelIterationsPerCall;
 
@@ -437,7 +485,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
                 var trace = debugTraces.CreateTrace();
 
-                using var request = talker.CreateCompletionRequest(attachments, trace);
+                var request = talker.CreateRequest(attachments);
                 r = await talker.RunAsync(database.DocumentsStorage.ContextPool, request, trace, token);
 
                 var currentTurnUsage = AiUsage.GetUsageDifference(talker.AiUsage, _document.CurrentUsage);
@@ -754,9 +802,14 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             }, "system/summary/final/msg"));
 
         var usage = new AiUsage();
-        var tools = client.GenerateTools(context, configuration, this);
-        using var request = client.CreateCompletionRequest(context, messages, attachments: null, tools, useTools: false, streaming: false, schema: SummarizationOutputSchema);
-        var result = await client.CompleteAsync(context, request, usage, SummarizationOutputSchema, trace: null, token);
+        var request = new AiChatRequest
+        {
+            Messages = messages,
+            Tools = client.PrepareTools(context, BuildToolDescriptors(context, configuration)),
+            UseTools = false,
+            Schema = SummarizationOutputSchema
+        };
+        var result = await client.CompleteAsync(context, request, usage, trace: null, token);
 
         if (result.Result is not BlittableJsonReaderObject resultObj || resultObj.TryGet(nameof(SummarizationSampleObject.Answer), out string messagesSummary) == false)
             throw new UnexpectedResponseException($"Unable to get a summary from response of agent '{oldChat.Agent}'.") { RequestId = null };

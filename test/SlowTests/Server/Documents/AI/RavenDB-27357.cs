@@ -110,14 +110,14 @@ namespace SlowTests.Server.Documents.AI
                 OpenAiSettings = new OpenAiSettings(apiKey: "test-key", endpoint: null, model: "gpt-4.1")
             };
 
-            Assert.True(AbstractChatCompletionClientSettings.TryGetParameters(connection, out var settings));
+            Assert.True(AbstractChatCompletionProvider.TryGetParameters(connection, out var settings));
 
             return new CannedResponseChatCompletionClient(contextPool, settings, statusCode, responseJson);
         }
 
         private sealed class CannedResponseChatCompletionClient(
             IMemoryContextPool contextPool,
-            AbstractChatCompletionClientSettings settings,
+            AbstractChatCompletionProvider settings,
             HttpStatusCode statusCode,
             string responseJson)
             : ChatCompletionClient(contextPool, settings, ChatCompletionClient.ConventionsToUse)

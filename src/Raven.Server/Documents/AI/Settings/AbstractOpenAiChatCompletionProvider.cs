@@ -3,13 +3,13 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.AI.Settings;
 
-internal abstract class AbstractOpenAiChatCompletionClientSettings : AbstractChatCompletionClientSettings
+internal abstract class AbstractOpenAiChatCompletionProvider : AbstractOpenAiCompatibleChatCompletionProvider
 {
     protected readonly OpenAiBaseSettings _settings;
 
     public override bool EnablePromptCaching => _settings.EnablePromptCache ?? true;
 
-    protected AbstractOpenAiChatCompletionClientSettings(OpenAiBaseSettings settings)
+    protected AbstractOpenAiChatCompletionProvider(OpenAiBaseSettings settings)
         : base(settings)
     {
         _settings = settings;
@@ -20,7 +20,7 @@ internal abstract class AbstractOpenAiChatCompletionClientSettings : AbstractCha
         if (_settings.Temperature.HasValue)
         {
             writer.WriteComma();
-            writer.WritePropertyName(Constants.RequestFields.Temperature);
+            writer.WritePropertyName(Wire.RequestFields.Temperature);
             writer.WriteDouble(_settings.Temperature.Value);
         }
     }

@@ -49,7 +49,7 @@ namespace SlowTests.Server.Documents.AI
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.AzureOpenAI | RavenAiIntegration.OpenAi | RavenAiIntegration.vLLM | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.AzureOpenAI | RavenAiIntegration.OpenAi | RavenAiIntegration.vLLM | RavenAiIntegration.Ollama | RavenAiIntegration.Anthropic, DatabaseMode = RavenDatabaseMode.Single)]
         public void CanTestAiChatConnectionString(Options options, GenAiConfiguration configuration)
         {
             using (var store = GetDocumentStore())
@@ -96,6 +96,16 @@ namespace SlowTests.Server.Documents.AI
                             case RavenAiIntegration.HuggingFace:
                             case RavenAiIntegration.MistralAi:
                             case RavenAiIntegration.Vertex:
+                                continue;
+                        }
+                    }
+
+                    if (typeof(T) == typeof(Embeddings))
+                    {
+                        // not all integrations support embeddings
+                        switch (value)
+                        {
+                            case RavenAiIntegration.Anthropic:
                                 continue;
                         }
                     }

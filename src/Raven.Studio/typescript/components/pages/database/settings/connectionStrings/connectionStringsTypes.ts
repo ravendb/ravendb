@@ -156,7 +156,8 @@ export interface AiConnection extends ConnectionBase {
         | "embeddedSettings"
         | "openAiSettings"
         | "mistralAiSettings"
-        | "vertexSettings";
+        | "vertexSettings"
+        | "anthropicSettings";
     modelType?: Raven.Client.Documents.Operations.AI.AiModelType;
     azureOpenAiSettings?: {
         apiKey?: string;
@@ -220,6 +221,15 @@ export interface AiConnection extends ConnectionBase {
         location?: string;
         model?: string;
         embeddingsMaxConcurrentBatches?: number;
+    };
+    anthropicSettings?: {
+        apiKey?: string;
+        model?: string;
+        endpoint?: string;
+        maxOutputTokens?: number;
+        reasoningEffort?: string;
+        enablePromptCache?: boolean;
+        apiVersion?: string;
     };
 }
 

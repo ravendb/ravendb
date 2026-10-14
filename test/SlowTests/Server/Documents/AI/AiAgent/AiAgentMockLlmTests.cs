@@ -6,6 +6,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Server.Documents.AI;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -105,6 +106,107 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
                 Assert.Contains("my order", response);
                 Assert.DoesNotContain("secret", response);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Ai)]
+        public async Task Summarization_LeavesASummaryFlaggedAssistantTurn_AndTheNextTurnStillWorks()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var agent = new AiAgentConfiguration("assistant", "fake-connection", "You answer briefly.")
+            {
+                SampleObject = "{\"Answer\":\"The answer\"}",
+                ChatTrimming = new AiAgentChatTrimmingConfiguration
+                {
+                    Tokens = new AiAgentSummarizationByTokens { MaxTokensBeforeSummarization = 0 }
+                }
+            };
+
+            const string conversationId = "chats/summary-test";
+            string changeVector = null;
+
+            for (var turn = 1; turn <= 2; turn++)
+            {
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                {
+                    var handler = new MockLlmConversationHandler(Server.ServerStore, database) { Authentication = null };
+                    handler.Initialize(agent, conversationId, new RequestBody
+                    {
+                        CreationOptions = new AiConversationCreationOptions(),
+                        UserPrompt = $"turn {turn}"
+                    }, changeVector);
+
+                    await handler.HandleRequestAsync(context, CancellationToken.None);
+
+                    using (context.OpenReadTransaction())
+                        changeVector = database.DocumentsStorage.Get(context, conversationId)?.ChangeVector;
+                }
+            }
+
+            // Summary-role messages only appear in the Full view.
+            var result = await store.AI.GetConversationMessagesAsync(new GetConversationMessagesOptions
+            {
+                ConversationId = conversationId,
+                DetailLevel = AiConversationDetailLevel.Full,
+                PageSize = 50
+            });
+            Assert.Equal(2, result.Messages.Count);
+            Assert.Equal(AiMessageRole.System, result.Messages[0].Role);
+            Assert.Equal(AiMessageRole.Summary, result.Messages[1].Role);
+        }
+
+        [RavenFact(RavenTestCategory.Ai)]
+        public async Task ToolSchemas_AreMaterializedOnce_ForTheWholeConversationCall()
+        {
+            using var store = GetDocumentStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Order { Company = "companies/1-A", Lines = [new OrderLine { ProductName = "a widget", Quantity = 1 }] });
+                await session.SaveChangesAsync();
+            }
+
+            var agent = new AiAgentConfiguration("shopping assistant", "fake-connection", "You answer shop questions.");
+            agent.Queries =
+            [
+                new AiAgentToolQuery("RecentOrder", "Get the recent orders", "from Orders limit 5") { ParametersSampleObject = "{}" },
+                new AiAgentToolQuery("AllProducts", "List the products", "from Products limit 5") { ParametersSampleObject = "{}" }
+            ];
+            agent.SampleObject = "{\"Answer\":\"The answer to the query\"}";
+
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                const int toolIterations = 3;
+                var requests = 0;
+
+                var handler = new MockLlmConversationHandler(Server.ServerStore, database,
+                    onRequest: payload =>
+                    {
+                        requests++;
+
+                        Assert.Equal(2, ((Newtonsoft.Json.Linq.JArray)payload["tools"]).Count);
+
+                        return requests <= toolIterations
+                            ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(MockLlm.CreateToolCallResponse("RecentOrder", "{}")) }
+                            : null; // fall through to the default tool-result answer, ending the loop
+                    })
+                {
+                    Authentication = null
+                };
+
+                handler.Initialize(agent, "Dummy", new RequestBody
+                {
+                    CreationOptions = new AiConversationCreationOptions(),
+                    UserPrompt = "what did I order"
+                }, changeVector: null);
+
+                await handler.HandleRequestAsync(context, CancellationToken.None);
+
+                Assert.Equal(toolIterations + 1, requests);
+                Assert.Equal(1, handler.LastClient.ForTestingPurposesOnly().ToolPreparationCount);
             }
         }
     }

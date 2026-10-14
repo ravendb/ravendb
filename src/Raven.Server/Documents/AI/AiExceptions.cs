@@ -17,10 +17,10 @@ namespace Raven.Server.Documents.AI
         {
         }
 
-        public static UnexpectedResponseException Create(string message, HttpResponseMessage response, BlittableJsonReaderObject content, Exception e = null)
-            => Create(message, response, content.ToString(), e);
+        public static UnexpectedResponseException Create(string message, HttpResponseMessage response, BlittableJsonReaderObject content, string requestId, Exception e = null)
+            => Create(message, response, content.ToString(), requestId, e);
 
-        public static UnexpectedResponseException Create(string message, HttpResponseMessage response, string content, Exception e = null)
+        public static UnexpectedResponseException Create(string message, HttpResponseMessage response, string content, string requestId, Exception e = null)
         {
             var sb = new StringBuilder();
             sb.Append(message).AppendLine(".")
@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.AI
 
             return new UnexpectedResponseException(sb.ToString(), e)
             {
-                RequestId = ChatCompletionClient.GetRequestId(response.Headers)
+                RequestId = requestId
             };
         }
     }

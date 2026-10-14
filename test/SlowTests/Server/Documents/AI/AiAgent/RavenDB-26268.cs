@@ -128,7 +128,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
                 bool promptCacheKeySeen = false;
 
-                var googleSettings = new GoogleChatCompletionClientSettings(new GoogleSettings("gemini-2.0-flash", "fake-key"));
+                var googleSettings = new GoogleChatCompletionProvider(new GoogleSettings("gemini-2.0-flash", "fake-key"));
 
                 var handler = new MockLlmConversationHandler(Server.ServerStore, database,
                     onRequest: payload =>
@@ -201,7 +201,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
                 // Explicitly disable prompt cache on an OpenAI connection
                 var openAiSettings = new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o") { EnablePromptCache = false };
-                var settings = new OpenAiChatCompletionClientSettings(openAiSettings);
+                var settings = new OpenAiChatCompletionProvider(openAiSettings);
 
                 var handler = new MockLlmConversationHandler(Server.ServerStore, database,
                     onRequest: payload =>

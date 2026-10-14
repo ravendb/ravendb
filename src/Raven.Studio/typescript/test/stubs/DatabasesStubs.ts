@@ -598,6 +598,7 @@ export class DatabasesStubs {
                     OpenAiSettings: null,
                     MistralAiSettings: null,
                     VertexSettings: null,
+                    AnthropicSettings: null,
                 },
                 "ai-name-gen-ai": {
                     Type: "Ai",
@@ -618,6 +619,7 @@ export class DatabasesStubs {
                     OpenAiSettings: null,
                     MistralAiSettings: null,
                     VertexSettings: null,
+                    AnthropicSettings: null,
                 },
             },
         };
@@ -778,6 +780,7 @@ export class DatabasesStubs {
                 OpenAiSettings: null,
                 MistralAiSettings: null,
                 VertexSettings: null,
+                AnthropicSettings: null,
                 ExcludedDatabases: [],
             },
         ];
