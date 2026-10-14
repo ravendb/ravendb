@@ -1,7 +1,6 @@
 import { formatCount, joinList } from "@/pages/setup/add-app-wizard/steps/map/planner-format";
 import { UNSPECIFIED_PROPERTY_CASE } from "@/pages/setup/add-app-wizard/steps/map/planner-frames";
 import { getRegisteredState, isBuilt, type PlanCollection } from "@/pages/setup/add-app-wizard/steps/map/planner-plan";
-import { composeBuildCollectionsPrompt } from "@/pages/setup/add-app-wizard/steps/map/planner-prompts";
 import { getLatestReply, type PlannerState } from "@/pages/setup/add-app-wizard/steps/map/planner-state";
 import type { PlannerActivity, PlannerReplyTurn } from "@/pages/setup/add-app-wizard/steps/map/planner-types";
 
@@ -111,19 +110,12 @@ export function describeWork(turn: PlannerReplyTurn): string {
 }
 
 /** Before anything is built, the whole proposal is one click away instead of a prompt to write. */
-export function getBuildSuggestedReply(collections: PlanCollection[]): SuggestedReply | null {
-    const suggested = collections.filter((collection) => collection.state === "suggested");
-
-    if (suggested.length === 0 || collections.some(isBuilt)) {
-        return null;
+export function getCollectionsToBuildFirst(collections: PlanCollection[]): string[] {
+    if (collections.some(isBuilt)) {
+        return [];
     }
 
-    return {
-        label: "Build suggested collections",
-        prompt: composeBuildCollectionsPrompt(suggested.map((collection) => collection.name)),
-        isRetry: false,
-        keeps: [],
-    };
+    return collections.filter((collection) => collection.state === "suggested").map((collection) => collection.name);
 }
 
 export function getSuggestedReplies({ failed, kept }: Pick<TurnOutcomes, "failed" | "kept">): SuggestedReply[] {

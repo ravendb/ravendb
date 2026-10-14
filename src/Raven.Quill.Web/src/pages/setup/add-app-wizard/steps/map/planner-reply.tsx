@@ -7,9 +7,11 @@ import { PlanWarning } from "@/pages/setup/add-app-wizard/steps/map/plan-collect
 import { getTurnOutcomes, hasCollectionOutcomes } from "@/pages/setup/add-app-wizard/steps/map/planner-activity";
 import { PlannerActivityCard } from "@/pages/setup/add-app-wizard/steps/map/planner-activity-card";
 import { DoneIcon, WorkingIcon } from "@/pages/setup/add-app-wizard/steps/map/planner-activity-parts";
+import { PlannerBuildSuggestedCard } from "@/pages/setup/add-app-wizard/steps/map/planner-build-suggested-card";
 import { formatCount, joinList, upperFirst } from "@/pages/setup/add-app-wizard/steps/map/planner-format";
 import { PlannerMessage, PlannerPlanCard } from "@/pages/setup/add-app-wizard/steps/map/planner-message";
 import { PlannerOpeningProgress } from "@/pages/setup/add-app-wizard/steps/map/planner-opening-progress";
+import { isBuilt, type PlanCollection } from "@/pages/setup/add-app-wizard/steps/map/planner-plan";
 import { isRegistered } from "@/pages/setup/add-app-wizard/steps/map/planner-state";
 import type { PlannerActivity, PlannerReplyTurn } from "@/pages/setup/add-app-wizard/steps/map/planner-types";
 
@@ -18,14 +20,14 @@ type ProposalActivity = Extract<PlannerActivity, { type: "proposal" }>;
 export function PlannerReply({
     turn,
     isLatest,
-    builtCount,
-    collectionCount,
+    collections,
 }: {
     turn: PlannerReplyTurn;
     isLatest: boolean;
-    builtCount: number;
-    collectionCount: number;
+    collections: PlanCollection[];
 }) {
+    const builtCount = collections.filter(isBuilt).length;
+    const collectionCount = collections.length;
     const tableCount = useSetupWizardStore((state) => state.plannerSelectedTables?.length ?? 0);
     const openPlannerPanel = useSetupWizardStore((state) => state.openPlannerPanel);
 
@@ -83,6 +85,7 @@ export function PlannerReply({
                     </Alert>
                 )}
                 {turn.status === "stopped" && <Text variant="muted">Stopped before finishing.</Text>}
+                {isLatest && <PlannerBuildSuggestedCard collections={collections} />}
                 {isLatest && turn.status === "done" && hasCollectionOutcomes(outcomes) && isPlanReady && (
                     <PlannerPlanCard
                         title={`Plan · ${formatCount(collectionCount, "collection")} built`}

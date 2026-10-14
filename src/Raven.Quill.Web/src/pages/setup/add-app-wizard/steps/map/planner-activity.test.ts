@@ -3,7 +3,7 @@ import {
     describeConventions,
     describeWork,
     getActivityHeadline,
-    getBuildSuggestedReply,
+    getCollectionsToBuildFirst,
     getSuggestedReplies,
     getTurnOutcomes,
 } from "@/pages/setup/add-app-wizard/steps/map/planner-activity";
@@ -122,7 +122,7 @@ describe("describeWork", () => {
     });
 });
 
-describe("getBuildSuggestedReply", () => {
+describe("getCollectionsToBuildFirst", () => {
     const planCollection = (name: string, state: PlanCollectionState): PlanCollection => ({
         name,
         state,
@@ -137,26 +137,21 @@ describe("getBuildSuggestedReply", () => {
         searchKey: name.toLowerCase(),
     });
 
-    it("asks for every suggested collection by name", () => {
+    it("names every suggested collection", () => {
         expect(
-            getBuildSuggestedReply([
+            getCollectionsToBuildFirst([
                 planCollection("Orders", "suggested"),
                 planCollection("Customers", "suggested"),
                 planCollection("Invoices", "failed"),
             ]),
-        ).toEqual({
-            label: "Build suggested collections",
-            prompt: "Build Orders and Customers.",
-            isRetry: false,
-            keeps: [],
-        });
+        ).toEqual(["Orders", "Customers"]);
     });
 
     it("offers nothing once a collection is built, or when nothing is suggested", () => {
         expect(
-            getBuildSuggestedReply([planCollection("Orders", "suggested"), planCollection("Customers", "built")]),
-        ).toBeNull();
-        expect(getBuildSuggestedReply([planCollection("Invoices", "failed")])).toBeNull();
+            getCollectionsToBuildFirst([planCollection("Orders", "suggested"), planCollection("Customers", "built")]),
+        ).toEqual([]);
+        expect(getCollectionsToBuildFirst([planCollection("Invoices", "failed")])).toEqual([]);
     });
 });
 
