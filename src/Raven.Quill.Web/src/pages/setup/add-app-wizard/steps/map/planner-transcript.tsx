@@ -4,7 +4,7 @@ import { useStickToBottom } from "@/hooks/use-stick-to-bottom";
 import { cn } from "@/lib/utils";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { PlannerMentionChip } from "@/pages/setup/add-app-wizard/steps/map/planner-mention-chip";
-import { isBuilt, type PlanCollection } from "@/pages/setup/add-app-wizard/steps/map/planner-plan";
+import type { PlanCollection } from "@/pages/setup/add-app-wizard/steps/map/planner-plan";
 import { PlannerReply } from "@/pages/setup/add-app-wizard/steps/map/planner-reply";
 import { getLatestReply } from "@/pages/setup/add-app-wizard/steps/map/planner-state";
 import type {
@@ -22,7 +22,6 @@ export function PlannerTranscript({ collections }: { collections: PlanCollection
     const { scrollRef, contentRef, onScroll, follow } = useStickToBottom<HTMLDivElement, HTMLDivElement>();
     const [isScrolledDown, setIsScrolledDown] = useState(false);
     const latestReplyId = getLatestReply(turns)?.id;
-    const builtCount = collections.filter(isBuilt).length;
     const followNewTurn = useEffectEvent(follow);
 
     // A turn the operator just started is followed, wherever they had scrolled to.
@@ -55,8 +54,7 @@ export function PlannerTranscript({ collections }: { collections: PlanCollection
                                     key={turn.id}
                                     turn={turn}
                                     isLatest={turn.id === latestReplyId}
-                                    builtCount={builtCount}
-                                    collectionCount={collections.length}
+                                    collections={collections}
                                 />
                             );
                     }

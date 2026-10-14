@@ -4,7 +4,6 @@ import { Button } from "@/components/shadcn/ui/button";
 import { cn } from "@/lib/utils";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import {
-    getBuildSuggestedReply,
     getSuggestedReplies,
     getTurnOutcomes,
     type TurnOutcomes,
@@ -12,11 +11,7 @@ import {
 import { PlannerComposer } from "@/pages/setup/add-app-wizard/steps/map/planner-composer";
 import type { PlanCollection } from "@/pages/setup/add-app-wizard/steps/map/planner-plan";
 import { PlannerQuestions } from "@/pages/setup/add-app-wizard/steps/map/planner-questions";
-import {
-    getLatestReply,
-    selectPendingQuestions,
-    selectPlannerPhase,
-} from "@/pages/setup/add-app-wizard/steps/map/planner-state";
+import { getLatestReply, selectPendingQuestions } from "@/pages/setup/add-app-wizard/steps/map/planner-state";
 import {
     useCanAskPlanner,
     usePlannerChatWidthClass,
@@ -75,14 +70,11 @@ function SuggestedReplies({ outcomes, collections }: { outcomes: TurnOutcomes | 
     const session = usePlannerSession();
     const canAsk = useCanAskPlanner();
     const dismissPlannerRejections = useSetupWizardStore((state) => state.dismissPlannerRejections);
-    const isReady = useSetupWizardStore((state) => selectPlannerPhase(state) === "ready");
     const hasErrors = (name: string) =>
         collections.some((collection) => collection.name === name && collection.errors.length > 0);
-    const buildReply = isReady ? getBuildSuggestedReply(collections) : null;
-    const retryReplies = outcomes
+    const replies = outcomes
         ? getSuggestedReplies({ failed: outcomes.failed.filter(hasErrors), kept: outcomes.kept.filter(hasErrors) })
         : [];
-    const replies = buildReply ? [buildReply, ...retryReplies] : retryReplies;
 
     if (replies.length === 0) {
         return null;

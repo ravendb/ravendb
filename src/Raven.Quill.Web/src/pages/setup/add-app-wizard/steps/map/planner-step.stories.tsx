@@ -51,6 +51,12 @@ const ANSWERS: PlannerScriptTurn["userTurn"] = {
     instructions: null,
 };
 
+const OPENING_WITHOUT_QUESTIONS: PlannerScriptTurn[] = [
+    {
+        frames: plannerOpeningFrames.map((frame) => (frame.type === "reply" ? { ...frame, openQuestions: [] } : frame)),
+    },
+];
+
 const REVIEW: PlannerScriptTurn[] = [...OPENING, { userTurn: ANSWERS, frames: plannerBuildFrames }];
 
 const RETRY: PlannerScriptTurn[] = [
@@ -163,6 +169,11 @@ export const OpeningActivity: Story = {
             canvas.getByText("The connection dropped after the planner finished: The AI service could not be reached."),
         ).toBeInTheDocument();
     },
+};
+
+// C2b - With nothing to ask, the planner's proposal ends on the next step: building the suggested collections.
+export const Proposal: Story = {
+    render: () => <PlannerAtStep seedStore={replay(OPENING_WITHOUT_QUESTIONS)} />,
 };
 
 // C3 - The planner at work after the answers: the turn's activity grows as collections are built.
@@ -392,17 +403,7 @@ export const BuildSuggested: Story = {
             },
         },
     },
-    render: () => (
-        <PlannerAtStep
-            seedStore={replay([
-                {
-                    frames: plannerOpeningFrames.map((frame) =>
-                        frame.type === "reply" ? { ...frame, openQuestions: [] } : frame,
-                    ),
-                },
-            ])}
-        />
-    ),
+    render: () => <PlannerAtStep seedStore={replay(OPENING_WITHOUT_QUESTIONS)} />,
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
 
