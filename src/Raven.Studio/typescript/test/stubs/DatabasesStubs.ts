@@ -415,7 +415,7 @@ export class DatabasesStubs {
                     Types: {
                         Documents: 1200,
                         TimeSeries: 200,
-                        Counters: 100,
+                        Counters: 0,
                     },
                     Process: "InternalReplication",
                     Estimated: true,

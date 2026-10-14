@@ -27,7 +27,7 @@ export interface IndexesPageListProps {
     toggleSelection: (index: IndexSharedInfo) => void;
     highlightCallback: (node: HTMLElement) => void;
     indexesWithExactProgress: string[];
-    toggleExactProgress: (index: IndexSharedInfo, location: databaseLocationSpecifier) => Promise<void>;
+    toggleExactProgress: (index: IndexSharedInfo) => Promise<void>;
 }
 
 export default function IndexesPageList({
@@ -65,9 +65,7 @@ export default function IndexesPageList({
                             }
                             openFaulty={(location: databaseLocationSpecifier) => openFaulty(index, location)}
                             exactProgress={indexesWithExactProgress.includes(index.name)}
-                            toggleExactProgress={(location: databaseLocationSpecifier) =>
-                                toggleExactProgress(index, location)
-                            }
+                            toggleExactProgress={() => toggleExactProgress(index)}
                             startIndexing={() => startIndexes([index])}
                             disableIndexing={() => disableIndexes([index])}
                             pauseIndexing={() => pauseIndexes([index])}
@@ -108,9 +106,7 @@ export default function IndexesPageList({
                                 }
                                 openFaulty={(location: databaseLocationSpecifier) => openFaulty(replacement, location)}
                                 exactProgress={indexesWithExactProgress.includes(replacement.name)}
-                                toggleExactProgress={(location: databaseLocationSpecifier) =>
-                                    toggleExactProgress(replacement, location)
-                                }
+                                toggleExactProgress={() => toggleExactProgress(replacement)}
                                 startIndexing={() => startIndexes([replacement])}
                                 disableIndexing={() => disableIndexes([replacement])}
                                 pauseIndexing={() => pauseIndexes([replacement])}

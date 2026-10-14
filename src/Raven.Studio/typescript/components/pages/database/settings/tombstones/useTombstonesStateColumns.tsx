@@ -126,7 +126,7 @@ function formatTombstoneTypes(
         return "";
     }
 
-    const fmt = (n: number) => (estimated ? `~${n.toLocaleString()}` : n.toLocaleString());
+    const fmt = (n: number) => (estimated && n > 0 ? `~${n.toLocaleString()}` : n.toLocaleString());
 
     if (process === "Index") {
         return `Documents: ${fmt(types.Documents)}`;
@@ -161,7 +161,7 @@ function CellTombstoneCountWrapper({
 }) {
     const value = getValue();
 
-    return row.original.Estimated ? (
+    return row.original.Estimated && value > 0 ? (
         <CellValue
             value={`~${value.toLocaleString()}`}
             className="value-number"

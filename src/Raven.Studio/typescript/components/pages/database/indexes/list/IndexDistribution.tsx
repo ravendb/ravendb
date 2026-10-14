@@ -27,7 +27,7 @@ interface IndexDistributionProps {
     showStaleReason: (location: databaseLocationSpecifier) => void;
     openFaulty: (location: databaseLocationSpecifier) => void;
     exactProgress: boolean;
-    toggleExactProgress: (location: databaseLocationSpecifier) => Promise<void>;
+    toggleExactProgress: () => Promise<void>;
 }
 
 interface ItemWithTooltipProps {
@@ -36,7 +36,7 @@ interface ItemWithTooltipProps {
     showStaleReason: (location: databaseLocationSpecifier) => void;
     openFaulty: (location: databaseLocationSpecifier) => void;
     exactProgress: boolean;
-    toggleExactProgress: (location: databaseLocationSpecifier) => Promise<void>;
+    toggleExactProgress: () => Promise<void>;
     nodeInfo: IndexNodeInfo;
     sharded: boolean;
 }

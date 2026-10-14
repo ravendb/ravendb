@@ -159,8 +159,7 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
     // the progress requests are not sequenced by the server - a late response must not overwrite a newer one
     const progressRequestIdsRef = useRef(new Map<string, number>());
 
-    const startProgressRequest = (location: databaseLocationSpecifier) => {
-        const key = locationKey(location);
+    const startProgressRequest = (key: string) => {
         const requestId = (progressRequestIdsRef.current.get(key) ?? 0) + 1;
         progressRequestIdsRef.current.set(key, requestId);
 
@@ -168,7 +167,7 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
     };
 
     const fetchProgress = async (location: databaseLocationSpecifier) => {
-        const isLatestRequest = startProgressRequest(location);
+        const isLatestRequest = startProgressRequest(locationKey(location));
 
         // the exact calculation is expensive, so it runs only for the stale indexes the user asked for
         const exactNames = staleIndexNamesRef.current.filter((x) => indexesWithExactProgressRef.current.has(x));
@@ -211,10 +210,23 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
             return;
         }
 
-        if (estimated.status === "rejected" || exact.status === "rejected") {
+        if (estimated.status === "rejected") {
             dispatch({
                 type: "ProgressLoadError",
-                error: estimated.status === "rejected" ? estimated.reason : (exact as PromiseRejectedResult).reason,
+                error: estimated.reason,
+                location,
+            });
+            return;
+        }
+
+        if (exact.status === "rejected") {
+            // fall back to the estimated counts, so the failing exact request is not repeated on every refresh
+            exactNames.forEach((name) => setExactProgress(name, false));
+            messagePublisher.reportError("Failed to get exact index progress", exact.reason?.responseText);
+
+            dispatch({
+                type: "ProgressLoaded",
+                progress: estimated.value,
                 location,
             });
             return;
@@ -240,20 +252,32 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
         location: databaseLocationSpecifier,
         exact: boolean
     ) => {
-        const isLatestRequest = startProgressRequest(location);
+        // keyed per index, so it does not supersede the periodic refresh of the other indexes on the node,
+        // but a periodic refresh started later already uses the requested accuracy and supersedes it
+        const nodeKey = locationKey(location);
+        const isLatestIndexRequest = startProgressRequest(`${nodeKey}/${index.name}`);
+        const nodeRequestId = progressRequestIdsRef.current.get(nodeKey);
+        const isLatestRequest = () =>
+            isLatestIndexRequest() && progressRequestIdsRef.current.get(nodeKey) === nodeRequestId;
 
-        const progress = await indexesService.getProgress(db.name, location, [index.name], exact);
+        try {
+            const progress = await indexesService.getProgress(db.name, location, [index.name], exact);
 
-        if (!isLatestRequest()) {
-            return;
+            if (!isLatestRequest()) {
+                return;
+            }
+
+            dispatch({
+                type: "ProgressLoaded",
+                progress,
+                location,
+                scope: [index.name],
+            });
+        } catch (e) {
+            if (isLatestRequest()) {
+                throw e;
+            }
         }
-
-        dispatch({
-            type: "ProgressLoaded",
-            progress,
-            location,
-            scope: [index.name],
-        });
     };
 
     const setExactProgress = (indexName: string, exact: boolean) => {
@@ -268,18 +292,24 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
         setIndexesWithExactProgress(Array.from(set));
     };
 
-    const toggleExactProgress = async (index: IndexSharedInfo, location: databaseLocationSpecifier) => {
+    const toggleExactProgress = async (index: IndexSharedInfo) => {
         const exact = !indexesWithExactProgressRef.current.has(index.name);
 
         // the toggle is applied up front so a concurrent refresh already uses the requested accuracy,
         // and reverted when the fetch fails so the link matches the displayed counts
         setExactProgress(index.name, exact);
 
-        try {
-            await fetchSingleIndexProgress(index, location, exact);
-        } catch (e) {
+        // the toggle is per index, so every node where the index is stale is refetched
+        const results = await Promise.allSettled(
+            index.nodesInfo
+                .filter((x) => x.details?.stale)
+                .map((x) => fetchSingleIndexProgress(index, x.location, exact))
+        );
+
+        const failure = results.find((x) => x.status === "rejected");
+        if (failure) {
             setExactProgress(index.name, !exact);
-            throw e;
+            throw failure.reason;
         }
     };
 

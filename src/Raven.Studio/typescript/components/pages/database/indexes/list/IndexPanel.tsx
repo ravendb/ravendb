@@ -54,7 +54,7 @@ export interface IndexPanelProps {
     resetIndex: (mode?: Raven.Client.Documents.Indexes.IndexResetMode) => void;
     openFaulty: (location: databaseLocationSpecifier) => Promise<void>;
     exactProgress: boolean;
-    toggleExactProgress: (location: databaseLocationSpecifier) => Promise<void>;
+    toggleExactProgress: () => Promise<void>;
     selected: boolean;
     hasReplacement?: boolean;
     toggleSelection: () => void;

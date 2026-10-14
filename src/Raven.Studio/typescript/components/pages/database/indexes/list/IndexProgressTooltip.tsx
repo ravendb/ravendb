@@ -29,7 +29,7 @@ interface IndexProgressTooltipProps {
     globalIndexingStatus: IndexRunningStatus;
     showStaleReason: (location: databaseLocationSpecifier) => void;
     exactProgress: boolean;
-    toggleExactProgress: (location: databaseLocationSpecifier) => Promise<void>;
+    toggleExactProgress: () => Promise<void>;
 }
 
 export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
@@ -45,7 +45,7 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
 
         setTogglingExactProgress(true);
         try {
-            await toggleExactProgress(nodeInfo.location);
+            await toggleExactProgress();
         } catch (e) {
             messagePublisher.reportError("Failed to get index progress", e.responseText);
         } finally {

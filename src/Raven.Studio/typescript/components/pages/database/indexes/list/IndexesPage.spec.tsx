@@ -1,4 +1,4 @@
-import { rtlRender, waitFor } from "test/rtlTestUtils";
+import { act, rtlRender, waitFor } from "test/rtlTestUtils";
 import React from "react";
 import { mockServices } from "test/mocks/services/MockServices";
 import { IndexesStubs } from "test/stubs/IndexesStubs";
@@ -126,6 +126,85 @@ describe("IndexesPage", function () {
         } finally {
             reportError.mockRestore();
             getProgress.mockReset();
+        }
+    });
+
+    it("keeps the exact counts when a superseded exact progress request fails", async () => {
+        jest.useFakeTimers({ advanceTimers: true });
+        const reportError = jest.spyOn(messagePublisher, "reportError").mockImplementation(() => {});
+        const getProgress = mockServices.indexesService.mock.getProgress as unknown as jest.Mock;
+
+        try {
+            const { screen, fireClick, user } = rtlRender(<StaleIndexWithEstimatedProgress />);
+
+            await screen.findByText("StaleInProgress");
+
+            const [, staleProgress] = IndexesStubs.getStaleInProgressIndex();
+            let rejectToggleRequest: (reason: unknown) => void;
+            let exactCalls = 0;
+            getProgress.mockImplementation((...args: Parameters<IndexesService["getProgress"]>) => {
+                const [, , , exact] = args;
+                if (exact && exactCalls++ === 0) {
+                    return new Promise((_, reject) => (rejectToggleRequest = reject));
+                }
+                return Promise.resolve([staleProgress]);
+            });
+
+            const distributionItems = screen.queryAllByClassName("distribution-item");
+            await user.hover(distributionItems[0]);
+
+            await fireClick(await screen.findByText("show exact counts"));
+
+            act(() => {
+                jest.advanceTimersByTime(15_000);
+            });
+            await waitFor(() => expect(exactCalls).toBe(2));
+
+            await act(async () => rejectToggleRequest({ responseText: "timeout" }));
+
+            expect(await screen.findByText("show estimated counts")).toBeInTheDocument();
+            expect(reportError).not.toHaveBeenCalled();
+        } finally {
+            reportError.mockRestore();
+            getProgress.mockReset();
+            jest.useRealTimers();
+        }
+    });
+
+    it("falls back to the estimated counts when a periodic exact progress refresh fails", async () => {
+        jest.useFakeTimers({ advanceTimers: true });
+        const reportError = jest.spyOn(messagePublisher, "reportError").mockImplementation(() => {});
+        const getProgress = mockServices.indexesService.mock.getProgress as unknown as jest.Mock;
+
+        try {
+            const { screen, fireClick, user } = rtlRender(<StaleIndexWithEstimatedProgress />);
+
+            await screen.findByText("StaleInProgress");
+
+            const distributionItems = screen.queryAllByClassName("distribution-item");
+            await user.hover(distributionItems[0]);
+
+            await fireClick(await screen.findByText("show exact counts"));
+            expect(await screen.findByText("show estimated counts")).toBeInTheDocument();
+
+            const [, staleProgress] = IndexesStubs.getStaleInProgressIndex();
+            getProgress.mockImplementation((...args: Parameters<IndexesService["getProgress"]>) => {
+                const [, , , exact] = args;
+                return exact ? Promise.reject({ responseText: "timeout" }) : Promise.resolve([staleProgress]);
+            });
+
+            act(() => {
+                jest.advanceTimersByTime(15_000);
+            });
+
+            await waitFor(() => expect(reportError).toHaveBeenCalled());
+
+            expect(await screen.findByText("show exact counts")).toBeInTheDocument();
+            expect(screen.queryByText(/Unable to load index status/)).not.toBeInTheDocument();
+        } finally {
+            reportError.mockRestore();
+            getProgress.mockReset();
+            jest.useRealTimers();
         }
     });
 });

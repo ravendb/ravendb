@@ -16,7 +16,11 @@ describe("TombstonesState", () => {
     it("shows ~ prefix for estimated tombstone counts", async () => {
         const { screen } = rtlRender(<Tombstones />);
 
-        expect(await screen.findByText("~1,500")).toBeInTheDocument();
-        expect(await screen.findByText("Documents: ~1,200, TimeSeries: ~200, Counters: ~100")).toBeInTheDocument();
+        const format = (n: number) => n.toLocaleString();
+
+        expect(await screen.findByText(`~${format(1500)}`)).toBeInTheDocument();
+        expect(
+            await screen.findByText(`Documents: ~${format(1200)}, TimeSeries: ~200, Counters: 0`)
+        ).toBeInTheDocument();
     });
 });
