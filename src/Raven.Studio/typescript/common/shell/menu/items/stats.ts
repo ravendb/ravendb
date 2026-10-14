@@ -4,18 +4,10 @@ import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 import reactUtils = require("common/reactUtils");
 import StatisticsPage = require("components/pages/database/status/statistics/StatisticsPage");
 import TombstonesState = require("components/pages/database/status/tombstones/TombstonesState");
-import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
-import shardedDatabase = require("models/resources/shardedDatabase");
-import shard = require("models/resources/shard");
 
 export = getStatsMenuItem;
 
-function getStatsMenuItem(appUrls: computedAppUrls) {
-    const isShardedDatabase = () => {
-        const db = activeDatabaseTracker.default.database();
-        return db instanceof shardedDatabase || db instanceof shard;
-    };
-
+function getStatsMenuItem(appUrls: computedAppUrls, isSharded: boolean) {
     const statsItems: menuItem[] = [
         new leafMenuItem({
             route: 'databases/status',
@@ -58,11 +50,11 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             shardingMode: "allShards",
             title: 'Buckets Report',
             tooltip: "Buckets Report",
-            nav: ko.pureComputed(isShardedDatabase),
+            nav: isSharded,
             css: 'icon-storage', //TODO:
             dynamicHash: appUrls.statusBucketsReport,
             search: {
-                isExcluded: !isShardedDatabase()
+                isExcluded: !isSharded
             }
         }),
         new leafMenuItem({
