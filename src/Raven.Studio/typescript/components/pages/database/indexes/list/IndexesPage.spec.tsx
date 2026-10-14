@@ -7,6 +7,7 @@ import IndexesService from "components/services/IndexesService";
 import { composeStories } from "@storybook/react-webpack5";
 
 import * as stories from "./IndexesPage.stories";
+import IndexProgress = Raven.Client.Documents.Indexes.IndexProgress;
 
 const {
     EmptyView,
@@ -166,6 +167,46 @@ describe("IndexesPage", function () {
             expect(reportError).not.toHaveBeenCalled();
         } finally {
             reportError.mockRestore();
+            getProgress.mockReset();
+            jest.useRealTimers();
+        }
+    });
+
+    it("keeps the exact counts when a refresh started before the toggle completes after it", async () => {
+        jest.useFakeTimers({ advanceTimers: true });
+        const getProgress = mockServices.indexesService.mock.getProgress as unknown as jest.Mock;
+
+        try {
+            const { screen, fireClick, user } = rtlRender(<StaleIndexWithEstimatedProgress />);
+
+            await screen.findByText("StaleInProgress");
+
+            const [, estimatedProgress] = IndexesStubs.getStaleInProgressIndex();
+            const [, exactProgress] = IndexesStubs.getStaleInProgressIndex();
+            Object.values(exactProgress.Collections).forEach((x) => (x.Estimated = false));
+
+            let resolveRefresh: (progress: IndexProgress[]) => void;
+            getProgress.mockImplementation((...args: Parameters<IndexesService["getProgress"]>) => {
+                const [, , , exact] = args;
+                return exact ? Promise.resolve([exactProgress]) : new Promise((resolve) => (resolveRefresh = resolve));
+            });
+
+            act(() => {
+                jest.advanceTimersByTime(15_000);
+            });
+            await waitFor(() => expect(resolveRefresh).toBeDefined());
+
+            const distributionItems = screen.queryAllByClassName("distribution-item");
+            await user.hover(distributionItems[0]);
+
+            await fireClick(await screen.findByText("show exact counts"));
+            expect(await screen.findByText("show estimated counts")).toBeInTheDocument();
+            await waitFor(() => expect(screen.queryByText("(~)")).not.toBeInTheDocument());
+
+            await act(async () => resolveRefresh([estimatedProgress]));
+
+            expect(screen.queryByText("(~)")).not.toBeInTheDocument();
+        } finally {
             getProgress.mockReset();
             jest.useRealTimers();
         }

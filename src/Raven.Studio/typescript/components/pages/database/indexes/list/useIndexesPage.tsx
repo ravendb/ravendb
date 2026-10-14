@@ -167,7 +167,15 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
     };
 
     const fetchProgress = async (location: databaseLocationSpecifier) => {
-        const isLatestRequest = startProgressRequest(locationKey(location));
+        const nodeKey = locationKey(location);
+        const isLatestRequest = startProgressRequest(nodeKey);
+
+        // an index toggled while this request is in flight already has newer progress, so it is skipped
+        const requestIdsAtStart = new Map(progressRequestIdsRef.current);
+        const indexesToggledSinceStart = () =>
+            Array.from(progressRequestIdsRef.current)
+                .filter(([key, id]) => key.startsWith(`${nodeKey}/`) && requestIdsAtStart.get(key) !== id)
+                .map(([key]) => key.slice(nodeKey.length + 1));
 
         // the exact calculation is expensive, so it runs only for the stale indexes the user asked for
         const exactNames = staleIndexNamesRef.current.filter((x) => indexesWithExactProgressRef.current.has(x));
@@ -184,6 +192,7 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
                     type: "ProgressLoaded",
                     progress,
                     location,
+                    exclude: indexesToggledSinceStart(),
                 });
             } catch (e) {
                 if (!isLatestRequest()) {
@@ -210,6 +219,9 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
             return;
         }
 
+        const toggledNames = indexesToggledSinceStart();
+        const exactNamesToApply = exactNames.filter((x) => !toggledNames.includes(x));
+
         if (estimated.status === "rejected") {
             dispatch({
                 type: "ProgressLoadError",
@@ -221,13 +233,14 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
 
         if (exact.status === "rejected") {
             // fall back to the estimated counts, so the failing exact request is not repeated on every refresh
-            exactNames.forEach((name) => setExactProgress(name, false));
+            exactNamesToApply.forEach((name) => setExactProgress(name, false));
             messagePublisher.reportError("Failed to get exact index progress", exact.reason?.responseText);
 
             dispatch({
                 type: "ProgressLoaded",
                 progress: estimated.value,
                 location,
+                exclude: toggledNames,
             });
             return;
         }
@@ -236,14 +249,14 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
             type: "ProgressLoaded",
             progress: estimated.value,
             location,
-            exclude: exactNames,
+            exclude: [...exactNames, ...toggledNames],
         });
 
         dispatch({
             type: "ProgressLoaded",
             progress: exact.value,
             location,
-            scope: exactNames,
+            scope: exactNamesToApply,
         });
     };
 
