@@ -283,21 +283,21 @@ const schema = yupObjectSchema<FormData>({
             .string()
             .nullable()
             .when("$connectorType", {
-                is: "mistralaiAiSettings",
+                is: "mistralAiSettings",
                 then: (schema) => schema.trim().required(),
             }),
         endpoint: yup
             .string()
             .nullable()
             .when("$connectorType", {
-                is: "mistralaiAiSettings",
+                is: "mistralAiSettings",
                 then: (schema) => schema.trim().required(),
             }),
         model: yup
             .string()
             .nullable()
             .when("$connectorType", {
-                is: "mistralaiAiSettings",
+                is: "mistralAiSettings",
                 then: (schema) => schema.trim().required(),
             }),
         embeddingsMaxConcurrentBatches: getEmbeddingsMaxConcurrentBatchesSchema("mistralAiSettings"),
