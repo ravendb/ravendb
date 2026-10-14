@@ -401,12 +401,13 @@ namespace Raven.Server.Documents.Handlers
                 {
                     var etag = _database.DocumentsStorage.GenerateNextEtag();
                     var localCv = _database.DocumentsStorage.GetNewChangeVector(context, etag);
-                    using (cgd.Values)
                     using (var lazyCv = context.GetLazyString(localCv))
                     {
                         cgd.ChangeVector = lazyCv;
                         PutCounters(context, cgd);
                     }
+
+                    _toDispose.Add(cgd.Values);
                 }
 
                 UpdateDocumentsMetadata(context);
@@ -419,11 +420,9 @@ namespace Raven.Server.Documents.Handlers
             {
                 foreach (var toUpdate in _counterUpdates)
                 {
-                    var doc = toUpdate.Value;
-                    using (doc.Data)
-                    {
-                        UpdateDocumentCountersAfterImportBatch(context, toUpdate.Key, doc);
-                    }
+                    UpdateDocumentCountersAfterImportBatch(context, toUpdate.Key, toUpdate.Value);
+
+                    _toDispose.Add(toUpdate.Value.Data);
                 }
             }
 
