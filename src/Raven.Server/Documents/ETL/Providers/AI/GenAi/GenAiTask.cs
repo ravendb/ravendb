@@ -274,7 +274,6 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
                 // this is how we ensure that we don't have too many outstanding tasks 
                 var idx = Task.WaitAny(executingTasks, shutdown);
-                statsScope.TotalSentToModel++;
 
                 var contextObject = item.ContextOutput.Context;
                 string json = contextObject.ToString();
@@ -302,6 +301,8 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
                     handler.SetClient(_chatCompletionClient);
                     task = handler.HandleRequestAsync(Database.Configuration.Ai.GenAiSendToModelTimeout.AsTimeSpan, shutdown);
+
+                    statsScope.TotalSentToModel++;
                 }
                 catch (Exception e)
                 {
@@ -382,9 +383,11 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             var item = items[index];
             if (task.IsCompletedSuccessfully is false)
             {
-                statsScope.ModelCallFailures++;
-
                 var err = HandleItemError(task, item);
+
+                if (item.RefusedBeforeTheModel == false)
+                    statsScope.ModelCallFailures++;
+
                 if (err is null) // can happen for refusal / too many tokens in one item, etc. (already handled) 
                     continue;
 
