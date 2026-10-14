@@ -1168,8 +1168,9 @@ type AiConnectionStringsSettings =
     | Raven.Client.Documents.Operations.AI.VertexSettings;
 
 interface AiModelsRequestDto {
-    ConnectorType: Extract<Raven.Client.Documents.Operations.AI.AiConnectorType, "Ollama" | "OpenAi" | "AzureOpenAi">;
+    ConnectorType: Extract<Raven.Client.Documents.Operations.AI.AiConnectorType, "Ollama" | "OpenAi" | "AzureOpenAi" | "Google">;
     AzureOpenAiSettings?: Pick<Raven.Client.Documents.Operations.AI.AzureOpenAiSettings, "Endpoint", "ApiKey">;
+    GoogleSettings?: Pick<Raven.Client.Documents.Operations.AI.GoogleSettings, "Endpoint" | "ApiKey" | "AiVersion">;
     OllamaSettings?: Pick<Raven.Client.Documents.Operations.AI.OllamaSettings, "Uri" | "Think">;
     OpenAiSettings?: Pick<Raven.Client.Documents.Operations.AI.OpenAiSettings, "Endpoint" | "ApiKey" | "OrganizationId" | "ProjectId">;
 }
