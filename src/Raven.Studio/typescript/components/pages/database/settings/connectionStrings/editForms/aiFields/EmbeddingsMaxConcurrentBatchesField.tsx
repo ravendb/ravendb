@@ -10,7 +10,11 @@ import OptionalLabel from "components/common/OptionalLabel";
 
 type FormData = ConnectionFormData<AiConnection>;
 
-export default function EmbeddingsMaxConcurrentBatches({ baseName }: { baseName: FormData["connectorType"] }) {
+export default function EmbeddingsMaxConcurrentBatches({
+    baseName,
+}: {
+    baseName: Exclude<FormData["connectorType"], "anthropicSettings">;
+}) {
     const { control } = useFormContext<FormData>();
 
     return (

@@ -63,25 +63,25 @@ const chatConnectorTypes: FormData["connectorType"][] = [
     "openAiSettings",
 ];
 
-function getConnectorOptions(modelType: FormData["modelType"]): SelectOptionWithIcon<FormData["connectorType"]>[] {
-    // Alphabetical order beside of Embedded
-    const allOptions: SelectOptionWithIcon<FormData["connectorType"]>[] = [
-        { label: "Anthropic", value: "anthropicSettings", icon: "llm" },
-        { label: "Azure OpenAI", value: "azureOpenAiSettings", icon: "openai" },
-        { label: "Google AI", value: "googleSettings", icon: "google-gemini" },
-        { label: "Hugging Face", value: "huggingFaceSettings", icon: "huggingface" },
-        { label: "Mistral AI", value: "mistralAiSettings", icon: "mistralai" },
-        { label: "Ollama", value: "ollamaSettings", icon: "ollama" },
-        { label: "OpenAI", value: "openAiSettings", icon: "openai" },
-        { label: "Vertex AI", value: "vertexSettings", icon: "vertex-ai" },
-        { label: "Embedded (bge-micro-v2)", value: "embeddedSettings", icon: "onnx" },
-    ];
+// Alphabetical order beside of Embedded
+const allConnectorOptions: SelectOptionWithIcon<FormData["connectorType"]>[] = [
+    { label: "Anthropic", value: "anthropicSettings", icon: "anthropic" },
+    { label: "Azure OpenAI", value: "azureOpenAiSettings", icon: "openai" },
+    { label: "Google AI", value: "googleSettings", icon: "google-gemini" },
+    { label: "Hugging Face", value: "huggingFaceSettings", icon: "huggingface" },
+    { label: "Mistral AI", value: "mistralAiSettings", icon: "mistralai" },
+    { label: "Ollama", value: "ollamaSettings", icon: "ollama" },
+    { label: "OpenAI", value: "openAiSettings", icon: "openai" },
+    { label: "Vertex AI", value: "vertexSettings", icon: "vertex-ai" },
+    { label: "Embedded (bge-micro-v2)", value: "embeddedSettings", icon: "onnx" },
+];
 
+function getConnectorOptions(modelType: FormData["modelType"]): SelectOptionWithIcon<FormData["connectorType"]>[] {
     if (modelType === "Chat") {
-        return allOptions.filter((x) => chatConnectorTypes.includes(x.value));
+        return allConnectorOptions.filter((x) => chatConnectorTypes.includes(x.value));
     }
 
-    return allOptions.filter((x) => !chatOnlyConnectorTypes.includes(x.value));
+    return allConnectorOptions.filter((x) => !chatOnlyConnectorTypes.includes(x.value));
 }
 
 const getTemperatureSchema = (connectorType: FormData["connectorType"]) =>
@@ -328,7 +328,6 @@ const schema = yupObjectSchema<FormData>({
         reasoningEffort: yup.string().nullable(),
         enablePromptCache: yup.boolean().nullable(),
         apiVersion: yup.string().nullable(),
-        embeddingsMaxConcurrentBatches: yup.number().nullable(),
     }),
     excludedDatabases: yup.array().of(yup.string()).optional(),
 });
@@ -411,7 +410,6 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
                 reasoningEffort: null,
                 enablePromptCache: null,
                 apiVersion: null,
-                embeddingsMaxConcurrentBatches: null,
             } satisfies Required<FormData["anthropicSettings"]>,
         };
     }
@@ -422,6 +420,7 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
 export const aiConnectionStringUtils = {
     getConnectorType,
     mapAiConnectionStringToSettingsDto,
+    allConnectorOptions,
     getConnectorOptions,
     getDefaultValues,
     schema,
