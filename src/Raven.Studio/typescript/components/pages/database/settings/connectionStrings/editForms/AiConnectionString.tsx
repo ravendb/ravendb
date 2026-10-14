@@ -17,6 +17,7 @@ import OpenAiSettings from "components/pages/database/settings/connectionStrings
 import EmbeddedSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/EmbeddedSettings";
 import MistralAiSettings from "./aiFields/MistralAiSettings";
 import VertexSettings from "components/pages/database/settings/connectionStrings/editForms/aiFields/VertexSettings";
+import AnthropicSettings from "./aiFields/AnthropicSettings";
 import TaskUtils from "components/utils/TaskUtils";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { connectionStringSelectors } from "../store/connectionStringsSlice";
@@ -73,9 +74,10 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
         const { unsubscribe } = watch((values, { name }) => {
             if (
                 name === "modelType" &&
-                values.modelType === "Chat" &&
                 values.connectorType != null &&
-                !aiConnectionStringUtils.chatConnectorTypes.includes(values.connectorType)
+                !aiConnectionStringUtils
+                    .getConnectorOptions(values.modelType)
+                    .some((option) => option.value === values.connectorType)
             ) {
                 setValue("connectorType", null);
             }
@@ -174,6 +176,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                 {connectorType === "vertexSettings" && (
                     <VertexSettings isUsedByAnyTask={isUsedByAnyTask} isForNewConnection={isForNewConnection} />
                 )}
+                {connectorType === "anthropicSettings" && <AnthropicSettings isUsedByAnyTask={isUsedByAnyTask} />}
 
                 {isUsedByAnyTask && (
                     <RichAlert variant="info">

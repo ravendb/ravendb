@@ -18,6 +18,8 @@ namespace Raven.Server.Documents.AI.Settings;
 
 internal sealed partial class AnthropicChatCompletionProvider : AbstractChatCompletionProvider
 {
+    private const int MaxModelsPageSize = 1000;
+
     private readonly AnthropicSettings _settings;
 
     public AnthropicChatCompletionProvider(AnthropicSettings settings)
@@ -32,7 +34,7 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
 
     public override string GetRelativeCompletionUri() => "messages";
 
-    public override string GetRelativeModelsUri() => "models";
+    public override string GetRelativeModelsUri() => $"models?limit={MaxModelsPageSize}";
 
     public override void AddAuthentication(HttpRequestMessage request)
     {

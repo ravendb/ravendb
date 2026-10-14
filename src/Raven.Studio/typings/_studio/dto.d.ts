@@ -1167,8 +1167,9 @@ type AiConnectionStringsSettings =
     | Raven.Client.Documents.Operations.AI.AnthropicSettings;
 
 interface AiModelsRequestDto {
-    ConnectorType: Extract<Raven.Client.Documents.Operations.AI.AiConnectorType, "Ollama" | "OpenAi" | "AzureOpenAi">;
+    ConnectorType: Extract<Raven.Client.Documents.Operations.AI.AiConnectorType, "Ollama" | "OpenAi" | "AzureOpenAi" | "Anthropic">;
     AzureOpenAiSettings?: Pick<Raven.Client.Documents.Operations.AI.AzureOpenAiSettings, "Endpoint", "ApiKey">;
+    AnthropicSettings?: Pick<Raven.Client.Documents.Operations.AI.AnthropicSettings, "Endpoint" | "ApiKey" | "ApiVersion">;
     OllamaSettings?: Pick<Raven.Client.Documents.Operations.AI.OllamaSettings, "Uri" | "Think">;
     OpenAiSettings?: Pick<Raven.Client.Documents.Operations.AI.OpenAiSettings, "Endpoint" | "ApiKey" | "OrganizationId" | "ProjectId">;
 }
