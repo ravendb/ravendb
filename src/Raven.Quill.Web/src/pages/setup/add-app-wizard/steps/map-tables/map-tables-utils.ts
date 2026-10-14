@@ -36,10 +36,6 @@ export function propertyNameFromJoinColumn(column: string): string {
     return pascalCase(stripIdSuffix(column)) || pascalCase(column);
 }
 
-export function getSourceTableLabel(table: SourceTableRef) {
-    return table.sourceTableSchema ? `${table.sourceTableSchema}.${table.sourceTableName}` : table.sourceTableName;
-}
-
 /** Normalized identity of a source table, matching the case-insensitive comparison the
  * validation schema uses for duplicate root tables. Null when the table has no name yet. */
 export function getSourceTableKey(table: SourceTableRef): string | null {
@@ -240,6 +236,21 @@ export function scaffoldTables(
             sourceTableName: selected.sourceTableName,
         };
     });
+}
+
+/**
+ * Scaffolds a root table for every selected table the mapping does not capture yet. Root tables outside
+ * the selection stay: the editor flags them, and dropping one is the operator's call.
+ */
+export function addUnmappedSelectedTables(
+    tables: FormRootTable[],
+    selectedTables: AppFormData["verifySchema"]["tables"],
+    discoverResult: DiscoverResponse | null,
+): FormRootTable[] {
+    const mappedKeys = collectMappedSourceTableKeys(tables);
+    const unmappedTables = selectedTables.filter((table) => !mappedKeys.has(getSourceTableKey(table) ?? ""));
+
+    return [...tables, ...scaffoldTables(unmappedTables, discoverResult)];
 }
 
 export function findDiscoveredTable(

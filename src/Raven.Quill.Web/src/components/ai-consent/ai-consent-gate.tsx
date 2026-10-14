@@ -1,7 +1,7 @@
-import { useState, type ReactNode } from "react";
+import { useState, type ComponentProps, type ReactNode } from "react";
 import { Sparkles } from "lucide-react";
 import { AiConsentTermsCheckbox } from "@/components/ai-consent/ai-consent-terms";
-import { useAiConsent, useGrantAiConsent } from "@/components/ai-consent/use-ai-consent";
+import { useAiConsent, useGrantAiConsent, type AiConsentState } from "@/components/ai-consent/use-ai-consent";
 import { Alert, AlertDescription } from "@/components/shadcn/ui/alert";
 import { Button } from "@/components/shadcn/ui/button";
 import {
@@ -15,7 +15,7 @@ import {
     DialogTrigger,
 } from "@/components/shadcn/ui/dialog";
 import { Spinner } from "@/components/shadcn/ui/spinner";
-import { Text } from "@/components/typography";
+import { Heading, Text } from "@/components/typography";
 import { cn } from "@/lib/utils";
 
 export type AiConsentCopy = {
@@ -24,20 +24,37 @@ export type AiConsentCopy = {
     dialogDescription: ReactNode;
 };
 
-/** "panel" fills a surface with nothing else to show; "banner" sits above options that stay on screen, disabled. */
-export type AiConsentGateVariant = "panel" | "banner";
-
-type AiConsentGateProps = {
-    copy: AiConsentCopy;
-    variant?: AiConsentGateVariant;
+export type AiConsentHeroCopy = {
+    title: ReactNode;
+    description: ReactNode;
+    acceptLabel: ReactNode;
 };
 
-/** Stands in for an AI-backed surface until the AI service can actually answer it. */
-export function AiConsentGate({ copy, variant = "panel" }: AiConsentGateProps) {
+type AiConsentGateVariant = "panel" | "banner" | "hero";
+
+type AiConsentGateHeroProps = {
+    variant: Extract<AiConsentGateVariant, "hero">;
+    copy: AiConsentHeroCopy;
+    figure?: ReactNode;
+    onGranted?: () => void;
+};
+
+type AiConsentGateProps =
+    | { variant?: Exclude<AiConsentGateVariant, "hero">; copy: AiConsentCopy }
+    | AiConsentGateHeroProps;
+
+export function AiConsentGate(props: AiConsentGateProps) {
+    if (props.variant === "hero") {
+        return <AiConsentHero copy={props.copy} figure={props.figure} onGranted={props.onGranted} />;
+    }
+
+    return <AiConsentNotice copy={props.copy} variant={props.variant ?? "panel"} />;
+}
+
+function AiConsentNotice({ copy, variant }: { copy: AiConsentCopy; variant: AiConsentGateVariant }) {
     const consent = useAiConsent();
 
     if (consent.isPending) {
-        // A banner sits above options that stay readable, so it waits instead of flashing a spinner over them.
         return variant === "banner" ? null : (
             <AiConsentLayout variant={variant} icon={<Spinner />} message="Checking consent…" />
         );
@@ -49,13 +66,7 @@ export function AiConsentGate({ copy, variant = "panel" }: AiConsentGateProps) {
                 variant={variant}
                 tone="destructive"
                 message={consent.unavailableReason}
-                action={
-                    consent.isRetryable && (
-                        <Button variant="outline" onClick={consent.recheck}>
-                            Try again
-                        </Button>
-                    )
-                }
+                action={<AiConsentRetryButton consent={consent} />}
             />
         );
     }
@@ -87,7 +98,6 @@ function AiConsentLayout({ variant, tone = "default", icon, message, action }: A
 
     return (
         <div
-            // Only the failure is an alert; a Terms of Use nobody has been asked for yet is not one.
             role={isError ? "alert" : undefined}
             className={cn(
                 "flex gap-3",
@@ -117,6 +127,61 @@ function AiConsentLayout({ variant, tone = "default", icon, message, action }: A
     );
 }
 
+function AiConsentHero({ copy, figure, onGranted }: Omit<AiConsentGateHeroProps, "variant">) {
+    const consent = useAiConsent();
+    const acceptance = useConsentAcceptance(onGranted);
+
+    if (consent.isPending || consent.isGranted) {
+        return null;
+    }
+
+    return (
+        <div className="@container flex min-h-0 flex-1 overflow-auto px-5 py-10 sm:px-10 lg:px-14">
+            <div className="m-auto grid w-full max-w-245 grid-cols-1 items-center gap-8 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] @3xl:gap-14">
+                <div className="flex flex-col gap-7">
+                    <div className="flex flex-col gap-3">
+                        <Heading as="h3" variant="page" className="text-balance">
+                            {copy.title}
+                        </Heading>
+                        <Text variant="muted" className="max-w-[44ch]">
+                            {copy.description}
+                        </Text>
+                    </div>
+                    <div className="flex flex-col gap-3.5">
+                        {consent.unavailableReason ? (
+                            <>
+                                <Text role="alert" className="text-destructive">
+                                    {consent.unavailableReason}
+                                </Text>
+                                <AiConsentRetryButton consent={consent} size="lg" className="self-start" />
+                            </>
+                        ) : (
+                            <>
+                                <AiConsentTermsCheckbox
+                                    isAccepted={acceptance.isAccepted}
+                                    onAcceptedChange={acceptance.setIsAccepted}
+                                    disabled={acceptance.isPending}
+                                />
+                                <Button
+                                    size="lg"
+                                    className="self-start"
+                                    disabled={!acceptance.isAccepted || acceptance.isPending}
+                                    onClick={acceptance.accept}
+                                >
+                                    {acceptance.isPending ? <Spinner /> : <Sparkles aria-hidden="true" />}
+                                    {copy.acceptLabel}
+                                </Button>
+                            </>
+                        )}
+                        <AiConsentGrantError error={acceptance.error} />
+                    </div>
+                </div>
+                {figure}
+            </div>
+        </div>
+    );
+}
+
 function AiConsentDialog({ copy }: { copy: AiConsentCopy }) {
     const [isOpen, setIsOpen] = useState(false);
 
@@ -134,8 +199,7 @@ function AiConsentDialog({ copy }: { copy: AiConsentCopy }) {
 }
 
 function AiConsentDialogBody({ copy, onGranted }: { copy: AiConsentCopy; onGranted: () => void }) {
-    const [isAccepted, setIsAccepted] = useState(false);
-    const consentMutation = useGrantAiConsent({ onGranted });
+    const acceptance = useConsentAcceptance(onGranted);
 
     return (
         <>
@@ -144,19 +208,11 @@ function AiConsentDialogBody({ copy, onGranted }: { copy: AiConsentCopy; onGrant
                 <DialogDescription>{copy.dialogDescription}</DialogDescription>
             </DialogHeader>
             <AiConsentTermsCheckbox
-                isAccepted={isAccepted}
-                onAcceptedChange={setIsAccepted}
-                disabled={consentMutation.isPending}
+                isAccepted={acceptance.isAccepted}
+                onAcceptedChange={acceptance.setIsAccepted}
+                disabled={acceptance.isPending}
             />
-            {consentMutation.isError && (
-                <Alert variant="destructive">
-                    <AlertDescription>
-                        {consentMutation.error instanceof Error
-                            ? consentMutation.error.message
-                            : "Could not record your consent."}
-                    </AlertDescription>
-                </Alert>
-            )}
+            <AiConsentGrantError error={acceptance.error} />
             <DialogFooter>
                 <DialogClose asChild>
                     <Button type="button" variant="outline">
@@ -165,13 +221,59 @@ function AiConsentDialogBody({ copy, onGranted }: { copy: AiConsentCopy; onGrant
                 </DialogClose>
                 <Button
                     type="button"
-                    disabled={!isAccepted || consentMutation.isPending}
-                    onClick={() => consentMutation.mutate()}
+                    disabled={!acceptance.isAccepted || acceptance.isPending}
+                    onClick={acceptance.accept}
                 >
-                    {consentMutation.isPending && <Spinner />}
+                    {acceptance.isPending && <Spinner />}
                     Agree &amp; enable
                 </Button>
             </DialogFooter>
         </>
+    );
+}
+
+function useConsentAcceptance(onGranted?: () => void) {
+    const [isAccepted, setIsAccepted] = useState(false);
+    const consentMutation = useGrantAiConsent();
+
+    return {
+        isAccepted,
+        setIsAccepted,
+        isPending: consentMutation.isPending,
+        error: consentMutation.error,
+        // Given to mutate rather than to the mutation, so a prompt the operator already left does not act on the grant.
+        accept: () => consentMutation.mutate(undefined, { onSuccess: onGranted }),
+    };
+}
+
+function AiConsentGrantError({ error }: { error: Error | null }) {
+    if (!error) {
+        return null;
+    }
+
+    return (
+        <Alert variant="destructive">
+            <AlertDescription>{error.message}</AlertDescription>
+        </Alert>
+    );
+}
+
+function AiConsentRetryButton({
+    consent,
+    size,
+    className,
+}: {
+    consent: AiConsentState;
+    size?: ComponentProps<typeof Button>["size"];
+    className?: string;
+}) {
+    if (!consent.isRetryable) {
+        return null;
+    }
+
+    return (
+        <Button variant="outline" size={size} className={className} onClick={consent.recheck}>
+            Try again
+        </Button>
     );
 }

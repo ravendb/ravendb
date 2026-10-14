@@ -23,7 +23,6 @@ import {
     DialogTitle,
 } from "@/components/shadcn/ui/dialog";
 import { CdcPerformanceSection } from "@/pages/apps/cdc-performance-section";
-import { cancelAbandonedSuggestions } from "@/pages/setup/add-app-wizard/steps/map-tables/suggest-map-tables-query";
 import { VERIFY_CDC_QUERY_KEY } from "@/pages/setup/add-app-wizard/steps/verify/verify-cdc-query";
 
 /** The app the wizard is editing, instead of creating a new one. */
@@ -77,7 +76,6 @@ export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
         }
 
         return () => {
-            cancelAbandonedSuggestions(queryClient);
             queryClient.removeQueries({ queryKey: VERIFY_CDC_QUERY_KEY });
             resetStore();
         };

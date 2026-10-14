@@ -8,6 +8,7 @@ import {
     collectMappedSourceTables,
     createEmptyEmbeddedTable,
     createEmptyRootTable,
+    addUnmappedSelectedTables,
     haveSameTables,
     makeUniquePropertyName,
     propertyNameFromJoinColumn,
@@ -216,6 +217,28 @@ describe("collectMappedSourceTables", () => {
         const tables = [rootTable("Order", { sourceTableSchema: "  " })];
 
         expect(collectMappedSourceTables(tables)).toEqual([{ sourceTableSchema: null, sourceTableName: "Order" }]);
+    });
+});
+
+describe("addUnmappedSelectedTables", () => {
+    const selected = (...names: string[]) =>
+        names.map((name) => ({ sourceTableSchema: "public", sourceTableName: name }));
+
+    it("keeps the whole mapping, also outside the selection, and scaffolds what nothing maps yet", () => {
+        const tables = [
+            rootTable("Customer", { collectionName: "Clients", embeddedTables: [embeddedTable("Address")] }),
+            rootTable("Order", { collectionName: "Orders" }),
+            rootTable("", { collectionName: "Draft" }),
+        ];
+
+        const completed = addUnmappedSelectedTables(tables, selected("Customer", "Address", "Invoice"), null);
+
+        expect(completed.map((table) => [table.sourceTableName, table.collectionName])).toEqual([
+            ["Customer", "Clients"],
+            ["Order", "Orders"],
+            ["", "Draft"],
+            ["Invoice", "Invoice"],
+        ]);
     });
 });
 

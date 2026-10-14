@@ -1,11 +1,8 @@
-import { useEffect, useRef } from "react";
 import { Text } from "@/components/typography";
 import { ExternalLink, Sparkles } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { useAssistantChatStore, type AssistantMessage } from "@/components/layout/assistant-chat-store";
-
-// How far from the bottom still counts as "following along", so a streaming answer keeps scrolling.
-const STICK_TO_BOTTOM_THRESHOLD_PX = 48;
+import { useStickToBottom } from "@/hooks/use-stick-to-bottom";
 
 function AssistantMessageItem({ message }: { message: AssistantMessage }) {
     if (message.role === "user") {
@@ -78,47 +75,29 @@ function AssistantRelevantLinks({ links }: { links: AssistantMessage["relevantLi
 
 export function AssistantMessages() {
     const messages = useAssistantChatStore((state) => state.messages);
-    const scrollRef = useRef<HTMLDivElement>(null);
-    // Content growing does not fire a scroll event, so the operator's last scroll position is what
-    // decides whether to follow the stream: scrolling up to re-read must not snap back down.
-    const isFollowingStreamRef = useRef(true);
-
-    // DOM side effect with no event to hang it on: keep the newest message in view as it arrives
-    // and while it streams in. Scrolling this container directly rather than calling
-    // scrollIntoView keeps the app shell — itself a scroll container — from scrolling along.
-    useEffect(() => {
-        const scrollArea = scrollRef.current;
-        if (scrollArea && isFollowingStreamRef.current) {
-            scrollArea.scrollTop = scrollArea.scrollHeight;
-        }
-    }, [messages]);
+    const { scrollRef, contentRef, onScroll } = useStickToBottom<HTMLDivElement, HTMLDivElement>();
 
     return (
-        <div
-            ref={scrollRef}
-            className="flex-1 overflow-y-auto p-3"
-            onScroll={(event) => {
-                const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
-                isFollowingStreamRef.current = scrollHeight - scrollTop - clientHeight <= STICK_TO_BOTTOM_THRESHOLD_PX;
-            }}
-        >
-            {messages.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
-                    <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-                        <Sparkles className="size-5 text-primary" aria-hidden="true" />
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-3" onScroll={onScroll}>
+            <div ref={contentRef} className="flex min-h-full flex-col">
+                {messages.length === 0 ? (
+                    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 text-center">
+                        <div className="flex size-12 items-center justify-center rounded-full bg-muted">
+                            <Sparkles className="size-5 text-primary" aria-hidden="true" />
+                        </div>
+                        <div>
+                            <Text variant="label">How can I help?</Text>
+                            <Text variant="muted">Ask about your apps, conversations, or setup.</Text>
+                        </div>
                     </div>
-                    <div>
-                        <Text variant="label">How can I help?</Text>
-                        <Text variant="muted">Ask about your apps, conversations, or setup.</Text>
+                ) : (
+                    <div className="flex flex-col gap-3">
+                        {messages.map((message) => (
+                            <AssistantMessageItem key={message.id} message={message} />
+                        ))}
                     </div>
-                </div>
-            ) : (
-                <div className="flex flex-col gap-3">
-                    {messages.map((message) => (
-                        <AssistantMessageItem key={message.id} message={message} />
-                    ))}
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 }
