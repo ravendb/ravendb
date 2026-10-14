@@ -1,4 +1,5 @@
 import type { DiscoverColumnResponse, DiscoverResponse, DiscoverTableResponse } from "@/api/generated/server-api";
+import { parseConnectionString, type Provider } from "@/pages/setup/add-app-wizard/connection-string";
 
 /** How many source tables one app can process. Unlimited tables are planned. */
 export const MAX_SELECTED_TABLES = 10_000;
@@ -42,6 +43,18 @@ export function isColumnSupported(
     column: DiscoverColumnResponse,
 ): boolean {
     return column.isCdcCapturable || Boolean(discoverResult?.hasPermissionToSetup && !table.isCdcEnabled);
+}
+
+// Mirrors the server's `CdcSinkSchemaDiscovery.ResolveDefaultSchema`
+export function resolveDefaultSchema(provider: Provider, connectionString: string): string {
+    switch (provider) {
+        case "Npgsql":
+            return "public";
+        case "SqlClient":
+            return "dbo";
+        case "MySqlConnectorFactory":
+            return parseConnectionString(connectionString).values.database || "mysql";
+    }
 }
 
 export type SourceTableRef = { sourceTableSchema?: string | null; sourceTableName: string };
