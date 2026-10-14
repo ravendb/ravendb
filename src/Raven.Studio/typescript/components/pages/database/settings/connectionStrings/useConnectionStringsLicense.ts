@@ -1,7 +1,8 @@
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
-import { FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import { FeatureAvailabilityData, FeatureAvailabilityFootnote } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
+import { aiConnectionStringUtils } from "./editForms/aiConnectionStringUtils";
 
 export interface ConnectionStringsLicenseFeatures {
     hasRavenEtl: boolean;
@@ -97,14 +98,26 @@ export default function useConnectionStringsLicense(): ConnectionStringsLicense 
     };
 }
 
+const aiConnectorOptions = aiConnectionStringUtils.getConnectorOptions(null);
+
+const embeddedConnectorFootnote: FeatureAvailabilityFootnote = {
+    title: "Available connectors",
+    items: aiConnectorOptions.filter((x) => x.value === "embeddedSettings"),
+};
+
+const allConnectorsFootnote: FeatureAvailabilityFootnote = {
+    title: "Available connectors",
+    items: aiConnectorOptions,
+};
+
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "AI",
         featureIcon: "ai-etl",
-        community: { value: true },
-        professional: { value: true },
-        enterprise: { value: true },
-        quill: { value: true },
+        community: { value: true, footnote: embeddedConnectorFootnote },
+        professional: { value: true, footnote: embeddedConnectorFootnote },
+        enterprise: { value: true, footnote: allConnectorsFootnote },
+        quill: { value: true, footnote: allConnectorsFootnote },
     },
     {
         featureName: "RavenDB ETL",
