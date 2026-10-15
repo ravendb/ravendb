@@ -401,6 +401,24 @@ if ($input.doc) {
 
     // === Query-tool binding: scalars bind and override the model; objects are model context only and a query that
     // references one is refused, since nothing but the model could supply the value. ===
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task GenAi_ContextPropertyThatIsAlsoAnOptionalToolArgument_IsRejected()
+    {
+        // The collision rule now applies to GenAI as well, per Karmel. ValidateConfiguration only catches a name
+        // that the tool schema lists under 'required'; one declared merely as a property used to pass, and the
+        // server would then advertise the context property's own name to the model as something it may fill in.
+        var (error, toolResults) = await RunGenAiQueryToolAsync(
+            contexts: [new DynamicJsonValue { ["brand"] = "TechNova" }],
+            queryRql: "from Products where Brand = $brand",
+            modelToolArgs: "{}",
+            seed: null,
+            parametersSchema: "{\"type\":\"object\",\"properties\":{\"brand\":{\"type\":\"string\"}},\"required\":[]}");
+
+        Assert.NotNull(error);
+        Assert.Contains("Parameter brand is defined on both the agent level and the query level for Q", error.ToString());
+        Assert.Empty(toolResults); // refused while the request was being built, so no query ran
+    }
+
 
     [RavenFact(RavenTestCategory.Ai)]
     public async Task GenAi_OmittedObject_QueryReferencingIt_IsRejectedWithATaskLevelError()
@@ -883,14 +901,14 @@ if ($input.doc) {
     // asks the model to call "Q" on the first turn of each conversation (detected by the absence of a tool message),
     // then answers once the query result comes back. Returns any thrown error plus the captured tool-result messages.
     private async Task<(Exception error, List<string> toolResults)> RunGenAiQueryToolAsync(
-        List<DynamicJsonValue> contexts, string queryRql, string modelToolArgs, Action<IDocumentSession> seed)
+        List<DynamicJsonValue> contexts, string queryRql, string modelToolArgs, Action<IDocumentSession> seed, string parametersSchema = null)
     {
-        var (error, toolResults, _, _) = await RunGenAiBatchAsync(contexts, queryRql, modelToolArgs, seed, testMode: true);
+        var (error, toolResults, _, _) = await RunGenAiBatchAsync(contexts, queryRql, modelToolArgs, seed, testMode: true, parametersSchema);
         return (error, toolResults);
     }
 
     private async Task<(Exception error, List<string> toolResults, List<GenAiResultItem> items, EtlProcessStatistics statistics)> RunGenAiBatchAsync(
-        List<DynamicJsonValue> contexts, string queryRql, string modelToolArgs, Action<IDocumentSession> seed, bool testMode)
+        List<DynamicJsonValue> contexts, string queryRql, string modelToolArgs, Action<IDocumentSession> seed, bool testMode, string parametersSchema = null)
     {
         using var store = GetDocumentStore();
         if (seed != null)
@@ -914,7 +932,7 @@ if ($input.doc) {
                 TestMode = true,               // the constructor would otherwise reach for a real provider client
                 MaxConcurrency = 1,
                 GenAiTransformation = new GenAiTransformation { Script = "ai.genContext(this);" },
-                Queries = [new AiAgentToolQuery("Q", "run the query", queryRql) { ParametersSampleObject = "{}" }]
+                Queries = [new AiAgentToolQuery("Q", "run the query", queryRql) { ParametersSampleObject = "{}", ParametersSchema = parametersSchema }]
             };
 
             using var task = new GenAiTask(config.Transforms[0], config, database, database.ServerStore);
