@@ -39,6 +39,11 @@ export default function useConnectionStringsLicense(): ConnectionStringsLicense 
         defaultFeatureAvailability,
         overwrites: [
             {
+                featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "ai-etl").featureName,
+                value: true,
+                footnote: hasEmbeddingsGeneration ? allConnectorsFootnote : embeddedConnectorFootnote,
+            },
+            {
                 featureName: defaultFeatureAvailability.find((x) => x.featureIcon === "ravendb-etl").featureName,
                 value: hasRavenEtl,
             },
