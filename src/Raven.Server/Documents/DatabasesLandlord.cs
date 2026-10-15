@@ -65,6 +65,8 @@ namespace Raven.Server.Documents
 
         private static readonly TimeSpan DatabaseEventExecDrainTimeout = TimeSpan.FromSeconds(5);
 
+        private static readonly string OnDatabaseDeleteExecConfigurationKey = RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExec);
+
         // deliberately never disposed: an in-flight hook would then fail on Release() during shutdown,
         // and SemaphoreSlim needs no disposal as long as AvailableWaitHandle is never used
         private readonly SemaphoreSlim _databaseEventExecSemaphore = new SemaphoreSlim(MaxConcurrentDatabaseEventExecs);
@@ -152,7 +154,7 @@ namespace Raven.Server.Documents
                             return;
                         }
 
-                        if (_serverStore.IsLeader() && type == nameof(DeleteDatabaseCommand) && rawRecord.EntireDatabasePendingDeletion())
+                        if (_serverStore.IsLeader() && changeState is DeleteDatabaseCommand deleteDatabaseCommand && rawRecord.EntireDatabasePendingDeletion())
                         {
                             DatabaseConfiguration databasesConfiguration = _serverStore.Configuration.Databases;
                             if (string.IsNullOrEmpty(databasesConfiguration.OnDatabaseDeleteExec) == false)
@@ -161,17 +163,7 @@ namespace Raven.Server.Documents
                                 // still open. The task started below outlives this scope, and 'rawRecord' nulls its
                                 // backing blittable on dispose, so it must not be touched from the task.
                                 // 'changeState' carries the applied command and is guaranteed to hold no blittable.
-                                bool hardDelete = true;
-                                if (changeState is DeleteDatabaseCommand deleteDatabaseCommand)
-                                {
-                                    hardDelete = deleteDatabaseCommand.HardDelete;
-                                }
-                                else if (_logger.IsInfoEnabled)
-                                {
-                                    _logger.Info($"Could not determine whether the deletion of database '{databaseName}' at index {index} is a hard or a soft delete, assuming a hard delete.");
-                                }
-
-                                StartDatabaseDeleteExec(databaseName, hardDelete, index, type, databasesConfiguration);
+                                StartDatabaseDeleteExec(databaseName, deleteDatabaseCommand.HardDelete, index, type, databasesConfiguration);
                             }
                         }
 
@@ -562,14 +554,12 @@ namespace Raven.Server.Documents
 
         private void StartDatabaseDeleteExec(string databaseName, bool hardDelete, long index, string type, DatabaseConfiguration configuration)
         {
-            string configurationKey = RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExec);
-
             if (_databaseEventExecSemaphore.Wait(0) == false)
             {
                 if (_logger.IsOperationsEnabled)
                 {
                     _logger.Operations(
-                        $"Dropped the '{configurationKey}' hook for database '{databaseName}' (raft index {index}): " +
+                        $"Dropped the '{OnDatabaseDeleteExecConfigurationKey}' hook for database '{databaseName}' (raft index {index}): " +
                         $"{MaxConcurrentDatabaseEventExecs} hooks are already running. Delivery of this event is best-effort.");
                 }
 
@@ -619,8 +609,7 @@ namespace Raven.Server.Documents
             {
                 error = e;
 
-                string configurationKey = RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExec);
-                string title = $"The '{configurationKey}' hook failed for database '{databaseName}'";
+                string title = $"The '{OnDatabaseDeleteExecConfigurationKey}' hook failed for database '{databaseName}'";
                 string message =
                     $"The database deletion hook did not complete successfully. The deletion itself was not affected. " +
                     $"Raft index: {index}, command: {type}, deletion kind: {(hardDelete ? "hard" : "soft")}. Error: {e.Message}";

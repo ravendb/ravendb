@@ -1,15 +1,18 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.ServerWide.Operations;
+using Raven.Server;
 using Raven.Server.Utils;
 using Sparrow.Logging;
-using Sparrow.Platform;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using static SlowTests.ExtensionPoints.DatabaseEventExecTestHelper;
 
 namespace SlowTests.ExtensionPoints
 {
@@ -19,19 +22,18 @@ namespace SlowTests.ExtensionPoints
         {
         }
 
-        private static string LongSleepScript => PlatformDetails.RunningOnPosix
-            ? "#!/bin/bash\necho $$ > \"$1\"\nsleep 300\n"
-            : @"
+        private static string LongSleepScript => Script(
+            posix: "#!/bin/bash\necho $$ > \"$1\"\nsleep 300\n",
+            windows: @"
 param([string]$outputPath)
 Set-Content -LiteralPath $outputPath -Value $PID
-Start-Sleep -Seconds 300";
+Start-Sleep -Seconds 300");
 
         [RavenFact(RavenTestCategory.Configuration)]
         public async Task OnDatabaseDelete_WhenServerShutsDownMidExecution_ChildProcessIsKilled()
         {
-            string scriptExtension = PlatformDetails.RunningOnPosix ? ".sh" : ".ps1";
-            string scriptFile = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), scriptExtension));
-            string pidFile = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".txt"));
+            string scriptFile = NewScriptPath();
+            string pidFile = NewOutputPath();
 
             try
             {
@@ -41,8 +43,8 @@ Start-Sleep -Seconds 300";
 
                 var parameters = new DatabaseExecUtils.OnDatabaseDeleteParameters
                 {
-                    Executable = PlatformDetails.RunningOnPosix ? "bash" : "powershell",
-                    Arguments = PlatformDetails.RunningOnPosix ? $"{scriptFile} {pidFile}" : $"-NoProfile {scriptFile} {pidFile}",
+                    Executable = Executable,
+                    Arguments = Arguments(scriptFile, pidFile),
                     Timeout = TimeSpan.FromMinutes(5),
                     MaxRetryDuration = TimeSpan.FromMinutes(10),
                     DatabaseName = "ShutdownDb",
@@ -64,7 +66,7 @@ Start-Sleep -Seconds 300";
 
                 await Assert.ThrowsAnyAsync<OperationCanceledException>(() => hook);
 
-                bool died = await WaitForConditionAsync(() => IsAlive(childPid) == false, TimeSpan.FromSeconds(10));
+                bool died = await WaitForValueAsync(() => IsAlive(childPid) == false, true, timeout: 10_000, interval: 200);
 
                 Assert.True(died,
                     $"The hook's child process (pid {childPid}) was still alive 10s after the shutdown token was cancelled. " +
@@ -72,17 +74,65 @@ Start-Sleep -Seconds 300";
             }
             finally
             {
-                TryDelete(scriptFile);
-                TryDelete(pidFile);
+                TryDelete(scriptFile, pidFile);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Configuration)]
+        public async Task OnDatabaseDelete_WhenServerIsDisposed_InFlightHookIsDrainedBeforeDisposeReturns()
+        {
+            string scriptFile = NewScriptPath();
+            string pidFile = NewOutputPath();
+
+            try
+            {
+                File.WriteAllText(scriptFile, LongSleepScript);
+
+                var customSettings = new Dictionary<string, string>();
+                ConfigureHook(customSettings, scriptFile, pidFile);
+
+                RavenServer server = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
+
+                // The hook's last act is this callback, and it is held long enough that the rest of the server
+                // shutdown would normally beat it - so it can only have run by the time Dispose() returns if the
+                // landlord waited for the hook. Kept well under the 5s drain timeout.
+                int hookFinished = 0;
+                server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().OnDatabaseDeleteExecCompleted = (_, _) =>
+                {
+                    Thread.Sleep(TimeSpan.FromSeconds(3));
+                    Volatile.Write(ref hookFinished, 1);
+                };
+
+                int childPid;
+                // the store must not issue a delete of its own on dispose: a repeated delete request may fire the hook again
+                using (var store = GetDocumentStore(new Options { Server = server, DeleteDatabaseOnDispose = false }))
+                {
+                    await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true));
+
+                    childPid = await WaitForChildPidAsync(pidFile);
+                    Assert.True(childPid > 0, "The hook script did not start.");
+                    Assert.True(IsAlive(childPid), $"Child {childPid} should be running before shutdown.");
+                }
+
+                server.Dispose();
+
+                Assert.True(Volatile.Read(ref hookFinished) == 1,
+                    "The server finished disposing while the database deletion hook was still in flight - the landlord must drain in-flight hooks on dispose.");
+
+                bool died = await WaitForValueAsync(() => IsAlive(childPid) == false, true, timeout: 10_000, interval: 200);
+                Assert.True(died, $"The hook's child process (pid {childPid}) outlived the server it was spawned by.");
+            }
+            finally
+            {
+                TryDelete(scriptFile, pidFile);
             }
         }
 
         [RavenFact(RavenTestCategory.Configuration)]
         public async Task OnDatabaseDelete_TotalRetryBudget_IsNotExceededByAnInFlightAttempt()
         {
-            string scriptExtension = PlatformDetails.RunningOnPosix ? ".sh" : ".ps1";
-            string scriptFile = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), scriptExtension));
-            string pidFile = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".txt"));
+            string scriptFile = NewScriptPath();
+            string pidFile = NewOutputPath();
 
             try
             {
@@ -93,8 +143,8 @@ Start-Sleep -Seconds 300";
                 // the per-attempt timeout is deliberately larger than the total budget
                 var parameters = new DatabaseExecUtils.OnDatabaseDeleteParameters
                 {
-                    Executable = PlatformDetails.RunningOnPosix ? "bash" : "powershell",
-                    Arguments = PlatformDetails.RunningOnPosix ? $"{scriptFile} {pidFile}" : $"-NoProfile {scriptFile} {pidFile}",
+                    Executable = Executable,
+                    Arguments = Arguments(scriptFile, pidFile),
                     Timeout = TimeSpan.FromSeconds(20),
                     MaxRetryDuration = TimeSpan.FromSeconds(5),
                     DatabaseName = "BudgetDb",
@@ -106,15 +156,16 @@ Start-Sleep -Seconds 300";
                 await Assert.ThrowsAnyAsync<Exception>(() => DatabaseExecUtils.ExecuteOnDatabaseDeleteAsync(parameters, CancellationToken.None));
                 sw.Stop();
 
-                Assert.True(sw.Elapsed < TimeSpan.FromSeconds(8),
+                // ~5s budget, plus the output drain and up to 1s of backoff jitter, with headroom for a loaded
+                // agent - while a budget checked only between attempts would run for the full 20s timeout
+                Assert.True(sw.Elapsed < TimeSpan.FromSeconds(12),
                     $"The hook ran for {sw.Elapsed.TotalSeconds:F1}s with a configured total retry budget of " +
                     $"{parameters.MaxRetryDuration.TotalSeconds}s and a per-attempt timeout of {parameters.Timeout.TotalSeconds}s. " +
                     "The budget is only checked between attempts, so an in-flight attempt can overshoot it by a full timeout.");
             }
             finally
             {
-                TryDelete(scriptFile);
-                TryDelete(pidFile);
+                TryDelete(scriptFile, pidFile);
             }
         }
 
@@ -141,49 +192,6 @@ Start-Sleep -Seconds 300";
             }
 
             return -1;
-        }
-
-        private static async Task<bool> WaitForConditionAsync(Func<bool> condition, TimeSpan timeout)
-        {
-            var sw = Stopwatch.StartNew();
-            while (sw.Elapsed < timeout)
-            {
-                if (condition())
-                    return true;
-
-                await Task.Delay(200);
-            }
-
-            return condition();
-        }
-
-        private static bool IsAlive(int pid)
-        {
-            try
-            {
-                using Process process = Process.GetProcessById(pid);
-                return process.HasExited == false;
-            }
-            catch (ArgumentException)
-            {
-                return false;
-            }
-            catch (InvalidOperationException)
-            {
-                return false;
-            }
-        }
-
-        private static void TryDelete(string path)
-        {
-            try
-            {
-                if (File.Exists(path))
-                    File.Delete(path);
-            }
-            catch (IOException)
-            {
-            }
         }
     }
 }

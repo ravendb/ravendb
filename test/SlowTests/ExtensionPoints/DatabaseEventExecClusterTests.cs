@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
-using Sparrow.Platform;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using static SlowTests.ExtensionPoints.DatabaseEventExecTestHelper;
 
 namespace SlowTests.ExtensionPoints
 {
@@ -19,20 +19,18 @@ namespace SlowTests.ExtensionPoints
         {
         }
 
-        private static string EchoNameScript => PlatformDetails.RunningOnPosix
-            ? "#!/bin/bash\necho \"$3\" >> \"$1\"\nexit 0\n"
-            : @"
+        // bash passes the '--' sentinel through to the script, so the database name is $3; PowerShell's
+        // binder consumes it, so the name binds to the second parameter
+        private static string EchoNameScript => Script(
+            posix: "#!/bin/bash\necho \"$3\" >> \"$1\"\nexit 0\n",
+            windows: @"
 param([string]$outputPath, [string]$dbName)
 Add-Content $outputPath $dbName
-exit 0";
+exit 0");
 
         private static (string ScriptFile, string[] OutputFiles) NewTempPaths(int numberOfNodes)
         {
-            string scriptExtension = PlatformDetails.RunningOnPosix ? ".sh" : ".ps1";
-            return (Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), scriptExtension)),
-                Enumerable.Range(0, numberOfNodes)
-                    .Select(_ => Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".txt")))
-                    .ToArray());
+            return (NewScriptPath(), Enumerable.Range(0, numberOfNodes).Select(_ => NewOutputPath()).ToArray());
         }
 
         /// <summary>
@@ -51,37 +49,11 @@ exit 0";
                     [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "300"
                 };
 
-                if (PlatformDetails.RunningOnPosix)
-                {
-                    settings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExec)] = "bash";
-                    settings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExecArguments)] = $"{scriptFile} {outputFiles[i]}";
-                }
-                else
-                {
-                    settings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExec)] = "powershell";
-                    settings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExecArguments)] = $"-NoProfile {scriptFile} {outputFiles[i]}";
-                }
-
+                ConfigureHook(settings, scriptFile, outputFiles[i]);
                 customSettingsList.Add(settings);
             }
 
             return customSettingsList;
-        }
-
-        private static void CleanupTempPaths(string scriptFile, string[] outputFiles)
-        {
-            foreach (string path in new[] { scriptFile }.Concat(outputFiles))
-            {
-                try
-                {
-                    if (File.Exists(path))
-                        File.Delete(path);
-                }
-                catch (IOException)
-                {
-                    // a still running script may hold the file on Windows
-                }
-            }
         }
 
         [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Configuration)]
@@ -127,7 +99,7 @@ exit 0";
             }
             finally
             {
-                CleanupTempPaths(scriptFile, outputFiles);
+                TryDelete(outputFiles.Append(scriptFile).ToArray());
             }
         }
 
@@ -171,7 +143,7 @@ exit 0";
             }
             finally
             {
-                CleanupTempPaths(scriptFile, outputFiles);
+                TryDelete(outputFiles.Append(scriptFile).ToArray());
             }
         }
     }

@@ -198,6 +198,7 @@ namespace Raven.Server.Config.Categories
         /// </summary>
         [Description("EXPERT: The number of seconds to wait for a single execution of the 'Databases.OnDatabaseDelete.Exec' executable to exit. Default: 30 seconds")]
         [DefaultValue(30)]
+        [MinValue(1)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Databases.OnDatabaseDelete.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting OnDatabaseDeleteExecTimeout { get; set; }
@@ -210,6 +211,7 @@ namespace Raven.Server.Config.Categories
                      "including the delays between retries. A failing script is attempted up to 3 times; a failure that cannot resolve on " +
                      "retry, such as a missing executable, is attempted once. Default: 90 seconds")]
         [DefaultValue(90)]
+        [MinValue(1)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Databases.OnDatabaseDelete.Exec.MaxRetryDurationInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting OnDatabaseDeleteExecMaxRetryDuration { get; set; }

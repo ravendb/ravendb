@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Utils;
@@ -82,9 +83,9 @@ namespace Raven.Server.Utils
             // Never put 'args' in a log line or an exception message. The user supplied part comes from
             // a secured configuration entry and may carry credentials, and the server log is readable by
             // an Operator while the settings endpoint redacts that value even for a cluster admin.
-            int userArgsCount = userArgs.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
             string commandDescription =
-                $"'{parameters.Executable}' with {userArgsCount} configured argument(s), for the {deletionKind} deletion of database '{parameters.DatabaseName}' (raft index {parameters.RaftIndex})";
+                $"'{parameters.Executable}'{(string.IsNullOrEmpty(userArgs) ? string.Empty : " with its configured arguments")}, " +
+                $"for the {deletionKind} deletion of database '{parameters.DatabaseName}' (raft index {parameters.RaftIndex})";
 
             Stopwatch totalDuration = Stopwatch.StartNew();
 
@@ -98,6 +99,8 @@ namespace Raven.Server.Utils
                 TimeSpan attemptTimeout = parameters.Timeout;
                 TimeSpan budgetLeft = parameters.MaxRetryDuration - totalDuration.Elapsed;
 
+                // the gate in the catch below leaves a positive budget for the next attempt, but the
+                // backoff delay can overshoot it - and with no budget left the cap below would not apply
                 if (budgetLeft <= TimeSpan.Zero && attempt > 1)
                 {
                     throw new InvalidOperationException(
@@ -190,7 +193,6 @@ namespace Raven.Server.Utils
                     Task<string> readStdOut = process.StandardOutput.ReadToEndAsync(token);
                     Task<string> readStdErr = process.StandardError.ReadToEndAsync(token);
 
-                    bool timedOut = false;
                     try
                     {
                         await process.WaitForExitAsync(attemptToken).ConfigureAwait(false);
@@ -202,30 +204,23 @@ namespace Raven.Server.Utils
                         // the output block forever. On shutdown it matters even more: Process.Dispose()
                         // closes handles but never terminates the process, so the tree would be
                         // reparented and outlive the server it was spawned by.
-                        KillProcessTree(process);
+                        KillProcessTree(process, parameters.Logger);
 
                         if (token.IsCancellationRequested)
                         {
-                            ObserveFailure(readStdOut);
-                            ObserveFailure(readStdErr);
+                            _ = readStdOut.IgnoreUnobservedExceptions();
+                            _ = readStdErr.IgnoreUnobservedExceptions();
                             throw;
                         }
 
-                        timedOut = true;
-                    }
-
-                    if (timedOut)
-                    {
-                        string timedOutStdOut = await ReadWithBudgetAsync(readStdOut).ConfigureAwait(false);
-                        string timedOutStdErr = await ReadWithBudgetAsync(readStdErr).ConfigureAwait(false);
+                        (string timedOutStdOut, string timedOutStdErr) = await ReadOutputsWithBudgetAsync(readStdOut, readStdErr).ConfigureAwait(false);
 
                         throw new InvalidOperationException(
                             $"Unable to execute {commandDescription}, waited for {(int)attemptTimeout.TotalMilliseconds} ms but the process didn't exit. " +
                             $"Output: {timedOutStdOut}{Environment.NewLine}Errors: {timedOutStdErr}");
                     }
 
-                    string output = await ReadWithBudgetAsync(readStdOut).ConfigureAwait(false);
-                    string errors = await ReadWithBudgetAsync(readStdErr).ConfigureAwait(false);
+                    (string output, string errors) = await ReadOutputsWithBudgetAsync(readStdOut, readStdErr).ConfigureAwait(false);
 
                     // Can have exit code 0 (success) but still get errors. We log the errors anyway.
                     // Note that this writes the script's own output to the log, so a script that echoes
@@ -260,12 +255,19 @@ namespace Raven.Server.Utils
             return TimeSpan.FromMilliseconds(Random.Shared.NextDouble() * cappedMs);
         }
 
+        private static async Task<(string Output, string Errors)> ReadOutputsWithBudgetAsync(Task<string> readStdOut, Task<string> readStdErr)
+        {
+            // both drains share one budget instead of running their clocks back to back
+            string[] results = await Task.WhenAll(ReadWithBudgetAsync(readStdOut), ReadWithBudgetAsync(readStdErr)).ConfigureAwait(false);
+            return (results[0], results[1]);
+        }
+
         private static async Task<string> ReadWithBudgetAsync(Task<string> read)
         {
-            Task completed = await Task.WhenAny(read, Task.Delay(ReadDrainBudget)).ConfigureAwait(false);
-            if (completed != read)
+            if (await read.WaitWithTimeout(ReadDrainBudget).ConfigureAwait(false) == false)
             {
-                ObserveFailure(read);
+                // make sure an abandoned read failing later does not surface as an unobserved task exception
+                _ = read.IgnoreUnobservedExceptions();
                 return OutputNotAvailable;
             }
 
@@ -279,22 +281,18 @@ namespace Raven.Server.Utils
             }
         }
 
-        private static void ObserveFailure(Task task)
-        {
-            // make sure an abandoned read failing later does not surface as an unobserved task exception
-            _ = task.ContinueWith(static t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
-        }
-
-        private static void KillProcessTree(Process process)
+        private static void KillProcessTree(Process process, Logger logger)
         {
             try
             {
                 process.Kill(entireProcessTree: true);
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                // the process may have exited in the meantime, or the tree may not be walkable
-                ProcessExtensions.TryKill(process);
+                // the tree kill is a no-op once the process has exited and terminates the root before
+                // walking its children, so a plain Kill() of the root could not do better than this
+                if (logger.IsInfoEnabled)
+                    logger.Info("Failed to kill the process tree of the database event hook.", e);
             }
         }
 
