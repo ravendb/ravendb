@@ -25,7 +25,7 @@ import { createDraftSlug, toSlug } from "@/pages/setup/add-app-wizard/slugify";
 import { discoverTables } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
 import { computeConnectKey } from "@/pages/setup/add-app-wizard/steps/connect/use-connect-source-step";
 import { toWizardStepError } from "@/components/form/wizard/wizard-step-error";
-import { IMPORTED_MAP_ORIGIN, useAdoptMapTables } from "@/pages/setup/add-app-wizard/steps/map/use-adopt-map-tables";
+import { useAdoptMapTables } from "@/pages/setup/add-app-wizard/steps/map/use-adopt-map-tables";
 
 const IMPORT_PHASES = {
     reading: "Reading the configuration...",
@@ -57,6 +57,10 @@ function resolveImportSlug(connection: AppFormData["externalConnection"]): { slu
 export function useImportConfig() {
     const { setValue, getValues } = useFormContext<AppFormData>();
     const adoptTables = useAdoptMapTables();
+    const setDiscoverResult = useSetupWizardStore((state) => state.setDiscoverResult);
+    const setConnectionAttempt = useSetupWizardStore((state) => state.setConnectionAttempt);
+    const setConnectKey = useSetupWizardStore((state) => state.setConnectKey);
+    const setInitialSelectedTables = useSetupWizardStore((state) => state.setInitialSelectedTables);
     const [progressLabel, setProgressLabel] = useState<string>(IMPORT_PHASES.reading);
 
     const importMutation = useMutation<ImportResult, Error, File>({
@@ -91,9 +95,7 @@ export function useImportConfig() {
                 : toWizardStepError(connectResult.errors, "Connection failed.");
 
             // The server now holds the imported source, also when the import goes no further.
-            useSetupWizardStore
-                .getState()
-                .setConnectionAttempt({ key: computeConnectKey(connection), error: connectError });
+            setConnectionAttempt({ key: computeConnectKey(connection), error: connectError });
 
             if (connectError) {
                 throw connectError;
@@ -157,18 +159,16 @@ export function useImportConfig() {
                 setValue("externalConnection.slug", slug, { shouldValidate: true });
             }
             setValue("verifySchema.tables", verifySchemaTables);
-            adoptTables(formTables, { source: "manual", key: IMPORTED_MAP_ORIGIN });
+            adoptTables(formTables, { source: "import" });
             setValue("preview.table", getTableLabel(formTables[0]));
-
-            const store = useSetupWizardStore.getState();
-            store.setDiscoverResult(discoverResult, schemas);
+            setDiscoverResult(discoverResult, schemas);
 
             const connection = getValues("externalConnection");
             const connectKey = computeConnectKey(connection);
 
-            store.setConnectKey(connectKey);
-            store.setConnectionAttempt({ key: connectKey, error: null });
-            store.setInitialSelectedTables(verifySchemaTables);
+            setConnectKey(connectKey);
+            setConnectionAttempt({ key: connectKey, error: null });
+            setInitialSelectedTables(verifySchemaTables);
         },
     });
 

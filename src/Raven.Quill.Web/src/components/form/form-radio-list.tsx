@@ -43,11 +43,10 @@ export function FormRadioList<TFieldValues extends FieldValues>({
     className,
     "aria-labelledby": labelledBy,
 }: FormRadioListProps<TFieldValues>) {
-    // The write-in is valid or not depending on the pick, so picking revalidates it too.
     const {
         field: { onChange, value },
         fieldState: { error, invalid },
-    } = useController({ control, name, rules: other ? { deps: [other.name] } : undefined });
+    } = useController({ control, name });
 
     return (
         <RadioGroup
@@ -90,8 +89,10 @@ function OtherOption<TFieldValues extends FieldValues>({
 }) {
     const {
         field: { onBlur, onChange, ref, value },
-        fieldState: { error, invalid },
+        fieldState: { error },
     } = useController({ control, name: other.name });
+    // An error can be left over from an earlier attempt to move on; it only counts while the write-in is the pick.
+    const pickedError = isSelected ? error : undefined;
 
     return (
         <>
@@ -101,7 +102,7 @@ function OtherOption<TFieldValues extends FieldValues>({
                     ref={ref}
                     value={value}
                     aria-label={other.label}
-                    aria-invalid={invalid}
+                    aria-invalid={pickedError !== undefined}
                     placeholder={other.placeholder}
                     className="h-auto rounded-none border-0 bg-transparent p-0 focus-visible:ring-0 aria-invalid:ring-0 dark:bg-transparent"
                     onBlur={onBlur}
@@ -112,7 +113,9 @@ function OtherOption<TFieldValues extends FieldValues>({
                 />
                 {other.hint}
             </div>
-            {error?.message && <FieldDescription className="text-destructive">{error.message}</FieldDescription>}
+            {pickedError?.message && (
+                <FieldDescription className="text-destructive">{pickedError.message}</FieldDescription>
+            )}
         </>
     );
 }

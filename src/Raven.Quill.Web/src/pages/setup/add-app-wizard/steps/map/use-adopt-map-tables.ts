@@ -3,19 +3,15 @@ import { tablesSchema, type AppFormData } from "@/pages/setup/add-app-wizard/app
 import { useApplyMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-apply-map-tables";
 import type { MapOrigin } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
 
-export const MANUAL_MAP_ORIGIN = "manual";
-
-export const IMPORTED_MAP_ORIGIN = "import";
-
 export function useAdoptMapTables() {
     const applyMapTables = useApplyMapTables();
+    const setMapOrigin = useSetupWizardStore((state) => state.setMapOrigin);
+    const resetMapTablesUiState = useSetupWizardStore((state) => state.resetMapTablesUiState);
 
     return (tables: AppFormData["mapTables"]["tables"], origin: MapOrigin) => {
-        const store = useSetupWizardStore.getState();
-
         applyMapTables(tables);
-        store.setMapOrigin(origin);
-        store.resetMapTablesUiState();
+        setMapOrigin(origin);
+        resetMapTablesUiState();
     };
 }
 

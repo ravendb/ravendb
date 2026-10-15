@@ -1,11 +1,11 @@
-export type MapSource = "planner" | "manual";
+export type MapOrigin = { source: "planner"; planKey: string } | { source: "manual" } | { source: "import" };
 
-/** `key` tells apart what produced the mapping: a plan, the manual scaffold, or an imported file. */
-export type MapOrigin = { source: MapSource; key: string };
+type MapSource = MapOrigin["source"];
 
 type MapSourceOption = { value: MapSource; label: string };
 
 export const MAP_SOURCE_OPTIONS: MapSourceOption[] = [
     { value: "planner", label: "Planner" },
     { value: "manual", label: "Manual" },
+    { value: "import", label: "Imported" },
 ];

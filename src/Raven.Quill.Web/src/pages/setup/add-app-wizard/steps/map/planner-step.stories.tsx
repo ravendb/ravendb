@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { assistantMocks } from "@/mocks/assistant-mocks";
-import { defaultApiMocks } from "@/mocks/default-mocks";
+import { consentHandlers, defaultApiMocks, discoverHandlers } from "@/mocks/default-mocks";
 import {
     LARGE_PLAN_CONVERSATION_ID,
     largePlanBuildFrames,
@@ -21,19 +21,15 @@ import {
 } from "@/mocks/migration-mocks";
 import { setupMocks } from "@/mocks/setup-mocks";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
-import {
-    consentHandlers,
-    replayPlannerTurns,
-    type PlannerScriptTurn,
-} from "@/pages/setup/add-app-wizard/app-wizard-story-fixtures";
-import { AppWizardAtStep } from "@/pages/setup/add-app-wizard/app-wizard-story-harness";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import { AppWizardAtStep } from "@/pages/setup/add-app-wizard/stories/app-wizard-at-step";
+import { replayPlannerTurns, type PlannerScriptTurn } from "@/pages/setup/add-app-wizard/stories/app-wizard-fixtures";
 
 const meta = {
-    title: "Setup/Plan Document Model",
+    title: "Setup/Add App Wizard/Plan Document Model",
     parameters: {
         page: { bare: true },
-        msw: { handlers: { setup: [setupMocks.discover(plannerDiscovery), ...defaultApiMocks.setup] } },
+        msw: { handlers: discoverHandlers(plannerDiscovery) },
     },
 } satisfies Meta;
 
@@ -363,6 +359,31 @@ export const TabPastCustomAnswer: Story = {
 
         await userEvent.keyboard("Embed the product");
         expect(canvas.getByRole("radio", { name: "Something else" })).toBeChecked();
+    },
+};
+
+// Picking "Something else" asks for nothing yet; moving on with it still empty is what does.
+export const EmptyCustomAnswer: Story = {
+    tags: ["!dev"],
+    render: () => <PlannerAtStep seedStore={replay(OPENING)} />,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const customAnswer = canvas.getByRole("textbox", { name: "Something else" });
+        const error = "Pick an answer, or write your own.";
+
+        await userEvent.click(canvas.getByRole("radio", { name: "Something else" }));
+        expect(canvas.queryByText(error)).not.toBeInTheDocument();
+
+        await userEvent.click(canvas.getByRole("button", { name: "Next" }));
+        await waitFor(() => expect(canvas.getByText(error)).toBeInTheDocument());
+        expect(customAnswer).toHaveFocus();
+        expect(canvas.getByText("1 of 3")).toBeInTheDocument();
+
+        await userEvent.type(customAnswer, "Embed the product");
+        await waitFor(() => expect(canvas.queryByText(error)).not.toBeInTheDocument());
+
+        await userEvent.click(canvas.getByRole("button", { name: "Next" }));
+        await waitFor(() => expect(canvas.getByText("2 of 3")).toBeInTheDocument());
     },
 };
 

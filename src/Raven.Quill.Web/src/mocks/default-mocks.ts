@@ -1,4 +1,5 @@
 import type { RequestHandler } from "msw";
+import type { AiHelperStatus, DiscoverResponse } from "@/api/generated/server-api";
 import { agentsMocks } from "./agents-mocks";
 import { aiConnectionStringsMocks } from "./ai-connection-strings-mocks";
 import { aiModelsMocks } from "./ai-models-mocks";
@@ -106,4 +107,14 @@ declare module "storybook/internal/csf" {
             handlers: MockHandlers;
         };
     }
+}
+
+// Each override goes first because MSW answers with the first matching handler; the rest of the
+// service keeps its defaults.
+export function discoverHandlers(discovery: DiscoverResponse): MockHandlers {
+    return { setup: [setupMocks.discover(discovery), ...defaultApiMocks.setup] };
+}
+
+export function consentHandlers(status: AiHelperStatus): MockHandlers {
+    return { assistant: [assistantMocks.consent({ status }), ...defaultApiMocks.assistant] };
 }

@@ -24,27 +24,25 @@ export type AiConsentCopy = {
     dialogDescription: ReactNode;
 };
 
-/** The words of a hero gate, which asks for consent in place rather than in a dialog. */
 export type AiConsentHeroCopy = {
     title: ReactNode;
     description: ReactNode;
     acceptLabel: ReactNode;
 };
 
-/** "panel" fills a surface with nothing else to show; "banner" sits above options that stay on screen, disabled. */
-export type AiConsentGateVariant = "panel" | "banner";
+type AiConsentGateVariant = "panel" | "banner" | "hero";
+
+type AiConsentGateHeroProps = {
+    variant: Extract<AiConsentGateVariant, "hero">;
+    copy: AiConsentHeroCopy;
+    figure?: ReactNode;
+    onGranted?: () => void;
+};
 
 type AiConsentGateProps =
-    | { variant?: AiConsentGateVariant; copy: AiConsentCopy }
-    | {
-          /** Introduces an AI feature on its own surface, with a picture of it, and asks for consent in place. */
-          variant: "hero";
-          copy: AiConsentHeroCopy;
-          figure?: ReactNode;
-          onGranted?: () => void;
-      };
+    | { variant?: Exclude<AiConsentGateVariant, "hero">; copy: AiConsentCopy }
+    | AiConsentGateHeroProps;
 
-/** Stands in for an AI-backed surface until the AI service can actually answer it. */
 export function AiConsentGate(props: AiConsentGateProps) {
     if (props.variant === "hero") {
         return <AiConsentHero copy={props.copy} figure={props.figure} onGranted={props.onGranted} />;
@@ -57,7 +55,6 @@ function AiConsentNotice({ copy, variant }: { copy: AiConsentCopy; variant: AiCo
     const consent = useAiConsent();
 
     if (consent.isPending) {
-        // A banner sits above options that stay readable, so it waits instead of flashing a spinner over them.
         return variant === "banner" ? null : (
             <AiConsentLayout variant={variant} icon={<Spinner />} message="Checking consent…" />
         );
@@ -101,7 +98,6 @@ function AiConsentLayout({ variant, tone = "default", icon, message, action }: A
 
     return (
         <div
-            // Only the failure is an alert; a Terms of Use nobody has been asked for yet is not one.
             role={isError ? "alert" : undefined}
             className={cn(
                 "flex gap-3",
@@ -131,15 +127,7 @@ function AiConsentLayout({ variant, tone = "default", icon, message, action }: A
     );
 }
 
-function AiConsentHero({
-    copy,
-    figure,
-    onGranted,
-}: {
-    copy: AiConsentHeroCopy;
-    figure?: ReactNode;
-    onGranted?: () => void;
-}) {
+function AiConsentHero({ copy, figure, onGranted }: Omit<AiConsentGateHeroProps, "variant">) {
     const consent = useAiConsent();
     const acceptance = useConsentAcceptance(onGranted);
 
@@ -244,7 +232,6 @@ function AiConsentDialogBody({ copy, onGranted }: { copy: AiConsentCopy; onGrant
     );
 }
 
-/** The accept flow every consent prompt shares: the box to tick, the grant it unlocks, and its failure. */
 function useConsentAcceptance(onGranted?: () => void) {
     const [isAccepted, setIsAccepted] = useState(false);
     const consentMutation = useGrantAiConsent();

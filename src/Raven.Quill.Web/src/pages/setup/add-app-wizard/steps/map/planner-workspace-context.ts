@@ -1,7 +1,7 @@
 import { createContext, useContext, type RefObject } from "react";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
-import { selectPlannerPhase, type PlannerPhase } from "@/pages/setup/add-app-wizard/steps/map/planner-state";
-import { useIsRemovingPlannerCollection } from "@/pages/setup/add-app-wizard/steps/map/use-remove-planner-collection";
+import { selectPlannerPhase, type PlannerPhase } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
+import { useIsRemovingPlannerCollection } from "@/pages/setup/add-app-wizard/steps/map/session/use-remove-planner-collection";
 
 type PlannerWorkspaceValue = {
     composerRef: RefObject<HTMLTextAreaElement | null>;
