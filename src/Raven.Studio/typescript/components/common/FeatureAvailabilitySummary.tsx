@@ -16,6 +16,7 @@ import Tooltip from "react-bootstrap/Tooltip";
 import PopoverWithHoverWrapper from "./PopoverWithHoverWrapper";
 import useBoolean from "components/hooks/useBoolean";
 import Modal from "components/common/Modal";
+import useUniqueId from "components/hooks/useUniqueId";
 
 const ravendbLogo = require("Content/img/ravendb_logo.svg");
 
@@ -65,6 +66,8 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
     );
     const getFootnoteNumber = (footnote: FeatureAvailabilityFootnote) =>
         footnotes.findIndex((x) => isEqual(x, footnote)) + 1;
+    const footnoteIdPrefix = useUniqueId("feature-availability-footnote-");
+    const getFootnoteId = (number: number) => `${footnoteIdPrefix}-${number}`;
 
     return (
         <>
@@ -153,6 +156,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                 </th>
                                 {columns.map((column) => {
                                     const valueData = column.getValue(data);
+                                    const footnoteNumber = valueData.footnote && getFootnoteNumber(valueData.footnote);
 
                                     return (
                                         <td
@@ -160,13 +164,14 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                             className={classNames(column.className, { current: column.isCurrent })}
                                         >
                                             {valueData.footnote ? (
-                                                <span className="position-relative d-inline-block">
+                                                <div className="position-relative d-inline-block">
                                                     {formatAvailabilityValue(valueData, column.canBeEnabledInCloud)}
                                                     <FootnoteMark
                                                         footnote={valueData.footnote}
-                                                        number={getFootnoteNumber(valueData.footnote)}
+                                                        number={footnoteNumber}
+                                                        descriptionId={getFootnoteId(footnoteNumber)}
                                                     />
-                                                </span>
+                                                </div>
                                             ) : (
                                                 formatAvailabilityValue(valueData, column.canBeEnabledInCloud)
                                             )}
@@ -202,7 +207,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                     {footnotes.map((footnote, idx) => (
                         <div key={idx} className="hstack gap-1 align-items-baseline">
                             <span className="small-label text-info">{idx + 1}</span>
-                            <span className="text-muted">
+                            <span id={getFootnoteId(idx + 1)} className="text-muted">
                                 {footnote.title}: {footnote.items.map((x) => x.label).join(", ")}
                             </span>
                         </div>
@@ -289,9 +294,10 @@ function getAvailabilityColumns(
 interface FootnoteMarkProps {
     footnote: FeatureAvailabilityFootnote;
     number: number;
+    descriptionId: string;
 }
 
-function FootnoteMark({ footnote, number }: FootnoteMarkProps) {
+function FootnoteMark({ footnote, number, descriptionId }: FootnoteMarkProps) {
     return (
         <PopoverWithHoverWrapper
             placement="top"
@@ -313,7 +319,9 @@ function FootnoteMark({ footnote, number }: FootnoteMarkProps) {
                 </div>
             }
         >
-            <span className="small-label text-info">{number}</span>
+            <sup className="small-label text-info" tabIndex={0} aria-describedby={descriptionId}>
+                {number}
+            </sup>
         </PopoverWithHoverWrapper>
     );
 }
