@@ -24,10 +24,20 @@ export interface DurationPickerProps {
         seconds?: string;
     };
     isFlexGrow?: boolean;
+    "aria-labelledby"?: string;
 }
 
 export default function DurationPicker(props: DurationPickerProps) {
-    const { totalSeconds, onChange, showDays, placeholder, showSeconds, disabled, isFlexGrow } = props;
+    const {
+        totalSeconds,
+        onChange,
+        showDays,
+        placeholder,
+        showSeconds,
+        disabled,
+        isFlexGrow,
+        "aria-labelledby": ariaLabelledBy,
+    } = props;
 
     const initialValues = getInitialValues(totalSeconds, showDays);
 
@@ -74,7 +84,11 @@ export default function DurationPicker(props: DurationPickerProps) {
     };
 
     return (
-        <div className={classNames("d-flex gap-1", { "flex-grow-1": isFlexGrow })}>
+        <div
+            role="group"
+            aria-labelledby={ariaLabelledBy}
+            className={classNames("d-flex gap-1", { "flex-grow-1": isFlexGrow })}
+        >
             {showDays && (
                 <FormGroup controlId="days" className={classNames({ "flex-grow-1": isFlexGrow })}>
                     <InputGroup>
@@ -85,6 +99,7 @@ export default function DurationPicker(props: DurationPickerProps) {
                             placeholder={placeholder?.days}
                             onChange={(e: ChangeEvent<HTMLInputElement>) => setDays(getInputValue(e))}
                             disabled={disabled}
+                            aria-label="Days"
                         />
                         <InputGroup.Text>Days</InputGroup.Text>
                     </InputGroup>
@@ -99,6 +114,7 @@ export default function DurationPicker(props: DurationPickerProps) {
                         placeholder={placeholder?.hours}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setHours(getInputValue(e))}
                         disabled={disabled}
+                        aria-label="Hours"
                     />
                     <InputGroup.Text>Hours</InputGroup.Text>
                 </InputGroup>
@@ -112,6 +128,7 @@ export default function DurationPicker(props: DurationPickerProps) {
                         placeholder={placeholder?.minutes}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setMinutes(getInputValue(e))}
                         disabled={disabled}
+                        aria-label="Minutes"
                     />
                     <InputGroup.Text>Minutes</InputGroup.Text>
                 </InputGroup>
@@ -126,6 +143,7 @@ export default function DurationPicker(props: DurationPickerProps) {
                             placeholder={placeholder?.seconds}
                             onChange={(e: ChangeEvent<HTMLInputElement>) => setSeconds(getInputValue(e))}
                             disabled={disabled}
+                            aria-label="Seconds"
                         />
                         <InputGroup.Text>Seconds</InputGroup.Text>
                     </InputGroup>

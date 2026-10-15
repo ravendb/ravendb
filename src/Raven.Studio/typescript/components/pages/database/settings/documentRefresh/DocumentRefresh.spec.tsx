@@ -6,6 +6,10 @@ import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 const { DefaultDocumentRefresh, LicenseRestricted, InitialDocumentRefresh } = composeStories(stories);
 
+const licenseLimitWarning = "Your current license does not allow a refresh frequency below 36 hours (129600 seconds).";
+// LicenseStubs limits the minimum period to 36 hours
+const licenseMinimumRefreshFrequency = 129600;
+
 describe("DocumentRefresh", () => {
     it("can render", async () => {
         const { screen } = rtlRender(<DefaultDocumentRefresh />);
@@ -56,9 +60,43 @@ describe("DocumentRefresh", () => {
         expect(customRefreshFrequency).toBeEnabled();
         expect(customRefreshFrequency).toHaveValue(DatabasesStubs.refreshConfiguration().RefreshFrequencyInSec);
 
-        const isAlertVisible = screen.getByText(
-            "Your current license does not allow a frequency higher than 36 hours (129600 seconds)"
-        );
-        expect(isAlertVisible).toBeInTheDocument();
+        expect(screen.getByText(licenseLimitWarning)).toBeInTheDocument();
+    });
+
+    it("shows the server default refresh frequency", async () => {
+        const { screen } = rtlRender(<LicenseRestricted />);
+
+        await screen.findByName("refreshFrequency");
+
+        expect(screen.getByName("refreshFrequency")).toHaveAttribute("placeholder", "Default (60)");
+    });
+
+    it("turns refresh frequency on when the license enforces a minimum period", async () => {
+        const { screen, fireClick } = rtlRender(<LicenseRestricted />);
+
+        const documentRefreshSwitch = await screen.findByRole("checkbox", { name: "Enable Document Refresh" });
+
+        await fireClick(documentRefreshSwitch);
+        expect(screen.getByRole("checkbox", { name: "Override Refresh frequency" })).not.toBeChecked();
+
+        await fireClick(documentRefreshSwitch);
+        expect(screen.getByRole("checkbox", { name: "Override Refresh frequency" })).toBeChecked();
+        expect(screen.getByName("refreshFrequency")).toHaveValue(licenseMinimumRefreshFrequency);
+        expect(screen.queryByText(licenseLimitWarning)).not.toBeInTheDocument();
+    });
+
+    it("blocks saving when the frequency falls back to the server default on a limited license", async () => {
+        const { screen, fireClick, user } = rtlRender(<LicenseRestricted />);
+
+        await fireClick(await screen.findByRole("checkbox", { name: "Override Refresh frequency" }));
+
+        expect(screen.getByRole("checkbox", { name: "Override Refresh frequency" })).not.toBeChecked();
+        expect(screen.getByText(licenseLimitWarning)).toBeInTheDocument();
+
+        const saveButton = screen.getByRole("button", { name: "Save" });
+        expect(saveButton).toBeDisabled();
+
+        await user.hover(saveButton);
+        expect(await screen.findByRole("tooltip")).toHaveTextContent(licenseLimitWarning);
     });
 });

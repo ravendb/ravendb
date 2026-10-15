@@ -31,8 +31,10 @@ import moment from "moment";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import RichAlert from "components/common/RichAlert";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 const defaultItemsToProcess = 65536;
+const defaultRefreshFrequencyInSec = 60;
 
 export default function DocumentRefresh() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -64,12 +66,20 @@ export default function DocumentRefresh() {
         ],
     });
 
-    const refreshFrequencyInHours = moment.duration(formValues.refreshFrequency, "seconds").asHours();
+    const licenseMinRefreshFrequencyInSec = moment.duration(minPeriodForRefreshInHours, "hours").asSeconds();
+
+    const effectiveRefreshFrequencyInSec = formValues.isRefreshFrequencyEnabled
+        ? formValues.refreshFrequency
+        : defaultRefreshFrequencyInSec;
+
+    const refreshFrequencyInHours = moment.duration(effectiveRefreshFrequencyInSec, "seconds").asHours();
 
     const isLimitWarningVisible =
         minPeriodForRefreshInHours > 0 &&
-        formValues.isRefreshFrequencyEnabled &&
+        formValues.isDocumentRefreshEnabled &&
         refreshFrequencyInHours < minPeriodForRefreshInHours;
+
+    const licenseLimitMessage = `Your current license does not allow a refresh frequency below ${minPeriodForRefreshInHours} hours (${licenseMinRefreshFrequencyInSec} seconds).`;
 
     useEffect(() => {
         const { unsubscribe } = watch((values, { name }) => {
@@ -77,6 +87,10 @@ export default function DocumentRefresh() {
                 case "isDocumentRefreshEnabled": {
                     if (values.isDocumentRefreshEnabled) {
                         setValue("isLimitMaxItemsToProcessEnabled", true, { shouldValidate: true });
+
+                        if (minPeriodForRefreshInHours > 0) {
+                            setValue("isRefreshFrequencyEnabled", true, { shouldValidate: true });
+                        }
                     } else {
                         setValue("isLimitMaxItemsToProcessEnabled", false, { shouldValidate: true });
                         setValue("isRefreshFrequencyEnabled", false, { shouldValidate: true });
@@ -92,7 +106,11 @@ export default function DocumentRefresh() {
                     break;
                 }
                 case "isRefreshFrequencyEnabled": {
-                    if (!values.isRefreshFrequencyEnabled) {
+                    if (values.isRefreshFrequencyEnabled) {
+                        if (values.refreshFrequency == null && minPeriodForRefreshInHours > 0) {
+                            setValue("refreshFrequency", licenseMinRefreshFrequencyInSec, { shouldValidate: true });
+                        }
+                    } else {
                         setValue("refreshFrequency", null, { shouldValidate: true });
                     }
                     break;
@@ -100,7 +118,7 @@ export default function DocumentRefresh() {
             }
         });
         return () => unsubscribe();
-    }, [setValue, watch]);
+    }, [licenseMinRefreshFrequencyInSec, minPeriodForRefreshInHours, setValue, watch]);
 
     const onSave: SubmitHandler<DocumentRefreshFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -134,16 +152,20 @@ export default function DocumentRefresh() {
                     <Col>
                         <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
                             <AboutViewHeading title="Document Refresh" icon="expos-refresh" />
-                            <ButtonWithSpinner
-                                type="submit"
-                                variant="primary"
-                                className="mb-3"
-                                icon="save"
-                                disabled={!formState.isDirty || isLimitWarningVisible}
-                                isSpinning={formState.isSubmitting}
+                            <ConditionalPopover
+                                conditions={{ isActive: isLimitWarningVisible, message: licenseLimitMessage }}
                             >
-                                Save
-                            </ButtonWithSpinner>
+                                <ButtonWithSpinner
+                                    type="submit"
+                                    variant="primary"
+                                    className="mb-3"
+                                    icon="save"
+                                    disabled={!formState.isDirty || isLimitWarningVisible}
+                                    isSpinning={formState.isSubmitting}
+                                >
+                                    Save
+                                </ButtonWithSpinner>
+                            </ConditionalPopover>
                             <Col>
                                 <Card>
                                     <Card.Body>
@@ -170,25 +192,14 @@ export default function DocumentRefresh() {
                                                             control={control}
                                                             type="number"
                                                             disabled={isDisabled}
-                                                            placeholder={
-                                                                minPeriodForRefreshInHours > 0
-                                                                    ? `Default (${moment
-                                                                          .duration(minPeriodForRefreshInHours, "hours")
-                                                                          .asSeconds()})`
-                                                                    : "Default (60)"
-                                                            }
+                                                            placeholder={`Default (${defaultRefreshFrequencyInSec})`}
                                                             addon="seconds"
                                                         />
                                                     )}
                                                 </OverridableField>
                                                 {isLimitWarningVisible && (
                                                     <RichAlert variant="warning" className="mt-3">
-                                                        Your current license does not allow a frequency higher than{" "}
-                                                        {minPeriodForRefreshInHours} hours (
-                                                        {moment
-                                                            .duration(minPeriodForRefreshInHours, "hours")
-                                                            .asSeconds()}{" "}
-                                                        seconds)
+                                                        {licenseLimitMessage}
                                                     </RichAlert>
                                                 )}
                                             </div>
