@@ -17,6 +17,7 @@ export interface OverridableFieldRenderState {
     isOverridden: boolean;
     isDisabled: boolean;
     controlId: string;
+    labelId: string;
 }
 
 interface OverridableFieldProps<
@@ -60,7 +61,7 @@ export default function OverridableField<
             </FieldLabel>
             <div className="d-flex flex-wrap align-items-start gap-2">
                 <div className="overridable-field-control">
-                    {children({ isOverridden, isDisabled: disabled || !isOverridden, controlId })}
+                    {children({ isOverridden, isDisabled: disabled || !isOverridden, controlId, labelId })}
                 </div>
                 <div className="overridable-field-switch">
                     <FormSwitch

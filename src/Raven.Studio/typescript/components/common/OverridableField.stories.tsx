@@ -3,8 +3,10 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
+import Button from "react-bootstrap/Button";
+import Form from "react-bootstrap/Form";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
-import { FormInput, FormSelect } from "components/common/Form";
+import { FormDurationPicker, FormInput, FormSelect } from "components/common/Form";
 import OverridableField from "components/common/OverridableField";
 import { SelectOption } from "components/common/select/Select";
 
@@ -28,6 +30,10 @@ const schema = yup.object({
     invalidValue: yup.number().nullable().min(1, "Value must be at least 1"),
     isNarrowOverridden: yup.boolean(),
     narrowValue: yup.number().nullable(),
+    isResetOverridden: yup.boolean(),
+    resetValue: yup.number().nullable(),
+    isDurationOverridden: yup.boolean(),
+    durationValue: yup.number().nullable(),
 });
 
 type FormData = yup.InferType<typeof schema>;
@@ -37,8 +43,8 @@ const defaultValues: FormData = {
     offValue: null,
     isOnOverridden: true,
     onValue: 30,
-    isDisabledOverridden: false,
-    disabledValue: null,
+    isDisabledOverridden: true,
+    disabledValue: 30,
     isSelectOverridden: false,
     selectValue: null,
     isAddonOverridden: true,
@@ -47,6 +53,10 @@ const defaultValues: FormData = {
     invalidValue: 0,
     isNarrowOverridden: false,
     narrowValue: null,
+    isResetOverridden: true,
+    resetValue: 45,
+    isDurationOverridden: true,
+    durationValue: 3600,
 };
 
 const selectOptions: SelectOption[] = [
@@ -56,7 +66,7 @@ const selectOptions: SelectOption[] = [
 ];
 
 export function States() {
-    const { control, trigger } = useForm<FormData>({
+    const { control, trigger, setValue } = useForm<FormData>({
         mode: "all",
         defaultValues,
         resolver: yupResolver(schema),
@@ -142,6 +152,34 @@ export function States() {
                     />
                 )}
             </OverridableField>
+            <OverridableField
+                control={control}
+                overrideName="isResetOverridden"
+                label="Reset on disable"
+                resetOnDisable={{ setValue, valueName: "resetValue" }}
+            >
+                {({ isDisabled }) => (
+                    <FormInput
+                        type="number"
+                        control={control}
+                        name="resetValue"
+                        placeholder="Default (30)"
+                        disabled={isDisabled}
+                    />
+                )}
+            </OverridableField>
+            <OverridableField control={control} overrideName="isDurationOverridden" label="Duration">
+                {({ isDisabled, labelId }) => (
+                    <FormDurationPicker
+                        control={control}
+                        name="durationValue"
+                        disabled={isDisabled}
+                        aria-labelledby={labelId}
+                        placeholder={{ hours: "Default (0)", minutes: "Default (1)", seconds: "Default (0)" }}
+                        showSeconds
+                    />
+                )}
+            </OverridableField>
             <div style={{ width: 240 }}>
                 <OverridableField control={control} overrideName="isNarrowOverridden" label="Narrow container (240px)">
                     {({ isDisabled }) => (
@@ -157,5 +195,32 @@ export function States() {
                 </OverridableField>
             </div>
         </div>
+    );
+}
+
+export function Submitting() {
+    const { control, handleSubmit } = useForm<FormData>({ defaultValues });
+
+    return (
+        <Form
+            onSubmit={handleSubmit(() => new Promise<void>(() => {}))}
+            className="vstack gap-3"
+            style={{ maxWidth: 480 }}
+        >
+            <OverridableField control={control} overrideName="isOnOverridden" label="Override on">
+                {({ isDisabled }) => (
+                    <FormInput
+                        type="number"
+                        control={control}
+                        name="onValue"
+                        placeholder="Default (30)"
+                        disabled={isDisabled}
+                    />
+                )}
+            </OverridableField>
+            <div>
+                <Button type="submit">Save</Button>
+            </div>
+        </Form>
     );
 }
