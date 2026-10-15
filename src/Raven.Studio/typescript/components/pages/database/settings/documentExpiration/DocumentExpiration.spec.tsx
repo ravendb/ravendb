@@ -124,12 +124,17 @@ describe("DocumentExpiration", () => {
     });
 
     it("blocks saving when the frequency falls back to the server default on a limited license", async () => {
-        const { screen, fireClick } = rtlRender(<LicenseRestricted />);
+        const { screen, fireClick, user } = rtlRender(<LicenseRestricted />);
 
         await fireClick(await screen.findByRole("checkbox", { name: "Override Expiration frequency" }));
 
         expect(screen.getByRole("checkbox", { name: "Override Expiration frequency" })).not.toBeChecked();
         expect(screen.getByText(licenseLimitWarning)).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+
+        const saveButton = screen.getByRole("button", { name: "Save" });
+        expect(saveButton).toBeDisabled();
+
+        await user.hover(saveButton);
+        expect(await screen.findByRole("tooltip")).toHaveTextContent(licenseLimitWarning);
     });
 });

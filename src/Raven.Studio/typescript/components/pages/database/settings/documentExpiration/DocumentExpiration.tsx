@@ -31,6 +31,7 @@ import moment from "moment";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import RichAlert from "components/common/RichAlert";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 export const defaultItemsToProcess = 65536;
 const defaultDeleteFrequencyInSec = 60;
@@ -79,6 +80,8 @@ export default function DocumentExpiration() {
         minPeriodForExpirationInHours > 0 &&
         formValues.isDocumentExpirationEnabled &&
         deleteFrequencyInHours < minPeriodForExpirationInHours;
+
+    const licenseLimitMessage = `Your current license does not allow an expiration frequency below ${minPeriodForExpirationInHours} hours.`;
 
     useEffect(() => {
         const { unsubscribe } = watch((values, { name }) => {
@@ -156,16 +159,20 @@ export default function DocumentExpiration() {
                     <Col>
                         <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
                             <AboutViewHeading title="Document Expiration" icon="document-expiration" />
-                            <ButtonWithSpinner
-                                type="submit"
-                                variant="primary"
-                                className="mb-3"
-                                icon="save"
-                                disabled={!formState.isDirty || isLimitWarningVisible}
-                                isSpinning={formState.isSubmitting}
+                            <ConditionalPopover
+                                conditions={{ isActive: isLimitWarningVisible, message: licenseLimitMessage }}
                             >
-                                Save
-                            </ButtonWithSpinner>
+                                <ButtonWithSpinner
+                                    type="submit"
+                                    variant="primary"
+                                    className="mb-3"
+                                    icon="save"
+                                    disabled={!formState.isDirty || isLimitWarningVisible}
+                                    isSpinning={formState.isSubmitting}
+                                >
+                                    Save
+                                </ButtonWithSpinner>
+                            </ConditionalPopover>
                             <Col>
                                 <Card>
                                     <Card.Body>
@@ -183,12 +190,13 @@ export default function DocumentExpiration() {
                                                         !formValues.isDocumentExpirationEnabled
                                                     }
                                                 >
-                                                    {({ isDisabled }) => (
+                                                    {({ isDisabled, labelId }) => (
                                                         <div data-testid="deleteFrequencyDurationPicker">
                                                             <FormDurationPicker
                                                                 name="deleteFrequency"
                                                                 control={control}
                                                                 disabled={isDisabled}
+                                                                aria-labelledby={labelId}
                                                                 placeholder={deleteFrequencyPlaceholder}
                                                                 showSeconds
                                                             />
@@ -197,8 +205,7 @@ export default function DocumentExpiration() {
                                                 </OverridableField>
                                                 {isLimitWarningVisible && (
                                                     <RichAlert variant="warning" className="mt-3">
-                                                        Your current license does not allow an expiration frequency
-                                                        below {minPeriodForExpirationInHours} hours.
+                                                        {licenseLimitMessage}
                                                     </RichAlert>
                                                 )}
                                             </div>
