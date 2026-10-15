@@ -1,5 +1,4 @@
 /**
- * @jest-environment jsdom
  * @jest-environment-options {"url": "https://a-my-cluster.sso.example.com/studio/index.html"}
  */
 
