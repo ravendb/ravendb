@@ -1,4 +1,4 @@
-﻿import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import Button from "react-bootstrap/Button";
 import {
     ReorderNodes,
@@ -30,6 +30,7 @@ import { useGroup } from "components/pages/resources/manageDatabaseGroup/partial
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { Icon } from "components/common/Icon";
 import useConfirm from "components/common/ConfirmDialog";
+import { SoftDeleteFromGroupModal } from "components/pages/resources/manageDatabaseGroup/partials/SoftDeleteFromGroupModal";
 
 export interface ShardsGroupProps {
     db: DatabaseSharedInfo;
@@ -53,6 +54,7 @@ export function ShardsGroup(props: ShardsGroupProps) {
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
     const confirm = useConfirm();
+    const [softDeleteNodeTag, setSoftDeleteNodeTag] = useState<string>(null);
 
     const addNode = useCallback(() => {
         const addKeyView = new addNewNodeToDatabaseGroup(db.name, db.nodes, db.isEncrypted);
@@ -70,6 +72,11 @@ export function ShardsGroup(props: ShardsGroupProps) {
 
     const deleteNodeFromGroup = useCallback(
         async (nodeTag: string, hardDelete: boolean) => {
+            if (!hardDelete) {
+                setSoftDeleteNodeTag(nodeTag);
+                return;
+            }
+
             const isConfirmed = await confirm({
                 icon: "trash",
                 title: (
@@ -163,6 +170,17 @@ export function ShardsGroup(props: ShardsGroupProps) {
                         </DatabaseGroupList>
                     </DatabaseGroup>
                 </React.Fragment>
+            )}
+            {softDeleteNodeTag && (
+                <SoftDeleteFromGroupModal
+                    db={db}
+                    nodeTag={softDeleteNodeTag}
+                    onClose={() => setSoftDeleteNodeTag(null)}
+                    onHardDeleteInstead={() => {
+                        setSoftDeleteNodeTag(null);
+                        deleteNodeFromGroup(softDeleteNodeTag, true);
+                    }}
+                />
             )}
         </RichPanel>
     );
