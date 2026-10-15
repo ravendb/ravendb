@@ -5,8 +5,8 @@ import {
     type MapActiveTable,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
 import type { MapOrigin } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
-import { createPlannerSlice, type PlannerActions } from "@/pages/setup/add-app-wizard/steps/map/planner-slice";
-import { initialPlannerState, type PlannerState } from "@/pages/setup/add-app-wizard/steps/map/planner-state";
+import { createPlannerSlice, type PlannerActions } from "@/pages/setup/add-app-wizard/steps/map/session/planner-slice";
+import { initialPlannerState, type PlannerState } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
 
 /** Outcome of a connect attempt together with the connect key it ran with. */
 export type ConnectionAttempt = { key: string; error: Error | null };

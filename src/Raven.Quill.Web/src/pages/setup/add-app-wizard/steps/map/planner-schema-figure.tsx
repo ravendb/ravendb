@@ -1,11 +1,11 @@
 import { Eye, Lock, Table } from "lucide-react";
 import { Text } from "@/components/typography";
+import { formatCount } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { getTableLabel } from "@/pages/setup/add-app-wizard/discover-utils";
 import { findDiscoveredTable } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
-import { formatCount } from "@/pages/setup/add-app-wizard/steps/map/planner-format";
 
 const SHOWN_COLUMN_COUNT = 4;
 

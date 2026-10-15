@@ -8,9 +8,9 @@ import type {
     DiscoverResponse,
     MigrationApplyResponse,
 } from "@/api/generated/server-api";
-import type { ProposalFrame } from "@/pages/setup/add-app-wizard/steps/map/planner-types";
 import { apiHttp } from "@/mocks/api-http";
 import { discoveredTable } from "@/mocks/discovery-fixtures";
+import type { ProposalFrame } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 
 type StreamOptions = {
     frameDelayMs?: number;

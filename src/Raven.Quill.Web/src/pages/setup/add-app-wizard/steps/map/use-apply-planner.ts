@@ -7,9 +7,13 @@ import { WizardStepError } from "@/components/form/wizard/wizard-step-error";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { wrapDtoTablesToFormShape } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
+import type { MapOrigin } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
+import {
+    selectBuiltCollections,
+    selectIsPlanSettled,
+} from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
+import type { RegisteredCollection } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 import { parsePlannerTables, useAdoptMapTables } from "@/pages/setup/add-app-wizard/steps/map/use-adopt-map-tables";
-import { selectBuiltCollections, selectIsPlanSettled } from "@/pages/setup/add-app-wizard/steps/map/planner-state";
-import type { RegisteredCollection } from "@/pages/setup/add-app-wizard/steps/map/planner-types";
 
 /**
  * Runs as the step's `beforeNext`: the plan is assembled server-side, validated as a whole, and
@@ -37,8 +41,8 @@ export function useApplyPlanner() {
 
         // Coming back to look at the plan and moving on again must not throw away what the
         // operator has since edited in the editor, so an unchanged plan is not applied twice.
-        const originKey = computePlannerOriginKey(conversationId, built);
-        if (hasMapping && originKey === store.mapOrigin?.key) {
+        const planKey = computePlanKey(conversationId, built);
+        if (hasMapping && isPlanApplied(store.mapOrigin, planKey)) {
             return;
         }
 
@@ -53,19 +57,23 @@ export function useApplyPlanner() {
         // operator edits.
         adoptTables(parsePlannerTables(wrapDtoTablesToFormShape(configuration.tables ?? [])), {
             source: "planner",
-            key: originKey,
+            planKey,
         });
     };
 }
 
 /** Identifies what an apply would hand over: the session, and each built collection's registration. */
-export function computePlannerOriginKey(conversationId: string, built: RegisteredCollection[]): string {
+export function computePlanKey(conversationId: string, built: RegisteredCollection[]): string {
     const collections = built
         .map((collection) => `${collection.name}@${collection.registrationNumber}`)
         .sort()
         .join(",");
 
-    return `planner:${conversationId}|${collections}`;
+    return `${conversationId}|${collections}`;
+}
+
+export function isPlanApplied(origin: MapOrigin | null, planKey: string): boolean {
+    return origin?.source === "planner" && origin.planKey === planKey;
 }
 
 /** The server answers a plan that does not validate as a whole with 422 and the reasons. */

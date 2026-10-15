@@ -6,13 +6,13 @@ import { useAiConsent } from "@/components/ai-consent/use-ai-consent";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import { Button } from "@/components/shadcn/ui/button";
 import { Heading, Text } from "@/components/typography";
+import { formatCount } from "@/lib/format";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { formatCount } from "@/pages/setup/add-app-wizard/steps/map/planner-format";
 import { PlannerFrame } from "@/pages/setup/add-app-wizard/steps/map/planner-frame";
 import { PlannerSchemaFigure } from "@/pages/setup/add-app-wizard/steps/map/planner-schema-figure";
 import { PlannerWorkspace } from "@/pages/setup/add-app-wizard/steps/map/planner-workspace";
-import { usePlannerSession } from "@/pages/setup/add-app-wizard/steps/map/use-planner-session";
+import { usePlannerSession } from "@/pages/setup/add-app-wizard/steps/map/session/use-planner-session";
 
 export function PlannerStep({ isBusy, goToPreviousStep }: WizardBodyComponentProps) {
     const { control } = useFormContext<AppFormData>();

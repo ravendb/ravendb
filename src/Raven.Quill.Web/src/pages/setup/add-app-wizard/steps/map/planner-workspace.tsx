@@ -3,25 +3,28 @@ import { PanelRight, RotateCcw } from "lucide-react";
 import { CountBadge } from "@/components/data/count-badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { ConfirmDialog } from "@/components/shadcn/ui/confirm-dialog";
+import { formatCount } from "@/lib/format";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
-import { PlanPanel } from "@/pages/setup/add-app-wizard/steps/map/plan-panel";
-import { selectIsBuildingCollections } from "@/pages/setup/add-app-wizard/steps/map/planner-activity";
-import { PlannerComposerArea } from "@/pages/setup/add-app-wizard/steps/map/planner-composer-area";
-import { formatCount } from "@/pages/setup/add-app-wizard/steps/map/planner-format";
+import { selectIsBuildingCollections } from "@/pages/setup/add-app-wizard/steps/map/chat/planner-activity";
+import { PlannerComposerArea } from "@/pages/setup/add-app-wizard/steps/map/chat/planner-composer-area";
+import { PlannerTranscript } from "@/pages/setup/add-app-wizard/steps/map/chat/planner-transcript";
+import { PlanPanel } from "@/pages/setup/add-app-wizard/steps/map/panel/plan-panel";
 import { PlannerFrame } from "@/pages/setup/add-app-wizard/steps/map/planner-frame";
+import {
+    PlannerWorkspaceContext,
+    usePlannerWorkspace,
+} from "@/pages/setup/add-app-wizard/steps/map/planner-workspace-context";
 import {
     countByState,
     countChangedSince,
     isBuilt,
     type PlanCollection,
-} from "@/pages/setup/add-app-wizard/steps/map/planner-plan";
-import { selectPendingQuestions, selectPlannerPhase } from "@/pages/setup/add-app-wizard/steps/map/planner-state";
-import { PlannerTranscript } from "@/pages/setup/add-app-wizard/steps/map/planner-transcript";
+} from "@/pages/setup/add-app-wizard/steps/map/session/planner-plan";
 import {
-    PlannerWorkspaceContext,
-    usePlannerWorkspace,
-} from "@/pages/setup/add-app-wizard/steps/map/planner-workspace-context";
-import { usePlanCollections } from "@/pages/setup/add-app-wizard/steps/map/use-plan-collections";
+    selectPendingQuestions,
+    selectPlannerPhase,
+} from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
+import { usePlanCollections } from "@/pages/setup/add-app-wizard/steps/map/session/use-plan-collections";
 
 const PLAN_BESIDE_CHAT_MIN_WIDTH_REM = 46;
 

@@ -62,3 +62,28 @@ const currencyFormatter = new Intl.NumberFormat("en-US", { style: "currency", cu
 export function formatCurrency(value: number): string {
     return currencyFormatter.format(value);
 }
+
+// e.g. (1, "table") -> "1 table", (3, "table") -> "3 tables".
+export function formatCount(count: number, singular: string, plural = `${singular}s`): string {
+    return `${count} ${count === 1 ? singular : plural}`;
+}
+
+// joinList for items that are not text, e.g. elements: [A, ", ", B, " and ", C].
+export function interleaveListSeparators<Item>(items: Item[]): (Item | string)[] {
+    return items.flatMap((item, index) => {
+        if (index === 0) {
+            return [item];
+        }
+
+        return [index === items.length - 1 ? " and " : ", ", item];
+    });
+}
+
+// e.g. ["A", "B", "C"] -> "A, B and C".
+export function joinList(items: string[]): string {
+    return interleaveListSeparators(items).join("");
+}
+
+export function upperFirst(text: string): string {
+    return text.charAt(0).toUpperCase() + text.slice(1);
+}

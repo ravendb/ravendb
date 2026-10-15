@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { RegisteredCollection } from "@/pages/setup/add-app-wizard/steps/map/planner-types";
-import { computePlannerOriginKey } from "@/pages/setup/add-app-wizard/steps/map/use-apply-planner";
-import { IMPORTED_MAP_ORIGIN, MANUAL_MAP_ORIGIN } from "@/pages/setup/add-app-wizard/steps/map/use-adopt-map-tables";
+import type { RegisteredCollection } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
+import { computePlanKey, isPlanApplied } from "@/pages/setup/add-app-wizard/steps/map/use-apply-planner";
 
 const collection = (name: string, registrationNumber: number): RegisteredCollection => ({
     name,
@@ -16,34 +15,41 @@ const collection = (name: string, registrationNumber: number): RegisteredCollect
     rejectionErrors: [],
 });
 
-describe("computePlannerOriginKey", () => {
+describe("computePlanKey", () => {
     it("does not depend on the order the collections arrived in", () => {
-        expect(computePlannerOriginKey("c/1", [collection("Orders", 1), collection("Products", 2)])).toBe(
-            computePlannerOriginKey("c/1", [collection("Products", 2), collection("Orders", 1)]),
+        expect(computePlanKey("c/1", [collection("Orders", 1), collection("Products", 2)])).toBe(
+            computePlanKey("c/1", [collection("Products", 2), collection("Orders", 1)]),
         );
     });
 
     it("changes with every registration, also one whose version started over after a removal", () => {
-        expect(computePlannerOriginKey("c/1", [collection("Orders", 1)])).not.toBe(
-            computePlannerOriginKey("c/1", [collection("Orders", 2)]),
+        expect(computePlanKey("c/1", [collection("Orders", 1)])).not.toBe(
+            computePlanKey("c/1", [collection("Orders", 2)]),
         );
     });
 
     it("changes when the selection changes", () => {
-        expect(computePlannerOriginKey("c/1", [collection("Orders", 1)])).not.toBe(
-            computePlannerOriginKey("c/1", [collection("Orders", 1), collection("Products", 1)]),
+        expect(computePlanKey("c/1", [collection("Orders", 1)])).not.toBe(
+            computePlanKey("c/1", [collection("Orders", 1), collection("Products", 1)]),
         );
     });
 
     it("changes with the session", () => {
-        expect(computePlannerOriginKey("c/1", [collection("Orders", 1)])).not.toBe(
-            computePlannerOriginKey("c/2", [collection("Orders", 1)]),
+        expect(computePlanKey("c/1", [collection("Orders", 1)])).not.toBe(
+            computePlanKey("c/2", [collection("Orders", 1)]),
         );
+    });
+});
+
+describe("isPlanApplied", () => {
+    const planKey = computePlanKey("c/1", [collection("Orders", 1)]);
+
+    it("matches the plan the mapping was applied from", () => {
+        expect(isPlanApplied({ source: "planner", planKey }, planKey)).toBe(true);
     });
 
     it("never matches a mapping made by hand or imported, so applying a plan over one is never skipped", () => {
-        const key = computePlannerOriginKey("c/1", [collection("Orders", 1)]);
-
-        expect([MANUAL_MAP_ORIGIN, IMPORTED_MAP_ORIGIN]).not.toContain(key);
+        expect(isPlanApplied({ source: "manual" }, planKey)).toBe(false);
+        expect(isPlanApplied({ source: "import" }, planKey)).toBe(false);
     });
 });

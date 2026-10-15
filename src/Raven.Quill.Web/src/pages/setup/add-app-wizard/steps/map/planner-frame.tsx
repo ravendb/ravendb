@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { useWatch } from "react-hook-form";
 import { Heading, Text } from "@/components/typography";
+import { formatCount } from "@/lib/format";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { formatCount } from "@/pages/setup/add-app-wizard/steps/map/planner-format";
 
 export function PlannerFrame({ actions, children }: { actions?: ReactNode; children?: ReactNode }) {
     const tables = useWatch<AppFormData, "verifySchema.tables">({ name: "verifySchema.tables" });

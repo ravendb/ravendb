@@ -1,6 +1,6 @@
 import { describeAiConsentBlock, type AiConsentState } from "@/components/ai-consent/use-ai-consent";
-import { formatCount } from "@/pages/setup/add-app-wizard/steps/map/planner-format";
-import type { PlannerPhase } from "@/pages/setup/add-app-wizard/steps/map/planner-state";
+import { formatCount } from "@/lib/format";
+import type { PlannerPhase } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
 
 export type PlannerNextState = { isNextDisabled: boolean; note: string; label: string };
 
