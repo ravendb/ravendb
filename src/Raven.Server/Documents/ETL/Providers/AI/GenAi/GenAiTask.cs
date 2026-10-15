@@ -283,6 +283,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 {
                     var queryParameters = FilterSupportedGenAiQueryParameters(context, contextObject, queryParameterNames);
                     var agentConfiguration = CreateAgentConfiguration(context, queryParameters);
+                    AiAgentHelpers.AssertAgentParametersAreNotToolArguments(context, agentConfiguration);
                     var handler = new GenAiConversationHandler(Database.ServerStore, Database, Configuration)
                     {
                         Authentication = authentication
