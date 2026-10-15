@@ -43,7 +43,7 @@ describe("FeatureAvailabilitySummary", () => {
         }
     );
 
-    it("can show footnotes numbered in order of appearance", () => {
+    describe("footnotes", () => {
         const embeddedFootnote: FeatureAvailabilityFootnote = {
             title: "Available connectors",
             items: [{ label: "Embedded" }],
@@ -53,18 +53,34 @@ describe("FeatureAvailabilitySummary", () => {
             items: [{ label: "OpenAI" }, { label: "Embedded" }],
         };
 
-        const { screen } = rtlRender(
-            <FeatureAvailabilitySummaryStory
-                community={{ value: true, footnote: embeddedFootnote }}
-                professional={{ value: true, footnote: embeddedFootnote }}
-                enterprise={{ value: true, footnote: allFootnote }}
-            />
-        );
+        const renderWithFootnotes = () =>
+            rtlRender(
+                <FeatureAvailabilitySummaryStory
+                    community={{ value: true, footnote: embeddedFootnote }}
+                    professional={{ value: true, footnote: embeddedFootnote }}
+                    enterprise={{ value: true, footnote: allFootnote }}
+                />
+            );
 
-        expect(screen.getByText("Available connectors: Embedded").previousElementSibling).toHaveTextContent("1");
-        expect(screen.getByText("Available connectors: OpenAI, Embedded").previousElementSibling).toHaveTextContent(
-            "2"
-        );
+        it("can show footnotes numbered in order of appearance", () => {
+            const { screen } = renderWithFootnotes();
+
+            expect(screen.getByText("Available connectors: Embedded").previousElementSibling).toHaveTextContent("1");
+            expect(screen.getByText("Available connectors: OpenAI, Embedded").previousElementSibling).toHaveTextContent(
+                "2"
+            );
+        });
+
+        it("can describe footnote marks with their footnotes", () => {
+            const { screen } = renderWithFootnotes();
+
+            screen
+                .getAllByText("1", { selector: "sup" })
+                .forEach((mark) => expect(mark).toHaveAccessibleDescription("Available connectors: Embedded"));
+            screen
+                .getAllByText("2", { selector: "sup" })
+                .forEach((mark) => expect(mark).toHaveAccessibleDescription("Available connectors: OpenAI, Embedded"));
+        });
     });
 
     it(`can hide '${selectors.ifYouDevelopingText}' for Developer license`, () => {

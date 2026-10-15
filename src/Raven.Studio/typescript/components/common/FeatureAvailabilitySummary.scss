@@ -89,6 +89,10 @@
             top: -9px;
             padding: 2px 4px 2px 1px;
             cursor: default;
+
+            sup {
+                top: 0;
+            }
         }
         .overwritten-value {
             position: relative;
