@@ -11,7 +11,6 @@ import {
     CertificatesState,
     GenerateCertificateDto,
     ReplaceServerCertificateDto,
-    TwoFactorAction,
     UpdateCertificateDto,
     UploadCertificateDto,
 } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
@@ -201,14 +200,6 @@ function mapExpireFromDto(dto: CertificateItem): Pick<CertificatesGenerateFormDa
     };
 }
 
-const twoFactorActionSchema = yup
-    .string<TwoFactorAction>()
-    .nullable()
-    .when("$certHasTwoFactor", {
-        is: true,
-        then: (schema) => schema.required(),
-    });
-
 const databasePermissionsSchema = yup
     .array()
     .of(yup.object({ databaseName: yup.string(), accessLevel: yup.string<DatabaseAccess>() }));
@@ -224,6 +215,5 @@ export const certificatesUtils = {
     mapReplaceServerToDto,
     mapDatabasePermissionsFromDto,
     mapExpireFromDto,
-    twoFactorActionSchema,
     databasePermissionsSchema,
 };
