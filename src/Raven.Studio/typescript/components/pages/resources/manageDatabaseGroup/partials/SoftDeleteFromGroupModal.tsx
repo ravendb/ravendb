@@ -30,16 +30,6 @@ export function SoftDeleteFromGroupModal({ db, nodeTag, onClose, onHardDeleteIns
         onSuccess: onClose,
     });
 
-    const deletedResource = DatabaseUtils.isSharded(db.name) ? (
-        <>
-            shard <strong>#{DatabaseUtils.shardNumber(db.name)}</strong>
-        </>
-    ) : (
-        <>
-            database <strong>{db.name}</strong>
-        </>
-    );
-
     return (
         <Modal show onHide={onClose} contentClassName="modal-border bulge-danger">
             <Modal.Header closeButton className="vstack gap-4 pb-0" onCloseClick={onClose}>
@@ -47,7 +37,17 @@ export function SoftDeleteFromGroupModal({ db, nodeTag, onClose, onHardDeleteIns
                     <Icon icon="disconnected" color="danger" className="fs-1" margin="m-0" />
                 </div>
                 <div className="text-center lead">
-                    Soft delete {deletedResource} from node <strong>{nodeTag}</strong>?
+                    Soft delete{" "}
+                    {DatabaseUtils.isSharded(db.name) ? (
+                        <>
+                            shard <strong>#{DatabaseUtils.shardNumber(db.name)}</strong>
+                        </>
+                    ) : (
+                        <>
+                            database <strong>{db.name}</strong>
+                        </>
+                    )}{" "}
+                    from node <strong>{nodeTag}</strong>?
                 </div>
             </Modal.Header>
             <Modal.Body className="vstack gap-3">
