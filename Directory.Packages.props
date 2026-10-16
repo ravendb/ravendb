@@ -88,8 +88,7 @@
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.402" />
     <PackageVersion Include="Microsoft.SqlServer.Types" Version="170.1000.7" />
     <PackageVersion Include="Microsoft.Win32.Registry" Version="5.0.0" />
-    <PackageVersion Include="MongoDB.Driver" Version="2.30.0" />
-    <PackageVersion Include="MongoDB.Driver.GridFS" Version="2.30.0" />
+    <PackageVersion Include="MongoDB.Driver" Version="3.12.0" />
     <PackageVersion Include="Mono.Posix.NETStandard" Version="1.0.0" />
     <PackageVersion Include="MySqlCdc" Version="5.0.0-preview2" />
     <PackageVersion Include="MySqlConnector" Version="2.6.2" />
