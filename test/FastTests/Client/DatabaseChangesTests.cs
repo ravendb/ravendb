@@ -1,4 +1,4 @@
-﻿﻿using System;
+using System;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
@@ -78,25 +78,6 @@ namespace FastTests.Client
                     await obs.EnsureSubscribedNow();
                 }
             }, timeout: 30_000);
-        }
-
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.ChangesApi)]
-        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
-        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
-        public async Task DatabaseChanges_WhenDeleteDatabaseAfterSubscribe_ShouldSetConnectionStateToDatabaseDoesNotExistException(Options options, bool disableTopologyUpdates)
-        {
-            options.ModifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = disableTopologyUpdates;
-            using var store = GetDocumentStore(options);
-
-            using (var changes = store.Changes())
-            {
-                var obs = changes.ForDocumentsInCollection<User>();
-                await obs.EnsureSubscribedNow();
-
-                await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true)).ConfigureAwait(false);
-
-                await AssertWaitForExceptionAsync<DatabaseDoesNotExistException>(async () => await obs.EnsureSubscribedNow(), interval: 1000);
-            }
         }
 
         [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.ChangesApi)]

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
@@ -10,7 +11,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace FastTests.Corax.Vectors;
+namespace SlowTests.Corax.Vectors;
 
 public class IndexVectorExactViaStaticIndexesTests(ITestOutputHelper output) : RavenTestBase(output)
 {

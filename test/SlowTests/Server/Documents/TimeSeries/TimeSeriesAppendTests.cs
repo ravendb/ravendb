@@ -1,12 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using FastTests;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Tests.Infrastructure;
 
-namespace FastTests.Server.Documents.TimeSeries
+namespace SlowTests.Server.Documents.TimeSeries
 {
     public class TimeSeriesAppendTests : RavenLowLevelTestBase
     {

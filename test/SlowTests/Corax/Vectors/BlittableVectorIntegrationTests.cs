@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Voron.FixedSize;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
@@ -10,7 +11,7 @@ using Tests.Infrastructure;
 using Xunit;
 #pragma warning disable CS0618 // Type or member is obsolete
 
-namespace FastTests.Corax.Vectors;
+namespace SlowTests.Corax.Vectors;
 
 public class BlittableVectorIntegrationTests(ITestOutputHelper output) : RavenTestBase(output)
 {

@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using FastTests.Voron;
 using FastTests.Voron.FixedSize;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow;
@@ -13,7 +14,7 @@ using Voron.Data.CompactTrees;
 using Voron.Global;
 using Xunit;
 
-namespace FastTests.Voron.CompactTrees
+namespace SlowTests.Voron.CompactTrees
 {
     public class RavenDB_21521 : StorageTest
     {
