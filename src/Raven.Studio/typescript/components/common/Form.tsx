@@ -186,6 +186,7 @@ export function FormRadio<TFieldValues extends FieldValues, TName extends FieldP
         <div className="position-relative">
             <div className="d-flex flex-grow-1">
                 <Radio
+                    name={name}
                     selected={value === props.value}
                     toggleSelection={() => {
                         onChange(props.value);

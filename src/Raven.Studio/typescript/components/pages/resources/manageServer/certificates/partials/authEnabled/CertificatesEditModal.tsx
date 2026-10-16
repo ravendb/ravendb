@@ -4,7 +4,7 @@ import { useServices } from "components/hooks/useServices";
 import { certificatesActions } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
-import { FormProvider, SubmitHandler, useForm, useWatch } from "react-hook-form";
+import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import Button from "react-bootstrap/Button";
 import * as yup from "yup";
 import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
@@ -18,6 +18,7 @@ import useCertificatePermissionsConfirm from "components/pages/resources/manageS
 import { FormGroup, FormLabel } from "components/common/Form";
 import Modal from "components/common/Modal";
 import Form from "react-bootstrap/Form";
+import useUniqueId from "components/hooks/useUniqueId";
 
 type SecurityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 
@@ -26,6 +27,7 @@ export default function CertificatesEditModal() {
     const { manageServerService } = useServices();
     const { reportEvent } = useEventsCollector();
     const permissionsConfirm = useCertificatePermissionsConfirm();
+    const titleId = useUniqueId("edit-certificate-title");
 
     const certificate = useAppSelector(certificatesSelectors.certificateToEdit);
 
@@ -34,8 +36,8 @@ export default function CertificatesEditModal() {
         defaultValues: {
             securityClearance: certificate.SecurityClearance,
             databasePermissions: certificatesUtils.mapDatabasePermissionsFromDto(certificate),
-            twoFactorAction: null,
-            isRequire2FA: false,
+            isRequire2FA: certificate.HasTwoFactor,
+            isRegenerate2FAKey: false,
             authenticationKey: "",
         },
         context: {
@@ -43,9 +45,9 @@ export default function CertificatesEditModal() {
         },
     });
 
-    const { control, formState, handleSubmit, reset } = form;
+    const { formState, handleSubmit, reset } = form;
 
-    const formValues = useWatch({ control });
+    const close = () => dispatch(certificatesActions.editModalClosed());
 
     const handleEdit: SubmitHandler<FormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -58,7 +60,7 @@ export default function CertificatesEditModal() {
 
             await manageServerService.updateCertificate(
                 certificatesUtils.mapEditToDto(formData, certificate),
-                formValues.twoFactorAction === "delete"
+                certificate.HasTwoFactor && !formData.isRequire2FA
             );
             reset(formData);
             dispatch(certificatesActions.fetchData());
@@ -67,17 +69,22 @@ export default function CertificatesEditModal() {
     };
 
     return (
-        <Modal show size="lg" centered contentClassName="modal-border bulge-primary">
+        <Modal
+            show
+            size="lg"
+            centered
+            contentClassName="modal-border bulge-primary"
+            backdrop="static"
+            onHide={close}
+            aria-labelledby={titleId}
+        >
             <FormProvider {...form}>
                 <form onSubmit={handleSubmit(handleEdit)}>
-                    <Modal.Header
-                        className="vstack gap-4"
-                        onCloseClick={() => dispatch(certificatesActions.editModalClosed())}
-                    >
-                        <div className="text-center">
-                            <Icon icon="certificate" addon="edit" className="fs-1" color="primary" margin="m-0" />
-                        </div>
-                        <div className="text-center lead">Edit client certificate</div>
+                    <Modal.Header className="pt-3 pb-0" onCloseClick={close}>
+                        <Icon icon="certificate" addon="edit" size="lg" color="primary" margin="me-3" />
+                        <h3 id={titleId} className="mb-0">
+                            Edit client certificate
+                        </h3>
                     </Modal.Header>
                     <Modal.Body>
                         <FormGroup>
@@ -87,14 +94,11 @@ export default function CertificatesEditModal() {
                         <CertificatesSecurityClearanceField />
                         <hr />
                         <CertificatesPermissionsField />
+                        <hr />
                         <Certificates2FAField editingCert={certificate} />
                     </Modal.Body>
                     <Modal.Footer>
-                        <Button
-                            variant="link"
-                            onClick={() => dispatch(certificatesActions.editModalClosed())}
-                            className="link-muted"
-                        >
+                        <Button variant="link" onClick={close} className="link-muted">
                             Cancel
                         </Button>
                         <ButtonWithSpinner
@@ -116,13 +120,14 @@ export default function CertificatesEditModal() {
 const schema = yup.object({
     securityClearance: yup.string<SecurityClearance>(),
     databasePermissions: certificatesUtils.databasePermissionsSchema,
-    twoFactorAction: certificatesUtils.twoFactorActionSchema,
     isRequire2FA: yup.boolean(),
+    isRegenerate2FAKey: yup.boolean(),
     authenticationKey: yup
         .string()
         .nullable()
-        .when("isRequire2FA", {
-            is: true,
+        .when(["isRequire2FA", "isRegenerate2FAKey", "$certHasTwoFactor"], {
+            is: (isRequire2FA: boolean, isRegenerate2FAKey: boolean, certHasTwoFactor: boolean) =>
+                isRequire2FA && (!certHasTwoFactor || isRegenerate2FAKey),
             then: (schema) => schema.required(),
         }),
 });
