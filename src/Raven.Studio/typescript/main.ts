@@ -16,6 +16,8 @@ import "eonasdan-bootstrap-datetimepicker/src/js/bootstrap-datetimepicker";
 
 import system from "durandal/system";
 import app from "durandal/app";
+import { changeLanguage } from "common/i18n/i18n";
+import globalSettings = require("common/settings/globalSettings");
 
 require("prismjs/components/prism-javascript");
 require("prismjs/components/prism-csharp");
@@ -52,8 +54,12 @@ const shellSetup = require("components/common/shell/setup");
 
 shellSetup.commonInit();
 
-app.start().then(() => {
+app.start().then(async () => {
     if ("WebSocket" in window) {
+        await changeLanguage(globalSettings.readStoredLanguage()).catch((error: unknown) =>
+            console.error("Failed to load Studio language", error)
+        );
+
         if (window.location.pathname.startsWith("/studio")) {
             const shell = require("viewmodels/shell");
             app.setRoot(shell);

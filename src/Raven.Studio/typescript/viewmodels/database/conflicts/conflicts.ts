@@ -21,6 +21,9 @@ import moment = require("moment");
 import prismjs = require("prismjs");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import database = require("models/resources/database");
+import i18nModule = require("common/i18n/i18n");
+
+const t = i18nModule.createTranslator("conflicts");
 
 class conflictItem {
     
@@ -51,7 +54,7 @@ class conflictItem {
                 const textSize: number = generalUtils.getSizeInBytesAsUTF8(this.originalValue());
                 return generalUtils.formatBytesToSize(textSize);
             } catch (e) {
-                return "cannot compute";
+                return t("documentSizeUnknown");
             }
         });
     }
@@ -68,6 +71,7 @@ class conflicts extends shardViewModelBase {
 
     private gridController = ko.observable<virtualGridController<replicationConflictListItemDto>>();
     private columnPreview = new columnPreviewPlugin<replicationConflictListItemDto>();
+    private lastModifiedColumn: textColumn<replicationConflictListItemDto>;
 
     currentConflict = ko.observable<Raven.Client.Documents.Commands.GetConflictsResult>();
     conflictItems = ko.observableArray<conflictItem>([]);
@@ -98,8 +102,8 @@ class conflicts extends shardViewModelBase {
             required: true,
             aceValidation: true,
             validation: [{
-                validator: (val: string) => conflictTokens.every(t => !val.includes(t)),
-                message: "Document contains conflicts markers"
+                validator: (val: string) => conflictTokens.every(token => !val.includes(token)),
+                message: () => t("conflictMarkersPresent")
             }]
         });
     }
@@ -119,24 +123,14 @@ class conflicts extends shardViewModelBase {
 
         const grid = this.gridController();
         grid.headerVisible(true);
-        grid.init((s, t) => this.fetchConflicts(t), () =>
-            [
-                new hyperlinkColumn<replicationConflictListItemDto>(grid, x => x.Id, x => appUrl.forConflicts(this.db, x.Id), "Document", "40%",
-                    {
-                        handler: (item, event) => this.handleLoadAction(item, event)
-                    }),
-                new textColumn<replicationConflictListItemDto>(grid, x => x.ConflictsPerDocument, "#", "10%", {
-                    headerTitle: "Conflicts per document"
-                }),
-                new textColumn<replicationConflictListItemDto>(grid, x => x.LastModified, "Last Modified", "45%")
-            ]
-        );
+
+        grid.init((_skip, take) => this.fetchConflicts(take), () => this.createColumns(grid));
 
         this.columnPreview.install(".conflicts-grid", ".js-conflict-details-tooltip",
             (details: replicationConflictListItemDto, column: virtualColumn, e: JQuery.TriggeredEvent,
              onValue: (context: any, valueToCopy?: string) => void) => {
                 if (column instanceof textColumn) {
-                    if (column.header === "Last Modified") {
+                    if (column === this.lastModifiedColumn) {
                         onValue(moment.utc(details.LastModified), details.LastModified);
                     } else {
                         const value = column.getCellValue(details);
@@ -168,6 +162,19 @@ class conflicts extends shardViewModelBase {
                     }
                 }
             });
+    }
+
+    private createColumns(grid: virtualGridController<replicationConflictListItemDto>): virtualColumn[] {
+        const documentColumn = new hyperlinkColumn<replicationConflictListItemDto>(grid, x => x.Id, x => appUrl.forConflicts(this.db, x.Id), t("columns.document"), "40%",
+            {
+                handler: (item, event) => this.handleLoadAction(item, event)
+            });
+        const conflictsPerDocumentColumn = new textColumn<replicationConflictListItemDto>(grid, x => x.ConflictsPerDocument, "#", "10%", {
+            headerTitle: t("columns.conflictsPerDocument")
+        });
+        this.lastModifiedColumn = new textColumn<replicationConflictListItemDto>(grid, x => x.LastModified, t("columns.lastModified"), "45%");
+
+        return [documentColumn, conflictsPerDocumentColumn, this.lastModifiedColumn];
     }
 
     private fetchConflicts(take: number): JQueryPromise<pagedResultWithToken<replicationConflictListItemDto>> {
@@ -247,9 +254,9 @@ class conflicts extends shardViewModelBase {
             .execute()
             .fail((xhr: JQueryXHR) => {
                 if (xhr.status === 404) {
-                    messagePublisher.reportError("Unable to find conflicted document: " + documentId + ". Maybe conflict was already resolved?");
+                    messagePublisher.reportError(t("documentNotFound", { documentId }));
                 } else {
-                    messagePublisher.reportError("Failed to load conflict!", xhr.responseText, xhr.statusText);
+                    messagePublisher.reportError(t("loadFailed"), xhr.responseText, xhr.statusText);
                 }
             });
     }
@@ -296,9 +303,13 @@ class conflicts extends shardViewModelBase {
         }
     }
 
-    private onResolved() {
+    private reloadGrid() {
         this.nextStart = 0;
         this.gridController().reset(false);
+    }
+
+    private onResolved() {
+        this.reloadGrid();
         
         this.suggestedResolution("");
         this.conflictItems([]);
@@ -312,7 +323,7 @@ class conflicts extends shardViewModelBase {
     }
 
     copyThis(itemToCopy: conflictItem) {
-        copyToClipboard.copy(itemToCopy.originalValue(), "Document has been copied to clipboard");
+        copyToClipboard.copy(itemToCopy.originalValue(), t("documentCopied"));
 }
 }
 

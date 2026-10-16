@@ -5,6 +5,7 @@ import abstractSettings = require("common/settings/abstractSettings");
 import simpleStudioSetting = require("common/settings/simpleStudioSetting");
 import dontShowAgainSettings = require("common/settings/dontShowAgainSettings");
 import studioSetting = require("common/settings/studioSetting");
+import i18nResources = require("common/i18n/resources");
 
 class globalSettings extends abstractSettings {
     private readonly remoteSettingsLoader: () => JQueryPromise<Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration>;
@@ -33,6 +34,8 @@ class globalSettings extends abstractSettings {
     tableFont = new simpleStudioSetting<string>("local", "default", x => this.saveSetting(x));
     monospaceFont = new simpleStudioSetting<string>("local", "default", x => this.saveSetting(x));
 
+    language = new simpleStudioSetting<i18nResources.StudioLanguage>("local", "en", x => this.saveSetting(x));
+
     ongoingTaskDisplayMode = new simpleStudioSetting<studio.settings.ongoingTaskDisplayMode>("local", "expanded", x => this.saveSetting(x));
 
     constructor(remoteSettingsLoader: () => JQueryPromise<Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration>,
@@ -44,7 +47,21 @@ class globalSettings extends abstractSettings {
     }
 
     get storageKey() {
+        return globalSettings.storageKey;
+    }
+
+    static get storageKey() {
         return storageKeyProvider.storageKeyFor("settings");
+    }
+
+    static readStoredLanguage(): i18nResources.StudioLanguage {
+        try {
+            const storedLanguage = JSON.parse(localStorage.getItem(globalSettings.storageKey))?.language;
+            const language = JSON.parse(storedLanguage);
+            return i18nResources.isStudioLanguage(language) ? language : "en";
+        } catch {
+            return "en";
+        }
     }
 
     protected fetchConfigDocument(): JQueryPromise<Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration> {

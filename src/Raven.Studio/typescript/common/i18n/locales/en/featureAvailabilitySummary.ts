@@ -1,0 +1,5 @@
+export default {
+    heading: "Licensing",
+    description_plans: "See which plans include this feature and other exciting features",
+    description_quill: "See what features are included in this license",
+} as const;

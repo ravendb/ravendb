@@ -1,0 +1,10 @@
+{
+    "heading_new": "Nowy sorter",
+    "heading_edit": "Edycja sortera",
+    "cancelTitle": "Wróć do listy sorterów",
+    "loadFromFileTitle": "Wczytaj sorter z pliku",
+    "nameLabel": "Nazwa sortera",
+    "namePlaceholder": "Wpisz nazwę sortera",
+    "codeLabel": "Kod:",
+    "notFound": "Nie znaleziono sortera o nazwie: {{name}}"
+}
