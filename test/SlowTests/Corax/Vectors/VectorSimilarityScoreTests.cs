@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics.Tensors;
 using System.Runtime.InteropServices;
+using FastTests;
 using FastTests.Voron.FixedSize;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -15,7 +16,7 @@ using Voron.Data.Graphs;
 using Xunit;
 using VectorEmbeddingType = Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType;
 
-namespace FastTests.Corax.Vectors;
+namespace SlowTests.Corax.Vectors;
 
 public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBase(output)
 {

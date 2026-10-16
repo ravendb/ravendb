@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
@@ -11,7 +12,7 @@ using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace FastTests.Corax.Vectors;
+namespace SlowTests.Corax.Vectors;
 
 public class VectorJavaScriptIndexing(ITestOutputHelper output) : RavenTestBase(output)
 {

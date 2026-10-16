@@ -2,11 +2,12 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace FastTests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_11424 : RavenTestBase
     {
