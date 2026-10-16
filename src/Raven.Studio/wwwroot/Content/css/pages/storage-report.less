@@ -635,6 +635,49 @@
             width: 100%;
             padding-right: 20px;
         }
+
+        .sort-button {
+            padding: 0;
+            border: 0;
+            background: none;
+            color: inherit;
+            font: inherit;
+            white-space: nowrap;
+
+            .sortable-controls {
+                display: inline-flex;
+                flex-direction: column;
+                vertical-align: middle;
+                margin-left: 4px;
+
+                &:before, &:after {
+                    font-family: 'icomoon' !important;
+                    opacity: 0.2;
+                    font-size: 10px;
+                    line-height: 8px;
+                }
+
+                &:before {
+                    content: '\f128';
+                }
+
+                &:after {
+                    content: '\f114';
+                }
+            }
+
+            &:hover .sortable-controls {
+                &:before, &:after {
+                    opacity: 0.5;
+                }
+            }
+        }
+
+        .asc .sortable-controls:before,
+        .desc .sortable-controls:after {
+            opacity: 1;
+            color: var(--bs-primary);
+        }
     }
 
     .table-item-name {
