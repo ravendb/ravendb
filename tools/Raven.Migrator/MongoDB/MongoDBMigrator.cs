@@ -33,6 +33,8 @@ namespace Raven.Migrator.MongoDB
             MongoDocumentId
         };
 
+        private readonly HashSet<ulong> _usedDocumentIdHashes = new HashSet<ulong>();
+
         public MongoDBMigrator(MongoDBConfiguration configuration)
         {
             _configuration = configuration;
@@ -225,7 +227,7 @@ namespace Raven.Migrator.MongoDB
         /// other identifiers (numbers, strings, embedded documents) are prefixed with the collection name, e.g. 'Users/1',
         /// to avoid collisions between collections.
         /// </summary>
-        private static string GetDocumentId(BsonValue mongoId, string ravenCollectionName)
+        private string GetDocumentId(BsonValue mongoId, string ravenCollectionName)
         {
             switch (mongoId.BsonType)
             {
@@ -237,8 +239,39 @@ namespace Raven.Migrator.MongoDB
                 case BsonType.Undefined:
                     return $"{ravenCollectionName}/{Guid.NewGuid()}";
                 default:
-                    return $"{ravenCollectionName}/{MongoBsonConverter.ToIdString(mongoId)}";
+                    return GetUniqueDocumentId($"{ravenCollectionName}/{MongoBsonConverter.ToIdString(mongoId)}");
             }
+        }
+
+        /// <summary>
+        /// RavenDB document IDs are case-insensitive while MongoDB identifiers are case-sensitive and typed (1 and '1' can coexist),
+        /// so an ID that was already used gets a numeric suffix, e.g. 'Users/abc' and 'Users/ABC-2'.
+        /// Only hashes of the used IDs are kept, a hash collision just adds a suffix to an ID that didn't need one.
+        /// </summary>
+        private string GetUniqueDocumentId(string documentId)
+        {
+            if (_usedDocumentIdHashes.Add(GetDocumentIdHash(documentId)))
+                return documentId;
+
+            for (var suffix = 2; ; suffix++)
+            {
+                var uniqueDocumentId = $"{documentId}-{suffix}";
+                if (_usedDocumentIdHashes.Add(GetDocumentIdHash(uniqueDocumentId)))
+                    return uniqueDocumentId;
+            }
+        }
+
+        private static ulong GetDocumentIdHash(string documentId)
+        {
+            // 64-bit FNV-1a of the lower-cased ID
+            var hash = 14695981039346656037UL;
+            foreach (var c in documentId)
+            {
+                hash ^= char.ToLowerInvariant(c);
+                hash *= 1099511628211UL;
+            }
+
+            return hash;
         }
 
         private static System.Dynamic.ExpandoObject ToRavenDocument(BsonDocument bsonDocument)
@@ -252,7 +285,7 @@ namespace Raven.Migrator.MongoDB
             return document;
         }
 
-        private static async Task MigrateGridFS(
+        private async Task MigrateGridFS(
             IMongoDatabase database,
             string bucketName,
             JsonTextWriter jsonTextWriter,
