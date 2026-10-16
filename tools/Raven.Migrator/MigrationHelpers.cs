@@ -17,6 +17,7 @@ namespace Raven.Migrator
         private const string RavenCollection = "@collection";
 
         private const string MetadataProperty = "@metadata";
+        private const string RenamedMetadataProperty = "@metadata-source";
         private const string MetadataPropertyFlags = "@flags";
         private const string MetadataPropertyFlagsValue = "HasAttachments";
         private const string MetadataPropertyAttachments = "@attachments";
@@ -151,6 +152,10 @@ namespace Raven.Migrator
                 }
             }
 
+            // a source document property named '@metadata' would be overwritten by the RavenDB metadata
+            if (dictionary.Remove(MetadataProperty, out var sourceMetadata))
+                dictionary[RenamedMetadataProperty] = sourceMetadata;
+
             var metadata = new Dictionary<string, object>
             {
                 {RavenDocumentId, documentId},
@@ -168,7 +173,7 @@ namespace Raven.Migrator
         }
 
         public static async Task<Dictionary<string, object>> WriteAttachment(
-            Stream attachmentStream, long totalSize, string attachmentId,
+            Stream attachmentStream, long totalSize, string attachmentName,
             string collectionName, string contentType, long attachmentNumber,
             JsonTextWriter jsonTextWriter, StreamWriter streamWriter)
         {
@@ -196,7 +201,7 @@ namespace Raven.Migrator
 
             var attachmentInfo = new Dictionary<string, object>
             {
-                {AttachmentInfoName, attachmentId},
+                {AttachmentInfoName, attachmentName},
                 {AttachmentInfoHash, hash},
                 {AttachmentInfoContentType, contentType},
                 {AttachmentInfoSize, totalSize}

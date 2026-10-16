@@ -15,9 +15,6 @@ namespace Raven.Migrator.MongoDB
         private readonly MongoDBConfiguration _configuration;
 
         private const string MongoDocumentId = "_id";
-        private const string RavenMetadataProperty = "@metadata";
-        // a MongoDB document property named '@metadata' would be overwritten by the RavenDB metadata
-        private const string RenamedMetadataProperty = "@metadata-mongodb";
 
         private const string DefaultGridFSBucketName = "fs";
         private const string DefaultGridFSCollectionName = "Files";
@@ -209,7 +206,7 @@ namespace Raven.Migrator.MongoDB
                     foreach (var bsonDocument in documentsCursor.Current)
                     {
                         var documentId = GetDocumentId(bsonDocument.GetValue(MongoDocumentId, BsonNull.Value), ravenCollectionName);
-                        var document = ToRavenDocument(bsonDocument);
+                        var document = MongoBsonConverter.ToExpandoObject(bsonDocument);
 
                         MigrationHelpers.WriteDocument(
                             document,
@@ -274,17 +271,6 @@ namespace Raven.Migrator.MongoDB
             return hash;
         }
 
-        private static System.Dynamic.ExpandoObject ToRavenDocument(BsonDocument bsonDocument)
-        {
-            var document = MongoBsonConverter.ToExpandoObject(bsonDocument);
-            var dictionary = (IDictionary<string, object>)document;
-
-            if (dictionary.Remove(RavenMetadataProperty, out var metadata))
-                dictionary[RenamedMetadataProperty] = metadata;
-
-            return document;
-        }
-
         private async Task MigrateGridFS(
             IMongoDatabase database,
             string bucketName,
@@ -302,11 +288,12 @@ namespace Raven.Migrator.MongoDB
                 {
                     foreach (var fileInfo in cursor.Current)
                     {
-                        var document = ToRavenDocument(fileInfo.Metadata ?? new BsonDocument());
+                        var document = MongoBsonConverter.ToExpandoObject(fileInfo.Metadata ?? new BsonDocument());
                         var dictionary = (IDictionary<string, object>)document;
                         var documentId = GetDocumentId(fileInfo.Id, collectionName);
                         var totalSize = fileInfo.Length;
                         var contentType = GetContentType(fileInfo, dictionary);
+                        var attachmentName = string.IsNullOrWhiteSpace(fileInfo.Filename) ? documentId : fileInfo.Filename;
 
                         //can't OpenDownloadStreamAsync because it's not a seekable stream
                         await using (var stream = CreateGridFSFileBuffer(totalSize))
@@ -316,7 +303,7 @@ namespace Raven.Migrator.MongoDB
 
                             attachmentNumber++;
                             var attachmentInfo = await MigrationHelpers.WriteAttachment(
-                                stream, totalSize, documentId, collectionName, contentType,
+                                stream, totalSize, attachmentName, collectionName, contentType,
                                 attachmentNumber, jsonTextWriter, streamWriter);
 
                             MigrationHelpers.WriteDocument(
