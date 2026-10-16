@@ -11,10 +11,13 @@ import { CertificatesGenerateFormData } from "components/pages/resources/manageS
 import { useAppSelector } from "components/store";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { FlexGrow } from "components/common/FlexGrow";
+import useUniqueId from "components/hooks/useUniqueId";
 import { LicenseRestrictedMessage } from "components/common/LicenseRestrictedMessage";
 import Collapse from "react-bootstrap/Collapse";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
+import { useRef } from "react";
+import { flushSync } from "react-dom";
 
 type SecurityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 
@@ -33,14 +36,28 @@ export default function CertificatesPermissionsField() {
         name: "databasePermissions",
     });
 
+    const permissionsListRef = useRef<HTMLDivElement>(null);
+    const databaseSelectId = useUniqueId("database-permissions-select");
+
+    const removePermission = (idx: number) => {
+        flushSync(() => permissionsFieldArray.remove(idx));
+
+        const removeButtons = permissionsListRef.current?.querySelectorAll("button");
+        const nextFocusTarget = removeButtons?.length
+            ? removeButtons[Math.min(idx, removeButtons.length - 1)]
+            : document.getElementById(databaseSelectId);
+        nextFocusTarget?.focus();
+    };
+
     return (
         <>
-            <FormLabel>Database Permissions</FormLabel>
+            <FormLabel htmlFor={databaseSelectId}>Database Permissions</FormLabel>
             <AccessToAllDatabasesInfo securityClearance={formValues.securityClearance} />
             <Collapse in={formValues.securityClearance === "ValidUser"}>
                 <div>
                     <FormGroup>
                         <SelectCreatable
+                            inputId={databaseSelectId}
                             placeholder="Select (or enter) a database"
                             isClearable
                             options={allDatabaseNames
@@ -49,22 +66,33 @@ export default function CertificatesPermissionsField() {
                                     value: x,
                                     label: x,
                                 }))}
-                            onChange={(value) =>
+                            onChange={(value) => {
                                 permissionsFieldArray.append({
                                     databaseName: value.value,
                                     accessLevel: "ReadWrite",
-                                })
-                            }
+                                });
+                                requestAnimationFrame(() =>
+                                    permissionsListRef.current?.lastElementChild?.scrollIntoView({ block: "nearest" })
+                                );
+                            }}
                             isClearedAfterSelect
                             isDisabled={formState.isSubmitting}
                         />
                     </FormGroup>
-                    <FormGroup className="vstack gap-2">
+                    <div
+                        ref={permissionsListRef}
+                        className="vstack gap-1 overflow-auto mb-3"
+                        style={{ maxHeight: "240px" }}
+                    >
                         {permissionsFieldArray.fields.map((field, idx) => (
                             <Card key={field.id} className="hstack rounded px-3 py-1 well">
                                 {field.databaseName}
                                 <FlexGrow />
-                                <div className="hstack gap-3">
+                                <div
+                                    role="radiogroup"
+                                    aria-label={`Access level for ${field.databaseName}`}
+                                    className="hstack gap-3"
+                                >
                                     <FormRadio
                                         control={control}
                                         name={`databasePermissions.${idx}.accessLevel`}
@@ -110,15 +138,17 @@ export default function CertificatesPermissionsField() {
                                     </ConditionalPopover>
                                 </div>
                                 <Button
-                                    variant="link"
-                                    className="px-0 ms-3"
-                                    onClick={() => permissionsFieldArray.remove(idx)}
+                                    variant="outline-danger"
+                                    size="sm"
+                                    className="border-0 ms-3"
+                                    title={`Remove ${field.databaseName}`}
+                                    onClick={() => removePermission(idx)}
                                 >
-                                    <Icon icon="trash" margin="m-0" className="text-danger" />
+                                    <Icon icon="trash" margin="m-0" />
                                 </Button>
                             </Card>
                         ))}
-                    </FormGroup>
+                    </div>
                 </div>
             </Collapse>
         </>

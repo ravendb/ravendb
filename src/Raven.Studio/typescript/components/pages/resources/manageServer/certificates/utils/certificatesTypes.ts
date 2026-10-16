@@ -90,5 +90,3 @@ export interface FetchSsoServerCertResult {
 }
 
 export type ExpireTimeUnit = Extract<unitOfTime.Base, "days" | "months">;
-
-export type TwoFactorAction = "leave" | "update" | "delete";

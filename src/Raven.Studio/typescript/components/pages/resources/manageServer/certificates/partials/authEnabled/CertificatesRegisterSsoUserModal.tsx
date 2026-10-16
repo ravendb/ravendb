@@ -29,6 +29,7 @@ import Card from "react-bootstrap/Card";
 import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
 import * as yup from "yup";
+import useUniqueId from "components/hooks/useUniqueId";
 
 // exhaustiveStringTuple makes the compiler enforce that every SsoProvider is listed here.
 const ssoProviders = exhaustiveStringTuple<SsoProvider>()("Github", "Google", "Microsoft", "Windows");
@@ -96,6 +97,7 @@ export default function CertificatesRegisterSsoUserModal() {
     const identifiersFieldArray = useFieldArray({ control, name: "ssoIdentifiers" });
 
     const handleClose = () => dispatch(certificatesActions.isRegisterSsoUserModalOpenToggled());
+    const titleId = useUniqueId("sso-user-title");
 
     const handleSubmitForm: SubmitHandler<FormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -161,22 +163,28 @@ export default function CertificatesRegisterSsoUserModal() {
     })) satisfies SelectOption[];
 
     return (
-        <Modal show size="lg" centered contentClassName="modal-border bulge-primary">
+        <Modal
+            show
+            size="lg"
+            centered
+            contentClassName="modal-border bulge-primary"
+            backdrop="static"
+            onHide={handleClose}
+            aria-labelledby={titleId}
+        >
             <FormProvider {...form}>
                 <Form onSubmit={handleSubmit(handleSubmitForm)}>
-                    <Modal.Header className="vstack gap-4" onCloseClick={handleClose}>
-                        <div className="text-center">
-                            <Icon
-                                icon="user"
-                                addon={isEditing ? "edit" : isCloning ? "copy" : "plus"}
-                                className="fs-1"
-                                color="primary"
-                                margin="m-0"
-                            />
-                        </div>
-                        <div className="text-center lead">
+                    <Modal.Header className="pt-3 pb-0" onCloseClick={handleClose}>
+                        <Icon
+                            icon="user"
+                            addon={isEditing ? "edit" : isCloning ? "copy" : "plus"}
+                            size="lg"
+                            color="primary"
+                            margin="me-3"
+                        />
+                        <h3 id={titleId} className="mb-0">
                             {isEditing ? "Edit SSO user" : isCloning ? "Clone SSO user" : "Add SSO user"}
-                        </div>
+                        </h3>
                     </Modal.Header>
                     <Modal.Body>
                         <FormGroup>
