@@ -6,13 +6,11 @@ import { FormProvider, useForm } from "react-hook-form";
 import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
-import type { AiHelperStatus } from "@/api/generated/server-api";
 import { AI_OUT_OF_TOKENS_MESSAGE } from "@/components/ai-consent/use-ai-consent";
 import { FormWizard } from "@/components/form/wizard/form-wizard";
 import { preventEnterKeySubmission } from "@/lib/form-utils";
 import { appsMocks, sampleAgentSuggestion } from "@/mocks/apps-mocks";
-import { assistantMocks } from "@/mocks/assistant-mocks";
-import { defaultApiMocks } from "@/mocks/default-mocks";
+import { consentHandlers, defaultApiMocks } from "@/mocks/default-mocks";
 import { channelsMocks } from "@/mocks/channels-mocks";
 import { AddCapabilityWizard } from "./add-capability-wizard";
 import { suggestionToAgentConfiguration } from "./agent-config-form";
@@ -36,10 +34,6 @@ const meta = {
 export default meta;
 
 type Story = StoryObj<typeof meta>;
-
-function consentHandlers(status: AiHelperStatus) {
-    return { assistant: [assistantMocks.consent({ status }), ...defaultApiMocks.assistant] };
-}
 
 // The full wizard through the real entry component (form creation, store reset, and the
 // provision mutation wired up). Starts on the connection step because of ?capability=agent.
