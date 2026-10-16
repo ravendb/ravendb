@@ -10,6 +10,7 @@ import genUtils = require("common/generalUtils");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import appUrl = require("common/appUrl");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 interface WarningItem {
     source: string;
@@ -27,6 +28,7 @@ class blockingTombstonesDetails extends abstractAlertDetails {
     tableItems: WarningItem[] = [];
     private gridController = ko.observable<virtualGridController<WarningItem>>();
     private columnPreview = new columnPreviewPlugin<WarningItem>();
+    gridToolbar = new detailsGridToolbar(this.gridController, this.alert, "source", "sources");
 
     constructor(alert: alert, notificationCenter: notificationCenter) {
         super(alert, notificationCenter);
@@ -120,7 +122,8 @@ class blockingTombstonesDetails extends abstractAlertDetails {
             const countColumn = new textColumn<WarningItem>(grid, x => x.count, "Tombstones count", "20%");
             const sizeColumn = new textColumn<WarningItem>(grid, x => x.size, "Size", "20%", {
                 sortable: x => x.size,
-                transformValue: genUtils.formatBytesToSize
+                transformValue: genUtils.formatBytesToSize,
+                exportHeader: "Size (bytes)"
             });
 
             return [sourceColumn, collectionColumn, countColumn, sizeColumn];

@@ -8,6 +8,7 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import abstractAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/abstractAlertDetails");
 import genUtils = require("common/generalUtils");
 import ServerLimitInfo = Raven.Server.NotificationCenter.Notifications.Details.ServerLimitsDetails.ServerLimitInfo;
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 class serverLimitsDetails extends abstractAlertDetails {
     
@@ -16,6 +17,7 @@ class serverLimitsDetails extends abstractAlertDetails {
     tableItems: Raven.Server.NotificationCenter.Notifications.Details.ServerLimitsDetails.ServerLimitInfo[] = [];
     private gridController = ko.observable<virtualGridController<ServerLimitInfo>>();
     private columnPreview = new columnPreviewPlugin<ServerLimitInfo>();
+    gridToolbar = new detailsGridToolbar(this.gridController, this.alert, "limit", "limits");
 
     constructor(alert: alert, notificationCenter: notificationCenter) {
         super(alert, notificationCenter);
@@ -38,7 +40,8 @@ class serverLimitsDetails extends abstractAlertDetails {
                 sortable: x => x.Limit
             });
             const dateColumn = new textColumn<ServerLimitInfo>(grid, x => genUtils.formatUtcDateAsLocal(x.Date), "Date", "30%", {
-                sortable: x => x.Date
+                sortable: x => x.Date,
+                exportValue: x => x.Date
             });
             const valueColumn = new textColumn<ServerLimitInfo>(grid, x => x.Value, "Value", "12%");
             const maxColumn = new textColumn<ServerLimitInfo>(grid, x => x.Max, "Max", "12%");

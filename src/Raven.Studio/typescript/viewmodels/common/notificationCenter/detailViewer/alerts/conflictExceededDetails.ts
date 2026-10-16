@@ -1,4 +1,4 @@
-﻿import app = require("durandal/app");
+import app = require("durandal/app");
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import notificationCenter = require("common/notifications/notificationCenter");
 import alert = require("common/notifications/models/alert");
@@ -9,6 +9,7 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
 import ActionDetails = Raven.Server.NotificationCenter.Notifications.Details.ConflictPerformanceDetails.ActionDetails;
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 class conflictExceededDetails extends abstractAlertDetails {
 
@@ -17,6 +18,7 @@ class conflictExceededDetails extends abstractAlertDetails {
     tableItems: ActionDetails[] = [];
     private gridController = ko.observable<virtualGridController<ActionDetails>>();
     private columnPreview = new columnPreviewPlugin<ActionDetails>();
+    gridToolbar = new detailsGridToolbar(this.gridController, this.alert, "document", "documents");
 
     constructor(alert: alert, notificationCenter: notificationCenter) {
         super(alert, notificationCenter);
@@ -47,7 +49,8 @@ class conflictExceededDetails extends abstractAlertDetails {
                     defaultSortOrder: "desc"
                 }),
                 new textColumn<ActionDetails>(grid, x => generalUtils.formatUtcDateAsLocal(x.Time), "Date", "20%", {
-                    sortable: x => x.Time
+                    sortable: x => x.Time,
+                    exportValue: x => x.Time
                 }),
             ];
         });

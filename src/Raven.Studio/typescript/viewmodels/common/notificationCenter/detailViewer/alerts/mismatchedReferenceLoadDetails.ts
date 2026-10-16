@@ -8,6 +8,7 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import abstractAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/abstractAlertDetails");
 import MismatchedReferencesLoadWarning = Raven.Server.NotificationCenter.Notifications.Details.MismatchedReferencesLoadWarning;
 import genUtils = require("common/generalUtils");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 interface WarningItem {
     actualCollection: string;
@@ -23,6 +24,7 @@ class mismatchedReferenceLoadDetails extends abstractAlertDetails {
     tableItems: WarningItem[] = [];
     private gridController = ko.observable<virtualGridController<WarningItem>>();
     private columnPreview = new columnPreviewPlugin<WarningItem>();
+    gridToolbar = new detailsGridToolbar(this.gridController, this.alert, "reference", "references");
 
     constructor(alert: alert, notificationCenter: notificationCenter) {
         super(alert, notificationCenter);
