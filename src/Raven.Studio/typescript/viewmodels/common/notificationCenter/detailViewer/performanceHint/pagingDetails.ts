@@ -8,6 +8,7 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 type pagingDetailsItemDto = {
     Action: string;
@@ -26,6 +27,9 @@ class pagingDetails extends abstractPerformanceHintDetails {
     tableItems: pagingDetailsItemDto[] = [];
     private gridController = ko.observable<virtualGridController<pagingDetailsItemDto>>();
     private columnPreview = new columnPreviewPlugin<pagingDetailsItemDto>();
+    gridToolbar = new detailsGridToolbar(this.gridController, this.hint, "request", "requests");
+
+    private static readonly pageSizeNotSet = 2147483647;
 
     constructor(hint: performanceHint, notificationCenter: notificationCenter) {
         super(hint, notificationCenter);
@@ -49,18 +53,23 @@ class pagingDetails extends abstractPerformanceHintDetails {
                 }),
                 new textColumn<pagingDetailsItemDto>(grid, x => x.NumberOfResults ? x.NumberOfResults.toLocaleString() : 'n/a', "# of results", "10%", {
                     sortable: x => x.NumberOfResults,
-                    defaultSortOrder: "desc"
+                    defaultSortOrder: "desc",
+                    exportValue: x => x.NumberOfResults
                 }),
-                new textColumn<pagingDetailsItemDto>(grid, x => x.PageSize ? x.PageSize.toLocaleString() : 'n/a', "Page size", "12%", {
+                new textColumn<pagingDetailsItemDto>(grid, x => pagingDetails.formatPageSize(x.PageSize), "Page size", "12%", {
                     sortable: x => x.PageSize,
-                    defaultSortOrder: "desc"
+                    defaultSortOrder: "desc",
+                    exportValue: x => x.PageSize === pagingDetails.pageSizeNotSet ? null : x.PageSize
                 }),
                 new textColumn<pagingDetailsItemDto>(grid, x => x.TotalDocumentsSizeInBytes ? generalUtils.formatBytesToSize(x.TotalDocumentsSizeInBytes) : 'n/a', "Docs size", "12%", {
                     sortable: x => x.TotalDocumentsSizeInBytes,
-                    defaultSortOrder: "desc"
+                    defaultSortOrder: "desc",
+                    exportValue: x => x.TotalDocumentsSizeInBytes,
+                    exportHeader: "Docs size (bytes)"
                 }),
                 new textColumn<pagingDetailsItemDto>(grid, x => generalUtils.formatUtcDateAsLocal(x.Occurrence), "Date", "13%", {
-                    sortable: x => x.Occurrence
+                    sortable: x => x.Occurrence,
+                    exportValue: x => x.Occurrence
                 }),
                 new textColumn<pagingDetailsItemDto>(grid, x => x.Duration, "Duration (ms)", "10%", {
                     sortable: "number",
@@ -80,6 +89,13 @@ class pagingDetails extends abstractPerformanceHintDetails {
                 onValue(generalUtils.escapeHtml(value), value);
             }
         });
+    }
+
+    private static formatPageSize(pageSize: number) {
+        if (pageSize === pagingDetails.pageSizeNotSet) {
+            return "Not set";
+        }
+        return pageSize ? pageSize.toLocaleString() : "n/a";
     }
 
     private fetcher(): JQueryPromise<pagedResult<pagingDetailsItemDto>> {
