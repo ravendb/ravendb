@@ -7,6 +7,7 @@ import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import databasesManager = require("common/shell/databasesManager");
 import storageReportItem = require("models/database/status/storageReportItem");
 import databaseStorageReportItem = require("models/database/status/databaseStorageReportItem");
+import storageReportSort = require("models/database/status/storageReportSort");
 import router = require("plugins/router");
 import d3 = require("d3");
 import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseState;
@@ -46,9 +47,12 @@ class storageReport extends viewModelBase {
     showEntriesColumn: KnockoutObservable<boolean>;
     showTempFiles: KnockoutObservable<boolean>;
 
+    private readonly sort = new storageReportSort.storageReportSort();
+    sortedChildren: KnockoutComputed<storageReportItem[]>;
+
     constructor() {
         super();
-        this.bindToCurrentInstance("onClick");
+        this.bindToCurrentInstance("onClick", "sortBy");
     }
 
     activate(args: any) {
@@ -109,6 +113,9 @@ class storageReport extends viewModelBase {
         this.showTempFiles = ko.pureComputed(() => {
             return this.node() == this.root;
         })
+
+        this.sortedChildren = ko.pureComputed(() => this.sort.apply(this.node().internalChildren));
+        this.node.subscribe(() => this.sort.reset());
     }
 
     private processData() {
@@ -532,6 +539,22 @@ class storageReport extends viewModelBase {
 
     tempSizeFormatted(item: storageReportItem) {
         return item.tempBuffersSize == null ? "n/a" : generalUtils.formatBytesToSize(item.tempBuffersSize);
+    }
+
+    sortBy(column: storageReportSort.storageReportSortColumn) {
+        this.sort.sortBy(column);
+    }
+
+    sortClass(column: storageReportSort.storageReportSortColumn) {
+        return this.sort.column() === column ? this.sort.mode() : "";
+    }
+
+    ariaSort(column: storageReportSort.storageReportSortColumn) {
+        if (this.sort.column() !== column) {
+            return "none";
+        }
+
+        return this.sort.mode() === "asc" ? "ascending" : "descending";
     }
 
     private onMouseOut() {
