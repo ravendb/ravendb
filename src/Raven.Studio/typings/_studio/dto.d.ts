@@ -759,6 +759,8 @@ interface textColumnOpts<T> {
     defaultSortOrder?: sortMode;
     customComparator?: (a: any, b: any) => number;
     transformValue?: ((a: any, item: T) => any) | ((a: any) => any);
+    exportValue?: (item: T) => unknown;
+    exportHeader?: string;
 }
 
 interface hypertextColumnOpts<T> extends textColumnOpts<T> {

@@ -26,6 +26,10 @@ interface virtualGridController<T> {
 
     setSelectedItems(selection: Array<T>): void;
 
+    getColumns(): virtualColumn[];
+
+    getItems(): T[];
+
     dirtyResults: KnockoutObservable<boolean>;
 
     resultEtag: () => string;

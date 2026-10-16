@@ -111,6 +111,8 @@ class virtualGrid<T extends object> {
             findItem: (predicate) => this.findItem(predicate),
             getSelectedItems: () => this.getSelectedItems(),
             setSelectedItems: (selection: Array<T>) => this.setSelectedItems(selection),
+            getColumns: () => this.columns(),
+            getItems: () => Array.from(this.items.entries()).sort(([a], [b]) => a - b).map(([, item]) => item),
             dirtyResults: this.dirtyResults,
             markColumnsDirty: () => this.markColumnsDirty(),
             resultEtag: () => this.previousResultsEtag(),
