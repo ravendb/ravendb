@@ -939,6 +939,8 @@ public static partial class CoraxQueryBuilder
 
 
         var query = ToCoraxQuery(builderParameters, expression.Arguments[0], ref builderParameters.StreamingDisabled, exact);
+        if (builderParameters.HasBoost == false)
+            return query;
 
         switch (query)
         {
