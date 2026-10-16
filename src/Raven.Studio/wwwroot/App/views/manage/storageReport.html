@@ -50,7 +50,7 @@
                         <a class="table-item-name text-elipsis" data-bind="text: name, attr: { href: link, title: name }, visible: link"></a>
                         <a href="#" class="table-item-name text-elipsis" data-bind="text: name, click: _.partial($root.onClick, $data, true), visible: hasChildren(), attr: { title: name }"></a>
                         <span href="#" class="table-item-name text-elipsis" data-bind="visible: !hasChildren() && !link, attr: { title: name }">
-                            <span data-bind="text: name"></span><small class="text-muted margin-left margin-left-xs" data-bind="visible: $data.isDisabled">Disabled</small>
+                            <span data-bind="text: name"></span><span class="rounded-pill badge bg-faded-warning margin-left margin-left-xs" data-bind="visible: $data.isDisabled">Disabled</span>
                         </span>
                         <span data-bind="visible: recyclableJournal"><small data-toggle="tooltip" title="Stored in Journals directory"><i class="icon-info text-info"></i></small></span>
                     </div>
