@@ -65,6 +65,27 @@ describe("storageReportSort", () => {
         expect(namesOf(sort.apply(items))).toEqual(["B", "C", "A"]);
     });
 
+    it("marks only the sorted column for styling and screen readers", () => {
+        const sort = new storageReportSort();
+
+        sort.sortBy("name");
+        expect([sort.cssClassFor("name"), sort.ariaSortFor("name")]).toEqual(["asc", "ascending"]);
+        expect([sort.cssClassFor("size"), sort.ariaSortFor("size")]).toEqual(["", "none"]);
+
+        sort.sortBy("name");
+        expect([sort.cssClassFor("name"), sort.ariaSortFor("name")]).toEqual(["desc", "descending"]);
+    });
+
+    it("can be bound as a click handler without its instance", () => {
+        const sort = new storageReportSort();
+        const items = [reportItem("B", "database", 1), reportItem("A", "database", 2)];
+
+        const { sortBy } = sort;
+        sortBy("name");
+
+        expect(namesOf(sort.apply(items))).toEqual(["A", "B"]);
+    });
+
     it("keeps items without a value last in both directions", () => {
         const sort = new storageReportSort();
         const items = [

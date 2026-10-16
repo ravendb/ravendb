@@ -47,12 +47,12 @@ class storageReport extends viewModelBase {
     showEntriesColumn: KnockoutObservable<boolean>;
     showTempFiles: KnockoutObservable<boolean>;
 
-    private readonly sort = new storageReportSort.storageReportSort();
+    readonly sort = new storageReportSort.storageReportSort();
     sortedChildren: KnockoutComputed<storageReportItem[]>;
 
     constructor() {
         super();
-        this.bindToCurrentInstance("onClick", "sortBy");
+        this.bindToCurrentInstance("onClick");
     }
 
     activate(args: any) {
@@ -539,22 +539,6 @@ class storageReport extends viewModelBase {
 
     tempSizeFormatted(item: storageReportItem) {
         return item.tempBuffersSize == null ? "n/a" : generalUtils.formatBytesToSize(item.tempBuffersSize);
-    }
-
-    sortBy(column: storageReportSort.storageReportSortColumn) {
-        this.sort.sortBy(column);
-    }
-
-    sortClass(column: storageReportSort.storageReportSortColumn) {
-        return this.sort.column() === column ? this.sort.mode() : "";
-    }
-
-    ariaSort(column: storageReportSort.storageReportSortColumn) {
-        if (this.sort.column() !== column) {
-            return "none";
-        }
-
-        return this.sort.mode() === "asc" ? "ascending" : "descending";
     }
 
     private onMouseOut() {

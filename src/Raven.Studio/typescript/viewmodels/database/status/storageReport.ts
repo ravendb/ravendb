@@ -6,6 +6,7 @@ import getEnvironmentStorageReportCommand = require("commands/database/debug/get
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 import generalUtils = require("common/generalUtils");
 import storageReportItem = require("models/database/status/storageReportItem");
+import storageReportSort = require("models/database/status/storageReportSort");
 import d3 = require("d3");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import database = require("models/resources/database");
@@ -49,6 +50,9 @@ class storageReport extends shardViewModelBase {
     showPagesColumn: KnockoutObservable<boolean>;
     showEntriesColumn: KnockoutObservable<boolean>;
     showTempFiles: KnockoutObservable<boolean>;
+
+    readonly sort = new storageReportSort.storageReportSort();
+    sortedChildren: KnockoutComputed<storageReportItem[]>;
 
     documentsCompressionUrl: KnockoutComputed<string>;
 
@@ -107,6 +111,9 @@ class storageReport extends shardViewModelBase {
             return this.node() == this.root;
         })
 
+        this.sortedChildren = ko.pureComputed(() => this.sort.apply(this.node().internalChildren));
+        this.node.subscribe(() => this.sort.reset());
+
         this.documentsCompressionUrl = ko.pureComputed(() => appUrl.forDocumentsCompression(this.db));
     }
 
@@ -137,11 +144,16 @@ class storageReport extends shardViewModelBase {
         const journals = this.mapJournals(reportItem.Report);
         const tempFiles = this.mapTempFiles(reportItem.Report);
 
-        return new storageReportItem(reportItem.Name,
+        const item = new storageReportItem(reportItem.Name,
             reportItem.Type.toLowerCase(),
             storageReport.showDisplayReportType(reportItem.Type),
             dataFile.size + journals.size + tempFiles.size,
             [dataFile, journals, tempFiles]);
+
+        item.dataSize = dataFile.size + journals.size;
+        item.tempBuffersSize = tempFiles.size;
+
+        return item;
     }
 
     private static showDisplayReportType(reportType: string): boolean {
@@ -661,22 +673,11 @@ class storageReport extends shardViewModelBase {
     }
 
     dataSizeFormatted(item: storageReportItem) {
-        if (!item.isStorageEnvironment()) {
-            return "n/a";
-        }
-        
-        const data = item.internalChildren.find(x => x.type === "data");
-        const journals = item.internalChildren.find(x => x.type === "journals");
-        return generalUtils.formatBytesToSize(data.size + journals.size);
+        return item.dataSize == null ? "n/a" : generalUtils.formatBytesToSize(item.dataSize);
     }
-    
-    tempSizeFormatted(item: storageReportItem) {
-        if (!item.isStorageEnvironment()) {
-            return "n/a";
-        }
 
-        const tempFiles = item.internalChildren.find(x => x.type === "tempFiles");
-        return generalUtils.formatBytesToSize(tempFiles.size);
+    tempSizeFormatted(item: storageReportItem) {
+        return item.tempBuffersSize == null ? "n/a" : generalUtils.formatBytesToSize(item.tempBuffersSize);
     }
 
     compactDatabase() {

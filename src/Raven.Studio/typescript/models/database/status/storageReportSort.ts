@@ -10,7 +10,7 @@ export class storageReportSort {
     column = ko.observable<storageReportSortColumn>("size");
     mode = ko.observable<sortMode>("desc");
 
-    sortBy(column: storageReportSortColumn) {
+    sortBy = (column: storageReportSortColumn) => {
         if (this.column() === column) {
             this.mode(this.mode() === "asc" ? "desc" : "asc");
             return;
@@ -18,6 +18,18 @@ export class storageReportSort {
 
         this.column(column);
         this.mode(storageReportSort.isTextColumn(column) ? "asc" : "desc");
+    };
+
+    cssClassFor(column: storageReportSortColumn) {
+        return this.column() === column ? this.mode() : "";
+    }
+
+    ariaSortFor(column: storageReportSortColumn) {
+        if (this.column() !== column) {
+            return "none";
+        }
+
+        return this.mode() === "asc" ? "ascending" : "descending";
     }
 
     reset() {
