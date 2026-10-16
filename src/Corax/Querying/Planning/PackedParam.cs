@@ -60,6 +60,7 @@ public readonly struct PackedParam
         {
             TypeLong => indexSearcher.TermQuery(fieldMeta, exec.LongValues[Param1]),
             TypeDouble => indexSearcher.TermQuery(fieldMeta, exec.DoubleValues[Param1]),
+            _ when exec.StringValues[Param1] is null => indexSearcher.TermQuery(fieldMeta, null),
             _ => indexSearcher.TermQuery(fieldMeta, exec.GetAnalyzedSlice(indexSearcher, fieldMeta, Param1))
         };
     }
