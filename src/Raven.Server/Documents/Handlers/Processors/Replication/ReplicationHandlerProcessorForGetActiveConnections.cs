@@ -1,4 +1,3 @@
-﻿using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.ServerWide;
@@ -21,13 +20,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
-                var activeConnectionsPreview = new ReplicationActiveConnectionsPreview
-                {
-                    IncomingConnections = RequestHandler.Database.ReplicationLoader.IncomingConnections.ToList(),
-                    OutgoingConnections = RequestHandler.Database.ReplicationLoader.OutgoingConnections.ToList()
-                };
-
-                context.Write(writer, activeConnectionsPreview.ToJson());
+                var activeConnectionsJson = RequestHandler.Database.ReplicationLoader.GetActiveConnectionsAsJson();
+                context.Write(writer, activeConnectionsJson);
             }
         }
 

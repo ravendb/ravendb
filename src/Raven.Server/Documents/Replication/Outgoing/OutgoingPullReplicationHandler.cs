@@ -24,7 +24,8 @@ namespace Raven.Server.Documents.Replication
     public enum PullReplicationChangeVectorWireMode
     {
         SendAsIs,
-        SendLegacyCompatible
+        SendLegacyCompatible,
+        NotNegotiated
     }
 }
 
@@ -35,10 +36,21 @@ namespace Raven.Server.Documents.Replication.Outgoing
         public string[] PathsToSend;
         public ReplicationLoader.PullReplicationParams OutgoingPullReplicationParams;
         private string[] _destinationAcceptablePaths;
+        private volatile PullReplicationChangeVectorWireMode _changeVectorWireMode = PullReplicationChangeVectorWireMode.NotNegotiated;
 
         public string CertificateThumbprint;
 
-        internal PullReplicationChangeVectorWireMode ChangeVectorWireMode { get; private set; } = PullReplicationChangeVectorWireMode.SendLegacyCompatible;
+        internal override DynamicJsonValue GetConnectionInfoAsJson()
+        {
+            var json = base.GetConnectionInfoAsJson();
+            json[nameof(ChangeVectorWireMode)] = ChangeVectorWireMode;
+            return json;
+        }
+
+        protected override string ConnectionEstablishedLogDetails =>
+            $"{base.ConnectionEstablishedLogDetails}, ChangeVectorWireMode={ChangeVectorWireMode}, CertificateThumbprint={CertificateThumbprint}";
+
+        internal PullReplicationChangeVectorWireMode ChangeVectorWireMode => _changeVectorWireMode;
 
         protected OutgoingPullReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, TcpConnectionInfo connectionInfo) :
             base(parent, database, node, connectionInfo)
@@ -71,8 +83,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
             // this is used when the other side lets us know what paths it is going to accept from us
             // it supplements (but does not extend) what we are willing to send out 
             _destinationAcceptablePaths = response.Reply.AcceptablePaths;
-            ChangeVectorWireMode = _database.SupportedFeatures.SupportedFeatureTypes.PullReplicationCompositeChangeVectors &&
-                                   response.Reply.SupportsPullReplicationCompositeChangeVectors
+            _changeVectorWireMode = _database.SupportedFeatures.SupportedFeatureTypes.PullReplicationCompositeChangeVectors &&
+                                    response.Reply.SupportsPullReplicationCompositeChangeVectors
                 ? PullReplicationChangeVectorWireMode.SendAsIs
                 : PullReplicationChangeVectorWireMode.SendLegacyCompatible;
         }
@@ -122,6 +134,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
             }
         }
 
+        protected override string ConnectionEstablishedLogDetails => $"{base.ConnectionEstablishedLogDetails}, Direction={PullReplicationMode.HubToSink}";
+
         protected override void ProcessHandshakeResponse((ReplicationMessageReply.ReplyType ReplyType, ReplicationMessageReply Reply) response)
         {
             base.ProcessHandshakeResponse(response);
@@ -163,6 +177,9 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
             return request;
         }
+
+        protected override string ConnectionEstablishedLogDetails =>
+            $"{base.ConnectionEstablishedLogDetails}, {nameof(ReplicationInitialRequest.PullReplicationDefinitionName)}={_node.HubName}, Direction={PullReplicationMode.SinkToHub}";
 
         protected override void ProcessHandshakeResponse((ReplicationMessageReply.ReplyType ReplyType, ReplicationMessageReply Reply) response)
         {
