@@ -29,7 +29,21 @@ public class ScoringOnlyWhenScoresAreConsumed(ITestOutputHelper output) : RavenT
     }
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void ExplicitBoostWithFieldOrderBuildsNoScoringState(Options options)
+    {
+        using var store = GetStoreWithDocumentBoostedIndex(options);
+        using var session = store.OpenSession();
+
+        var results = Query(session, "where boost(startsWith(Name, 'maciej'), 2) and Tag = 'a' order by Age as long", out var plan);
+
+        Assert.Equal(new[] { "docs/3", "docs/1", "docs/2" }, results.Select(x => x.Id));
+        Assert.DoesNotContain("True", IsBoostingValues(plan));
+    }
+
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [RavenData("where Tag = 'a' and not Name = 'Maciej' order by score()", 2, SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData("where Tag = 'a' and not boost(Name = 'Maciej', 2) order by score()", 2, SearchEngineMode = RavenSearchEngineMode.Corax)]
     [RavenData("where Tag = 'b' or not Name = 'Maciej' order by score()", 3, SearchEngineMode = RavenSearchEngineMode.Corax)]
     [RavenData("where Name != 'Maciej' order by score()", 3, SearchEngineMode = RavenSearchEngineMode.Corax)]
     [RavenData("where Tag = 'a' and not startsWith(Name, 'maciej2') order by score()", 1, SearchEngineMode = RavenSearchEngineMode.Corax)]
