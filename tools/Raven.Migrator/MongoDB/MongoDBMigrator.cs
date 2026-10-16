@@ -15,6 +15,7 @@ namespace Raven.Migrator.MongoDB
         private readonly MongoDBConfiguration _configuration;
 
         private const string MongoDocumentId = "_id";
+        private const string OriginalIdProperty = "@mongodb-id";
 
         private const string DefaultGridFSBucketName = "fs";
         private const string DefaultGridFSCollectionName = "Files";
@@ -205,8 +206,10 @@ namespace Raven.Migrator.MongoDB
                 {
                     foreach (var bsonDocument in documentsCursor.Current)
                     {
-                        var documentId = GetDocumentId(bsonDocument.GetValue(MongoDocumentId, BsonNull.Value), ravenCollectionName);
+                        var mongoId = bsonDocument.GetValue(MongoDocumentId, BsonNull.Value);
+                        var documentId = GetDocumentId(mongoId, ravenCollectionName);
                         var document = MongoBsonConverter.ToExpandoObject(bsonDocument);
+                        AddOriginalId(document, mongoId);
 
                         MigrationHelpers.WriteDocument(
                             document,
@@ -237,6 +240,25 @@ namespace Raven.Migrator.MongoDB
                     return $"{ravenCollectionName}/{Guid.NewGuid()}";
                 default:
                     return GetUniqueDocumentId($"{ravenCollectionName}/{MongoBsonConverter.ToIdString(mongoId)}");
+            }
+        }
+
+        /// <summary>
+        /// Identifiers that aren't used as is (they are prefixed with the collection name and, on a collision, suffixed)
+        /// are kept in the document, so references to them stored in other documents can be updated after the migration.
+        /// </summary>
+        private static void AddOriginalId(IDictionary<string, object> document, BsonValue mongoId)
+        {
+            switch (mongoId.BsonType)
+            {
+                case BsonType.ObjectId:
+                case BsonType.Binary when MongoBsonConverter.TryGetGuid(mongoId.AsBsonBinaryData, out _):
+                case BsonType.Null:
+                case BsonType.Undefined:
+                    return;
+                default:
+                    document[OriginalIdProperty] = MongoBsonConverter.ToDotNetValue(mongoId);
+                    return;
             }
         }
 
@@ -291,6 +313,7 @@ namespace Raven.Migrator.MongoDB
                         var document = MongoBsonConverter.ToExpandoObject(fileInfo.Metadata ?? new BsonDocument());
                         var dictionary = (IDictionary<string, object>)document;
                         var documentId = GetDocumentId(fileInfo.Id, collectionName);
+                        AddOriginalId(dictionary, fileInfo.Id);
                         var totalSize = fileInfo.Length;
                         var contentType = GetContentType(fileInfo, dictionary);
                         var attachmentName = string.IsNullOrWhiteSpace(fileInfo.Filename) ? documentId : fileInfo.Filename;
