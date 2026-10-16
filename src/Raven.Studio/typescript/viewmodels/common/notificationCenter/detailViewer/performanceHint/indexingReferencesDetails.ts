@@ -9,6 +9,7 @@ import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import moment = require("moment");
 import performanceHint = require("common/notifications/models/performanceHint");
 import abstractPerformanceHintDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/abstractPerformanceHintDetails");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 interface indexReferencesDetailsItem {
     referenceId: string;
@@ -30,6 +31,7 @@ class indexingReferencesDetails extends abstractPerformanceHintDetails {
     tableItems: indexingReferencesItem[] = [];
     private gridController = ko.observable<virtualGridController<indexingReferencesItem>>();
     private columnPreview = new columnPreviewPlugin<indexingReferencesItem>();
+    gridToolbar = new detailsGridToolbar(this.gridController, this.hint, "index", "indexes");
 
     constructor(hint: performanceHint, notificationCenter: notificationCenter) {
         super(hint, notificationCenter);
@@ -71,7 +73,8 @@ class indexingReferencesDetails extends abstractPerformanceHintDetails {
                         sortable: "number"
                     }),
                     new textColumn<indexingReferencesItem>(grid, x => generalUtils.formatUtcDateAsLocal(x.lastWarningTime), "Last Warning Date", "30%", {
-                        sortable: x => x.lastWarningTime
+                        sortable: x => x.lastWarningTime,
+                        exportValue: x => x.lastWarningTime
                     }),
                     new actionColumn<indexingReferencesItem>(
                         grid, item => this.showDetails(item), "Reference IDs", `Show top 10 loaded references`, "30%",

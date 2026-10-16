@@ -7,6 +7,7 @@ import alert = require("common/notifications/models/alert");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import abstractAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/abstractAlertDetails");
 import genUtils = require("common/generalUtils");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 class queueSinkErrorDetails extends abstractAlertDetails {
     
@@ -15,6 +16,7 @@ class queueSinkErrorDetails extends abstractAlertDetails {
     tableItems: Raven.Server.NotificationCenter.Notifications.Details.QueueSinkErrorInfo[] = [];
     private gridController = ko.observable<virtualGridController<Raven.Server.NotificationCenter.Notifications.Details.QueueSinkErrorInfo>>();
     private columnPreview = new columnPreviewPlugin<Raven.Server.NotificationCenter.Notifications.Details.QueueSinkErrorInfo>();
+    gridToolbar = new detailsGridToolbar(this.gridController, this.alert, "error", "errors");
 
     constructor(alert: alert, notificationCenter: notificationCenter) {
         super(alert, notificationCenter);
@@ -33,7 +35,8 @@ class queueSinkErrorDetails extends abstractAlertDetails {
            
             const dateColumn = new textColumn<Raven.Server.NotificationCenter.Notifications.Details.QueueSinkErrorInfo>(
                 grid, x => genUtils.formatUtcDateAsLocal(x.Date), "Date", "30%", {
-                    sortable: x => x.Date
+                    sortable: x => x.Date,
+                    exportValue: x => x.Date
                 });
             const errorColumn = new textColumn<Raven.Server.NotificationCenter.Notifications.Details.QueueSinkErrorInfo>(
                 grid, x => x.Error, "Error", "69%");

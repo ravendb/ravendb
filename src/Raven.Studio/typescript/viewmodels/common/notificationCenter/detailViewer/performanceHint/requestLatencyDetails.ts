@@ -8,6 +8,7 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import generalUtils = require("common/generalUtils");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import moment = require("moment");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 class requestLatencyDetails extends abstractPerformanceHintDetails {
 
@@ -16,6 +17,7 @@ class requestLatencyDetails extends abstractPerformanceHintDetails {
     tableItems: Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo[] = [];
     private gridController = ko.observable<virtualGridController<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>>();
     private columnPreview = new columnPreviewPlugin<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>();
+    gridToolbar = new detailsGridToolbar(this.gridController, this.hint, "request", "requests");
 
     constructor(hint: performanceHint, notificationCenter: notificationCenter) {
         super(hint, notificationCenter);
@@ -38,10 +40,13 @@ class requestLatencyDetails extends abstractPerformanceHintDetails {
                     sortable: "string"
                 }),
                 new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "20%", {
-                    sortable: x => x.Date
+                    sortable: x => x.Date,
+                    exportValue: x => x.Date
                 }),
                 new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => generalUtils.formatTimeSpan(x.Duration, true), "Duration", "15%", {
-                    sortable: x => x.Duration
+                    sortable: x => x.Duration,
+                    exportValue: x => x.Duration,
+                    exportHeader: "Duration (ms)"
                 }),
                 new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.Query, "Query", "45%", {
                     sortable: "string"
@@ -56,10 +61,8 @@ class requestLatencyDetails extends abstractPerformanceHintDetails {
             const value = column.getCellValue(details);
             if (column.header === "Date") {
                 onValue(moment.utc(details.Date), details.Date);
-            } else if (value === undefined) {
+            } else if (value !== undefined) {
                 onValue(generalUtils.escapeHtml(value), value);
-            } else if (column.header === "Query") {
-                onValue(generalUtils.escapeHtml(details.Query), details.Query);
             }
         });
     }

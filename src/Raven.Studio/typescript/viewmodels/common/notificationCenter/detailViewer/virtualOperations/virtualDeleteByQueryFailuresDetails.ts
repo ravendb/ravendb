@@ -9,6 +9,7 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
 import virtualDeleteByQueryFailures = require("common/notifications/models/virtualDeleteByQueryFailures");
 import moment = require("moment");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 class virtualDeleteByQueryFailuresDetails extends dialogViewModelBase {
 
@@ -17,11 +18,13 @@ class virtualDeleteByQueryFailuresDetails extends dialogViewModelBase {
     private virtualNotification: virtualDeleteByQueryFailures;
     private gridController = ko.observable<virtualGridController<queryBasedVirtualBulkOperationFailureItem>>();
     private columnPreview = new columnPreviewPlugin<queryBasedVirtualBulkOperationFailureItem>();
+    gridToolbar: detailsGridToolbar<queryBasedVirtualBulkOperationFailureItem>;
 
     constructor(virtualNotification: virtualDeleteByQueryFailures) {
         super();
 
         this.virtualNotification = virtualNotification;
+        this.gridToolbar = new detailsGridToolbar(this.gridController, virtualNotification, "failure", "failures");
     }
 
     compositionComplete() {
@@ -33,7 +36,8 @@ class virtualDeleteByQueryFailuresDetails extends dialogViewModelBase {
         grid.init(() => this.fetcher(), () => {
             return [
                 new textColumn<queryBasedVirtualBulkOperationFailureItem>(grid, x => generalUtils.formatUtcDateAsLocal(x.date), "Date", "25%", {
-                    sortable: x => x.date
+                    sortable: x => x.date,
+                    exportValue: x => x.date
                 }),
                 new textColumn<queryBasedVirtualBulkOperationFailureItem>(grid, x => x.duration, "Duration (ms)", "15%", {
                     sortable: "number",

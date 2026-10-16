@@ -1,4 +1,4 @@
-﻿/// <reference path="../../../typings/tsd.d.ts"/>
+/// <reference path="../../../typings/tsd.d.ts"/>
 
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualRow = require("widgets/virtualGrid/virtualRow");
@@ -25,6 +25,10 @@ interface virtualGridController<T> {
     getSelectedItems(): T[];
 
     setSelectedItems(selection: Array<T>): void;
+
+    getColumns(): virtualColumn[];
+
+    getItems(): T[];
 
     dirtyResults: KnockoutObservable<boolean>;
 

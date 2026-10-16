@@ -7,6 +7,7 @@ import alert = require("common/notifications/models/alert");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import abstractAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/abstractAlertDetails");
 import genUtils = require("common/generalUtils");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 interface TableItem {
     indexName: string;
@@ -19,6 +20,7 @@ class cpuCreditsBalanceDetails extends abstractAlertDetails {
     tableItems: TableItem[] = [];
     private gridController = ko.observable<virtualGridController<TableItem>>();
     private columnPreview = new columnPreviewPlugin<TableItem>();
+    gridToolbar = new detailsGridToolbar(this.gridController, this.alert, "index", "indexes");
 
     constructor(alert: alert, notificationCenter: notificationCenter) {
         super(alert, notificationCenter);

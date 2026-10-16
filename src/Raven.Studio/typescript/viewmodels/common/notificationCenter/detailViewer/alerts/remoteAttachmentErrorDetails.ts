@@ -10,6 +10,7 @@ import abstractAlertDetails = require("viewmodels/common/notificationCenter/deta
 import copyToClipboard = require("common/copyToClipboard");
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 interface RemoteAttachmentErrorInfo {
     Date: string;
@@ -32,6 +33,7 @@ class remoteAttachmentErrorDetails extends abstractAlertDetails {
     tableItems: RemoteAttachmentErrorInfo[] = [];
     private gridController = ko.observable<virtualGridController<RemoteAttachmentErrorInfo>>();
     private columnPreview = new columnPreviewPlugin<RemoteAttachmentErrorInfo>();
+    gridToolbar = new detailsGridToolbar(this.gridController, this.alert, "error", "errors");
 
     constructor(alert: alert, notificationCenter: notificationCenter) {
         super(alert, notificationCenter);
@@ -56,7 +58,8 @@ class remoteAttachmentErrorDetails extends abstractAlertDetails {
                 title: () => 'Show item preview'
             });
             const dateColumn = new textColumn<RemoteAttachmentErrorInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "15%", {
-                sortable: x => x.Date
+                sortable: x => x.Date,
+                exportValue: x => x.Date
             });
             const idsColumn = new textColumn<RemoteAttachmentErrorInfo>(grid, x => x.Ids.join(', '), "Ids", "10%", {
                 sortable: x => x.Ids.join(', ')

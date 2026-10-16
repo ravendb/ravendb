@@ -8,6 +8,7 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import abstractAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/abstractAlertDetails");
 import ExceededTokenThresholdDetails = Raven.Server.NotificationCenter.Notifications.Details.ExceededTokenThresholdDetails;
 import genUtils = require("common/generalUtils");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 interface ToolCallItem {
     id: string;
@@ -28,6 +29,7 @@ class aiAgentExceededTokenThreshold extends abstractAlertDetails {
     tableItems: ToolCallItem[] = [];
     private gridController = ko.observable<virtualGridController<ToolCallItem>>();
     private columnPreview = new columnPreviewPlugin<ToolCallItem>();
+    gridToolbar = new detailsGridToolbar(this.gridController, this.alert, "tool call", "tool calls");
 
     constructor(alert: alert, notificationCenter: notificationCenter) {
         super(alert, notificationCenter);
@@ -63,8 +65,12 @@ class aiAgentExceededTokenThreshold extends abstractAlertDetails {
                 new textColumn<ToolCallItem>(grid, (x) => x.type, "Type", "15%", {
                     sortable: (x) => x.type,
                 }),
-                new textColumn<ToolCallItem>(grid, (x) => x.arguments != null ? x.arguments : "N/A", "Arguments", "25%"),
-                new textColumn<ToolCallItem>(grid, (x) => x.query != null ? x.query : "N/A", "Query", "25%"),
+                new textColumn<ToolCallItem>(grid, (x) => x.arguments != null ? x.arguments : "N/A", "Arguments", "25%", {
+                    exportValue: (x) => x.arguments
+                }),
+                new textColumn<ToolCallItem>(grid, (x) => x.query != null ? x.query : "N/A", "Query", "25%", {
+                    exportValue: (x) => x.query
+                }),
                 new textColumn<ToolCallItem>(grid, (x) => x.id, "ID", "15%"),
             ];
         });

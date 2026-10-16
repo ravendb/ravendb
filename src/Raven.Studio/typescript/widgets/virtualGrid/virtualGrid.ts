@@ -1,4 +1,4 @@
-﻿/// <reference path="../../../typings/tsd.d.ts"/>
+/// <reference path="../../../typings/tsd.d.ts"/>
 
 import virtualRow = require("widgets/virtualGrid/virtualRow");
 import itemFetch = require("widgets/virtualGrid/itemFetch");
@@ -10,6 +10,8 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import virtualGridUtils = require("widgets/virtualGrid/virtualGridUtils");
 import virtualGridSelection = require("widgets/virtualGrid/virtualGridSelection");
 import shiftSelectionPreview = require("widgets/virtualGrid/shiftSelectionPreview");
+import textColumn = require("widgets/virtualGrid/columns/textColumn");
+import virtualGridColumnFitter = require("widgets/virtualGrid/virtualGridColumnFitter");
 
 interface VirtualGridParams<T> {
     controller: KnockoutObservable<virtualGridController<T>> | ((gridController: virtualGridController<T>) => void);
@@ -17,6 +19,7 @@ interface VirtualGridParams<T> {
     condensed: boolean;
     disableStripes: boolean;
     afterRender?: () => void
+    fitToContent?: boolean;
 }
 
 class virtualGrid<T extends object> {
@@ -67,7 +70,16 @@ class virtualGrid<T extends object> {
     private customRowClassProvider: (item: T) => string[] = null;
     private readonly afterRenderCallback: () => void;
 
+    private readonly fitToContent: boolean;
+    private fittedColumns: textColumn<T>[] = [];
+    private contentRowCount: number = null;
+    private contentResizeObserver: ResizeObserver;
+    private readonly refitColumnsDebounced = _.debounce(() => this.refitColumns(), 100);
+    private static textMeasuringContext: CanvasRenderingContext2D = null;
+
     private static readonly minItemFetchCount = 100;
+    private static readonly emptyContentRowCount = 2;
+    private static readonly headerLabelGap = 6;
     private static readonly viewportSelector = ".viewport";
     private static readonly columnContainerSelector = ".column-container";
     private static readonly viewportScrollerSelector = ".viewport-scroller";
@@ -98,6 +110,8 @@ class virtualGrid<T extends object> {
         this.afterRenderCallback = params.afterRender;
         
         this.disableStripes = params ? params.disableStripes : false;
+
+        this.fitToContent = !!params.fitToContent;
     }
 
     private initController() {
@@ -111,6 +125,8 @@ class virtualGrid<T extends object> {
             findItem: (predicate) => this.findItem(predicate),
             getSelectedItems: () => this.getSelectedItems(),
             setSelectedItems: (selection: Array<T>) => this.setSelectedItems(selection),
+            getColumns: () => this.columns(),
+            getItems: () => Array.from(this.items.entries()).sort(([a], [b]) => a - b).map(([, item]) => item),
             dirtyResults: this.dirtyResults,
             markColumnsDirty: () => this.markColumnsDirty(),
             resultEtag: () => this.previousResultsEtag(),
@@ -129,6 +145,8 @@ class virtualGrid<T extends object> {
 
     dispose() {
         this.shiftSelection.dispose();
+        this.contentResizeObserver?.disconnect();
+        this.refitColumnsDebounced.cancel();
     }
 
     // Called by Knockout once the grid has been rendered.
@@ -153,6 +171,11 @@ class virtualGrid<T extends object> {
 
         this.shiftSelection = new shiftSelectionPreview(this.gridId, () => this.virtualRows, (s, e) => this.checkIfAllRecordsInRangeAreLoaded(s, e));
         this.shiftSelection.init();
+
+        if (this.fitToContent) {
+            this.contentResizeObserver = new ResizeObserver(() => this.refitColumnsDebounced());
+            this.contentResizeObserver.observe(this.$viewportElement[0]);
+        }
     }
 
     private checkIfAllRecordsInRangeAreLoaded(start: number, end: number): boolean {
@@ -598,6 +621,9 @@ class virtualGrid<T extends object> {
             
             const clientWidth = this.$viewportElement.prop("clientWidth");
             const columns = this.settings.columnsProvider(clientWidth, results);
+            this.fittedColumns = this.fitToContent
+                ? columns.filter((x): x is textColumn<T> => x instanceof textColumn && x.width.endsWith("%"))
+                : [];
             columns
                 .filter(x => x.width.endsWith("%"))
                 .forEach(percentageColumn => {
@@ -605,6 +631,12 @@ class virtualGrid<T extends object> {
                 });
 
             this.columns(columns);
+
+            if (this.fitToContent) {
+                this.updateContentHeight(results.totalResultCount);
+                this.fitColumnsToContent(results.items, results.totalResultCount);
+                this.syncHeaderWidths();
+            }
 
             this.syncVirtualWidth();
         }
@@ -617,6 +649,9 @@ class virtualGrid<T extends object> {
         const oldTotalCount = this.items.size;
         this.totalItemCount = results.totalResultCount;
         this.virtualHeight(results.totalResultCount * this.rowHeight);
+        if (this.fitToContent) {
+            this.updateContentHeight(results.totalResultCount);
+        }
         for (let i = 0; i < results.items.length; i++) {
             const rowIndex = i + skip;
             if (!this.items.has(rowIndex)) { // newer override existing items, to avoid issues with selected items and jumps
@@ -658,6 +693,117 @@ class virtualGrid<T extends object> {
             // can't auto calculate this
             this.virtualWidth(undefined);
         }
+    }
+
+    private updateContentHeight(rowCount: number) {
+        if (rowCount === this.contentRowCount) {
+            return;
+        }
+        this.contentRowCount = rowCount;
+
+        const verticalPadding = this.$gridElement.innerHeight() - this.$gridElement.height();
+        const headerHeight = this.$columnContainer.outerHeight(true);
+        const rowsHeight = (rowCount || virtualGrid.emptyContentRowCount) * this.rowHeight;
+
+        this.$gridElement.parent()[0].style.setProperty("--virtual-grid-content-height", `${verticalPadding + headerHeight + rowsHeight + 1}px`);
+    }
+
+    private fitColumnsToContent(items: T[], rowCount: number) {
+        const context = virtualGrid.getTextMeasuringContext();
+        if (this.fittedColumns.length === 0 || !context) {
+            return;
+        }
+
+        const viewport = this.$viewportElement[0];
+        const rowsOverflow = rowCount * this.rowHeight > viewport.clientHeight;
+        const fixedWidth = _.sum(this.columns()
+            .filter(x => !_.includes(this.fittedColumns, x))
+            .map(x => virtualGridUtils.widthToPixels(x)));
+        const availableWidth = viewport.offsetWidth - (rowsOverflow ? this.measureScrollbarWidth() : 0) - fixedWidth;
+
+        const widths = virtualGridColumnFitter.fitColumnWidths(this.measureFittedColumns(context, items), availableWidth);
+        this.fittedColumns.forEach((column, index) => column.width = widths[index] + "px");
+    }
+
+    private measureFittedColumns(context: CanvasRenderingContext2D, items: T[]): virtualGridColumnFitter.measuredColumn[] {
+        const columns = this.columns();
+        const headerElements = this.$columnContainer.find(".column").toArray();
+        const cell = this.measureCellStyle();
+        const renderedCell = document.implementation.createHTMLDocument("").createElement("div");
+
+        return this.fittedColumns.map(column => {
+            const headerElement = headerElements[columns.indexOf(column)];
+            const label = headerElement.querySelector("strong");
+            const headerStyle = getComputedStyle(headerElement);
+            const sortControls = headerElement.querySelector<HTMLElement>(".sortable-controls");
+
+            context.font = virtualGrid.fontOf(getComputedStyle(label));
+            const header = context.measureText(label.textContent).width
+                + parseFloat(headerStyle.paddingLeft) + parseFloat(headerStyle.paddingRight)
+                + parseFloat(headerStyle.borderLeftWidth) + parseFloat(headerStyle.borderRightWidth)
+                + (column.sortable && sortControls ? sortControls.offsetWidth + virtualGrid.headerLabelGap : 0);
+
+            context.font = cell.font;
+            const contentWidths = items.map(item => {
+                renderedCell.innerHTML = column.renderCell(item, false, false);
+                return context.measureText(renderedCell.textContent).width;
+            });
+            const content = (_.max(contentWidths) ?? 0) + cell.padding;
+
+            return {
+                header: Math.ceil(header) + 1,
+                content: Math.ceil(content) + 1
+            };
+        });
+    }
+
+    private measureCellStyle(): { font: string; padding: number } {
+        const $probe = $(`<div class="virtual-row" style="visibility: hidden"><div class="cell text-cell">&nbsp;</div></div>`);
+        this.$viewportElement.find(virtualGrid.viewportScrollerSelector).append($probe);
+        const cellStyle = getComputedStyle($probe.find(".cell")[0]);
+        const result = {
+            font: virtualGrid.fontOf(cellStyle),
+            padding: parseFloat(cellStyle.paddingLeft) + parseFloat(cellStyle.paddingRight)
+        };
+        $probe.remove();
+        return result;
+    }
+
+    private measureScrollbarWidth(): number {
+        const viewport = this.$viewportElement[0];
+        const overflowY = viewport.style.overflowY;
+        viewport.style.overflowY = "scroll";
+        const width = viewport.offsetWidth - viewport.clientWidth;
+        viewport.style.overflowY = overflowY;
+        return width;
+    }
+
+    private syncHeaderWidths() {
+        const columns = this.columns();
+        this.$columnContainer.find(".column").each((index, element) => {
+            element.style.width = columns[index].width;
+        });
+    }
+
+    private refitColumns() {
+        if (this.fittedColumns.length === 0 || !this.checkGridVisibility()) {
+            return;
+        }
+
+        this.fitColumnsToContent(this.controller.getItems(), this.totalItemCount);
+        this.syncHeaderWidths();
+        this.syncVirtualWidth();
+        this.virtualRows.forEach(r => r.reset());
+        this.render();
+    }
+
+    private static getTextMeasuringContext(): CanvasRenderingContext2D {
+        virtualGrid.textMeasuringContext ??= document.createElement("canvas").getContext("2d");
+        return virtualGrid.textMeasuringContext;
+    }
+
+    private static fontOf(style: CSSStyleDeclaration): string {
+        return `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
     }
 
     private gridClicked(e: JQuery.TriggeredEvent) {

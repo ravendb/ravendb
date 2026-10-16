@@ -8,6 +8,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import generalUtils = require("common/generalUtils");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 type gridItem = {
     Id: string;
@@ -21,6 +22,7 @@ class validateSchemaDetails extends abstractOperationDetails {
 
     private gridController = ko.observable<virtualGridController<gridItem>>();
     private columnPreview = new columnPreviewPlugin<gridItem>();
+    gridToolbar = new detailsGridToolbar(this.gridController, this.op, "error", "errors");
     private allErrors = ko.observableArray<gridItem>([]);
 
     private gridInitialized = false;
@@ -128,7 +130,7 @@ class validateSchemaDetails extends abstractOperationDetails {
             ) => {
                 const value = column.getCellValue(details);
                 if (value) {
-                    onValue(generalUtils.escapeHtml(value));
+                    onValue(generalUtils.escapeHtml(value), value);
                 }
             }
         );

@@ -9,6 +9,7 @@ import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import performanceHint = require("common/notifications/models/performanceHint");
 import abstractPerformanceHintDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/abstractPerformanceHintDetails");
 import moment = require("moment");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 class slowIoDetails extends abstractPerformanceHintDetails {
 
@@ -17,6 +18,7 @@ class slowIoDetails extends abstractPerformanceHintDetails {
     tableItems: Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo[] = [];
     private gridController = ko.observable<virtualGridController<Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo>>();
     private columnPreview = new columnPreviewPlugin<Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo>();
+    gridToolbar = new detailsGridToolbar(this.gridController, this.hint, "write", "writes");
 
     constructor(hint: performanceHint, notificationCenter: notificationCenter) {
         super(hint, notificationCenter);
@@ -47,11 +49,14 @@ class slowIoDetails extends abstractPerformanceHintDetails {
                     sortable: "string"
                 }),
                 new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "20%", {
-                    sortable: x => x.Date
+                    sortable: x => x.Date,
+                    exportValue: x => x.Date
                 }),
                 new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo>(grid,
                     x => this.formatSpeed(x), "Speed", "15%", {
-                        sortable: x => x.SpeedInMbPerSec
+                        sortable: x => x.SpeedInMbPerSec,
+                        exportValue: x => x.SpeedInMbPerSec,
+                        exportHeader: "Speed (MB/s)"
                     })
             ]);
         

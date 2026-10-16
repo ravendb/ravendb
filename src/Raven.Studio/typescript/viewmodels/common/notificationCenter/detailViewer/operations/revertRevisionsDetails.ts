@@ -8,6 +8,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import generalUtils = require("common/generalUtils");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 type gridItem = {
     Id: string;
@@ -22,6 +23,7 @@ class revertRevisionsDetails extends abstractOperationDetails {
 
     private gridController = ko.observable<virtualGridController<gridItem>>();
     private columnPreview = new columnPreviewPlugin<gridItem>();
+    gridToolbar = new detailsGridToolbar(this.gridController, this.op, "warning", "warnings");
     private allWarnings = ko.observableArray<gridItem>([]);
     
     private gridInitialized = false;
@@ -85,7 +87,7 @@ class revertRevisionsDetails extends abstractOperationDetails {
              e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
                 const value = column.getCellValue(details);
                 if (value) {
-                    onValue(generalUtils.escapeHtml(value));
+                    onValue(generalUtils.escapeHtml(value), value);
                 }
             });
         
