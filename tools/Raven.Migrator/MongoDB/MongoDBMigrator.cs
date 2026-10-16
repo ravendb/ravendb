@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using MongoDB.Driver.GridFS;
 using Newtonsoft.Json;
@@ -21,6 +22,11 @@ namespace Raven.Migrator.MongoDB
         {
             MongoDocumentId
         };
+
+        static MongoDBMigrator()
+        {
+            BsonSerializer.TryRegisterSerializer(new MongoGuidSerializer());
+        }
 
         public MongoDBMigrator(MongoDBConfiguration configuration)
         {
@@ -223,9 +229,12 @@ namespace Raven.Migrator.MongoDB
 
         private static string GetContentType(GridFSFileInfo fileInfo, IDictionary<string, object> dictionary)
         {
-#pragma warning disable CS0618 // Type or member is obsolete
-            var contentType = fileInfo.ContentType;
-#pragma warning restore CS0618 // Type or member is obsolete
+            // the deprecated top-level 'contentType' field of the files collection document
+            // (GridFSFileInfo.ContentType was removed in MongoDB.Driver 3.x)
+            string contentType = null;
+            if (fileInfo.BackingDocument.TryGetValue("contentType", out var contentTypeValue) && contentTypeValue.IsString)
+                contentType = contentTypeValue.AsString;
+
             if (dictionary.TryGetValue("contentType", out object value))
             {
                 contentType = (string)value;
@@ -244,9 +253,12 @@ namespace Raven.Migrator.MongoDB
 
         private static readonly System.Text.RegularExpressions.Regex ObjectIdReplace = new System.Text.RegularExpressions.Regex(@"ObjectId\((.[a-f0-9]{24}.)\)", System.Text.RegularExpressions.RegexOptions.Compiled);
 
+        private static readonly global::MongoDB.Bson.IO.JsonWriterSettings ShellJsonWriterSettings = new global::MongoDB.Bson.IO.JsonWriterSettings { OutputMode = global::MongoDB.Bson.IO.JsonOutputMode.Shell };
+
         private static dynamic ToExpandoObject(BsonDocument bsonDocument)
         {
-            var input = bsonDocument.ToJson();
+            // MongoDB.Driver 3.x defaults to relaxed extended JSON, keep the 2.x shell format that the regex below expects
+            var input = bsonDocument.ToJson(ShellJsonWriterSettings);
             var json = ObjectIdReplace.Replace(input, s => s.Groups[1].Value);
             return JsonConvert.DeserializeObject<ExpandoObject>(json);
         }
