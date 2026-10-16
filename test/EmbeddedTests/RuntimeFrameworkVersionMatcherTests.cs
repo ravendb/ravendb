@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Raven.Embedded;
 using Xunit;
@@ -120,6 +121,39 @@ namespace EmbeddedTests
             Assert.Equal("Cannot set 'Minor' with value '1+' because '+' is not allowed.", e.Message);
         }
 
+#if NETCOREAPP
+        [Fact]
+        public void Should_report_failed_dotnet_runtime_discovery()
+        {
+            string runtimeDirectory = RuntimeEnvironment.GetRuntimeDirectory().TrimEnd(Path.DirectorySeparatorChar);
+            string installation = Directory.GetParent(runtimeDirectory).Parent.Parent.FullName;
+            string executable = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "dotnet.exe" : "dotnet";
+            string directory = NewDataPath();
+            Directory.CreateDirectory(directory);
+            string dotnetPath = Path.Combine(directory, executable);
+            // A real host without its host/fxr installation fails before it can list runtimes.
+            File.Copy(Path.Combine(installation, executable), dotnetPath);
+            ServerOptions options = CopyServerAndCreateOptions();
+            options.DotNetPath = dotnetPath;
+
+            AggregateException error = Assert.Throws<AggregateException>(() =>
+            {
+                // Dispose observes the asynchronous startup failure using the existing contract.
+                using var embedded = new EmbeddedServer();
+                embedded.StartServer(options);
+            });
+            InvalidOperationException startupError = Assert.IsType<InvalidOperationException>(error.InnerException);
+
+            Assert.DoesNotContain("Could not find a matching runtime", startupError.Message);
+            Assert.Contains("Unable to discover installed .NET runtimes", startupError.Message);
+            Assert.Contains($"Command: \"{dotnetPath}\" --info", startupError.Message);
+            Assert.Contains(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Exit code: -2147450749 (0x80008083)" : "Exit code: 131 (0x00000083)", startupError.Message);
+            Assert.Contains("Standard output:" + Environment.NewLine + "<empty>", startupError.Message);
+            Assert.Contains("Standard error:", startupError.Message);
+            Assert.Contains("host", startupError.Message);
+            Assert.Contains("fxr", startupError.Message);
+        }
+#endif
         private static List<RuntimeFrameworkVersionMatcher.RuntimeFrameworkVersion> GetRuntimes()
         {
             return new()
