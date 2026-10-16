@@ -23,12 +23,12 @@
     <PackageVersion Include="CsvHelper" Version="33.1.0" />
     <PackageVersion Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
     <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="9.5.3" />
-    <PackageVersion Include="FluentFTP" Version="54.2.1" />
+    <PackageVersion Include="FluentFTP" Version="55.0.0" />
     <PackageVersion Include="FubarDev.FtpServer" Version="3.1.2" />
     <PackageVersion Include="FubarDev.FtpServer.FileSystem.DotNet" Version="3.1.2" />
     <PackageVersion Include="FubarDev.FtpServer.FileSystem.InMemory" Version="3.1.2" />
     <PackageVersion Include="Google.Api.Gax.Rest" Version="4.15.2" />
-    <PackageVersion Include="Google.Cloud.Storage.V1" Version="4.16.0" />
+    <PackageVersion Include="Google.Cloud.Storage.V1" Version="5.0.0" />
     <PackageVersion Include="Hl7.Fhir.R4" Version="5.13.4" />
     <PackageVersion Include="HtmlAgilityPack" Version="1.13.1" />
     <PackageVersion Include="JetBrains.Annotations" Version="2026.2.0" />
@@ -116,7 +116,7 @@
     <PackageVersion Include="Oracle.ManagedDataAccess.Core" Version="23.26.301" />
     <PackageVersion Include="Parquet.Net" Version="6.1.0" />
     <PackageVersion Include="Pgvector" Version="0.3.2" />
-    <PackageVersion Include="pgsqlparser" Version="1.0.0" />
+    <PackageVersion Include="pgsqlparser" Version="2.1.0" />
     <PackageVersion Include="Polly" Version="8.8.0" />
     <PackageVersion Include="RabbitMQ.Client" Version="7.2.2" />
     <PackageVersion Include="Raven.CodeAnalysis" Version="1.0.14" />
