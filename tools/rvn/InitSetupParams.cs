@@ -84,9 +84,7 @@ public class InitSetupParams
                     {
                         Addresses = new List<string> { "0.0.0.0" },
                         Port = 443,
-                        TcpPort = 38888,
-                        PublicServerUrl = "https://your-domain.development.run",
-                        PublicTcpServerUrl = "tcp://your-domain.development.run:38888"
+                        TcpPort = 38888
                     }
                 }
             }

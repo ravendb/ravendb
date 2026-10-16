@@ -647,62 +647,130 @@ namespace Raven.Server.Utils
 
         public static string GetServerUrlFromCertificate(X509Certificate2 cert, SetupInfo setupInfo, string nodeTag, int port, int tcpPort, out string publicTcpUrl, out string domain)
         {
-            publicTcpUrl = null;
             var node = setupInfo.NodeSetupInfos[nodeTag];
-
+            var lowerTag = nodeTag.ToLowerInvariant();
             var subjectAlternativeNames = GetCertificateAlternativeNames(cert).ToList();
-            var subject = subjectAlternativeNames.FirstOrDefault();
 
-            // fallback to common name
-            if (string.IsNullOrEmpty(subject))
-                subject = cert.GetNameInfo(X509NameType.SimpleName, false);
-            Debug.Assert(string.IsNullOrEmpty(subject) == false, nameof(subject) + " is null or empty");
-            if (subject[0] == '*')
+            if (string.IsNullOrEmpty(node.PublicServerUrl) == false)
             {
-                var parts = subject.Split("*.");
-                if (parts.Length != 2)
-                    throw new FormatException($"{subject} is not a valid wildcard name for a certificate.");
+                var providedHost = ParseProvidedUrl(node.PublicServerUrl, "https", nameof(node.PublicServerUrl), nodeTag).Host;
+                var certificateNames = subjectAlternativeNames.Count > 0
+                    ? subjectAlternativeNames
+                    : new List<string> { cert.GetNameInfo(X509NameType.SimpleName, false) };
 
-                domain = parts[1];
+                if (IsHostCoveredByCertificate(providedHost, certificateNames) == false)
+                    throw new InvalidOperationException(
+                        $"{nameof(node.PublicServerUrl)} '{node.PublicServerUrl}' of node '{nodeTag}' points to host '{providedHost}' which is not covered by the certificate. Certificate names: {string.Join(", ", certificateNames)}");
 
-                publicTcpUrl = node.ExternalTcpPort != Constants.Network.ZeroValue
-                    ? $"tcp://{nodeTag.ToLower()}.{domain}:{node.ExternalTcpPort}"
-                    : $"tcp://{nodeTag.ToLower()}.{domain}:{tcpPort}";
+                if (string.IsNullOrEmpty(node.PublicTcpServerUrl) == false)
+                    ParseProvidedUrl(node.PublicTcpServerUrl, "tcp", nameof(node.PublicTcpServerUrl), nodeTag);
 
-                if (setupInfo.NodeSetupInfos[nodeTag].ExternalPort != Constants.Network.ZeroValue)
-                    return $"https://{nodeTag.ToLower()}.{domain}:{node.ExternalPort}";
-
-                return port == Constants.Network.DefaultSecuredRavenDbHttpPort
-                    ? $"https://{nodeTag.ToLower()}.{domain}"
-                    : $"https://{nodeTag.ToLower()}.{domain}:{port}";
+                domain = GetDomainForHost(providedHost, lowerTag, subjectAlternativeNames);
+                publicTcpUrl = string.IsNullOrEmpty(node.PublicTcpServerUrl)
+                    ? BuildTcpUrl(providedHost, node, tcpPort)
+                    : node.PublicTcpServerUrl;
+                return node.PublicServerUrl;
             }
 
-            domain = subject; //default for one node case
+            var host = SelectHostFromCertificate(cert, setupInfo, lowerTag, subjectAlternativeNames);
+            domain = GetDomainForHost(host, lowerTag, subjectAlternativeNames);
 
-            foreach (var value in subjectAlternativeNames)
-            {
-                if (value.StartsWith(nodeTag + ".", StringComparison.OrdinalIgnoreCase) == false)
-                    continue;
-
-                domain = value;
-                break;
-            }
-
-            var url = $"https://{domain}";
+            var url = $"https://{host}";
 
             if (node.ExternalPort != Constants.Network.ZeroValue)
                 url += ":" + node.ExternalPort;
             else if (port != Constants.Network.DefaultSecuredRavenDbHttpPort)
                 url += ":" + port;
 
-            publicTcpUrl = node.ExternalTcpPort != Constants.Network.ZeroValue
-                ? $"tcp://{domain}:{node.ExternalTcpPort}"
-                : $"tcp://{domain}:{tcpPort}";
+            publicTcpUrl = BuildTcpUrl(host, node, tcpPort);
 
             node.PublicServerUrl = url;
             node.PublicTcpServerUrl = publicTcpUrl;
 
             return url;
+        }
+
+        private static Uri ParseProvidedUrl(string value, string expectedScheme, string fieldName, string nodeTag)
+        {
+            if (Uri.TryCreate(value, UriKind.Absolute, out var uri) == false || string.IsNullOrEmpty(uri.Host))
+                throw new InvalidOperationException($"{fieldName} '{value}' of node '{nodeTag}' is not a valid absolute URL. Expected format: {expectedScheme}://host[:port]");
+
+            if (string.Equals(uri.Scheme, expectedScheme, StringComparison.OrdinalIgnoreCase) == false)
+                throw new InvalidOperationException($"{fieldName} '{value}' of node '{nodeTag}' must use the '{expectedScheme}' scheme.");
+
+            return uri;
+        }
+
+        private static bool IsHostCoveredByCertificate(string host, List<string> certificateNames)
+        {
+            foreach (var name in certificateNames)
+            {
+                if (string.Equals(name, host, StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+                if (name.StartsWith("*.", StringComparison.Ordinal) == false)
+                    continue;
+
+                var dot = host.IndexOf('.');
+                if (dot > 0 && string.Equals(host.Substring(dot + 1), name.Substring(2), StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static string SelectHostFromCertificate(X509Certificate2 cert, SetupInfo setupInfo, string lowerTag, List<string> subjectAlternativeNames)
+        {
+            if (string.IsNullOrEmpty(setupInfo.Domain) == false)
+            {
+                var expectedSuffix = string.IsNullOrEmpty(setupInfo.RootDomain)
+                    ? setupInfo.Domain.ToLowerInvariant()
+                    : $"{setupInfo.Domain}.{setupInfo.RootDomain}".ToLowerInvariant();
+                var expectedHost = $"{lowerTag}.{expectedSuffix}";
+
+                if (subjectAlternativeNames.Any(san => string.Equals(san, expectedHost, StringComparison.OrdinalIgnoreCase)))
+                    return expectedHost;
+
+                if (subjectAlternativeNames.Any(san => string.Equals(san, $"*.{expectedSuffix}", StringComparison.OrdinalIgnoreCase)))
+                    return expectedHost;
+            }
+
+            var subject = subjectAlternativeNames.FirstOrDefault();
+            if (string.IsNullOrEmpty(subject))
+                subject = cert.GetNameInfo(X509NameType.SimpleName, false);
+            Debug.Assert(string.IsNullOrEmpty(subject) == false, nameof(subject) + " is null or empty");
+
+            if (subject[0] == '*')
+            {
+                var parts = subject.Split("*.");
+                if (parts.Length != 2)
+                    throw new FormatException($"{subject} is not a valid wildcard name for a certificate.");
+
+                return $"{lowerTag}.{parts[1]}";
+            }
+
+            return subjectAlternativeNames.FirstOrDefault(san => san.StartsWith(lowerTag + ".", StringComparison.OrdinalIgnoreCase)) ?? subject;
+        }
+
+        private static string GetDomainForHost(string host, string lowerTag, List<string> subjectAlternativeNames)
+        {
+            if (host.StartsWith(lowerTag + ".", StringComparison.OrdinalIgnoreCase) == false)
+                return host;
+
+            if (subjectAlternativeNames.Any(san => string.Equals(san, host, StringComparison.OrdinalIgnoreCase)))
+                return host;
+
+            var suffix = host.Substring(lowerTag.Length + 1);
+            return subjectAlternativeNames.Any(san => string.Equals(san, $"*.{suffix}", StringComparison.OrdinalIgnoreCase))
+                ? suffix
+                : host;
+        }
+
+        private static string BuildTcpUrl(string host, NodeInfo node, int tcpPort)
+        {
+            return node.ExternalTcpPort != Constants.Network.ZeroValue
+                ? $"tcp://{host}:{node.ExternalTcpPort}"
+                : $"tcp://{host}:{tcpPort}";
         }
 
         public static IEnumerable<string> GetCertificateAlternativeNames(X509Certificate2 cert)
