@@ -8,6 +8,7 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 type hugeDocumentsDetailsItemDto = Raven.Server.NotificationCenter.Notifications.Details.HugeDocumentInfo
 
@@ -18,6 +19,7 @@ class hugeDocumentsDetails extends abstractPerformanceHintDetails {
     tableItems: hugeDocumentsDetailsItemDto[] = [];
     private gridController = ko.observable<virtualGridController<hugeDocumentsDetailsItemDto>>();
     private columnPreview = new columnPreviewPlugin<hugeDocumentsDetailsItemDto>();
+    gridToolbar = new detailsGridToolbar(this.gridController, this.hint, "document", "documents");
 
     constructor(hint: performanceHint, notificationCenter: notificationCenter) {
         super(hint, notificationCenter);
@@ -42,10 +44,13 @@ class hugeDocumentsDetails extends abstractPerformanceHintDetails {
                 }),
                 new textColumn<hugeDocumentsDetailsItemDto>(grid, x => generalUtils.formatBytesToSize(x.Size), "Document size", "20%", {
                     sortable: x => x.Size,
-                    defaultSortOrder: "desc"
+                    defaultSortOrder: "desc",
+                    exportValue: x => x.Size,
+                    exportHeader: "Document size (bytes)"
                 }),
                 new textColumn<hugeDocumentsDetailsItemDto>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Last access", "50%", {
                     sortable: x => x.Date,
+                    exportValue: x => x.Date,
                     defaultSortOrder: "desc"
                 }),
             ];
