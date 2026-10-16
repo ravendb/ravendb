@@ -9,6 +9,7 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
 import virtualBulkInsertFailures = require("common/notifications/models/virtualBulkInsertFailures");
 import moment = require("moment");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 class virtualBulkInsertFailuresDetails extends dialogViewModelBase {
 
@@ -17,11 +18,13 @@ class virtualBulkInsertFailuresDetails extends dialogViewModelBase {
     private bulkInserts: virtualBulkInsertFailures;
     private gridController = ko.observable<virtualGridController<virtualBulkOperationFailureItem>>();
     private columnPreview = new columnPreviewPlugin<virtualBulkOperationFailureItem>();
-    
+    gridToolbar: detailsGridToolbar<virtualBulkOperationFailureItem>;
+
     constructor(bulkInserts: virtualBulkInsertFailures) {
         super();
-        
+
         this.bulkInserts = bulkInserts;
+        this.gridToolbar = new detailsGridToolbar(this.gridController, bulkInserts, "failure", "failures");
     }
 
     compositionComplete() {
@@ -33,7 +36,8 @@ class virtualBulkInsertFailuresDetails extends dialogViewModelBase {
         grid.init(() => this.fetcher(), () => {
             return [
                 new textColumn<virtualBulkOperationFailureItem>(grid, x => generalUtils.formatUtcDateAsLocal(x.date), "Date", "25%", {
-                    sortable: x => x.date
+                    sortable: x => x.date,
+                    exportValue: x => x.date
                 }),
                 new textColumn<virtualBulkOperationFailureItem>(grid, x => x.duration, "Duration (ms)", "15%", {
                     sortable: "number",

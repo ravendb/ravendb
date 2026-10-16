@@ -9,6 +9,7 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
 import virtualDeleteByQuery = require("common/notifications/models/virtualDeleteByQuery");
 import moment = require("moment");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 class virtualDeleteByQueryDetails extends dialogViewModelBase {
 
@@ -17,11 +18,13 @@ class virtualDeleteByQueryDetails extends dialogViewModelBase {
     private virtualNotification: virtualDeleteByQuery;
     private gridController = ko.observable<virtualGridController<queryBasedVirtualBulkOperationItem>>();
     private columnPreview = new columnPreviewPlugin<queryBasedVirtualBulkOperationItem>();
+    gridToolbar: detailsGridToolbar<queryBasedVirtualBulkOperationItem>;
 
     constructor(virtualNotification: virtualDeleteByQuery) {
         super();
 
         this.virtualNotification = virtualNotification;
+        this.gridToolbar = new detailsGridToolbar(this.gridController, virtualNotification, "operation", "operations");
     }
 
     compositionComplete() {
@@ -33,7 +36,8 @@ class virtualDeleteByQueryDetails extends dialogViewModelBase {
         grid.init(() => this.fetcher(), () => {
             return [
                 new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => generalUtils.formatUtcDateAsLocal(x.date), "Date", "25%", {
-                    sortable: x => x.date
+                    sortable: x => x.date,
+                    exportValue: x => x.date
                 }),
                 new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => x.duration, "Duration (ms)", "15%", {
                     sortable: "number",
