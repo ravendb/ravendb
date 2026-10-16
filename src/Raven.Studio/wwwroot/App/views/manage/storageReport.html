@@ -22,6 +22,8 @@
                 <th class="column-min-width">Name</th>
                 <th data-bind="visible: showPagesColumn()"># Pages</th>
                 <th data-bind="visible: showEntriesColumn()">Entries</th>
+                <th data-bind="visible: showTempFiles()">Data + Journals</th>
+                <th data-bind="visible: showTempFiles()">Temporary Buffers</th>
                 <th><span data-bind="visible: showTempFiles()">Total</span> Size (&sum; <span data-bind="text: node().formatSize(true)"></span>)</th>
                 <th>% Total</th>
             </tr>
@@ -31,13 +33,19 @@
                 <td data-bind="text: _.upperFirst(type)"></td>
                 <td class="position-relative">
                     <div class="table-items">
+                        <a class="table-item-name text-elipsis" data-bind="attr: { href: link, title: name }, visible: link">
+                            <span data-bind="text: name"></span><i class="icon-link margin-left margin-left-xs"></i>
+                        </a>
                         <a href="#" class="table-item-name text-elipsis" data-bind="text: name, click: _.partial($root.onClick, $data, true), visible: hasChildren(), attr: { title: name }"></a>
-                        <span href="#" class="table-item-name text-elipsis" data-bind="text: name, visible: !hasChildren(), attr: { title: name }"></span>
+                        <span href="#" class="table-item-name text-elipsis" data-bind="text: name, visible: !hasChildren() && !link, attr: { title: name }"></span>
                         <span data-bind="visible: recyclableJournal"><small data-toggle="tooltip" title="Stored in Journals directory"><i class="icon-info text-info"></i></small></span>
+                        <small class="text-muted margin-left margin-left-xs" data-bind="visible: $data.isDisabled">Disabled</small>
                     </div>
                 </td>
                 <td data-bind="visible: $root.showPagesColumn(), text: pageCount ? pageCount.toLocaleString() : 0"></td>
                 <td data-bind="visible: $root.showEntriesColumn(), text: numberOfEntries ? numberOfEntries.toLocaleString() : 0"></td>
+                <td data-bind="visible: $root.showTempFiles, text: $root.dataSizeFormatted($data)"></td>
+                <td data-bind="visible: $root.showTempFiles, text: $root.tempSizeFormatted($data)"></td>
                 <td data-bind="html: formatSize(false)"></td>
                 <td data-bind="text: formatPercentage($parent.node().size)"></td>
             </tr>
