@@ -1,4 +1,4 @@
-﻿@chart-data-color: @color-5-2;
+@chart-data-color: @color-5-2;
 @chart-documents-color: @color-5-1;
 @chart-reserved-color: @color-5;
 @chart-journal-color: @color-4-3;
@@ -16,6 +16,9 @@
 @chart-tree-color: @color-1;
 @chart-configuration-color: @color-5-3;
 @chart-free-color: @gray-darker;
+@chart-database-color: @chart-documents-color;
+@chart-shard-color: darken(@chart-documents-color, 10%);
+@chart-system-color: @color-4;
 
 
 #storage-report {
@@ -359,6 +362,30 @@
             }
         }
 
+        &.database {
+            fill: @chart-database-color;
+
+            &:hover {
+                fill: lighten(@chart-database-color, 5%);
+            }
+        }
+
+        &.shard {
+            fill: @chart-shard-color;
+
+            &:hover {
+                fill: lighten(@chart-shard-color, 5%);
+            }
+        }
+
+        &.system {
+            fill: @chart-system-color;
+
+            &:hover {
+                fill: lighten(@chart-system-color, 5%);
+            }
+        }
+
         rect {
             fill-opacity: 1;
             stroke: transparent;
@@ -552,6 +579,14 @@
                     background-color: lighten(@chart-structure-color,5%);
                 }
             }
+
+            &.system {
+                background-color: @chart-system-color;
+
+                &:hover {
+                    background-color: lighten(@chart-system-color,5%);
+                }
+            }
         }
 
         i {
@@ -577,10 +612,57 @@
             width: 100%;
             padding-right: 20px;
         }
+
+        .sort-button {
+            padding: 0;
+            border: 0;
+            background: none;
+            color: inherit;
+            font: inherit;
+            white-space: nowrap;
+
+            .sortable-controls {
+                display: inline-flex;
+                flex-direction: column;
+                vertical-align: middle;
+                margin-left: 4px;
+
+                &:before, &:after {
+                    font-family: 'icomoon' !important;
+                    opacity: 0.2;
+                    font-size: 10px;
+                    line-height: 8px;
+                }
+
+                &:before {
+                    content: '\f128';
+                }
+
+                &:after {
+                    content: '\f114';
+                }
+            }
+
+            &:hover .sortable-controls {
+                &:before, &:after {
+                    opacity: 0.5;
+                }
+            }
+        }
+
+        .asc .sortable-controls:before,
+        .desc .sortable-controls:after {
+            opacity: 1;
+            color: var(--bs-primary);
+        }
     }
 
     .table-item-name {
         display: block;
         white-space: nowrap;
+
+        .badge {
+            margin-top: -3px;
+        }
     }
 }
