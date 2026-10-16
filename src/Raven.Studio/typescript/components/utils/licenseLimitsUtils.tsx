@@ -1,4 +1,8 @@
-import { AvailabilityValue, FeatureAvailabilityData } from "components/common/FeatureAvailabilitySummary";
+import {
+    AvailabilityValue,
+    FeatureAvailabilityData,
+    FeatureAvailabilityFootnote,
+} from "components/common/FeatureAvailabilitySummary";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
 
@@ -108,6 +112,7 @@ interface UseLimitedFeatureAvailabilityProps {
     overwrites: {
         featureName: string;
         value: AvailabilityValue;
+        footnote?: FeatureAvailabilityFootnote;
     }[];
 }
 
@@ -117,17 +122,10 @@ export function useLimitedFeatureAvailability({
 }: UseLimitedFeatureAvailabilityProps) {
     const licenseType = useAppSelector(licenseSelectors.licenseType);
 
-    const featureAvailability: FeatureAvailabilityData[] = defaultFeatureAvailability.map((x) => {
-        if (x.enterpriseAi) {
-            return x;
-        }
-
-        // use enterprise if enterpriseAi is not defined
-        return {
-            ...x,
-            enterpriseAi: structuredClone(x.enterprise),
-        };
-    });
+    const featureAvailability: FeatureAvailabilityData[] = defaultFeatureAvailability.map((x) => ({
+        ...x,
+        enterpriseAi: x.enterpriseAi ?? structuredClone(x.enterprise),
+    }));
 
     const type = getLicenseAvailabilityType(licenseType);
     if (!type) {
@@ -136,10 +134,16 @@ export function useLimitedFeatureAvailability({
 
     for (const overwrite of overwrites) {
         const data = featureAvailability.find((x) => x.featureName === overwrite.featureName);
+        const valueData = { ...data[type] };
 
-        if (shouldOverrideLicenseAvailability(data[type].value, overwrite.value)) {
-            data[type].overwrittenValue = overwrite.value;
+        if (shouldOverrideLicenseAvailability(valueData.value, overwrite.value)) {
+            valueData.overwrittenValue = overwrite.value;
         }
+        if (overwrite.footnote) {
+            valueData.footnote = overwrite.footnote;
+        }
+
+        data[type] = valueData;
     }
 
     return featureAvailability;

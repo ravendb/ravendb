@@ -78,6 +78,10 @@ function getConnectorOptions(modelType: FormData["modelType"]): SelectOptionWith
     return allOptions;
 }
 
+function getExternalConnectorOptions(): SelectOptionWithIcon<FormData["connectorType"]>[] {
+    return getConnectorOptions(null).filter((x) => x.value !== "embeddedSettings");
+}
+
 const getTemperatureSchema = (connectorType: FormData["connectorType"]) =>
     yup
         .number()
@@ -379,6 +383,7 @@ export const aiConnectionStringUtils = {
     getConnectorType,
     mapAiConnectionStringToSettingsDto,
     getConnectorOptions,
+    getExternalConnectorOptions,
     getDefaultValues,
     schema,
     chatConnectorTypes,

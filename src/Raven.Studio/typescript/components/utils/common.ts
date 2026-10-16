@@ -231,8 +231,6 @@ export const logFilterActionOptions: SelectOption<Sparrow.Logging.LogFilterActio
     })
 );
 
-export const allAiExternalProviders = ["Azure OpenAI", "Google AI", "Ollama", "OpenAI", "Mistral AI"];
-
 export type RecursiveRequired<T> = Required<{
     [P in keyof T]: T[P] extends object | undefined ? RecursiveRequired<Required<T[P]>> : T[P];
 }>;

@@ -7,6 +7,10 @@
     }
 }
 
+.footnote-popover {
+    line-height: 1.2;
+}
+
 .feature-availability-table {
     $table-border-radius: bs5variables.$border-radius-md;
     $table-border-style: bs5variables.$border-width solid bs5variables.$border-color-light-var;
@@ -78,6 +82,17 @@
         }
         th {
             color: bs5variables.$text-muted-var;
+        }
+        .footnote-mark {
+            position: absolute;
+            left: 100%;
+            top: -9px;
+            padding: 2px 4px 2px 1px;
+            cursor: default;
+
+            sup {
+                top: 0;
+            }
         }
         .overwritten-value {
             position: relative;
