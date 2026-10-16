@@ -1,4 +1,4 @@
-<div class="modal-dialog modal-lg validateSchemaDetails" role="document" id="validateSchemaModal">
+<div class="modal-dialog modal-lg modal-grid validateSchemaDetails" role="document" id="validateSchemaModal">
     <div class="modal-content" tabindex="-1">
         <div class="modal-header">
             <div class="flex-horizontal">
@@ -36,8 +36,14 @@
                     <code data-bind="foreach: errorMessages"><span data-bind="text: $data"></span></code>
                 </pre>
             </div>
-            <div class="margin-bottom" style="position: relative; height: 300px">
-                <virtual-grid style="height: 300px" class="resizable flex-window" params="controller: gridController, emptyTemplate: 'empty-validate-schema-template'"></virtual-grid>
+            <div class="modal-grid-toolbar" data-bind="with: gridToolbar">
+                <span class="text-muted" data-bind="text: summary"></span>
+                <button type="button" class="btn btn-default btn-sm" data-bind="click: exportToCsv, enable: canExport" title="Download all rows as a CSV file">
+                    <i class="icon-csv-export"></i><span>Export to CSV</span>
+                </button>
+            </div>
+            <div class="modal-grid-container margin-bottom">
+                <virtual-grid class="resizable flex-window" params="controller: gridController, emptyTemplate: 'empty-validate-schema-template', fitToContent: true"></virtual-grid>
             </div>
         </div>
         <div class="modal-footer" data-bind="compose: $root.footerPartialView">
