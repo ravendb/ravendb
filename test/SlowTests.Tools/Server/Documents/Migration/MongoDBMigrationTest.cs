@@ -236,6 +236,51 @@ namespace SlowTests.Tools.Server.Documents.Migration
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport, Requires = RavenServiceRequirement.MongoDB)]
+        public async Task MigrateMongodb_WhenIdsCollideInRavenDB_ShouldMigrateAllDocuments()
+        {
+            using (var mongo = new MongoTestDatabase())
+            {
+                // distinct in MongoDB (typed and case-sensitive), the same in RavenDB (case-insensitive)
+                await mongo.Database.GetCollection<BsonDocument>("Users").InsertManyAsync(new[]
+                {
+                    new BsonDocument { { "_id", 1 }, { "Name", "int" } },
+                    new BsonDocument { { "_id", "1" }, { "Name", "string" } },
+                    new BsonDocument { { "_id", "abc" }, { "Name", "lower" } },
+                    new BsonDocument { { "_id", "ABC" }, { "Name", "upper" } },
+                    new BsonDocument { { "_id", "1-2" }, { "Name", "suffix" } }
+                });
+
+                // a regular collection with the same name as a GridFS bucket
+                await mongo.Database.GetCollection<BsonDocument>("photos").InsertOneAsync(new BsonDocument { { "_id", "p1" }, { "Name", "regular" } });
+                var photosBucket = new GridFSBucket<string>(mongo.Database, new GridFSBucketOptions { BucketName = "photos" });
+                await photosBucket.UploadFromBytesAsync("p1", "p.jpg", Encoding.UTF8.GetBytes("photo"));
+
+                using (var store = GetDocumentStore())
+                {
+                    await MigrateFromMongoDB(store, mongo, migrateGridFS: true, collectionsToMigrate: new[] { ("Users", (string)null), ("photos", null) });
+
+                    var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(7, stats.CountOfDocuments);
+
+                    using (var commands = store.Commands())
+                    {
+                        var names = new List<string>();
+                        foreach (var id in new[] { "Users/1", "Users/1-2", "Users/1-2-2", "Users/abc", "Users/abc-2", "photos/p1" })
+                        {
+                            var document = await commands.GetAsync(id);
+                            Assert.True(document != null, $"Document '{id}' wasn't migrated");
+                            names.Add(Get<string>(document.BlittableJson, "Name"));
+                        }
+
+                        Assert.Equal(new[] { "int", "lower", "regular", "string", "suffix", "upper" }, names.OrderBy(x => x));
+                    }
+
+                    await AssertGridFSFile(store, "photos/p1-2", null, Encoding.UTF8.GetBytes("photo"));
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport, Requires = RavenServiceRequirement.MongoDB)]
         public async Task MigrateMongodb_ShouldMigrateOnlySelectedCollectionsWithNewNames()
         {
             using (var mongo = new MongoTestDatabase())
