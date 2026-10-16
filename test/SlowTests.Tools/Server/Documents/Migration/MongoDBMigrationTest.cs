@@ -234,6 +234,21 @@ namespace SlowTests.Tools.Server.Documents.Migration
                             Assert.True(document != null, $"Document '{id}' wasn't migrated");
                             Assert.Equal(name, Get<string>(document.BlittableJson, "Name"));
                         }
+
+                        // ObjectId and UUID identifiers are used as is, the original value of the other identifiers is kept
+                        foreach (var id in new[] { objectId.ToString(), TestGuid.ToString(), legacyGuid.ToString() })
+                        {
+                            var document = await commands.GetAsync(id);
+                            Assert.False(document.BlittableJson.TryGet("@mongodb-id", out object _), $"Document '{id}' shouldn't have the original id");
+                        }
+
+                        Assert.Equal(1, Get<long>((await commands.GetAsync("Users/1")).BlittableJson, "@mongodb-id"));
+                        Assert.Equal(2, Get<long>((await commands.GetAsync("Users/2")).BlittableJson, "@mongodb-id"));
+                        Assert.Equal("abc", Get<string>((await commands.GetAsync("Users/abc")).BlittableJson, "@mongodb-id"));
+
+                        var compositeId = Get<BlittableJsonReaderObject>((await commands.GetAsync("Users/{\"a\":1,\"b\":2}")).BlittableJson, "@mongodb-id");
+                        Assert.Equal(1, Get<long>(compositeId, "a"));
+                        Assert.Equal(2, Get<long>(compositeId, "b"));
                     }
 
                     var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
@@ -269,6 +284,16 @@ namespace SlowTests.Tools.Server.Documents.Migration
                     var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(7, stats.CountOfDocuments);
 
+                    var originalIds = new Dictionary<string, object>
+                    {
+                        ["int"] = 1L,
+                        ["string"] = "1",
+                        ["lower"] = "abc",
+                        ["upper"] = "ABC",
+                        ["suffix"] = "1-2",
+                        ["regular"] = "p1"
+                    };
+
                     using (var commands = store.Commands())
                     {
                         var names = new List<string>();
@@ -276,13 +301,22 @@ namespace SlowTests.Tools.Server.Documents.Migration
                         {
                             var document = await commands.GetAsync(id);
                             Assert.True(document != null, $"Document '{id}' wasn't migrated");
-                            names.Add(Get<string>(document.BlittableJson, "Name"));
+                            var name = Get<string>(document.BlittableJson, "Name");
+                            names.Add(name);
+
+                            // the original id tells which MongoDB document got the suffixed id
+                            var expectedOriginalId = originalIds[name];
+                            if (expectedOriginalId is long number)
+                                Assert.Equal(number, Get<long>(document.BlittableJson, "@mongodb-id"));
+                            else
+                                Assert.Equal(expectedOriginalId, Get<string>(document.BlittableJson, "@mongodb-id"));
                         }
 
                         Assert.Equal(new[] { "int", "lower", "regular", "string", "suffix", "upper" }, names.OrderBy(x => x));
                     }
 
-                    await AssertGridFSFile(store, "photos/p1-2", "p.jpg", null, Encoding.UTF8.GetBytes("photo"));
+                    await AssertGridFSFile(store, "photos/p1-2", "p.jpg", null, Encoding.UTF8.GetBytes("photo"),
+                        file => Assert.Equal("p1", Get<string>(file, "@mongodb-id")));
                 }
             }
         }
