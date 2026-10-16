@@ -24,6 +24,10 @@ class storageReportItem {
     
     recyclableJournal = false;
 
+    link: string = null;
+    dataSize: number = null;
+    tempBuffersSize: number = null;
+
     constructor(name: string, type: string, showType: boolean, size: number, internalChildren: storageReportItem[] = null, isGrouped = false) {
         this.name = name;
         this.type = type;

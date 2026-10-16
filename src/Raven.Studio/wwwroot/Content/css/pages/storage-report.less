@@ -1,4 +1,4 @@
-﻿@chart-data-color: @color-5-2;
+@chart-data-color: @color-5-2;
 @chart-documents-color: @color-5-1;
 @chart-reserved-color: @color-5;
 @chart-journal-color: @color-4-3;
@@ -16,6 +16,9 @@
 @chart-tree-color: @color-1;
 @chart-configuration-color: @color-5-3;
 @chart-free-color: @gray-darker;
+@chart-database-color: @chart-documents-color;
+@chart-shard-color: darken(@chart-documents-color, 10%);
+@chart-system-color: @color-4;
 
 
 #storage-report {
@@ -359,6 +362,30 @@
             }
         }
 
+        &.database {
+            fill: @chart-database-color;
+
+            &:hover {
+                fill: lighten(@chart-database-color, 5%);
+            }
+        }
+
+        &.shard {
+            fill: @chart-shard-color;
+
+            &:hover {
+                fill: lighten(@chart-shard-color, 5%);
+            }
+        }
+
+        &.system {
+            fill: @chart-system-color;
+
+            &:hover {
+                fill: lighten(@chart-system-color, 5%);
+            }
+        }
+
         rect {
             fill-opacity: 1;
             stroke: transparent;
@@ -550,6 +577,14 @@
 
                 &:hover {
                     background-color: lighten(@chart-structure-color,5%);
+                }
+            }
+
+            &.system {
+                background-color: @chart-system-color;
+
+                &:hover {
+                    background-color: lighten(@chart-system-color,5%);
                 }
             }
         }

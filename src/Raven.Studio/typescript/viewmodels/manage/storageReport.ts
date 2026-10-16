@@ -1,8 +1,15 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getSystemStorageReportCommand = require("commands/resources/getSystemStorageReportCommand");
+import getDatabasesStateForStudioCommand = require("commands/resources/getDatabasesStateForStudioCommand");
 import generalUtils = require("common/generalUtils");
+import messagePublisher = require("common/messagePublisher");
+import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import databasesManager = require("common/shell/databasesManager");
 import storageReportItem = require("models/database/status/storageReportItem");
+import databaseStorageReportItem = require("models/database/status/databaseStorageReportItem");
+import router = require("plugins/router");
 import d3 = require("d3");
+import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseState;
 
 type positionAndSizes = {
     dx: number,
@@ -18,6 +25,7 @@ class storageReport extends viewModelBase {
     static readonly animationLength = 200;
 
     private rawData: detailedSystemStorageReportItemDto;
+    private databaseStates: StudioDatabaseState[] = [];
 
     private currentPath: KnockoutComputed<Array<storageReportItem>>;
 
@@ -48,11 +56,22 @@ class storageReport extends viewModelBase {
 
         this.initObservables();
 
-        return new getSystemStorageReportCommand()
+        const systemReportTask = new getSystemStorageReportCommand()
             .execute()
             .done(result => {
                 this.rawData = result;
             });
+
+        const databaseStatesTask = new getDatabasesStateForStudioCommand(clusterTopologyManager.default.localNodeTag())
+            .execute()
+            .then(
+                result => {
+                    this.databaseStates = result.Databases;
+                },
+                (response: JQueryXHR) => messagePublisher.reportError("Failed to load databases", response.responseText, response.statusText)
+            );
+
+        return $.when<any>(systemReportTask, databaseStatesTask);
     }
 
     compositionComplete() {
@@ -93,11 +112,19 @@ class storageReport extends viewModelBase {
     }
 
     private processData() {
-        const data = this.rawData;
-        this.root = this.mapReport(data);
+        const system = this.mapReport(this.rawData);
+        const databases = this.databaseStates.map(x => this.mapDatabase(x));
+        const items = [system, ...databases];
+
+        this.root = new storageReportItem(clusterTopologyManager.default.localNodeTag(), "node", false, items.reduce((p, c) => p + c.size, 0), items);
         this.sortBySize(this.root);
 
         this.node(this.root);
+    }
+
+    private mapDatabase(state: StudioDatabaseState): storageReportItem {
+        const isDisabled = databasesManager.default.getDatabaseByName(state.Name)?.disabled() ?? false;
+        return new databaseStorageReportItem(state, isDisabled);
     }
 
     private sortBySize(node: storageReportItem) {
@@ -113,11 +140,16 @@ class storageReport extends viewModelBase {
         const journals = this.mapJournals(reportItem.Report);
         const tempFiles = this.mapTempFiles(reportItem.Report);
 
-        return new storageReportItem(reportItem.Environment,
+        const item = new storageReportItem(reportItem.Environment,
             reportItem.Type.toLowerCase(),
             true,
             dataFile.size + journals.size + tempFiles.size,
             [dataFile, journals, tempFiles]);
+
+        item.dataSize = dataFile.size + journals.size;
+        item.tempBuffersSize = tempFiles.size;
+
+        return item;
     }
 
     private mapDataFile(report: Voron.Debugging.DetailedStorageReport): storageReportItem {
@@ -393,7 +425,7 @@ class storageReport extends viewModelBase {
             .attr("height", d => Math.max(0, d.dy - 1));
 
         rectangles
-            .filter(x => x.hasChildren())
+            .filter(x => x.hasChildren() || !!x.link)
             .style('cursor', 'pointer');
 
         cell.append("svg:text")
@@ -433,6 +465,11 @@ class storageReport extends viewModelBase {
     } 
 
     onClick(d: storageReportItem, goingIn: boolean) {
+        if (d.link) {
+            router.navigate(d.link);
+            return;
+        }
+
         if (this.transitioning || this.node() === d) {
             return;
         }
@@ -487,6 +524,14 @@ class storageReport extends viewModelBase {
 
     private shouldDisplayNumberOfEntries(d: storageReportItem) {
         return d.type === "tree" || d.type === "table";
+    }
+
+    dataSizeFormatted(item: storageReportItem) {
+        return item.dataSize == null ? "n/a" : generalUtils.formatBytesToSize(item.dataSize);
+    }
+
+    tempSizeFormatted(item: storageReportItem) {
+        return item.tempBuffersSize == null ? "n/a" : generalUtils.formatBytesToSize(item.tempBuffersSize);
     }
 
     private onMouseOut() {
