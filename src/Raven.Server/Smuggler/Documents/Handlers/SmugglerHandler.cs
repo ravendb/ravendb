@@ -347,6 +347,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
                 var token = CreateBackgroundOperationToken();
                 var transformScript = migrationConfiguration.TransformScript;
+                // must be read before the request ends, the import runs in the background
+                var authorizationStatus = GetAuthorizationStatusForSmuggler(DatabaseName);
 
                 var description = $"{EnumHelper.GetDescription(OperationType.DatabaseMigration)} from: '{migrationConfiguration.DatabaseTypeName}'";
                 _ = Database.Operations.AddLocalOperation(
@@ -364,7 +366,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             {
                                 using (ContextPool.AllocateOperationContext(out DocumentsOperationContext migrateContext))
                                 {
-                                    var options = new DatabaseSmugglerOptionsServerSide(GetAuthorizationStatusForSmuggler(DatabaseName))
+                                    var options = new DatabaseSmugglerOptionsServerSide(authorizationStatus)
                                     {
                                         TransformScript = transformScript
                                     };
@@ -589,7 +591,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         {
             await using (stream)
             using (token)
-            using (var source = new StreamSource(stream, context, Database.Name, new DatabaseSmugglerOptionsServerSide(GetAuthorizationStatusForSmuggler(DatabaseName))))
+            // runs in the background, after the request has finished, so the authorization status can't be read from the request here
+            using (var source = new StreamSource(stream, context, Database.Name, new DatabaseSmugglerOptionsServerSide(options.AuthorizationStatus)))
             {
                 var destination = Database.Smuggler.CreateDestination(token.Token);
                 var smuggler = Database.Smuggler.Create(source, destination, context, options, result, onProgress, token.Token);
