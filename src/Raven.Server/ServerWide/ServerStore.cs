@@ -2755,9 +2755,7 @@ namespace Raven.Server.ServerWide
                     break;
                 case ConnectionStringType.Ai:
                     var aiCs = JsonDeserializationCluster.AiConnectionString(connectionString);
-                    if (string.IsNullOrWhiteSpace(aiCs.Identifier))
-                        aiCs.Identifier = AiTaskIdentifierHelper.GenerateIdentifier(aiCs.Name);
-                    if (AiTaskIdentifierHelper.ValidateIdentifier(aiCs.Identifier, out var idErrors) == false)
+                    if (aiCs.EnsureIdentifier(out var idErrors) == false)
                         ThrowInvalidConfigurationIfNecessary(connectionString, idErrors);
                     command = new PutAiConnectionStringCommand(aiCs, databaseName, raftRequestId);
                     break;

@@ -18,6 +18,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
+using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide;
 
@@ -68,16 +69,28 @@ public sealed partial class ClusterStateMachine
         }
     }
 
-    private void UpdateDatabasesWithServerWideConnectionString(ClusterOperationContext context, string type, ServerWideConnectionString serverWideConnectionString, long index)
+    private void PutServerWideConnectionString(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
     {
+        var command = (PutServerWideConnectionStringCommand)JsonDeserializationCluster.Commands[type](cmd);
+        var serverWideConnectionString = command.Value;
+
         if (serverWideConnectionString == null)
             throw new RachisInvalidOperationException($"Server-wide connection string is null for command type: {type}");
 
         if (string.IsNullOrWhiteSpace(serverWideConnectionString.Name))
             throw new RachisInvalidOperationException($"Server-wide connection string name is null or empty for command type: {type}");
 
-        var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+        PutServerWideConnectionStringCommand.EnsureAiIdentifier(serverWideConnectionString);
 
+        var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+        var toUpdate = CollectDatabaseUpdatesForServerWideConnectionString(context, serverWideConnectionString, items);
+
+        UpdateValue<ServerWideConnectionString>(context, type, cmd, index, skipNotifyValueChanged: true);
+        ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
+    }
+
+    private List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName, object)> CollectDatabaseUpdatesForServerWideConnectionString(ClusterOperationContext context, ServerWideConnectionString serverWideConnectionString, Table items)
+    {
         var dbKey = Constants.Documents.Prefix;
         var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName, object)>();
         var databaseRecordCSName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(serverWideConnectionString.Name);
@@ -99,6 +112,9 @@ public sealed partial class ClusterStateMachine
 
                     if (hasConnectionStrings)
                     {
+                        if (serverWideConnectionString.ConnectionString is AiConnectionString aiConnectionString)
+                            AssertAiIdentifierNotInUse(connectionStrings, databaseRecordCSName, aiConnectionString.Identifier, databaseName);
+
                         connectionStrings.Modifications = new DynamicJsonValue(connectionStrings)
                         {
                             [databaseRecordCSName] = csJson
@@ -155,7 +171,7 @@ public sealed partial class ClusterStateMachine
             }
         }
 
-        ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
+        return toUpdate;
     }
 
     private void RemoveServerWideConnectionStringFromAllDatabases(RemoveServerWideConnectionStringCommand.DeleteConfiguration deleteConfiguration, ClusterOperationContext context, string type, long index)
@@ -220,6 +236,40 @@ public sealed partial class ClusterStateMachine
         }
 
         ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
+    }
+
+    private static void AssertAiIdentifierNotInUse(BlittableJsonReaderObject aiConnectionStrings, string connectionStringName, string identifier, string databaseName)
+    {
+        foreach (var propertyName in aiConnectionStrings.GetPropertyNames())
+        {
+            if (propertyName == connectionStringName)
+                continue;
+
+            if (aiConnectionStrings.TryGet(propertyName, out BlittableJsonReaderObject existing) == false || existing == null)
+                continue;
+
+            if (PutServerWideConnectionStringCommand.GetEffectiveAiIdentifier(existing, propertyName) == identifier)
+                ThrowAiIdentifierInUse(connectionStringName, identifier, propertyName, databaseName);
+        }
+    }
+
+    private static void AssertAiIdentifierNotInUse(Dictionary<string, AiConnectionString> aiConnectionStrings, string connectionStringName, string identifier, string databaseName)
+    {
+        foreach (var (name, existing) in aiConnectionStrings)
+        {
+            if (name == connectionStringName)
+                continue;
+
+            if (existing != null && PutServerWideConnectionStringCommand.GetEffectiveAiIdentifier(existing.Identifier, name) == identifier)
+                ThrowAiIdentifierInUse(connectionStringName, identifier, name, databaseName);
+        }
+    }
+
+    private static void ThrowAiIdentifierInUse(string connectionStringName, string identifier, string existingName, string databaseName)
+    {
+        throw new RachisApplyException(
+            $"Can't put server-wide connection string '{connectionStringName}'. " +
+            $"The identifier '{identifier}' is already used by connection string '{existingName}' in database '{databaseName}'");
     }
 
     private static void AssertServerWideConnectionStringNotInUse(BlittableJsonReaderObject databaseRecord, string connectionStringName, ConnectionStringType type, string databaseName)
@@ -347,6 +397,8 @@ public sealed partial class ClusterStateMachine
                 if (serverWideCS?.ConnectionString == null)
                     continue;
 
+                PutServerWideConnectionStringCommand.EnsureAiIdentifier(serverWideCS);
+
                 var databaseRecordCSName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(serverWideCS.Name);
                 serverWideCS.ConnectionString.Name = databaseRecordCSName;
 
@@ -371,7 +423,9 @@ public sealed partial class ClusterStateMachine
                         addDatabaseCommand.Record.SnowflakeConnectionStrings[databaseRecordCSName] = (SnowflakeConnectionString)serverWideCS.ConnectionString;
                         break;
                     case ConnectionStringType.Ai:
-                        addDatabaseCommand.Record.AiConnectionStrings[databaseRecordCSName] = (AiConnectionString)serverWideCS.ConnectionString;
+                        var aiConnectionString = (AiConnectionString)serverWideCS.ConnectionString;
+                        AssertAiIdentifierNotInUse(addDatabaseCommand.Record.AiConnectionStrings, databaseRecordCSName, aiConnectionString.Identifier, addDatabaseCommand.Name);
+                        addDatabaseCommand.Record.AiConnectionStrings[databaseRecordCSName] = aiConnectionString;
                         break;
                 }
 
