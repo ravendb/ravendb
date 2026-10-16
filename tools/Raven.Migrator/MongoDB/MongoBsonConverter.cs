@@ -8,7 +8,8 @@ namespace Raven.Migrator.MongoDB
 {
     /// <summary>
     /// Converts BSON values to values that can be written as JSON:
-    /// ObjectId, Decimal128, binary data (base64), regular expressions (/pattern/options), JavaScript code and symbols are written as strings,
+    /// Decimal128 as a number if it fits in a decimal without rounding, otherwise (and NaN, Infinity) as a string,
+    /// ObjectId, binary data (base64), regular expressions (/pattern/options), JavaScript code and symbols are written as strings,
     /// UUIDs as Guids (subtype 4 as standard, subtype 3 using the C# legacy byte order),
     /// dates as UTC DateTime and BSON types without a JSON equivalent (Timestamp, MinKey, MaxKey, JavaScript with scope, out of range dates)
     /// in the MongoDB relaxed extended JSON format, e.g. { "$timestamp": { "t": 1, "i": 1 } }.
@@ -56,7 +57,10 @@ namespace Raven.Migrator.MongoDB
                 case BsonType.Double:
                     return value.AsDouble;
                 case BsonType.Decimal128:
-                    return value.AsDecimal128.ToString();
+                    var decimal128 = value.AsDecimal128;
+                    if (TryGetDecimal(decimal128, out var decimalValue))
+                        return decimalValue;
+                    return decimal128.ToString();
                 case BsonType.Boolean:
                     return value.AsBoolean;
                 case BsonType.ObjectId:
@@ -118,6 +122,24 @@ namespace Raven.Migrator.MongoDB
 
             guid = default;
             return false;
+        }
+
+        private static bool TryGetDecimal(Decimal128 decimal128, out decimal value)
+        {
+            try
+            {
+                // rounds the digits that don't fit (Decimal128 has 34 significant digits, decimal 28-29)
+                value = Decimal128.ToDecimal(decimal128);
+            }
+            catch (OverflowException)
+            {
+                // NaN, Infinity or out of the decimal range
+                value = default;
+                return false;
+            }
+
+            // keep the exact value as a string if it was rounded
+            return new Decimal128(value) == decimal128;
         }
 
         private static object ToRelaxedExtendedJson(BsonValue value)

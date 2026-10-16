@@ -100,6 +100,9 @@ namespace SlowTests.Tools.Server.Documents.Migration
                     { "Int64", 1234567890123L },
                     { "Double", 1.5 },
                     { "Decimal", new Decimal128(12.34m) },
+                    { "DecimalWithMorePrecisionThanDecimal", Decimal128.Parse("0.1234567890123456789012345678901234") },
+                    { "DecimalOutOfDecimalRange", Decimal128.Parse("1E+100") },
+                    { "DecimalNaN", Decimal128.QNaN },
                     { "Boolean", true },
                     { "ObjectId", objectId },
                     { "Date", new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc) },
@@ -135,7 +138,11 @@ namespace SlowTests.Tools.Server.Documents.Migration
                         Assert.Equal(42, Get<long>(json, "Int32"));
                         Assert.Equal(1234567890123L, Get<long>(json, "Int64"));
                         Assert.Equal(1.5, Get<double>(json, "Double"));
-                        Assert.Equal("12.34", Get<string>(json, "Decimal"));
+                        Assert.Equal(12.34m, Get<decimal>(json, "Decimal"));
+                        // values that a decimal can't hold exactly are kept as strings
+                        Assert.Equal("0.1234567890123456789012345678901234", Get<string>(json, "DecimalWithMorePrecisionThanDecimal"));
+                        Assert.Equal("1E+100", Get<string>(json, "DecimalOutOfDecimalRange"));
+                        Assert.Equal("NaN", Get<string>(json, "DecimalNaN"));
                         Assert.True(Get<bool>(json, "Boolean"));
                         Assert.Equal(objectId.ToString(), Get<string>(json, "ObjectId"));
                         Assert.Equal("2020-01-02T03:04:05Z", Get<string>(json, "Date"));
@@ -170,7 +177,7 @@ namespace SlowTests.Tools.Server.Documents.Migration
                         Assert.Equal(3, Get<long>((BlittableJsonReaderObject)array[2], "Three"));
 
                         // a MongoDB '@metadata' property can't overwrite the RavenDB metadata
-                        Assert.True(Get<bool>(Get<BlittableJsonReaderObject>(json, "@metadata-mongodb"), "Mine"));
+                        Assert.True(Get<bool>(Get<BlittableJsonReaderObject>(json, "@metadata-source"), "Mine"));
                         Assert.Equal("Items", Get<string>(Get<BlittableJsonReaderObject>(json, "@metadata"), "@collection"));
 
                         Assert.False(json.TryGet("_id", out object _));
@@ -275,7 +282,7 @@ namespace SlowTests.Tools.Server.Documents.Migration
                         Assert.Equal(new[] { "int", "lower", "regular", "string", "suffix", "upper" }, names.OrderBy(x => x));
                     }
 
-                    await AssertGridFSFile(store, "photos/p1-2", null, Encoding.UTF8.GetBytes("photo"));
+                    await AssertGridFSFile(store, "photos/p1-2", "p.jpg", null, Encoding.UTF8.GetBytes("photo"));
                 }
             }
         }
@@ -338,6 +345,7 @@ namespace SlowTests.Tools.Server.Documents.Migration
                         }
                     });
                 var multipleChunks = await bucket.UploadFromBytesAsync("e.dat", largeContent, new GridFSUploadOptions { ChunkSizeBytes = 1024 });
+                var withoutFilename = await bucket.UploadFromBytesAsync(string.Empty, Encoding.UTF8.GetBytes("fifth file"));
 
                 // the deprecated top-level 'contentType' field written by older drivers
                 await mongo.Database.GetCollection<BsonDocument>("fs.files").UpdateOneAsync(
@@ -356,22 +364,24 @@ namespace SlowTests.Tools.Server.Documents.Migration
                 {
                     await MigrateFromMongoDB(store, mongo, migrateGridFS: true);
 
-                    await AssertGridFSFile(store, withContentTypeInMetadata.ToString(), "text/plain", Encoding.UTF8.GetBytes("first file"),
+                    await AssertGridFSFile(store, withContentTypeInMetadata.ToString(), "a.txt", "text/plain", Encoding.UTF8.GetBytes("first file"),
                         file => Assert.Equal(owner.ToString(), Get<string>(file, "Owner")));
-                    await AssertGridFSFile(store, withTopLevelContentType.ToString(), "text/csv", Encoding.UTF8.GetBytes("second file"),
+                    await AssertGridFSFile(store, withTopLevelContentType.ToString(), "b.csv", "text/csv", Encoding.UTF8.GetBytes("second file"),
                         file => Assert.Equal(owner.ToString(), Get<string>(file, "Owner")));
-                    await AssertGridFSFile(store, withoutMetadata.ToString(), null, Encoding.UTF8.GetBytes("third file"));
-                    await AssertGridFSFile(store, withDateAndGuidInMetadata.ToString(), "application/json", Encoding.UTF8.GetBytes("fourth file"), file =>
+                    await AssertGridFSFile(store, withoutMetadata.ToString(), "c.bin", null, Encoding.UTF8.GetBytes("third file"));
+                    await AssertGridFSFile(store, withDateAndGuidInMetadata.ToString(), "d.json", "application/json", Encoding.UTF8.GetBytes("fourth file"), file =>
                     {
                         Assert.Equal("2020-01-02T03:04:05Z", Get<string>(file, "Created"));
                         Assert.Equal(TestGuid.ToString(), Get<string>(file, "Ref"));
                     });
-                    await AssertGridFSFile(store, multipleChunks.ToString(), null, largeContent);
+                    await AssertGridFSFile(store, multipleChunks.ToString(), "e.dat", null, largeContent);
+                    // the document ID is used as the attachment name when the file has no name
+                    await AssertGridFSFile(store, withoutFilename.ToString(), withoutFilename.ToString(), null, Encoding.UTF8.GetBytes("fifth file"));
                     // non ObjectId file ids are prefixed with the collection (bucket) name
-                    await AssertGridFSFile(store, "photos/photo-1", "image/jpeg", Encoding.UTF8.GetBytes("photo"));
+                    await AssertGridFSFile(store, "photos/photo-1", "p.jpg", "image/jpeg", Encoding.UTF8.GetBytes("photo"));
 
                     var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
-                    Assert.Equal(5, collectionStats.Collections["Files"]);
+                    Assert.Equal(6, collectionStats.Collections["Files"]);
                     Assert.Equal(1, collectionStats.Collections["photos"]);
                     Assert.Equal(1, collectionStats.Collections["report.files"]);
                     Assert.Equal(3, collectionStats.Collections.Count);
@@ -395,7 +405,7 @@ namespace SlowTests.Tools.Server.Documents.Migration
                     Assert.Equal(1, collectionStats.CountOfDocuments);
                     Assert.Equal(1, collectionStats.Collections["Files"]);
 
-                    await AssertGridFSFile(store, fileId.ToString(), null, Encoding.UTF8.GetBytes("file"));
+                    await AssertGridFSFile(store, fileId.ToString(), "a.txt", null, Encoding.UTF8.GetBytes("file"));
                 }
             }
         }
@@ -517,10 +527,23 @@ namespace SlowTests.Tools.Server.Documents.Migration
                 ExportFilePath = NewDataPath()
             });
 
-            Assert.Equal(-1, Raven.Migrator.Program.Main(new[] { "mongodb", "-j", inputConfiguration }));
+            // the connection string is unreachable as well, so the exit code alone doesn't prove the validation
+            var originalError = Console.Error;
+            var error = new StringWriter();
+            Console.SetError(error);
+            try
+            {
+                Assert.Equal(-1, Raven.Migrator.Program.Main(new[] { "mongodb", "-j", inputConfiguration }));
+            }
+            finally
+            {
+                Console.SetError(originalError);
+            }
+
+            Assert.Contains("Cannot export to the console and to a file", error.ToString());
         }
 
-        private static async Task AssertGridFSFile(IDocumentStore store, string id, string expectedContentType, byte[] expectedContent,
+        private static async Task AssertGridFSFile(IDocumentStore store, string id, string expectedName, string expectedContentType, byte[] expectedContent,
             Action<BlittableJsonReaderObject> assertDocument = null)
         {
             using (var commands = store.Commands())
@@ -532,6 +555,7 @@ namespace SlowTests.Tools.Server.Documents.Migration
                 var attachments = Get<BlittableJsonReaderArray>(metadata, "@attachments");
                 var attachmentInfo = (BlittableJsonReaderObject)Assert.Single(attachments);
                 var attachmentName = Get<string>(attachmentInfo, "Name");
+                Assert.Equal(expectedName, attachmentName);
 
                 attachmentInfo.TryGet("ContentType", out string contentType);
                 if (expectedContentType == null)
