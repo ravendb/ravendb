@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -69,7 +69,8 @@ public static class BackupUtils
         return backupStream;
     }
 
-    internal static Stream GetCompressionStream(Stream stream, ExportCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel)
+    /// <param name="zstdWorkers">Worker threads compressing a Zstd stream, 0 compresses on the calling thread.</param>
+    internal static Stream GetCompressionStream(Stream stream, ExportCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel, int zstdWorkers = 0)
     {
         switch (compressionAlgorithm)
         {
@@ -79,7 +80,7 @@ public static class BackupUtils
                 if (compressionLevel == CompressionLevel.NoCompression)
                     return new LeaveOpenStream(stream);
 
-                return ZstdStream.Compress(stream, compressionLevel, leaveOpen: true);
+                return ZstdStream.Compress(stream, compressionLevel, leaveOpen: true, zstdWorkers);
             default:
                 throw new ArgumentOutOfRangeException();
         }
