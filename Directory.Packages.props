@@ -73,7 +73,8 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Configuration" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.10.0" />
     <PackageVersion Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.1" />
-    <PackageVersion Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.23.2" />
+    <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.31.0" />
+    <PackageVersion Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.31.0" />
     <PackageVersion Include="Microsoft.ML.Tokenizers" Version="2.0.0" />
     <PackageVersion Include="Microsoft.ML.Tokenizers.Data.Cl100kBase" Version="2.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.0" />
