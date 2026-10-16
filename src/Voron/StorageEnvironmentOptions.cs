@@ -899,11 +899,19 @@ namespace Voron
                     return true;
                 }
 
-                if (RootJournal.Env.Options is not DirectoryStorageEnvironmentOptions rootOptions ||
-                    rootOptions.Disposed ||
-                    CanJournalsBeLinkedWith(rootOptions) == false) // a rename cannot cross volumes
+                if (RootJournal.Env.Options is not DirectoryStorageEnvironmentOptions rootOptions || rootOptions.Disposed)
                     return false;
-                    
+
+                try
+                {
+                    if (CanJournalsBeLinkedWith(rootOptions) == false) // a rename cannot cross volumes
+                        return false;
+                }
+                catch (Exception)
+                {
+                    return false; // the probe writes into the root's journal directory, which fails on a full disk
+                }
+
                 // we donate this to the root's pool, so it can be reused by any of its branches (or the root itself)
                 rootOptions.TryStoreJournalForReuse(file);
                 return true;
@@ -1400,6 +1408,10 @@ namespace Voron
             {
                 if (ForTestingPurposes?.SimulateCannotLinkJournals == true || other.ForTestingPurposes?.SimulateCannotLinkJournals == true)
                     return false;
+
+                ForTestingPurposes?.BeforeJournalLinkProbe?.Invoke();
+                other.ForTestingPurposes?.BeforeJournalLinkProbe?.Invoke();
+
                 return other is DirectoryStorageEnvironmentOptions &&
                        CanJournalsBeLinkedWith(other.JournalPath, JournalPath);
             }
@@ -2041,10 +2053,17 @@ namespace Voron
             string fileName = Guid.NewGuid() + ".test-hard-link";
             string src = otherPath.Combine(fileName).FullPath;
             string dst = selfPath.Combine(fileName).FullPath;
-            File.WriteAllText(src, "This file was created to see if hard links between document database & index work");
-            var rc = Pal.rvn_hard_link_non_durable(src,dst,out _);
-              
-            File.Delete(src);
+            PalFlags.FailCodes rc;
+            try
+            {
+                File.WriteAllText(src, "This file was created to see if hard links between document database & index work");
+                rc = Pal.rvn_hard_link_non_durable(src, dst, out _);
+            }
+            finally
+            {
+                File.Delete(src);
+            }
+
             if (rc != PalFlags.FailCodes.Success)
                 return false;
                 
@@ -2069,6 +2088,8 @@ namespace Voron
             internal DeviceWriteBudget.DeviceClass? ForceMeasuredDeviceClass;
 
             internal bool SimulateCannotLinkJournals;
+
+            internal Action BeforeJournalLinkProbe;
 
             internal Func<long, PartialJournalWriteFailure> SimulatePartialJournalWriteFailure;
 
