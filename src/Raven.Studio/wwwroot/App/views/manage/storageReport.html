@@ -18,26 +18,26 @@
     <table class="table table-condensed table-striped on-base-background" data-bind="if: node() && node().internalChildren">
         <thead>
             <tr>
-                <th data-bind="css: sortClass('type'), attr: { 'aria-sort': ariaSort('type') }">
-                    <button type="button" class="sort-button" data-bind="click: _.partial(sortBy, 'type')">Type<span class="sortable-controls"></span></button>
+                <th data-bind="css: sort.cssClassFor('type'), attr: { 'aria-sort': sort.ariaSortFor('type') }">
+                    <button type="button" class="sort-button" data-bind="click: _.partial(sort.sortBy, 'type')">Type<span class="sortable-controls"></span></button>
                 </th>
-                <th class="column-min-width" data-bind="css: sortClass('name'), attr: { 'aria-sort': ariaSort('name') }">
-                    <button type="button" class="sort-button" data-bind="click: _.partial(sortBy, 'name')">Name<span class="sortable-controls"></span></button>
+                <th class="column-min-width" data-bind="css: sort.cssClassFor('name'), attr: { 'aria-sort': sort.ariaSortFor('name') }">
+                    <button type="button" class="sort-button" data-bind="click: _.partial(sort.sortBy, 'name')">Name<span class="sortable-controls"></span></button>
                 </th>
-                <th data-bind="visible: showPagesColumn(), css: sortClass('pageCount'), attr: { 'aria-sort': ariaSort('pageCount') }">
-                    <button type="button" class="sort-button" data-bind="click: _.partial(sortBy, 'pageCount')"># Pages<span class="sortable-controls"></span></button>
+                <th data-bind="visible: showPagesColumn(), css: sort.cssClassFor('pageCount'), attr: { 'aria-sort': sort.ariaSortFor('pageCount') }">
+                    <button type="button" class="sort-button" data-bind="click: _.partial(sort.sortBy, 'pageCount')"># Pages<span class="sortable-controls"></span></button>
                 </th>
-                <th data-bind="visible: showEntriesColumn(), css: sortClass('numberOfEntries'), attr: { 'aria-sort': ariaSort('numberOfEntries') }">
-                    <button type="button" class="sort-button" data-bind="click: _.partial(sortBy, 'numberOfEntries')">Entries<span class="sortable-controls"></span></button>
+                <th data-bind="visible: showEntriesColumn(), css: sort.cssClassFor('numberOfEntries'), attr: { 'aria-sort': sort.ariaSortFor('numberOfEntries') }">
+                    <button type="button" class="sort-button" data-bind="click: _.partial(sort.sortBy, 'numberOfEntries')">Entries<span class="sortable-controls"></span></button>
                 </th>
-                <th data-bind="visible: showTempFiles(), css: sortClass('dataSize'), attr: { 'aria-sort': ariaSort('dataSize') }">
-                    <button type="button" class="sort-button" data-bind="click: _.partial(sortBy, 'dataSize')">Data + Journals<span class="sortable-controls"></span></button>
+                <th data-bind="visible: showTempFiles(), css: sort.cssClassFor('dataSize'), attr: { 'aria-sort': sort.ariaSortFor('dataSize') }">
+                    <button type="button" class="sort-button" data-bind="click: _.partial(sort.sortBy, 'dataSize')">Data + Journals<span class="sortable-controls"></span></button>
                 </th>
-                <th data-bind="visible: showTempFiles(), css: sortClass('tempBuffersSize'), attr: { 'aria-sort': ariaSort('tempBuffersSize') }">
-                    <button type="button" class="sort-button" data-bind="click: _.partial(sortBy, 'tempBuffersSize')">Temporary Buffers<span class="sortable-controls"></span></button>
+                <th data-bind="visible: showTempFiles(), css: sort.cssClassFor('tempBuffersSize'), attr: { 'aria-sort': sort.ariaSortFor('tempBuffersSize') }">
+                    <button type="button" class="sort-button" data-bind="click: _.partial(sort.sortBy, 'tempBuffersSize')">Temporary Buffers<span class="sortable-controls"></span></button>
                 </th>
-                <th data-bind="css: sortClass('size'), attr: { 'aria-sort': ariaSort('size') }">
-                    <button type="button" class="sort-button" data-bind="click: _.partial(sortBy, 'size')"><span data-bind="visible: showTempFiles()">Total</span> Size (&sum; <span data-bind="text: node().formatSize(true)"></span>)<span class="sortable-controls"></span></button>
+                <th data-bind="css: sort.cssClassFor('size'), attr: { 'aria-sort': sort.ariaSortFor('size') }">
+                    <button type="button" class="sort-button" data-bind="click: _.partial(sort.sortBy, 'size')"><span data-bind="visible: showTempFiles()">Total</span> Size (&sum; <span data-bind="text: node().formatSize(true)"></span>)<span class="sortable-controls"></span></button>
                 </th>
                 <th>% Total</th>
             </tr>
