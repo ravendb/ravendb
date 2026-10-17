@@ -13,17 +13,17 @@ using Graphs;
 using Address = System.UInt64;
 
 /// <summary>
-/// Represents a .GCDump file.  You can open it for reading with the construtor
+/// Represents a .GCDump file.  You can open it for reading with the constructor
 /// and you can write one with WriteMemoryGraph
 /// </summary>
 public class GCHeapDump : IFastSerializable, IFastSerializableVersion
 {
     public GCHeapDump(string inputFileName) :
-        this(new Deserializer(inputFileName, new SerializationConfiguration() { StreamLabelWidth = StreamLabelWidth.FourBytes }))
+        this(new Deserializer(inputFileName, SerializationSettings.Default.WithStreamLabelWidth(StreamLabelWidth.FourBytes)))
     { }
 
     public GCHeapDump(Stream inputStream, string streamName) :
-        this(new Deserializer(inputStream, streamName, new SerializationConfiguration() { StreamLabelWidth = StreamLabelWidth.FourBytes }))
+        this(new Deserializer(inputStream, streamName, SerializationSettings.Default.WithStreamLabelWidth(StreamLabelWidth.FourBytes)))
     { }
 
     /// <summary>
@@ -193,7 +193,7 @@ public class GCHeapDump : IFastSerializable, IFastSerializableVersion
     private void Write(string outputFileName)
     {
         Debug.Assert(MemoryGraph != null);
-        Serializer serializer = new(new IOStreamStreamWriter(outputFileName, config: new SerializationConfiguration() { StreamLabelWidth = StreamLabelWidth.FourBytes }), this);
+        Serializer serializer = new(new IOStreamStreamWriter(outputFileName, settings: SerializationSettings.Default.WithStreamLabelWidth(StreamLabelWidth.FourBytes)), this);
         serializer.Close();
     }
 
@@ -1008,6 +1008,7 @@ internal static class XmlGcHeapDump
                             // TODO FIX NOW very inefficient.   Use ReadValueChunk and FastStream to make more efficient.
                             children.Clear();
                             string body = reader.ReadElementContentAsString();
+#pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
                             foreach (string num in Regex.Split(body, @"\s+"))
                             {
                                 if (num.Length > 0)
@@ -1015,6 +1016,7 @@ internal static class XmlGcHeapDump
                                     children.Add((NodeIndex)int.Parse(num));
                                 }
                             }
+#pragma warning restore SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
 
                             if (size == 0)
                             {

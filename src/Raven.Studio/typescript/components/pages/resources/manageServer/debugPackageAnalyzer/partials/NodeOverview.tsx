@@ -48,7 +48,11 @@ export default function NodeOverview({ summary, nodeTag }: NodeOverviewProps) {
                                     iconColor="node"
                                     value={node.NodeType}
                                 />
-                                <StatTile label="OS" icon={osIcon(node.OsType)} value={node.OsName} />
+                                <StatTile
+                                    label="OS"
+                                    icon={node.OsName ? osIcon(node.OsType) : "server"}
+                                    value={node.OsName || "-"}
+                                />
                                 <StatTile label="Server version" icon="server" value={node.ServerVersion} />
                                 <StatTile label="Uptime" icon="clock" value={formatUpTime(node.UpTime)} />
                                 <StatTile
