@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -14,13 +13,25 @@ namespace Raven.Migrator.MongoDB
     public class MongoDBMigrator : INoSqlMigrator
     {
         private readonly MongoDBConfiguration _configuration;
-        private readonly BsonDocument _filterDefinition = new BsonDocument();
 
         private const string MongoDocumentId = "_id";
+        private const string OriginalIdProperty = "@mongodb-id";
+
+        private const string DefaultGridFSBucketName = "fs";
+        private const string DefaultGridFSCollectionName = "Files";
+        private const string GridFSFilesSuffix = ".files";
+        private const string GridFSChunksSuffix = ".chunks";
+        private const string SystemCollectionPrefix = "system.";
+
+        // larger GridFS files are buffered in a temporary file instead of memory
+        private const long MaxInMemoryGridFSFileSize = 64 * 1024 * 1024;
+
         private readonly List<string> _propertiesToRemove = new List<string>
         {
             MongoDocumentId
         };
+
+        private readonly HashSet<ulong> _usedDocumentIdHashes = new HashSet<ulong>();
 
         public MongoDBMigrator(MongoDBConfiguration configuration)
         {
@@ -66,17 +77,19 @@ namespace Raven.Migrator.MongoDB
             var database = client.GetDatabase(_configuration.DatabaseName);
             AssertOnline(client, database);
 
+            var databaseCollections = await GetDatabaseCollections(database);
+
             MigrationHelpers.OutputClass(_configuration,
                 new ExtendedCollectionsInfo
                 {
-                    Collections = await GetCollections(database),
-                    HasGridFS = await HasGridFs(database)
+                    Collections = databaseCollections.Collections,
+                    HasGridFS = await HasGridFS(database, databaseCollections.GridFSBuckets)
                 });
         }
 
-        private static async Task<List<string>> GetCollections(IMongoDatabase database)
+        private static async Task<DatabaseCollections> GetDatabaseCollections(IMongoDatabase database)
         {
-            var collections = new List<string>();
+            var names = new List<string>();
 
             using (var cursor = await database.ListCollectionsAsync())
             {
@@ -84,28 +97,62 @@ namespace Raven.Migrator.MongoDB
                 {
                     foreach (var collectionDocument in cursor.Current)
                     {
-                        var collectionName = collectionDocument["name"].ToString();
-                        if (collectionName.EndsWith(".chunks", StringComparison.OrdinalIgnoreCase) || 
-                            collectionName.EndsWith(".files", StringComparison.OrdinalIgnoreCase))
-                            continue; // grid fs files will be handled separately
+                        // views are skipped, their documents are migrated from the source collections
+                        var type = collectionDocument.GetValue("type", "collection").AsString;
+                        if (type != "collection" && type != "timeseries")
+                            continue;
 
-                        collections.Add(collectionName);
+                        var collectionName = collectionDocument["name"].AsString;
+                        if (collectionName.StartsWith(SystemCollectionPrefix, StringComparison.Ordinal))
+                            continue;
+
+                        names.Add(collectionName);
                     }
                 }
             }
 
-            return collections;
+            var allNames = new HashSet<string>(names, StringComparer.Ordinal);
+            var gridFSBuckets = new List<string>();
+            var gridFSCollections = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var name in names)
+            {
+                if (name.EndsWith(GridFSFilesSuffix, StringComparison.Ordinal) == false)
+                    continue;
+
+                var bucketName = name.Substring(0, name.Length - GridFSFilesSuffix.Length);
+                var chunksCollectionName = bucketName + GridFSChunksSuffix;
+                if (allNames.Contains(chunksCollectionName) == false)
+                    continue; // a regular collection that happens to end with '.files'
+
+                gridFSBuckets.Add(bucketName);
+                gridFSCollections.Add(name);
+                gridFSCollections.Add(chunksCollectionName);
+            }
+
+            return new DatabaseCollections
+            {
+                Collections = names.Where(x => gridFSCollections.Contains(x) == false).ToList(),
+                GridFSBuckets = gridFSBuckets
+            };
         }
 
-        private static async Task<bool> HasGridFs(IMongoDatabase database)
+        private static async Task<bool> HasGridFS(IMongoDatabase database, List<string> gridFSBuckets)
         {
-            var bucket = new GridFSBucket(database);
-
-            var filter = Builders<GridFSFileInfo>.Filter.Empty;
-            using (var cursor = await bucket.FindAsync(filter))
+            foreach (var bucketName in gridFSBuckets)
             {
-                return await cursor.MoveNextAsync();
+                var bucket = CreateGridFSBucket(database, bucketName);
+                using (var cursor = await bucket.FindAsync(Builders<GridFSFileInfo<BsonValue>>.Filter.Empty, new GridFSFindOptions<BsonValue> { Limit = 1 }))
+                {
+                    while (await cursor.MoveNextAsync())
+                    {
+                        if (cursor.Current.Any())
+                            return true;
+                    }
+                }
             }
+
+            return false;
         }
 
         public async Task MigrateDatabase()
@@ -116,39 +163,53 @@ namespace Raven.Migrator.MongoDB
             var database = client.GetDatabase(_configuration.DatabaseName);
             AssertOnline(client, database);
 
-            if (_configuration.CollectionsToMigrate == null || 
+            var databaseCollections = await GetDatabaseCollections(database);
+
+            if (_configuration.CollectionsToMigrate == null ||
                 _configuration.CollectionsToMigrate.Count == 0 && _configuration.MigrateGridFS == false)
             {
-                _configuration.CollectionsToMigrate = await GetCollectionsToMigrate(database);
+                _configuration.CollectionsToMigrate = databaseCollections.Collections
+                    .Select(x => new Collection
+                    {
+                        Name = x,
+                        NewName = x
+                    }).ToList();
             }
 
             await MigrationHelpers.MigrateNoSqlDatabase(
                 _configuration,
-                async (mongoCollectionName, ravenCollectionName, jsonTextWriter, streamWriter) => 
+                async (mongoCollectionName, ravenCollectionName, jsonTextWriter, streamWriter) =>
                     await MigrateSingleCollection(database, mongoCollectionName, ravenCollectionName, jsonTextWriter),
                 async (jsonTextWriter, streamWriter) =>
                 {
-                    if (_configuration.MigrateGridFS)
-                        await MigrateGridFS(database, jsonTextWriter, streamWriter);
+                    if (_configuration.MigrateGridFS == false)
+                        return;
+
+                    foreach (var bucketName in databaseCollections.GridFSBuckets)
+                    {
+                        await MigrateGridFS(database, bucketName, jsonTextWriter, streamWriter);
+                    }
                 });
         }
 
         private async Task MigrateSingleCollection(
-            IMongoDatabase database, 
+            IMongoDatabase database,
             string mongoCollectionName,
             string ravenCollectionName,
             JsonTextWriter jsonTextWriter)
         {
-            var collection = database.GetCollection<ExpandoObject>(mongoCollectionName);
+            var collection = database.GetCollection<BsonDocument>(mongoCollectionName);
 
-            using (var documentsCursor = await collection.Find(_filterDefinition).ToCursorAsync())
+            using (var documentsCursor = await collection.Find(FilterDefinition<BsonDocument>.Empty).ToCursorAsync())
             {
                 while (await documentsCursor.MoveNextAsync())
                 {
-                    foreach (var document in documentsCursor.Current)
+                    foreach (var bsonDocument in documentsCursor.Current)
                     {
-                        var dictionary = (IDictionary<string, object>)document;
-                        var documentId = dictionary[MongoDocumentId].ToString();
+                        var mongoId = bsonDocument.GetValue(MongoDocumentId, BsonNull.Value);
+                        var documentId = GetDocumentId(mongoId, ravenCollectionName);
+                        var document = MongoBsonConverter.ToExpandoObject(bsonDocument);
+                        AddOriginalId(document, mongoId);
 
                         MigrationHelpers.WriteDocument(
                             document,
@@ -161,25 +222,86 @@ namespace Raven.Migrator.MongoDB
             }
         }
 
-        private static async Task<List<Collection>> GetCollectionsToMigrate(IMongoDatabase database)
+        /// <summary>
+        /// ObjectId and UUID identifiers are globally unique and are used as is (so references stored in other documents still match),
+        /// other identifiers (numbers, strings, embedded documents) are prefixed with the collection name, e.g. 'Users/1',
+        /// to avoid collisions between collections.
+        /// </summary>
+        private string GetDocumentId(BsonValue mongoId, string ravenCollectionName)
         {
-            var collectionsToMigrate = await GetCollections(database);
-            return collectionsToMigrate
-                .Select(x => new Collection
-                {
-                    Name = x,
-                    NewName = x
-                }).ToList();
+            switch (mongoId.BsonType)
+            {
+                case BsonType.ObjectId:
+                    return mongoId.AsObjectId.ToString();
+                case BsonType.Binary when MongoBsonConverter.TryGetGuid(mongoId.AsBsonBinaryData, out var guid):
+                    return guid.ToString();
+                case BsonType.Null:
+                case BsonType.Undefined:
+                    return $"{ravenCollectionName}/{Guid.NewGuid()}";
+                default:
+                    return GetUniqueDocumentId($"{ravenCollectionName}/{MongoBsonConverter.ToIdString(mongoId)}");
+            }
         }
 
-        private static async Task MigrateGridFS(
-            IMongoDatabase database, 
-            JsonTextWriter jsonTextWriter, 
+        /// <summary>
+        /// Identifiers that aren't used as is (they are prefixed with the collection name and, on a collision, suffixed)
+        /// are kept in the document, so references to them stored in other documents can be updated after the migration.
+        /// </summary>
+        private static void AddOriginalId(IDictionary<string, object> document, BsonValue mongoId)
+        {
+            switch (mongoId.BsonType)
+            {
+                case BsonType.ObjectId:
+                case BsonType.Binary when MongoBsonConverter.TryGetGuid(mongoId.AsBsonBinaryData, out _):
+                case BsonType.Null:
+                case BsonType.Undefined:
+                    return;
+                default:
+                    document[OriginalIdProperty] = MongoBsonConverter.ToDotNetValue(mongoId);
+                    return;
+            }
+        }
+
+        /// <summary>
+        /// RavenDB document IDs are case-insensitive while MongoDB identifiers are case-sensitive and typed (1 and '1' can coexist),
+        /// so an ID that was already used gets a numeric suffix, e.g. 'Users/abc' and 'Users/ABC-2'.
+        /// Only hashes of the used IDs are kept, a hash collision just adds a suffix to an ID that didn't need one.
+        /// </summary>
+        private string GetUniqueDocumentId(string documentId)
+        {
+            if (_usedDocumentIdHashes.Add(GetDocumentIdHash(documentId)))
+                return documentId;
+
+            for (var suffix = 2; ; suffix++)
+            {
+                var uniqueDocumentId = $"{documentId}-{suffix}";
+                if (_usedDocumentIdHashes.Add(GetDocumentIdHash(uniqueDocumentId)))
+                    return uniqueDocumentId;
+            }
+        }
+
+        private static ulong GetDocumentIdHash(string documentId)
+        {
+            // 64-bit FNV-1a of the lower-cased ID
+            var hash = 14695981039346656037UL;
+            foreach (var c in documentId)
+            {
+                hash ^= char.ToLowerInvariant(c);
+                hash *= 1099511628211UL;
+            }
+
+            return hash;
+        }
+
+        private async Task MigrateGridFS(
+            IMongoDatabase database,
+            string bucketName,
+            JsonTextWriter jsonTextWriter,
             StreamWriter streamWriter)
         {
-            var bucket = new GridFSBucket(database);
-            var collectionName = bucket.Options.BucketName == "fs" ? "Files" : bucket.Options.BucketName;
-            var filter = Builders<GridFSFileInfo>.Filter.Empty;
+            var bucket = CreateGridFSBucket(database, bucketName);
+            var collectionName = bucketName == DefaultGridFSBucketName ? DefaultGridFSCollectionName : bucketName;
+            var filter = Builders<GridFSFileInfo<BsonValue>>.Filter.Empty;
             var attachmentNumber = 0;
 
             using (var cursor = await bucket.FindAsync(filter))
@@ -188,21 +310,23 @@ namespace Raven.Migrator.MongoDB
                 {
                     foreach (var fileInfo in cursor.Current)
                     {
-                        var document = ToExpandoObject(fileInfo.Metadata);
+                        var document = MongoBsonConverter.ToExpandoObject(fileInfo.Metadata ?? new BsonDocument());
                         var dictionary = (IDictionary<string, object>)document;
-                        var documentId = fileInfo.Id.ToString();
+                        var documentId = GetDocumentId(fileInfo.Id, collectionName);
+                        AddOriginalId(dictionary, fileInfo.Id);
                         var totalSize = fileInfo.Length;
                         var contentType = GetContentType(fileInfo, dictionary);
+                        var attachmentName = string.IsNullOrWhiteSpace(fileInfo.Filename) ? documentId : fileInfo.Filename;
 
-                        using (var stream = new MemoryStream())
+                        //can't OpenDownloadStreamAsync because it's not a seekable stream
+                        await using (var stream = CreateGridFSFileBuffer(totalSize))
                         {
-                            //can't OpenDownloadStreamAsync because it's not a seekable stream
                             await bucket.DownloadToStreamAsync(fileInfo.Id, stream);
                             stream.Position = 0;
 
                             attachmentNumber++;
                             var attachmentInfo = await MigrationHelpers.WriteAttachment(
-                                stream, totalSize, documentId, collectionName, contentType,
+                                stream, totalSize, attachmentName, collectionName, contentType,
                                 attachmentNumber, jsonTextWriter, streamWriter);
 
                             MigrationHelpers.WriteDocument(
@@ -221,34 +345,45 @@ namespace Raven.Migrator.MongoDB
             }
         }
 
-        private static string GetContentType(GridFSFileInfo fileInfo, IDictionary<string, object> dictionary)
+        private static GridFSBucket<BsonValue> CreateGridFSBucket(IMongoDatabase database, string bucketName)
         {
-#pragma warning disable CS0618 // Type or member is obsolete
-            var contentType = fileInfo.ContentType;
-#pragma warning restore CS0618 // Type or member is obsolete
-            if (dictionary.TryGetValue("contentType", out object value))
+            return new GridFSBucket<BsonValue>(database, new GridFSBucketOptions
             {
-                contentType = (string)value;
+                BucketName = bucketName
+            });
+        }
+
+        private static Stream CreateGridFSFileBuffer(long size)
+        {
+            if (size <= MaxInMemoryGridFSFileSize)
+                return new MemoryStream();
+
+            return new FileStream(Path.GetTempFileName(), FileMode.Create, FileAccess.ReadWrite, FileShare.None, 4096,
+                FileOptions.DeleteOnClose | FileOptions.Asynchronous);
+        }
+
+        private static string GetContentType(GridFSFileInfo<BsonValue> fileInfo, IDictionary<string, object> dictionary)
+        {
+            // the deprecated top-level 'contentType' field of the files collection document
+            // (GridFSFileInfo.ContentType was removed in MongoDB.Driver 3.x)
+            string contentType = null;
+            if (fileInfo.BackingDocument.TryGetValue("contentType", out var contentTypeValue) && contentTypeValue.IsString)
+                contentType = contentTypeValue.AsString;
+
+            if (dictionary.TryGetValue("contentType", out object value) && value is string metadataContentType)
+            {
+                contentType = metadataContentType;
             }
-            else if (dictionary.TryGetValue("Content-Type", out value))
+            else if (dictionary.TryGetValue("Content-Type", out value) && value is string metadataHeaderContentType)
             {
-                contentType = (string)value;
+                contentType = metadataHeaderContentType;
             }
-            else if (dictionary.TryGetValue("ContentType", out value))
+            else if (dictionary.TryGetValue("ContentType", out value) && value is string metadataPascalContentType)
             {
-                contentType = (string)value;
+                contentType = metadataPascalContentType;
             }
 
             return contentType;
-        }
-
-        private static readonly System.Text.RegularExpressions.Regex ObjectIdReplace = new System.Text.RegularExpressions.Regex(@"ObjectId\((.[a-f0-9]{24}.)\)", System.Text.RegularExpressions.RegexOptions.Compiled);
-
-        private static dynamic ToExpandoObject(BsonDocument bsonDocument)
-        {
-            var input = bsonDocument.ToJson();
-            var json = ObjectIdReplace.Replace(input, s => s.Groups[1].Value);
-            return JsonConvert.DeserializeObject<ExpandoObject>(json);
         }
 
         private void AssertConnectionString()
@@ -273,6 +408,13 @@ namespace Raven.Migrator.MongoDB
             var online = database.RunCommandAsync((Command<BsonDocument>)"{ping:1}").Wait(TimeSpan.FromSeconds(5));
             if (online == false)
                 throw new InvalidOperationException($"Couldn't connect to: {_configuration.ConnectionString}");
+        }
+
+        private sealed class DatabaseCollections
+        {
+            public List<string> Collections { get; set; }
+
+            public List<string> GridFSBuckets { get; set; }
         }
     }
 }
