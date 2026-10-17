@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -227,7 +227,9 @@ public partial class IndexSearcher
         
         var unaryMatchItems = new MultiUnaryItem[queryTerms.Length];
         for (var i = 0; i < queryTerms.Length; ++i)
-            unaryMatchItems[i] = new MultiUnaryItem(field, queryTerms[i].Term, UnaryMatchOperation.Equals);
+            unaryMatchItems[i] = queryTerms[i].Key == null
+                ? new MultiUnaryItem(this, field, null, UnaryMatchOperation.Equals)
+                : new MultiUnaryItem(field, queryTerms[i].Term, UnaryMatchOperation.Equals);
 
         return CreateMultiUnaryMatch(binaryMatchOfTermMatches[0], unaryMatchItems, cancellationToken);
     }
