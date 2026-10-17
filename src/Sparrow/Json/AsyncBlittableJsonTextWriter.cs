@@ -47,14 +47,14 @@ namespace Sparrow.Json
         public bool ShouldFlushAsync
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _innerStream.Length * 2 > _innerStream.Capacity;
+            get => _innerStream.Length * 2 > _innerStream.Capacity64;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<long> MaybeFlushAsync(CancellationToken token = default)
         {
             // PERF: Use cached RecyclableMemoryStream reference
-            if (_innerStream.Length * 2 <= _innerStream.Capacity)
+            if (_innerStream.Length * 2 <= _innerStream.Capacity64)
                 return new ValueTask<long>(0);
 
             FlushInternal(); // this is OK, because inner stream is a RecyclableMemoryStream

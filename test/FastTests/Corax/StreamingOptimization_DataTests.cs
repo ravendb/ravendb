@@ -35,8 +35,18 @@ public class StreamingOptimization_DataTests : RavenTestBase
      * Range Queries L_ASC[X]  L_DSC[X] D_ASC[X] D_DSC[X] S_ASC[X] S_DSC[X]
      */
 
-    public static IEnumerable<object[]> UnboundedRange()
+    public static IEnumerable<object[]> UnboundedRange(bool fullMatrix)
     {
+        if (fullMatrix == false)
+        {
+            // covers every value of every parameter, the full matrix runs in SlowTests.Corax.StreamingOptimization_RangeMatrix
+            yield return new object[] { UnaryMatchOperation.GreaterThan, OrderingType.String, true, "a" };
+            yield return new object[] { UnaryMatchOperation.LessThan, OrderingType.Long, false, 4L };
+            yield return new object[] { UnaryMatchOperation.GreaterThanOrEqual, OrderingType.Double, true, 2.0D };
+            yield return new object[] { UnaryMatchOperation.LessThanOrEqual, OrderingType.String, false, "a" };
+            yield break;
+        }
+
         foreach (var unaryOperation in new UnaryMatchOperation[] {UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan, UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual})
         foreach (var fieldType in new OrderingType[] {OrderingType.String, OrderingType.Long, OrderingType.Double})
         foreach (var isAscending in new bool[]{true, false})
@@ -54,10 +64,13 @@ public class StreamingOptimization_DataTests : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-    [MemberData(nameof(UnboundedRange))]
-    public void UnboundedRangeQueries(UnaryMatchOperation unaryMatchOperation, OrderingType fieldType, bool ascending, object value)
+    [MemberData(nameof(UnboundedRange), false)]
+    public void UnboundedRangeQueries(UnaryMatchOperation unaryMatchOperation, OrderingType fieldType, bool ascending, object value) =>
+        AssertUnboundedRangeQuery(this, unaryMatchOperation, fieldType, ascending, value);
+
+    public static void AssertUnboundedRangeQuery(RavenTestBase self, UnaryMatchOperation unaryMatchOperation, OrderingType fieldType, bool ascending, object value)
     {
-        using var store = CreateDatabase(out List<Dto> actualDocuments);
+        using var store = CreateDatabase(self, out List<Dto> actualDocuments);
         using var session = store.OpenSession();
         var fieldName = fieldType switch
         {
@@ -270,10 +283,13 @@ public class StreamingOptimization_DataTests : RavenTestBase
   
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-    [MemberData(nameof(RangesTests))]
-    public void RangeTests(bool leftInclusive, bool rightInclusive, bool ascending, OrderingType fieldType)
+    [MemberData(nameof(RangesTests), false)]
+    public void RangeTests(bool leftInclusive, bool rightInclusive, bool ascending, OrderingType fieldType) =>
+        AssertRangeQuery(this, leftInclusive, rightInclusive, ascending, fieldType);
+
+    public static void AssertRangeQuery(RavenTestBase self, bool leftInclusive, bool rightInclusive, bool ascending, OrderingType fieldType)
     {
-        using var store = CreateDatabase(out List<Dto> actualDocuments);
+        using var store = CreateDatabase(self, out List<Dto> actualDocuments);
         using var session = store.OpenSession();
 
         var query = session.Advanced.DocumentQuery<Dto>()
@@ -365,8 +381,17 @@ public class StreamingOptimization_DataTests : RavenTestBase
     }
     
     
-    public static IEnumerable<object[]> RangesTests()
+    public static IEnumerable<object[]> RangesTests(bool fullMatrix)
     {
+        if (fullMatrix == false)
+        {
+            // covers every value of every parameter, the full matrix runs in SlowTests.Corax.StreamingOptimization_RangeMatrix
+            yield return new object[] { false, false, true, OrderingType.Long };
+            yield return new object[] { true, true, false, OrderingType.String };
+            yield return new object[] { false, true, true, OrderingType.Double };
+            yield break;
+        }
+
         var boolean = new bool[] {false, true};
         foreach (var leftInclusive in boolean)
         foreach (var rightInclusive in boolean)
@@ -378,9 +403,11 @@ public class StreamingOptimization_DataTests : RavenTestBase
     }
     
     
-    private IDocumentStore CreateDatabase(out List<Dto> documents)
+    private IDocumentStore CreateDatabase(out List<Dto> documents) => CreateDatabase(this, out documents);
+
+    private static IDocumentStore CreateDatabase(RavenTestBase self, out List<Dto> documents)
     {
-        var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        var store = self.GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
 
         documents = new();
         documents.Add(new Dto("aaaaa", -5, -2.5));

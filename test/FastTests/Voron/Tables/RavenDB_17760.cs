@@ -165,52 +165,6 @@ namespace FastTests.Voron.Tables
         }
 
         [RavenFact(RavenTestCategory.Voron)]
-        public void CanUpdateByDynamic_ManyItems()
-        {
-            using (var tx = Env.WriteTransaction())
-            {
-                DocsSchema.Create(tx, "docs", 16);
-
-                tx.Commit();
-            }
-
-            const string idPrefix = "users/";
-
-            for (long i = 0; i < 10_000; i++)
-            {
-                using (var tx = Env.WriteTransaction())
-                {
-                    var docs = tx.OpenTable(DocsSchema, "docs");
-                    var id = $"{idPrefix}/{i}";
-
-                    SetHelper(docs, id, "Users", i, $"{{'Name': 'Oren-{i}'}}");
-                    tx.Commit();
-                }
-            }
-
-            using (var tx = Env.ReadTransaction())
-            {
-                var docs = tx.OpenTable(DocsSchema, "docs");
-
-                long count = 0;
-                foreach (var item in docs.SeekByPrefix(DocsSchema.DynamicKeyIndexes[IndexName], Slices.BeforeAllKeys, Slices.Empty, 0))
-                {
-                    var handle = item.Result;
-                    
-                    var id = handle.ReadString(0);
-                    var etag = Bits.SwapBytes(handle.ReadLong(2));
-
-                    AssertKey(id, etag, item.Key);
-
-                    Assert.Equal($"{{'Name': 'Oren-{etag}'}}", handle.ReadString(3));
-                    count++;
-                }
-
-                Assert.Equal(10_000, count);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Voron)]
         public void CanSeekByPrefix()
         {
             Options.ManualFlushing = true;
@@ -386,10 +340,12 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        private void AssertKey(string id, long etag, Slice key)
+        private void AssertKey(string id, long etag, Slice key) => AssertKey(Allocator, id, etag, key);
+
+        public static void AssertKey(ByteStringContext allocator, string id, long etag, Slice key)
         {
-            using (Allocator.Allocate(sizeof(long) + sizeof(int), out var buffer))
-            using (Slice.From(Allocator, id, out var idSlice))
+            using (allocator.Allocate(sizeof(long) + sizeof(int), out var buffer))
+            using (Slice.From(allocator, id, out var idSlice))
             {
                 var expectedHash = Hashing.XXHash64.Calculate(idSlice.Content.Ptr, (ulong)idSlice.Size);
                 var expectedBucket = (int)(expectedHash % 100);
@@ -405,7 +361,7 @@ namespace FastTests.Voron.Tables
         }
 
         [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope IndexKeyGenerator(Transaction tx, in TableValueReader tvr, out Slice slice)
+        public static ByteStringContext.Scope IndexKeyGenerator(Transaction tx, in TableValueReader tvr, out Slice slice)
         {
             var scope = tx.Allocator.Allocate(sizeof(long) + sizeof(int), out var buffer);
 

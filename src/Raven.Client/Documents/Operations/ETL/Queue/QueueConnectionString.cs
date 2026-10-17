@@ -113,6 +113,8 @@ public sealed class QueueConnectionString : ConnectionString
         json[nameof(BrokerType)] = BrokerType;
         json[nameof(KafkaConnectionSettings)] = KafkaConnectionSettings?.ToAuditJson();
         json[nameof(RabbitMqConnectionSettings)] = RabbitMqConnectionSettings?.ToAuditJson();
+        json[nameof(AzureQueueStorageConnectionSettings)] = AzureQueueStorageConnectionSettings?.ToAuditJson();
+        json[nameof(AmazonSqsConnectionSettings)] = AmazonSqsConnectionSettings?.ToAuditJson();
         json[nameof(AzureServiceBusConnectionSettings)] = AzureServiceBusConnectionSettings?.ToAuditJson();
 
         return json;

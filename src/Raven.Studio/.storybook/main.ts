@@ -3,7 +3,9 @@ import type { Configuration } from "webpack";
 import webpackConfigFunc from "../webpack.config.js";
 import path from "path";
 import webpack from "webpack";
-import { hooksForAutoMock } from "../typescript/components/hooks/hooksForAutoMock";
+import { hooksForAutoMock } from "../typescript/components/hooks/hooksForAutoMock.ts";
+
+const __dirname = import.meta.dirname;
 
 const customHooksAliases: Record<string, string> = Object.fromEntries(
     hooksForAutoMock.map((name: string) => [
@@ -15,6 +17,7 @@ const customHooksAliases: Record<string, string> = Object.fromEntries(
 const webpackConfig: Configuration = webpackConfigFunc(null, {
     mode: "development",
     watch: false,
+    ignoreCssOrder: true,
 });
 
 const config: StorybookConfig = {
@@ -69,6 +72,9 @@ const config: StorybookConfig = {
 
         config.watchOptions ??= {};
         config.watchOptions.ignored = /(node_modules|storybook-config-entry|storybook-stories)/;
+
+        config.ignoreWarnings ??= [];
+        config.ignoreWarnings.push({ module: /react-datepicker/, message: /Critical dependency/ });
 
         const incomingRules = webpackConfig.module.rules.filter(
             (x: any) =>

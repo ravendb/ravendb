@@ -20,10 +20,17 @@ import ReactAce from "react-ace/lib/ace";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppUrls } from "hooks/useAppUrls";
-import { FormProvider, useFieldArray, UseFieldArrayRemove, useForm, useFormContext, useWatch } from "react-hook-form";
+import {
+    FieldArrayWithId,
+    FormProvider,
+    useFieldArray,
+    UseFieldArrayRemove,
+    useForm,
+    useFormContext,
+    useWatch,
+} from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { FieldArrayWithId } from "react-hook-form/dist/types/fieldArray";
 import useBoolean from "hooks/useBoolean";
 import Collapse from "react-bootstrap/Collapse";
 import { useViewSheet } from "components/common/splitView/ViewSheet";

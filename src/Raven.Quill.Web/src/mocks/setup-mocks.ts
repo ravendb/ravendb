@@ -364,6 +364,7 @@ export const sampleCdcSuggestion: SuggestCdcResponse = {
     configuration: sampleCdcConfiguration,
     rationale: ["Customers and Orders have primary keys and CDC enabled, so both can be mapped."],
     status: "Success",
+    unmappedTables: [],
 };
 
 export const sampleMappingTest: TestMappingResponse = {

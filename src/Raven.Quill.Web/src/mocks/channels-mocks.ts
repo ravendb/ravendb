@@ -54,7 +54,7 @@ export const sampleChannels: ChannelSummaryResponse[] = [
         channelId: SAMPLE_TELEGRAM_CHANNEL_ID,
         type: "Telegram",
         agentId: "agents/faq",
-        displayName: "Telegram bot",
+        displayName: "Telegram",
         enabled: false,
         createdAt: "2026-05-09T14:20:00Z",
         allowedOrigins: [],

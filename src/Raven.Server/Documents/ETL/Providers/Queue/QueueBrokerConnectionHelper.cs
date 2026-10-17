@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Threading;
 using Amazon;
 using Amazon.SQS;
 using Azure.Identity;
@@ -51,9 +53,35 @@ public static class QueueBrokerConnectionHelper
         return producer;
     }
 
+    private static readonly Lazy<DllNotFoundException> KafkaLibraryLoadError = new(() =>
+    {
+        try
+        {
+            Library.Load();
+            return null;
+        }
+        catch (DllNotFoundException e)
+        {
+            // e.g. librdkafka.redist does not ship win-arm64 binaries
+            return e;
+        }
+    }, LazyThreadSafetyMode.PublicationOnly);
+
+    public static void EnsureKafkaIsSupported()
+    {
+        var loadError = KafkaLibraryLoadError.Value;
+        if (loadError != null)
+        {
+            throw new NotSupportedException(
+                $"Kafka is not supported on this platform ({RuntimeInformation.OSDescription}, {RuntimeInformation.ProcessArchitecture}) because the librdkafka native library could not be loaded.", loadError);
+        }
+    }
+
     public static void SetupKafkaClientConfig(ClientConfig config, KafkaConnectionSettings settings,
         CertificateUtils.CertificateHolder certificateHolder = null)
     {
+        EnsureKafkaIsSupported();
+
         if (settings.UseRavenCertificate && certificateHolder?.ClientCertificate != null)
         {
             config.SslCertificatePem = certificateHolder.ClientCertificate.ExportCertificatePem();

@@ -943,6 +943,10 @@ class editIndex extends shardViewModelBase {
         this.editedIndex().removeConfigurationOption(item);
     }
 
+    isIgnoredOnEncryptedDatabase(item: configurationItem) {
+        return this.db.isEncrypted() && item.key() === configurationConstants.indexing.coraxVectorSearchCacheSize;
+    }
+
     createConfigurationOptionAutocompleter(item: configurationItem) {
         return ko.pureComputed(() => {
             const key = item.key();

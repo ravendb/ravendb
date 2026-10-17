@@ -11,6 +11,8 @@ import endpoints = require("endpoints");
 import moment = require("moment");
 import clientCertificateModel = require("models/auth/clientCertificateModel");
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import clusterNode = require("models/database/cluster/clusterNode");
+import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
 class footerStats {
     countOfDocuments = ko.observable<number>(0);
@@ -47,6 +49,29 @@ class footer {
         const ssoHostname = window.location.hostname.replace(/^[^.]+\./, "");
         return `${window.location.protocol}//${ssoHostname}/clusters`;
     });
+
+    nodeServerUrl(node: clusterNode): KnockoutComputed<string> {
+        return ko.pureComputed(() => {
+            if (!this.ssoAppUrl()) {
+                return node.serverUrl();
+            }
+            const host = footer.ssoNodeHost(
+                window.location.host,
+                clusterTopologyManager.default.localNodeTag(),
+                node.tag()
+            );
+            return `${window.location.protocol}//${host}`;
+        });
+    }
+
+    static ssoNodeHost(currentHost: string, localNodeTag: string, targetNodeTag: string): string {
+        const [subdomain, ...ssoDomain] = currentHost.split(".");
+        const localNodePrefix = `${localNodeTag.toLowerCase()}-`;
+        const clusterAlias = subdomain.startsWith(localNodePrefix)
+            ? subdomain.slice(localNodePrefix.length)
+            : subdomain;
+        return [`${targetNodeTag.toLowerCase()}-${clusterAlias}`, ...ssoDomain].join(".");
+    }
 
     twoFactorSessionExpiration: KnockoutComputed<moment.Moment>;
 

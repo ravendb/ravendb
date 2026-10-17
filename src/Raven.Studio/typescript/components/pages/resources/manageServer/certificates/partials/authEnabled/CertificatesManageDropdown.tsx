@@ -24,11 +24,11 @@ export default function CertificatesManageDropdown() {
                     <Dropdown.Header className="small-label">SSO</Dropdown.Header>
                     <Dropdown.Item onClick={() => dispatch(certificatesActions.isRegisterSsoServerModalOpenToggled())}>
                         <Icon icon="certificate" addon="upload" />
-                        Upload SSO certificate
+                        Register SSO server certificate
                     </Dropdown.Item>
                     <Dropdown.Item onClick={() => dispatch(certificatesActions.isRegisterSsoUserModalOpenToggled())}>
                         <Icon icon="user" addon="plus" />
-                        Generate SSO user
+                        Add SSO user
                     </Dropdown.Item>
                     <Dropdown.Divider />
                     <Dropdown.Header className="small-label">Server</Dropdown.Header>

@@ -15,6 +15,13 @@ $TARGET_SPECS = (
         "TargetId" = "win-x86";
     },
     @{
+        "Name"      = "windows-arm64";
+        "Runtime"   = "win-arm64";
+        "PkgType"   = "zip";
+        "IsUnix"    = $False;
+        "TargetId" = "win-arm64";
+    },
+    @{
         "Name"      = "linux-x64";
         "Runtime"   = "linux-x64";
         "PkgType"   = "tar.bz2";

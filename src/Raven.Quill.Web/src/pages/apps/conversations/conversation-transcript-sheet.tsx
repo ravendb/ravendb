@@ -176,7 +176,7 @@ function TranscriptTurn({ turn, turnKey }: { turn: AiConversationMessage; turnKe
                         <Streamdown>{content}</Streamdown>
                     </div>
                 ))}
-            {turn.timestamp && <Timestamp value={turn.timestamp} textVariant="caption" />}
+            {turn.timestamp && <Timestamp value={turn.timestamp} textVariant="caption" timeZone="utc" />}
         </div>
     );
 }

@@ -24,16 +24,16 @@ namespace SlowTests.Tools.Issues
         [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
         public Task CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode()
         {
-            return CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode(false);
+            return CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteModeImpl(false);
         }
 
         [RavenMultiplatformFact(RavenTestCategory.Voron | RavenTestCategory.Compression, RavenArchitecture.AllX64)]
         public Task CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteModeCompressed()
         {
-            return CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode(true);
+            return CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteModeImpl(true);
         }
 
-        private async Task CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode(bool compressed)
+        private async Task CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteModeImpl(bool compressed)
         {
             var dbPath = NewDataPath(prefix: Guid.NewGuid().ToString());
             var recoveryExportPath = NewDataPath(prefix: Guid.NewGuid().ToString());

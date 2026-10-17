@@ -18,6 +18,7 @@ export = generateMenuItems;
 
 interface GenerateMenuItemsOptions {
     db: database | string;
+    isSharded: boolean;
     isWhatsNewVisible: boolean;
 }
 
@@ -48,7 +49,7 @@ function generateActiveDatabaseMenuItems(options: GenerateMenuItemsOptions) {
         getIndexesMenuItem(appUrls),        
         getTasksMenuItem(appUrls),
         getSettingsMenuItem(appUrls),
-        getStatsMenuItem(appUrls),
+        getStatsMenuItem(appUrls, options.isSharded),
         getAiHubMenuItem(appUrls),
         
         new separatorMenuItem('Server'),

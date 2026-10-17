@@ -68,6 +68,7 @@ import seedIdentityCommand from "commands/database/identities/seedIdentityComman
 import getRevisionsBinCleanerConfigurationCommand from "commands/database/settings/getRevisionsBinCleanerConfigurationCommand";
 import saveRevisionsBinCleanerConfigurationCommand from "commands/database/settings/saveRevisionsBinCleanerConfigurationCommand";
 import deleteDocumentsCommand from "commands/database/documents/deleteDocumentsCommand";
+import getDocumentsWithMetadataCommand from "commands/database/documents/getDocumentsWithMetadataCommand";
 import deleteCollectionCommand from "commands/database/documents/deleteCollectionCommand";
 import getDatabaseSettingsCommand = require("commands/database/settings/getDatabaseSettingsCommand");
 import getRevisionsPreviewCommand from "commands/database/documents/getRevisionsPreviewCommand";
@@ -363,6 +364,10 @@ export default class DatabasesService {
 
     async getDocumentWithMetadata(...args: ConstructorParameters<typeof getDocumentWithMetadataCommand>) {
         return new getDocumentWithMetadataCommand(...args).execute();
+    }
+
+    async getDocumentsWithMetadata(...args: ConstructorParameters<typeof getDocumentsWithMetadataCommand>) {
+        return new getDocumentsWithMetadataCommand(...args).execute();
     }
 
     async getRemoteAttachmentsConfiguration(

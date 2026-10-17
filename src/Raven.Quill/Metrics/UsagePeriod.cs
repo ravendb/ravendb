@@ -83,6 +83,22 @@ internal readonly struct UsagePeriod
         return all.Where(b => b < end).ToList();
     }
 
+    /// <summary>Exclusive end of the bucket that starts at <paramref name="bucketUtc"/>: one hour,
+    /// day, or month later depending on granularity.</summary>
+    public DateTime BucketEnd(DateTime bucketUtc) =>
+        Hourly ? bucketUtc.AddHours(1) :
+        Daily ? bucketUtc.AddDays(1) :
+        bucketUtc.AddMonths(1);
+
+    /// <summary>Normalizes a deserialized timestamp to UTC so it can be placed in a bucket
+    /// (unspecified kinds are taken as UTC, which is how the license server reports).</summary>
+    public static DateTime ToUtc(DateTime d) => d.Kind switch
+    {
+        DateTimeKind.Utc => d,
+        DateTimeKind.Local => d.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(d, DateTimeKind.Utc),
+    };
+
     /// <summary>Maps a timestamp to its bucket slot (hour-of-day / day-of-month / month-of-year),
     /// or -1 if it falls outside this period so callers drop it.</summary>
     public int IndexOf(DateTime t)
@@ -95,10 +111,10 @@ internal readonly struct UsagePeriod
         return idx >= 0 && idx < count ? idx : -1;
     }
 
-    /// <summary>The x-axis label for a bucket: <c>yyyy-MM-ddTHH:00</c> (hourly), <c>yyyy-MM-dd</c>
-    /// (daily), or <c>yyyy-MM</c> (monthly).</summary>
+    /// <summary>The x-axis label for a bucket: <c>yyyy-MM-ddTHH:00:00Z</c> (hourly, UTC-marked so
+    /// browsers do not parse it as local time), <c>yyyy-MM-dd</c> (daily), or <c>yyyy-MM</c> (monthly).</summary>
     public string Label(DateTime bucketUtc) =>
-        Hourly ? bucketUtc.ToString("yyyy-MM-ddTHH:00") :
+        Hourly ? bucketUtc.ToString("yyyy-MM-ddTHH:00:00Z") :
         Daily ? bucketUtc.ToString("yyyy-MM-dd") :
         bucketUtc.ToString("yyyy-MM");
 }
