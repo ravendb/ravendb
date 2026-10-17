@@ -129,8 +129,9 @@ public class DebugPackageAnalysisSummary : IDynamicJson
                 NodeTag = nodeReport.NodeTag,
                 NodeType = nodeReport.ClusterNode.NodeStateInfo?.Topology?.ServerRole.ToString(),
                 NodeUrl = nodeReport.Server.PublicServerUrl ?? nodeReport.Server.ServerUrl ?? "unknown-node-url",
-                OsName = nodeReport.Machine.OsInfo.FullName,
-                OsType = nodeReport.Machine.OsInfo.Type,
+                // OS info comes from the node license details, which can be missing (e.g. unlicensed node shortly after startup)
+                OsName = nodeReport.Machine.OsInfo?.FullName,
+                OsType = nodeReport.Machine.OsInfo?.Type ?? default,
                 ServerVersion = nodeReport.Server.BasicServerInfo.Version,
                 StartTime = nodeReport.Server.BasicServerInfo.StartUpTime ?? DateTime.MinValue,
                 UpTime = nodeReport.Server.BasicServerInfo.UpTime
