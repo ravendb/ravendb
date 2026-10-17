@@ -8,3 +8,5 @@ $env:OUTPUT_DIR = "$PSScriptRoot/dist"
 .\set-raven-version-env.ps1
 
 .\test-deb-docker.ps1
+
+exit $LASTEXITCODE

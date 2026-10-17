@@ -66,6 +66,7 @@ import ReplicationProcessProgress = Raven.Server.Documents.Replication.Stats.Rep
 import InternalReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.InternalReplicationTaskProgress;
 import TaskUtils from "components/utils/TaskUtils";
 import { sortBy } from "common/typeUtils";
+import { loadStatus } from "components/models/common";
 
 interface ActionTasksLoaded {
     location: databaseLocationSpecifier;
@@ -116,10 +117,17 @@ interface ActionTasksLoadError {
     error: string;
 }
 
+export interface LocationLoadStatus {
+    location: databaseLocationSpecifier;
+    status: loadStatus;
+    error?: string;
+}
+
 export interface OngoingTasksState {
     tasks: OngoingTaskInfo[];
     subscriptions: OngoingTaskSubscriptionInfo[];
     locations: databaseLocationSpecifier[];
+    locationsLoadStatus: LocationLoadStatus[];
     orchestrators: string[];
     replicationHubs: OngoingTaskHubDefinitionInfo[];
     subscriptionConnectionDetails: SubscriptionConnectionsDetailsWithId[];
@@ -595,6 +603,19 @@ function initNodesInfo(
     );
 }
 
+function markLocationLoadStatus(
+    draft: Draft<OngoingTasksState>,
+    location: databaseLocationSpecifier,
+    status: loadStatus,
+    error?: string
+) {
+    const item = draft.locationsLoadStatus.find((x) => databaseLocationComparator(x.location, location));
+    if (item) {
+        item.status = status;
+        item.error = error;
+    }
+}
+
 const mapTask = (
     incomingTask: OngoingTask,
     incomingLocation: databaseLocationSpecifier,
@@ -675,6 +696,8 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
             const sharded = state.orchestrators.length > 0;
 
             return produce(state, (draft) => {
+                markLocationLoadStatus(draft, incomingLocation, "success");
+
                 const newTasks = incomingTasks.OngoingTasks.map((incomingTask) =>
                     mapTask(incomingTask, incomingLocation, state)
                 );
@@ -769,6 +792,8 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
             const error = action.error;
 
             return produce(state, (draft) => {
+                markLocationLoadStatus(draft, incomingLocation, "failure", error);
+
                 draft.tasks.forEach((task) => {
                     const nodeInfo = task.nodesInfo.find((x) =>
                         databaseLocationComparator(x.location, incomingLocation)
@@ -986,12 +1011,17 @@ export const ongoingTasksReducerInitializer = (db: DatabaseSharedInfo): OngoingT
         })
     );
 
+    const locationsLoadStatus = [...orchestrators.map((nodeTag) => ({ nodeTag })), ...locations].map(
+        (location): LocationLoadStatus => ({ location, status: "idle" })
+    );
+
     return {
         tasks: [],
         subscriptions: [],
         replicationHubs: [],
         locations,
         orchestrators,
+        locationsLoadStatus,
         subscriptionConnectionDetails: [],
         internalReplication,
     };

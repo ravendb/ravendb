@@ -2,6 +2,7 @@ param(
     $Target="",
     [switch]$WinX64,
     [switch]$WinX86,
+    [switch]$WinArm64,
     [switch]$LinuxX64,
     [switch]$MacOs,
     [switch]$MacOsArm,
@@ -112,6 +113,10 @@ if ([string]::IsNullOrEmpty($Target) -eq $false) {
         $Target = @( "win-x86" );
     }
 
+    if ($WinArm64) {
+        $Target = @( "win-arm64" );
+    }
+
     if ($LinuxX64) {
         $Target = @( "linux-x64" );
     } 
@@ -195,7 +200,7 @@ if (($JustStudio -eq $False) -and ($IsPosix -eq $False) -and (-not $Quill)) {
     $studioZipPath = [io.path]::combine($STUDIO_OUT_DIR, "Raven.Studio.zip")
     BuildEmbeddedNuget $PROJECT_DIR $OUT_DIR $SERVER_SRC_DIR $studioZipPath
     $embeddedDir = [io.path]::combine($OUT_DIR, "RavenDB.Embedded")
-    if ($target.Name -eq "windows-x64") {
+    if ($targets.Name -contains "windows-x64") {
         Validate-AssemblyVersion $(Join-Path -Path $embeddedDir -ChildPath "lib/netstandard2.0/Raven.Embedded.dll" ) $versionObj
     }
 
@@ -246,7 +251,7 @@ Foreach ($target in $targets) {
 
     #ValidateRuntimeConfig $target $specOutDirs.Server
 
-    if ($target.Name -eq "windows-x64") {
+    if ($target.IsUnix -eq $False) {
         Validate-ExecutableVersion $(Join-Path -Path $specOutDirs.Server -ChildPath "Raven.Server.exe" ) $versionObj
         Validate-ExecutableVersion $(Join-Path -Path $specOutDirs.Rvn -ChildPath "rvn.exe" ) $versionObj
         Validate-ExecutableVersion $(Join-Path -Path $specOutDirs.Migrator -ChildPath "Raven.Migrator.exe" ) $versionObj

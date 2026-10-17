@@ -239,9 +239,11 @@ class shell extends viewModelBase {
         const menuItems = ko.pureComputed(() => {
             // we hide "What's new" menu item for all builds that buildNumber is less than 60_000, so nightly, local, etc
             const isWhatsNewVisible = buildInfo.serverBuildVersion()?.BuildVersion >= 60_000;
+            const db = activeDatabaseTracker.default.database();
 
             return generateMenuItems({
-                db: activeDatabaseTracker.default.database(),
+                db,
+                isSharded: db?.root.isSharded() ?? false,
                 isWhatsNewVisible,
             });
         });

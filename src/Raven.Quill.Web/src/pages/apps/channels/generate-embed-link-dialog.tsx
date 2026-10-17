@@ -223,7 +223,7 @@ export function GenerateEmbedLinkDialog({
         setIsOpen(open);
         if (!open) {
             // The minted link's preview iframe spends real invocations (see embed-link-preview.tsx),
-            // so refresh the list on close to reflect any chats sent in the preview after minting.
+            // so refresh the list on close to reflect any prompts sent in the preview after minting.
             if (mintMutation.data) {
                 queryClient.invalidateQueries({ queryKey: api.queries.embedLinks.list(slug).queryKey });
                 queryClient.invalidateQueries({ queryKey: ["stats", "usage"] });
@@ -281,8 +281,8 @@ export function GenerateEmbedLinkDialog({
                             control={form.control}
                             name="maxInvocations"
                             type="number"
-                            label="Max invocations"
-                            description="How many chats this link allows before it stops working."
+                            label="Maximum prompts"
+                            description="How many prompts this link accepts before it stops working."
                             min={MIN_INVOCATIONS}
                             max={MAX_INVOCATIONS}
                         />

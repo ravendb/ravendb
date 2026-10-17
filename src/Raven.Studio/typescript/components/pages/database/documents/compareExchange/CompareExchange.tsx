@@ -28,6 +28,7 @@ import { useAsyncCallback } from "react-async-hook";
 import { useAppSelector } from "components/store";
 import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import { AccessPopover } from "components/common/AccessPopover";
+import { columnCheckbox } from "components/common/virtualTable/utils/commonColumnDefs";
 
 type CompareExchangeListItem =
     Raven.Server.Web.System.Processors.CompareExchange.CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem;
@@ -239,7 +240,7 @@ function useCompareExchangeColumns({
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
 
-    const checkboxWidth = hasDatabaseWriteAccess ? 38 : 0;
+    const checkboxWidth = hasDatabaseWriteAccess ? columnCheckbox.size : 0;
 
     const bodyWidth = virtualTableUtils.getTableBodyWidth(width - checkboxWidth);
     const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
@@ -264,6 +265,7 @@ function useCompareExchangeColumns({
                             setSelectedRows(dataArray);
                         }
                     }}
+                    className="selection-checkbox"
                 />
             ),
             accessorFn: (x) => x,
@@ -292,7 +294,9 @@ function useCompareExchangeColumns({
 
                 return (
                     <CellWithCopy value={value}>
-                        <a href={appUrl.forEditCmpXchg(value, databaseName)}>{String(value)}</a>
+                        <a href={appUrl.forEditCmpXchg(value, databaseName)} className="cell-link">
+                            {String(value)}
+                        </a>
                     </CellWithCopy>
                 );
             },
@@ -353,7 +357,7 @@ function CheckboxCell({ rowValue, selectedRows, setSelectedRows, setIsAllSelecte
         }
     };
 
-    return <Checkbox selected={isSelected} toggleSelection={toggleSelection} />;
+    return <Checkbox selected={isSelected} toggleSelection={toggleSelection} className="selection-checkbox" />;
 }
 
 function isRowEqual(a: CompareExchangeListItem, b: CompareExchangeListItem): boolean {

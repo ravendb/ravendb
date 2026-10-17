@@ -84,7 +84,7 @@ export function AppChannelDetail() {
         setRequestedTab(next);
     };
     const currentLayout = tabs.find((tab) => tab.key === activeTab)?.layout ?? "padded";
-    // "bare" tabs (e.g. the web widget's Customize) bring their own sticky top bar/preview and want content
+    // "bare" tabs (e.g. the embedded chat channel's Customize) bring their own sticky top bar/preview and want content
     // flush under the header. "fill" tabs (the editable Telegram tabs) keep a fixed header while their body
     // scrolls. "padded" tabs get the default breathing padding.
     const isBare = currentLayout === "bare";

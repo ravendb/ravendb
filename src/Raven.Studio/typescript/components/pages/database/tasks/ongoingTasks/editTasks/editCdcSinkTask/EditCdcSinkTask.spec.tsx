@@ -4,6 +4,7 @@ import { act, rtlRender, waitFor, within } from "test/rtlTestUtils";
 import { mockServices } from "test/mocks/services/MockServices";
 import { TasksStubs } from "test/stubs/TasksStubs";
 import { Ace } from "ace-builds";
+import messagePublisher from "common/messagePublisher";
 
 const selectors = {
     newTaskTitle: "New CDC Sink task",
@@ -496,6 +497,7 @@ describe("Edit CDC Sink task", () => {
     });
 
     it("does not save a raw configuration with invalid JSON", async () => {
+        const reportError = jest.spyOn(messagePublisher, "reportError").mockImplementation(() => undefined);
         const Story = composeStory(stories.EditTask, stories.default);
 
         const { screen, fireClick } = rtlRender(<Story />);
@@ -508,8 +510,13 @@ describe("Edit CDC Sink task", () => {
         await fireClick(getButtonByText(screen, selectors.saveTaskButton));
 
         expect(screen.getByLabelText(selectors.rawConfigSwitch)).toBeChecked();
+        expect(reportError).toHaveBeenCalledWith(
+            "The raw configuration cannot be converted. Please fix the JSON and try again.",
+            expect.any(SyntaxError)
+        );
         expect(mockServices.tasksService.mock.verifyCdcSink).not.toHaveBeenCalled();
         expect(mockServices.tasksService.mock.saveCdcSinkTask).not.toHaveBeenCalled();
+        reportError.mockRestore();
     });
 
     it("switches to the form view when the raw configuration has validation errors", async () => {

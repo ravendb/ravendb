@@ -226,6 +226,17 @@ interface confirmDialogResult {
     can: boolean;
 }
 
+type attachmentUploadStatus = "uploading" | "uploaded" | "failed" | "skipped" | "cancelled";
+
+interface attachmentUploadProgress {
+    position: number;
+    count: number;
+    fileName: string;
+    status: attachmentUploadStatus;
+    loaded: number;
+    total: number;
+}
+
 interface disableDatabaseResult {
     Name: string;
     Success: boolean;
@@ -1039,6 +1050,15 @@ type databaseLocationSpecifier = {
     nodeTag: string;
 }
 
+type bucketReportSortColumn = "range" | "buckets" | "documents" | "size";
+
+type bucketReportSortDirection = "asc" | "desc";
+
+type bucketReportSort = {
+    column: bucketReportSortColumn;
+    direction: bucketReportSortDirection;
+}
+
 interface PopoverUtilsOptions extends PopoverOptions {
     rounded?: boolean;
 }
@@ -1068,6 +1088,8 @@ interface ReactInKnockoutOptions<T> {
     component: T;
     props?: Parameters<T>[0];
     dirtyFlag?: ReactDirtyFlag;
+    isPageView?: boolean;
+    databaseName?: string;
 }
 
 type ReactInKnockout<T> = KnockoutComputed<ReactInKnockoutOptions<T>>;
@@ -1155,8 +1177,9 @@ type AiConnectionStringsSettings =
     | Raven.Client.Documents.Operations.AI.VertexSettings;
 
 interface AiModelsRequestDto {
-    ConnectorType: Extract<Raven.Client.Documents.Operations.AI.AiConnectorType, "Ollama" | "OpenAi" | "AzureOpenAi">;
+    ConnectorType: Extract<Raven.Client.Documents.Operations.AI.AiConnectorType, "Ollama" | "OpenAi" | "AzureOpenAi" | "Google">;
     AzureOpenAiSettings?: Pick<Raven.Client.Documents.Operations.AI.AzureOpenAiSettings, "Endpoint", "ApiKey">;
+    GoogleSettings?: Pick<Raven.Client.Documents.Operations.AI.GoogleSettings, "Endpoint" | "ApiKey" | "AiVersion">;
     OllamaSettings?: Pick<Raven.Client.Documents.Operations.AI.OllamaSettings, "Uri" | "Think">;
     OpenAiSettings?: Pick<Raven.Client.Documents.Operations.AI.OpenAiSettings, "Endpoint" | "ApiKey" | "OrganizationId" | "ProjectId">;
 }

@@ -37,7 +37,7 @@ import {
 } from "@/pages/apps/channels/slack-parameter-sources";
 import { SlackConnectionCard } from "@/pages/apps/channels/slack-connection-card";
 import { SlackWebhookPanel } from "@/pages/apps/channels/slack-webhook-panel";
-import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
+import type { FixedAgent } from "@/pages/apps/channels/channel-form-types";
 
 const parameterBindingSchema = z
     .object({

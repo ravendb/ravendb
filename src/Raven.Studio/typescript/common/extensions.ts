@@ -12,6 +12,7 @@ import useDirtyFlag = require("components/hooks/useDirtyFlag");
 import ConfirmDialog = require("components/common/ConfirmDialog");
 import Dialog = require("components/common/Dialog");
 import SplitView = require("components/common/splitView/SplitView");
+import ActiveDatabaseGuard = require("components/common/ActiveDatabaseGuard");
 
 class extensions {
     static install() {
@@ -250,8 +251,12 @@ class extensions {
                     const dialogProvider = react.createElement(Dialog.DialogProvider, null, confirmDialogProvider);
                     const dirtyFlagWrapper = react.createElement(useDirtyFlag.DirtyFlagProvider, options.dirtyFlag, dialogProvider);
 
+                    const activeDatabaseGuard = options.databaseName
+                        ? react.createElement(ActiveDatabaseGuard.ActiveDatabaseGuard, { databaseName: options.databaseName }, dirtyFlagWrapper)
+                        : dirtyFlagWrapper;
+
                     // Keep it as last wrapper
-                    const reduxWrapper = react.createElement(Redux.Provider, { store: store.default } as Redux.ProviderProps, dirtyFlagWrapper);
+                    const reduxWrapper = react.createElement(Redux.Provider, { store: store.default } as Redux.ProviderProps, activeDatabaseGuard);
 
                     root.render(reduxWrapper);
                 }

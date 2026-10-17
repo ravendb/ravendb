@@ -364,7 +364,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task ExistsOptimization(bool hasMultipleValues) => await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>>(hasMultipleValues, session =>
+    public async Task ExistsOptimization(bool hasMultipleValues) => await TestQueryBuilder<IncludeNullMatch<MultiTermMatch>>(hasMultipleValues, session =>
         session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
             .WhereExists(p => p.Name)
             .OrderBy(x => x.Name)
@@ -420,10 +420,18 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
             .GetIndexQuery());
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-    [MemberData(nameof(RangesTests))]
-    public async Task RangeTests(bool hasMultipleValues, bool leftInclusive, bool rightInclusive, bool ascending)
+    [MemberData(nameof(RangesTests), false)]
+    public async Task RangeTests(bool hasMultipleValues, bool leftInclusive, bool rightInclusive, bool ascending) =>
+        await AssertRangeQuery(this, hasMultipleValues, leftInclusive, rightInclusive, ascending);
+
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+    [MemberData(nameof(RangesTests), false)]
+    public async Task RangeTestsCannotApplyStreaming(bool hasMultipleValues, bool leftInclusive, bool rightInclusive, bool ascending) =>
+        await AssertRangeQueryCannotApplyStreaming(this, hasMultipleValues, leftInclusive, rightInclusive, ascending);
+
+    public static async Task AssertRangeQuery(RavenTestBase self, bool hasMultipleValues, bool leftInclusive, bool rightInclusive, bool ascending)
     {
-        await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>>(hasMultipleValues, session =>
+        await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>, DtoIndexSingleValues>(self, hasMultipleValues, session =>
             {
                 var query = session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>();
 
@@ -446,11 +454,9 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
         );
     }
 
-    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-    [MemberData(nameof(RangesTests))]
-    public async Task RangeTestsCannotApplyStreaming(bool hasMultipleValues, bool leftInclusive, bool rightInclusive, bool ascending)
+    public static async Task AssertRangeQueryCannotApplyStreaming(RavenTestBase self, bool hasMultipleValues, bool leftInclusive, bool rightInclusive, bool ascending)
     {
-        await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
+        await TestQueryBuilder<SortingMatch, DtoIndexSingleValues>(self, hasMultipleValues, session =>
             {
                 var query = session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>();
 
@@ -475,8 +481,16 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
         );
     }
 
-    public static IEnumerable<object[]> RangesTests()
+    public static IEnumerable<object[]> RangesTests(bool fullMatrix)
     {
+        if (fullMatrix == false)
+        {
+            // covers every value of every parameter, the full matrix runs in SlowTests.Corax.StreamingOptimization_RangeMatrix
+            yield return new object[] { false, true, false, true };
+            yield return new object[] { true, false, true, false };
+            yield break;
+        }
+
         var boolean = new bool[] { false, true };
 
         foreach (var hasMultipleValues in boolean)

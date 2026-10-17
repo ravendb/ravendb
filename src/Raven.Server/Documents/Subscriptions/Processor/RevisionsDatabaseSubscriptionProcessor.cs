@@ -29,9 +29,11 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
         public override async Task<SubscriptionBatchResult> GetBatchAsync(SubscriptionBatchStatsScope batchScope, Stopwatch sendingCurrentBatchStopwatch)
         {
-            if (Database.DocumentsStorage.RevisionsStorage.Configuration == null ||
-                Database.DocumentsStorage.RevisionsStorage.GetRevisionsConfiguration(Collection).Disabled)
+            if (Database.DocumentsStorage.RevisionsStorage.Configuration == null)
                 throw new SubscriptionInvalidStateException($"Cannot use a revisions subscription, database {Database.Name} does not have revisions configuration.");
+
+            if (Database.DocumentsStorage.RevisionsStorage.GetRevisionsConfiguration(Collection).Disabled)
+                throw new SubscriptionInvalidStateException($"Cannot use a revisions subscription, revisions are not configured for collection '{Collection}' in database {Database.Name}.");
 
             var result = new SubscriptionBatchResult { CurrentBatch = new List<SubscriptionBatchItem>(), LastChangeVectorSentInThisBatch = null };
 

@@ -58,6 +58,7 @@ Remove-Item .\artifacts -Force -Recurse -ErrorAction Ignore
 
 New-Item -ItemType Directory -Path runtimes/win-x86/native -Force > $null
 New-Item -ItemType Directory -Path runtimes/win-x64/native -Force > $null
+New-Item -ItemType Directory -Path runtimes/win-arm64/native -Force > $null
 New-Item -ItemType Directory -Path runtimes/linux-x64/native -Force > $null
 New-Item -ItemType Directory -Path runtimes/linux-arm/native -Force > $null
 New-Item -ItemType Directory -Path runtimes/linux-arm64/native -Force > $null
@@ -69,6 +70,9 @@ zig cc -Wall -O3 -g -shared -fPIC -Iinc -target x86-windows-gnu -o runtimes/win-
 
 Write-Output "Building Windows x64"
 zig cc -Wall -O3 -g -shared -fPIC -Iinc -target x86_64-windows-gnu -o runtimes/win-x64/native/librvnpal.dll  $shared $win_files
+
+Write-Output "Building Windows ARM64"
+zig cc -Wall -O3 -g -shared -fPIC -Iinc -target aarch64-windows-gnu -o runtimes/win-arm64/native/librvnpal.dll $shared $win_files
 
 Write-Output "Building Linux x64"
 zig cc -Wall -O3 -g -shared  -fPIC -Iinc -target x86_64-linux-gnu ../../libs/liburing/liburing-2.8.1-x64.a -o runtimes/linux-x64/native/librvnpal.so $shared $posix_files $linux_only

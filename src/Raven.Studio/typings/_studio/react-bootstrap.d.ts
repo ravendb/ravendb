@@ -51,7 +51,7 @@ declare module "react-bootstrap/Spinner" {
 }
 
 declare module "react-bootstrap/Button" {
-    export type RavenButtonVariants = ButtonProps["variant"] | RavenVariants
+    export type RavenButtonVariants = ButtonProps["variant"] | RavenVariants | "text"
     
     export type RavenButtonSizes = ButtonProps["size"] | RavenSizes
     

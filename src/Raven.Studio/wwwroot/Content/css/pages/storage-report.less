@@ -594,6 +594,29 @@
             min-width: 200px;
         }
 
+        .sort-header {
+            display: inline-flex;
+            align-items: center;
+            color: inherit;
+
+            i {
+                margin-left: 4px;
+                font-size: 14px;
+
+                &.icon-sortby {
+                    opacity: .3;
+                }
+            }
+
+            &:hover {
+                color: @brand-primary;
+
+                i.icon-sortby {
+                    opacity: 1;
+                }
+            }
+        }
+
         .table-items {
             position: absolute;
             display: flex;
@@ -605,5 +628,21 @@
     .table-item-name {
         display: block;
         white-space: nowrap;
+    }
+
+    .label.shard-pending-removal {
+        background-color: transparent;
+        border: 1px dashed @brand-warning;
+        color: @brand-warning;
+        cursor: help;
+
+        i {
+            margin-right: 3px;
+        }
+
+        .pending-removal-text {
+            margin-left: 4px;
+            font-weight: normal;
+        }
     }
 }

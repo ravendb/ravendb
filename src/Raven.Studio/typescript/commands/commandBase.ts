@@ -19,6 +19,8 @@ class commandBase {
 
     static ravenStudioVersionHeader = 'Raven-Studio-Version';
 
+    static readonly perNodeRequestTimeoutMs = 30_000;
+
     execute(): JQueryPromise<any> | Promise<any> {
         throw new Error("Execute must be overridden.");
     }
