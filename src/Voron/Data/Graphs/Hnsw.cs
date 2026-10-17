@@ -36,6 +36,12 @@ public unsafe partial class Hnsw
 
     public static void Create(LowLevelTransaction llt, Slice name, int vectorSizeBytes, int numberOfEdges, int numberOfCandidates, VectorEmbeddingType embeddingType)
     {
+        // The level formula divides by Log(numberOfEdges). An edge count of 1 makes the level
+        // factor infinite. The int cast then skips graph placement and persists every
+        // non-root node with zero edges.
+        if (numberOfEdges < 2)
+            throw new ArgumentOutOfRangeException(nameof(numberOfEdges), numberOfEdges, "An HNSW graph needs at least 2 edges per node.");
+
         var tree = llt.Transaction.CreateTree(name);
         if (tree.State.Header.NumberOfEntries is not 0)
             return; // already created
