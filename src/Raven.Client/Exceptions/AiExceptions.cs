@@ -16,6 +16,10 @@ namespace Raven.Client.Exceptions
         public string RequestId { get; set; }
     }
 
+    public sealed class UnsupportedAiQueryParameterException(string message) : AiException(message)
+    {
+    }
+
     public sealed class RefusedToAnswerException(string message) : AiException(message)
     {
         public string Refusal;
