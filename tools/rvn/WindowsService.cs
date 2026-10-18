@@ -5,9 +5,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.ServiceProcess;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Sparrow.Utils;
-using static Raven.Server.Utils.WindowsServiceUtils;
 
 namespace rvn
 {
@@ -137,6 +137,11 @@ namespace rvn
                 return $"{exception.Message} (ERROR CODE 0x{exception.NativeErrorCode:x8}).";
             }
 
+            private static string NormalizeServiceName(string serviceName)
+            {
+                return Regex.Replace(serviceName, @"[\/\s]", "_");
+            }
+
             private static string FormatServiceControlToolError((int ExitCode, string Output) result)
             {
                 var message = string.IsNullOrWhiteSpace(result.Output) ? "sc.exe reported a failure." : result.Output;
@@ -163,8 +168,10 @@ namespace rvn
 
                 using (var process = Process.Start(startInfo))
                 {
+                    // read stderr concurrently, so neither of the redirected pipes can fill up and block sc.exe
+                    var errorTask = process.StandardError.ReadToEndAsync();
                     var output = process.StandardOutput.ReadToEnd();
-                    var error = process.StandardError.ReadToEnd();
+                    var error = errorTask.GetAwaiter().GetResult();
                     process.WaitForExit();
 
                     var combined = string.Join(

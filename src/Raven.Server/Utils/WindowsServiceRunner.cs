@@ -13,10 +13,10 @@ namespace Raven.Server.Utils
 {
     public static class WindowsServiceRunner
     {
-        public static void Run(string serviceName, RavenConfiguration configuration, string[] args)
+        public static void Run(RavenConfiguration configuration, string[] args)
         {
 #pragma warning disable CA1416 // Validate platform compatibility
-            var service = new RavenWin32Service(serviceName, configuration, args);
+            var service = new RavenWin32Service(configuration, args);
             Program.RestartServer = service.Restart;
             ServiceBase.Run(service);
 #pragma warning restore CA1416 // Validate platform compatibility
@@ -46,11 +46,15 @@ namespace Raven.Server.Utils
 
         private readonly string[] _args;
 
-        public RavenWin32Service(string serviceName, RavenConfiguration configuration, string[] args)
+        public RavenWin32Service(RavenConfiguration configuration, string[] args)
         {
-            // Normalize identically to how rvn registers the service (see WindowsServiceUtils),
-            // so the name reported to the SCM matches the registered name.
-            ServiceName = WindowsServiceUtils.NormalizeServiceName(serviceName);
+            // ServiceName is intentionally left empty - for an own process service ServiceBase takes it from the SCM
+            // (it is the first ServiceMain argument), so it is always the name the service was registered under
+            // and is not subject to ServiceBase's 80 characters limit (the SCM allows up to 256)
+
+            // RavenDB has its own logging and LocalService is not allowed to create an event log source
+            AutoLog = false;
+
             _args = args;
             _ravenServer = new RavenServer(configuration);
         }
@@ -109,6 +113,16 @@ namespace Raven.Server.Utils
 
                 Thread.Sleep(3000);
             }
+
+            _ravenServer.Dispose();
+        }
+
+        protected override void OnShutdown()
+        {
+            // ServiceBase accepts SERVICE_CONTROL_SHUTDOWN for every stoppable service and reports it as stopped
+            // once this returns (which lets the process exit), so the server needs to be disposed here as well
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Stopping RavenDB Windows Service: {ServiceName} due to system shutdown.");
 
             _ravenServer.Dispose();
         }
