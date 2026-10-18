@@ -204,7 +204,7 @@ namespace Raven.Server
             {
                 try
                 {
-                    WindowsServiceRunner.Run(CommandLineSwitches.ServiceName, configuration, configurationArgs);
+                    WindowsServiceRunner.Run(configuration, configurationArgs);
                 }
                 catch (Exception e)
                 {
