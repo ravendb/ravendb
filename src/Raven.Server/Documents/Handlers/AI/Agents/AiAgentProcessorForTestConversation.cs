@@ -147,7 +147,10 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
             if (request.Documents == null || request.Documents.TryGetValue(_conversationId, out BlittableJsonReaderObject docBjro) == false)
                 await base.InitializeDocumentAsync(context, token);
             else
+            {
                 _document = ConversationDocument.ToDocument(_conversationId, docBjro, _maxModelIterationsPerCall); // document exists, we initialize from it instead of creating a new one
+                ValidateDeclaredParametersAreSupplied(_document.Parameters);
+            }
 
             _documents = request.Documents ?? new();
         }

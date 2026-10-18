@@ -200,6 +200,12 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             ? _request.Parameters
             : conversation.Data.TryGet(nameof(ConversationDocument.Parameters), out BlittableJsonReaderObject storedParameters) ? storedParameters : null;
 
+        ValidateDeclaredParametersAreSupplied(suppliedParameters);
+    }
+
+    // the test-conversation endpoint builds the document itself, so it has no Document to read the parameters from
+    protected void ValidateDeclaredParametersAreSupplied(BlittableJsonReaderObject suppliedParameters)
+    {
         foreach (var declared in _configuration.Parameters ?? [])
         {
             if (suppliedParameters == null || suppliedParameters.TryGetMember(declared.Name, out _) == false)

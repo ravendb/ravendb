@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
 using Raven.Server.ServerWide.Commands.AI;
 using Raven.Server.Documents;
+using Raven.Server.Documents.AI.Settings;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -170,9 +171,13 @@ public class RavenDB_27289(ITestOutputHelper output) : RavenTestBase(output)
     [RavenFact(RavenTestCategory.Ai)]
     public async Task ConversationDocumentStillRefusesToBuildWithoutADeclaredValue()
     {
-        // InitializeDocumentAsync rejects this earlier, but not on every path that reaches Initialize - the
-        // summarization rebuild, and the test-conversation endpoint when the caller supplies the document. A
-        // Debug.Assert here would compile away, leaving a release server to carry on with the parameter missing.
+        // InitializeDocumentAsync rejects this earlier, but the summarization rebuild reaches Initialize directly,
+        // and a Debug.Assert here would compile away, leaving a release server to carry on with the parameter
+        // missing. Note the bound of this throw: the loop skips SendToModel == false before reaching it, so a
+        // hidden parameter - the kind this ticket is about - never trips it, which is why the agent here declares
+        // a visible one. The test-conversation endpoint does not reach Initialize at all; it builds the document
+        // with ToDocument, and is covered by
+        // TestEndpoint_ParameterAddedToTheAgentIsEnforcedOnASuppliedConversationDocument.
         var agent = CreateAgent(sendToModel: true);
 
         using var store = GetDocumentStore();
@@ -386,5 +391,104 @@ public class RavenDB_27289(ITestOutputHelper output) : RavenTestBase(output)
 
             Assert.Contains("Department", e.Message);
         }
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task TestEndpoint_ParameterAddedToTheAgentIsEnforcedOnASuppliedConversationDocument()
+    {
+        // The same scenario as ParameterAddedToTheAgentIsEnforcedOnAnAlreadyRunningConversation, but on the
+        // /ai/agent/test endpoint, where the caller posts the conversation document back on every turn
+        // (AiAgentTestRequest.Documents) and TestConversationHandler builds it with ConversationDocument.ToDocument
+        // instead of calling base.InitializeDocumentAsync.
+        using var store = GetDocumentStore();
+        await SeedAsync(store);
+
+        const string conversationId = "chats/test-endpoint";
+        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        {
+            // turn 1: the agent has no parameters and no tools yet
+            var firstAgent = new AiAgentConfiguration("support assistant", "fake-connection",
+                "You help users with their own support tickets.")
+            {
+                SampleObject = "{\"Answer\":\"The answer to the query\"}"
+            };
+
+            var first = TestEndpointHandler(database, context, firstAgent, conversationId, documents: null, toolArguments: null);
+            var firstResult = await first.HandleRequestAsync(context, CancellationToken.None);
+
+            var firstResponse = context.ReadObject(first.GetConversationResponse(context, firstResult.Response, firstResult.ToolsIterations), "turn-1");
+            Assert.True(firstResponse.TryGet(nameof(AiAgentProcessorForTestConversation.AiAgentTestResult.Documents), out BlittableJsonReaderObject returnedDocuments));
+
+            var documents = new Dictionary<string, BlittableJsonReaderObject>();
+            foreach (var id in returnedDocuments.GetPropertyNames())
+                documents[id] = (BlittableJsonReaderObject)returnedDocuments[id];
+
+            Assert.Single(documents);
+
+            // turn 2: the agent now declares TelegramUsername (SendToModel = false) and a tool scoped by it; the
+            // conversation document posted back has no value for it. The model asks for another user's tickets.
+            var scopedAgent = CreateAgent(sendToModel: false);
+            var next = TestEndpointHandler(database, context, scopedAgent, conversationId, documents,
+                toolArguments: $"{{\"TelegramUsername\":\"{OtherHandle}\"}}");
+
+            string response;
+            try
+            {
+                var r = await next.HandleRequestAsync(context, CancellationToken.None);
+                response = r.Response.ToString();
+            }
+            catch (MissingAiAgentParameterException)
+            {
+                return; // the declared parameter is enforced
+            }
+
+            Assert.Fail("The conversation continued without a value for the declared parameter 'TelegramUsername'. " +
+                        $"Secret leaked: {response.Contains(Secret)}. Response: {response}");
+        }
+    }
+
+    private AiAgentProcessorForTestConversation.TestConversationHandler TestEndpointHandler(
+        DocumentDatabase database,
+        DocumentsOperationContext context,
+        AiAgentConfiguration agent,
+        string conversationId,
+        Dictionary<string, BlittableJsonReaderObject> documents,
+        string toolArguments)
+    {
+        // what AiAgentProcessorForTestConversation.ExecuteAsync builds from the HTTP request
+        var request = new AiAgentProcessorForTestConversation.AiAgentTestRequest
+        {
+            UserPrompt = "show my tickets",
+            CreationOptions = context.ReadObject(new DynamicJsonValue(), "creation-options"),
+            Configuration = agent,
+            Documents = documents
+        };
+
+        var handler = new AiAgentProcessorForTestConversation.TestConversationHandler(Server.ServerStore, database, request)
+        {
+            Authentication = null
+        };
+
+        var toolCalled = false;
+        handler.SetClient(new MockLlm(database.DocumentsStorage.ContextPool,
+            new OpenAiChatCompletionClientSettings(new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o")),
+            onRequest: _ =>
+            {
+                if (toolArguments == null)
+                    return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(MockLlm.CreateAnswerResponse("\"nothing to do\"")) };
+
+                if (toolCalled)
+                    return null; // MockLlm echoes the tool result back as the answer
+                toolCalled = true;
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(MockLlm.CreateToolCallResponse("MyTickets", toolArguments))
+                };
+            },
+            conventions: Raven.Server.Documents.AI.ChatCompletionClient.ConventionsToUse));
+
+        handler.Initialize(agent, conversationId, request.RequestBody, changeVector: null);
+        return handler;
     }
 }
