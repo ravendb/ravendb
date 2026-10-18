@@ -20,6 +20,10 @@ namespace Raven.Client.Exceptions
     {
     }
 
+    public sealed class AiAgentParameterCollisionException(string message) : AiException(message)
+    {
+    }
+
     public sealed class RefusedToAnswerException(string message) : AiException(message)
     {
         public string Refusal;

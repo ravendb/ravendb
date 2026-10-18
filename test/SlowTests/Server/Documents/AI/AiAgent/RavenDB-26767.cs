@@ -419,6 +419,35 @@ if ($input.doc) {
         Assert.Empty(toolResults); // refused while the request was being built, so no query ran
     }
 
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task GenAi_Collision_IsTheItemsOwnRefusal_NotATransientBatchFailure()
+    {
+        // The same collision as the test above, but outside test mode, where HandleItemError sorts the
+        // exception instead of rethrowing it. A collision is deterministic - same configuration, same result
+        // every pass - so it must land next to UnsupportedAiQueryParameterException and not in the transient
+        // branch, which sets _maxConcurrency = 1 and throws before anything is persisted, so the whole batch
+        // is attempted again forever. RefusedBeforeTheModel is also what keeps GenAiTask.cs:391 from counting
+        // a document the model never saw as a model call failure.
+        var (error, _, items, statistics) = await RunGenAiBatchAsync(
+            contexts: [new DynamicJsonValue { ["brand"] = "TechNova" }],
+            queryRql: "from Products where Brand = $brand",
+            modelToolArgs: "{}",
+            seed: null,
+            testMode: false,
+            parametersSchema: "{\"type\":\"object\",\"properties\":{\"brand\":{\"type\":\"string\"}},\"required\":[]}");
+
+        Assert.Null(error); // not a whole-batch failure: nothing escapes SendToModel
+
+        Assert.False(items[0].UpdateHash);
+        Assert.True(items[0].RefusedBeforeTheModel);
+
+        // and the author still gets told, against the document, in words that do not claim the model answered
+        var refusal = statistics.ReadInMemoryItemErrors().Single().Error;
+        Assert.Contains("Parameter brand is defined on both the agent level and the query level for Q", refusal);
+        Assert.Contains("was not sent to the model", refusal);
+        Assert.DoesNotContain("Model call failed", refusal);
+    }
+
 
     [RavenFact(RavenTestCategory.Ai)]
     public async Task GenAi_OmittedObject_QueryReferencingIt_IsRejectedWithATaskLevelError()

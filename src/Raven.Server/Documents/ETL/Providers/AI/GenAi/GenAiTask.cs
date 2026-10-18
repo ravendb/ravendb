@@ -283,7 +283,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 {
                     var queryParameters = FilterSupportedGenAiQueryParameters(context, contextObject, queryParameterNames);
                     var agentConfiguration = CreateAgentConfiguration(context, queryParameters);
-                    AiAgentHelpers.AssertAgentParametersAreNotToolArguments(context, agentConfiguration);
+                    AssertNoAgentParameterIsAlsoAToolArgument(context, agentConfiguration);
                     var handler = new GenAiConversationHandler(Database.ServerStore, Database, Configuration)
                     {
                         Authentication = authentication
@@ -350,6 +350,18 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
         AddOrUpdateAiAgentCommand.ValidateConfiguration(context, agentConfiguration);
         return agentConfiguration;
+    }
+
+    private static void AssertNoAgentParameterIsAlsoAToolArgument(JsonOperationContext context, AiAgentConfiguration agentConfiguration)
+    {
+        try
+        {
+            AiAgentHelpers.AssertAgentParametersAreNotToolArguments(context, agentConfiguration);
+        }
+        catch (InvalidOperationException e)
+        {
+            throw new AiAgentParameterCollisionException(e.Message);
+        }
     }
 
     private static BlittableJsonReaderObject FilterSupportedGenAiQueryParameters(JsonOperationContext context, BlittableJsonReaderObject rawContext,
@@ -448,7 +460,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             if (Configuration.TestMode)
                 throw new InvalidOperationException("Failed to run test", singleEx);
 
-            var msg = singleEx is UnsupportedAiQueryParameterException
+            var msg = singleEx is UnsupportedAiQueryParameterException or AiAgentParameterCollisionException
                 ? $"Context in document '{item.DocumentId}' was not sent to the model: {singleEx.Message}{Environment.NewLine}" +
                   "Nothing was stored for this document, so it will not be retried on its own. It is sent again when the " +
                   $"document changes, or when the task is reset after the query is fixed.{Environment.NewLine}" +
@@ -472,6 +484,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                     item.UpdateHash = true;
                     return null;
                 // nothing was asked of the model, so there is nothing to mark as processed
+                case AiAgentParameterCollisionException:
                 case UnsupportedAiQueryParameterException:
                     item.UpdateHash = false;
                     item.RefusedBeforeTheModel = true;
