@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.CdcSink.Schema
         /// <summary>
         /// Resolves which source schemas discovery should expose. An explicit hint is honored;
         /// an empty hint falls back to dbo (the SQL Server default returned by
-        /// <see cref="ResolveDefaultSchema"/> and used by the CDC runtime / Studio "Discover" contract),
+        /// <see cref="CdcSinkDefaultSchema.Resolve"/> and used by the CDC runtime / Studio "Discover" contract),
         /// not the login's actual default schema. System schemas are always excluded.
         /// </summary>
         private static HashSet<string> ResolveAllowedSchemas(string[] schemas)
@@ -66,8 +66,8 @@ namespace Raven.Server.Documents.CdcSink.Schema
             }
             else
             {
-                // SQL Server's default is the constant "dbo"; ResolveDefaultSchema ignores the connection string here.
-                allowed.Add(ResolveDefaultSchema(MicrosoftDataSqlClientFactory, connectionString: null));
+                // SQL Server's default is the constant "dbo"; CdcSinkDefaultSchema.Resolve ignores the connection string here.
+                allowed.Add(CdcSinkDefaultSchema.Resolve(MicrosoftDataSqlClientFactory, connectionString: null));
             }
 
             allowed.ExceptWith(SystemSchemas);
