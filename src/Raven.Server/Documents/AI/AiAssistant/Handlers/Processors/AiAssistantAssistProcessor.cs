@@ -31,8 +31,9 @@ internal class AiAssistantAssistProcessor([NotNull] RequestHandler requestHandle
             if (response.IsSuccessStatusCode == false)
                 HttpContext.Response.StatusCode = (int)response.StatusCode;
 
-            var contentType = response.Content.Headers.ContentType.ToString();
-            HttpContext.Response.Headers.ContentType = contentType;
+            var contentType = response.Content.Headers.ContentType?.ToString();
+            if (contentType != null)
+                HttpContext.Response.Headers.ContentType = contentType;
 
             if (response.IsSuccessStatusCode && contentType == "text/event-stream")
                 RequestHandler.DisableResponseBuffering();

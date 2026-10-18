@@ -1,9 +1,11 @@
 using FastTests;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.CdcSink.Schema;
 using Raven.Quill.AiHelper.Migration;
 using Raven.Quill.AiHelper.Migration.Planning;
 using Raven.Quill.Contracts;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -102,6 +104,58 @@ public class MigrationPlanAssemblyTests(ITestOutputHelper output) : NoDisposalNe
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public void Inheriting_a_schema_leaves_the_plan_entry_as_registered()
+    {
+        var orders = MigrationSamples.ValidOrders();
+        orders.SourceTableSchema = "sales";
+        var lines = MigrationSamples.ValidLines();
+        lines.SourceTableSchema = null;
+        var notes = MigrationSamples.ValidLines();
+        notes.SourceTableName = "line_notes";
+        notes.SourceTableSchema = null;
+        lines.EmbeddedTables = [notes];
+        orders.EmbeddedTables = [lines];
+        var entry = Assert.Single(Entries(orders));
+
+        var config = PlanToCdcConfiguration.Build([entry], "shop-cdc", "cs");
+
+        var built = Assert.Single(Assert.Single(config.Tables).EmbeddedTables);
+        Assert.Equal("sales", built.SourceTableSchema);
+        Assert.Equal("sales", Assert.Single(built.EmbeddedTables).SourceTableSchema);
+
+        var registered = Assert.Single(entry.Config!.EmbeddedTables);
+        Assert.Null(registered.SourceTableSchema);
+        Assert.Null(Assert.Single(registered.EmbeddedTables).SourceTableSchema);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void A_table_with_nothing_to_inherit_is_built_exactly_as_registered()
+    {
+        var orders = MigrationSamples.ValidOrders();
+        orders.Patch = "this.Total = 0;";
+        orders.OnDelete = new CdcSinkOnDeleteConfig { Patch = "archive(this);", IgnoreDeletes = true };
+        orders.Columns[1].Type = CdcColumnType.Json;
+        var lines = MigrationSamples.ValidLines();
+        lines.Type = CdcSinkRelationType.Map;
+        lines.CaseSensitiveKeys = true;
+        lines.Patch = "this.Lines = [];";
+        lines.LinkedTables = [MigrationSamples.ValidCustomer()];
+        orders.EmbeddedTables = [lines];
+        orders.LinkedTables = [MigrationSamples.ValidCustomer()];
+        var entry = Assert.Single(Entries(orders));
+
+        var config = PlanToCdcConfiguration.Build([entry], "shop-cdc", "cs");
+
+        Assert.Equal(Json(entry.Config!), Json(Assert.Single(config.Tables)));
+    }
+
+    private static string Json(CdcSinkTableConfig table)
+    {
+        using var ctx = JsonOperationContext.ShortTermSingleUse();
+        return DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(table, ctx).ToString();
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public void An_embedded_table_counts_as_covered_but_a_linked_one_does_not()
     {
         var orders = MigrationSamples.ValidOrders();
@@ -110,7 +164,7 @@ public class MigrationPlanAssemblyTests(ITestOutputHelper output) : NoDisposalNe
 
         var config = PlanToCdcConfiguration.Build(Entries(orders), "shop-cdc", "cs");
         var unmapped = PlanToCdcConfiguration.UnmappedTables(
-            config, Discovered("orders", "order_lines", "customers"));
+            config, Discovered("orders", "order_lines", "customers"), "public");
 
         // orders is a root and order_lines is embedded, so both are produced; customers is only
         // referenced, so nothing in this plan writes it.
@@ -125,7 +179,7 @@ public class MigrationPlanAssemblyTests(ITestOutputHelper output) : NoDisposalNe
 
         var config = PlanToCdcConfiguration.Build(Entries(orders), "shop-cdc", "cs");
 
-        Assert.Equal(["public.orders"], PlanToCdcConfiguration.UnmappedTables(config, Discovered("orders")));
+        Assert.Equal(["public.orders"], PlanToCdcConfiguration.UnmappedTables(config, Discovered("orders"), "public"));
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -138,7 +192,27 @@ public class MigrationPlanAssemblyTests(ITestOutputHelper output) : NoDisposalNe
 
         var config = PlanToCdcConfiguration.Build(Entries(orders), "shop-cdc", "cs");
 
-        Assert.Empty(PlanToCdcConfiguration.UnmappedTables(config, Discovered("orders", "order_lines")));
+        Assert.Empty(PlanToCdcConfiguration.UnmappedTables(config, Discovered("orders", "order_lines"), "public"));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void A_root_without_a_schema_is_covered_in_the_provider_default_schema_not_the_most_common_discovered_one()
+    {
+        var discovered = new CdcSinkSourceSchema
+        {
+            Tables =
+            [
+                new CdcSinkSourceTable { SourceTableSchema = "sales", SourceTableName = "orders" },
+                new CdcSinkSourceTable { SourceTableSchema = "sales", SourceTableName = "order_lines" },
+                new CdcSinkSourceTable { SourceTableSchema = "public", SourceTableName = "orders" }
+            ]
+        };
+        var orders = MigrationSamples.ValidOrders();
+        orders.SourceTableSchema = null;
+
+        var config = PlanToCdcConfiguration.Build(Entries(orders), "shop-cdc", "cs");
+
+        Assert.Equal(["sales.orders", "sales.order_lines"], PlanToCdcConfiguration.UnmappedTables(config, discovered, "public"));
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -149,6 +223,6 @@ public class MigrationPlanAssemblyTests(ITestOutputHelper output) : NoDisposalNe
 
         var config = PlanToCdcConfiguration.Build(Entries(orders), "shop-cdc", "cs");
 
-        Assert.Empty(PlanToCdcConfiguration.UnmappedTables(config, Discovered("orders", "order_lines")));
+        Assert.Empty(PlanToCdcConfiguration.UnmappedTables(config, Discovered("orders", "order_lines"), "public"));
     }
 }

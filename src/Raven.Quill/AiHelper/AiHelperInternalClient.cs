@@ -22,33 +22,6 @@ public sealed class AiHelperInternalClient(
 
     private const string GiveConsentPath = "/assistant/give-consent";
 
-    public async Task<SuggestCdcInternalResult> SuggestCdcAsync(
-        object? schema, object? samples, string prompt, CancellationToken ct)
-    {
-        var request = new SuggestCdcApiRequest
-        {
-            Schema = schema,
-            Samples = samples,
-            Prompt = prompt,
-        };
-
-        var (transport, content) = await SendAsync(AssistPath, "POST", request, ct);
-        if (transport != AiHelperStatus.Success)
-            return new SuggestCdcInternalResult(transport, Configuration: null, [], 0, 0);
-
-        var wire = await DeserializeAsync<SuggestCdcApiResponse>(content, ct);
-        if (wire is null)
-            return new SuggestCdcInternalResult(AiHelperStatus.InternalError, Configuration: null, [], 0, 0);
-
-        var status = ParseStatus(wire.Status);
-        return new SuggestCdcInternalResult(
-            status,
-            status == AiHelperStatus.Success ? wire.Configuration : null,
-            wire.Rationale ?? [],
-            wire.InputTokenCount,
-            wire.OutputTokenCount);
-    }
-
     public async Task<SuggestAiAgentInternalResult> SuggestAiAgentAsync(
         CdcSinkConfiguration cdcConfig, object? collectionsSample, string mode, string? prompt, CancellationToken ct)
     {
@@ -222,14 +195,6 @@ public sealed class AiHelperInternalClient(
         public int RavenVersion { get; set; }
     }
 
-    private sealed class SuggestCdcApiRequest
-    {
-        public string OperationType { get; set; } = "CdcConfigSetup";
-        public object? Schema { get; set; }
-        public object? Samples { get; set; }
-        public string Prompt { get; set; } = null!;
-    }
-
     private sealed class SuggestAiAgentApiRequest
     {
         public string OperationType { get; set; } = "CdcBasedAgentConfigSetup";
@@ -237,15 +202,6 @@ public sealed class AiHelperInternalClient(
         public object? CollectionsSample { get; set; }
         public string Mode { get; set; } = null!;
         public string? Prompt { get; set; }
-    }
-
-    private sealed class SuggestCdcApiResponse
-    {
-        public string? Status { get; set; }
-        public CdcSinkConfiguration? Configuration { get; set; }
-        public string[]? Rationale { get; set; }
-        public int InputTokenCount { get; set; }
-        public int OutputTokenCount { get; set; }
     }
 
     private sealed class SuggestAiAgentApiResponse
@@ -257,13 +213,6 @@ public sealed class AiHelperInternalClient(
         public int OutputTokenCount { get; set; }
     }
 }
-
-public sealed record SuggestCdcInternalResult(
-    AiHelperStatus Status,
-    CdcSinkConfiguration? Configuration,
-    IReadOnlyList<string> Rationale,
-    int InputTokenCount,
-    int OutputTokenCount);
 
 public sealed record SuggestAiAgentInternalResult(
     AiHelperStatus Status,
