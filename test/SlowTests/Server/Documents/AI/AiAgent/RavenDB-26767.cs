@@ -467,6 +467,14 @@ if ($input.doc) {
         // list shows them - and against that one only
         Assert.Equal([items[1].DocumentId], statistics.ReadInMemoryItemErrors().Select(e => e.DocumentId));
 
+        // nothing is stored for the document, so the recorded error is the only trace of it - it has to say the model
+        // was never called and what brings the document back
+        var refusal = statistics.ReadInMemoryItemErrors().Single().Error;
+        Assert.Contains("was not sent to the model", refusal);
+        Assert.Contains("$brand", refusal);
+        Assert.Contains("reset", refusal);
+        Assert.DoesNotContain("Model call failed", refusal);
+
         Assert.False(items[1].UpdateHash);
         Assert.True(items[1].RefusedBeforeTheModel);
     }
