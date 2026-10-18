@@ -913,22 +913,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/setup/suggest/cdc": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["setup.suggestCdc"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/setup/migration/start": {
         parameters: {
             query?: never;
@@ -1940,18 +1924,6 @@ export interface components {
             configurations: components["schemas"]["AiAgentConfiguration"][];
             rationale: string[];
             status: string;
-        };
-        SuggestCdcRequest: {
-            intentPrompt: null | string;
-            selectedTables: components["schemas"]["SelectedSourceTable"][];
-            /** @default  */
-            slug: string;
-        };
-        SuggestCdcResponse: {
-            configuration: null | components["schemas"]["CdcSinkConfiguration"];
-            rationale: string[];
-            status: string;
-            unmappedTables: string[];
         };
         TelegramChannelMessages: {
             greeting?: null | string;
@@ -4363,48 +4335,6 @@ export interface operations {
             };
         };
     };
-    "setup.suggestCdc": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SuggestCdcRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuggestCdcResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unprocessable Entity */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
     "setup.migrationStart": {
         parameters: {
             query?: never;
@@ -4762,8 +4692,6 @@ export type SlackUpdateRequest = components["schemas"]["SlackUpdateRequest"];
 export type SlackWebhookInfoResponse = components["schemas"]["SlackWebhookInfoResponse"];
 export type SuggestAgentRequest = components["schemas"]["SuggestAgentRequest"];
 export type SuggestAgentResponse = components["schemas"]["SuggestAgentResponse"];
-export type SuggestCdcRequest = components["schemas"]["SuggestCdcRequest"];
-export type SuggestCdcResponse = components["schemas"]["SuggestCdcResponse"];
 export type TelegramChannelMessages = components["schemas"]["TelegramChannelMessages"];
 export type TelegramProvisionRequest = components["schemas"]["TelegramProvisionRequest"];
 export type TelegramSummaryResponse = components["schemas"]["TelegramSummaryResponse"];
@@ -4880,7 +4808,6 @@ export const API_ENDPOINTS = {
         migrationRemoveCollection: "/setup/migration/remove",
         migrationStart: "/setup/migration/start",
         provision: "/setup/provision",
-        suggestCdc: "/setup/suggest/cdc",
         testMapping: "/setup/test-mapping",
         verifyCdc: "/setup/verify-cdc",
     },
@@ -4991,7 +4918,6 @@ export function createServerApi(client: ApiClient) {
             migrationRemoveCollection: (request: string) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.setup.migrationRemoveCollection, request),
             migrationStart: (request: string) => client.post<void>(API_ENDPOINTS.setup.migrationStart, request),
             provision: (request: ProvisionRequest) => client.post<ProvisionResponse, ApiErrorResponse>(API_ENDPOINTS.setup.provision, request),
-            suggestCdc: (request: SuggestCdcRequest) => client.post<SuggestCdcResponse, ApiErrorResponse>(API_ENDPOINTS.setup.suggestCdc, request),
             testMapping: (request: TestMappingRequest) => client.post<TestMappingResponse, ApiErrorResponse>(API_ENDPOINTS.setup.testMapping, request),
             verifyCdc: (request: VerifyCdcRequest) => client.post<VerifyCdcResponse, ApiErrorResponse>(API_ENDPOINTS.setup.verifyCdc, request),
         },

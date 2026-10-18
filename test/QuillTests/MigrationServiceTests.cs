@@ -262,7 +262,6 @@ public class MigrationServiceTests(ITestOutputHelper output) : RavenTestBase(out
 
     [RavenTheory(RavenTestCategory.Quill)]
     [InlineData(HttpStatusCode.Unauthorized, "consent")]
-    [InlineData(HttpStatusCode.TooManyRequests, "quota")]
     [InlineData(HttpStatusCode.NotFound, "No planning session")]
     [InlineData(HttpStatusCode.RequestEntityTooLarge, "too large")]
     [InlineData(HttpStatusCode.BadGateway, "HTTP 502")]
@@ -272,6 +271,22 @@ public class MigrationServiceTests(ITestOutputHelper output) : RavenTestBase(out
         var frames = new List<MigrationFrame>();
 
         await NewService(store, new StubPlannerHandler(status, "{\"Status\":\"Refused\"}"))
+            .StartAsync(new MigrationStartRequest(Slug), Collect(frames), CancellationToken.None);
+
+        Assert.Contains(expected, Assert.IsType<ErrorFrame>(Assert.Single(frames)).Message);
+    }
+
+    [RavenTheory(RavenTestCategory.Quill)]
+    [InlineData("{\"Status\":\"OutOfTokens\",\"InputTokenCount\":0,\"OutputTokenCount\":0}", "monthly AI token quota")]
+    [InlineData("{\"Status\":\"InternalError\"}", "busy")]
+    [InlineData("", "busy")]
+    [InlineData("Rate limit exceeded, error id: 'x'", "busy")]
+    public async Task Too_many_requests_is_the_quota_only_when_the_body_says_out_of_tokens(string body, string expected)
+    {
+        using var store = await StoreWithSchemaAsync();
+        var frames = new List<MigrationFrame>();
+
+        await NewService(store, new StubPlannerHandler(HttpStatusCode.TooManyRequests, body))
             .StartAsync(new MigrationStartRequest(Slug), Collect(frames), CancellationToken.None);
 
         Assert.Contains(expected, Assert.IsType<ErrorFrame>(Assert.Single(frames)).Message);
@@ -316,10 +331,71 @@ public class MigrationServiceTests(ITestOutputHelper output) : RavenTestBase(out
         Assert.Equal(3, Assert.Single(reloaded!.Entries).Version);
     }
 
-    private async Task<IDocumentStore> StoreWithSchemaAsync(MigrationPlan? plan = null)
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Start_sends_only_the_foreign_keys_between_the_selected_tables()
+    {
+        using var store = await StoreWithSchemaAsync(tables:
+        [
+            MigrationSamples.SourceTable("orders", "customers", "audit_log"),
+            MigrationSamples.SourceTable("customers"),
+            MigrationSamples.SourceTable("audit_log")
+        ]);
+        var handler = StubPlannerHandler.Replying(new DoneFrame { ConversationId = ConversationId });
+
+        await NewService(store, handler).StartAsync(
+            new MigrationStartRequest(Slug, SelectedTables: [new SelectedSourceTable("orders", "public"), new SelectedSourceTable("customers", "public")]),
+            Collect([]),
+            CancellationToken.None);
+
+        using var sent = JsonDocument.Parse(MigrationSamples.SentSchemaJson(handler.LastBody));
+        var tables = sent.RootElement.GetProperty("Tables").EnumerateArray().ToArray();
+        Assert.Equal(["orders", "customers"], tables.Select(t => t.GetProperty("SourceTableName").GetString()));
+        Assert.Equal(["customers"], tables[0].GetProperty("ForeignKeys").EnumerateArray().Select(k => k.GetProperty("ReferencedTable").GetString()));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Start_matches_the_selected_tables_case_sensitively()
+    {
+        using var store = await StoreWithSchemaAsync(tables:
+        [
+            MigrationSamples.SourceTable("orders", "Orders"),
+            MigrationSamples.SourceTable("Orders")
+        ]);
+        var handler = StubPlannerHandler.Replying(new DoneFrame { ConversationId = ConversationId });
+
+        await NewService(store, handler).StartAsync(
+            new MigrationStartRequest(Slug, SelectedTables: [new SelectedSourceTable("orders", "public")]),
+            Collect([]),
+            CancellationToken.None);
+
+        using var sent = JsonDocument.Parse(MigrationSamples.SentSchemaJson(handler.LastBody));
+        var table = Assert.Single(sent.RootElement.GetProperty("Tables").EnumerateArray().ToArray());
+        Assert.Equal("orders", table.GetProperty("SourceTableName").GetString());
+        Assert.Empty(table.GetProperty("ForeignKeys").EnumerateArray());
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Apply_reports_a_join_column_that_is_not_a_column_of_the_source_table()
+    {
+        var orders = MigrationSamples.ValidOrders();
+        var customer = MigrationSamples.ValidCustomer();
+        customer.JoinColumns = ["buyer_ref"];
+        orders.LinkedTables = [customer];
+        using var store = await StoreWithSchemaAsync(MigrationSamples.Plan(ConversationId,
+            new PlanEntry { Collection = "Orders", Version = 1, Config = orders }));
+
+        var (response, refusal) = await NewService(store, StubPlannerHandler.Replying())
+            .ApplyAsync(new MigrationApplyRequest(Slug, ConversationId), CancellationToken.None);
+
+        Assert.Null(refusal);
+        Assert.Null(response!.Configuration);
+        Assert.Contains("buyer_ref", Assert.Single(response.Errors));
+    }
+
+    private async Task<IDocumentStore> StoreWithSchemaAsync(MigrationPlan? plan = null, CdcSinkSourceTable[]? tables = null)
     {
         var store = GetDocumentStore();
-        await MigrationSamples.SeedDiscoveredSchemaAsync(store, Slug, plan);
+        await MigrationSamples.SeedDiscoveredSchemaAsync(store, Slug, plan, tables: tables);
         return store;
     }
 

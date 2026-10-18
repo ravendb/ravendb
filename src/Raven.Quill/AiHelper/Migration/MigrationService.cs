@@ -229,10 +229,15 @@ public sealed class MigrationService(
         {
             if (response.IsSuccessStatusCode == false)
             {
-                if (logger.IsInfoEnabled)
-                    logger.Info($"Planner {path} failed: upstream {(int)response.StatusCode}.");
+                var tooManyRequests = response.StatusCode == HttpStatusCode.TooManyRequests;
+                var failureBody = tooManyRequests ? await ReadFailureBodyAsync(response, token) : string.Empty;
 
-                await onFrame(new ErrorFrame { Message = DescribeFailure(response.StatusCode) });
+                if (logger.IsInfoEnabled)
+                    logger.Info(tooManyRequests
+                        ? $"Planner {path} failed: upstream 429. Body: {failureBody}"
+                        : $"Planner {path} failed: upstream {(int)response.StatusCode}.");
+
+                await onFrame(new ErrorFrame { Message = DescribeFailure(response.StatusCode, failureBody) });
                 return;
             }
 
@@ -318,15 +323,44 @@ public sealed class MigrationService(
         }
     }
 
-    private static string DescribeFailure(HttpStatusCode statusCode) => statusCode switch
+    private static string DescribeFailure(HttpStatusCode statusCode, string body) => statusCode switch
     {
         HttpStatusCode.Unauthorized => "The AI service refused the request: consent is required or the license was not accepted.",
-        HttpStatusCode.TooManyRequests => "The monthly AI token quota is used up.",
+        HttpStatusCode.TooManyRequests when IsOutOfTokens(body) => "The monthly AI token quota is used up.",
+        HttpStatusCode.TooManyRequests => "The AI service is busy. Try again in a moment.",
         HttpStatusCode.NotFound => "No planning session found for that conversation.",
         HttpStatusCode.BadRequest => "The AI service rejected the planning request.",
         HttpStatusCode.RequestEntityTooLarge => "The selected schema is too large for the AI service. Select fewer tables.",
         _ => $"The AI service failed (HTTP {(int)statusCode})."
     };
+
+    private static async Task<string> ReadFailureBodyAsync(HttpResponseMessage response, CancellationToken token)
+    {
+        try
+        {
+            return await response.Content.ReadAsStringAsync(token);
+        }
+        catch (Exception e) when (IsTransportFailure(e, token))
+        {
+            return string.Empty;
+        }
+    }
+
+    private static bool IsOutOfTokens(string body)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            return document.RootElement.ValueKind == JsonValueKind.Object &&
+                   document.RootElement.TryGetProperty("Status", out var status) &&
+                   status.ValueKind == JsonValueKind.String &&
+                   string.Equals(status.GetString(), nameof(AiHelperStatus.OutOfTokens), StringComparison.OrdinalIgnoreCase);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
 
     private string SerializeRequest(object request)
     {

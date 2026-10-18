@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.CdcSink.Schema;
 using Raven.Quill.AiHelper.Migration.Planning;
@@ -44,8 +45,9 @@ public static class PlanToCdcConfiguration
     /// default there. Writing the parent's schema in keeps a root outside the default schema from
     /// validating against one table and ingesting another.
     /// </summary>
-    private static CdcSinkTableConfig WithInheritedSchemas(CdcSinkTableConfig table)
+    private static CdcSinkTableConfig WithInheritedSchemas(CdcSinkTableConfig registered)
     {
+        var table = JsonSerializer.Deserialize<CdcSinkTableConfig>(JsonSerializer.SerializeToUtf8Bytes(registered))!;
         Inherit(table.EmbeddedTables, table.SourceTableSchema);
         return table;
 

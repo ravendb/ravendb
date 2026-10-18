@@ -24,13 +24,6 @@ public static class WizardEndpoints
     internal const string DefaultCdcTaskName = "quill-cdc";
     private const string CdcDryRunTaskName = "quill-cdc-dry-run";
 
-    private const string DefaultIntentPrompt =
-        "Propose a sensible RavenDB CDC document model from the discovered relational schema: " +
-        "map each root/aggregate table to its own collection, embed parent-owned child rows " +
-        "(1:N ownership) as nested arrays, and keep many-to-many or shared references as separate " +
-        "collections linked by id. Use idiomatic collection names derived from the table names; " +
-        "prefer a minimal, query-friendly shape over a literal table-per-collection mirror.";
-
     public static void Map(WebApplication app)
     {
         var group = app.MapGroup("/api/setup").WithTags("setup").RequireAuthorization();
@@ -59,12 +52,6 @@ public static class WizardEndpoints
             .Accepts<MapRequest>("application/json")
             .Produces<CdcSinkConfiguration>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
-        group.MapPost("/suggest/cdc", SuggestCdcAsync)
-            .WithName("setup.suggestCdc")
-            .Accepts<SuggestCdcRequest>("application/json")
-            .Produces<SuggestCdcResponse>()
-            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
-            .Produces<ApiErrorResponse>(StatusCodes.Status422UnprocessableEntity);
         group.MapPost("/migration/start", StartMigrationAsync)
             .WithName("setup.migrationStart")
             .WithDescription(
@@ -416,89 +403,6 @@ public static class WizardEndpoints
         return Results.Ok(cdcConfig);
     }
 
-    private static async Task<IResult> SuggestCdcAsync(
-        SuggestCdcRequest body,
-        IDocumentStore store,
-        IAiHelperClient aiClient,
-        QuillLogger<WizardLogger> logger,
-        CancellationToken ct)
-    {
-        if (body is null)
-            return Results.BadRequest(new ApiErrorResponse("request body is required"));
-        if (string.IsNullOrWhiteSpace(body.Slug))
-            return Results.BadRequest(new ApiErrorResponse("slug is required"));
-
-        if (body.SelectedTables is not { Length: > 0 })
-            return Results.BadRequest(new ApiErrorResponse("selectedTables must list at least one table"));
-
-        var intentPrompt = string.IsNullOrWhiteSpace(body.IntentPrompt) ? DefaultIntentPrompt : body.IntentPrompt!;
-
-        WizardState? state;
-        using (var session = store.OpenAsyncSession())
-            state = await session.LoadAsync<WizardState>(WizardState.DocumentIdFor(body.Slug), ct);
-
-        if (state?.LastDiscoveredSchema is null)
-            return Results.BadRequest(new ApiErrorResponse("no discovered schema found; call /api/setup/discover first"));
-
-        var selectedSchema = SelectTables(state.LastDiscoveredSchema, body.SelectedTables);
-        if (selectedSchema.Tables.Count == 0)
-            return Results.BadRequest(new ApiErrorResponse(
-                "none of the selected tables are part of the discovered schema; call /api/setup/discover first"));
-
-        var result = await aiClient.SuggestCdcAsync(selectedSchema, samples: null, intentPrompt, ct);
-
-        if (result.Status != AiHelperStatus.Success)
-            return Results.Ok(new SuggestCdcResponse(Configuration: null, result.Rationale, result.Status.ToString(), UnmappedTables: []));
-
-        if (result.Configuration is null)
-            return Results.UnprocessableEntity(new ApiErrorResponse("AI service returned a success status but no configuration"));
-
-        if (!result.Configuration.Validate(out var errors, validateName: false, validateConnection: false))
-        {
-            if (logger.IsInfoEnabled)
-                logger.Info($"SuggestCdc: returned configuration failed validation ({errors.Count} errors)");
-            return Results.UnprocessableEntity(new ApiErrorResponse(Errors: errors.ToArray()));
-        }
-
-        ValidateJoinColumnsAgainstSchema(result.Configuration, state.LastDiscoveredSchema, errors);
-        if (errors.Count > 0)
-        {
-            if (logger.IsInfoEnabled)
-                logger.Info(
-                    $"SuggestCdc: returned configuration has {errors.Count} join column(s) the source " +
-                    "schema does not have");
-            return Results.UnprocessableEntity(new ApiErrorResponse(Errors: errors.ToArray()));
-        }
-
-        var defaultSchema = SqlConnectionStringValidation.DefaultSchemaFor(state.Provider, state.LastDiscoveredSchema.CatalogName);
-        var unmappedTables = CollectUnmappedTables(selectedSchema, result.Configuration, defaultSchema);
-        if (unmappedTables.Count > 0 && logger.IsInfoEnabled)
-            logger.Info(
-                $"SuggestCdc: configuration leaves {unmappedTables.Count} of {selectedSchema.Tables.Count} " +
-                "selected table(s) unmapped");
-
-        return Results.Ok(new SuggestCdcResponse(result.Configuration, result.Rationale, result.Status.ToString(), unmappedTables));
-    }
-
-    private static List<string> CollectUnmappedTables(
-        CdcSinkSourceSchema selectedSchema,
-        CdcSinkConfiguration configuration,
-        string? defaultSchema)
-    {
-        var covered = new HashSet<CdcSinkConfiguration.TableInfo>(configuration.CollectAllTablesFlat(defaultSchema ?? string.Empty));
-
-        return selectedSchema.Tables
-            .Where(table => covered.Contains(new CdcSinkConfiguration.TableInfo
-            {
-                Schema = table.SourceTableSchema,
-                TableName = table.SourceTableName,
-            }) == false)
-            .Select(table => string.IsNullOrWhiteSpace(table.SourceTableSchema)
-                ? table.SourceTableName
-                : $"{table.SourceTableSchema}.{table.SourceTableName}")
-            .ToList();
-    }
-
     private static Task StartMigrationAsync(
         MigrationStartRequest? body,
         MigrationService service,
@@ -763,11 +667,6 @@ public static class WizardEndpoints
         }
     }
 
-    /// <summary>
-    /// Narrows the persisted discovery result to the tables the operator selected on the verify step.
-    /// Discovery enumerates whole schemas, so handing the AI everything it found would map tables the
-    /// operator deliberately left out.
-    /// </summary>
     internal static void ValidateJoinColumnsAgainstSchema(CdcSinkConfiguration configuration, CdcSinkSourceSchema schema, List<string> errors)
     {
         foreach (var table in configuration.Tables)
@@ -817,6 +716,11 @@ public static class WizardEndpoints
         }
     }
 
+    /// <summary>
+    /// Narrows the persisted discovery result to the tables the operator selected on the verify step.
+    /// Discovery enumerates whole schemas, so handing the AI everything it found would map tables the
+    /// operator deliberately left out.
+    /// </summary>
     internal static CdcSinkSourceSchema SelectTables(CdcSinkSourceSchema schema, SelectedSourceTable[] selectedTables)
     {
         var selectedKeys = selectedTables

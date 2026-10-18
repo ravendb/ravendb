@@ -39,12 +39,6 @@ public class QuillSuggestAgentCollection : ICollectionFixture<QuillAiHelperFixtu
 }
 
 [CollectionDefinition(Name)]
-public class QuillSuggestCdcCollection : ICollectionFixture<QuillAiHelperFixture>
-{
-    public const string Name = "quill-suggest-cdc";
-}
-
-[CollectionDefinition(Name)]
 public class QuillAssistantCollection : ICollectionFixture<QuillAiHelperFixture>
 {
     public const string Name = "quill-assistant";

@@ -65,7 +65,8 @@ public static class MigrationSamples
         IDocumentStore store,
         string slug,
         MigrationPlan? plan = null,
-        CdcSinkConfiguration? mapConfiguration = null)
+        CdcSinkConfiguration? mapConfiguration = null,
+        CdcSinkSourceTable[]? tables = null)
     {
         using var session = store.OpenAsyncSession();
         await session.StoreAsync(new WizardState
@@ -75,7 +76,7 @@ public static class MigrationSamples
             {
                 CatalogName = "shop",
                 HasPermissionToSetup = true,
-                Tables = [SourceTable("orders"), SourceTable("customers"), SourceTable("audit_log")]
+                Tables = [.. tables ?? [SourceTable("orders"), SourceTable("customers"), SourceTable("audit_log")]]
             },
             LastDiscoverAt = DateTime.UtcNow,
             LastMapConfiguration = mapConfiguration,
@@ -108,7 +109,7 @@ public static class MigrationSamples
     public static string Sse(params MigrationFrame[] frames) =>
         ": keepalive\n\n" + string.Concat(frames.Select(f => $"data: {JsonSerializer.Serialize(f, WireOptions)}\n\n: keepalive\n\n"));
 
-    private static CdcSinkSourceTable SourceTable(string name) => new()
+    public static CdcSinkSourceTable SourceTable(string name, params string[] foreignKeysTo) => new()
     {
         SourceTableSchema = "public",
         SourceTableName = name,
@@ -118,7 +119,14 @@ public static class MigrationSamples
         [
             new CdcSinkSourceColumn { Name = "order_id", NativeType = "int", IsPrimaryKey = true, IsCdcCapturable = true },
             new CdcSinkSourceColumn { Name = "ordered_at", NativeType = "timestamp", IsCdcCapturable = true }
-        ]
+        ],
+        ForeignKeys = [.. foreignKeysTo.Select(referenced => new CdcSinkSourceForeignKey
+        {
+            Columns = [$"{referenced}_id"],
+            ReferencedSchema = "public",
+            ReferencedTable = referenced,
+            ReferencedColumns = ["order_id"]
+        })]
     };
 }
 
@@ -175,9 +183,6 @@ public sealed class FakeConsentClient(AiHelperStatus consent) : IAiHelperClient
     public Task<AiHelperStatus> CheckConsentAsync(CancellationToken ct) => Task.FromResult(consent);
 
     public Task<AiHelperStatus> GiveConsentAsync(CancellationToken ct) => Task.FromResult(AiHelperStatus.Success);
-
-    public Task<SuggestCdcInternalResult> SuggestCdcAsync(object? schema, object? samples, string prompt, CancellationToken ct) =>
-        throw new NotSupportedException();
 
     public Task<SuggestAiAgentInternalResult> SuggestAiAgentAsync(
         CdcSinkConfiguration cdcConfig, object? collectionsSample, string mode, string? prompt, CancellationToken ct) =>
