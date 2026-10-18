@@ -2201,6 +2201,8 @@ namespace Raven.Server.Documents
 
             internal bool EnableWritesToTheWrongShard = false;
 
+            internal Action BeforeSavingOlapEtlLastBatchTime;
+
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
             {
                 ActionToCallDuringDocumentDatabaseInternalDispose = action;

@@ -732,7 +732,7 @@ namespace Raven.Server.Documents.ETL
         {
         }
 
-        private void ReportStopReasonToStats(string msg)
+        protected void ReportStopReasonToStats(string msg)
         {
             try
             {
@@ -748,8 +748,22 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract TStatsScope CreateScope(EtlRunStats stats);
 
+        protected virtual bool RunImmediatelyOnStart => true;
+
         public void Run()
         {
+            if (RunImmediatelyOnStart == false)
+            {
+                try
+                {
+                    _waitForChanges.Wait(CancellationToken);
+                }
+                catch (Exception e) when (e is OperationCanceledException or ObjectDisposedException)
+                {
+                    return;
+                }
+            }
+
             var runStart = Database.Time.GetUtcNow();
 
             while (true)
@@ -945,7 +959,7 @@ namespace Raven.Server.Documents.ETL
         {
             var command = new UpdateEtlProcessStateCommand(Database.Name, Configuration.Name, Transformation.Name, Statistics.LastProcessedEtag,
                 ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector), _serverStore.NodeTag,
-                _serverStore.LicenseManager.HasHighlyAvailableTasks(), Database.DbBase64Id, RaftIdGenerator.NewId(), state.SkippedTimeSeriesDocs, lastBatchTime);
+                _serverStore.LicenseManager.HasHighlyAvailableTasks(), Database.DbBase64Id, RaftIdGenerator.NewId(), state.SkippedTimeSeriesDocs, lastBatchTime ?? state.LastBatchTime);
 
             var sendToLeaderTask = _serverStore.SendToLeaderAsync(command);
 
