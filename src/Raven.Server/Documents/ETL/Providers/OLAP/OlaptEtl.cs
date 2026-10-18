@@ -53,6 +53,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         public override bool ShouldTrackTimeSeries() => false;
 
+        protected override bool RunImmediatelyOnStart => LastProcessState.LastBatchTime == null;
+
         public override void NotifyAboutWork(DatabaseChange change)
         {
             // intentionally not setting _waitForChanges here
@@ -196,7 +198,23 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         protected override void AfterAllBatchesCompleted(DateTime lastBatchTime)
         {
             if (Statistics.LastProcessedEtag > 0)
-                UpdateEtlProcessState(LastProcessState, lastBatchTime);
+            {
+                try
+                {
+                    Database.ForTestingPurposes?.BeforeSavingOlapEtlLastBatchTime?.Invoke();
+
+                    UpdateEtlProcessState(LastProcessState, lastBatchTime);
+                }
+                catch (Exception e) when (CancellationToken.IsCancellationRequested == false)
+                {
+                    var msg = $"{Tag} Failed to save the last batch time of ETL process '{Name}'";
+
+                    if (Logger.IsWarnEnabled)
+                        Logger.Warn(msg, e);
+
+                    ReportStopReasonToStats($"{msg} : {e}");
+                }
+            }
 
             UpdateTimer(lastBatchTime);
         }
