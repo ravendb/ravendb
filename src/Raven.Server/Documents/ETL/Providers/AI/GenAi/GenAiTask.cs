@@ -448,10 +448,14 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             if (Configuration.TestMode)
                 throw new InvalidOperationException("Failed to run test", singleEx);
 
-            var msg =
-                $"Model call failed for context in document '{item.DocumentId}' ({singleEx.GetType().Name}). {Environment.NewLine}" +
-                $"Context was: {item.ContextOutput.Context}{Environment.NewLine}" +
-                $"{singleEx}";
+            var msg = singleEx is UnsupportedAiQueryParameterException
+                ? $"Context in document '{item.DocumentId}' was not sent to the model: {singleEx.Message}{Environment.NewLine}" +
+                  "Nothing was stored for this document, so it will not be retried on its own. It is sent again when the " +
+                  $"document changes, or when the task is reset after the query is fixed.{Environment.NewLine}" +
+                  $"Context was: {item.ContextOutput.Context}"
+                : $"Model call failed for context in document '{item.DocumentId}' ({singleEx.GetType().Name}). {Environment.NewLine}" +
+                  $"Context was: {item.ContextOutput.Context}{Environment.NewLine}" +
+                  $"{singleEx}";
 
             Statistics.RecordItemLoadError(msg, item.DocumentId, step: LoadErrorStep);
             if (Logger.IsWarnEnabled)
