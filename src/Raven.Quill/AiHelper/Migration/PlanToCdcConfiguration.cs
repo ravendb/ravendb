@@ -68,10 +68,8 @@ public static class PlanToCdcConfiguration
     /// embedded tables at any depth; a link does not count, because it only references documents
     /// another mapping has to produce.
     /// </summary>
-    public static string[] UnmappedTables(CdcSinkConfiguration configuration, CdcSinkSourceSchema discovered)
+    public static string[] UnmappedTables(CdcSinkConfiguration configuration, CdcSinkSourceSchema discovered, string defaultSchema)
     {
-        var defaultSchema = DefaultSchemaOf(discovered);
-
         var covered = configuration
             .CollectAllTablesFlat(defaultSchema)
             .Select(t => t.FullName)
@@ -83,17 +81,4 @@ public static class PlanToCdcConfiguration
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
-
-    /// <summary>
-    /// Discovery stamps every table with the schema it came from, so the schema the operator
-    /// actually selected is a better default than a per-provider guess.
-    /// </summary>
-    private static string DefaultSchemaOf(CdcSinkSourceSchema discovered) =>
-        (discovered.Tables ?? [])
-            .Select(t => t.SourceTableSchema)
-            .Where(s => string.IsNullOrWhiteSpace(s) == false)
-            .GroupBy(s => s, StringComparer.OrdinalIgnoreCase)
-            .OrderByDescending(g => g.Count())
-            .Select(g => g.Key)
-            .FirstOrDefault() ?? string.Empty;
 }

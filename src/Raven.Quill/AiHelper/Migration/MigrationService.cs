@@ -3,6 +3,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.CdcSink.Schema;
 using Raven.Quill.AiHelper.Migration.Planning;
 using Raven.Quill.Contracts;
@@ -185,7 +186,8 @@ public sealed class MigrationService(
             ? WizardEndpoints.SelectTables(state.LastDiscoveredSchema, plan.SelectedTables)
             : state.LastDiscoveredSchema;
 
-        var unmapped = PlanToCdcConfiguration.UnmappedTables(configuration, coverageSchema);
+        var defaultSchema = CdcSinkDefaultSchema.Resolve(state.Provider!, state.SourceConnectionString!);
+        var unmapped = PlanToCdcConfiguration.UnmappedTables(configuration, coverageSchema, defaultSchema);
 
         state.LastMapConfiguration = configuration;
         state.LastMapAt = DateTime.UtcNow;
@@ -244,6 +246,8 @@ public sealed class MigrationService(
             await using var body = await response.Content.ReadAsStreamAsync(token);
             using var reader = new StreamReader(body, Encoding.UTF8);
 
+            MigrationFrame? frame = null;
+
             try
             {
                 while (await reader.ReadLineAsync(token) is { } line)
@@ -251,7 +255,7 @@ public sealed class MigrationService(
                     if (line.StartsWith(DataPrefix, StringComparison.Ordinal) == false)
                         continue;
 
-                    var frame = ReadFrame(path, line[DataPrefix.Length..]);
+                    frame = ReadFrame(path, line[DataPrefix.Length..]);
                     if (frame is null)
                         continue;
 
@@ -269,6 +273,9 @@ public sealed class MigrationService(
 
                     await onFrame(frame);
                 }
+
+                if (frame is not (DoneFrame or ErrorFrame) && logger.IsWarnEnabled)
+                    logger.Warn($"Planner {path} stream ended without a done or error frame (last frame: {frame?.GetType().Name ?? "none"}).");
             }
             catch (Exception e) when (IsTransportFailure(e, token))
             {

@@ -524,9 +524,9 @@ namespace SlowTests.Server.Documents.CdcSink
         [RavenFact(RavenTestCategory.Sinks)]
         public async Task ClientOperation_MalformedMySqlConnectionString_ReturnsStructuredError()
         {
-            // CdcSinkSchemaDiscovery.ResolveDefaultSchema parses the user-supplied MySQL
+            // CdcSinkDefaultSchema.Resolve parses the user-supplied MySQL
             // connection string before any try/catch envelope. A malformed string makes
-            // MySqlConnectionStringBuilder's ctor throw, bubbling out of ExecuteTestMappingAsync
+            // DbConnectionStringBuilder throw, bubbling out of ExecuteTestMappingAsync
             // as HTTP 500 — inconsistent with how every other failure on this endpoint surfaces
             // (structured Errors with HTTP 200). Wrap the resolve call so the failure becomes
             // an Errors entry, matching the row-fetch and schema-discovery catch patterns.
@@ -574,7 +574,7 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task ClientOperation_MaliciousMySqlDatabaseName_RejectedAtValidationGate()
         {
             // The identifier gate only validated raw request/config schema fields, not the
-            // resolved targetSchema. For MySQL, ResolveDefaultSchema falls back to the
+            // resolved targetSchema. For MySQL, CdcSinkDefaultSchema.Resolve falls back to the
             // connection string's Database value — which is user-controlled. A backtick in
             // the DB name was being passed straight to QuoteTable when the user left
             // SourceTableSchema empty. Validate the effective targetSchema after resolution.

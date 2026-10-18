@@ -71,7 +71,7 @@ public static class MigrationSamples
         using var session = store.OpenAsyncSession();
         await session.StoreAsync(new WizardState
         {
-            Provider = "SqlClient",
+            Provider = "Microsoft.Data.SqlClient",
             LastDiscoveredSchema = new CdcSinkSourceSchema
             {
                 CatalogName = "shop",

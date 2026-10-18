@@ -121,13 +121,13 @@ internal sealed class CdcSinkHandlerProcessorForTest : AbstractCdcSinkHandlerPro
         // that left the field empty - or vice versa. Resolve the default once and apply it to
         // both sides of the comparison + the runner so the test endpoint mirrors what the
         // runtime would do.
-        // MySQL's ResolveDefaultSchema parses the user-supplied connection string via
-        // MySqlConnectionStringBuilder, which throws on malformed input. Catch it and surface
+        // CdcSinkDefaultSchema.Resolve throws on an unsupported provider or a malformed
+        // connection string. Catch it and surface
         // structured Errors with the full driver exception detail, Logger.Warn for the stack.
         string defaultSchema;
         try
         {
-            defaultSchema = CdcSinkSchemaDiscovery.ResolveDefaultSchema(connection.FactoryName, connection.ConnectionString);
+            defaultSchema = CdcSinkDefaultSchema.Resolve(connection.FactoryName, connection.ConnectionString);
         }
         catch (Exception e)
         {
