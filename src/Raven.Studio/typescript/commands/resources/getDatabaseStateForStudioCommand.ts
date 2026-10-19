@@ -6,6 +6,8 @@ class getDatabaseStateForStudioCommand extends commandBase {
     private readonly nodeTag: string;
     private readonly databaseName: string;
 
+    protected readonly showProtractedRequestMessage = false;
+
     constructor(nodeTag: string, databaseName: string) {
         super();
         this.nodeTag = nodeTag;
@@ -19,7 +21,7 @@ class getDatabaseStateForStudioCommand extends commandBase {
             name: this.databaseName,
         };
 
-        return this.query<StudioDatabasesState>(url, args, undefined);
+        return this.query<StudioDatabasesState>(url, args, null, null, { timeout: commandBase.perNodeRequestTimeoutMs });
     }
 }
 
