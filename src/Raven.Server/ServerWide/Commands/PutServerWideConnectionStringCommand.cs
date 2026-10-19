@@ -38,7 +38,7 @@ namespace Raven.Server.ServerWide.Commands
                 Value.ExcludedDatabases.Any(string.IsNullOrWhiteSpace))
                 throw new RachisApplyException($"{nameof(ServerWideConnectionString.ExcludedDatabases)} cannot contain null or empty database names");
 
-            EnsureAiIdentifier(Value);
+            ResolveAiIdentifier(Value, previousValue);
 
             if (previousValue != null)
             {
@@ -60,6 +60,10 @@ namespace Raven.Server.ServerWide.Commands
 
         private static void AssertAiIdentifierNotInUse(BlittableJsonReaderObject serverWideConnectionStrings, AiConnectionString aiConnectionString)
         {
+            var identifier = GetEffectiveAiIdentifier(aiConnectionString.Identifier, aiConnectionString.Name);
+            if (identifier == null)
+                return;
+
             foreach (var name in serverWideConnectionStrings.GetPropertyNames())
             {
                 if (name == aiConnectionString.Name)
@@ -68,11 +72,29 @@ namespace Raven.Server.ServerWide.Commands
                 if (serverWideConnectionStrings.TryGet(name, out BlittableJsonReaderObject existing) == false || existing == null)
                     continue;
 
-                if (GetEffectiveAiIdentifier(existing, name) == aiConnectionString.Identifier)
+                if (GetEffectiveAiIdentifier(existing, name) == identifier)
                     throw new RachisApplyException(
                         $"Can't put server-wide connection string '{aiConnectionString.Name}'. " +
-                        $"The identifier '{aiConnectionString.Identifier}' is already used by server-wide connection string '{name}'");
+                        $"The identifier '{identifier}' is already used by server-wide connection string '{name}'");
             }
+        }
+
+        internal static void ResolveAiIdentifier(ServerWideConnectionString connectionString, BlittableJsonReaderObject previousValue)
+        {
+            if (connectionString.ConnectionString is not AiConnectionString aiConnectionString)
+                return;
+
+            if (string.IsNullOrWhiteSpace(aiConnectionString.Identifier) &&
+                previousValue != null &&
+                previousValue.TryGet(connectionString.Name, out BlittableJsonReaderObject stored) &&
+                stored != null)
+            {
+                stored.TryGet(nameof(AiConnectionString.Identifier), out string storedIdentifier);
+                aiConnectionString.Identifier = storedIdentifier;
+                return;
+            }
+
+            EnsureAiIdentifier(aiConnectionString);
         }
 
         internal static string GetEffectiveAiIdentifier(BlittableJsonReaderObject aiConnectionString, string name)
@@ -87,12 +109,6 @@ namespace Raven.Server.ServerWide.Commands
                 return identifier;
 
             return AiTaskIdentifierHelper.TryGenerateIdentifier(ServerWideConnectionString.GetNameFromDatabaseRecordConnectionStringName(name), out var generated) ? generated : null;
-        }
-
-        internal static void EnsureAiIdentifier(ServerWideConnectionString connectionString)
-        {
-            if (connectionString.ConnectionString is AiConnectionString aiConnectionString)
-                EnsureAiIdentifier(aiConnectionString);
         }
 
         internal static void EnsureAiIdentifier(AiConnectionString aiConnectionString)

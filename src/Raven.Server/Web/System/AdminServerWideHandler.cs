@@ -215,7 +215,8 @@ namespace Raven.Server.Web.System
                     throw new BadRequestException($"Invalid connection string configuration. Errors: {string.Join($"{Environment.NewLine}", errors)}");
 
                 if (serverWideConnectionString.ConnectionString is AiConnectionString aiConnectionString &&
-                    aiConnectionString.EnsureIdentifier(out var identifierErrors) == false)
+                    string.IsNullOrWhiteSpace(aiConnectionString.Identifier) == false &&
+                    aiConnectionString.ValidateIdentifier(out var identifierErrors) == false)
                     throw new BadRequestException($"Invalid connection string identifier. Errors: {string.Join($"{Environment.NewLine}", identifierErrors)}");
 
                 var (newIndex, _) = await ServerStore.PutServerWideConnectionStringAsync(serverWideConnectionString, GetRaftRequestIdFromQuery());
@@ -265,9 +266,6 @@ namespace Raven.Server.Web.System
                     var connectionString = ServerWideConnectionString.FromBlittable(blittable);
                     if (connectionString == null)
                         continue;
-
-                    if (connectionString.ConnectionString is AiConnectionString aiConnectionString)
-                        aiConnectionString.EnsureIdentifier(out _);
 
                     result.Results.Add(connectionString);
                 }

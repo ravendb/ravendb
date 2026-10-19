@@ -965,7 +965,7 @@ public class RavenDB_24310 : RavenTestBase
             foreach (var name in names)
             {
                 var getResult = await store.Maintenance.Server.SendAsync(new GetServerWideConnectionStringsOperation(name, ConnectionStringType.Ai));
-                Assert.Equal(AiTaskIdentifierHelper.GenerateIdentifier(name), ((AiConnectionString)getResult.Results.Single().ConnectionString).Identifier);
+                Assert.Null(((AiConnectionString)getResult.Results.Single().ConnectionString).Identifier);
             }
 
             var newDbName = store.Database + "_new";
@@ -977,6 +977,100 @@ public class RavenDB_24310 : RavenTestBase
                 var prefixedName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(name);
                 Assert.Null(record.AiConnectionStrings[prefixedName].Identifier);
             }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Ai)]
+    public async Task ServerWideAiConnectionString_UpdateWithoutIdentifierKeepsStoredIdentifier()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var csName = "My Server Wide AI CS";
+            var prefixedName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(csName);
+            var generatedIdentifier = AiTaskIdentifierHelper.GenerateIdentifier(csName);
+
+            await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(new ServerWideConnectionString
+            {
+                ConnectionString = NewAiConnectionString(csName, identifier: null)
+            }));
+
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            Assert.Equal(generatedIdentifier, record.AiConnectionStrings[prefixedName].Identifier);
+
+            var updated = NewAiConnectionString(csName, identifier: null);
+            updated.OpenAiSettings.ApiKey = "rotated-key";
+            await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(new ServerWideConnectionString { ConnectionString = updated }));
+
+            record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            Assert.Equal(generatedIdentifier, record.AiConnectionStrings[prefixedName].Identifier);
+            Assert.Equal("rotated-key", record.AiConnectionStrings[prefixedName].OpenAiSettings.ApiKey);
+
+            var getResult = await store.Maintenance.Server.SendAsync(new GetServerWideConnectionStringsOperation(csName, ConnectionStringType.Ai));
+            Assert.Equal(generatedIdentifier, ((AiConnectionString)getResult.Results.Single().ConnectionString).Identifier);
+
+            await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(new ServerWideConnectionString
+            {
+                ConnectionString = NewAiConnectionString(csName, identifier: "explicit-identifier")
+            }));
+
+            record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            Assert.Equal("explicit-identifier", record.AiConnectionStrings[prefixedName].Identifier);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Ai)]
+    public async Task ServerWideAiConnectionString_StoredWithoutIdentifier_KeepsMissingIdentifierOnUpdate()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var csName = "Legacy Ai CS";
+            var prefixedName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(csName);
+
+            var djv = new DynamicJsonValue
+            {
+                [csName] = new ServerWideConnectionString { ConnectionString = NewAiConnectionString(csName, identifier: null) }.ToJson()
+            };
+
+            using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            using (var json = context.ReadObject(djv, ClusterStateMachine.ServerWideConfigurationKey.ConnectionStringAi))
+            {
+                ClusterStateMachine.PutValueDirectly(context, ClusterStateMachine.ServerWideConfigurationKey.ConnectionStringAi, json, 1);
+                tx.Commit();
+            }
+
+            var newDbName = store.Database + "_new";
+            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDbName)));
+
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
+            Assert.Null(record.AiConnectionStrings[prefixedName].Identifier);
+
+            var updated = NewAiConnectionString(csName, identifier: null);
+            updated.OpenAiSettings.ApiKey = "rotated-key";
+            await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(new ServerWideConnectionString { ConnectionString = updated }));
+
+            record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
+            Assert.Null(record.AiConnectionStrings[prefixedName].Identifier);
+            Assert.Equal("rotated-key", record.AiConnectionStrings[prefixedName].OpenAiSettings.ApiKey);
+
+            var getResult = await store.Maintenance.Server.SendAsync(new GetServerWideConnectionStringsOperation(csName, ConnectionStringType.Ai));
+            Assert.Null(((AiConnectionString)getResult.Results.Single().ConnectionString).Identifier);
+
+            var generatedIdentifier = AiTaskIdentifierHelper.GenerateIdentifier(csName);
+            var ex = await Assert.ThrowsAsync<RavenException>(async () =>
+                await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(new ServerWideConnectionString
+                {
+                    ConnectionString = NewAiConnectionString("Other Ai CS", generatedIdentifier)
+                })));
+            Assert.Contains($"The identifier '{generatedIdentifier}' is already used by", ex.Message);
+
+            await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(new ServerWideConnectionString
+            {
+                ConnectionString = NewAiConnectionString(csName, identifier: "explicit-identifier")
+            }));
+
+            record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
+            Assert.Equal("explicit-identifier", record.AiConnectionStrings[prefixedName].Identifier);
         }
     }
 
@@ -1008,10 +1102,13 @@ public class RavenDB_24310 : RavenTestBase
             }
 
             var newDbName = store.Database + "_new";
-            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDbName)));
+            var newRecord = new DatabaseRecord(newDbName);
+            newRecord.AiConnectionStrings["???"] = NewAiConnectionString("???", identifier: null);
+            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(newRecord));
 
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
-            Assert.Equal(stored.Length, record.AiConnectionStrings.Count);
+            Assert.Equal(stored.Length + 1, record.AiConnectionStrings.Count);
+            Assert.Null(record.AiConnectionStrings["???"].Identifier);
             foreach (var (name, identifier) in stored)
             {
                 var prefixedName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(name);
