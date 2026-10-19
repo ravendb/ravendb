@@ -1,0 +1,58 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.import-result-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: sizes.$gutter-xs 0;
+    border-bottom: sizes.$border-width solid colors.$border-color-light-var;
+}
+
+.import-result-log {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+// Selectors are scoped with the extra `.table` class the react-bootstrap <Table> already carries:
+// the app's `.bs5 .table > * > *` rule (specificity 0,2,1) hardcodes cell padding/border and would
+// otherwise win. `.import-result-table.table` gives us 0,2,2 so our padding/border take effect.
+// Cell background is the exception — it honours `--bs-table-bg`, so we set that variable instead.
+.import-result-table.table {
+    border: sizes.$border-width solid colors.$border-color-light-var;
+    border-radius: sizes.$border-radius;
+    overflow: hidden;
+    // `collapse` (bootstrap default) drops the table's own outer border; `separate` keeps it so the
+    // rounded bordered container shows. border-spacing:0 keeps rows flush.
+    border-collapse: separate;
+    border-spacing: 0;
+
+    // header ~40px tall (Figma), filled with panel-bg-3
+    thead th {
+        --bs-table-bg: var(--panel-bg-3);
+        padding: sizes.$gutter-xs;
+        font-weight: 600;
+        border-bottom: sizes.$border-width solid colors.$border-color-light-var;
+    }
+
+    // rows carry a subtle panel-bg-2 fill so the table reads as filled, with light separators
+    tbody td {
+        --bs-table-bg: var(--panel-bg-2);
+        padding: sizes.$gutter-xs;
+        vertical-align: middle;
+        border-bottom: sizes.$border-width solid colors.$border-color-light-var;
+    }
+
+    // nested rows sit on a darker fill than their parent rows (Figma)
+    tbody tr.import-result-nested td {
+        --bs-table-bg: var(--panel-bg-1);
+    }
+
+    tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .import-result-name {
+        white-space: nowrap;
+    }
+}

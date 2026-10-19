@@ -27,7 +27,7 @@ public static class EmbedLinksEndpoints
         group.MapPost("/embed-links", MintAsync)
             .WithName("embedLinks.mint")
             .WithDescription(
-                "Mints a per-user embed link for an iFrame channel (by channelId). SERVER-SIDE ONLY: it " +
+                "Mints a per-user embed link for an embedded chat channel (by channelId). SERVER-SIDE ONLY: it " +
                 "needs the operator key, which must never reach a browser, and it sends no CORS headers " +
                 "— call it from your backend and pass only the returned url to the page. Parameters are " +
                 "validated against the channel's agent and bound into the link server-side (never " +
@@ -89,11 +89,11 @@ public static class EmbedLinksEndpoints
 
         if (channel is null || channel.Type != ChannelType.IFrame)
             return Results.NotFound(new ApiErrorResponse(
-                $"no iframe channel '{body.ChannelId}' in app '{slug}'"));
+                $"no embedded chat channel '{body.ChannelId}' in app '{slug}'"));
 
         if (channel.Enabled == false)
             return Results.BadRequest(new ApiErrorResponse(
-                $"the iframe channel '{body.ChannelId}' is disabled", Code: "channel_disabled"));
+                $"the embedded chat channel '{body.ChannelId}' is disabled", Code: "channel_disabled"));
 
         var config = await AgentLookup.FindAsync(store, app.Database, channel.AgentId, ct);
         if (config is null)

@@ -37,7 +37,7 @@ import { useServices } from "hooks/useServices";
 import { SelectOption } from "components/common/select/Select";
 import { isEmpty } from "common/typeUtils";
 import Row from "react-bootstrap/Row";
-import Col from "react-bootstrap/esm/Col";
+import Col from "react-bootstrap/Col";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { setupWizardGA4Prefixes } from "components/setupWizard/utils/setupWizardConstants";
 import { getMaxClusterSize } from "components/setupWizard/utils/setupWizardUtils";
@@ -908,7 +908,7 @@ interface AddAnotherNodeProps {
     onAddNode: () => void;
 }
 
-function AddAnotherNode({ onAddNode }: AddAnotherNodeProps) {
+export function AddAnotherNode({ onAddNode }: AddAnotherNodeProps) {
     const { getValues } = useFormContext<SetupWizardFormData>();
 
     const licenseKeyStep = getValues("licenseKeyStep");
@@ -928,7 +928,7 @@ function AddAnotherNode({ onAddNode }: AddAnotherNodeProps) {
             <ConditionalPopover
                 conditions={[
                     {
-                        isActive: !hasLicense,
+                        isActive: !hasLicense && isMaxClusterNodes,
                         message: (
                             <>
                                 <p className="mb-0">

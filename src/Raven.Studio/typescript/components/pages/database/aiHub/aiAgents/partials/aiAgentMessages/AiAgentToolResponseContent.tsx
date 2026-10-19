@@ -27,7 +27,6 @@ function TableContent({ content }: AiAgentToolResponseContentProps) {
 
     const { columnDefs } = useDocumentColumnsProvider({
         documents: tableData,
-        availableWidth: window.innerWidth,
         hasCheckbox: false,
         hasPreview: false,
         hasFlags: true,

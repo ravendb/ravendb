@@ -35,7 +35,7 @@ import {
     discordParameterSourceHint,
 } from "@/pages/apps/channels/discord-parameter-sources";
 import { DiscordStatusPanel } from "@/pages/apps/channels/discord-status-panel";
-import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
+import type { FixedAgent } from "@/pages/apps/channels/channel-form-types";
 
 const DISCORD_APP_SETUP_STEPS: NumberedStep[] = [
     {

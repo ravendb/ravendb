@@ -1,10 +1,11 @@
-import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
-import { AllRevisionsTableProps } from "components/pages/database/documents/allRevisions/common/allRevisionsTypes";
-import AllRevisionsTableNonSharded from "components/pages/database/documents/allRevisions/partials/AllRevisionsTableNonSharded";
-import AllRevisionsTableSharded from "components/pages/database/documents/allRevisions/partials/AllRevisionsTableSharded";
+import {
+    AllRevisionsPaginationProps,
+    AllRevisionsTableProps,
+} from "components/pages/database/documents/allRevisions/common/allRevisionsTypes";
+import { allRevisionsUtils } from "components/pages/database/documents/allRevisions/common/allRevisionsUtils";
+import AllRevisionsTable from "components/pages/database/documents/allRevisions/partials/AllRevisionsTable";
 import AllRevisionsTableSmallSample from "components/pages/database/documents/allRevisions/partials/AllRevisionsTableSmallSample";
-import { useAppSelector } from "components/store";
 
 export default function AllRevisionsWithSize({
     width,
@@ -14,9 +15,9 @@ export default function AllRevisionsWithSize({
     fetcherRef,
     selectedRows,
     setSelectedRows,
-}: AllRevisionsTableProps) {
-    const isSharded = useAppSelector(databaseSelectors.activeDatabase)?.isSharded;
-
+    isPaginated,
+    onIsPaginatedChange,
+}: AllRevisionsTableProps & AllRevisionsPaginationProps) {
     const tableProps = {
         width: virtualTableUtils.getTableBodyWidth(width),
         height,
@@ -27,14 +28,10 @@ export default function AllRevisionsWithSize({
         setSelectedRows,
     };
 
-    if (selectedType !== "All" && selectedCollectionName) {
+    if (allRevisionsUtils.isSmallSample(selectedType, selectedCollectionName)) {
         // in this case the server does not return `TotalResults` so we display part of the results
         return <AllRevisionsTableSmallSample {...tableProps} />;
     }
 
-    if (isSharded) {
-        return <AllRevisionsTableSharded {...tableProps} />;
-    }
-
-    return <AllRevisionsTableNonSharded {...tableProps} />;
+    return <AllRevisionsTable {...tableProps} isPaginated={isPaginated} onIsPaginatedChange={onIsPaginatedChange} />;
 }

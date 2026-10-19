@@ -29,17 +29,17 @@ namespace SlowTests.Issues
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanLoadCompareExchangeInIndexes(Options options)
         {
-            CanLoadCompareExchangeInIndexes<Index_With_CompareExchange>(options);
+            CanLoadCompareExchangeInIndexesImpl<Index_With_CompareExchange>(options);
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanLoadCompareExchangeInIndexes_JavaScript(Options options)
         {
-            CanLoadCompareExchangeInIndexes<Index_With_CompareExchange_JavaScript>(options);
+            CanLoadCompareExchangeInIndexesImpl<Index_With_CompareExchange_JavaScript>(options);
         }
 
-        private void CanLoadCompareExchangeInIndexes<TIndex>(Options options)
+        private void CanLoadCompareExchangeInIndexesImpl<TIndex>(Options options)
             where TIndex : AbstractIndexCreationTask, new()
         {
             using (var store = GetDocumentStore(options))
@@ -418,17 +418,17 @@ namespace SlowTests.Issues
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanLoadCompareExchangeInIndexes_Simple(Options options)
         {
-            CanLoadCompareExchangeInIndexes_Simple<Index_With_CompareExchange_Simple>(options);
+            CanLoadCompareExchangeInIndexes_SimpleImpl<Index_With_CompareExchange_Simple>(options);
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanLoadCompareExchangeInIndexes_Simple_JavaScript(Options options)
         {
-            CanLoadCompareExchangeInIndexes_Simple<Index_With_CompareExchange_Simple_JavaScript>(options);
+            CanLoadCompareExchangeInIndexes_SimpleImpl<Index_With_CompareExchange_Simple_JavaScript>(options);
         }
 
-        private void CanLoadCompareExchangeInIndexes_Simple<TIndex>(Options options)
+        private void CanLoadCompareExchangeInIndexes_SimpleImpl<TIndex>(Options options)
             where TIndex : AbstractIndexCreationTask, new()
         {
             using (var store = GetDocumentStore(options))
@@ -650,17 +650,17 @@ namespace SlowTests.Issues
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanLoadCompareExchangeInIndexes_Simple_Array(Options options)
         {
-            CanLoadCompareExchangeInIndexes_Simple_Array<Index_With_CompareExchange_Simple_Array>(options);
+            CanLoadCompareExchangeInIndexes_Simple_ArrayImpl<Index_With_CompareExchange_Simple_Array>(options);
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanLoadCompareExchangeInIndexes_Simple_Array_JavaScript(Options options)
         {
-            CanLoadCompareExchangeInIndexes_Simple_Array<Index_With_CompareExchange_Simple_Array_JavaScript>(options);
+            CanLoadCompareExchangeInIndexes_Simple_ArrayImpl<Index_With_CompareExchange_Simple_Array_JavaScript>(options);
         }
 
-        private void CanLoadCompareExchangeInIndexes_Simple_Array<TIndex>(Options options)
+        private void CanLoadCompareExchangeInIndexes_Simple_ArrayImpl<TIndex>(Options options)
             where TIndex : AbstractIndexCreationTask, new()
         {
             using (var store = GetDocumentStore(options))
@@ -868,17 +868,17 @@ namespace SlowTests.Issues
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanLoadCompareExchangeInIndexes_Query(Options options)
         {
-            CanLoadCompareExchangeInIndexes_Query<Index_With_CompareExchange>(options);
+            CanLoadCompareExchangeInIndexes_QueryImpl<Index_With_CompareExchange>(options);
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanLoadCompareExchangeInIndexes_Query_JavaScript(Options options)
         {
-            CanLoadCompareExchangeInIndexes_Query<Index_With_CompareExchange_JavaScript>(options);
+            CanLoadCompareExchangeInIndexes_QueryImpl<Index_With_CompareExchange_JavaScript>(options);
         }
 
-        private void CanLoadCompareExchangeInIndexes_Query<TIndex>(Options options)
+        private void CanLoadCompareExchangeInIndexes_QueryImpl<TIndex>(Options options)
             where TIndex : AbstractIndexCreationTask, new()
         {
             using (var store = GetDocumentStore(options))
@@ -2311,10 +2311,10 @@ namespace SlowTests.Issues
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanLoadCompareExchangeInIndexes_MapReduce_Query(Options options)
         {
-            CanLoadCompareExchangeInIndexes_MapReduce_Query<Index_With_CompareExchange_MapReduce>(options);
+            CanLoadCompareExchangeInIndexes_MapReduce_QueryImpl<Index_With_CompareExchange_MapReduce>(options);
         }
 
-        private void CanLoadCompareExchangeInIndexes_MapReduce_Query<TIndex>(Options options)
+        private void CanLoadCompareExchangeInIndexes_MapReduce_QueryImpl<TIndex>(Options options)
             where TIndex : AbstractIndexCreationTask, new()
         {
             using (var store = GetDocumentStore(options))

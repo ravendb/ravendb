@@ -11,7 +11,10 @@ public sealed record AppUsageResponse(
 
 public sealed record AppUsageMetrics(
     MetricCard Conversations,
-    MetricCard Tokens);
+    MetricCard Tokens,
+    // Bucket start times the sparklines are indexed by (UsagePeriod.Buckets()); both cards
+    // share the same buckets, so one array aligns 1:1 with each MetricCard.Sparkline.
+    DateTime[] Buckets);
 
 public sealed record MetricCard(double Value, double Delta, double[] Sparkline);
 

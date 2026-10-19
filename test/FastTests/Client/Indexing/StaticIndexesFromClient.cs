@@ -210,7 +210,7 @@ namespace FastTests.Client.Indexing
 
                 Indexes.WaitForIndexing(store);
 
-                Assert.Null(Indexes.WaitForIndexingErrors(store, errorsShouldExists: false));
+                Indexes.AssertNoIndexErrors(store);
             }
         }
     }

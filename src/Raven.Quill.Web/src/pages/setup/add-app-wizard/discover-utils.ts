@@ -13,6 +13,27 @@ export function isTableSupported(discoverResult: DiscoverResponse | null, table:
     );
 }
 
+export function hasTableWarnings(table: DiscoverTableResponse): boolean {
+    return table.warnings.length > 0;
+}
+
+export type WarningsFilter = "all" | "no-warnings" | "warnings";
+
+export function matchesWarningsFilter(table: DiscoverTableResponse, filter: WarningsFilter): boolean {
+    switch (filter) {
+        case "all":
+            return true;
+        case "no-warnings":
+            return !hasTableWarnings(table);
+        case "warnings":
+            return hasTableWarnings(table);
+    }
+}
+
+export function matchesTableSearch(table: DiscoverTableResponse, search: string): boolean {
+    return getTableLabel(table).toLowerCase().includes(search.toLowerCase());
+}
+
 /** A table without CDC enabled yet reports all columns as non-capturable; when the user has
  * permission to set CDC up, every discovered column of such a table is still eligible. */
 export function isColumnSupported(

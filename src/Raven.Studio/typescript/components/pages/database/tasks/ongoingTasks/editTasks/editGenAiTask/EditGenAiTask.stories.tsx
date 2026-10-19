@@ -3,7 +3,7 @@ import { Meta, StoryObj } from "@storybook/react-webpack5";
 import EditGenAiTask from "./EditGenAiTask";
 import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
-import { userEvent } from "storybook/test";
+import { screen, userEvent } from "storybook/test";
 import { EditGenAiTaskStepId } from "./hooks/useEditGenAiTaskSteps";
 import { Canvas } from "storybook/internal/csf";
 
@@ -83,7 +83,7 @@ export const Summary: StoryObj = {
 async function navigateToStep(canvas: Canvas, step: EditGenAiTaskStepId) {
     await userEvent.type(await canvas.findByLabelText("Task Name"), "ai-name-gen-ai");
     await userEvent.click(canvas.getByText("Select..."));
-    await userEvent.click(canvas.getByText("ai-name-gen-ai"));
+    await userEvent.click(screen.getByText("ai-name-gen-ai"));
 
     if (step === "basic") {
         return;
@@ -91,7 +91,7 @@ async function navigateToStep(canvas: Canvas, step: EditGenAiTaskStepId) {
 
     await userEvent.click(canvas.getByText("Next"));
     await userEvent.click(canvas.getAllByText("Select...")[0]);
-    await userEvent.click(canvas.getByText("Orders"));
+    await userEvent.click(screen.getByText("Orders"));
     await userEvent.click(canvas.getByText("1"));
     await userEvent.paste(sampleContextScript);
     await userEvent.click(canvas.getByRole("button", { name: "Or enter a document manually" }));

@@ -26,7 +26,7 @@ type MessagesFormData = z.infer<typeof messagesFormSchema>;
 
 // The Telegram bot's canned replies, shown read-only until "Edit" is pressed. This used to live in a
 // collapsible inside the edit sheet; it moved here so the sheet keeps only the channel basics,
-// mirroring how the web widget's appearance lives in its own tab.
+// mirroring how the chat widget's appearance lives in its own tab.
 export function TelegramMessagesTab({ slug, channel }: { slug: string; channel: ChannelSummaryResponse }) {
     const queryClient = useQueryClient();
     const [isEditing, setIsEditing] = useState(false);

@@ -605,7 +605,8 @@ namespace FastTests.Client.Subscriptions
 
                 notThrowingSubscriptionWorker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
-                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
+                    // retry sooner than the dropped workers so we take the subscription before they reconnect
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
                     Strategy = SubscriptionOpeningStrategy.WaitForFree
                 });
 

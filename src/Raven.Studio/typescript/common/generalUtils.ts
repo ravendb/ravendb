@@ -25,6 +25,7 @@ class genUtils {
     static readonly basicDateFormat = "YYYY-MM-DD";
     static readonly dateFormat = "YYYY MMMM Do, h:mm A";
     static readonly utcFullDateFormat = "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]";
+    static readonly timeSeriesFullDateFormat = "YYYY-MM-DD HH:mm:ss.SSS";
     
     /***  IP Address Methods  ***/
 

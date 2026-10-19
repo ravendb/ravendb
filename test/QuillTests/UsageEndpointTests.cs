@@ -196,10 +196,25 @@ public class UsageEndpointTests(ITestOutputHelper output, QuillCollectionHost co
         var now = DateTime.UtcNow;
         var usage = await Host.GetUsageAsync(now.Year, now.Month);
 
-        // license write metering reports nothing in tests; each app still gets a row (0 writes)
+        // the stubbed license usage names no test app; each app still gets a row (0 writes)
         // so the dashboard can key the WRU column by slug
+        Assert.False(usage.IsWritesUnavailable);
         Assert.Equal(0, Assert.Single(usage.WritesByApp, w => w.Slug == app1.Slug).Writes);
         Assert.Equal(0, Assert.Single(usage.WritesByApp, w => w.Slug == app2.Slug).Writes);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Usage_flags_writes_as_unavailable_when_the_license_server_is_down()
+    {
+        await using var app = await NewAppAsync();
+        LicenseStats.IsUsageUnavailable = true;
+
+        var now = DateTime.UtcNow;
+        var usage = await Host.GetUsageAsync(now.Year, now.Month);
+
+        Assert.True(usage.IsWritesUnavailable);
+        Assert.Equal(0, Assert.Single(usage.WritesByApp, w => w.Slug == app.Slug).Writes);
+        Assert.All(usage.Points, p => Assert.Equal(0, p.Writes));
     }
 
     [RavenFact(RavenTestCategory.Quill)]

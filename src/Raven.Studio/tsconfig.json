@@ -9,9 +9,9 @@
         "target": "ES2020",
         "esModuleInterop": true,
         "resolveJsonModule": true,
-        "moduleResolution": "node",
+        "moduleResolution": "bundler",
         "skipLibCheck": true,
-        "module": "AMD",
+        "module": "preserve",
         "lib": [
             "DOM",
             "es6",

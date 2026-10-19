@@ -9,7 +9,14 @@ import { SeriesBarChart } from "@/components/data/charts";
 import { DatePeriodPicker } from "@/components/data/date-period-picker";
 import { ChartSkeleton, DetailGridSkeleton } from "@/components/data/loading-skeletons";
 import { PagePanel } from "@/components/data/page-panel";
-import { canDrillInto, drillInto, getDefaultDatePeriod } from "@/lib/date-period";
+import {
+    canDrillInto,
+    drillInto,
+    formatBucketLabel,
+    formatBucketTooltip,
+    getDefaultDatePeriod,
+    type DatePeriod,
+} from "@/lib/date-period";
 import { useAppStartDate } from "@/lib/use-start-date";
 import { TableCell, TableRow } from "@/components/shadcn/ui/table";
 import { SectionTable } from "@/components/table/section-table";
@@ -25,7 +32,7 @@ export function AppAnalytics() {
     const appStartDate = useAppStartDate(slug);
 
     // Keep the previous charts on screen while the finer-grained period loads, so
-    // drilling in reads as a zoom rather than the page blanking out and back in.
+    // drilling in reads as a transition rather than the page blanking out and back in.
     const appUsageQuery = useQuery({ ...api.queries.stats.appUsage(slug, period), placeholderData: keepPreviousData });
 
     // Every chart is bucketed on the same shared period, so clicking a bucket in
@@ -65,16 +72,19 @@ export function AppAnalytics() {
                             <AnalyticsSeriesSection
                                 title="Tokens by capability"
                                 series={appUsageQuery.data.tokensByCapability}
+                                period={period}
                                 onBarClick={drillFromBar}
                             />
                             <AnalyticsSeriesSection
                                 title="Tokens by model"
                                 series={appUsageQuery.data.tokensByModel}
+                                period={period}
                                 onBarClick={drillFromBar}
                             />
                             <AnalyticsSeriesSection
                                 title="Conversations by channel"
                                 series={appUsageQuery.data.conversationsByChannel}
+                                period={period}
                                 onBarClick={drillFromBar}
                             />
                             <TopCapabilitiesSection capabilities={appUsageQuery.data.topCapabilities} />
@@ -87,7 +97,7 @@ export function AppAnalytics() {
 }
 
 function AnalyticsMetricCards({ usage }: { usage: AppUsageResponse }) {
-    const { conversations, tokens } = usage.metrics;
+    const { conversations, tokens, buckets } = usage.metrics;
     const cards: DashboardStatCard[] = [
         {
             label: "Conversations",
@@ -95,8 +105,16 @@ function AnalyticsMetricCards({ usage }: { usage: AppUsageResponse }) {
             isLoading: false,
             delta: conversations.delta,
             series: conversations.sparkline,
+            seriesDates: buckets,
         },
-        { label: "Tokens", value: tokens.value, isLoading: false, delta: tokens.delta, series: tokens.sparkline },
+        {
+            label: "Tokens",
+            value: tokens.value,
+            isLoading: false,
+            delta: tokens.delta,
+            series: tokens.sparkline,
+            seriesDates: buckets,
+        },
     ];
 
     return <StatCardsSection cards={cards} />;
@@ -105,10 +123,12 @@ function AnalyticsMetricCards({ usage }: { usage: AppUsageResponse }) {
 function AnalyticsSeriesSection({
     title,
     series,
+    period,
     onBarClick,
 }: {
     title: string;
     series: SeriesData;
+    period: DatePeriod;
     onBarClick?: BarClickHandler;
 }) {
     return (
@@ -119,7 +139,12 @@ function AnalyticsSeriesSection({
                         No data for this period.
                     </Text>
                 ) : (
-                    <SeriesBarChart data={series} onBarClick={onBarClick} />
+                    <SeriesBarChart
+                        data={series}
+                        xTickFormatter={(t) => formatBucketLabel(t, period)}
+                        tooltipLabelFormatter={(t) => formatBucketTooltip(t, period)}
+                        onBarClick={onBarClick}
+                    />
                 )}
             </div>
         </SectionCard>

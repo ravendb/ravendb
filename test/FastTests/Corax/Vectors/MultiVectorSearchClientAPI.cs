@@ -29,15 +29,15 @@ public class MultiVectorSearchClientAPI(ITestOutputHelper output) : RavenTestBas
             session.SaveChanges();
 
             var multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithText(s => s.Name), v => v.ByTexts(["italian food", "vehicle"]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithText(s => s.Name), v => v.ByTexts(["italian food", "vehicle"]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(2, multiVectorTextualQuery.Count);
 
             multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithText(s => s.Name), v => v.ByTexts(["italian food", "dog"]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithText(s => s.Name), v => v.ByTexts(["italian food", "dog"]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(1, multiVectorTextualQuery.Count);
 
             multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithText(s => s.Name), v => v.ByTexts(["cat", "dog"]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithText(s => s.Name), v => v.ByTexts(["cat", "dog"]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(0, multiVectorTextualQuery.Count);
         }
 
@@ -47,15 +47,15 @@ public class MultiVectorSearchClientAPI(ITestOutputHelper output) : RavenTestBas
         using (var session = store.OpenSession())
         {
             var multiVectorTextualQuery = session.Query<Dto, VectorStaticIndex>()
-                .VectorSearch(f => f.WithField(s => s.Name), v => v.ByTexts(["italian food", "vehicle"]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithField(s => s.Name), v => v.ByTexts(["italian food", "vehicle"]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(2, multiVectorTextualQuery.Count);
 
             multiVectorTextualQuery = session.Query<Dto, VectorStaticIndex>()
-                .VectorSearch(f => f.WithField(s => s.Name), v => v.ByTexts(["italian food", "dog"]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithField(s => s.Name), v => v.ByTexts(["italian food", "dog"]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(1, multiVectorTextualQuery.Count);
 
             multiVectorTextualQuery = session.Query<Dto, VectorStaticIndex>()
-                .VectorSearch(f => f.WithField(s => s.Name), v => v.ByTexts(["cat", "dog"]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithField(s => s.Name), v => v.ByTexts(["cat", "dog"]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(0, multiVectorTextualQuery.Count);
         }
     }
@@ -75,15 +75,15 @@ public class MultiVectorSearchClientAPI(ITestOutputHelper output) : RavenTestBas
             session.SaveChanges();
 
             var multiVectorEmbeddingQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbeddings([GetEmbedding("italian food"), GetEmbedding("vehicle")]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbeddings([GetEmbedding("italian food"), GetEmbedding("vehicle")]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(2, multiVectorEmbeddingQuery.Count);
 
             multiVectorEmbeddingQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbeddings([GetEmbedding("italian food"), GetEmbedding("dog")]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbeddings([GetEmbedding("italian food"), GetEmbedding("dog")]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(1, multiVectorEmbeddingQuery.Count);
 
             multiVectorEmbeddingQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbeddings([GetEmbedding("cat"), GetEmbedding("dog")]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbeddings([GetEmbedding("cat"), GetEmbedding("dog")]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(0, multiVectorEmbeddingQuery.Count);
         }
 
@@ -93,15 +93,15 @@ public class MultiVectorSearchClientAPI(ITestOutputHelper output) : RavenTestBas
         using (var session = store.OpenSession())
         {
             var multiVectorEmbeddingQuery = session.Query<Dto, VectorStaticIndex>()
-                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbeddings([GetEmbedding("italian food"), GetEmbedding("vehicle")]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbeddings([GetEmbedding("italian food"), GetEmbedding("vehicle")]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(2, multiVectorEmbeddingQuery.Count);
 
             multiVectorEmbeddingQuery = session.Query<Dto, VectorStaticIndex>()
-                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbeddings([GetEmbedding("italian food"), GetEmbedding("dog")]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbeddings([GetEmbedding("italian food"), GetEmbedding("dog")]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(1, multiVectorEmbeddingQuery.Count);
 
             multiVectorEmbeddingQuery = session.Query<Dto, VectorStaticIndex>()
-                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbeddings([GetEmbedding("cat"), GetEmbedding("dog")]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbeddings([GetEmbedding("cat"), GetEmbedding("dog")]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(0, multiVectorEmbeddingQuery.Count);
         }
 
@@ -128,15 +128,15 @@ public class MultiVectorSearchClientAPI(ITestOutputHelper output) : RavenTestBas
             session.SaveChanges();
 
             var multiVectorEmbeddingQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbedding([GetEmbedding("italian food"), GetEmbedding("vehicle")]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbedding([GetEmbedding("italian food"), GetEmbedding("vehicle")]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(2, multiVectorEmbeddingQuery.Count);
 
             multiVectorEmbeddingQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbedding([GetEmbedding("italian food"), GetEmbedding("dog")]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbedding([GetEmbedding("italian food"), GetEmbedding("dog")]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(1, multiVectorEmbeddingQuery.Count);
 
             multiVectorEmbeddingQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbedding([GetEmbedding("cat"), GetEmbedding("dog")]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbedding([GetEmbedding("cat"), GetEmbedding("dog")]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(0, multiVectorEmbeddingQuery.Count);
         }
 
@@ -146,15 +146,15 @@ public class MultiVectorSearchClientAPI(ITestOutputHelper output) : RavenTestBas
         using (var session = store.OpenSession())
         {
             var multiVectorEmbeddingQuery = session.Query<Dto, VectorStaticIndex>()
-                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbedding([GetEmbedding("italian food"), GetEmbedding("vehicle")]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbedding([GetEmbedding("italian food"), GetEmbedding("vehicle")]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(2, multiVectorEmbeddingQuery.Count);
 
             multiVectorEmbeddingQuery = session.Query<Dto, VectorStaticIndex>()
-                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbedding([GetEmbedding("italian food"), GetEmbedding("dog")]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbedding([GetEmbedding("italian food"), GetEmbedding("dog")]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(1, multiVectorEmbeddingQuery.Count);
 
             multiVectorEmbeddingQuery = session.Query<Dto, VectorStaticIndex>()
-                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbedding([GetEmbedding("cat"), GetEmbedding("dog")]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByEmbedding([GetEmbedding("cat"), GetEmbedding("dog")]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(0, multiVectorEmbeddingQuery.Count);
         }
 
@@ -181,15 +181,15 @@ public class MultiVectorSearchClientAPI(ITestOutputHelper output) : RavenTestBas
             session.SaveChanges();
 
             var multiVectorEmbeddingQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByBase64([GetEmbedding("italian food"), GetEmbedding("vehicle")]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByBase64([GetEmbedding("italian food"), GetEmbedding("vehicle")]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(2, multiVectorEmbeddingQuery.Count);
 
             multiVectorEmbeddingQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByBase64([GetEmbedding("italian food"), GetEmbedding("dog")]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByBase64([GetEmbedding("italian food"), GetEmbedding("dog")]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(1, multiVectorEmbeddingQuery.Count);
 
             multiVectorEmbeddingQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
-                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByBase64([GetEmbedding("cat"), GetEmbedding("dog")]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByBase64([GetEmbedding("cat"), GetEmbedding("dog")]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(0, multiVectorEmbeddingQuery.Count);
         }
 
@@ -199,15 +199,15 @@ public class MultiVectorSearchClientAPI(ITestOutputHelper output) : RavenTestBas
         using (var session = store.OpenSession())
         {
             var multiVectorEmbeddingQuery = session.Query<Dto, VectorStaticIndex>()
-                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByBase64([GetEmbedding("italian food"), GetEmbedding("vehicle")]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByBase64([GetEmbedding("italian food"), GetEmbedding("vehicle")]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(2, multiVectorEmbeddingQuery.Count);
 
             multiVectorEmbeddingQuery = session.Query<Dto, VectorStaticIndex>()
-                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByBase64([GetEmbedding("italian food"), GetEmbedding("dog")]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByBase64([GetEmbedding("italian food"), GetEmbedding("dog")]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(1, multiVectorEmbeddingQuery.Count);
 
             multiVectorEmbeddingQuery = session.Query<Dto, VectorStaticIndex>()
-                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByBase64([GetEmbedding("cat"), GetEmbedding("dog")]), minimumSimilarity: 0.75f).ToList();
+                .VectorSearch(f => f.WithEmbedding(s => s.Vector), v => v.ByBase64([GetEmbedding("cat"), GetEmbedding("dog")]), minimumSimilarity: 0.8f).ToList();
             Assert.Equal(0, multiVectorEmbeddingQuery.Count);
         }
 

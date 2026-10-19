@@ -1,7 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
 import abstractNotification = require("common/notifications/models/abstractNotification");
-import database = require("models/resources/database");
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
 
@@ -24,8 +23,8 @@ class attachmentUpload extends abstractNotification {
     
     static currentUploadId = 1;
 
-    constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.Notification, documentId: string, fileName: string) {
-        super(db, dto);
+    constructor(databaseName: string, dto: Raven.Server.NotificationCenter.Notifications.Notification, documentId: string, fileName: string) {
+        super(databaseName, dto);
         
         this.requiresRemoteDismiss(false);
 
@@ -56,11 +55,11 @@ class attachmentUpload extends abstractNotification {
         }
     }
     
-    static forFile(db: database, documentId: string, fileName: string) {
-        return new attachmentUpload(db, {
+    static forFile(databaseName: string, documentId: string, fileName: string) {
+        return new attachmentUpload(databaseName, {
             Type: "AttachmentUpload",
             CreatedAt: null, // will be assigned later
-            Database: db.name,
+            Database: databaseName,
             Message: "Uploading '" + fileName + "' for document '" + documentId + "'",
             Title: "Attachment upload",
             Severity: "None",

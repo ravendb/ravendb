@@ -12,6 +12,10 @@ export type MockedValue<T> = ((defaultValue: T) => void) | T;
 export abstract class AutoMockService<T extends object> {
     protected mocks = {} as ServiceMocks<T>;
 
+    getMock<K extends keyof T>(method: K): ServiceMocks<T>[K] {
+        return this.mocks[method];
+    }
+
     protected constructor(serviceToMock: T) {
         const methods = AutoMockService.getMethods(serviceToMock);
         methods.forEach((method) => {

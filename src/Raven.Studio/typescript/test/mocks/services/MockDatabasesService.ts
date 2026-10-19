@@ -198,6 +198,10 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         );
     }
 
+    withRevisionsIds(dto?: MockedValue<{ Results: { Id: string }[] }>) {
+        return this.mockResolvedValue(this.mocks.getRevisionsIds, dto, { Results: [] });
+    }
+
     withIdentities(dto?: MockedValue<Record<string, number>>) {
         return this.mockResolvedValue(this.mocks.getIdentities, dto, DatabasesStubs.getIdentities(5));
     }
@@ -259,6 +263,28 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         return this.mockResolvedValue(this.mocks.getRevisionsPreview, dto, DatabasesStubs.revisionsPreview());
     }
 
+    withDocumentsPreview(dto?: MockedValue<pagedResultWithAvailableColumns<document>>) {
+        return this.mockResolvedValue(this.mocks.getDocumentsPreview, dto, DatabasesStubs.documentsPreview());
+    }
+
+    withGeneratedDocumentsPreview(totalCount: number) {
+        this.mocks.getDocumentsPreview.mockImplementation(
+            async (_database, skip, take, collectionName, _previewBindings, _fullBindings, continuationToken) => {
+                const start = continuationToken ? Number(continuationToken) : skip;
+                const count = Math.max(0, Math.min(take, totalCount - start));
+                const next = start + count;
+
+                return {
+                    items: DatabasesStubs.documentsPreviewItems(start, count, collectionName),
+                    totalResultCount: totalCount,
+                    availableColumns: DatabasesStubs.documentsPreviewColumns(),
+                    continuationToken: next < totalCount ? String(next) : null,
+                    resultEtag: "1",
+                };
+            }
+        );
+    }
+
     withDocumentWithMetadata(dto?: MockedValue<any>) {
         return this.mockResolvedValue(this.mocks.getDocumentWithMetadata, dto, new document({ Name: "some-name" }));
     }
@@ -270,6 +296,14 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
             this.mocks.getRemoteAttachmentsConfiguration,
             dto,
             DatabasesStubs.remoteAttachmentsConfiguration()
+        );
+    }
+
+    withGetRemoteAttachmentsDestinations(dto?: MockedValue<RemoteAttachmentsStudioConfiguration>) {
+        return this.mockResolvedValue(
+            this.mocks.getRemoteAttachmentsDestinations,
+            dto,
+            DatabasesStubs.remoteAttachmentsStudioConfiguration()
         );
     }
 

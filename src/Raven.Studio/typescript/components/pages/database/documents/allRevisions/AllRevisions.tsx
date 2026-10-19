@@ -28,6 +28,8 @@ import AllRevisionsAboutView from "components/pages/database/documents/allRevisi
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { FlexGrow } from "components/common/FlexGrow";
 import classNames from "classnames";
+import { Switch } from "components/common/Checkbox";
+import useBoolean from "components/hooks/useBoolean";
 
 type RevisionType = Raven.Server.Documents.Revisions.RevisionsStorage.RevisionType;
 
@@ -42,6 +44,11 @@ export default function AllRevisions() {
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
+    const isSharded = useAppSelector(databaseSelectors.activeDatabase)?.isSharded;
+
+    const { value: isPaginated, setValue: setIsPaginated, toggle: toggleIsPaginated } = useBoolean(false);
+    const isSmallSample = allRevisionsUtils.isSmallSample(type.value, collection.value);
+    const isPaginationAvailable = !isSharded && !isSmallSample;
 
     // Reset selected rows when filters change
     useEffect(() => {
@@ -112,7 +119,7 @@ export default function AllRevisions() {
                         <AllRevisionsAboutView />
                     </HStack>
                 )}
-                <HStack gap={2} className={classNames({ "my-3": hasDatabaseAdminAccess })}>
+                <HStack gap={2} className={classNames("align-items-end", { "my-3": hasDatabaseAdminAccess })}>
                     <div>
                         <FormLabel className="small-label">Filter by collection</FormLabel>
                         <SelectCreatable
@@ -134,15 +141,22 @@ export default function AllRevisions() {
                             setSelectedItem={type.setValue}
                         />
                     </div>
-                    {!hasDatabaseAdminAccess && (
-                        <>
-                            <FlexGrow />
-                            <AllRevisionsAboutView />
-                        </>
+                    <FlexGrow />
+                    {isPaginationAvailable && (
+                        <Switch
+                            selected={isPaginated}
+                            toggleSelection={toggleIsPaginated}
+                            color="primary"
+                            title="Show the revisions page by page instead of scrolling"
+                            className="mb-1"
+                        >
+                            Pagination
+                        </Switch>
                     )}
+                    {!hasDatabaseAdminAccess && <AllRevisionsAboutView />}
                 </HStack>
             </VStack>
-            {type.value !== "All" && collection.value && (
+            {isSmallSample && (
                 <RichAlert variant="warning">
                     The table displays only part of the results. When both a collection and a type other than
                     &quot;All&quot; are selected, only the first {allRevisionsUtils.smallSampleSize} results are
@@ -160,6 +174,8 @@ export default function AllRevisions() {
                         fetcherRef={fetcherRef}
                         selectedRows={selectedRows}
                         setSelectedRows={setSelectedRows}
+                        isPaginated={isPaginated}
+                        onIsPaginatedChange={setIsPaginated}
                     />
                 )}
             />

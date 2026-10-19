@@ -1,0 +1,31 @@
+@use "Content/scss/colors";
+
+// The filter badge is a bootstrap split button (two .btn segments joined in a .btn-group), but wears
+// the neutral fill/border of the original chip design rather than a primary-coloured variant. The
+// compound selector (.time-series-filter-badge.btn-group .btn) keeps enough specificity to override
+// the base .btn colours.
+.time-series-filter-badge.btn-group .btn {
+    background-color: colors.$panel-bg-2-var;
+    // Borderless: the shared divider between the two split segments looked awkward. Kept as a
+    // transparent 1px border (not removed) so the badge stays the same height as the bordered
+    // toolbar buttons next to it.
+    border-color: transparent;
+    color: colors.$text-color-var;
+
+    &:hover,
+    &:focus,
+    &:active {
+        background-color: colors.$secondary-var;
+        border-color: transparent;
+        color: colors.$text-color-var;
+    }
+
+    // The clear (X) segment reads as a subtler affordance until hovered.
+    &.time-series-filter-badge__clear {
+        color: colors.$text-muted-var;
+
+        &:hover {
+            color: colors.$text-color-var;
+        }
+    }
+}

@@ -89,14 +89,14 @@ export function EmbedLinkApiDocs({ slug, channelId, parameters }: EmbedLinkApiDo
     const [hostStack, onHostStackChange] = useStoredTabValue(HOST_STACK_STORAGE_KEY, HOST_STACK_OPTIONS);
 
     const fields = [
-        { name: "channelId", description: "The web widget channel the link is minted for (already filled in)." },
+        { name: "channelId", description: "The embedded chat channel the link is minted for (already filled in)." },
         {
             name: "ttlSeconds",
             description: `Link lifetime in seconds, ${MIN_TTL_SECONDS}–${MAX_TTL_SECONDS.toLocaleString()} (default ${DEFAULT_TTL_SECONDS.toLocaleString()}).`,
         },
         {
             name: "maxInvocations",
-            description: `Chats allowed before the link stops, ${MIN_INVOCATIONS}–${MAX_INVOCATIONS.toLocaleString()} (default ${DEFAULT_MAX_INVOCATIONS}).`,
+            description: `Prompts accepted before the link stops, ${MIN_INVOCATIONS}–${MAX_INVOCATIONS.toLocaleString()} (default ${DEFAULT_MAX_INVOCATIONS}).`,
         },
         ...(hasParameters
             ? [

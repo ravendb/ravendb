@@ -233,7 +233,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
                     return;
 
                 var differences = ConnectionString.Compare(oldAiConnectionString);
-                if (differences.HasFlag(AiSettingsCompareDifferences.RequiresEmbeddingsRegeneration) == false)
+                if ((differences & AiSettingsCompareDifferences.RequiresEmbeddingsRegeneration) == AiSettingsCompareDifferences.None)
                     return;
 
                 var embeddingTasks = embeddingsUsingConnection.Select(x => x.Name);

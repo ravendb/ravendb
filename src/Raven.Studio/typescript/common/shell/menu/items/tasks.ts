@@ -5,6 +5,8 @@ import BackupsPage = require("components/pages/database/tasks/backups/BackupsPag
 import CreateSampleData = require("components/pages/database/tasks/createSampleData/CreateSampleData");
 import EditCdcSinkTask = require("components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/EditCdcSinkTask");
 import EditGenAiTask = require("components/pages/database/tasks/ongoingTasks/editTasks/editGenAiTask/EditGenAiTask");
+import ImportDataOptions = require("components/pages/database/tasks/importData/ImportDataOptions");
+import ImportDatabaseFromFile = require("components/pages/database/tasks/importData/importFromFile/ImportDatabaseFromFile");
 import OngoingTasksPage = require("components/pages/database/tasks/ongoingTasks/OngoingTasksPage");
 import AddNewOngoingTask = require("components/pages/database/tasks/ongoingTasks/AddNewOngoingTask");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
@@ -87,24 +89,40 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             itemRouteToHighlight: 'databases/tasks/addNewOngoingTasks',
         }),
         new leafMenuItem({
-            route: 'databases/tasks/import*details',
-            moduleId: require('viewmodels/database/tasks/importParent'),
+            route: 'databases/tasks/importOptions',
+            moduleId: reactUtils.bridgeToReact(ImportDataOptions.default, "nonShardedView"),
+            shardingMode: "allShards",
             title: 'Import Data',
             nav: true,
             css: 'icon-import-database',
-            dynamicHash: appUrls.importDatabaseFromFileUrl,
+            dynamicHash: appUrls.importDataOptionsUrl,
             requiredAccess: "DatabaseReadWrite",
         }),
         new leafMenuItem({
             route: 'databases/tasks/import/file',
-            moduleId: require('viewmodels/database/tasks/importDatabaseFromFile'),
+            moduleId: reactUtils.bridgeToReact(ImportDatabaseFromFile.default, "nonShardedView"),
+            shardingMode: "allShards",
             title: 'Import Data',
             nav: false,
             css: 'icon-import-database',
             dynamicHash: appUrls.importDatabaseFromFileUrl,
-            itemRouteToHighlight: 'databases/tasks/import*details',
+            itemRouteToHighlight: 'databases/tasks/importOptions',
+            requiredAccess: "DatabaseReadWrite",
             search: {
                 overrideTitle: "Import Database From File",
+            },
+        }),
+        new leafMenuItem({
+            route: 'databases/tasks/import*details',
+            moduleId: require('viewmodels/database/tasks/importParent'),
+            title: 'Import Data',
+            nav: false,
+            css: 'icon-import-database',
+            dynamicHash: appUrls.importDatabaseFromFileUrl,
+            itemRouteToHighlight: 'databases/tasks/importOptions',
+            requiredAccess: "DatabaseReadWrite",
+            search: {
+                isExcluded: true,
             },
         }),
         new leafMenuItem({
@@ -114,7 +132,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             nav: false,
             css: 'icon-import-database',
             dynamicHash: appUrls.migrateRavenDbDatabaseUrl,
-            itemRouteToHighlight: 'databases/tasks/import*details',
+            itemRouteToHighlight: 'databases/tasks/importOptions',
             search: {
                 overrideTitle: "Import Database From RavenDB Server",
             },
@@ -126,7 +144,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             nav: false,
             css: 'icon-import-database',
             dynamicHash: appUrls.importCollectionFromCsv,
-            itemRouteToHighlight: 'databases/tasks/import*details',
+            itemRouteToHighlight: 'databases/tasks/importOptions',
             search: {
                 overrideTitle: "Import documents from a CSV",
             },
@@ -138,7 +156,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             nav: false,
             css: 'icon-import-database',
             dynamicHash: appUrls.importDatabaseFromSql,
-            itemRouteToHighlight: 'databases/tasks/import*details',
+            itemRouteToHighlight: 'databases/tasks/importOptions',
             search: {
                 overrideTitle: "Import documents from a SQL",
             },
@@ -148,9 +166,9 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             moduleId: require('viewmodels/database/tasks/migrateDatabase'),
             title: 'Import Data',
             nav: false,
-            css: 'icon-export-database',
-            dynamicHash: appUrls.exportDatabaseUrl,
-            itemRouteToHighlight: 'databases/tasks/export*details',
+            css: 'icon-import-database',
+            dynamicHash: appUrls.migrateDatabaseUrl,
+            itemRouteToHighlight: 'databases/tasks/importOptions',
             search: {
                 overrideTitle: "Migrate data from another database",
             },

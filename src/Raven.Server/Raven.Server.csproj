@@ -3,7 +3,7 @@
     <Description>Raven.Server is the database server for RavenDB</Description>
     <Authors>RavenDB</Authors>
     <TargetFramework>net10.0</TargetFramework>
-    <RuntimeFrameworkVersion>10.0.12</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>10.0.13</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Server</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -22,6 +22,11 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsWindowsArm64)' == 'true'">
+    <None Include="..\..\libs\libzstd\libzstd.win.arm64.dll" Link="libzstd.win.arm64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
   <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsWindows32)' == 'true'">
     <None Include="..\..\libs\libzstd\libzstd.win.x86.dll" Link="libzstd.win.x86.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -34,9 +39,6 @@
   </ItemGroup>
   <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsLinuxArm64)' == 'true'">
     <None Include="..\..\libs\libzstd\libzstd.linux.arm.64.so" Link="libzstd.linux.arm.64.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libpgquery\libpg_query.linux.arm64.so" Link="libpg_query.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

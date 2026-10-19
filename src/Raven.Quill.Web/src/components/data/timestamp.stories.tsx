@@ -11,14 +11,14 @@ import { Timestamp } from "./timestamp";
 const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * MS_IN.minute).toISOString();
 
 const SAMPLE_CHANNELS = [
-    { name: "Support widget", type: "Web widget", createdAt: minutesAgo(0.5) },
-    { name: "Sales chat", type: "Web widget", createdAt: minutesAgo(19) },
+    { name: "Support widget", type: "Embedded chat", createdAt: minutesAgo(0.5) },
+    { name: "Sales chat", type: "Embedded chat", createdAt: minutesAgo(19) },
     { name: "#help-desk", type: "Slack", createdAt: minutesAgo(3 * 60) },
     { name: "#general", type: "Discord", createdAt: minutesAgo(17 * 60) },
     { name: "Order updates", type: "Telegram", createdAt: minutesAgo(4 * 24 * 60) },
     { name: "Returns bot", type: "Slack", createdAt: minutesAgo(3 * 7 * 24 * 60) },
-    { name: "Legacy embed", type: "Web widget", createdAt: minutesAgo(8 * 30 * 24 * 60) },
-    { name: "Pilot widget", type: "Web widget", createdAt: minutesAgo(2 * 365 * 24 * 60) },
+    { name: "Legacy embed", type: "Embedded chat", createdAt: minutesAgo(8 * 30 * 24 * 60) },
+    { name: "Pilot widget", type: "Embedded chat", createdAt: minutesAgo(2 * 365 * 24 * 60) },
 ];
 
 // Mirrors the channel cards' stat box, the tightest place a timestamp has to fit.

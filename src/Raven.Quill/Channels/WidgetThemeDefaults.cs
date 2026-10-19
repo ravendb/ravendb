@@ -1,6 +1,6 @@
 namespace Raven.Quill.Channels;
 
-/// The app-level default theme, applied to every web-widget channel that makes no choice of its own.
+/// The app-level default theme, applied to every embedded chat channel that makes no choice of its own.
 internal sealed class WidgetThemeDefaults
 {
     internal const string DocumentId = "widget-theme-defaults/config";
