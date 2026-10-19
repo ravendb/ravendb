@@ -85,7 +85,7 @@ namespace Raven.Server.ServerWide.Commands
             if (string.IsNullOrWhiteSpace(identifier) == false)
                 return identifier;
 
-            return AiTaskIdentifierHelper.GenerateIdentifier(ServerWideConnectionString.GetNameFromDatabaseRecordConnectionStringName(name));
+            return AiTaskIdentifierHelper.TryGenerateIdentifier(ServerWideConnectionString.GetNameFromDatabaseRecordConnectionStringName(name), out var generated) ? generated : null;
         }
 
         internal static void EnsureAiIdentifier(ServerWideConnectionString connectionString)
