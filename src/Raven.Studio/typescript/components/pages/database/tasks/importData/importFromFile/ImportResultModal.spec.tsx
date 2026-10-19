@@ -84,6 +84,21 @@ describe("ImportResultModal", () => {
         expect(screen.queryByText("Not processed")).not.toBeInTheDocument();
     });
 
+    it("shows error messages after the progress log when the import fails", () => {
+        const { screen } = rtlRender(
+            <ImportResultModal
+                progress={smugglerResult({ Messages: ["Reading documents"] })}
+                errorMessages={["Import failed"]}
+                status="Faulted"
+                startTime={new Date()}
+                endTime={new Date()}
+                onClose={jest.fn()}
+            />
+        );
+
+        expect(screen.getByRole("log")).toHaveTextContent(/Reading documents\s*Import failed/);
+    });
+
     it("keeps the log pinned to the bottom until the user scrolls up", async () => {
         const { screen, fireClick, rerender } = rtlRender(modal(smugglerResult({ Messages: ["first"] })));
         await fireClick(screen.getByRole("button", { name: /Show details/ }));

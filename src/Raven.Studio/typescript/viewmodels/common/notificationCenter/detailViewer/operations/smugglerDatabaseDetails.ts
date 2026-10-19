@@ -27,6 +27,8 @@ import ShardNodeSmugglerResult = Raven.Client.Documents.Smuggler.ShardNodeSmuggl
 import ShardNodeBackupResult = Raven.Client.Documents.Operations.Backups.ShardNodeBackupResult;
 import BackupResult = Raven.Client.Documents.Operations.Backups.BackupResult;
 import timeAwareEWMA = require("viewmodels/common/timeAwareEWMA");
+import ImportResultModal = require("components/pages/database/tasks/importData/importFromFile/ImportResultModal");
+import OperationExceptionResult = Raven.Client.Documents.Operations.OperationExceptionResult;
 
 type smugglerListItemStatus = "processed" | "skipped" | "processing" | "pending" | "processedWithErrors";
 
@@ -121,7 +123,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         return type.includes("ShardedBackupResult");
     }
 
-    private mergeShardedResult(result: ShardedSmugglerResult | ShardedBackupResult): SmugglerProgressBase {
+    private static mergeShardedResult(result: ShardedSmugglerResult | ShardedBackupResult): SmugglerProgressBase {
         const mergeCounts = (items: Counts[]): Counts => {
             return {
                 ReadCount: items.reduce((p, c) => p + c.ReadCount, 0),
@@ -239,7 +241,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             }
 
             if (smugglerDatabaseDetails.isShardedResult(status)) {
-                status = this.mergeShardedResult(status);
+                status = smugglerDatabaseDetails.mergeShardedResult(status);
             }
 
             const result: smugglerListItem[] = [];
@@ -597,7 +599,49 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
     }
 
     static showDetailsFor(op: operation, center: notificationCenter) {
+        if (op.taskType() === "DatabaseImport") {
+            center.importDetailsView(smugglerDatabaseDetails.importResultModalView(op, () => center.importDetailsView(null)));
+            return;
+        }
+
         return app.showBootstrapDialog(new smugglerDatabaseDetails(op, center));
+    }
+
+    static importResultModalView(op: operation, onClose: () => void): ReactInKnockout<typeof ImportResultModal.default> {
+        let lastProgress: ImportResultModal.ImportProgress = null;
+
+        return ko.pureComputed(() => {
+            const status = op.status();
+            const current = (status === "Completed" ? op.result() : op.progress()) as SmugglerResult | ShardedSmugglerResult;
+            if (current) {
+                lastProgress = smugglerDatabaseDetails.toImportProgress(current);
+            }
+
+            const exceptionResult = status === "Faulted" ? op.result() as OperationExceptionResult : null;
+
+            return {
+                component: ImportResultModal.default,
+                props: {
+                    progress: lastProgress,
+                    errorMessages: exceptionResult ? [exceptionResult.Message, exceptionResult.Error] : [],
+                    status,
+                    startTime: (op.startTime() ?? op.createdAt()).toDate(),
+                    endTime: op.endTime()?.toDate() ?? null,
+                    onClose,
+                },
+            };
+        });
+    }
+
+    private static toImportProgress(value: SmugglerResult | ShardedSmugglerResult): ImportResultModal.ImportProgress {
+        if (smugglerDatabaseDetails.isShardedResult(value)) {
+            return {
+                ...smugglerDatabaseDetails.mergeShardedResult(value),
+                Messages: value.Results.flatMap(x => x.Result.Messages),
+            };
+        }
+
+        return value;
     }
 
     static merge(existing: operation, incoming: OperationChanged): boolean {

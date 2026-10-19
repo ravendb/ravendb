@@ -18,6 +18,8 @@ type SmugglerResult = Raven.Client.Documents.Smuggler.SmugglerResult;
 type Counts = Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts;
 type OperationStatus = Raven.Client.Documents.Operations.OperationStatus;
 
+export type ImportProgress = Raven.Client.Documents.Smuggler.SmugglerProgressBase & Pick<SmugglerResult, "Messages">;
+
 interface ImportResultRow {
     name: string;
     isNested: boolean;
@@ -26,21 +28,29 @@ interface ImportResultRow {
 }
 
 interface ImportResultModalProps {
-    progress: SmugglerResult | null;
+    progress: ImportProgress | null;
+    errorMessages?: string[];
     status: OperationStatus;
     startTime: Date;
     endTime: Date | null;
     onClose: () => void;
 }
 
-export default function ImportResultModal({ progress, status, startTime, endTime, onClose }: ImportResultModalProps) {
+export default function ImportResultModal({
+    progress,
+    errorMessages = [],
+    status,
+    startTime,
+    endTime,
+    onClose,
+}: ImportResultModalProps) {
     const rows = buildRows(progress);
     const duration = genUtils.formatAsTimeSpan(moment(endTime ?? undefined).diff(moment(startTime)));
 
     const { value: isDetailsVisible, setTrue: showDetails, toggle: toggleDetails } = useBoolean(false);
     const { value: isLogPinnedToBottom, setValue: setIsLogPinnedToBottom } = useBoolean(true);
     const logRef = useRef<HTMLDivElement>(null);
-    const messages = progress?.Messages ?? [];
+    const messages = [...(progress?.Messages ?? []), ...errorMessages];
 
     useEffect(() => {
         if (status === "Faulted") {
@@ -168,7 +178,7 @@ function ImportResultTableRow({ row, operationStatus }: { row: ImportResultRow; 
     );
 }
 
-function buildRows(progress: SmugglerResult): ImportResultRow[] {
+function buildRows(progress: ImportProgress | null): ImportResultRow[] {
     if (!progress) {
         return [];
     }
