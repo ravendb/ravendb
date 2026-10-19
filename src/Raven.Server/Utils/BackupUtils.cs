@@ -606,32 +606,35 @@ public static class BackupUtils
     public static void SaveBackupStatus(PeriodicBackupStatus status, string databaseName, ServerStore serverStore, Logger logger,
         BackupResult backupResult = default, Action<IOperationProgress> onProgress = default, OperationCancelToken operationCancelToken = default)
     {
+        AsyncHelpers.RunSync(() => SaveBackupStatusAsync(status, databaseName, serverStore, logger, backupResult, onProgress, operationCancelToken));
+    }
+
+    public static async Task SaveBackupStatusAsync(PeriodicBackupStatus status, string databaseName, ServerStore serverStore, Logger logger,
+        BackupResult backupResult = default, Action<IOperationProgress> onProgress = default, OperationCancelToken operationCancelToken = default)
+    {
         try
         {
             var raftId = RaftIdGenerator.NewId();
-            
-            AsyncHelpers.RunSync(async () =>
-            {
-                var index = await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
-                    {
-                        // update backup status both locally and in cluster
-                        var command = new UpdatePeriodicBackupStatusCommand(databaseName, raftId) { PeriodicBackupStatus = status };
-                        var result = await serverStore.SendToLeaderAsync(command);
-                        return result.Index;
-                    },
-                    infoMessage: "Saving the backup status in the cluster",
-                    errorMessage: "Failed to save the backup status in the cluster",
-                    backupResult, onProgress, operationCancelToken);
 
-                await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
-                    {
-                        await serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
-                        return default;
-                    },
-                    infoMessage: "Verifying that the backup status was successfully saved in the cluster",
-                    errorMessage: "Failed to verify that the backup status was successfully saved in the cluster",
-                    backupResult, onProgress, operationCancelToken);
-            });
+            var index = await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
+                {
+                    // update backup status both locally and in cluster
+                    var command = new UpdatePeriodicBackupStatusCommand(databaseName, raftId) { PeriodicBackupStatus = status };
+                    var result = await serverStore.SendToLeaderAsync(command);
+                    return result.Index;
+                },
+                infoMessage: "Saving the backup status in the cluster",
+                errorMessage: "Failed to save the backup status in the cluster",
+                backupResult, onProgress, operationCancelToken);
+
+            await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
+                {
+                    await serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
+                    return default;
+                },
+                infoMessage: "Verifying that the backup status was successfully saved in the cluster",
+                errorMessage: "Failed to verify that the backup status was successfully saved in the cluster",
+                backupResult, onProgress, operationCancelToken);
 
             if (logger.IsInfoEnabled)
                 logger.Info($"Periodic backup status with task id {status.TaskId} was updated");
