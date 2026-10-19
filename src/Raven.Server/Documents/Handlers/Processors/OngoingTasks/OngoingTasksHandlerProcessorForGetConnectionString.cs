@@ -1,11 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
-using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -69,7 +68,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
         private static void AssignUsedBy(GetConnectionStringsResult result, RawDatabaseRecord rawRecord)
         {
-            var usageMap = BuildUsageMap(rawRecord.MaterializedRecord);
+            var usageMap = BuildUsageMap(rawRecord);
 
             AssignToDict(result.RavenConnectionStrings);
             AssignToDict(result.SqlConnectionStrings);
@@ -91,7 +90,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             }
         }
 
-        private static Dictionary<string, List<ConnectionStringUsage>> BuildUsageMap(DatabaseRecord record)
+        private static Dictionary<string, List<ConnectionStringUsage>> BuildUsageMap(RawDatabaseRecord record)
         {
             var map = new Dictionary<string, List<ConnectionStringUsage>>(StringComparer.OrdinalIgnoreCase);
 
