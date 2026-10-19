@@ -206,7 +206,7 @@ namespace Raven.Server.Utils
                 if (Logger.IsInfoEnabled)
                 {
                     Logger.Info(_systemShutdown
-                        ? $"Stopping RavenDB Windows Service: {ServiceName} due to system shutdown."
+                        ? $"Stopping RavenDB Windows Service: {ServiceName} due to system shutdown (preshutdown notification)."
                         : $"Stopping RavenDB Windows Service: {ServiceName}.");
 
                     if (_systemShutdown == false)
@@ -237,7 +237,7 @@ namespace Raven.Server.Utils
             // stoppable service and reports it as stopped once this returns (which lets the process exit), so the server needs to be
             // disposed here as well, but there are only a few seconds (WaitToKillServiceTimeout) for that and no way to ask for more
             if (Logger.IsInfoEnabled)
-                Logger.Info($"Stopping RavenDB Windows Service: {ServiceName} due to system shutdown.");
+                Logger.Info($"Stopping RavenDB Windows Service: {ServiceName} due to system shutdown (shutdown notification).");
 
             StopServer();
         }
@@ -249,6 +249,9 @@ namespace Raven.Server.Utils
                 _stopped = true;
                 _ravenServer.Dispose();
             }
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"RavenDB Windows Service: {ServiceName} stopped.");
         }
 
         // keeps telling the SCM that a pending start or stop is progressing, so it does not consider the service unresponsive
