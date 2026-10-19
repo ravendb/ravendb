@@ -252,15 +252,20 @@ public sealed partial class ClusterStateMachine
         }
     }
 
-    private static void AssertAiIdentifierNotInUse(Dictionary<string, AiConnectionString> aiConnectionStrings, string connectionStringName, string identifier, string databaseName)
+    private static void AssertNewDatabaseAiIdentifierNotInUse(Dictionary<string, AiConnectionString> aiConnectionStrings, string serverWideName, string identifier, string databaseName)
     {
+        var connectionStringName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(serverWideName);
+
         foreach (var (name, existing) in aiConnectionStrings)
         {
             if (name == connectionStringName)
                 continue;
 
             if (existing != null && PutServerWideConnectionStringCommand.GetEffectiveAiIdentifier(existing.Identifier, name) == identifier)
-                ThrowAiIdentifierInUse(connectionStringName, identifier, name, databaseName);
+                throw new RachisApplyException(
+                    $"Can't create database '{databaseName}'. " +
+                    $"Its AI connection string '{name}' uses identifier '{identifier}', which is also used by server-wide connection string '{serverWideName}'. " +
+                    $"Exclude the database from '{serverWideName}' or change one of the identifiers.");
         }
     }
 
@@ -373,7 +378,7 @@ public sealed partial class ClusterStateMachine
                         break;
                     case ConnectionStringType.Ai:
                         var aiConnectionString = (AiConnectionString)serverWideCS.ConnectionString;
-                        AssertAiIdentifierNotInUse(addDatabaseCommand.Record.AiConnectionStrings, databaseRecordCSName, aiConnectionString.Identifier, addDatabaseCommand.Name);
+                        AssertNewDatabaseAiIdentifierNotInUse(addDatabaseCommand.Record.AiConnectionStrings, serverWideCS.Name, aiConnectionString.Identifier, addDatabaseCommand.Name);
                         addDatabaseCommand.Record.AiConnectionStrings[databaseRecordCSName] = aiConnectionString;
                         break;
                 }

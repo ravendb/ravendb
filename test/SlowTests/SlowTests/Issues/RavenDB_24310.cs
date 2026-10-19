@@ -917,7 +917,8 @@ public class RavenDB_24310 : RavenTestBase
 
             var ex = await Assert.ThrowsAsync<RavenException>(async () =>
                 await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(newRecord)));
-            Assert.Contains($"The identifier '{identifier}' is already used by connection string 'DbLevelAiCS' in database '{newDbName}'", ex.Message);
+            Assert.Contains($"Can't create database '{newDbName}'. Its AI connection string 'DbLevelAiCS' uses identifier '{identifier}', which is also used by server-wide connection string 'MyAiCS'", ex.Message);
+            Assert.Contains("Exclude the database from 'MyAiCS' or change one of the identifiers", ex.Message);
         }
     }
 
@@ -939,7 +940,7 @@ public class RavenDB_24310 : RavenTestBase
 
             var ex = await Assert.ThrowsAsync<RavenException>(async () =>
                 await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(newRecord)));
-            Assert.Contains($"The identifier '{identifier}' is already used by connection string '{dbLevelName}' in database '{newDbName}'", ex.Message);
+            Assert.Contains($"Can't create database '{newDbName}'. Its AI connection string '{dbLevelName}' uses identifier '{identifier}', which is also used by server-wide connection string 'MyAiCS'", ex.Message);
         }
     }
 
