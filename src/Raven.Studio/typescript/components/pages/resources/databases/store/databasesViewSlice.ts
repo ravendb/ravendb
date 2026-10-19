@@ -228,9 +228,22 @@ export const databasesViewSlice = createSlice({
     },
 });
 
-const fetchDatabases = createAsyncThunk(sliceName + "/fetchDatabases", async (nodeTag: string) => {
-    return await services.databasesService.getDatabasesState(nodeTag);
-});
+const nodeTagsBeingFetched = new Set<string>();
+
+const fetchDatabases = createAsyncThunk(
+    sliceName + "/fetchDatabases",
+    async (nodeTag: string) => {
+        nodeTagsBeingFetched.add(nodeTag);
+        try {
+            return await services.databasesService.getDatabasesState(nodeTag);
+        } finally {
+            nodeTagsBeingFetched.delete(nodeTag);
+        }
+    },
+    {
+        condition: (nodeTag) => !nodeTagsBeingFetched.has(nodeTag),
+    }
+);
 
 const fetchDatabase = createAsyncThunk(
     sliceName + "/fetchDatabase",
