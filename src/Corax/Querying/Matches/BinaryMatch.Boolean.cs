@@ -199,12 +199,10 @@ namespace Corax.Querying.Matches
                 var innerIsSingleBatch = inner.Confidence == QueryCountConfidence.High &&
                                          inner.Count < Querying.IndexSearcher.BitmapAndFillSingleBatchThreshold;
 
-                // A scored AND needs the bitmaps to score only the matches it returned
                 viaBitmap = searcher.BitmapMemoryFits(bitmaps: 2) &&
-                            (inner.IsBoosting || outer.IsBoosting ||
-                             ((outerIsAndNot && innerIsSingleBatch) == false &&
-                              (searcher.BitmapSideQualifies(inner.Count, inner.Confidence) ||
-                               searcher.BitmapSideQualifies(outer.Count, outer.Confidence))));
+                            (outerIsAndNot && innerIsSingleBatch) == false &&
+                            (searcher.BitmapSideQualifies(inner.Count, inner.Confidence) ||
+                             searcher.BitmapSideQualifies(outer.Count, outer.Confidence));
             }
 
             var duplicates = viaBitmap ? DuplicatesOccurrence.NotPossible : DuplicatesOccurrence.Possible;
