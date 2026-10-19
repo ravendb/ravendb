@@ -283,7 +283,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 {
                     var queryParameters = FilterSupportedGenAiQueryParameters(context, contextObject, queryParameterNames);
                     var agentConfiguration = CreateAgentConfiguration(context, queryParameters);
-                    AssertNoAgentParameterIsAlsoAToolArgument(context, agentConfiguration);
+                    AiAgentHelpers.AssertAgentParametersAreNotToolArguments(context, agentConfiguration);
                     var handler = new GenAiConversationHandler(Database.ServerStore, Database, Configuration)
                     {
                         Authentication = authentication
@@ -350,18 +350,6 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
         AddOrUpdateAiAgentCommand.ValidateConfiguration(context, agentConfiguration);
         return agentConfiguration;
-    }
-
-    private static void AssertNoAgentParameterIsAlsoAToolArgument(JsonOperationContext context, AiAgentConfiguration agentConfiguration)
-    {
-        try
-        {
-            AiAgentHelpers.AssertAgentParametersAreNotToolArguments(context, agentConfiguration);
-        }
-        catch (InvalidOperationException e)
-        {
-            throw new AiAgentParameterCollisionException(e.Message);
-        }
     }
 
     private static BlittableJsonReaderObject FilterSupportedGenAiQueryParameters(JsonOperationContext context, BlittableJsonReaderObject rawContext,
