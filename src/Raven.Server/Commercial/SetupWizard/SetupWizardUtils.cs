@@ -48,7 +48,8 @@ public static class SetupWizardUtils
                     parameters.SetupInfo.NodeSetupInfos[localNodeTag].Port,
                     parameters.SetupInfo.NodeSetupInfos[localNodeTag].TcpPort,
                     out _,
-                    out domainFromCert);
+                    out domainFromCert,
+                    parameters.Progress);
 
                 domain = (parameters.SetupMode == SetupMode.Secured)
                     ? domainFromCert.ToLower()
@@ -80,7 +81,7 @@ public static class SetupWizardUtils
                         parameters.SetupInfo.NodeSetupInfos[node.Key].PublicServerUrl = CertificateUtils.GetServerUrlFromCertificate(serverCert,
                             parameters.SetupInfo, node.Key,
                             node.Value.Port,
-                            node.Value.TcpPort, out _, out _);
+                            node.Value.TcpPort, out _, out _, parameters.Progress);
 
                         if (parameters.AddNodeToCluster != null)
                             await parameters.AddNodeToCluster(node.Key);

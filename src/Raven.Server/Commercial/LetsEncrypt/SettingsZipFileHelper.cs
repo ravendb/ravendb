@@ -173,7 +173,8 @@ public static class SettingsZipFileHelper
 
                     var httpUrl = CertificateUtils.GetServerUrlFromCertificate(parameters.CompleteClusterConfigurationResult.ServerCert, parameters.SetupInfo, node.Key, node.Value.Port, node.Value.TcpPort,
                         out var tcpUrl,
-                        out var _);
+                        out var _,
+                        parameters.Progress);
 
                     if (string.IsNullOrEmpty(node.Value.ExternalIpAddress) == false)
                         currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = node.Value.ExternalIpAddress;
