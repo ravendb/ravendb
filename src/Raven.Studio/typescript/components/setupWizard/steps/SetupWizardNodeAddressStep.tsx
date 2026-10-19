@@ -1541,7 +1541,7 @@ export const nodeEditFormSchema = yup.object({
 
             return true;
         })
-        .test("unique", "DNS name must be unique across nodes", function (value) {
+        .test("unique", "DNS name and HTTPS port must be unique across nodes", function (value) {
             const { securityOption, isWildcardCertificate, nodeAddressStep, currentIndex } = this.options.context as {
                 securityOption: SetupWizardSecurityOption;
                 isWildcardCertificate: boolean;
@@ -1553,9 +1553,14 @@ export const nodeEditFormSchema = yup.object({
                 return true;
             }
 
+            const httpPort = this.parent.httpPort ?? 443;
+
             return (
                 nodeAddressStep.nodes.findIndex(
-                    (node, idx) => idx !== currentIndex && node.dnsName?.toLowerCase() === value.toLowerCase()
+                    (node, idx) =>
+                        idx !== currentIndex &&
+                        node.dnsName?.toLowerCase() === value.toLowerCase() &&
+                        (node.httpPort ?? 443) === httpPort
                 ) === -1
             );
         }),
