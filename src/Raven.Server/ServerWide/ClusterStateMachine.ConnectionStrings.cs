@@ -229,7 +229,7 @@ public sealed partial class ClusterStateMachine
 
         throw new RachisApplyException(
             $"Can't delete server-wide connection string '{connectionStringName}'. " +
-            $"It is used by '{usage.Value.Name}' in database '{databaseName}'");
+            $"It is used by '{usage.Name}' in database '{databaseName}'");
     }
 
     internal IEnumerable<BlittableJsonReaderObject> GetServerWideConnectionStrings(TransactionOperationContext context, ConnectionStringType? type, string name)
