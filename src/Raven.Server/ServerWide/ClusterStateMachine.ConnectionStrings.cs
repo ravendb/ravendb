@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Documents.Operations.AI;
@@ -122,7 +122,7 @@ public sealed partial class ClusterStateMachine
                     if (csPropertyIndex != -1)
                     {
                         // excluding a database must not orphan a task that uses the propagated connection string
-                        AssertServerWideConnectionStringNotInUse(oldDatabaseRecord, databaseRecordCSName, serverWideConnectionString.Type, databaseName);
+                        AssertServerWideConnectionStringNotInUse(context, oldDatabaseRecord, databaseRecordCSName, serverWideConnectionString.Type, databaseName);
 
                         connectionStrings.Modifications ??= new DynamicJsonValue();
                         connectionStrings.Modifications.Removals = new HashSet<int> { csPropertyIndex };
@@ -198,7 +198,7 @@ public sealed partial class ClusterStateMachine
 
                 // check if any ongoing task in this database uses the connection string
                 var databaseName = key.Substring(dbKey.Length);
-                AssertServerWideConnectionStringNotInUse(oldDatabaseRecord, databaseRecordCSName, deleteConfiguration.Type, databaseName);
+                AssertServerWideConnectionStringNotInUse(context, oldDatabaseRecord, databaseRecordCSName, deleteConfiguration.Type, databaseName);
 
                 connectionStrings.Modifications ??= new DynamicJsonValue();
                 connectionStrings.Modifications.Removals = new HashSet<int> { csPropertyIndex };
@@ -221,9 +221,9 @@ public sealed partial class ClusterStateMachine
         ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
     }
 
-    private static void AssertServerWideConnectionStringNotInUse(BlittableJsonReaderObject databaseRecord, string connectionStringName, ConnectionStringType type, string databaseName)
+    private static void AssertServerWideConnectionStringNotInUse(ClusterOperationContext context, BlittableJsonReaderObject databaseRecord, string connectionStringName, ConnectionStringType type, string databaseName)
     {
-        var usage = ConnectionStringConsumers.FindUsage(JsonDeserializationCluster.DatabaseRecord(databaseRecord), type, connectionStringName);
+        var usage = ConnectionStringConsumers.FindUsage(new RawDatabaseRecord(context, databaseRecord), type, connectionStringName);
         if (usage == null)
             return;
 
