@@ -1,6 +1,6 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Exceptions;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.AI;
 using Sparrow.Json;
@@ -47,7 +47,7 @@ public static class AiAgentHelpers
             foreach (var toolArgument in properties.GetPropertyNames())
             {
                 if (scopeParams.Contains(toolArgument))
-                    throw new InvalidOperationException(
+                    throw new AiAgentParameterCollisionException(
                         $"Parameter {toolArgument} is defined on both the agent level and the query level for {tool.Name}");
             }
         }

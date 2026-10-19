@@ -234,7 +234,7 @@ public class RavenDB_27289(ITestOutputHelper output) : RavenTestBase(output)
 
         var agent = CreateAgent(sendToModel: false, parametersSchema: optionalScopingParameter);
 
-        var e = await Assert.ThrowsAsync<RavenException>(
+        var e = await Assert.ThrowsAsync<AiAgentParameterCollisionException>(
             () => store.Maintenance.SendAsync(AddOrUpdateAiAgentOperation.Create(agent, AiAgentBasics.OutputSchema.Instance)));
 
         Assert.Contains("TelegramUsername", e.Message);
@@ -259,7 +259,7 @@ public class RavenDB_27289(ITestOutputHelper output) : RavenTestBase(output)
 
             AddOrUpdateAiAgentCommand.ValidateConfiguration(context, agent);
 
-            Assert.Throws<InvalidOperationException>(
+            Assert.Throws<AiAgentParameterCollisionException>(
                 () => AiAgentHelpers.AssertAgentParametersAreNotToolArguments(context, agent));
         }
     }
@@ -358,6 +358,8 @@ public class RavenDB_27289(ITestOutputHelper output) : RavenTestBase(output)
 
         var agent = CreateAgent(sendToModel: false, sampleObject: "{\"TelegramUsername\":\"abc\"}");
 
+        // a schema generated from a sample object lists every property under 'required', so this collision is
+        // caught by the older rule in ValidateConfiguration, which still throws a plain InvalidOperationException
         await Assert.ThrowsAsync<RavenException>(
             () => store.Maintenance.SendAsync(AddOrUpdateAiAgentOperation.Create(agent, AiAgentBasics.OutputSchema.Instance)));
     }
