@@ -76,7 +76,7 @@ public class RavenDB_27616 : RavenTestBase
         }));
 
         var ex = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new RemoveConnectionStringOperation<RavenConnectionString>(cs)));
-        Assert.Contains($"Can't delete connection string: {cs.Name}. It is used by task: TestSink", ex.Message);
+        Assert.Contains($"Can't delete connection string: {cs.Name}. It is used by PullReplicationAsSink 'TestSink'", ex.Message);
 
         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
         Assert.True(record.RavenConnectionStrings.ContainsKey(cs.Name));
@@ -94,7 +94,7 @@ public class RavenDB_27616 : RavenTestBase
         await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation(agent, new { Answer = "answer" }));
 
         var ex = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new RemoveConnectionStringOperation<AiConnectionString>(cs)));
-        Assert.Contains($"Can't delete connection string: {cs.Name}. It is used by task: TestAgent", ex.Message);
+        Assert.Contains($"Can't delete connection string: {cs.Name}. It is used by AiAgent 'TestAgent'", ex.Message);
 
         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
         Assert.True(record.AiConnectionStrings.ContainsKey(cs.Name));
@@ -110,7 +110,7 @@ public class RavenDB_27616 : RavenTestBase
         await store.Maintenance.SendAsync(new AddCdcSinkOperation(CreateCdcSink("TestCdc", cs.Name)));
 
         var ex = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new RemoveConnectionStringOperation<SqlConnectionString>(cs)));
-        Assert.Contains($"Can't delete connection string: {cs.Name}. It is used by task: TestCdc", ex.Message);
+        Assert.Contains($"Can't delete connection string: {cs.Name}. It is used by CdcSink 'TestCdc'", ex.Message);
 
         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
         Assert.True(record.SqlConnectionStrings.ContainsKey(cs.Name));
@@ -145,7 +145,7 @@ public class RavenDB_27616 : RavenTestBase
 
         var ex = await Assert.ThrowsAsync<RavenException>(() =>
             store.Maintenance.Server.SendAsync(new RemoveServerWideConnectionStringOperation<SqlConnectionString>(new SqlConnectionString { Name = cs.Name })));
-        Assert.Contains("It is used by 'TestCdc'", ex.Message);
+        Assert.Contains("It is used by CdcSink 'TestCdc'", ex.Message);
 
         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
         Assert.True(record.SqlConnectionStrings.ContainsKey(prefixedName));

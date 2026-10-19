@@ -44,7 +44,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
             var usage = ConnectionStringConsumers.FindUsage(record, type, ConnectionStringName);
             if (usage != null)
-                throw new InvalidOperationException($"Can't delete connection string: {ConnectionStringName}. It is used by task: {usage.Name}");
+                throw new InvalidOperationException($"Can't delete connection string: {ConnectionStringName}. It is used by {usage.Kind} '{usage.Name}'");
 
             connectionStrings.Remove(ConnectionStringName);
         }

@@ -501,7 +501,7 @@ namespace SlowTests.Server.Documents.ETL
                 var exception = Assert.Throws<RavenException>(() =>
                     store.Maintenance.Send(new RemoveConnectionStringOperation<QueueConnectionString>(queueConnectionString)));
 
-                Assert.Contains($"Can't delete connection string: {queueConnectionString.Name}. It is used by task: {queueSinkConfig.Name}", exception.Message);
+                Assert.Contains($"Can't delete connection string: {queueConnectionString.Name}. It is used by QueueSink '{queueSinkConfig.Name}'", exception.Message);
             }
         }
 }
