@@ -1013,6 +1013,30 @@ public class RavenDB_24310 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Ai)]
+    public async Task DatabaseAiConnectionString_RejectsIdentifierGeneratedForStoredConnectionStringWithoutIdentifier()
+    {
+        var legacyName = "Legacy Ai CS";
+        using (var store = GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record => record.AiConnectionStrings[legacyName] = NewAiConnectionString(legacyName, identifier: null)
+        }))
+        {
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            Assert.Null(record.AiConnectionStrings[legacyName].Identifier);
+
+            var identifier = AiTaskIdentifierHelper.GenerateIdentifier(legacyName);
+            var ex = await Assert.ThrowsAsync<RavenException>(async () =>
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(NewAiConnectionString("OtherAiCS", identifier))));
+            Assert.Contains($"The identifier '{identifier}' is already used by connection string '{legacyName}'", ex.Message);
+
+            record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            Assert.False(record.AiConnectionStrings.ContainsKey("OtherAiCS"));
+
+            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(NewAiConnectionString("OtherAiCS", "other-identifier")));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Ai)]
     public void AiConnectionStringIdentifierGenerationFailureIsReportedAsRachisApplyException()
     {
         var loneSurrogateName = "\uD800";

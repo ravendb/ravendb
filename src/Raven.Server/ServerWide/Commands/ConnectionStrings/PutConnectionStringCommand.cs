@@ -201,7 +201,9 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
                 var isUpdate = databaseRecord.AiConnectionStrings.TryGetValue(ConnectionString.Name, out var oldAiConnectionString) && oldAiConnectionString != null;
                 var identifierConflicts = databaseRecord?.AiConnectionStrings
-                    .Where(x => x.Value != null && x.Value.Identifier == ConnectionString.Identifier && x.Key != ConnectionString.Name)
+                    .Where(x => x.Value != null &&
+                                x.Key != ConnectionString.Name &&
+                                PutServerWideConnectionStringCommand.GetEffectiveAiIdentifier(x.Value.Identifier, x.Key) == ConnectionString.Identifier)
                     .ToArray();
 
                 if (identifierConflicts.Length > 0)
