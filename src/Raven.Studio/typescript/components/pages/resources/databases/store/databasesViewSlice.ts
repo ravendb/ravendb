@@ -5,6 +5,8 @@ import { toDatabaseLocalInfo } from "components/common/shell/databasesSlice";
 import { databaseLocationComparator } from "components/utils/common";
 import genUtils from "common/generalUtils";
 import { services } from "hooks/useServices";
+import { AppAsyncThunk, RootState } from "components/store";
+import StudioDatabasesState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabasesState;
 import StudioOrchestratorState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioOrchestratorState;
 
 export interface DatabasesViewState {
@@ -20,6 +22,8 @@ export interface DatabasesViewState {
      * Data loading status per each node (applies to both db and orchestrator info)
      */
     detailedLoadStatus: EntityState<perNodeTagLoadStatus, string>;
+    nodeTagsBeingFetched: string[];
+    nodeTagsToRefetch: string[];
 }
 
 const selectDatabaseInfoId = (dbName: string, location: databaseLocationSpecifier) =>
@@ -47,6 +51,8 @@ const initialState: DatabasesViewState = {
     databaseDetailedInfo: databaseInfoAdapter.getInitialState(),
     detailedLoadStatus: databaseDetailedLoadStatusAdapter.getInitialState(),
     orchestratorDetailedInfo: orchestratorInfoAdapter.getInitialState(),
+    nodeTagsBeingFetched: [],
+    nodeTagsToRefetch: [],
 };
 
 const sliceName = "databasesView";
@@ -168,8 +174,15 @@ export const databasesViewSlice = createSlice({
             }
         });
 
+        builder.addCase(fetchDatabases.pending, (state, action) => {
+            const nodeTag = action.meta.arg;
+            state.nodeTagsBeingFetched.push(nodeTag);
+            state.nodeTagsToRefetch = state.nodeTagsToRefetch.filter((x) => x !== nodeTag);
+        });
+
         builder.addCase(fetchDatabases.fulfilled, (state, action) => {
             const nodeTag = action.meta.arg;
+            state.nodeTagsBeingFetched = state.nodeTagsBeingFetched.filter((x) => x !== nodeTag);
 
             const loadStatusEntities = state.detailedLoadStatus.entities;
 
@@ -220,30 +233,45 @@ export const databasesViewSlice = createSlice({
         });
 
         builder.addCase(fetchDatabases.rejected, (state, action) => {
+            const nodeTag = action.meta.arg;
+
+            if (action.meta.condition) {
+                if (!state.nodeTagsToRefetch.includes(nodeTag)) {
+                    state.nodeTagsToRefetch.push(nodeTag);
+                }
+                return;
+            }
+
+            state.nodeTagsBeingFetched = state.nodeTagsBeingFetched.filter((x) => x !== nodeTag);
             databaseDetailedLoadStatusAdapter.setOne(state.detailedLoadStatus, {
-                nodeTag: action.meta.arg,
+                nodeTag,
                 status: "failure",
             });
         });
     },
 });
 
-const nodeTagsBeingFetched = new Set<string>();
-
-const fetchDatabases = createAsyncThunk(
+const fetchDatabases = createAsyncThunk<StudioDatabasesState, string, { state: RootState }>(
     sliceName + "/fetchDatabases",
-    async (nodeTag: string) => {
-        nodeTagsBeingFetched.add(nodeTag);
-        try {
-            return await services.databasesService.getDatabasesState(nodeTag);
-        } finally {
-            nodeTagsBeingFetched.delete(nodeTag);
-        }
+    async (nodeTag) => {
+        return await services.databasesService.getDatabasesState(nodeTag);
     },
     {
-        condition: (nodeTag) => !nodeTagsBeingFetched.has(nodeTag),
+        condition: (nodeTag, { getState }) => !getState().databasesView.nodeTagsBeingFetched.includes(nodeTag),
+        dispatchConditionRejection: true,
     }
 );
+
+const loadNodeDatabases =
+    (nodeTag: string): AppAsyncThunk =>
+    async (dispatch, getState) => {
+        const result = await dispatch(fetchDatabases(nodeTag));
+        const wasSkipped = fetchDatabases.rejected.match(result) && result.meta.condition;
+
+        if (!wasSkipped && getState().databasesView.nodeTagsToRefetch.includes(nodeTag)) {
+            await dispatch(loadNodeDatabases(nodeTag));
+        }
+    };
 
 const fetchDatabase = createAsyncThunk(
     sliceName + "/fetchDatabase",
@@ -292,7 +320,7 @@ export const databasesViewSliceInternal = {
     databaseInfoIntoTopLevelDatabaseInfo,
     orchestratorInfoIntoTopLevelDatabaseInfo,
     fetchDatabase,
-    fetchDatabases,
+    loadNodeDatabases,
     selectDatabaseInfoId,
     selectOrchestratorInfoId,
 };
