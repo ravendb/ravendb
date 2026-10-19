@@ -1,8 +1,11 @@
-import { rtlRender } from "test/rtlTestUtils";
+import { act, rtlRender, waitFor } from "test/rtlTestUtils";
 import React from "react";
 import * as stories from "./StudioSearchWithDatabaseSwitcher.stories";
 import { composeStories } from "@storybook/react-webpack5";
-import { act } from "@testing-library/react";
+import { mockServices } from "test/mocks/services/MockServices";
+import { globalDispatch } from "components/storeCompat";
+import { databaseActions } from "components/common/shell/databaseSliceActions";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 const { DefaultStory } = composeStories(stories);
 
@@ -49,6 +52,28 @@ describe("StudioSearchWithDatabaseSwitcher", function () {
         view.rerender(<DefaultStory isSharded={false} />);
 
         expect(await searchFor(view, "Report")).not.toContain("Buckets Report");
+    });
+
+    it("does not refetch tasks and indexes when unchanged databases are reloaded", async () => {
+        const { getOngoingTasks } = mockServices.tasksService.mock;
+        const { getStats } = mockServices.indexesService.mock;
+
+        rtlRender(<DefaultStory />);
+        await waitFor(() => expect(getOngoingTasks).toHaveBeenCalled());
+
+        const tasksCallsCount = (getOngoingTasks as jest.Mock).mock.calls.length;
+        const statsCallsCount = (getStats as jest.Mock).mock.calls.length;
+
+        act(() =>
+            globalDispatch((dispatch, getState) =>
+                dispatch(
+                    databaseActions.databasesLoaded(databaseSelectors.allDatabases(getState()).map((db) => ({ ...db })))
+                )
+            )
+        );
+
+        expect(getOngoingTasks).toHaveBeenCalledTimes(tasksCallsCount);
+        expect(getStats).toHaveBeenCalledTimes(statsCallsCount);
     });
 });
 
