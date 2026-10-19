@@ -32,6 +32,9 @@
             </button>
         </div>
     </div>
+    <div data-bind="if: importDetailsView">
+        <div data-bind="react: importDetailsView()"></div>
+    </div>
 </div>
 
 <script type="text/html" id="OperationChanged-template">
