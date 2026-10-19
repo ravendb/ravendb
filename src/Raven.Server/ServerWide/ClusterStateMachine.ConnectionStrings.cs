@@ -352,7 +352,8 @@ public sealed partial class ClusterStateMachine
                 if (serverWideCS?.ConnectionString == null)
                     continue;
 
-                var databaseRecordCSName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(serverWideCS.Name);
+                var serverWideName = serverWideCS.Name;
+                var databaseRecordCSName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(serverWideName);
                 serverWideCS.ConnectionString.Name = databaseRecordCSName;
 
                 switch (serverWideCS.Type)
@@ -377,8 +378,8 @@ public sealed partial class ClusterStateMachine
                         break;
                     case ConnectionStringType.Ai:
                         var aiConnectionString = (AiConnectionString)serverWideCS.ConnectionString;
-                        var identifier = PutServerWideConnectionStringCommand.GetEffectiveAiIdentifier(aiConnectionString.Identifier, serverWideCS.Name);
-                        AssertNewDatabaseAiIdentifierNotInUse(databaseOwnedAiConnectionStrings, serverWideCS.Name, identifier, addDatabaseCommand.Name);
+                        var identifier = PutServerWideConnectionStringCommand.GetEffectiveAiIdentifier(aiConnectionString.Identifier, serverWideName);
+                        AssertNewDatabaseAiIdentifierNotInUse(databaseOwnedAiConnectionStrings, serverWideName, identifier, addDatabaseCommand.Name);
                         addDatabaseCommand.Record.AiConnectionStrings[databaseRecordCSName] = aiConnectionString;
                         break;
                 }
