@@ -268,11 +268,11 @@ public sealed unsafe partial class SortingMatch<TInner> : SortingMatch
         match.StreamScanEstimateRaw = estimatedScan;
 
         double inflationFactor = 1;
-        if (bitmapMatch is CompiledQueryMatch { CompiledPlan: { } cp })
+        if (ScanInflation(match, bitmapMatch) is { } learner)
         {
             // Correct the uniform-distribution estimate by what this plan has actually scanned in the past.
             // Self-correcting by inflating / deflating estimation with prior queries' results 
-            var inflation = cp.GetOrCreateStreamScanInflation().Factor;
+            var inflation = learner.Factor;
             if (inflation > 0)
             {
                 inflationFactor = inflation;
@@ -291,6 +291,9 @@ public sealed unsafe partial class SortingMatch<TInner> : SortingMatch
         match.GateDecision = stream ? SortStrategyDecision.StreamCheaper : SortStrategyDecision.SortCheaper;
         return stream;
     }
+
+    private static Planning.InflationEwma ScanInflation(SortingMatch<TInner> match, IBitmapQueryMatch bitmapMatch) =>
+        bitmapMatch is CompiledQueryMatch { CompiledPlan: { } cp } ? cp.GetOrCreateStreamScanInflation() : match.StreamScanInflation;
 
     private static void SampleRandomOrder(SortingMatch<TInner> match, IBitmapQueryMatch bitmapMatch)
     {
@@ -597,7 +600,7 @@ public sealed unsafe partial class SortingMatch<TInner> : SortingMatch
         bool forceUsingOnlyIndex = match.ForcedStrategy == CoraxSortingStrategy.IndexOrderStreaming;
 
         // Per-plan learning: record (entries actually scanned / the gate's uniform estimate) so a future query for this plan can have a better estimate
-        var scanInflation = forceUsingOnlyIndex is false && bitmapMatch is CompiledQueryMatch { CompiledPlan: { } cp } ? cp.GetOrCreateStreamScanInflation() : null;
+        var scanInflation = forceUsingOnlyIndex ? null : ScanInflation(match, bitmapMatch);
 
         using var sortedIdsScope = allocator.Allocate(sizeof(long) * SortBatchSize, out ByteString bs);
         Span<long> sortedIdBuffer = new(bs.Ptr, SortBatchSize);
