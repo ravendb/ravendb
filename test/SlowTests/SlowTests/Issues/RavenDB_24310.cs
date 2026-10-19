@@ -13,9 +13,14 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
+using Raven.Client.Util;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
@@ -1004,6 +1009,25 @@ public class RavenDB_24310 : RavenTestBase
             await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDbName)));
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
             Assert.Equal(2, record.AiConnectionStrings.Count);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Ai)]
+    public void AiConnectionStringIdentifierGenerationFailureIsReportedAsRachisApplyException()
+    {
+        var loneSurrogateName = "\uD800";
+
+        var databaseCommand = new PutAiConnectionStringCommand(NewAiConnectionString(loneSurrogateName, identifier: null), "db", RaftIdGenerator.NewId());
+        Assert.Throws<RachisApplyException>(() => databaseCommand.UpdateDatabaseRecord(new DatabaseRecord("db"), etag: 0));
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            var serverWideCommand = new PutServerWideConnectionStringCommand(new ServerWideConnectionString
+            {
+                ConnectionString = NewAiConnectionString(loneSurrogateName, identifier: null)
+            }, RaftIdGenerator.NewId());
+
+            Assert.Throws<RachisApplyException>(() => serverWideCommand.GetUpdatedValue(context, previousValue: null, index: 1));
         }
     }
 

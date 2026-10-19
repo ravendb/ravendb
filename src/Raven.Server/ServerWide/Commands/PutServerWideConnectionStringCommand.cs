@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -90,8 +91,24 @@ namespace Raven.Server.ServerWide.Commands
 
         internal static void EnsureAiIdentifier(ServerWideConnectionString connectionString)
         {
-            if (connectionString.ConnectionString is AiConnectionString aiConnectionString &&
-                aiConnectionString.EnsureIdentifier(out var errors) == false)
+            if (connectionString.ConnectionString is AiConnectionString aiConnectionString)
+                EnsureAiIdentifier(aiConnectionString);
+        }
+
+        internal static void EnsureAiIdentifier(AiConnectionString aiConnectionString)
+        {
+            bool isValid;
+            List<string> errors;
+            try
+            {
+                isValid = aiConnectionString.EnsureIdentifier(out errors);
+            }
+            catch (Exception e)
+            {
+                throw new RachisApplyException($"Failed to generate or validate the identifier of AI connection string '{aiConnectionString.Name}'", e);
+            }
+
+            if (isValid == false)
                 throw new RachisApplyException($"Invalid identifier format. Validation errors:{Environment.NewLine} - {string.Join($"{Environment.NewLine} - ", errors)}");
         }
 
