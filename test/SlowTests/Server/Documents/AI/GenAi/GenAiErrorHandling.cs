@@ -286,7 +286,7 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
 
             var error = errors.First();
 
-            Assert.Contains("Model call failed", error.Error);
+            Assert.Contains("Execution failed", error.Error);
             Assert.Contains("win $$$$", error.Error);
             Assert.Contains("fake refusal", error.Error);
 

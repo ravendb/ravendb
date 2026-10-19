@@ -426,7 +426,7 @@ if ($input.doc) {
         // exception instead of rethrowing it. A collision is deterministic - same configuration, same result
         // every pass - so it must land next to UnsupportedAiQueryParameterException and not in the transient
         // branch, which sets _maxConcurrency = 1 and throws before anything is persisted, so the whole batch
-        // is attempted again forever. RefusedBeforeTheModel is also what keeps GenAiTask.cs:391 from counting
+        // is attempted again forever. RefusedBeforeTheModel is also what keeps ProcessModelResults from counting
         // a document the model never saw as a model call failure.
         var (error, _, items, statistics) = await RunGenAiBatchAsync(
             contexts: [new DynamicJsonValue { ["brand"] = "TechNova" }],
@@ -445,7 +445,31 @@ if ($input.doc) {
         var refusal = statistics.ReadInMemoryItemErrors().Single().Error;
         Assert.Contains("Parameter brand is defined on both the agent level and the query level for Q", refusal);
         Assert.Contains("was not sent to the model", refusal);
-        Assert.DoesNotContain("Model call failed", refusal);
+        Assert.DoesNotContain("Execution failed", refusal);
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task GenAi_ModelCallThatFails_IsRecordedAsAnExecutionFailure()
+    {
+        // the other side of the branch above: the model was reached and the call failed, so the item is a
+        // transient failure, not a refusal, and the recorded error carries the exception itself
+        var (error, _, items, statistics) = await RunGenAiBatchAsync(
+            contexts: [new DynamicJsonValue { ["brand"] = "TechNova" }],
+            queryRql: "from Products where Brand = $brand",
+            modelToolArgs: "{}",
+            seed: null,
+            testMode: false,
+            modelResponseStatus: HttpStatusCode.InternalServerError);
+
+        Assert.NotNull(error);
+
+        Assert.False(items[0].UpdateHash);
+        Assert.False(items[0].RefusedBeforeTheModel);
+
+        var recorded = statistics.ReadInMemoryItemErrors().Single().Error;
+        Assert.Contains("Execution failed for context in document 'docs/1'", recorded);
+        Assert.Contains("Context was:", recorded);
+        Assert.DoesNotContain("was not sent to the model", recorded);
     }
 
 
@@ -502,7 +526,7 @@ if ($input.doc) {
         Assert.Contains("was not sent to the model", refusal);
         Assert.Contains("$brand", refusal);
         Assert.Contains("reset", refusal);
-        Assert.DoesNotContain("Model call failed", refusal);
+        Assert.DoesNotContain("Execution failed", refusal);
 
         Assert.False(items[1].UpdateHash);
         Assert.True(items[1].RefusedBeforeTheModel);
@@ -945,7 +969,8 @@ if ($input.doc) {
     }
 
     private async Task<(Exception error, List<string> toolResults, List<GenAiResultItem> items, EtlProcessStatistics statistics)> RunGenAiBatchAsync(
-        List<DynamicJsonValue> contexts, string queryRql, string modelToolArgs, Action<IDocumentSession> seed, bool testMode, string parametersSchema = null)
+        List<DynamicJsonValue> contexts, string queryRql, string modelToolArgs, Action<IDocumentSession> seed, bool testMode, string parametersSchema = null,
+        HttpStatusCode modelResponseStatus = HttpStatusCode.OK)
     {
         using var store = GetDocumentStore();
         if (seed != null)
@@ -981,6 +1006,9 @@ if ($input.doc) {
                 new OpenAiChatCompletionClientSettings(new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o")),
                 onRequest: payload =>
                 {
+                    if (modelResponseStatus != HttpStatusCode.OK)
+                        return new HttpResponseMessage(modelResponseStatus) { Content = new StringContent("the provider is down") };
+
                     var messages = payload["messages"];
                     var toolMessages = messages?.Where(m => m["role"]?.ToString() == "tool").ToList() ?? new List<JToken>();
                     if (toolMessages.Count > 0)
