@@ -77,7 +77,7 @@ internal static class ConnectionStringConsumers
     {
         foreach (var usage in GetUsages(record, type))
         {
-            if (string.Equals(usage.ConnectionStringName, connectionStringName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(usage.ConnectionStringName, connectionStringName, StringComparison.Ordinal))
                 return usage;
         }
 
