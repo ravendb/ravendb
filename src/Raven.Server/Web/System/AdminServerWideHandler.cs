@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -264,17 +264,17 @@ namespace Raven.Server.Web.System
 
                 if (result.Results.Count > 0)
                 {
-                    var relevantNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    var relevantKeys = new HashSet<(ConnectionStringType Type, string Name)>();
                     foreach (var cs in result.Results)
-                        relevantNames.Add(ServerWideConnectionString.GetDatabaseRecordConnectionStringName(cs.Name));
+                        relevantKeys.Add((cs.Type, ServerWideConnectionString.GetDatabaseRecordConnectionStringName(cs.Name)));
 
                     var allDatabases = ServerStore.Cluster.GetAllDatabases(context);
-                    var usageMap = BuildUsageMap(allDatabases, relevantNames);
+                    var usageMap = BuildUsageMap(allDatabases, relevantKeys);
 
                     foreach (var cs in result.Results)
                     {
                         var prefixedName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(cs.Name);
-                        if (usageMap.TryGetValue(prefixedName, out var usages))
+                        if (usageMap.TryGetValue((cs.Type, prefixedName), out var usages))
                             cs.UsedBy = usages;
                     }
                 }
@@ -283,19 +283,22 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private static Dictionary<string, List<ServerWideConnectionStringUsage>> BuildUsageMap(
-            List<DatabaseRecord> databases, HashSet<string> relevantNames)
+        private static Dictionary<(ConnectionStringType Type, string Name), List<ServerWideConnectionStringUsage>> BuildUsageMap(
+            List<DatabaseRecord> databases, HashSet<(ConnectionStringType Type, string Name)> relevantKeys)
         {
-            var map = new Dictionary<string, List<ServerWideConnectionStringUsage>>(StringComparer.OrdinalIgnoreCase);
+            var map = new Dictionary<(ConnectionStringType Type, string Name), List<ServerWideConnectionStringUsage>>();
 
             foreach (var db in databases)
             {
                 foreach (var usage in ConnectionStringConsumers.GetUsages(db))
                 {
-                    if (usage.ConnectionStringName == null || relevantNames.Contains(usage.ConnectionStringName) == false)
+                    if (usage.ConnectionStringName == null)
                         continue;
-                    if (map.TryGetValue(usage.ConnectionStringName, out var list) == false)
-                        map[usage.ConnectionStringName] = list = new List<ServerWideConnectionStringUsage>();
+                    var key = (usage.Type, usage.ConnectionStringName);
+                    if (relevantKeys.Contains(key) == false)
+                        continue;
+                    if (map.TryGetValue(key, out var list) == false)
+                        map[key] = list = new List<ServerWideConnectionStringUsage>();
                     list.Add(new ServerWideConnectionStringUsage { Kind = usage.Kind, Id = usage.Id, Identifier = usage.Identifier, Name = usage.Name, DatabaseName = db.DatabaseName });
                 }
             }
