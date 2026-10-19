@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -499,14 +499,14 @@ namespace rvn
 
                     subcmd.OnExecute(() =>
                     {
-                        WindowsService.Register(
+                        var registered = WindowsService.Register(
                             serviceNameOpt.Value() ?? defaultServiceName,
                             serviceUserNameOpt.Value(),
                             serviceUserPasswordOpt.Value(),
                             serverDirOpt.Value(),
                             subcmd.RemainingArguments.ToList());
 
-                        return 0;
+                        return registered ? 0 : 1;
                     });
 
                     subcmd.UnrecognizedArgumentHandling = UnrecognizedArgumentHandling.StopParsingAndCollect;
@@ -520,8 +520,7 @@ namespace rvn
 
                     subcmd.OnExecute(() =>
                     {
-                        WindowsService.Unregister(serviceNameOpt.Value() ?? defaultServiceName);
-                        return 0;
+                        return WindowsService.Unregister(serviceNameOpt.Value() ?? defaultServiceName) ? 0 : 1;
                     });
                 });
 
@@ -533,8 +532,7 @@ namespace rvn
 
                     subcmd.OnExecute(() =>
                     {
-                        WindowsService.Start(serviceNameOpt.Value() ?? defaultServiceName);
-                        return 0;
+                        return WindowsService.Start(serviceNameOpt.Value() ?? defaultServiceName) ? 0 : 1;
                     });
                 });
 
@@ -546,8 +544,7 @@ namespace rvn
 
                     subcmd.OnExecute(() =>
                     {
-                        WindowsService.Stop(serviceNameOpt.Value() ?? defaultServiceName);
-                        return 0;
+                        return WindowsService.Stop(serviceNameOpt.Value() ?? defaultServiceName) ? 0 : 1;
                     });
                 });
 
