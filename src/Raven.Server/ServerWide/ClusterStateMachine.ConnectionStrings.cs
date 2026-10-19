@@ -79,7 +79,7 @@ public sealed partial class ClusterStateMachine
         if (string.IsNullOrWhiteSpace(serverWideConnectionString.Name))
             throw new RachisInvalidOperationException($"Server-wide connection string name is null or empty for command type: {type}");
 
-        PutServerWideConnectionStringCommand.EnsureAiIdentifier(serverWideConnectionString);
+        PutServerWideConnectionStringCommand.ResolveAiIdentifier(serverWideConnectionString, Read(context, command.Name));
 
         var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
         var toUpdate = CollectDatabaseUpdatesForServerWideConnectionString(context, serverWideConnectionString, items);
@@ -112,7 +112,10 @@ public sealed partial class ClusterStateMachine
                     if (hasConnectionStrings)
                     {
                         if (serverWideConnectionString.ConnectionString is AiConnectionString aiConnectionString)
-                            AssertAiIdentifierNotInUse(connectionStrings, databaseRecordCSName, aiConnectionString.Identifier, databaseName);
+                        {
+                            var identifier = PutServerWideConnectionStringCommand.GetEffectiveAiIdentifier(aiConnectionString.Identifier, serverWideConnectionString.Name);
+                            AssertAiIdentifierNotInUse(connectionStrings, databaseRecordCSName, identifier, databaseName);
+                        }
 
                         connectionStrings.Modifications = new DynamicJsonValue(connectionStrings)
                         {
@@ -239,6 +242,9 @@ public sealed partial class ClusterStateMachine
 
     private static void AssertAiIdentifierNotInUse(BlittableJsonReaderObject aiConnectionStrings, string connectionStringName, string identifier, string databaseName)
     {
+        if (identifier == null)
+            return;
+
         foreach (var propertyName in aiConnectionStrings.GetPropertyNames())
         {
             if (propertyName == connectionStringName)
@@ -254,6 +260,9 @@ public sealed partial class ClusterStateMachine
 
     private static void AssertNewDatabaseAiIdentifierNotInUse(Dictionary<string, AiConnectionString> aiConnectionStrings, string serverWideName, string identifier, string databaseName)
     {
+        if (identifier == null)
+            return;
+
         var connectionStringName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(serverWideName);
 
         foreach (var (name, existing) in aiConnectionStrings)
