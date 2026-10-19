@@ -185,8 +185,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         {
             AssertNotServerWideConnectionString(ConnectionString.Name);
 
-            if (ConnectionString.EnsureIdentifier(out var identifierErrors) == false)
-                throw new RachisApplyException($"Invalid identifier format. Validation errors:{Environment.NewLine} - {string.Join($"{Environment.NewLine} - ", identifierErrors)}");
+            PutServerWideConnectionStringCommand.EnsureAiIdentifier(ConnectionString);
 
             InClusterValidation(record);
 
