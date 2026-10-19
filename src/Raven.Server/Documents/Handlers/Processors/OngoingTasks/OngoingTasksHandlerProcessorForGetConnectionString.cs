@@ -94,14 +94,12 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
             var map = new Dictionary<(ConnectionStringType Type, string Name), List<ConnectionStringUsage>>();
 
-            foreach (var usage in ConnectionStringConsumers.GetUsages(record))
+            foreach (var (type, name, usage) in ConnectionStringConsumers.GetUsages<ConnectionStringUsage>(record))
             {
-                if (usage.ConnectionStringName == null)
-                    continue;
-                var key = (usage.Type, usage.ConnectionStringName);
+                var key = (type, name);
                 if (map.TryGetValue(key, out var list) == false)
                     map[key] = list = new List<ConnectionStringUsage>();
-                list.Add(new ConnectionStringUsage { Kind = usage.Kind, Id = usage.Id, Identifier = usage.Identifier, Name = usage.Name });
+                list.Add(usage);
             }
 
             return map;

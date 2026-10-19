@@ -290,16 +290,15 @@ namespace Raven.Server.Web.System
 
             foreach (var db in databases)
             {
-                foreach (var usage in ConnectionStringConsumers.GetUsages(db))
+                foreach (var (type, name, usage) in ConnectionStringConsumers.GetUsages<ServerWideConnectionStringUsage>(db))
                 {
-                    if (usage.ConnectionStringName == null)
-                        continue;
-                    var key = (usage.Type, usage.ConnectionStringName);
+                    var key = (type, name);
                     if (relevantKeys.Contains(key) == false)
                         continue;
                     if (map.TryGetValue(key, out var list) == false)
                         map[key] = list = new List<ServerWideConnectionStringUsage>();
-                    list.Add(new ServerWideConnectionStringUsage { Kind = usage.Kind, Id = usage.Id, Identifier = usage.Identifier, Name = usage.Name, DatabaseName = db.DatabaseName });
+                    usage.DatabaseName = db.DatabaseName;
+                    list.Add(usage);
                 }
             }
 
