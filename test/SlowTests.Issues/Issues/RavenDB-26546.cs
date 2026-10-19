@@ -2,7 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Net;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json.Linq;
@@ -10,6 +13,7 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Commercial.LetsEncrypt;
+using Raven.Server.Commercial.SetupWizard;
 using Raven.Server.Config;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
@@ -101,18 +105,52 @@ public class RavenDB_26546 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Setup)]
-    public void Explicit_PublicServerUrl_host_not_covered_by_certificate_throws()
+    public void Explicit_PublicServerUrl_host_not_covered_by_certificate_warns_and_is_kept()
     {
         using var cert = CreateCert(["*.sink1.test.local"]);
         var setupInfo = CreateSetupInfo("sink1");
         setupInfo.NodeSetupInfos["B"].PublicServerUrl = "https://sink1.test.local";
+        var progress = CreateProgress(out var messages);
 
-        var e = Assert.Throws<InvalidOperationException>(() =>
-            CertificateUtils.GetServerUrlFromCertificate(cert, setupInfo, "B", 443, 38888, out _, out _));
+        var url = CertificateUtils.GetServerUrlFromCertificate(cert, setupInfo, "B", 443, 38888, out var tcpUrl, out _, progress);
 
-        Assert.Contains("'B'", e.Message);
-        Assert.Contains("sink1.test.local", e.Message);
-        Assert.Contains("not covered by the certificate", e.Message);
+        Assert.Equal("https://sink1.test.local", url);
+        Assert.Equal("tcp://sink1.test.local:38888", tcpUrl);
+        var warning = Assert.Single(messages, m => m.Contains("WARNING"));
+        Assert.Contains("'B'", warning);
+        Assert.Contains("sink1.test.local", warning);
+        Assert.Contains("does not cover", warning);
+    }
+
+    [RavenFact(RavenTestCategory.Setup)]
+    public void Explicit_PublicServerUrl_with_ip_san_is_accepted_without_warning()
+    {
+        using var cert = CreateCertWithIpSan("10.0.0.5");
+        var setupInfo = CreateSetupInfo(domain: null);
+        setupInfo.NodeSetupInfos["A"].PublicServerUrl = "https://10.0.0.5";
+        var progress = CreateProgress(out var messages);
+
+        var url = CertificateUtils.GetServerUrlFromCertificate(cert, setupInfo, "A", 443, 38888, out var tcpUrl, out var domain, progress);
+
+        Assert.Equal("https://10.0.0.5", url);
+        Assert.Equal("tcp://10.0.0.5:38888", tcpUrl);
+        Assert.Equal("10.0.0.5", domain);
+        Assert.DoesNotContain(messages, m => m.Contains("WARNING"));
+    }
+
+    [RavenFact(RavenTestCategory.Setup)]
+    public void Derived_url_is_not_written_back_to_node()
+    {
+        using var cert = CreateCert(["*.sink1.test.local"]);
+        var setupInfo = CreateSetupInfo("sink1");
+        setupInfo.NodeSetupInfos["A"].PublicTcpServerUrl = "tcp://tcp-lb.sink1.test.local:40000";
+
+        var url = CertificateUtils.GetServerUrlFromCertificate(cert, setupInfo, "A", 443, 38888, out var tcpUrl, out _);
+
+        Assert.Equal("https://a.sink1.test.local", url);
+        Assert.Equal("tcp://tcp-lb.sink1.test.local:40000", tcpUrl);
+        Assert.Null(setupInfo.NodeSetupInfos["A"].PublicServerUrl);
+        Assert.Equal("tcp://tcp-lb.sink1.test.local:40000", setupInfo.NodeSetupInfos["A"].PublicTcpServerUrl);
     }
 
     [RavenTheory(RavenTestCategory.Setup)]
@@ -168,11 +206,61 @@ public class RavenDB_26546 : RavenTestBase
         setupInfo.NodeSetupInfos["C"].PublicServerUrl = "https://c-override.sink1.test.local:443";
         setupInfo.NodeSetupInfos["C"].PublicTcpServerUrl = "tcp://c-override.sink1.test.local:38889";
 
-        var zipBytes = await SettingsZipFileHelper.GetSetupZipFileSecuredSetup(new GetSetupZipFileParameters
+        var zipBytes = await SettingsZipFileHelper.GetSetupZipFileSecuredSetup(CreateZipParameters(cert, setupInfo));
+
+        var a = ExtractSettingsJson(zipBytes, "A/settings.json");
+        var c = ExtractSettingsJson(zipBytes, "C/settings.json");
+
+        Assert.Equal("https://a.sink1.test.local", a[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)]?.Value<string>());
+        Assert.Equal("tcp://a.sink1.test.local:38888", a[RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)]?.Value<string>());
+        Assert.Equal("https://c-override.sink1.test.local:443", c[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)]?.Value<string>());
+        Assert.Equal("tcp://c-override.sink1.test.local:38889", c[RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)]?.Value<string>());
+    }
+
+    [RavenFact(RavenTestCategory.Setup)]
+    public async Task Wildcard_setup_package_keeps_custom_PublicTcpServerUrl_without_PublicServerUrl()
+    {
+        using var cert = CreateCert(["*.sink1.test.local"]);
+        var setupInfo = CreateSetupInfo("sink1");
+        setupInfo.NodeSetupInfos["A"].PublicTcpServerUrl = "tcp://tcp-lb.sink1.test.local:40000";
+
+        var zipBytes = await SettingsZipFileHelper.GetSetupZipFileSecuredSetup(CreateZipParameters(cert, setupInfo));
+
+        var a = ExtractSettingsJson(zipBytes, "A/settings.json");
+        var b = ExtractSettingsJson(zipBytes, "B/settings.json");
+
+        Assert.Equal("https://a.sink1.test.local", a[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)]?.Value<string>());
+        Assert.Equal("tcp://tcp-lb.sink1.test.local:40000", a[RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)]?.Value<string>());
+        Assert.Equal("https://b.sink1.test.local", b[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)]?.Value<string>());
+        Assert.Equal("tcp://b.sink1.test.local:38888", b[RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)]?.Value<string>());
+    }
+
+    [RavenFact(RavenTestCategory.Setup)]
+    public async Task Own_certificate_setup_package_uses_Domain_for_every_node()
+    {
+        using var cert = CreateCert(SharedCertSans);
+        var setupInfo = CreateSetupInfo("sink1");
+        setupInfo.Email = "support@ravendb.net";
+        setupInfo.Certificate = Convert.ToBase64String(cert.Export(X509ContentType.Pfx));
+        setupInfo.NodeSetupInfos["C"].Port = 8443;
+
+        var zipBytes = await OwnCertificateSetupUtils.Setup(setupInfo, CreateProgress(out _), CancellationToken.None);
+
+        foreach (var (tag, expectedUrl) in new[] { ("A", "https://a.sink1.test.local"), ("B", "https://b.sink1.test.local"), ("C", "https://c.sink1.test.local:8443") })
+        {
+            var settings = ExtractSettingsJson(zipBytes, $"{tag}/settings.json");
+            Assert.Equal(expectedUrl, settings[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)]?.Value<string>());
+            Assert.Equal($"tcp://{tag.ToLowerInvariant()}.sink1.test.local:{setupInfo.NodeSetupInfos[tag].TcpPort}", settings[RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)]?.Value<string>());
+        }
+    }
+
+    private static GetSetupZipFileParameters CreateZipParameters(X509Certificate2 cert, SetupInfo setupInfo)
+    {
+        return new GetSetupZipFileParameters
         {
             SetupMode = SetupMode.Secured,
             ZipOnly = true,
-            Progress = new SetupProgressAndResult(_ => { }, SetupMode.Secured, zipOnly: true),
+            Progress = CreateProgress(out _),
             SetupInfo = setupInfo,
             CompleteClusterConfigurationResult = new CompleteClusterConfigurationResult
             {
@@ -183,15 +271,18 @@ public class RavenDB_26546 : RavenTestBase
                 CertBytes = cert.Export(X509ContentType.Pfx),
                 PublicServerUrl = "https://a.sink1.test.local"
             }
-        });
+        };
+    }
 
-        var a = ExtractSettingsJson(zipBytes, "A/settings.json");
-        var c = ExtractSettingsJson(zipBytes, "C/settings.json");
-
-        Assert.Equal("https://a.sink1.test.local", a[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)]?.Value<string>());
-        Assert.Equal("tcp://a.sink1.test.local:38888", a[RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)]?.Value<string>());
-        Assert.Equal("https://c-override.sink1.test.local:443", c[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)]?.Value<string>());
-        Assert.Equal("tcp://c-override.sink1.test.local:38889", c[RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)]?.Value<string>());
+    private static SetupProgressAndResult CreateProgress(out List<string> messages)
+    {
+        var collected = new List<string>();
+        messages = collected;
+        return new SetupProgressAndResult(tuple =>
+        {
+            if (tuple.Message != null)
+                collected.Add(tuple.Message);
+        }, SetupMode.Secured, zipOnly: true);
     }
 
     private static SetupInfo CreateSetupInfo(string domain)
@@ -227,6 +318,17 @@ public class RavenDB_26546 : RavenTestBase
             sans: sans);
 
         return CertificateLoaderUtil.CreateCertificate(certBytes, flags: CertificateLoaderUtil.FlagsForExport);
+    }
+
+    private static X509Certificate2 CreateCertWithIpSan(string ip)
+    {
+        using var rsa = RSA.Create(2048);
+        var request = new CertificateRequest("CN=RavenDB_26546 ip", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var sanBuilder = new SubjectAlternativeNameBuilder();
+        sanBuilder.AddIpAddress(IPAddress.Parse(ip));
+        request.CertificateExtensions.Add(sanBuilder.Build());
+        using var created = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddMonths(1));
+        return CertificateLoaderUtil.CreateCertificate(created.Export(X509ContentType.Pfx), flags: CertificateLoaderUtil.FlagsForExport);
     }
 
     private static JObject ExtractSettingsJson(byte[] zipBytes, string entryName)
