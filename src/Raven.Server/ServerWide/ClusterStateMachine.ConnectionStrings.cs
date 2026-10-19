@@ -328,6 +328,7 @@ public sealed partial class ClusterStateMachine
     private bool PopulateServerWideConnectionStrings(ClusterOperationContext context, AddDatabaseCommand addDatabaseCommand)
     {
         var hasChanges = false;
+        var databaseOwnedAiConnectionStrings = new Dictionary<string, AiConnectionString>(addDatabaseCommand.Record.AiConnectionStrings);
 
         foreach (var key in ServerWideConfigurationKey.AllConnectionStringKeys)
         {
@@ -350,8 +351,6 @@ public sealed partial class ClusterStateMachine
                 var serverWideCS = ServerWideConnectionString.FromBlittable(configurationBlittable);
                 if (serverWideCS?.ConnectionString == null)
                     continue;
-
-                PutServerWideConnectionStringCommand.EnsureAiIdentifier(serverWideCS);
 
                 var databaseRecordCSName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(serverWideCS.Name);
                 serverWideCS.ConnectionString.Name = databaseRecordCSName;
@@ -378,7 +377,8 @@ public sealed partial class ClusterStateMachine
                         break;
                     case ConnectionStringType.Ai:
                         var aiConnectionString = (AiConnectionString)serverWideCS.ConnectionString;
-                        AssertNewDatabaseAiIdentifierNotInUse(addDatabaseCommand.Record.AiConnectionStrings, serverWideCS.Name, aiConnectionString.Identifier, addDatabaseCommand.Name);
+                        var identifier = PutServerWideConnectionStringCommand.GetEffectiveAiIdentifier(aiConnectionString.Identifier, serverWideCS.Name);
+                        AssertNewDatabaseAiIdentifierNotInUse(databaseOwnedAiConnectionStrings, serverWideCS.Name, identifier, addDatabaseCommand.Name);
                         addDatabaseCommand.Record.AiConnectionStrings[databaseRecordCSName] = aiConnectionString;
                         break;
                 }

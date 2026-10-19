@@ -945,7 +945,7 @@ public class RavenDB_24310 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Ai)]
-    public async Task ServerWideAiConnectionStrings_WithoutIdentifiers_GetIdentifiersWhenPropagatedToNewDatabase()
+    public async Task ServerWideAiConnectionStrings_WithoutIdentifiers_KeepMissingIdentifierWhenPropagatedToNewDatabase()
     {
         using (var store = GetDocumentStore())
         {
@@ -975,7 +975,47 @@ public class RavenDB_24310 : RavenTestBase
             foreach (var name in names)
             {
                 var prefixedName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(name);
-                Assert.Equal(AiTaskIdentifierHelper.GenerateIdentifier(name), record.AiConnectionStrings[prefixedName].Identifier);
+                Assert.Null(record.AiConnectionStrings[prefixedName].Identifier);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Ai)]
+    public async Task ServerWideAiConnectionStrings_StoredWithoutIdentifierValidation_DoNotBlockDatabaseCreation()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var stored = new (string Name, string Identifier)[]
+            {
+                ("Legacy Upper", "My-Id"),
+                ("Duplicate One", "duplicate"),
+                ("Duplicate Two", "duplicate"),
+                ("Same Generated", null),
+                ("same-generated", null),
+                ("!!!", null)
+            };
+
+            var djv = new DynamicJsonValue();
+            foreach (var (name, identifier) in stored)
+                djv[name] = new ServerWideConnectionString { ConnectionString = NewAiConnectionString(name, identifier) }.ToJson();
+
+            using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            using (var json = context.ReadObject(djv, ClusterStateMachine.ServerWideConfigurationKey.ConnectionStringAi))
+            {
+                ClusterStateMachine.PutValueDirectly(context, ClusterStateMachine.ServerWideConfigurationKey.ConnectionStringAi, json, 1);
+                tx.Commit();
+            }
+
+            var newDbName = store.Database + "_new";
+            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDbName)));
+
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
+            Assert.Equal(stored.Length, record.AiConnectionStrings.Count);
+            foreach (var (name, identifier) in stored)
+            {
+                var prefixedName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(name);
+                Assert.Equal(identifier, record.AiConnectionStrings[prefixedName].Identifier);
             }
         }
     }
