@@ -112,7 +112,17 @@ public sealed class AiConnectionString : ConnectionString
     internal bool EnsureIdentifier(out List<string> errors)
     {
         if (string.IsNullOrWhiteSpace(Identifier))
-            Identifier = GenerateIdentifier();
+        {
+            try
+            {
+                Identifier = GenerateIdentifier();
+            }
+            catch (InvalidOperationException e)
+            {
+                errors = [e.Message];
+                return false;
+            }
+        }
 
         return ValidateIdentifier(out errors);
     }

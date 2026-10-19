@@ -797,6 +797,36 @@ public class RavenDB_24310 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Ai)]
+    public async Task AiConnectionString_RejectsMissingIdentifierWhenNameHasNoAsciiLettersOrDigits()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var csName = "日本語";
+            var expectedError = $"Can't generate an identifier from name '{csName}' because it contains no ASCII letters or digits";
+
+            var serverWideEx = await Assert.ThrowsAnyAsync<RavenException>(async () =>
+                await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(new ServerWideConnectionString
+                {
+                    ConnectionString = NewAiConnectionString(csName, identifier: null)
+                })));
+            Assert.Contains(expectedError, serverWideEx.Message);
+
+            var getResult = await store.Maintenance.Server.SendAsync(new GetServerWideConnectionStringsOperation(csName, ConnectionStringType.Ai));
+            Assert.Equal(0, getResult.Results.Count);
+
+            var databaseEx = await Assert.ThrowsAnyAsync<RavenException>(async () =>
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(NewAiConnectionString(csName, identifier: null))));
+            Assert.Contains(expectedError, databaseEx.Message);
+
+            await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(new ServerWideConnectionString
+            {
+                ConnectionString = NewAiConnectionString(csName, identifier: "nihongo")
+            }));
+            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(NewAiConnectionString("Database " + csName, identifier: null)));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Ai)]
     public async Task ServerWideAiConnectionString_RejectsInvalidIdentifier()
     {
         using (var store = GetDocumentStore())
