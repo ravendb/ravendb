@@ -70,36 +70,37 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
             var usageMap = BuildUsageMap(rawRecord);
 
-            AssignToDict(result.RavenConnectionStrings);
-            AssignToDict(result.SqlConnectionStrings);
-            AssignToDict(result.OlapConnectionStrings);
-            AssignToDict(result.ElasticSearchConnectionStrings);
-            AssignToDict(result.QueueConnectionStrings);
-            AssignToDict(result.SnowflakeConnectionStrings);
-            AssignToDict(result.AiConnectionStrings);
+            AssignToDict(result.RavenConnectionStrings, ConnectionStringType.Raven);
+            AssignToDict(result.SqlConnectionStrings, ConnectionStringType.Sql);
+            AssignToDict(result.OlapConnectionStrings, ConnectionStringType.Olap);
+            AssignToDict(result.ElasticSearchConnectionStrings, ConnectionStringType.ElasticSearch);
+            AssignToDict(result.QueueConnectionStrings, ConnectionStringType.Queue);
+            AssignToDict(result.SnowflakeConnectionStrings, ConnectionStringType.Snowflake);
+            AssignToDict(result.AiConnectionStrings, ConnectionStringType.Ai);
 
-            void AssignToDict<T>(Dictionary<string, T> dict) where T : ConnectionString
+            void AssignToDict<T>(Dictionary<string, T> dict, ConnectionStringType type) where T : ConnectionString
             {
                 if (dict == null)
                     return;
                 foreach (var cs in dict.Values)
                 {
-                    if (usageMap.TryGetValue(cs.Name, out var usages))
+                    if (usageMap.TryGetValue((type, cs.Name), out var usages))
                         cs.UsedBy = usages;
                 }
             }
         }
 
-        private static Dictionary<string, List<ConnectionStringUsage>> BuildUsageMap(RawDatabaseRecord record)
+        private static Dictionary<(ConnectionStringType Type, string Name), List<ConnectionStringUsage>> BuildUsageMap(RawDatabaseRecord record)
         {
-            var map = new Dictionary<string, List<ConnectionStringUsage>>(StringComparer.OrdinalIgnoreCase);
+            var map = new Dictionary<(ConnectionStringType Type, string Name), List<ConnectionStringUsage>>();
 
             foreach (var usage in ConnectionStringConsumers.GetUsages(record))
             {
                 if (usage.ConnectionStringName == null)
                     continue;
-                if (map.TryGetValue(usage.ConnectionStringName, out var list) == false)
-                    map[usage.ConnectionStringName] = list = new List<ConnectionStringUsage>();
+                var key = (usage.Type, usage.ConnectionStringName);
+                if (map.TryGetValue(key, out var list) == false)
+                    map[key] = list = new List<ConnectionStringUsage>();
                 list.Add(new ConnectionStringUsage { Kind = usage.Kind, Id = usage.Id, Identifier = usage.Identifier, Name = usage.Name });
             }
 
