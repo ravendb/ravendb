@@ -7,23 +7,30 @@ import {
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
+    RichPanelName,
 } from "components/common/RichPanel";
-import { DestinationUrlItem, OngoingTaskName, OngoingTaskResponsibleNode } from "../../shared/shared";
+import { DestinationUrlItem, OngoingTaskResponsibleNode } from "../../shared/shared";
 import { ExternalReplicationTaskDistribution } from "../partials/ExternalReplicationTaskDistribution";
 import { Icon } from "components/common/Icon";
+import Button from "react-bootstrap/Button";
+import Collapse from "react-bootstrap/Collapse";
 
 interface ReplicationHubConnectedSinkPanelProps {
     data: OngoingTaskReplicationHubInfo;
+    isExpanded: boolean;
+    toggleExpanded: () => void;
 }
 
 export function ReplicationHubConnectedSinkPanel(props: ReplicationHubConnectedSinkPanelProps) {
-    const { data } = props;
+    const { data, isExpanded, toggleExpanded } = props;
 
     return (
-        <RichPanel>
+        <RichPanel className="well">
             <RichPanelHeader>
                 <RichPanelInfo>
-                    <OngoingTaskName task={data} canEdit={false} editUrl={undefined} />
+                    <RichPanelName size="sm" title={"Sink database: " + data.shared.destinationDatabase}>
+                        {data.shared.destinationDatabase}
+                    </RichPanelName>
                 </RichPanelInfo>
                 <RichPanelActions>
                     <span>
@@ -34,11 +41,23 @@ export function ReplicationHubConnectedSinkPanel(props: ReplicationHubConnectedS
                 </RichPanelActions>
             </RichPanelHeader>
             <RichPanelDetails>
-                <RichPanelDetailItem label="Task Name">{data.shared.taskName}</RichPanelDetailItem>
-                <RichPanelDetailItem label="Sink Database">{data.shared.destinationDatabase}</RichPanelDetailItem>
+                <RichPanelDetailItem>
+                    <Button
+                        variant="secondary"
+                        onClick={toggleExpanded}
+                        title={`${isExpanded ? "Collapse" : "Expand"} distribution details for ${data.shared.destinationDatabase}`}
+                        className="btn-toggle-panel rounded-pill"
+                    >
+                        <Icon icon={isExpanded ? "fold" : "unfold"} margin="m-0" />
+                    </Button>
+                </RichPanelDetailItem>
                 <DestinationUrlItem destinationUrl={data.shared.destinationUrl} label="Actual Sink URL" />
             </RichPanelDetails>
-            <ExternalReplicationTaskDistribution task={data} />
+            <Collapse in={isExpanded}>
+                <div>
+                    <ExternalReplicationTaskDistribution task={data} />
+                </div>
+            </Collapse>
         </RichPanel>
     );
 }
