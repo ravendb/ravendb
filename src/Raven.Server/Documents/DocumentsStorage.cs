@@ -13,6 +13,8 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.ServerWide.Sharding;
+using Voron.Util.Settings;
 using Raven.Server.Config;
 using Raven.Server.Documents.DataArchival;
 using Raven.Server.Documents.Expiration;
@@ -204,7 +206,8 @@ namespace Raven.Server.Documents
 
             }
 
-            var options = GetStorageEnvironmentOptionsFromConfiguration(DocumentDatabase.Configuration, DocumentDatabase.IoChanges, DocumentDatabase.CatastrophicFailureNotification);
+            var options = GetStorageEnvironmentOptionsFromConfiguration(DocumentDatabase.Configuration, DocumentDatabase.IoChanges,
+                DocumentDatabase.CatastrophicFailureNotification, DocumentDatabase as ShardedDocumentDatabase);
 
             options.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
             options.OnRecoveryError += DocumentDatabase.HandleOnDatabaseRecoveryError;
@@ -244,22 +247,32 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static StorageEnvironmentOptions GetStorageEnvironmentOptionsFromConfiguration(RavenConfiguration config, IoChangesNotifications ioChanges, CatastrophicFailureNotification catastrophicFailureNotification)
+        public static StorageEnvironmentOptions GetStorageEnvironmentOptionsFromConfiguration(RavenConfiguration config, IoChangesNotifications ioChanges,
+            CatastrophicFailureNotification catastrophicFailureNotification, ShardedDocumentDatabase database = null, ShardingConfiguration sharding = null)
         {
-            if (config.Core.RunInMemory)
-                return StorageEnvironmentOptions.CreateMemoryOnly(
-                    config.Core.DataDirectory.FullPath,
-                    config.Storage.TempPath?.FullPath,
-                    ioChanges,
-                    catastrophicFailureNotification);
+            var dataDirectory = config.Core.DataDirectory.FullPath;
+            var tempPath = config.Storage.TempPath?.FullPath;
+            var isSharded = database != null || sharding != null;
 
-            return StorageEnvironmentOptions.ForPath(
-                config.Core.DataDirectory.FullPath,
-                config.Storage.TempPath?.FullPath,
-                null,
-                ioChanges,
-                catastrophicFailureNotification
-            );
+            if (config.Core.RunInMemory)
+            {
+                if (isSharded == false)
+                    return StorageEnvironmentOptions.CreateMemoryOnly(dataDirectory, tempPath, ioChanges, catastrophicFailureNotification);
+
+                return new ShardedPureMemoryStorageEnvironmentOptions(dataDirectory,
+                    new VoronPathSetting(tempPath ?? StorageEnvironmentOptions.GetTempPath()),
+                    ioChanges, catastrophicFailureNotification, database, sharding);
+            }
+
+            if (isSharded == false)
+                return StorageEnvironmentOptions.ForPath(dataDirectory, tempPath, null, ioChanges, catastrophicFailureNotification);
+
+            var basePath = new VoronPathSetting(dataDirectory);
+
+            return new ShardedDirectoryStorageEnvironmentOptions(basePath,
+                new VoronPathSetting(tempPath ?? StorageEnvironmentOptions.GetTempPath(dataDirectory)),
+                basePath.Combine("Journals"),
+                ioChanges, catastrophicFailureNotification, database, sharding);
         }
 
         private void Initialize(StorageEnvironmentOptions options)

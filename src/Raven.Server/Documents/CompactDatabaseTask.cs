@@ -109,7 +109,8 @@ namespace Raven.Server.Documents
                         {
                             DisableIoMetrics = true
                         },
-                        new CatastrophicFailureNotification((envId, path, exception, stacktrace) => throw new InvalidOperationException($"Failed to compact database {_database} ({path}). StackTrace='{stacktrace}'", exception))))
+                        new CatastrophicFailureNotification((envId, path, exception, stacktrace) => throw new InvalidOperationException($"Failed to compact database {_database} ({path}). StackTrace='{stacktrace}'", exception)),
+                        sharding: databaseRecord.Sharding))
                     {
                         InitializeOptions(dst, configuration, documentDatabase, encryptionKey);
                         DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(dst, configuration.Storage, documentDatabase.Name, DirectoryExecUtils.EnvironmentType.Compaction, Logger);
@@ -132,7 +133,7 @@ namespace Raven.Server.Documents
                                 (isRevision && databaseRecord.DocumentsCompression?.CompressRevisions == true) ||
                                 (isCollection && databaseRecord.DocumentsCompression?.CompressAllCollections == true) ||
                                 compressedCollectionsTableNames?.Contains(name) == true;
-                        }, lowerId => ShardHelper.GetBucketFor(databaseRecord.Sharding, lowerId), _token);
+                        },_token);
                     }
 
                     result.TreeName = null;

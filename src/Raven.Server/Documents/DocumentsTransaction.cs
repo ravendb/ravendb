@@ -44,7 +44,6 @@ namespace Raven.Server.Documents
 
             if (context.DocumentDatabase is ShardedDocumentDatabase sharded)
             {
-                transaction.BucketResolver = sharded.GetBucketFor;
                 transaction.OnBeforeCommit += sharded.ShardedDocumentsStorage.OnBeforeCommit;
                 transaction.LowLevelTransaction.OnRollBack += sharded.ShardedDocumentsStorage.OnFailure;
             }

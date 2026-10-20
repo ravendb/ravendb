@@ -5033,7 +5033,7 @@ namespace Raven.Server.Documents.Indexes
                                 result.Progress.GlobalTotal = progressReport.GlobalTotal;
                                 result.AddMessage(progressReport.Message);
                                 onProgress?.Invoke(result.Progress);
-                            }, null, null, token);
+                            }, null, token);
                         }
 
                         // reset tree name back to null after processing

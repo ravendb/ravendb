@@ -68,7 +68,7 @@ namespace Raven.Server.Documents
         {
             var keyPtr = tvr.Read(keyIndex, out var keySize);
             int sizeOfDocId = AttachmentKey.GetSizeOfDocId(new ReadOnlySpan<byte>(keyPtr, keySize));
-            return tx.GetBucketFor(new ReadOnlySpan<byte>(keyPtr, sizeOfDocId));
+            return ShardedDocumentsStorage.GetBucketFor(tx, new ReadOnlySpan<byte>(keyPtr, sizeOfDocId));
         }
 
         public (long TotalSize, int UniqueAttachmets) GetStreamInfoForBucket(Transaction tx, int bucket)

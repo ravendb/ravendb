@@ -20,8 +20,6 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Voron.Impl
 {
-    public delegate int BucketResolver(ReadOnlySpan<byte> lowerId);
-
     public sealed unsafe class Transaction : IDisposable
     {
         public LowLevelTransaction LowLevelTransaction
@@ -31,16 +29,6 @@ namespace Voron.Impl
         }
 
         public object Owner;
-
-        public BucketResolver BucketResolver;
-
-        public int GetBucketFor(ReadOnlySpan<byte> lowerId)
-        {
-            if (BucketResolver == null)
-                throw new InvalidOperationException("This transaction has no bucket resolver, so it cannot modify a sharded table. Whoever opened it has to provide one");
-
-            return BucketResolver(lowerId);
-        }
 
         public ByteStringContext Allocator => _lowLevelTransaction.Allocator;
 
