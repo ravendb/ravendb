@@ -24,13 +24,14 @@ public sealed class ApiKeyStore(
 
     private const int SaltBytes = 16;
     private const int MaxKeyIdLength = 64;
-    private const int MaxCacheEntries = 1024;
+    private const int MaxUnknownCacheEntries = 1024;
     private const int MinRecommendedApiKeyLength = 16;
 
     private static readonly Record Decoy = new(RandomNumberGenerator.GetBytes(SaltBytes), RandomNumberGenerator.GetBytes(32));
 
     private readonly SemaphoreSlim _seedLock = new(1, 1);
-    private readonly ConcurrentDictionary<string, CacheEntry> _cache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, CacheEntry> _known = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, CacheEntry> _unknown = new(StringComparer.OrdinalIgnoreCase);
     private volatile bool _seeded;
 
     public async Task<bool> ValidateAsync(string? presentedKey, CancellationToken ct)
@@ -90,8 +91,10 @@ public sealed class ApiKeyStore(
     private async Task<Record?> LoadAsync(string keyId, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
-        if (_cache.TryGetValue(keyId, out var cached) && cached.ExpiresAt > now)
+        if (_known.TryGetValue(keyId, out var cached) && cached.ExpiresAt > now)
             return cached.Record;
+        if (_unknown.TryGetValue(keyId, out cached) && cached.ExpiresAt > now)
+            return null;
 
         ApiKey? doc;
         try
@@ -113,10 +116,19 @@ public sealed class ApiKeyStore(
 
     private void Cache(string keyId, Record? record, DateTime now)
     {
-        if (_cache.Count >= MaxCacheEntries && _cache.ContainsKey(keyId) == false)
-            _cache.Clear();
+        var entry = new CacheEntry(record, now + options.Value.ApiKeyCacheDuration);
+        if (record is not null)
+        {
+            _unknown.TryRemove(keyId, out _);
+            _known[keyId] = entry;
+            return;
+        }
 
-        _cache[keyId] = new CacheEntry(record, now + options.Value.ApiKeyCacheDuration);
+        _known.TryRemove(keyId, out _);
+        if (_unknown.Count >= MaxUnknownCacheEntries && _unknown.ContainsKey(keyId) == false)
+            _unknown.Clear();
+
+        _unknown[keyId] = entry;
     }
 
     private Record? Decode(ApiKey doc, string keyId)
@@ -186,7 +198,8 @@ public sealed class ApiKeyStore(
             };
             await session.StoreAsync(doc, ApiKey.PrimaryId, ct);
             await session.SaveChangesAsync(ct);
-            _cache.TryRemove(PrimaryKeyId, out _);
+            _known.TryRemove(PrimaryKeyId, out _);
+            _unknown.TryRemove(PrimaryKeyId, out _);
             return true;
         }
         catch (Exception ex)
@@ -209,7 +222,8 @@ public sealed class ApiKeyStore(
                 await session.SaveChangesAsync(ct);
             }
 
-            _cache.TryRemove(PrimaryKeyId, out _);
+            _known.TryRemove(PrimaryKeyId, out _);
+            _unknown.TryRemove(PrimaryKeyId, out _);
             return true;
         }
         catch (Exception ex)
