@@ -8,6 +8,7 @@ using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Sparrow.Json;
 using Tests.Infrastructure;
@@ -681,6 +682,33 @@ namespace FastTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task SubclassedResolver_RootIdKeyInDictionary_IsNotWritten()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>
+                {
+                    var serialization = new NewtonsoftJsonSerializationConventions();
+                    serialization.JsonContractResolver = new SubclassedResolver(serialization);
+                    s.Conventions.Serialization = serialization;
+                }
+            });
+            await SeedAsync(store, Id);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var user = await session.LoadAsync<User>(Id);
+                user.Extra["@id"] = "users/2";
+                user.Extra["Probe"] = "1";
+                await session.SaveChangesAsync();
+            }
+
+            var raw = await GetRawAsync(store, Id);
+            Assert.Equal("1", Get<string>(raw, "Probe"));
+            Assert.DoesNotContain("@id", PropertyNames(raw));
+        }
+
         private static async Task SeedAsync(IDocumentStore store, string id)
         {
             using (var session = store.OpenAsyncSession())
@@ -787,6 +815,13 @@ namespace FastTests.Issues
 
             [JsonExtensionData]
             public IDictionary<string, object> Extra { get; set; }
+        }
+
+        private class SubclassedResolver : DefaultRavenContractResolver
+        {
+            public SubclassedResolver(ISerializationConventions conventions) : base(conventions)
+            {
+            }
         }
     }
 }
