@@ -1,7 +1,6 @@
 import { useFormContext } from "react-hook-form";
 import { api } from "@/api/api";
-import type { MigrationApplyRequest, MigrationApplyResult } from "@/api/custom-services/migration-service";
-import type { ApiErrorResponse } from "@/api/generated/server-api";
+import type { ApiErrorResponse, CdcSinkConfiguration, MigrationApplyRequest } from "@/api/generated/server-api";
 import { isApiError } from "@/api/http-client";
 import { WizardStepError } from "@/components/form/wizard/wizard-step-error";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
@@ -77,9 +76,9 @@ export function isPlanApplied(origin: MapOrigin | null, planKey: string): boolea
 }
 
 /** The server answers a plan that does not validate as a whole with 422 and the reasons. */
-async function applyPlan(request: MigrationApplyRequest): Promise<NonNullable<MigrationApplyResult["configuration"]>> {
+async function applyPlan(request: MigrationApplyRequest): Promise<CdcSinkConfiguration> {
     try {
-        const { configuration } = await api.services.migration.apply(request);
+        const { configuration } = await api.services.setup.migrationApply(request);
 
         if (!configuration) {
             throw new WizardStepError("The planner returned no configuration to apply.");

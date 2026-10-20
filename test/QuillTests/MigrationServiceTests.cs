@@ -306,6 +306,28 @@ public class MigrationServiceTests(ITestOutputHelper output) : RavenTestBase(out
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Arrays_the_planner_leaves_out_arrive_empty()
+    {
+        using var store = await StoreWithSchemaAsync();
+        var body =
+            "data: {\"type\":\"collection\",\"status\":\"registered\",\"collection\":\"Orders\",\"version\":1}\n\n" +
+            "data: {\"type\":\"reply\",\"openQuestions\":[{\"question\":\"Embed lines?\"}]}\n\n";
+        var frames = new List<MigrationFrame>();
+
+        await NewService(store, new StubPlannerHandler(HttpStatusCode.OK, body))
+            .StartAsync(new MigrationStartRequest(Slug), Collect(frames), CancellationToken.None);
+
+        Assert.Collection(frames,
+            f => Assert.Empty(Assert.IsType<CollectionFrame>(f).Warnings),
+            f =>
+            {
+                var reply = Assert.IsType<ReplyFrame>(f);
+                Assert.Empty(reply.Gaps);
+                Assert.Empty(Assert.Single(reply.OpenQuestions).Options);
+            });
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Upsert_bumps_the_version_case_insensitively_and_remove_drops_it()
     {
         using var store = await StoreWithSchemaAsync();
