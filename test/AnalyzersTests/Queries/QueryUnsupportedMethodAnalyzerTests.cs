@@ -248,6 +248,53 @@ class Order { public string Status { get; set; } }
         // ── Filter (added to QueryChainLambdaMethods) ─────────────────────────
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task UserMethod_Not_Referencing_Element_In_Where_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Defaults { public static string Status() => ""Active""; public static int Days(int n) => n; }
+
+class Test
+{
+    void Run(IDocumentSession session, int days)
+    {
+        var q = session.Query<Order>()
+            .Where(o => o.Status == Defaults.Status() && o.Qty > Defaults.Days(days));
+    }
+}
+
+class Order { public string Status { get; set; } public int Qty { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task UserMethod_Not_Referencing_Element_In_QueryExpression_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Defaults { public static string Status() => ""Active""; }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = from o in session.Query<Order>()
+                where o.Status == Defaults.Status()
+                select o;
+    }
+}
+
+class Order { public string Status { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_Filter_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"

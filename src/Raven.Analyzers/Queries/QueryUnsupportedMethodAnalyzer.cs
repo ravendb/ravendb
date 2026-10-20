@@ -118,11 +118,29 @@ namespace Raven.Analyzers.Queries
                 if (!MethodTranslatabilityHelper.IsLikelyNonTranslatable(method, exemptObjectMethodOverrides: false))
                     continue;
 
+                if (!ReferencesQueryElement(nested, context.SemanticModel))
+                    continue;
+
                 context.ReportDiagnostic(Diagnostic.Create(
                     DiagnosticDescriptors.QueryUnsupportedMethodCall,
                     SyntaxHelpers.GetInvocationNameLocation(nested),
                     method.Name));
             }
+        }
+
+        private static bool ReferencesQueryElement(InvocationExpressionSyntax invocation, SemanticModel model)
+        {
+            foreach (IdentifierNameSyntax id in invocation.DescendantNodes().OfType<IdentifierNameSyntax>())
+            {
+                switch (model.GetSymbolInfo(id).Symbol)
+                {
+                    case IRangeVariableSymbol:
+                    case IParameterSymbol { ContainingSymbol: IMethodSymbol { MethodKind: MethodKind.AnonymousFunction } }:
+                        return true;
+                }
+            }
+
+            return false;
         }
 
         // When scanning a query-expression clause, an invocation may also be reported by another
