@@ -87,14 +87,18 @@ builder.Services.AddOpenApi(options =>
     options.AddSchemaTransformer((schema, context, _) =>
     {
         var type = context.JsonTypeInfo.Type;
-        var derivedType = type.BaseType?
+        var polymorphicBase = type.BaseType;
+        while (polymorphicBase is not null && polymorphicBase.GetCustomAttribute<JsonPolymorphicAttribute>() is null)
+            polymorphicBase = polymorphicBase.BaseType;
+
+        var derivedType = polymorphicBase?
             .GetCustomAttributes<JsonDerivedTypeAttribute>()
             .FirstOrDefault(attribute => attribute.DerivedType == type);
 
         if (derivedType?.TypeDiscriminator is null)
             return Task.CompletedTask;
 
-        var propertyName = type.BaseType!.GetCustomAttribute<JsonPolymorphicAttribute>()?.TypeDiscriminatorPropertyName ?? "$type";
+        var propertyName = polymorphicBase!.GetCustomAttribute<JsonPolymorphicAttribute>()?.TypeDiscriminatorPropertyName ?? "$type";
 
         schema.Required ??= new HashSet<string>();
         schema.Required.Add(propertyName);
@@ -192,6 +196,8 @@ builder.Services.AddHttpClient(WebhookActionExecutor.ClientName,
 
 builder.Services.AddHttpClient<IAiHelperClient, AiHelperInternalClient>(ConfigureRavenServerClient)
     .ConfigurePrimaryHttpMessageHandler(CreateRavenServerHandler);
+
+builder.Services.AddSingleton<MigrationTurns>();
 
 builder.Services.AddHttpClient<MigrationService>(ConfigureRavenServerClient)
     .ConfigurePrimaryHttpMessageHandler(CreateRavenServerHandler);

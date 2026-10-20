@@ -140,4 +140,95 @@ describe("createPlannerSession", () => {
         expect(prompt).toContain("Keep it small.");
         expect(useSetupWizardStore.getState().plannerDraft).toBe("");
     });
+
+    it("sends collections picked without writing anything as a selection, with no prompt", async () => {
+        migration.start.mockImplementation(() => streamOf(DONE));
+        migration.ask.mockImplementation(() => streamOf(DONE));
+        const session = newSession();
+        await session.start();
+        useSetupWizardStore.getState().addPlannerMention("Orders");
+        useSetupWizardStore.getState().addPlannerMention("Customers");
+
+        await session.sendDraft();
+
+        expect(migration.ask).toHaveBeenCalledWith(
+            { slug: "shop", conversationId: "planner/1", selectedCollections: ["Orders", "Customers"] },
+            expect.any(AbortSignal),
+        );
+        expect(useSetupWizardStore.getState().plannerMentions).toEqual([]);
+    });
+
+    it("does not send picked collections that are all built already, with nothing written", async () => {
+        migration.start.mockImplementation(() =>
+            streamOf(
+                {
+                    type: "collection",
+                    status: "registered",
+                    collection: "Orders",
+                    version: 1,
+                    warnings: [],
+                },
+                DONE,
+            ),
+        );
+        const session = newSession();
+        await session.start();
+        useSetupWizardStore.getState().addPlannerMention("Orders");
+
+        await session.sendDraft();
+
+        expect(migration.ask).not.toHaveBeenCalled();
+        expect(useSetupWizardStore.getState().plannerMentions).toEqual(["Orders"]);
+    });
+
+    it("sends picked areas and collections as a selection", async () => {
+        migration.start.mockImplementation(() => streamOf(DONE));
+        migration.ask.mockImplementation(() => streamOf(DONE));
+        const session = newSession();
+        await session.start();
+
+        await session.askSelection({ areas: ["Sales"], collections: ["Customers"] });
+
+        expect(migration.ask).toHaveBeenCalledWith(
+            { slug: "shop", conversationId: "planner/1", selectedAreas: ["Sales"], selectedCollections: ["Customers"] },
+            expect.any(AbortSignal),
+        );
+    });
+
+    it("sends collections picked meanwhile with the answers as a selection, not as a dangling prompt", async () => {
+        migration.start.mockImplementation(() =>
+            streamOf(
+                {
+                    type: "reply",
+                    reply: "One question first.",
+                    openQuestions: [{ question: "Embed lines?", options: ["Yes", "No"], recommended: 0 }],
+                    gaps: [],
+                },
+                DONE,
+            ),
+        );
+        migration.ask.mockImplementation(() => streamOf(DONE));
+        const session = newSession();
+        await session.start();
+        useSetupWizardStore.getState().addPlannerMention("Orders");
+
+        await session.answer([{ question: "Embed lines?", answer: "Yes" }], false);
+
+        const [request] = migration.ask.mock.calls[0] as [{ prompt: string; selectedCollections?: string[] }];
+        expect(request.prompt).not.toContain("About the");
+        expect(request.selectedCollections).toEqual(["Orders"]);
+        const answersTurn = useSetupWizardStore.getState().plannerTurns.find((turn) => turn.kind === "answers");
+        expect(answersTurn).toMatchObject({ instructions: { text: "", mentions: ["Orders"] } });
+    });
+
+    it("sends nothing when nothing is written or picked", async () => {
+        migration.start.mockImplementation(() => streamOf(DONE));
+        const session = newSession();
+        await session.start();
+
+        await session.sendDraft();
+        await session.askSelection({ areas: [], collections: [] });
+
+        expect(migration.ask).not.toHaveBeenCalled();
+    });
 });

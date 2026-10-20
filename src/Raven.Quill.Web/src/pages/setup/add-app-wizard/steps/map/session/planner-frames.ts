@@ -96,19 +96,26 @@ export function applyPlannerFrame(state: PlannerState, frame: MigrationFrame): P
         // Kept as a collection rather than dropped: a rejection the operator cannot see looks identical
         // to a collection the planner never attempted. A rejected change leaves the registration in place,
         // as it does on the server.
-        case "rejected": {
+        case "rejectedCollection": {
             const previous = state.plannerCollections[frame.collection];
             const isChange = previous !== undefined && isRegistered(previous);
+            const errors = frame.errors.map((issue) => issue.message);
 
             return {
                 plannerCollections: isChange
                     ? {
                           ...state.plannerCollections,
-                          [frame.collection]: { ...previous, rejectionErrors: frame.errors },
+                          [frame.collection]: { ...previous, rejectionErrors: errors },
                       }
                     : {
                           ...state.plannerCollections,
-                          [frame.collection]: { name: frame.collection, outcome: "rejected", errors: frame.errors },
+                          [frame.collection]: {
+                              name: frame.collection,
+                              outcome: "rejected",
+                              errors,
+                              config: frame.config ?? null,
+                              issues: frame.errors,
+                          },
                       },
                 plannerTurns: addActivity(state.plannerTurns, {
                     type: "rejected",
@@ -118,6 +125,17 @@ export function applyPlannerFrame(state: PlannerState, frame: MigrationFrame): P
                 }),
             };
         }
+
+        case "transientCollectionError":
+            return {
+                plannerTurns: addActivity(state.plannerTurns, {
+                    type: "transientError",
+                    collection: frame.collection,
+                    errors: frame.errors.map((issue) => issue.message),
+                    rejections: frame.rejections,
+                    maxRejections: frame.maxRejections,
+                }),
+            };
 
         case "removed":
             return frame.collection
@@ -148,8 +166,8 @@ export function applyPlannerFrame(state: PlannerState, frame: MigrationFrame): P
                 plannerTurns: updateReplyTurn(state.plannerTurns, (turn) => ({
                     ...turn,
                     reply: frame.reply?.trim() || null,
-                    gaps: frame.gaps,
-                    questions: frame.openQuestions.map(toPlannerQuestion),
+                    gaps: frame.gaps ?? [],
+                    questions: (frame.openQuestions ?? []).map(toPlannerQuestion),
                 })),
             };
 

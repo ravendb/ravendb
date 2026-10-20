@@ -95,7 +95,7 @@ describe("buildPlanCollections", () => {
         const collections = buildPlanCollections(
             source({
                 Orders: registered("Orders", 2),
-                Customers: { name: "Customers", outcome: "rejected", errors: ["Id is mapped twice."] },
+                Customers: { name: "Customers", outcome: "rejected", errors: ["Id is mapped twice."], config: null, issues: [] },
                 Products: registered("Products", 1),
             }),
             index,
@@ -230,7 +230,7 @@ describe("countUnbuilt", () => {
             countUnbuilt(
                 source({
                     Orders: registered("Orders", 1),
-                    Customers: { name: "Customers", outcome: "rejected", errors: [] },
+                    Customers: { name: "Customers", outcome: "rejected", errors: [], config: null, issues: [] },
                 }),
             ),
         ).toBe(1);

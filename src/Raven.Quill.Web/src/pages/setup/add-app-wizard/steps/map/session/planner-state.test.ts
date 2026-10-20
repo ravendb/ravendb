@@ -79,7 +79,7 @@ describe("selectBuiltCollections", () => {
                 plannerCollections: {
                     Orders: built("Orders"),
                     Products: built("Products"),
-                    Invoices: { name: "Invoices", outcome: "rejected", errors: [] },
+                    Invoices: { name: "Invoices", outcome: "rejected", errors: [], config: null, issues: [] },
                 },
             }).map((collection) => collection.name),
         ).toEqual(["Orders", "Products"]);
