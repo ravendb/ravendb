@@ -44,13 +44,28 @@ namespace Raven.Analyzers.Shared
             if (!TryCollectChainDeclarations(classSymbol, compilation, out List<ClassDeclarationSyntax> declarations))
                 return IndexChainSearch.Unknown;
 
-            // A Map assignment counts only when it is reachable from a constructor: directly in a ctor
-            // body, or in a method the constructor invokes (transitively). Candidate methods and seed
-            // constructors are gathered across the WHOLE chain and all partials, so a ctor that delegates
-            // to a base-class or other-partial helper — MyIndex() { Setup(); } with void Setup() { Map =
-            // ...; } declared elsewhere — is followed correctly. A Map in a method no constructor ever
-            // reaches (a dead helper, a finalizer, an operator) does not count, so a genuinely map-less
-            // index still reports RVN004. RVN001 separately flags a Map assigned outside a constructor.
+            foreach ((SyntaxNode body, SemanticModel model) in EnumerateConstructorReachableBodies(declarations, compilation))
+            {
+                if (ContainsAssignment(body, model, propertyName))
+                    return IndexChainSearch.Found;
+            }
+
+            return IndexChainSearch.NotFound;
+        }
+
+        /// <summary>
+        /// Yields every method-like body reachable from a constructor of the chain: each constructor body,
+        /// then (transitively) the body of every method the visited bodies invoke. Candidate methods and
+        /// seed constructors are gathered across the WHOLE chain and all partials, so a ctor that delegates
+        /// to a base-class or other-partial helper (<c>MyIndex() { Setup(); }</c> with <c>void Setup()</c>
+        /// declared elsewhere) is followed. A body no constructor ever reaches (a dead helper, a finalizer,
+        /// an operator) is not yielded. Shared by the Map/Reduce search and the AddMap count so the two
+        /// agree on what counts as defined in the constructor.
+        /// </summary>
+        private static IEnumerable<(SyntaxNode Body, SemanticModel Model)> EnumerateConstructorReachableBodies(
+            List<ClassDeclarationSyntax> declarations,
+            Compilation compilation)
+        {
             Dictionary<string, List<MethodDeclarationSyntax>> methodsByName = new(StringComparer.Ordinal);
             Queue<(SyntaxNode Body, SemanticModel Model)> pending = new();
 
@@ -83,8 +98,7 @@ namespace Raven.Analyzers.Shared
             {
                 (SyntaxNode body, SemanticModel model) = pending.Dequeue();
 
-                if (ContainsAssignment(body, model, propertyName))
-                    return IndexChainSearch.Found;
+                yield return (body, model);
 
                 // Follow calls to methods declared anywhere in the chain/partials (Setup(), this.Setup(),
                 // Setup<T>()); enqueue every overload sharing the name. DescendantNodesAndSelf so an
@@ -109,8 +123,6 @@ namespace Raven.Analyzers.Shared
                     }
                 }
             }
-
-            return IndexChainSearch.NotFound;
         }
 
         /// <summary>
@@ -191,9 +203,10 @@ namespace Raven.Analyzers.Shared
         }
 
         /// <summary>
-        /// Counts AddMap/AddMapForAll call sites across the index class and its user-defined base
-        /// classes, and reports whether any sit inside a loop, whether any is AddMapForAll, and whether
-        /// a base class is metadata-only (unknown — the caller must then suppress).
+        /// Counts AddMap/AddMapForAll call sites reachable from a constructor across the index class and
+        /// its user-defined base classes, and reports whether any sit inside a loop, whether any is
+        /// AddMapForAll, and whether a base class is metadata-only (unknown; the counts then cover only
+        /// the readable prefix).
         /// </summary>
         public static (int count, bool anyInLoop, bool anyForAll, bool unknown) CountAddMapInChain(
             INamedTypeSymbol classSymbol,
@@ -203,48 +216,31 @@ namespace Raven.Analyzers.Shared
             bool anyInLoop = false;
             bool anyForAll = false;
 
-            for (INamedTypeSymbol? type = classSymbol; type != null; type = type.BaseType)
+            bool wholeChainReadable = TryCollectChainDeclarations(classSymbol, compilation, out List<ClassDeclarationSyntax> declarations);
+
+            foreach ((SyntaxNode body, SemanticModel model) in EnumerateConstructorReachableBodies(declarations, compilation))
             {
-                if (SyntaxHelpers.IsKnownIndexBaseType(type))
-                    break;
-
-                if (!IsReadableIn(type, compilation))
-                    return (count, anyInLoop, anyForAll, true);
-
-                foreach (SyntaxReference syntaxRef in type.DeclaringSyntaxReferences)
+                foreach (InvocationExpressionSyntax invocation in
+                    body.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
                 {
-                    if (syntaxRef.GetSyntax() is not ClassDeclarationSyntax decl)
+                    string? methodName = SyntaxHelpers.GetMethodName(invocation);
+                    if (methodName != KnownTypes.AddMapMethodName && methodName != KnownTypes.AddMapForAllMethodName)
                         continue;
 
-                    SemanticModel model = compilation.GetSemanticModel(decl.SyntaxTree);
-                    foreach (ConstructorDeclarationSyntax ctor in decl.Members.OfType<ConstructorDeclarationSyntax>())
-                    {
-                        if (ctor.GetBodyNode() is not SyntaxNode body)
-                            continue;
+                    // Confirm the method resolves to the AddMap defined on a multi-map index base.
+                    if (SyntaxHelpers.GetMethodSymbol(invocation, model) is not IMethodSymbol method
+                        || !SyntaxHelpers.IsMultiMapBase(method.ContainingType))
+                        continue;
 
-                        foreach (InvocationExpressionSyntax invocation in
-                            body.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
-                        {
-                            string? methodName = SyntaxHelpers.GetMethodName(invocation);
-                            if (methodName != KnownTypes.AddMapMethodName && methodName != KnownTypes.AddMapForAllMethodName)
-                                continue;
-
-                            // Confirm the method resolves to the AddMap defined on a multi-map index base.
-                            if (SyntaxHelpers.GetMethodSymbol(invocation, model) is not IMethodSymbol method
-                                || !SyntaxHelpers.IsMultiMapBase(method.ContainingType))
-                                continue;
-
-                            count++;
-                            if (IsInsideLoop(invocation, body))
-                                anyInLoop = true;
-                            if (methodName == KnownTypes.AddMapForAllMethodName)
-                                anyForAll = true;
-                        }
-                    }
+                    count++;
+                    if (IsInsideLoop(invocation, body))
+                        anyInLoop = true;
+                    if (methodName == KnownTypes.AddMapForAllMethodName)
+                        anyForAll = true;
                 }
             }
 
-            return (count, anyInLoop, anyForAll, false);
+            return (count, anyInLoop, anyForAll, !wholeChainReadable);
         }
 
         private static bool ContainsAssignment(SyntaxNode node, SemanticModel model, string propertyName)

@@ -130,7 +130,7 @@ class Company { public string Name { get; set; } }
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
-        public async Task MultiMap_AddMap_Only_In_Helper_Method_Reports_Diagnostics()
+        public async Task MultiMap_AddMap_Only_In_Helper_Method_Called_From_Ctor_No_Diagnostic()
         {
             const string source = CommonUsings + @"
 class MyMultiMapIndex : AbstractMultiMapIndexCreationTask<MyResult>
@@ -154,8 +154,7 @@ class Employee { public string FirstName { get; set; } }
             ImmutableArray<Diagnostic> diagnostics =
                 await RavenAnalyzerTest.AnalyzeAsync<IndexDefinitionAnalyzer>(source);
 
-            Diagnostic d = Assert.Single(diagnostics);
-            Assert.Equal(DiagnosticIds.MultiMapIndexMissingAddMap, d.Id);
+            Assert.Empty(diagnostics);
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
