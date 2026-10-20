@@ -7,19 +7,19 @@ import { Icon } from "components/common/Icon";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import { useAppDispatch } from "components/store";
 import { certificatesActions } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
-import CertificatesRenewedModalBrowserAccess from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRenewedModalBrowserAccess";
-import CertificatesRenewedModalApiAccess from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRenewedModalApiAccess";
-import "./CertificatesRenewedModal.scss";
+import CertificatesReadyModalBrowserAccess from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesReadyModalBrowserAccess";
+import CertificatesReadyModalApiAccess from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesReadyModalApiAccess";
+import "./CertificatesReadyModal.scss";
 
 type AccessTab = "browser" | "api";
 
-export default function CertificatesRenewedModal() {
+export default function CertificatesReadyModal() {
     const dispatch = useAppDispatch();
     const docsLink = useRavenLink({ hash: "RSFSL5" });
 
     const [accessTab, setAccessTab] = useState<AccessTab>("browser");
 
-    const close = () => dispatch(certificatesActions.isRenewedModalOpenToggled());
+    const close = () => dispatch(certificatesActions.isReadyModalOpenToggled());
 
     return (
         <Modal
@@ -27,7 +27,7 @@ export default function CertificatesRenewedModal() {
             show
             size="lg"
             centered
-            contentClassName="modal-border bulge-primary certificates-renewed-modal"
+            contentClassName="modal-border bulge-primary certificates-ready-modal"
         >
             <Modal.Header onCloseClick={close} className="mb-0">
                 <Icon icon="certificate" size="lg" margin="me-3" color="primary" addon="check" />
@@ -65,8 +65,8 @@ export default function CertificatesRenewedModal() {
                     </div>
 
                     <Tab.Content>
-                        <CertificatesRenewedModalBrowserAccess />
-                        <CertificatesRenewedModalApiAccess />
+                        <CertificatesReadyModalBrowserAccess />
+                        <CertificatesReadyModalApiAccess />
                     </Tab.Content>
                 </Tab.Container>
             </Modal.Body>
