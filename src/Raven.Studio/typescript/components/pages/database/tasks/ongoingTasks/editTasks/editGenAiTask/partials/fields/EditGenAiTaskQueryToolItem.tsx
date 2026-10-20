@@ -1,6 +1,7 @@
 import savedQueriesStorage from "common/storage/savedQueriesStorage";
 import AceEditor from "components/common/ace/AceEditor";
-import { FormInput, FormAceEditor, FormGroup, FormLabel, FormSelect, FormSwitch } from "components/common/Form";
+import { FormInput, FormAceEditor, FormGroup, FormLabel, FormSelect } from "components/common/Form";
+import OverridableField from "components/common/OverridableField";
 import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import useRqlLanguageService from "components/hooks/useRqlLanguageService";
@@ -190,74 +191,46 @@ export default function EditGenAiTaskQueryToolItem({ index, remove, save, edit }
                     <Accordion.Header
                         as={() => <AccordionButton className="rounded-2 panel-bg-2">Advanced settings</AccordionButton>}
                     ></Accordion.Header>
-                    <Accordion.Body>
+                    <Accordion.Body className="pt-0">
                         <hr className="my-0 mb-2" />
-                        <FormGroup>
-                            <FormLabel>
-                                Allow model queries
-                                <PopoverWithHoverWrapper message={<AllowModelQueriesTooltip />}>
-                                    <Icon icon="info-new" margin="ms-1" />
-                                </PopoverWithHoverWrapper>
-                            </FormLabel>
-                            <div className="d-flex flex-wrap align-items-center">
-                                <FormSelect
-                                    control={control}
-                                    name={`queries.${index}.isAllowModelQueries`}
-                                    options={isAllowModelQueriesOptions}
-                                    isDisabled={!queryItem.isAllowModelQueriesOverride}
-                                    placeholder={
-                                        queryItem.isAllowModelQueriesOverride ? "Select True or False" : "Default"
-                                    }
-                                />
-                                <FormSwitch
-                                    control={control}
-                                    name={`queries.${index}.isAllowModelQueriesOverride`}
-                                    className="ms-2"
-                                    afterChange={(isChecked) => {
-                                        if (!isChecked) {
-                                            setValue(`queries.${index}.isAllowModelQueries`, null, {
-                                                shouldValidate: true,
-                                            });
-                                        }
-                                    }}
-                                >
-                                    Override
-                                </FormSwitch>
-                            </div>
-                        </FormGroup>
-                        <FormGroup className="mb-0">
-                            <FormLabel>
-                                Add to initial context
-                                <PopoverWithHoverWrapper message={<AddToInitialContextTooltip />}>
-                                    <Icon icon="info-new" margin="ms-1" />
-                                </PopoverWithHoverWrapper>
-                            </FormLabel>
-                            <div className="d-flex flex-wrap align-items-center">
-                                <FormSelect
-                                    control={control}
-                                    name={`queries.${index}.isAddToInitialContext`}
-                                    options={isAddToInitialContextOptions}
-                                    isDisabled={!queryItem.isAddToInitialContextOverride}
-                                    placeholder={
-                                        queryItem.isAddToInitialContextOverride ? "Select True or False" : "Default"
-                                    }
-                                />
-                                <FormSwitch
-                                    control={control}
-                                    name={`queries.${index}.isAddToInitialContextOverride`}
-                                    className="ms-2"
-                                    afterChange={(isChecked) => {
-                                        if (!isChecked) {
-                                            setValue(`queries.${index}.isAddToInitialContext`, null, {
-                                                shouldValidate: true,
-                                            });
-                                        }
-                                    }}
-                                >
-                                    Override
-                                </FormSwitch>
-                            </div>
-                        </FormGroup>
+                        <div className="vstack gap-3">
+                            <OverridableField
+                                control={control}
+                                overrideName={`queries.${index}.isAllowModelQueriesOverride`}
+                                resetOnDisable={{ setValue, valueName: `queries.${index}.isAllowModelQueries` }}
+                                label="Allow model queries"
+                                tooltip={<AllowModelQueriesTooltip />}
+                            >
+                                {({ isOverridden, isDisabled, controlId }) => (
+                                    <FormSelect
+                                        control={control}
+                                        name={`queries.${index}.isAllowModelQueries`}
+                                        options={isAllowModelQueriesOptions}
+                                        isDisabled={isDisabled}
+                                        inputId={controlId}
+                                        placeholder={isOverridden ? "Select True or False" : "Default (True)"}
+                                    />
+                                )}
+                            </OverridableField>
+                            <OverridableField
+                                control={control}
+                                overrideName={`queries.${index}.isAddToInitialContextOverride`}
+                                resetOnDisable={{ setValue, valueName: `queries.${index}.isAddToInitialContext` }}
+                                label="Add to initial context"
+                                tooltip={<AddToInitialContextTooltip />}
+                            >
+                                {({ isOverridden, isDisabled, controlId }) => (
+                                    <FormSelect
+                                        control={control}
+                                        name={`queries.${index}.isAddToInitialContext`}
+                                        options={isAddToInitialContextOptions}
+                                        isDisabled={isDisabled}
+                                        inputId={controlId}
+                                        placeholder={isOverridden ? "Select True or False" : "Default (False)"}
+                                    />
+                                )}
+                            </OverridableField>
+                        </div>
                     </Accordion.Body>
                 </Accordion.Item>
             </Accordion>
@@ -274,7 +247,7 @@ function AllowModelQueriesTooltip() {
             When False, the model cannot call this query (unless executed as part of initial context).
             <br />
             <br />
-            When Default, server default is applied.
+            When Default, True is applied.
         </>
     );
 }
@@ -289,7 +262,7 @@ function AddToInitialContextTooltip() {
             When False, the query will not be executed for the initial context.
             <br />
             <br />
-            When Default, server default is applied.
+            When Default, False is applied.
         </>
     );
 }
