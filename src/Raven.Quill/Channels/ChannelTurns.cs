@@ -145,18 +145,8 @@ internal sealed class ChannelTurns<TMessage>(
             logger.Warn($"{channel.Type} agent turn produced an empty reply for channel {channel.Id}");
     }
 
-    public async Task NotifyBufferFullAsync(TMessage message, CancellationToken ct)
-    {
-        try
-        {
-            await TrySendAsync(message, platform.Replies.Overloaded, ct);
-        }
-        catch (Exception e) when (e is not OperationCanceledException)
-        {
-            if (logger.IsDebugEnabled)
-                logger.Debug($"{channel.Type} overload notice failed for channel {channel.Id}: {e.Message}");
-        }
-    }
+    public Task NotifyBufferFullAsync(TMessage message, CancellationToken ct) =>
+        TrySendAsync(message, platform.Replies.Overloaded, ct);
 
     private async Task TrySendAsync(TMessage replyTo, string text, CancellationToken ct)
     {
