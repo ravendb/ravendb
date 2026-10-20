@@ -12,6 +12,7 @@
 #define rvn_pread pread
 #define rvn_pwrite pwrite
 #define rvn_pwritev pwritev
+#define rvn_lseek lseek
 #define O_DIRECT 0
 #define O_LARGEFILE 0
 
@@ -29,6 +30,7 @@ struct io_uring
 #define rvn_pread pread64
 #define rvn_pwrite pwrite64
 #define rvn_pwritev pwritev64
+#define rvn_lseek lseek64
 #endif
 
 struct journal_handle

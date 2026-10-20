@@ -848,22 +848,67 @@ int32_t rvn_write_file_io(
     return SUCCESS;
 }
 
+/* Writing through the mapping into a range with no clusters behind it, such as a punched one, fails the page fault
+   with STATUS_IN_PAGE_ERROR (0xC0000006) when the disk is full, which kills the process. Such buffers go through
+   WriteFile, which fails with ERROR_DISK_FULL. Buffers come sorted by offset, so [hole_start, hole_end) keeps the
+   hole found by the last query. */
+static bool
+_overlaps_hole(struct handle *handle_ptr, int64_t start, int64_t end, int64_t *hole_start, int64_t *hole_end)
+{
+    if (start >= *hole_end)
+    {
+        int64_t size = 0;
+        int32_t error = 0;
+        *hole_end = INT64_MAX;
+        if (rvn_pager_get_next_sparse_region(handle_ptr, start, hole_start, &size, &error) != SUCCESS)
+        {
+            // no FSCTL support: keep writing through the mapping; any other failure: WriteFile the rest of the batch
+            *hole_start = (error == ERROR_INVALID_FUNCTION || error == ERROR_NOT_SUPPORTED) ? INT64_MAX : start;
+        }
+        else if (*hole_start < 0)
+            *hole_start = INT64_MAX; // no hole
+        else
+            *hole_end = *hole_start + size;
+    }
+    return end > *hole_start;
+}
+
 int32_t rvn_write_mmap32(
     void *handle,
     struct page_to_write *buffers,
     int32_t count,
     int32_t *detailed_error_code)
 {
+    struct handle *handle_ptr = handle;
     int32_t rc = SUCCESS;
 
     void* mapped_view = NULL;
     int64_t mapped_start_page = -1;  // Start page of currently mapped region
     int64_t mapped_page_count = 0;   // Number of pages in currently mapped region
+    int64_t hole_start = -1;
+    int64_t hole_end = -1;
 
     for (int32_t i = 0; i < count; i++)
     {
         int64_t page_number = buffers[i].page_num;
         int64_t number_of_pages = buffers[i].count_of_pages;
+        int64_t offset = page_number * VORON_PAGE_SIZE;
+        int64_t bytes_to_write = number_of_pages * VORON_PAGE_SIZE;
+
+        if (_overlaps_hole(handle_ptr, offset, offset + bytes_to_write, &hole_start, &hole_end))
+        {
+            rc = rvn_write_file_io(handle, &buffers[i], 1, detailed_error_code);
+            if (rc != SUCCESS)
+            {
+                if (mapped_view != NULL)
+                {
+                    int32_t dummy_error = 0;
+                    rvn_unmap_memory(handle, mapped_view, mapped_page_count * VORON_PAGE_SIZE, &dummy_error);
+                }
+                return rc;
+            }
+            continue;
+        }
 
         // Check if the current write fits in the currently mapped region
         bool needs_remap = (mapped_view == NULL) ||
@@ -916,7 +961,6 @@ int32_t rvn_write_mmap32(
         // Write to the mapped region
         int64_t offset_in_mapping = (page_number - mapped_start_page) * VORON_PAGE_SIZE;
         char* write_position = (char*)mapped_view + offset_in_mapping;
-        int64_t bytes_to_write = number_of_pages * VORON_PAGE_SIZE;
         char* source_ptr = buffers[i].ptr;
 
         memcpy(write_position, source_ptr, (size_t)bytes_to_write);
@@ -954,10 +998,19 @@ int32_t rvn_write_mmap(
     int32_t *detailed_error_code)
 {
     struct handle *handle_ptr = handle;
+    int64_t hole_start = -1;
+    int64_t hole_end = -1;
     for (int32_t i = 0; i < count; i++)
     {
         int64_t offset = buffers[i].page_num * VORON_PAGE_SIZE;
         int64_t size = (int64_t)buffers[i].count_of_pages * VORON_PAGE_SIZE;
+        if (_overlaps_hole(handle_ptr, offset, offset + size, &hole_start, &hole_end))
+        {
+            int32_t rc = rvn_write_file_io(handle, &buffers[i], 1, detailed_error_code);
+            if (rc != SUCCESS)
+                return rc;
+            continue;
+        }
         memcpy((char *)handle_ptr->write_address + offset, buffers[i].ptr, (size_t)size);
     }
     if (!FlushViewOfFile(handle_ptr->write_address, 0))
