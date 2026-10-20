@@ -99,12 +99,12 @@ namespace Raven.Migrator
 
                 foreach (var collection in configuration.CollectionsToMigrate)
                 {
-                    var mongoCollectionName = collection.Name;
+                    var sourceCollectionName = collection.Name;
                     var ravenCollectionName = collection.NewName;
                     if (string.IsNullOrWhiteSpace(ravenCollectionName))
-                        ravenCollectionName = mongoCollectionName;
+                        ravenCollectionName = sourceCollectionName;
 
-                    await migrateSingleCollection(mongoCollectionName, ravenCollectionName, jsonTextWriter, streamWriter);
+                    await migrateSingleCollection(sourceCollectionName, ravenCollectionName, jsonTextWriter, streamWriter);
                 }
 
                 if (migrateAttachments != null)

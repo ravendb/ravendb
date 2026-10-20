@@ -13,13 +13,9 @@
 	</ItemGroup>
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
-		<PackageReference Include="AWSSDK.Core" />
 		<PackageReference Include="McMaster.Extensions.CommandLineUtils" />
 		<PackageReference Include="Microsoft.Azure.DocumentDB.Core" />
-		<PackageReference Include="MongoDB.Driver" />
 		<PackageReference Include="Newtonsoft.Json" />
-		<PackageReference Include="Snappier" />
 		<PackageReference Include="System.Data.HashFunction.Blake2" />
-		<PackageReference Include="ZstdSharp.Port" />
 	</ItemGroup>
 </Project>
