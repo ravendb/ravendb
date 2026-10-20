@@ -45,8 +45,8 @@ function smugglerResult(readCount: number, messages: string[]): SmugglerResult {
     };
 }
 
-function importOperation(state: OperationState): operation {
-    return new operation("db", {
+function importChanged(state: OperationState): OperationChanged {
+    return {
         Id: "op/1",
         Type: "OperationChanged",
         CreatedAt: "2026-10-16T10:00:00.000Z",
@@ -55,26 +55,24 @@ function importOperation(state: OperationState): operation {
         OperationId: 1,
         TaskType: "DatabaseImport",
         State: state,
-    } as OperationChanged);
+    } as OperationChanged;
 }
 
-function update(op: operation, state: OperationState) {
-    op.status(state.Status);
-    op.progress(state.Progress);
-    op.result(state.Result);
+function importOperation(state: OperationState): operation {
+    return new operation("db", importChanged(state));
 }
 
 describe("smugglerDatabaseDetails.importResultModalView", () => {
-    it("keeps the last progress and appends the error when the import fails", () => {
+    it("keeps the last progress for a failed import reopened from the notification center", () => {
         const op = importOperation({ Status: "InProgress", Progress: smugglerResult(5, ["Reading"]), Result: null });
-        const view = smugglerDatabaseDetails.importResultModalView(op, jest.fn());
-        expect(view().props.progress.Documents.ReadCount).toBe(5);
+        const error = { Message: "Import failed", Error: "stack" };
 
-        update(op, { Status: "Faulted", Progress: null, Result: { Message: "Import failed", Error: "stack" } });
+        op.updateWith(importChanged({ Status: "Faulted", Progress: null, Result: error }));
+        const { props } = smugglerDatabaseDetails.importResultModalView(op, jest.fn())();
 
-        expect(view().props.progress.Documents.ReadCount).toBe(5);
-        expect(view().props.progress.Messages).toEqual(["Reading"]);
-        expect(view().props.errorMessages).toEqual(["Import failed", "stack"]);
+        expect(props.progress.Documents.ReadCount).toBe(5);
+        expect(props.progress.Messages).toEqual(["Reading"]);
+        expect(props.error).toEqual(error);
     });
 
     it("merges sharded results", () => {
@@ -94,6 +92,6 @@ describe("smugglerDatabaseDetails.importResultModalView", () => {
 
         expect(props.progress.Documents.ReadCount).toBe(5);
         expect(props.progress.Messages).toEqual(["Shard 0", "Shard 1"]);
-        expect(props.errorMessages).toEqual([]);
+        expect(props.error).toBeNull();
     });
 });

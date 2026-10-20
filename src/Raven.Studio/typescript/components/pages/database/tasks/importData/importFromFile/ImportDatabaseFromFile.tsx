@@ -162,6 +162,7 @@ function ImportDatabaseFromFileContent() {
                 {isResultModalOpen && operationState && (
                     <ImportResultModal
                         progress={operationState.progress}
+                        error={operationState.error}
                         status={operationState.status}
                         startTime={operationState.startTime}
                         endTime={operationState.endTime}

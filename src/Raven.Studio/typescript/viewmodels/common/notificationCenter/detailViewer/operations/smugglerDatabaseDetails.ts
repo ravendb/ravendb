@@ -281,10 +281,6 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 result.push(this.mapToExportListItem("Counters", status.Counters, true));
                 result.push(this.mapToExportListItem("TimeSeries", status.TimeSeries, true));
 
-                if (this.op.taskType() === "DatabaseImport") {
-                    result.push(this.mapToExportListItem("Tombstones", status.Tombstones, true));
-                }
-
                 result.push(this.mapToExportListItem("Revisions", status.RevisionDocuments));
                 const revisionsAttachments = (status.RevisionDocuments as CountsWithLastEtagAndAttachments).Attachments;
                 result.push(this.mapToExportListItem("Attachments", revisionsAttachments, true));
@@ -293,10 +289,6 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 result.push(this.mapToExportListItem("Indexes", status.Indexes));
                 result.push(this.mapToExportListItem("Identities", status.Identities));
                 result.push(this.mapToExportListItem("Compare Exchange", status.CompareExchange));
-
-                if (this.op.taskType() === "DatabaseImport") {
-                    result.push(this.mapToExportListItem("Compare Exchange Tombstones", status.CompareExchangeTombstones, true));
-                }
 
                 result.push(this.mapToExportListItem("Subscriptions", status.Subscriptions));
 
@@ -600,7 +592,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
     static showDetailsFor(op: operation, center: notificationCenter) {
         if (op.taskType() === "DatabaseImport") {
-            center.importDetailsView(smugglerDatabaseDetails.importResultModalView(op, () => center.importDetailsView(null)));
+            center.reactModalView(smugglerDatabaseDetails.importResultModalView(op, () => center.reactModalView(null)));
             return;
         }
 
@@ -608,22 +600,15 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
     }
 
     static importResultModalView(op: operation, onClose: () => void): ReactInKnockout<typeof ImportResultModal.default> {
-        let lastProgress: ImportResultModal.ImportProgress = null;
-
         return ko.pureComputed(() => {
             const status = op.status();
-            const current = (status === "Completed" ? op.result() : op.progress()) as SmugglerResult | ShardedSmugglerResult;
-            if (current) {
-                lastProgress = smugglerDatabaseDetails.toImportProgress(current);
-            }
-
-            const exceptionResult = status === "Faulted" ? op.result() as OperationExceptionResult : null;
+            const current = (status === "Completed" ? op.result() : op.lastProgress()) as SmugglerResult | ShardedSmugglerResult;
 
             return {
                 component: ImportResultModal.default,
                 props: {
-                    progress: lastProgress,
-                    errorMessages: exceptionResult ? [exceptionResult.Message, exceptionResult.Error] : [],
+                    progress: current ? smugglerDatabaseDetails.toImportProgress(current) : null,
+                    error: status === "Faulted" ? op.result() as OperationExceptionResult : null,
                     status,
                     startTime: (op.startTime() ?? op.createdAt()).toDate(),
                     endTime: op.endTime()?.toDate() ?? null,

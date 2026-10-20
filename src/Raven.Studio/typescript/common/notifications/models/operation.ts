@@ -10,6 +10,7 @@ class operation extends abstractNotification {
 
     operationId = ko.observable<number>();
     progress = ko.observable<unknown>();
+    lastProgress = ko.observable<unknown>();
     result = ko.observable<unknown>();
     status = ko.observable<Raven.Client.Documents.Operations.OperationStatus>();
     killable = ko.observable<boolean>();
@@ -47,6 +48,9 @@ class operation extends abstractNotification {
 
         const stateDto = incomingChanges.State;
         this.progress(stateDto.Progress);
+        if (stateDto.Progress) {
+            this.lastProgress(stateDto.Progress);
+        }
         this.result(stateDto.Result);
         this.status(stateDto.Status);
         this.taskType(incomingChanges.TaskType);
