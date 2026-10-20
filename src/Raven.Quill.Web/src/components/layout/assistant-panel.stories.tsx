@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, waitFor, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { AI_LICENSE_UNAVAILABLE_MESSAGE } from "@/api/custom-services/assistant-service";
 import { assistantMocks } from "@/mocks/assistant-mocks";
 import { defaultApiMocks } from "@/mocks/default-mocks";
@@ -47,6 +47,30 @@ export const ConsentRequired: Story = {
 
         await waitFor(() => expect(canvas.getByRole("button", { name: /review the terms of use/i })).toBeEnabled());
         expect(canvas.queryByRole("textbox", { name: /message the ai assistant/i })).not.toBeInTheDocument();
+    },
+};
+
+// Consent can lapse mid-conversation: the AI service then refuses the turn, and the panel
+// falls back to asking for consent again.
+export const ConsentRequiredWhileChatting: Story = {
+    tags: ["test-only"],
+    parameters: {
+        msw: {
+            handlers: {
+                assistant: [
+                    assistantMocks.chat([{ type: "Done", text: { Status: "ConsentRequired" } }]),
+                    ...defaultApiMocks.assistant,
+                ],
+            },
+        },
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const composer = await canvas.findByRole("textbox", { name: /message the ai assistant/i });
+
+        await userEvent.type(composer, "How do indexes work?{Enter}");
+
+        await waitFor(() => expect(canvas.getByRole("button", { name: /review the terms of use/i })).toBeEnabled());
     },
 };
 

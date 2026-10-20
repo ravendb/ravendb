@@ -6,7 +6,7 @@ import { ConversationTranscriptSheet } from "./conversation-transcript-sheet";
 const meta = {
     title: "Apps/ConversationTranscriptSheet",
     component: ConversationTranscriptSheet,
-    tags: ["!dev"],
+    tags: ["test-only"],
     args: {
         slug: "demo",
         // the one mock conversation with no stored last exchange, so its detail carries the long sample transcript
