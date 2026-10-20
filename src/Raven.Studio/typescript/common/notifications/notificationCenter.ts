@@ -103,7 +103,7 @@ class notificationCenter {
     
     includeInDom = ko.observable<boolean>(false); // to avoid RavenDB-10660
 
-    importDetailsView = ko.observable<ReturnType<typeof smugglerDatabaseDetails.importResultModalView>>(null);
+    reactModalView = ko.observable<ReactInKnockout<any>>(null);
 
     globalNotifications = ko.observableArray<abstractNotification>();
     databaseNotifications = ko.observableArray<abstractNotification>();

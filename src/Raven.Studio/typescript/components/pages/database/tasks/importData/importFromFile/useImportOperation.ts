@@ -14,9 +14,11 @@ import { ImportFromFileFormData } from "./importFromFileValidation";
 
 type SmugglerResult = Raven.Client.Documents.Smuggler.SmugglerResult;
 type OperationStatus = Raven.Client.Documents.Operations.OperationStatus;
+type OperationExceptionResult = Raven.Client.Documents.Operations.OperationExceptionResult;
 
 export interface OperationState {
     progress: SmugglerResult | null;
+    error: OperationExceptionResult | null;
     status: OperationStatus;
     startTime: Date;
     endTime: Date | null;
@@ -83,6 +85,7 @@ export function useImportOperation() {
 
         setOperationState({
             progress: null,
+            error: null,
             status: "InProgress",
             startTime: new Date(),
             endTime: null,
@@ -108,9 +111,11 @@ export function useImportOperation() {
                     );
                 }
             })
-            .fail(() => {
+            .fail((error: OperationExceptionResult) => {
                 if (isMounted()) {
-                    setOperationState((prev) => (prev ? { ...prev, status: "Faulted", endTime: new Date() } : prev));
+                    setOperationState((prev) =>
+                        prev ? { ...prev, error, status: "Faulted", endTime: new Date() } : prev
+                    );
                 }
             });
 
