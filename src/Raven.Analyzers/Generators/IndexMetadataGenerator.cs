@@ -40,12 +40,14 @@ namespace Raven.Analyzers.Generators
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            // All of the expensive work happens in the transform, which Roslyn caches per syntax node and
-            // re-runs only for nodes that actually changed. Two things are needed for that to hold: the
-            // step must not depend on CompilationProvider, which reports a new value on every keystroke
-            // and would drag the whole pipeline with it, and its result must be a value that compares by
-            // content, which is what RecordedIndexShape is for. The Compilation the extraction needs
-            // comes from the node's own semantic model instead.
+            // Roslyn caches only the predicate per syntax tree. The transform runs again for every node
+            // that passed it whenever the compilation changes, because the semantic model is new; what
+            // it caches is the transform's OUTPUT, compared by value against the previous run, so every
+            // step downstream is reused when nothing about an index changed. Two things are needed for
+            // that to hold: the step must not depend on CompilationProvider, which reports a new value on
+            // every keystroke and would drag the whole pipeline with it, and its result must be a value
+            // that compares by content, which is what RecordedIndexShape is for. The Compilation the
+            // extraction needs comes from the node's own semantic model instead.
             IncrementalValuesProvider<RecordedIndexShape> shapes = context.SyntaxProvider
                 .CreateSyntaxProvider(
                     predicate: static (node, _) => node is ClassDeclarationSyntax { BaseList: not null },
