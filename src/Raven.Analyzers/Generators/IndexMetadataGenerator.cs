@@ -85,6 +85,7 @@ namespace Raven.Analyzers.Generators
                 StoredFields: RenderFields(metadata.StoredFields),
                 StoreAllFields: metadata.StoreAllFields,
                 AssignsMap: metadata.AssignsMap,
+                IsMapReduce: metadata.IsMapReduce,
                 AddMapCount: metadata.AddMapCount,
                 AddMapInLoop: metadata.AddMapInLoop,
                 UsesAdditionalCode: metadata.UsesAdditionalCode);
@@ -133,6 +134,7 @@ namespace Raven.Analyzers.Generators
                 AppendFields(builder, nameof(IndexMetadata.StoredFields), shape.StoredFields);
                 builder.Append(", StoreAllFields = ").Append(shape.StoreAllFields ? "true" : "false");
                 builder.Append(", AssignsMap = ").Append(shape.AssignsMap ? "true" : "false");
+                builder.Append(", IsMapReduce = ").Append(shape.IsMapReduce ? "true" : "false");
                 builder.Append(", AddMapCount = ").Append(shape.AddMapCount);
                 builder.Append(", AddMapInLoop = ").Append(shape.AddMapInLoop ? "true" : "false");
                 builder.Append(", UsesAdditionalCode = ").Append(shape.UsesAdditionalCode ? "true" : "false");

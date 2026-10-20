@@ -182,8 +182,8 @@ namespace Raven.Analyzers.Queries
                 return false;
 
             // StoreAllFields makes every map-projection field stored, so the stored set is the projection.
-            ImmutableHashSet<string> storedFields = metadata.StoreAllFields
-                ? metadata.MapFields
+            ImmutableHashSet<string> storedFields = metadata.StoreAllFields || metadata.IsMapReduce
+                ? metadata.MapFields.Union(metadata.StoredFields)
                 : metadata.StoredFields;
 
             ImmutableHashSet<string> sourceMembers = SourceMemberExtractor.GetPublicMembers(sourceType);

@@ -75,6 +75,12 @@ namespace Raven.Client.Documents.Indexes
         public bool AssignsMap { get; set; }
 
         /// <summary>
+        /// Whether any constructor in the chain assigns the <c>Reduce</c> property. A map-reduce index
+        /// serves every projected field from its index entries, so stored-field rules do not apply.
+        /// </summary>
+        public bool IsMapReduce { get; set; }
+
+        /// <summary>
         /// Number of <c>AddMap</c> / <c>AddMapForAll</c> call sites across the constructors in the chain.
         /// </summary>
         public int AddMapCount { get; set; }

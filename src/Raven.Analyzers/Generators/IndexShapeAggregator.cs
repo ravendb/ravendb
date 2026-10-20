@@ -46,6 +46,7 @@ namespace Raven.Analyzers.Generators
             // an unreadable base, which is precisely the case the inherited metadata below fills in, so
             // an unknown here is not itself fatal.
             IndexChainSearch mapSearch = IndexInheritanceInspector.FindMapAssignmentInChain(indexClass, compilation);
+            IndexChainSearch reduceSearch = IndexInheritanceInspector.FindAssignmentInChain(indexClass, compilation, KnownTypes.ReduceFieldName);
             (int addMapCount, bool addMapInLoop, bool addMapUnknown) =
                 IndexInheritanceInspector.CountAddMapInChain(indexClass, compilation);
 
@@ -55,6 +56,7 @@ namespace Raven.Analyzers.Generators
                 StoredFields: storedFields.Fields,
                 StoreAllFields: storedFields.Status == StoredFieldsStatus.AllStored,
                 AssignsMap: mapSearch == IndexChainSearch.Found,
+                IsMapReduce: reduceSearch == IndexChainSearch.Found,
                 AddMapCount: addMapCount,
                 AddMapInLoop: addMapInLoop,
                 UsesAdditionalCode: IndexAdditionalCodeExtractor.ShipsServerSideCode(declarations, compilation));
@@ -84,6 +86,7 @@ namespace Raven.Analyzers.Generators
             StoredFields: local.StoredFields.Union(inherited.StoredFields),
             StoreAllFields: local.StoreAllFields || inherited.StoreAllFields,
             AssignsMap: local.AssignsMap || inherited.AssignsMap,
+            IsMapReduce: local.IsMapReduce || inherited.IsMapReduce,
             AddMapCount: local.AddMapCount + inherited.AddMapCount,
             AddMapInLoop: local.AddMapInLoop || inherited.AddMapInLoop,
             UsesAdditionalCode: local.UsesAdditionalCode || inherited.UsesAdditionalCode);

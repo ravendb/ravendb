@@ -55,6 +55,35 @@ class Test
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task ProjectInto_MapReduce_Result_Field_Not_On_Source_No_Diagnostic()
+        {
+            const string source = CommonUsings + OrderClass + @"
+class Totals { public string Status { get; set; } public decimal Total { get; set; } }
+class OrderTotals : AbstractIndexCreationTask<Order, Totals>
+{
+    public OrderTotals()
+    {
+        Map = orders => from o in orders select new Totals { Status = o.Status, Total = o.Price };
+        Reduce = results => from r in results group r by r.Status into g select new Totals { Status = g.Key, Total = g.Sum(x => x.Total) };
+    }
+}
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var a = session.Query<Order, OrderTotals>().ProjectInto<Totals>();
+        var b = session.Query<Order, OrderTotals>()
+            .Customize(x => x.Projection(ProjectionBehavior.FromIndex))
+            .Select(o => new { o.Status });
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ProjectInto_All_Fields_On_Source_Document_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"

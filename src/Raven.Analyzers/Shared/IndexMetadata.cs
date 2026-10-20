@@ -21,6 +21,7 @@ namespace Raven.Analyzers.Shared
         ImmutableHashSet<string> StoredFields,
         bool StoreAllFields,
         bool AssignsMap,
+        bool IsMapReduce,
         int AddMapCount,
         bool AddMapInLoop,
         bool UsesAdditionalCode)
@@ -36,6 +37,7 @@ namespace Raven.Analyzers.Shared
             StoredFields: ImmutableHashSet<string>.Empty,
             StoreAllFields: false,
             AssignsMap: false,
+            IsMapReduce: false,
             AddMapCount: 0,
             AddMapInLoop: false,
             UsesAdditionalCode: false);
@@ -166,6 +168,7 @@ namespace Raven.Analyzers.Shared
             ImmutableHashSet<string> storedFields = ImmutableHashSet<string>.Empty;
             bool storeAllFields = false;
             bool assignsMap = false;
+            bool isMapReduce = false;
             int addMapCount = 0;
             bool addMapInLoop = false;
             bool usesAdditionalCode = false;
@@ -189,6 +192,9 @@ namespace Raven.Analyzers.Shared
                     case nameof(IndexMetadata.AssignsMap):
                         assignsMap = named.Value.Value is true;
                         break;
+                    case nameof(IndexMetadata.IsMapReduce):
+                        isMapReduce = named.Value.Value is true;
+                        break;
                     case nameof(IndexMetadata.AddMapCount):
                         addMapCount = named.Value.Value is int count ? count : 0;
                         break;
@@ -204,7 +210,7 @@ namespace Raven.Analyzers.Shared
             // A recorded but unable to be analyzed index carries no usable values; collapse it to Unknown so
             // there is a single "cannot reason about this" value for callers to test.
             return analyzable
-                ? new IndexMetadata(true, mapFields, storedFields, storeAllFields, assignsMap, addMapCount, addMapInLoop, usesAdditionalCode)
+                ? new IndexMetadata(true, mapFields, storedFields, storeAllFields, assignsMap, isMapReduce, addMapCount, addMapInLoop, usesAdditionalCode)
                 : IndexMetadata.Unknown;
         }
 

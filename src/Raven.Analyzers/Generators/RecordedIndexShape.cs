@@ -19,6 +19,7 @@ namespace Raven.Analyzers.Generators
         string StoredFields,
         bool StoreAllFields,
         bool AssignsMap,
+        bool IsMapReduce,
         int AddMapCount,
         bool AddMapInLoop,
         bool UsesAdditionalCode);

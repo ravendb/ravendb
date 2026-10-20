@@ -33,7 +33,10 @@ namespace Raven.Analyzers.Shared
         /// base. Returns <see cref="IndexChainSearch.Unknown"/> when a base class is only available as
         /// metadata so the caller can suppress rather than report a false positive.
         /// </summary>
-        public static IndexChainSearch FindMapAssignmentInChain(INamedTypeSymbol classSymbol, Compilation compilation)
+        public static IndexChainSearch FindMapAssignmentInChain(INamedTypeSymbol classSymbol, Compilation compilation) =>
+            FindAssignmentInChain(classSymbol, compilation, KnownTypes.MapFieldName);
+
+        public static IndexChainSearch FindAssignmentInChain(INamedTypeSymbol classSymbol, Compilation compilation, string propertyName)
         {
             // Collect every in-source class declaration in the chain, stopping at the framework base. A
             // metadata-only base cannot be inspected — the Map may well live there, so report Unknown
@@ -80,7 +83,7 @@ namespace Raven.Analyzers.Shared
             {
                 (SyntaxNode body, SemanticModel model) = pending.Dequeue();
 
-                if (ContainsMapAssignment(body, model))
+                if (ContainsAssignment(body, model, propertyName))
                     return IndexChainSearch.Found;
 
                 // Follow calls to methods declared anywhere in the chain/partials (Setup(), this.Setup(),
@@ -241,13 +244,13 @@ namespace Raven.Analyzers.Shared
             return (count, anyInLoop, false);
         }
 
-        private static bool ContainsMapAssignment(SyntaxNode node, SemanticModel model)
+        private static bool ContainsAssignment(SyntaxNode node, SemanticModel model, string propertyName)
         {
             foreach (AssignmentExpressionSyntax assignment in
                 node.DescendantNodesAndSelf().OfType<AssignmentExpressionSyntax>())
             {
                 SimpleNameSyntax? nameNode = SyntaxHelpers.TryGetSimpleMemberName(assignment.Left);
-                if (nameNode == null || nameNode.Identifier.Text != KnownTypes.MapFieldName)
+                if (nameNode == null || nameNode.Identifier.Text != propertyName)
                     continue;
 
                 ISymbol? symbol = model.GetSymbolInfo(nameNode).Symbol;
