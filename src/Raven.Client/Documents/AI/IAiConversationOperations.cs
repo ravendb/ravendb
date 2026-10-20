@@ -329,10 +329,24 @@ public interface IAiConversationOperations
     string Id { get; }
 
     /// <summary>
-    /// The current RavenDB change vector for this conversation document,  
+    /// The current RavenDB change vector for this conversation document,
     /// used to detect concurrent modifications.
     /// </summary>
     string ChangeVector { get; }
+
+    /// <summary>
+    /// Creates a snapshot of the current conversation state (and its sub-conversations) without
+    /// running a turn, returning a token that can later be passed to
+    /// <see cref="AiOperations.ForkConversationAsync"/>. The conversation's cached change vector
+    /// baseline is updated from the snapshot result, so a subsequent <see cref="RunAsync{TAnswer}"/>
+    /// on this same instance does not fail because the snapshot advanced the server-side change vector.
+    /// </summary>
+    /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
+    /// <returns>An <see cref="AiConversationSnapshot"/> containing the token and creation timestamp.</returns>
+    Task<AiConversationSnapshot> CreateSnapshotAsync(CancellationToken token = default);
+
+    /// <inheritdoc cref="CreateSnapshotAsync"/>
+    AiConversationSnapshot CreateSnapshot();
 
     /// <summary>
     /// Retrieves the list of action-tool requests  

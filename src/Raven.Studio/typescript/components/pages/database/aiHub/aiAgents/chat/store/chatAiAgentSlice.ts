@@ -166,6 +166,7 @@ const runChat = createAsyncThunk(
                         formValues.isDocumentExpireInCustomizeEnabled
                             ? formValues.persistenceExpiresInSeconds
                             : null,
+                    SnapshotBeforeRunning: false,
                 },
             },
             config.data?.Identifier,
