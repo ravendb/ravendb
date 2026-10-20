@@ -120,6 +120,12 @@ describe("describeWork", () => {
         expect(describeWork(turn([], "working"))).toBe("Working on your prompt");
         expect(describeWork(turn([failed("Products")], "working"))).toBe("Building collections");
     });
+
+    it("claims building once an attempt failed and is being retried", () => {
+        const retrying: PlannerActivity = { type: "transientError", collection: "Products", errors: ["x"], rejections: 1, maxRejections: 2 };
+
+        expect(describeWork(turn([retrying], "working"))).toBe("Building collections");
+    });
 });
 
 describe("getCollectionsToBuildFirst", () => {

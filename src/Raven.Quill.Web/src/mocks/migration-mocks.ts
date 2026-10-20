@@ -31,7 +31,8 @@ export const migrationMocks = {
     /** The assembled plan does not validate as a whole, which the server answers with 422 and the reasons. */
     applyRejected: (errors: string[]) =>
         apiHttp.post("/api/setup/migration/apply", ({ response }) => response(422).json({ errors })),
-    remove: () => apiHttp.post("/api/setup/migration/remove", ({ response }) => response(204).empty()),
+    edit: (warnings: string[] = []) =>
+        apiHttp.post("/api/setup/migration/edit", ({ response }) => response(200).json({ warnings })),
 };
 
 function streamFrames(
@@ -125,6 +126,7 @@ export function proposedCollection(
         rootTable,
         absorbs: absorbs.map(({ table, how, why: absorbedWhy }) => ({ table, how, why: absorbedWhy ?? null })),
         why,
+        fields: [],
     };
 }
 
@@ -387,11 +389,19 @@ export const plannerBuildFrames: MigrationFrame[] = [
         warnings: [TOTAL_PRECISION_WARNING],
     },
     {
-        type: "rejected",
+        type: "transientCollectionError",
         collection: "Products",
+        errors: [{ message: "Column Price is mapped twice, as price and unitPrice.", path: "columns[2].name" }],
+        rejections: 1,
+        maxRejections: 2,
+    },
+    {
+        type: "rejectedCollection",
+        collection: "Products",
+        config: null,
         errors: [
-            "Column Price is mapped twice, as price and unitPrice.",
-            "Primary key column ProductId does not exist on dbo.Products.",
+            { message: "Column Price is mapped twice, as price and unitPrice.", path: "columns[2].name" },
+            { message: "Primary key column ProductId does not exist on dbo.Products.", path: "primaryKeyColumns[0]" },
         ],
     },
     {

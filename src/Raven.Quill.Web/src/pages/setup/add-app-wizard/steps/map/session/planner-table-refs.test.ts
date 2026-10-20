@@ -14,7 +14,7 @@ function resolveName(name: string, selectedTables: SelectedTables) {
     const { collections } = resolveProposalTables(
         {
             areas: [],
-            collections: [{ collection: "Collection", rootTable: name, absorbs: [], why: null }],
+            collections: [{ collection: "Collection", rootTable: name, absorbs: [], why: null, fields: [] }],
             dropped: [],
             enables: [],
         },
@@ -38,6 +38,7 @@ describe("resolveProposalTables", () => {
                             { table: "public.audit_log", how: "Embed", why: null },
                         ],
                         why: null,
+                        fields: [],
                     },
                 ],
                 dropped: [{ table: "no_such_table", why: null }],

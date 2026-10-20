@@ -27,7 +27,7 @@ export function composeAnswersPrompt({
     const lines = answers.map(({ question, answer }, index) => `${index + 1}. ${question}\n   ${answer}`);
     const answersPrompt = [heading, ...lines].join("\n");
 
-    return instructions ? `${answersPrompt}\n\n${composePlannerPrompt(instructions)}` : answersPrompt;
+    return instructions?.text ? `${answersPrompt}\n\n${composePlannerPrompt(instructions)}` : answersPrompt;
 }
 
 export function composeAddTablesPrompt(tables: string[]): string {

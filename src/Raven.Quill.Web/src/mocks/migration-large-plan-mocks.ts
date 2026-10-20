@@ -324,7 +324,12 @@ export const largePlanBuildFrames: MigrationFrame[] = [
         const errors = FAILURES[collection.name];
 
         return errors
-            ? { type: "rejected", collection: collection.name, errors }
+            ? {
+                  type: "rejectedCollection",
+                  collection: collection.name,
+                  config: configOf(collection),
+                  errors: errors.map((message) => ({ message })),
+              }
             : {
                   type: "collection",
                   status: "registered",

@@ -82,7 +82,7 @@ function PromptContent({ prompt }: { prompt: PlannerPrompt }) {
                     ))}
                 </div>
             )}
-            <Text className="whitespace-pre-wrap">{prompt.text}</Text>
+            {prompt.text && <Text className="whitespace-pre-wrap">{prompt.text}</Text>}
         </>
     );
 }

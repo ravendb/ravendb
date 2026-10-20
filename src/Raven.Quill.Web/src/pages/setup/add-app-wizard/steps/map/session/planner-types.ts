@@ -4,6 +4,7 @@ import type {
     DroppedTable,
     MigrationFrameProposalFrame,
     ProposedCollection as ProposedCollectionFrame,
+    ValidationIssue,
 } from "@/api/generated/server-api";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import type { SourceTableRef } from "@/pages/setup/add-app-wizard/discover-utils";
@@ -47,7 +48,15 @@ export type RegisteredCollection = {
     rejectionErrors: string[];
 };
 
-export type RejectedCollection = { name: string; outcome: "rejected"; errors: string[] };
+export type RejectedCollection = {
+    name: string;
+    outcome: "rejected";
+    errors: string[];
+    /** The mapping the planner generated last, so it can be fixed by hand. */
+    config: CdcSinkTableConfig | null;
+    /** The same errors, each located in the mapping. */
+    issues: ValidationIssue[];
+};
 
 export type PlannerCollection = RegisteredCollection | RejectedCollection;
 
@@ -62,6 +71,8 @@ export type PlannerActivity =
       }
     | { type: "registered"; collection: string; version: number; warningCount: number }
     | { type: "rejected"; collection: string; errorCount: number; isChange: boolean }
+    /** An attempt failed and the planner is still working on the collection. */
+    | { type: "transientError"; collection: string; errors: string[]; rejections: number; maxRejections: number }
     | { type: "removed"; collection: string }
     | { type: "note"; text: string }
     /** The stream failed after the planner had finished the turn, which leaves the turn itself intact. */

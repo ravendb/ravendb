@@ -151,6 +151,52 @@ public sealed class StubPlannerHandler(HttpStatusCode status, string body) : Htt
     }
 }
 
+/// <summary>Holds the planner's answer until the test releases it, so a turn can be observed while it runs.</summary>
+public sealed class GatedPlannerHandler(string body) : HttpMessageHandler
+{
+    public TaskCompletionSource Reached { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        Reached.TrySetResult();
+        await Release.Task.WaitAsync(cancellationToken);
+
+        return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "text/event-stream") };
+    }
+}
+
+/// <summary>Holds the consent check until the test releases it, so the start of a turn can be observed.</summary>
+public sealed class GatedConsentClient : IAiHelperClient
+{
+    public TaskCompletionSource Reached { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public async Task<AiHelperStatus> CheckConsentAsync(CancellationToken ct)
+    {
+        Reached.TrySetResult();
+        await Release.Task.WaitAsync(ct);
+        return AiHelperStatus.Success;
+    }
+
+    public Task<AiHelperStatus> GiveConsentAsync(CancellationToken ct) => Task.FromResult(AiHelperStatus.Success);
+
+    public Task<SuggestAiAgentInternalResult> SuggestAiAgentAsync(
+        CdcSinkConfiguration cdcConfig, object? collectionsSample, string mode, string? prompt, CancellationToken ct) =>
+        throw new NotSupportedException();
+
+    public Task<HttpResponseMessage> SendChatAsync(string message, string? conversationId, CancellationToken ct) =>
+        throw new NotSupportedException();
+
+    public Task<(AiHelperStatus Transport, string Content)> SendAsync(string path, string method, object request, CancellationToken ct) =>
+        throw new NotSupportedException();
+
+    public Task<T> DeserializeAsync<T>(string json, CancellationToken ct) where T : class =>
+        Task.FromResult(JsonSerializer.Deserialize<T>(json)!);
+}
+
 public sealed class ThrowingPlannerHandler(Exception failure) : HttpMessageHandler
 {
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>

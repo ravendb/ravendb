@@ -930,7 +930,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/setup/migration/remove": {
+    "/api/setup/migration/edit": {
         parameters: {
             query?: never;
             header?: never;
@@ -939,8 +939,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Takes a collection out of the plan, also one the planner only proposed. The planner is told on the next turn. */
-        post: operations["setup.migrationRemoveCollection"];
+        /** @description The operator's change to one collection of the plan: a null config deletes it (also one the planner only proposed), a config naming another collection renames it, and a collection the plan does not hold is added. Refused with 409 while a planner turn is running. The planner is told on the next turn. */
+        post: operations["setup.migrationEditCollection"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1722,9 +1722,20 @@ export interface components {
         MigrationAskRequest: {
             slug: string;
             conversationId: string;
-            prompt: string;
+            prompt?: null | string;
+            selectedAreas?: null | string[];
+            selectedCollections?: null | string[];
         };
-        MigrationFrame: components["schemas"]["MigrationFrameProposalFrame"] | components["schemas"]["MigrationFrameCollectionFrame"] | components["schemas"]["MigrationFrameRejectedFrame"] | components["schemas"]["MigrationFrameRemovedFrame"] | components["schemas"]["MigrationFrameConventionsFrame"] | components["schemas"]["MigrationFrameNoteFrame"] | components["schemas"]["MigrationFrameReplyFrame"] | components["schemas"]["MigrationFrameDoneFrame"] | components["schemas"]["MigrationFrameErrorFrame"];
+        MigrationEditCollectionRequest: {
+            slug: string;
+            conversationId: string;
+            collection: string;
+            config?: null | components["schemas"]["CdcSinkTableConfig"];
+        };
+        MigrationEditCollectionResponse: {
+            warnings: string[];
+        };
+        MigrationFrame: components["schemas"]["MigrationFrameProposalFrame"] | components["schemas"]["MigrationFrameCollectionFrame"] | components["schemas"]["MigrationFrameTransientCollectionErrorFrame"] | components["schemas"]["MigrationFrameRejectedCollectionFrame"] | components["schemas"]["MigrationFrameRemovedFrame"] | components["schemas"]["MigrationFrameConventionsFrame"] | components["schemas"]["MigrationFrameNoteFrame"] | components["schemas"]["MigrationFrameReplyFrame"] | components["schemas"]["MigrationFrameDoneFrame"] | components["schemas"]["MigrationFrameErrorFrame"];
         MigrationFrameCollectionFrame: {
             /** @enum {string} */
             type: "collection";
@@ -1767,11 +1778,12 @@ export interface components {
             dropped: components["schemas"]["DroppedTable"][];
             enables: string[];
         };
-        MigrationFrameRejectedFrame: {
+        MigrationFrameRejectedCollectionFrame: {
             /** @enum {string} */
-            type: "rejected";
+            type: "rejectedCollection";
+            config?: null | components["schemas"]["CdcSinkTableConfig"];
             collection: string;
-            errors: string[];
+            errors: components["schemas"]["ValidationIssue"][];
         };
         MigrationFrameRemovedFrame: {
             /** @enum {string} */
@@ -1783,13 +1795,18 @@ export interface components {
             /** @enum {string} */
             type: "reply";
             reply?: null | string;
-            gaps: string[];
-            openQuestions: components["schemas"]["OpenQuestion"][];
+            gaps?: null | string[];
+            openQuestions?: null | components["schemas"]["OpenQuestion"][];
         };
-        MigrationRemoveCollectionRequest: {
-            slug: string;
-            conversationId: string;
+        MigrationFrameTransientCollectionErrorFrame: {
+            /** @enum {string} */
+            type: "transientCollectionError";
+            /** Format: int32 */
+            rejections: number;
+            /** Format: int32 */
+            maxRejections: number;
             collection: string;
+            errors: components["schemas"]["ValidationIssue"][];
         };
         MigrationStartRequest: {
             slug: string;
@@ -1871,6 +1888,12 @@ export interface components {
             rootTable?: null | string;
             absorbs: components["schemas"]["AbsorbedTable"][];
             why?: null | string;
+            fields: components["schemas"]["ProposedField"][];
+        };
+        ProposedField: {
+            table: string;
+            column: string;
+            property: string;
         };
         ProvisionAgentResponse: {
             agentId: string;
@@ -2110,6 +2133,13 @@ export interface components {
             points: components["schemas"]["UsagePoint"][];
             writesByApp: components["schemas"]["AppWrites"][];
             isWritesUnavailable: boolean;
+        };
+        ValidationIssue: {
+            message: string;
+            path?: null | string;
+            table?: null | string;
+            column?: null | string;
+            property?: null | string;
         };
         VerifyCdcRequest: {
             tables: components["schemas"]["VerifyCdcTableRequest"][];
@@ -4447,7 +4477,7 @@ export interface operations {
             };
         };
     };
-    "setup.migrationRemoveCollection": {
+    "setup.migrationEditCollection": {
         parameters: {
             query?: never;
             header?: never;
@@ -4456,19 +4486,39 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["MigrationRemoveCollectionRequest"];
+                "application/json": components["schemas"]["MigrationEditCollectionRequest"];
             };
         };
         responses: {
-            /** @description No Content */
-            204: {
+            /** @description OK */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MigrationEditCollectionResponse"];
+                };
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4732,6 +4782,8 @@ export type MetricCard = components["schemas"]["MetricCard"];
 export type MigrationApplyRequest = components["schemas"]["MigrationApplyRequest"];
 export type MigrationApplyResponse = components["schemas"]["MigrationApplyResponse"];
 export type MigrationAskRequest = components["schemas"]["MigrationAskRequest"];
+export type MigrationEditCollectionRequest = components["schemas"]["MigrationEditCollectionRequest"];
+export type MigrationEditCollectionResponse = components["schemas"]["MigrationEditCollectionResponse"];
 export type MigrationFrame = components["schemas"]["MigrationFrame"];
 export type MigrationFrameCollectionFrame = components["schemas"]["MigrationFrameCollectionFrame"];
 export type MigrationFrameConventionsFrame = components["schemas"]["MigrationFrameConventionsFrame"];
@@ -4739,10 +4791,10 @@ export type MigrationFrameDoneFrame = components["schemas"]["MigrationFrameDoneF
 export type MigrationFrameErrorFrame = components["schemas"]["MigrationFrameErrorFrame"];
 export type MigrationFrameNoteFrame = components["schemas"]["MigrationFrameNoteFrame"];
 export type MigrationFrameProposalFrame = components["schemas"]["MigrationFrameProposalFrame"];
-export type MigrationFrameRejectedFrame = components["schemas"]["MigrationFrameRejectedFrame"];
+export type MigrationFrameRejectedCollectionFrame = components["schemas"]["MigrationFrameRejectedCollectionFrame"];
 export type MigrationFrameRemovedFrame = components["schemas"]["MigrationFrameRemovedFrame"];
 export type MigrationFrameReplyFrame = components["schemas"]["MigrationFrameReplyFrame"];
-export type MigrationRemoveCollectionRequest = components["schemas"]["MigrationRemoveCollectionRequest"];
+export type MigrationFrameTransientCollectionErrorFrame = components["schemas"]["MigrationFrameTransientCollectionErrorFrame"];
 export type MigrationStartRequest = components["schemas"]["MigrationStartRequest"];
 export type MintEmbedLinkRequest = components["schemas"]["MintEmbedLinkRequest"];
 export type MintEmbedLinkResponse = components["schemas"]["MintEmbedLinkResponse"];
@@ -4754,6 +4806,7 @@ export type ProblemDetails = components["schemas"]["ProblemDetails"];
 export type PropertyCase = components["schemas"]["PropertyCase"];
 export type ProposedArea = components["schemas"]["ProposedArea"];
 export type ProposedCollection = components["schemas"]["ProposedCollection"];
+export type ProposedField = components["schemas"]["ProposedField"];
 export type ProvisionAgentResponse = components["schemas"]["ProvisionAgentResponse"];
 export type ProvisionChannelRequest = components["schemas"]["ProvisionChannelRequest"];
 export type ProvisionChannelResponse = components["schemas"]["ProvisionChannelResponse"];
@@ -4789,6 +4842,7 @@ export type UpdateChannelRequest = components["schemas"]["UpdateChannelRequest"]
 export type UpdateWidgetThemeRequest = components["schemas"]["UpdateWidgetThemeRequest"];
 export type UsagePoint = components["schemas"]["UsagePoint"];
 export type UsageResponse = components["schemas"]["UsageResponse"];
+export type ValidationIssue = components["schemas"]["ValidationIssue"];
 export type VerifyCdcRequest = components["schemas"]["VerifyCdcRequest"];
 export type VerifyCdcResponse = components["schemas"]["VerifyCdcResponse"];
 export type VerifyCdcTableRequest = components["schemas"]["VerifyCdcTableRequest"];
@@ -4889,7 +4943,7 @@ export const API_ENDPOINTS = {
         map: "/setup/map",
         migrationApply: "/setup/migration/apply",
         migrationAsk: "/setup/migration/ask",
-        migrationRemoveCollection: "/setup/migration/remove",
+        migrationEditCollection: "/setup/migration/edit",
         migrationStart: "/setup/migration/start",
         provision: "/setup/provision",
         testMapping: "/setup/test-mapping",
@@ -4998,7 +5052,7 @@ export function createServerApi(client: ApiClient) {
             map: (request: MapRequest) => client.post<CdcSinkConfiguration, ApiErrorResponse>(API_ENDPOINTS.setup.map, request),
             migrationApply: (request: MigrationApplyRequest) => client.post<MigrationApplyResponse, ApiErrorResponse>(API_ENDPOINTS.setup.migrationApply, request),
             migrationAsk: (request: MigrationAskRequest) => client.post<Response>(API_ENDPOINTS.setup.migrationAsk, request, { responseType: "response" }),
-            migrationRemoveCollection: (request: MigrationRemoveCollectionRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.setup.migrationRemoveCollection, request),
+            migrationEditCollection: (request: MigrationEditCollectionRequest) => client.post<MigrationEditCollectionResponse, ApiErrorResponse>(API_ENDPOINTS.setup.migrationEditCollection, request),
             migrationStart: (request: MigrationStartRequest) => client.post<Response>(API_ENDPOINTS.setup.migrationStart, request, { responseType: "response" }),
             provision: (request: ProvisionRequest) => client.post<ProvisionResponse, ApiErrorResponse>(API_ENDPOINTS.setup.provision, request),
             testMapping: (request: TestMappingRequest) => client.post<TestMappingResponse, ApiErrorResponse>(API_ENDPOINTS.setup.testMapping, request),
