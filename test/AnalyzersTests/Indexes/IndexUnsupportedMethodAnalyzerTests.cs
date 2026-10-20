@@ -471,6 +471,37 @@ class Product { public string Name { get; set; } }
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task UserMethod_In_Dynamic_Fields_Map_With_AdditionalSources_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyHelpers
+{
+    public static string Key(string s) => s;
+    public static object Value(string s) => s;
+}
+
+class ProductIndex : AbstractIndexCreationTask<Product>
+{
+    public ProductIndex()
+    {
+        Map = products => from p in products
+                          select new { _ = CreateField(MyHelpers.Key(p.Name), MyHelpers.Value(p.Name)) };
+        AdditionalSources = new Dictionary<string, string>
+        {
+            { ""MyHelpers"", ""public static class MyHelpers { public static string Key(string s) => s; public static object Value(string s) => s; }"" }
+        };
+    }
+}
+
+class Product { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_Map_With_AdditionalSources_In_Base_Class_No_Diagnostic()
         {
             // The AdditionalSources write that ships the helper source lives in a shared BASE index class,

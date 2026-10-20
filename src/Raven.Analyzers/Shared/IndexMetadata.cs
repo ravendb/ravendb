@@ -17,6 +17,7 @@ namespace Raven.Analyzers.Shared
     /// </remarks>
     internal sealed record IndexMetadata(
         bool Analyzable,
+        bool FieldsKnown,
         ImmutableHashSet<string> MapFields,
         ImmutableHashSet<string> StoredFields,
         bool StoreAllFields,
@@ -33,6 +34,7 @@ namespace Raven.Analyzers.Shared
         /// </summary>
         public static readonly IndexMetadata Unknown = new(
             Analyzable: false,
+            FieldsKnown: false,
             MapFields: ImmutableHashSet<string>.Empty,
             StoredFields: ImmutableHashSet<string>.Empty,
             StoreAllFields: false,
@@ -164,6 +166,7 @@ namespace Raven.Analyzers.Shared
         private static IndexMetadata Parse(AttributeData attribute)
         {
             bool analyzable = false;
+            bool fieldsKnown = false;
             ImmutableHashSet<string> mapFields = ImmutableHashSet<string>.Empty;
             ImmutableHashSet<string> storedFields = ImmutableHashSet<string>.Empty;
             bool storeAllFields = false;
@@ -179,6 +182,9 @@ namespace Raven.Analyzers.Shared
                 {
                     case nameof(IndexMetadata.Analyzable):
                         analyzable = named.Value.Value is true;
+                        break;
+                    case nameof(IndexMetadata.FieldsKnown):
+                        fieldsKnown = named.Value.Value is true;
                         break;
                     case nameof(IndexMetadata.MapFields):
                         mapFields = ToStringSet(named.Value);
@@ -210,7 +216,7 @@ namespace Raven.Analyzers.Shared
             // A recorded but unable to be analyzed index carries no usable values; collapse it to Unknown so
             // there is a single "cannot reason about this" value for callers to test.
             return analyzable
-                ? new IndexMetadata(true, mapFields, storedFields, storeAllFields, assignsMap, isMapReduce, addMapCount, addMapInLoop, usesAdditionalCode)
+                ? new IndexMetadata(true, fieldsKnown, mapFields, storedFields, storeAllFields, assignsMap, isMapReduce, addMapCount, addMapInLoop, usesAdditionalCode)
                 : IndexMetadata.Unknown;
         }
 

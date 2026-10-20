@@ -81,6 +81,7 @@ namespace Raven.Analyzers.Generators
             return new RecordedIndexShape(
                 TypeName: typeName,
                 Analyzable: metadata.Analyzable,
+                FieldsKnown: metadata.FieldsKnown,
                 MapFields: RenderFields(metadata.MapFields),
                 StoredFields: RenderFields(metadata.StoredFields),
                 StoreAllFields: metadata.StoreAllFields,
@@ -130,9 +131,13 @@ namespace Raven.Analyzers.Generators
 
             if (shape.Analyzable)
             {
-                AppendFields(builder, nameof(IndexMetadata.MapFields), shape.MapFields);
-                AppendFields(builder, nameof(IndexMetadata.StoredFields), shape.StoredFields);
-                builder.Append(", StoreAllFields = ").Append(shape.StoreAllFields ? "true" : "false");
+                builder.Append(", FieldsKnown = ").Append(shape.FieldsKnown ? "true" : "false");
+                if (shape.FieldsKnown)
+                {
+                    AppendFields(builder, nameof(IndexMetadata.MapFields), shape.MapFields);
+                    AppendFields(builder, nameof(IndexMetadata.StoredFields), shape.StoredFields);
+                    builder.Append(", StoreAllFields = ").Append(shape.StoreAllFields ? "true" : "false");
+                }
                 builder.Append(", AssignsMap = ").Append(shape.AssignsMap ? "true" : "false");
                 builder.Append(", IsMapReduce = ").Append(shape.IsMapReduce ? "true" : "false");
                 builder.Append(", AddMapCount = ").Append(shape.AddMapCount);

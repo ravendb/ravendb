@@ -20,6 +20,28 @@ using Raven.Client.Documents.Indexes.Counters;
 ";
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task MultiMap_Single_AddMap_With_Dynamic_Fields_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyMultiMapIndex : AbstractMultiMapIndexCreationTask<MyResult>
+{
+    public MyMultiMapIndex()
+    {
+        AddMap<Company>(companies => from c in companies select new { _ = CreateField(c.Name, c.Name) });
+    }
+}
+
+class MyResult { public string Name { get; set; } }
+class Company { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexDefinitionAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.MultiMapIndexSingleAddMap, d.Id);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task MultiMap_Two_AddMap_Calls_No_Diagnostic()
         {
             const string source = CommonUsings + @"

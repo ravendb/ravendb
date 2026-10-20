@@ -178,7 +178,7 @@ namespace Raven.Analyzers.Queries
             // Stored and map fields both come from the index's recorded metadata, so this works whether
             // the index is declared here or in a referenced assembly whose constructor bodies are gone.
             IndexMetadata metadata = metadataRegistry.Read(indexClass);
-            if (!metadata.Analyzable)
+            if (!metadata.FieldsKnown)
                 return false;
 
             // StoreAllFields makes every map-projection field stored, so the stored set is the projection.

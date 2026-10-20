@@ -51,6 +51,15 @@ namespace Raven.Client.Documents.Indexes
         public bool Analyzable { get; set; }
 
         /// <summary>
+        /// Whether <see cref="MapFields"/>, <see cref="StoredFields"/> and <see cref="StoreAllFields"/>
+        /// could be read. False when the map projection or a storage directive has a shape the generator
+        /// cannot follow (a block-bodied lambda, dynamic field creation via <c>CreateField</c>, a
+        /// computed field name). The remaining values stay valid, since they describe how the index
+        /// defines itself rather than which fields it produces.
+        /// </summary>
+        public bool FieldsKnown { get; set; }
+
+        /// <summary>
         /// Field names produced by the map projection across the chain. Empty when the index projects
         /// nothing statically knowable.
         /// </summary>

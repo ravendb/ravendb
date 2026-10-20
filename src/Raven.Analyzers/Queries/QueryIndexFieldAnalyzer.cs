@@ -158,7 +158,7 @@ namespace Raven.Analyzers.Queries
             // constructor here: that is what lets this rule work when the index lives in a referenced
             // project, whose constructor bodies are absent from compiled metadata entirely.
             IndexMetadata metadata = metadataRegistry.Read(indexClass);
-            if (!metadata.Analyzable)
+            if (!metadata.FieldsKnown)
                 return false;
 
             mapFields = metadata.MapFields;

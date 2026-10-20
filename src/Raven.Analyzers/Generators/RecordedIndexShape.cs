@@ -15,6 +15,7 @@ namespace Raven.Analyzers.Generators
     internal sealed record RecordedIndexShape(
         string TypeName,
         bool Analyzable,
+        bool FieldsKnown,
         string MapFields,
         string StoredFields,
         bool StoreAllFields,

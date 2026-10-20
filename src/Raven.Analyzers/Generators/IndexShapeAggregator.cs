@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Analyzers.Indexes;
@@ -35,12 +36,9 @@ namespace Raven.Analyzers.Generators
                 indexClass, compilation, out List<ClassDeclarationSyntax> declarations, out INamedTypeSymbol? foreignBase);
 
             IndexFieldSet mapFields = IndexFieldExtractor.ExtractLocalPrefix(indexClass, compilation, out _);
-            if (mapFields.Status == IndexFieldInspection.BailCannotAnalyze)
-                return IndexMetadata.Unknown;
-
             IndexStoredFieldSet storedFields = IndexStoredFieldExtractor.ExtractLocalPrefix(indexClass, compilation, out _);
-            if (storedFields.Status == StoredFieldsStatus.BailCannotAnalyze)
-                return IndexMetadata.Unknown;
+            bool fieldsKnown = mapFields.Status != IndexFieldInspection.BailCannotAnalyze
+                               && storedFields.Status != StoredFieldsStatus.BailCannotAnalyze;
 
             // The readable prefix's own Map / AddMap facts. Both walkers report "unknown" when they hit
             // an unreadable base, which is precisely the case the inherited metadata below fills in, so
@@ -52,9 +50,10 @@ namespace Raven.Analyzers.Generators
 
             IndexMetadata local = new(
                 Analyzable: true,
-                MapFields: mapFields.Fields,
-                StoredFields: storedFields.Fields,
-                StoreAllFields: storedFields.Status == StoredFieldsStatus.AllStored,
+                FieldsKnown: fieldsKnown,
+                MapFields: fieldsKnown ? mapFields.Fields : ImmutableHashSet<string>.Empty,
+                StoredFields: fieldsKnown ? storedFields.Fields : ImmutableHashSet<string>.Empty,
+                StoreAllFields: fieldsKnown && storedFields.Status == StoredFieldsStatus.AllStored,
                 AssignsMap: mapSearch == IndexChainSearch.Found,
                 IsMapReduce: reduceSearch == IndexChainSearch.Found,
                 AddMapCount: addMapCount,
@@ -82,6 +81,7 @@ namespace Raven.Analyzers.Generators
 
         private static IndexMetadata Merge(IndexMetadata local, IndexMetadata inherited) => new(
             Analyzable: true,
+            FieldsKnown: local.FieldsKnown && inherited.FieldsKnown,
             MapFields: local.MapFields.Union(inherited.MapFields),
             StoredFields: local.StoredFields.Union(inherited.StoredFields),
             StoreAllFields: local.StoreAllFields || inherited.StoreAllFields,
