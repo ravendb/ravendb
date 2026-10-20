@@ -33,6 +33,7 @@ public sealed class ApiKeyStore(
     private readonly ConcurrentDictionary<string, CacheEntry> _known = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, CacheEntry> _unknown = new(StringComparer.OrdinalIgnoreCase);
     private volatile bool _seeded;
+    private volatile bool _disabled;
 
     public async Task<bool> ValidateAsync(string? presentedKey, CancellationToken ct)
     {
@@ -45,6 +46,9 @@ public sealed class ApiKeyStore(
             if (_seeded == false && string.Equals(keyId, PrimaryKeyId, StringComparison.OrdinalIgnoreCase))
                 return false;
         }
+
+        if (_disabled)
+            return false;
 
         var record = await LoadAsync(keyId, ct);
         var target = record ?? Decoy;
@@ -158,12 +162,13 @@ public sealed class ApiKeyStore(
             {
                 if (logger.IsWarnEnabled)
                     logger.Warn(
-                        "QUILL_API_KEY is not set; the primary appliance API key is disabled (fail-closed). " +
+                        "QUILL_API_KEY is not set; appliance admin authentication is disabled (fail-closed). " +
                         "Set QUILL_API_KEY to enable the dashboard and API.");
                 if (logger.AuditEnabled)
                     logger.Audit("AUTH",
-                        "QUILL_API_KEY is not configured; the primary API key is disabled (fail-closed)",
+                        "QUILL_API_KEY is not configured; admin authentication is disabled (fail-closed)",
                         context: null);
+                _disabled = true;
                 _seeded = await RevokePrimaryAsync(ct);
                 return;
             }

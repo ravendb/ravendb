@@ -68,6 +68,32 @@ public class AuthEndpointsTests(ITestOutputHelper output) : QuillTestBase(output
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task With_no_operator_key_configured_an_additional_key_document_is_401()
+    {
+        await using var host = await NewHostAsync(configure: opts => opts.ApiKey = null, seedChatConnectionString: false);
+
+        const string secondSecret = "second-secret-with-plenty-of-entropy";
+        var salt = RandomNumberGenerator.GetBytes(16);
+        using (var session = host.Config.OpenAsyncSession())
+        {
+            await session.StoreAsync(new ApiKey
+            {
+                Label = "second",
+                Salt = Convert.ToBase64String(salt),
+                Hash = Convert.ToBase64String(ApiKeyStore.HashSecret(salt, secondSecret)),
+                CreatedAt = DateTime.UtcNow,
+            }, ApiKey.IdPrefix + "second");
+            await session.SaveChangesAsync();
+        }
+
+        using var client = host.Factory.CreateClient();
+        client.DefaultRequestHeaders.Remove(ApiKeyAuthenticationHandler.HeaderName);
+        client.DefaultRequestHeaders.Add(ApiKeyAuthenticationHandler.HeaderName, "second/" + secondSecret);
+        var resp = await client.GetAsync(QuillRoutes.Apps);
+        Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Admin_endpoint_with_bearer_token_is_authorized()
     {
         using var client = Host.Factory.CreateClient();
