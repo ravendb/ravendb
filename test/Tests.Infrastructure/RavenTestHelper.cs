@@ -70,7 +70,6 @@ namespace Tests.Infrastructure
             public const string OracleSqlConnectionStringEnvName = "RAVEN_ORACLESQL_CONNECTION_STRING";
             public const string SnowflakeConnectionStringEnvName = "RAVEN_SNOWFLAKE_CONNECTION_STRING";
             public const string SnowflakeTestingBranchEnvName = "RAVEN_SNOWFLAKE_TESTING_BRANCH";
-            public const string MongoDbConnectionStringEnvName = "RAVEN_MONGODB_CONNECTION_STRING";
             public const string ElasticSearchNodeUrlsEnvName = "RAVEN_ELASTICSEARCH_NODE_URLS";
 
             // AI integrations - env var names
@@ -164,7 +163,6 @@ namespace Tests.Infrastructure
             public static readonly string OracleSqlConnectionString;
             public static readonly string SnowflakeConnectionString;
             public static readonly string SnowflakeTestingBranch;
-            public static readonly string MongoDbConnectionString;
             public static readonly string ElasticSearchNodeUrls;
 
             // SQL / external databases - HasXxx
@@ -174,7 +172,6 @@ namespace Tests.Infrastructure
             public static readonly bool HasOracleSqlConnectionString;
             public static readonly bool HasSnowflakeConnectionString;
             public static readonly bool HasSnowflakeTestingBranch;
-            public static readonly bool HasMongoDbConnectionString;
             public static readonly bool HasElasticSearchNodeUrls;
 
             // AI integrations - values
@@ -282,7 +279,6 @@ namespace Tests.Infrastructure
                 (OracleSqlConnectionString, HasOracleSqlConnectionString) = ParseString(OracleSqlConnectionStringEnvName);
                 (SnowflakeConnectionString, HasSnowflakeConnectionString) = ParseString(SnowflakeConnectionStringEnvName);
                 (SnowflakeTestingBranch, HasSnowflakeTestingBranch) = ParseString(SnowflakeTestingBranchEnvName);
-                (MongoDbConnectionString, HasMongoDbConnectionString) = ParseString(MongoDbConnectionStringEnvName);
                 (ElasticSearchNodeUrls, HasElasticSearchNodeUrls) = ParseString(ElasticSearchNodeUrlsEnvName);
 
                 // AI integrations
