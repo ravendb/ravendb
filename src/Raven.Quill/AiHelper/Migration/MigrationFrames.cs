@@ -15,7 +15,8 @@ namespace Raven.Quill.AiHelper.Migration;
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
 [JsonDerivedType(typeof(ProposalFrame), "proposal")]
 [JsonDerivedType(typeof(CollectionFrame), "collection")]
-[JsonDerivedType(typeof(RejectedFrame), "rejected")]
+[JsonDerivedType(typeof(TransientCollectionErrorFrame), "transientCollectionError")]
+[JsonDerivedType(typeof(RejectedCollectionFrame), "rejectedCollection")]
 [JsonDerivedType(typeof(RemovedFrame), "removed")]
 [JsonDerivedType(typeof(ConventionsFrame), "conventions")]
 [JsonDerivedType(typeof(NoteFrame), "note")]
@@ -50,12 +51,51 @@ public sealed class CollectionFrame : MigrationFrame
     public string[] Warnings { get; set; } = [];
 }
 
-public sealed class RejectedFrame : MigrationFrame
+/// <summary>A collection that failed validation, with the errors located in its mapping.</summary>
+public abstract class CollectionErrorFrame : MigrationFrame
 {
     [Required]
     public string Collection { get; set; } = string.Empty;
     [Required]
-    public string[] Errors { get; set; } = [];
+    public ValidationIssue[] Errors { get; set; } = [];
+}
+
+/// <summary>
+/// An attempt at a collection failed and the planner is still working on it. <see cref="Rejections"/> counts
+/// the attempts that used up one of the <see cref="MaxRejections"/>.
+/// </summary>
+public sealed class TransientCollectionErrorFrame : CollectionErrorFrame
+{
+    [Required]
+    public int Rejections { get; set; }
+    [Required]
+    public int MaxRejections { get; set; }
+}
+
+/// <summary>
+/// The planner gave up on a collection in this turn; <see cref="Config"/> is the mapping it generated last.
+/// </summary>
+public sealed class RejectedCollectionFrame : CollectionErrorFrame
+{
+    public CdcSinkTableConfig? Config { get; set; }
+}
+
+/// <summary>
+/// A validation error located in a collection's configuration. <see cref="Path"/> addresses the offending
+/// member in camelCase (e.g. <c>embeddedTables[0].columns[2].column</c>), and is null for the whole configuration.
+/// </summary>
+public sealed class ValidationIssue
+{
+    [Required]
+    public string Message { get; set; } = string.Empty;
+
+    public string? Path { get; set; }
+
+    public string? Table { get; set; }
+
+    public string? Column { get; set; }
+
+    public string? Property { get; set; }
 }
 
 public sealed class RemovedFrame : MigrationFrame
@@ -83,10 +123,8 @@ public sealed class NoteFrame : MigrationFrame
 public sealed class ReplyFrame : MigrationFrame
 {
     public string? Reply { get; set; }
-    [Required]
-    public string[] Gaps { get; set; } = [];
-    [Required]
-    public OpenQuestion[] OpenQuestions { get; set; } = [];
+    public string[]? Gaps { get; set; }
+    public OpenQuestion[]? OpenQuestions { get; set; }
 }
 
 /// <summary>
@@ -136,6 +174,10 @@ public sealed class ProposedCollection
     public AbsorbedTable[] Absorbs { get; set; } = [];
 
     public string? Why { get; set; }
+
+    /// <summary>The RavenDB property names of its root and embedded tables' columns, derived by the planner service.</summary>
+    [Required]
+    public ProposedField[] Fields { get; set; } = [];
 }
 
 public sealed class AbsorbedTable
@@ -146,6 +188,18 @@ public sealed class AbsorbedTable
     public string? How { get; set; }
 
     public string? Why { get; set; }
+}
+
+public sealed class ProposedField
+{
+    [Required]
+    public string Table { get; set; } = string.Empty;
+
+    [Required]
+    public string Column { get; set; } = string.Empty;
+
+    [Required]
+    public string Property { get; set; } = string.Empty;
 }
 
 public sealed class DroppedTable

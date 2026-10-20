@@ -119,6 +119,13 @@ function ActivityRow({ activity }: { activity: PlannerActivity }) {
                 </ActivityRowLayout>
             );
 
+        case "transientError":
+            return (
+                <ActivityRowLayout icon={<WarningIcon />} collection={activity.collection}>
+                    retrying after {formatCount(activity.errors.length, "error")}
+                </ActivityRowLayout>
+            );
+
         case "removed":
             return <ActivityRowLayout icon={<DoneIcon />}>{activity.collection} removed</ActivityRowLayout>;
 

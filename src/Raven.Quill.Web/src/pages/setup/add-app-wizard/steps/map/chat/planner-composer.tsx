@@ -24,7 +24,10 @@ import {
 import type { PlanCollection } from "@/pages/setup/add-app-wizard/steps/map/session/planner-plan";
 import { describeMentionPlaceholder } from "@/pages/setup/add-app-wizard/steps/map/session/planner-prompts";
 import { getLatestReply, selectPlannerPhase } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
-import { usePlannerSession } from "@/pages/setup/add-app-wizard/steps/map/session/use-planner-session";
+import {
+    hasUnbuiltMention,
+    usePlannerSession,
+} from "@/pages/setup/add-app-wizard/steps/map/session/use-planner-session";
 
 const MENTION_TRIGGER = "@";
 
@@ -41,6 +44,7 @@ export function PlannerComposer({ collections }: { collections: PlanCollection[]
     const latestReply = useSetupWizardStore((state) => getLatestReply(state.plannerTurns));
     const draft = useSetupWizardStore((state) => state.plannerDraft);
     const mentions = useSetupWizardStore((state) => state.plannerMentions);
+    const canSendPicksAlone = useSetupWizardStore(hasUnbuiltMention);
     const setPlannerDraft = useSetupWizardStore((state) => state.setPlannerDraft);
     const addPlannerMention = useSetupWizardStore((state) => state.addPlannerMention);
     const removePlannerMention = useSetupWizardStore((state) => state.removePlannerMention);
@@ -51,7 +55,7 @@ export function PlannerComposer({ collections }: { collections: PlanCollection[]
 
     const isOpening = phase === "opening";
     const isWorking = isOpening || phase === "working";
-    const canSend = canAsk && draft.trim() !== "";
+    const canSend = canAsk && (draft.trim() !== "" || canSendPicksAlone);
 
     // Typing MENTION_TRIGGER where a word starts opens the picker, which adds the collection as a chip. Pasted text,
     // deleting, or backing out of the picker leave the MENTION_TRIGGER as written.

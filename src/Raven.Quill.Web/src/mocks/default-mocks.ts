@@ -91,7 +91,7 @@ export const defaultApiMocks = {
         migrationMocks.start(),
         migrationMocks.ask(),
         migrationMocks.apply(),
-        migrationMocks.remove(),
+        migrationMocks.edit(),
     ],
 } satisfies Record<string, RequestHandler[]>;
 

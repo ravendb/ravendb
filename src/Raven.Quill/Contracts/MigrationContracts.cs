@@ -8,10 +8,27 @@ public sealed record MigrationStartRequest(
     SelectedSourceTable[]? SelectedTables = null,
     string? Prompt = null);
 
-/// <summary>One more turn in an existing planning session.</summary>
-public sealed record MigrationAskRequest(string Slug, string ConversationId, string Prompt);
+/// <summary>
+/// One more turn in an existing planning session. <paramref name="SelectedAreas"/> and
+/// <paramref name="SelectedCollections"/> are what the operator picked rather than wrote; with a selection the
+/// prompt may be empty.
+/// </summary>
+public sealed record MigrationAskRequest(
+    string Slug,
+    string ConversationId,
+    string? Prompt = null,
+    string[]? SelectedAreas = null,
+    string[]? SelectedCollections = null);
 
-public sealed record MigrationRemoveCollectionRequest(string Slug, string ConversationId, string Collection);
+/// <summary>
+/// The operator's change to one collection of the plan. A null <paramref name="Config"/> deletes it; a config
+/// whose CollectionName differs from <paramref name="Collection"/> renames it; a collection the plan does not
+/// hold is added. The planner is told on the next turn.
+/// </summary>
+public sealed record MigrationEditCollectionRequest(string Slug, string ConversationId, string Collection, CdcSinkTableConfig? Config = null);
+
+/// <summary><paramref name="Warnings"/> name what the change left inconsistent, such as links to a collection that is gone.</summary>
+public sealed record MigrationEditCollectionResponse(string[] Warnings);
 
 /// <summary>
 /// Turns what the session registered into the configuration the wizard carries on with.

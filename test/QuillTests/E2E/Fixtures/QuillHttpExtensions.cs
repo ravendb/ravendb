@@ -129,7 +129,7 @@ internal static class QuillRoutes
     public const string MigrationStart = "/api/setup/migration/start";
     public const string MigrationAsk = "/api/setup/migration/ask";
     public const string MigrationApply = "/api/setup/migration/apply";
-    public const string MigrationRemove = "/api/setup/migration/remove";
+    public const string MigrationEdit = "/api/setup/migration/edit";
 
     // global (config-DB fan-out)
     public const string Usage = "/api/usage";

@@ -49,6 +49,61 @@ public class MigrationServiceTests(ITestOutputHelper output) : RavenTestBase(out
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task The_plan_is_free_to_edit_once_the_done_frame_reaches_the_browser()
+    {
+        using var store = await StoreWithSchemaAsync();
+        var turns = new MigrationTurns();
+        var handler = StubPlannerHandler.Replying(new NoteFrame { Text = "reading" }, new DoneFrame { ConversationId = ConversationId });
+        var freeDuringNote = true;
+        var freeOnDone = false;
+
+        await NewService(store, handler, turns: turns).StartAsync(new MigrationStartRequest(Slug), async frame =>
+        {
+            using var edit = await turns.TryBeginEditAsync(Slug, CancellationToken.None);
+            if (frame is NoteFrame)
+                freeDuringNote = edit is not null;
+            if (frame is DoneFrame)
+                freeOnDone = edit is not null;
+        }, CancellationToken.None);
+
+        Assert.False(freeDuringNote);
+        Assert.True(freeOnDone);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_collection_the_planner_rebuilt_in_a_failed_turn_is_no_longer_the_users_version()
+    {
+        var plan = MigrationSamples.Plan(ConversationId, Entry("Orders"));
+        plan.PendingUserEdits = [new UserEdit("Orders", UserEditKind.Edited), new UserEdit("Customers", UserEditKind.Removed), new UserEdit("Products", UserEditKind.Removed)];
+        using var store = await StoreWithSchemaAsync(plan);
+        var handler = StubPlannerHandler.Replying(
+            new CollectionFrame { Status = "replaced", Collection = "Orders", Version = 2, Config = Orders() },
+            new CollectionFrame { Status = "registered", Collection = "Products", Version = 1, Config = Orders("Products") },
+            new ErrorFrame { Message = "The model did not finish the turn." });
+
+        await NewService(store, handler).AskAsync(new MigrationAskRequest(Slug, ConversationId, "change orders"), Collect([]), CancellationToken.None);
+
+        var stored = await MigrationSamples.LoadPlanAsync(store, Slug);
+        Assert.Equal([new UserEdit("Customers", UserEditKind.Removed)], stored!.PendingUserEdits);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_turn_waits_briefly_for_a_plan_released_moments_later()
+    {
+        var turns = new MigrationTurns();
+        var held = await turns.TryBeginTurnAsync(Slug, CancellationToken.None);
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(200);
+            held!.Dispose();
+        });
+
+        using var next = await turns.TryBeginTurnAsync(Slug, CancellationToken.None);
+
+        Assert.NotNull(next);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Start_replaces_the_previous_plan_on_done()
     {
         using var store = await StoreWithSchemaAsync(MigrationSamples.Plan("quill-cdc-planner/old", Entry("Products")));
@@ -443,10 +498,12 @@ public class MigrationServiceTests(ITestOutputHelper output) : RavenTestBase(out
     private static MigrationService NewService(
         IDocumentStore store,
         HttpMessageHandler handler,
-        AiHelperStatus consent = AiHelperStatus.Success) =>
+        AiHelperStatus consent = AiHelperStatus.Success,
+        MigrationTurns? turns = null) =>
         new(new HttpClient(handler) { BaseAddress = new Uri("http://localhost") },
             store,
             new FakeConsentClient(consent),
+            turns ?? new MigrationTurns(),
             new QuillLogger<MigrationService>());
 
     private static Func<MigrationFrame, Task> Collect(List<MigrationFrame> frames) => frame =>

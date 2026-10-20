@@ -23,6 +23,7 @@ public sealed class MigrationService(
     HttpClient httpClient,
     IDocumentStore store,
     IAiHelperClient aiClient,
+    MigrationTurns turns,
     QuillLogger<MigrationService> logger)
 {
     public const string StartPath = "/assistant/migration/start";
@@ -46,13 +47,22 @@ public sealed class MigrationService(
     /// Why a request was turned away. <see cref="Status"/> is set only when the AI service is the
     /// reason, so the endpoint can tell "you have not consented" apart from "the service is down".
     /// </summary>
-    public sealed record Refusal(string Message, AiHelperStatus? Status = null);
+    public sealed record Refusal(string Message, AiHelperStatus? Status = null, bool IsConflict = false);
+
+    private static readonly Refusal TurnAlreadyRunning = new("a planner turn is already running for this app", IsConflict: true);
 
     public async Task<Refusal?> StartAsync(
         MigrationStartRequest request,
         Func<MigrationFrame, Task> onFrame,
         CancellationToken token)
     {
+        if (string.IsNullOrWhiteSpace(request.Slug))
+            return new Refusal("slug is required");
+
+        using var turn = await turns.TryBeginTurnAsync(request.Slug, token);
+        if (turn is null)
+            return TurnAlreadyRunning;
+
         var (_, schema, refusal) = await LoadWizardAsync(request.Slug, request.SelectedTables, token);
         if (refusal is not null)
             return refusal;
@@ -70,6 +80,7 @@ public sealed class MigrationService(
             conversationId: null,
             new MigrationPlan { SelectedTables = request.SelectedTables },
             onFrame,
+            turn,
             token);
 
         return null;
@@ -82,8 +93,14 @@ public sealed class MigrationService(
     {
         if (string.IsNullOrWhiteSpace(request.ConversationId))
             return new Refusal("conversationId is required");
-        if (string.IsNullOrWhiteSpace(request.Prompt))
-            return new Refusal("prompt is required");
+        if (string.IsNullOrWhiteSpace(request.Prompt) && HasSelection(request) == false)
+            return new Refusal("a prompt or a selection is required");
+        if (string.IsNullOrWhiteSpace(request.Slug))
+            return new Refusal("slug is required");
+
+        using var turn = await turns.TryBeginTurnAsync(request.Slug, token);
+        if (turn is null)
+            return TurnAlreadyRunning;
 
         var (state, _, refusal) = await LoadWizardAsync(request.Slug, selected: null, token);
         if (refusal is not null)
@@ -106,24 +123,44 @@ public sealed class MigrationService(
                 Slug = request.Slug,
                 ConversationId = request.ConversationId,
                 Prompt = request.Prompt,
+                SelectedAreas = request.SelectedAreas,
+                SelectedCollections = request.SelectedCollections,
                 Plan = new PlannerPlan { Conventions = plan.Conventions, Entries = plan.CurrentEntries() },
-                RemovedByUser = plan.PendingUserRemovals.ToList()
+                UserEdits = plan.PendingUserEdits.ToList()
             },
             request.Slug,
             request.ConversationId,
             plan,
             onFrame,
+            turn,
             token);
 
         return null;
     }
 
-    public async Task<Refusal?> RemoveCollectionAsync(MigrationRemoveCollectionRequest request, CancellationToken token)
+    /// <summary>
+    /// How an operator's change ended: refused, refused because a turn is running, rejected with the errors
+    /// CDC Sink would raise, or applied with <see cref="Warnings"/>.
+    /// </summary>
+    public sealed record EditOutcome(Refusal? Refusal = null, bool TurnRunning = false, string[]? Errors = null, string[]? Warnings = null);
+
+    /// <summary>
+    /// Applies the operator's change to one collection. The checks are the ones apply runs on the assembled
+    /// configuration - what CDC Sink would refuse, and join columns the source tables lack - so an edit the
+    /// plan accepts cannot fail there later. Whether it fits the planner's own rules is left to the planner.
+    /// </summary>
+    public async Task<EditOutcome> EditCollectionAsync(MigrationEditCollectionRequest request, CancellationToken token)
     {
         if (string.IsNullOrWhiteSpace(request.ConversationId))
-            return new Refusal("conversationId is required");
+            return new EditOutcome(new Refusal("conversationId is required"));
         if (string.IsNullOrWhiteSpace(request.Collection))
-            return new Refusal("collection is required");
+            return new EditOutcome(new Refusal("collection is required"));
+        if (string.IsNullOrWhiteSpace(request.Slug))
+            return new EditOutcome(new Refusal("slug is required"));
+
+        using var edit = await turns.TryBeginEditAsync(request.Slug, token);
+        if (edit is null)
+            return new EditOutcome(TurnRunning: true);
 
         WizardState? state;
         using (var session = store.OpenAsyncSession())
@@ -131,12 +168,56 @@ public sealed class MigrationService(
 
         var plan = state is null ? null : CurrentPlan(state, request.ConversationId);
         if (plan is null)
-            return new Refusal("no plan found for that conversation");
+            return new EditOutcome(new Refusal("no plan found for that conversation"));
 
-        plan.RemoveByUser(request.Collection);
+        if (request.Config is not null)
+        {
+            if (string.IsNullOrWhiteSpace(request.Config.CollectionName))
+                request.Config.CollectionName = request.Collection;
+
+            var errors = ValidateEdit(request.Collection, request.Config, state!.LastDiscoveredSchema);
+            if (errors.Length > 0)
+                return new EditOutcome(Errors: errors);
+        }
+
+        var existed = plan.CurrentEntries().Any(entry => string.Equals(entry.Collection, request.Collection, StringComparison.OrdinalIgnoreCase));
+        var refused = plan.ApplyUserEdit(request.Collection, request.Config);
+        if (refused is not null)
+            return new EditOutcome(new Refusal(refused));
+
         await plan.SaveAsync(store, request.Slug, token);
 
-        return null;
+        return new EditOutcome(Warnings: existed ? DanglingLinks(plan, request.Collection, request.Config) : []);
+    }
+
+    private static string[] ValidateEdit(string collection, CdcSinkTableConfig config, CdcSinkSourceSchema? schema)
+    {
+        var entry = new PlanEntry { Collection = collection, Config = config };
+        var configuration = PlanToCdcConfiguration.Build([entry], previousMapping: null);
+
+        if (configuration.Validate(out var errors, validateName: false, validateConnection: false) == false)
+            return errors.ToArray();
+
+        if (schema is not null)
+            WizardEndpoints.ValidateJoinColumnsAgainstSchema(configuration, schema, errors);
+
+        return errors.ToArray();
+    }
+
+    private static string[] DanglingLinks(MigrationPlan plan, string collection, CdcSinkTableConfig? config)
+    {
+        var renamedTo = config is null || string.Equals(config.CollectionName, collection, StringComparison.OrdinalIgnoreCase)
+            ? null
+            : config.CollectionName;
+
+        if (config is not null && renamedTo is null)
+            return [];
+
+        return plan.LinkingTo(collection)
+            .Select(linking => renamedTo is null
+                ? $"{linking} links to {collection}, which is no longer in the plan. Update or remove that link."
+                : $"{linking} links to {collection}, which is now named {renamedTo}. Update that link.")
+            .ToArray();
     }
 
     /// <summary>
@@ -208,6 +289,7 @@ public sealed class MigrationService(
         string? conversationId,
         MigrationPlan plan,
         Func<MigrationFrame, Task> onFrame,
+        IDisposable turn,
         CancellationToken token)
     {
         HttpResponseMessage response;
@@ -262,7 +344,7 @@ public sealed class MigrationService(
                     if (frame is DoneFrame done)
                     {
                         conversationId = done.ConversationId;
-                        plan.PendingUserRemovals.Clear();
+                        plan.PendingUserEdits.Clear();
                     }
 
                     if (Mirror(plan, frame) && conversationId is not null)
@@ -270,6 +352,9 @@ public sealed class MigrationService(
                         plan.ConversationId = conversationId;
                         await plan.SaveAsync(store, slug, token);
                     }
+
+                    if (frame is DoneFrame)
+                        turn.Dispose();
 
                     await onFrame(frame);
                 }
@@ -312,10 +397,12 @@ public sealed class MigrationService(
         {
             case CollectionFrame collection:
                 plan.Upsert(collection.Collection, collection.Rationale, collection.Config);
+                plan.ForgetUserEdits(collection.Collection, includingRemoval: true);
                 return true;
 
             case RemovedFrame { Collection: not null } removed:
                 plan.Remove(removed.Collection);
+                plan.ForgetUserEdits(removed.Collection, includingRemoval: false);
                 return true;
 
             case ConventionsFrame conventions:
@@ -456,6 +543,9 @@ public sealed class MigrationService(
         public string? Prompt { get; init; }
     }
 
+    private static bool HasSelection(MigrationAskRequest request) =>
+        (request.SelectedAreas ?? []).Concat(request.SelectedCollections ?? []).Any(name => string.IsNullOrWhiteSpace(name) == false);
+
     private sealed class PlannerAskRequest
     {
         public string? Slug { get; init; }
@@ -464,9 +554,13 @@ public sealed class MigrationService(
 
         public string? Prompt { get; init; }
 
+        public string[]? SelectedAreas { get; init; }
+
+        public string[]? SelectedCollections { get; init; }
+
         public PlannerPlan? Plan { get; init; }
 
-        public List<string>? RemovedByUser { get; init; }
+        public List<UserEdit>? UserEdits { get; init; }
     }
 
     private sealed class PlannerPlan

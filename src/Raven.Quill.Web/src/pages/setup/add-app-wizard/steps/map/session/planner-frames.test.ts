@@ -54,7 +54,7 @@ describe("applyPlannerFrame", () => {
         const update = applyPlannerFrame(stateWithTurn(), {
             type: "proposal",
             areas: [{ area: "Sales", collections: ["Orders"], why: null }],
-            collections: [{ collection: "Orders", rootTable: "dbo.Orders", absorbs: [], why: "One per order." }],
+            collections: [{ collection: "Orders", rootTable: "dbo.Orders", absorbs: [], why: "One per order.", fields: [] }],
             dropped: [{ table: "dbo.AuditLog", why: "Nothing reads it." }],
             enables: [],
         });
@@ -72,7 +72,7 @@ describe("applyPlannerFrame", () => {
         const proposed = applyPlannerFrame(state, {
             type: "proposal",
             areas: [],
-            collections: [{ collection: "Orders", rootTable: "orders", absorbs: [], why: null }],
+            collections: [{ collection: "Orders", rootTable: "orders", absorbs: [], why: null, fields: [] }],
             dropped: [{ table: "dbo.AuditLog", why: "Nothing reads it." }],
             enables: [],
         });
@@ -121,17 +121,26 @@ describe("applyPlannerFrame", () => {
         ]);
     });
 
-    it("keeps a rejected collection, with why it was rejected", () => {
+    it("keeps a rejected collection, with why it was rejected and the mapping the planner generated", () => {
         const update = applyPlannerFrame(stateWithTurn(), {
-            type: "rejected",
+            type: "rejectedCollection",
             collection: "Products",
-            errors: ["Price is mapped twice.", "ProductId does not exist."],
+            config: ordersConfig("Price"),
+            errors: [
+                { message: "Price is mapped twice.", path: "columns[1].name", property: "Price" },
+                { message: "ProductId does not exist." },
+            ],
         });
 
         expect(update.plannerCollections?.Products).toEqual({
             name: "Products",
             outcome: "rejected",
             errors: ["Price is mapped twice.", "ProductId does not exist."],
+            config: ordersConfig("Price"),
+            issues: [
+                { message: "Price is mapped twice.", path: "columns[1].name", property: "Price" },
+                { message: "ProductId does not exist." },
+            ],
         });
         expect(lastTurn(update).activity).toEqual([
             { type: "rejected", collection: "Products", errorCount: 2, isChange: false },
@@ -140,9 +149,10 @@ describe("applyPlannerFrame", () => {
 
     it("keeps a built collection whose change was rejected, and says it was only the change", () => {
         const update = applyPlannerFrame(stateWithTurn({ plannerCollections: { Orders: builtOrders } }), {
-            type: "rejected",
+            type: "rejectedCollection",
             collection: "Orders",
-            errors: ["Total is mapped twice."],
+            config: ordersConfig("Total"),
+            errors: [{ message: "Total is mapped twice." }],
         });
 
         expect(update.plannerCollections?.Orders).toMatchObject({
@@ -153,6 +163,27 @@ describe("applyPlannerFrame", () => {
         });
         expect(lastTurn(update).activity).toEqual([
             { type: "rejected", collection: "Orders", errorCount: 1, isChange: true },
+        ]);
+    });
+
+    it("shows a transient error as activity only, leaving the collection as it was", () => {
+        const update = applyPlannerFrame(stateWithTurn({ plannerCollections: { Orders: builtOrders } }), {
+            type: "transientCollectionError",
+            collection: "Orders",
+            errors: [{ message: "Total is mapped twice.", path: "columns[1].name" }],
+            rejections: 1,
+            maxRejections: 2,
+        });
+
+        expect(update.plannerCollections).toBeUndefined();
+        expect(lastTurn(update).activity).toEqual([
+            {
+                type: "transientError",
+                collection: "Orders",
+                errors: ["Total is mapped twice."],
+                rejections: 1,
+                maxRejections: 2,
+            },
         ]);
     });
 
@@ -175,7 +206,7 @@ describe("applyPlannerFrame", () => {
 
     it("drops a removed collection, and remembers it so the proposal does not bring it back", () => {
         const state = stateWithTurn({
-            plannerCollections: { Products: { name: "Products", outcome: "rejected", errors: [] } },
+            plannerCollections: { Products: { name: "Products", outcome: "rejected", errors: [], config: null, issues: [] } },
         });
 
         const update = applyPlannerFrame(state, { type: "removed", collection: "Products", reason: null });
@@ -208,6 +239,28 @@ describe("applyPlannerFrame", () => {
         });
 
         expect(update.plannerRemovedCollections).toEqual([]);
+    });
+
+    it("keeps each proposed collection's field names on the collection", () => {
+        const update = applyPlannerFrame(stateWithTurn(), {
+            type: "proposal",
+            areas: [],
+            collections: [
+                {
+                    collection: "Orders",
+                    rootTable: "dbo.Orders",
+                    absorbs: [],
+                    why: null,
+                    fields: [{ table: "dbo.Orders", column: "order_id", property: "OrderId" }],
+                },
+            ],
+            dropped: [],
+            enables: [],
+        });
+
+        expect(update.plannerProposal?.collections[0].fields).toEqual([
+            { table: "dbo.Orders", column: "order_id", property: "OrderId" },
+        ]);
     });
 
     it("skips conventions that change nothing", () => {

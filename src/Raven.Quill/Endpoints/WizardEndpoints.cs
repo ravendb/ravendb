@@ -65,12 +65,17 @@ public static class WizardEndpoints
             .WithDescription("One more turn in an existing planning session. Streams the same NDJSON frames.")
             .Accepts<MigrationAskRequest>("application/json")
             .Produces<MigrationFrame>(StatusCodes.Status200OK, contentType: "application/x-ndjson");
-        group.MapPost("/migration/remove", RemoveMigrationCollectionAsync)
-            .WithName("setup.migrationRemoveCollection")
-            .WithDescription("Takes a collection out of the plan, also one the planner only proposed. The planner is told on the next turn.")
-            .Accepts<MigrationRemoveCollectionRequest>("application/json")
-            .Produces(StatusCodes.Status204NoContent)
-            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+        group.MapPost("/migration/edit", EditMigrationCollectionAsync)
+            .WithName("setup.migrationEditCollection")
+            .WithDescription(
+                "The operator's change to one collection of the plan: a null config deletes it (also one the planner only " +
+                "proposed), a config naming another collection renames it, and a collection the plan does not hold is added. " +
+                "Refused with 409 while a planner turn is running. The planner is told on the next turn.")
+            .Accepts<MigrationEditCollectionRequest>("application/json")
+            .Produces<MigrationEditCollectionResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict)
+            .Produces<ApiErrorResponse>(StatusCodes.Status422UnprocessableEntity);
         group.MapPost("/migration/apply", ApplyMigrationAsync)
             .WithName("setup.migrationApply")
             .WithDescription("Assembles the registered plan into a CDC configuration and hands it to the map step.")
@@ -419,16 +424,23 @@ public static class WizardEndpoints
         CancellationToken ct) =>
         StreamMigrationAsync(ctx, ct, body, (request, write) => service.AskAsync(request, write, ct));
 
-    private static async Task<IResult> RemoveMigrationCollectionAsync(
-        MigrationRemoveCollectionRequest body,
+    private static async Task<IResult> EditMigrationCollectionAsync(
+        MigrationEditCollectionRequest body,
         MigrationService service,
         CancellationToken ct)
     {
-        var refusal = await service.RemoveCollectionAsync(body, ct);
+        var outcome = await service.EditCollectionAsync(body, ct);
 
-        return refusal is null
-            ? Results.NoContent()
-            : Results.BadRequest(new ApiErrorResponse(refusal.Message));
+        if (outcome.Refusal is not null)
+            return Results.BadRequest(new ApiErrorResponse(outcome.Refusal.Message));
+
+        if (outcome.TurnRunning)
+            return Results.Conflict(new ApiErrorResponse("the planner is working on the plan; save again when it finishes"));
+
+        if (outcome.Errors is { Length: > 0 } errors)
+            return Results.UnprocessableEntity(new ApiErrorResponse(Errors: errors));
+
+        return Results.Ok(new MigrationEditCollectionResponse(outcome.Warnings ?? []));
     }
 
     private static async Task<IResult> ApplyMigrationAsync(
@@ -490,6 +502,7 @@ public static class WizardEndpoints
         // request itself was wrong, and a status it never got to report means the service is down.
         ctx.Response.StatusCode = refusal.Status switch
         {
+            null when refusal.IsConflict => StatusCodes.Status409Conflict,
             null => StatusCodes.Status400BadRequest,
             var status when status.Value.ServiceAnswered() => StatusCodes.Status401Unauthorized,
             _ => StatusCodes.Status502BadGateway
