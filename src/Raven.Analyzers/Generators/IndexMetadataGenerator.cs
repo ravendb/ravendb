@@ -175,15 +175,20 @@ namespace Raven.Analyzers.Generators
         {
             expression = string.Empty;
 
-            // A type parameter cannot appear in an assembly-level typeof(), and a query cannot target an
-            // unbound generic index concretely anyway.
-            if (type.IsGenericType || type.ContainingType?.IsGenericType == true)
-                return false;
-
-            if (type.DeclaredAccessibility == Accessibility.Private
-                || type.DeclaredAccessibility == Accessibility.Protected)
+            // A type parameter cannot appear in an assembly-level typeof(), a query cannot target an
+            // unbound generic index concretely anyway, and an assembly-level attribute can only name a
+            // type that is at least internal at every nesting level.
+            for (INamedTypeSymbol? current = type; current != null; current = current.ContainingType)
             {
-                return false;
+                if (current.IsGenericType)
+                    return false;
+
+                if (current.DeclaredAccessibility is Accessibility.Private
+                    or Accessibility.Protected
+                    or Accessibility.ProtectedAndInternal)
+                {
+                    return false;
+                }
             }
 
             expression = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);

@@ -38,6 +38,37 @@ class Order { public string Id { get; set; } }
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task Index_Nested_In_Inaccessible_Types_Compiles_And_Is_Analyzed()
+        {
+            const string source = CommonUsings + @"
+class Holder
+{
+    private class Hidden
+    {
+        public class MyIndex : AbstractIndexCreationTask<Order>
+        {
+            public MyIndex() { }
+        }
+    }
+
+    private protected class MyOtherIndex : AbstractIndexCreationTask<Order>
+    {
+        public MyOtherIndex()
+        {
+            Map = orders => from o in orders select new { o.Id };
+        }
+    }
+}
+
+class Order { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexDefinitionAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task NonGeneric_Base_With_CreateIndexDefinition_Override_No_Diagnostic()
         {
             const string source = CommonUsings + @"
