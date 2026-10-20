@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { MigrationFrame } from "@/api/custom-services/migration-service";
-import type { CdcSinkTableConfig } from "@/api/generated/server-api";
+import type { CdcSinkTableConfig, MigrationFrame } from "@/api/generated/server-api";
 import {
     applyPlannerFrame,
     createReplyTurn,

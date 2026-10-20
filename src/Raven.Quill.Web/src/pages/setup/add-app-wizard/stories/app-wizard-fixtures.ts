@@ -1,5 +1,4 @@
-import type { MigrationFrame } from "@/api/custom-services/migration-service";
-import type { DiscoverResponse } from "@/api/generated/server-api";
+import type { DiscoverResponse, MigrationFrame } from "@/api/generated/server-api";
 import { sampleDiscovery } from "@/mocks/setup-mocks";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";

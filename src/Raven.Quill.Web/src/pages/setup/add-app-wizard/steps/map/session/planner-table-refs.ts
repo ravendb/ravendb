@@ -1,9 +1,12 @@
-import type { CdcSinkEmbeddedTableConfig, CdcSinkTableConfig } from "@/api/generated/server-api";
+import type {
+    CdcSinkEmbeddedTableConfig,
+    CdcSinkTableConfig,
+    MigrationFrameProposalFrame,
+} from "@/api/generated/server-api";
 import { getTableLabel, type SourceTableRef } from "@/pages/setup/add-app-wizard/discover-utils";
 import type {
     ConfigTableRef,
     PlannerProposal,
-    ProposalFrame,
     SelectedTables,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 
@@ -12,7 +15,7 @@ import type {
  * selected table it means. A name that fits more than one table is left unresolved rather than guessed.
  */
 export function resolveProposalTables(
-    proposal: Omit<ProposalFrame, "type">,
+    proposal: Omit<MigrationFrameProposalFrame, "type">,
     selectedTables: SelectedTables,
 ): PlannerProposal {
     const resolve = createTableResolver(selectedTables);
