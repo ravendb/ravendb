@@ -129,6 +129,8 @@ namespace Raven.Analyzers
         public const string RavenIndexMetadataAttributeFullName =
             "Raven.Client.Documents.Indexes.RavenIndexMetadataAttribute";
 
+        public const string CreateIndexDefinitionMethodName = "CreateIndexDefinition";
+
         public const string AddMapMethodName = "AddMap";
         public const string AddMapForAllMethodName = "AddMapForAll";
 

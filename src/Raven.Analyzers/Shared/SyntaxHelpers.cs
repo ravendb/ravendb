@@ -317,6 +317,29 @@ namespace Raven.Analyzers.Shared
                        or KnownTypes.AbstractMultiMapTimeSeriesIndexCreationTaskName
                        or KnownTypes.AbstractMultiMapCountersIndexCreationTaskName);
 
+        internal static bool DefinesShapeThroughMap(INamedTypeSymbol indexClass)
+        {
+            for (INamedTypeSymbol? type = indexClass; type != null; type = type.BaseType)
+            {
+                if (type.Name == KnownTypes.AbstractGenericIndexCreationTaskName || IsMultiMapBase(type))
+                    return true;
+
+                if (type.Name == KnownTypes.AbstractIndexCreationTaskGenericName && type.Arity == 0)
+                    return false;
+
+                if (IsInRavenClientNamespace(type))
+                    continue;
+
+                foreach (ISymbol member in type.GetMembers(KnownTypes.CreateIndexDefinitionMethodName))
+                {
+                    if (member is IMethodSymbol { IsOverride: true })
+                        return false;
+                }
+            }
+
+            return false;
+        }
+
         /// <summary>
         /// True when <paramref name="type"/> is <em>itself</em> one of the framework index base
         /// classes (<c>AbstractIndexCreationTask&lt;T&gt;</c>, <c>AbstractGenericIndexCreationTask</c>,

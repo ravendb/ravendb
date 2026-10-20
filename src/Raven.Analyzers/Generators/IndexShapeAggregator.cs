@@ -28,6 +28,9 @@ namespace Raven.Analyzers.Generators
             if (SyntaxHelpers.IsJavaScriptIndex(indexClass))
                 return IndexMetadata.Unknown;
 
+            if (!SyntaxHelpers.DefinesShapeThroughMap(indexClass))
+                return IndexMetadata.Unknown;
+
             IndexInheritanceInspector.TryCollectChainDeclarations(
                 indexClass, compilation, out List<ClassDeclarationSyntax> declarations, out INamedTypeSymbol? foreignBase);
 

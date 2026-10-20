@@ -38,6 +38,44 @@ class Order { public string Id { get; set; } }
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task NonGeneric_Base_With_CreateIndexDefinition_Override_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyIndex : AbstractIndexCreationTask
+{
+    public override IndexDefinition CreateIndexDefinition()
+    {
+        return new IndexDefinition { Maps = { ""from o in docs.Orders select new { o.Id }"" } };
+    }
+}
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexDefinitionAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task Generic_Base_With_CreateIndexDefinition_Override_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyIndex : AbstractIndexCreationTask<Order>
+{
+    public override IndexDefinition CreateIndexDefinition()
+    {
+        return new IndexDefinition { Maps = { ""from o in docs.Orders select new { o.Id }"" } };
+    }
+}
+
+class Order { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexDefinitionAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Empty_Ctor_Reports_Diagnostics()
         {
             const string source = CommonUsings + @"

@@ -82,6 +82,30 @@ class Test
             Assert.Empty(diagnostics);
         }
 
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task Where_On_Index_Overriding_CreateIndexDefinition_No_Diagnostic()
+        {
+            string source = CommonUsings + OrderClass + @"
+class OrderIndex : AbstractIndexCreationTask
+{
+    public override IndexDefinition CreateIndexDefinition()
+    {
+        return new IndexDefinition { Maps = { ""from o in docs.Orders select new { o.Price }"" } };
+    }
+}
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, OrderIndex>().Where(x => x.Price > 100);
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryIndexFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
         [RavenTheory(RavenTestCategory.ClientApi)]
         [MemberData(nameof(IndexMapVariants))]
         public async Task Where_On_Non_Indexed_Field_Reports_Diagnostic(string index)
