@@ -54,10 +54,10 @@ namespace Raven.Server.Documents.Replication.Incoming
         }
 
         protected override string ConnectionEstablishedLogDetails =>
-            $"{base.FromToString}, {nameof(ReplicationInitialRequest.PullReplicationDefinitionName)}={IncomingPullReplicationParams.Name}, {nameof(PullReplicationMode)}={IncomingPullReplicationParams.Mode}, {nameof(ChangeVectorWireMode)}={ChangeVectorWireMode}, {nameof(CertificateThumbprint)}={CertificateThumbprint}";
+            $"{base.ConnectionEstablishedLogDetails}, {nameof(PullReplicationMode)}={IncomingPullReplicationParams.Mode}, {nameof(ChangeVectorWireMode)}={ChangeVectorWireMode}, {nameof(CertificateThumbprint)}={CertificateThumbprint}";
 
         public override string FromToString => base.FromToString +
-                                               $"{(IncomingPullReplicationParams?.Name == null ? null : $"(pull definition: {IncomingPullReplicationParams?.Name})")}";
+                                               $"{(IncomingPullReplicationParams?.Name == null ? null : $", {nameof(ReplicationInitialRequest.PullReplicationDefinitionName)}={IncomingPullReplicationParams.Name}")}";
 
         protected override void DisposeInternal()
         {
