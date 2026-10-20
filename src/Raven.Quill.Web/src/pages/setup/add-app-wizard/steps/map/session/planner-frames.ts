@@ -1,4 +1,4 @@
-import type { MigrationFrame } from "@/api/custom-services/migration-service";
+import type { MigrationFrame, MigrationFrameConventionsFrame, OpenQuestion } from "@/api/generated/server-api";
 import {
     isRegistered,
     withoutCollection,
@@ -14,10 +14,6 @@ import type {
     PlannerReplyTurn,
     PlannerTurn,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
-
-type OpenQuestionFrame = Extract<MigrationFrame, { type: "reply" }>["openQuestions"][number];
-
-type ConventionsFrame = Extract<MigrationFrame, { type: "conventions" }>;
 
 export const UNSPECIFIED_PROPERTY_CASE = "Unspecified";
 
@@ -195,7 +191,7 @@ function failTurn(turn: PlannerReplyTurn, error: string): PlannerReplyTurn {
         : { ...turn, status: "failed", error };
 }
 
-function isUnchangedConventions(frame: ConventionsFrame): boolean {
+function isUnchangedConventions(frame: MigrationFrameConventionsFrame): boolean {
     return (
         frame.propertyCase === UNSPECIFIED_PROPERTY_CASE &&
         !frame.propertyLanguage &&
@@ -204,7 +200,7 @@ function isUnchangedConventions(frame: ConventionsFrame): boolean {
     );
 }
 
-function toPlannerQuestion({ question, options, recommended }: OpenQuestionFrame): PlannerQuestion {
+function toPlannerQuestion({ question, options, recommended }: OpenQuestion): PlannerQuestion {
     const isRecommendationValid = recommended != null && recommended >= 0 && recommended < options.length;
 
     return { question, options, recommended: isRecommendationValid ? recommended : null };

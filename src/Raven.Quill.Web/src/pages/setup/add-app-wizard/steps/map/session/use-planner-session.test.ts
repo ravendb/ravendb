@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { MigrationFrame } from "@/api/custom-services/migration-service";
+import type { MigrationFrame } from "@/api/generated/server-api";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { getLatestReply } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
 import type { SelectedTables } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";

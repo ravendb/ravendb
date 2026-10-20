@@ -1,23 +1,24 @@
-import type { MigrationFrame } from "@/api/custom-services/migration-service";
-import type { CdcSinkTableConfig } from "@/api/generated/server-api";
+import type {
+    AbsorbedTable,
+    CdcSinkTableConfig,
+    DroppedTable,
+    MigrationFrameProposalFrame,
+    ProposedCollection as ProposedCollectionFrame,
+} from "@/api/generated/server-api";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import type { SourceTableRef } from "@/pages/setup/add-app-wizard/discover-utils";
-
-export type ProposalFrame = Extract<MigrationFrame, { type: "proposal" }>;
-
-type ProposedCollectionFrame = ProposalFrame["collections"][number];
 
 /** A table the planner named, with the selected table the name means; null when it fits none. */
 type WithTableRef<Named> = Named & { tableRef: SourceTableRef | null };
 
 export type ProposedCollection = Omit<ProposedCollectionFrame, "absorbs"> & {
     rootTableRef: SourceTableRef | null;
-    absorbs: WithTableRef<ProposedCollectionFrame["absorbs"][number]>[];
+    absorbs: WithTableRef<AbsorbedTable>[];
 };
 
-export type PlannerProposal = Omit<ProposalFrame, "type" | "collections" | "dropped"> & {
+export type PlannerProposal = Omit<MigrationFrameProposalFrame, "type" | "collections" | "dropped"> & {
     collections: ProposedCollection[];
-    dropped: WithTableRef<ProposalFrame["dropped"][number]>[];
+    dropped: WithTableRef<DroppedTable>[];
 };
 
 /** The selected table a configuration reads from, and the same for each of its embedded tables, in their order. */

@@ -1,16 +1,17 @@
 import { delay, http, HttpResponse } from "msw";
-import type { MigrationFrame } from "@/api/custom-services/migration-service";
 import type {
     CdcColumnMapping,
     CdcSinkEmbeddedTableConfig,
     CdcSinkLinkedTableConfig,
     CdcSinkTableConfig,
     DiscoverResponse,
+    DroppedTable,
     MigrationApplyResponse,
+    MigrationFrame,
+    ProposedCollection,
 } from "@/api/generated/server-api";
 import { apiHttp } from "@/mocks/api-http";
 import { discoveredTable } from "@/mocks/discovery-fixtures";
-import type { ProposalFrame } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 
 type StreamOptions = {
     frameDelayMs?: number;
@@ -18,8 +19,8 @@ type StreamOptions = {
     isEndless?: boolean;
 };
 
-// The planner relays its frames as NDJSON rather than a body the OpenAPI contract describes, so the two
-// streaming endpoints use plain msw instead of `apiHttp` - mirroring assistantMocks.chat.
+// The planner streams its frames as NDJSON, so the two streaming endpoints use plain msw instead of
+// `apiHttp` - mirroring assistantMocks.chat.
 export const migrationMocks = {
     start: (frames: MigrationFrame[] = plannerOpeningFrames, options?: StreamOptions) =>
         streamFrames("/api/setup/migration/start", frames, options),
@@ -118,7 +119,7 @@ export function proposedCollection(
     rootTable: string,
     absorbs: { table: string; how: "Embed" | "Link"; why?: string }[],
     why: string,
-): ProposalFrame["collections"][number] {
+): ProposedCollection {
     return {
         collection,
         rootTable,
@@ -127,7 +128,7 @@ export function proposedCollection(
     };
 }
 
-export function droppedTable(table: string, why: string): ProposalFrame["dropped"][number] {
+export function droppedTable(table: string, why: string): DroppedTable {
     return { table, why };
 }
 

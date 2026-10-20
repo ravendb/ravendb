@@ -1034,6 +1034,11 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AbsorbedTable: {
+            table?: null | string;
+            how?: null | string;
+            why?: null | string;
+        };
         ActivityEventDto: {
             id: string;
             appId: string;
@@ -1605,6 +1610,10 @@ export interface components {
             unsupportedReason?: null | string;
             warnings: string[];
         };
+        DroppedTable: {
+            table?: null | string;
+            why?: null | string;
+        };
         EditAgentRequest: {
             configuration: components["schemas"]["AiAgentConfiguration"];
             actionBindings: null | {
@@ -1718,6 +1727,68 @@ export interface components {
             conversationId: string;
             prompt: string;
         };
+        MigrationFrame: components["schemas"]["MigrationFrameProposalFrame"] | components["schemas"]["MigrationFrameCollectionFrame"] | components["schemas"]["MigrationFrameRejectedFrame"] | components["schemas"]["MigrationFrameRemovedFrame"] | components["schemas"]["MigrationFrameConventionsFrame"] | components["schemas"]["MigrationFrameNoteFrame"] | components["schemas"]["MigrationFrameReplyFrame"] | components["schemas"]["MigrationFrameDoneFrame"] | components["schemas"]["MigrationFrameErrorFrame"];
+        MigrationFrameCollectionFrame: {
+            /** @enum {string} */
+            type: "collection";
+            status: string;
+            collection: string;
+            /** Format: int32 */
+            version: number;
+            rationale?: null | string;
+            config?: null | components["schemas"]["CdcSinkTableConfig"];
+            warnings: string[];
+        };
+        MigrationFrameConventionsFrame: {
+            /** @enum {string} */
+            type: "conventions";
+            propertyCase: components["schemas"]["PropertyCase"];
+            propertyLanguage?: null | string;
+            notes?: null | string;
+            mustReEmit: string[];
+        };
+        MigrationFrameDoneFrame: {
+            /** @enum {string} */
+            type: "done";
+            conversationId: string;
+        };
+        MigrationFrameErrorFrame: {
+            /** @enum {string} */
+            type: "error";
+            message: string;
+        };
+        MigrationFrameNoteFrame: {
+            /** @enum {string} */
+            type: "note";
+            text: string;
+        };
+        MigrationFrameProposalFrame: {
+            /** @enum {string} */
+            type: "proposal";
+            areas: components["schemas"]["ProposedArea"][];
+            collections: components["schemas"]["ProposedCollection"][];
+            dropped: components["schemas"]["DroppedTable"][];
+            enables: string[];
+        };
+        MigrationFrameRejectedFrame: {
+            /** @enum {string} */
+            type: "rejected";
+            collection: string;
+            errors: string[];
+        };
+        MigrationFrameRemovedFrame: {
+            /** @enum {string} */
+            type: "removed";
+            collection?: null | string;
+            reason?: null | string;
+        };
+        MigrationFrameReplyFrame: {
+            /** @enum {string} */
+            type: "reply";
+            reply?: null | string;
+            gaps: string[];
+            openQuestions: components["schemas"]["OpenQuestion"][];
+        };
         MigrationRemoveCollectionRequest: {
             slug: string;
             conversationId: string;
@@ -1777,6 +1848,12 @@ export interface components {
             /** Format: int32 */
             embeddingsMaxConcurrentBatches?: null | number;
         };
+        OpenQuestion: {
+            question: string;
+            options: string[];
+            /** Format: int32 */
+            recommended?: null | number;
+        };
         ProblemDetails: {
             type?: null | string;
             title?: null | string;
@@ -1784,6 +1861,19 @@ export interface components {
             status?: null | number;
             detail?: null | string;
             instance?: null | string;
+        };
+        /** @enum {unknown} */
+        PropertyCase: "Unspecified" | "SnakeCase" | "CamelCase" | "PascalCase";
+        ProposedArea: {
+            area?: null | string;
+            collections: string[];
+            why?: null | string;
+        };
+        ProposedCollection: {
+            collection?: null | string;
+            rootTable?: null | string;
+            absorbs: components["schemas"]["AbsorbedTable"][];
+            why?: null | string;
         };
         ProvisionAgentResponse: {
             agentId: string;
@@ -4342,9 +4432,9 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": null | components["schemas"]["MigrationStartRequest"];
+                "application/json": components["schemas"]["MigrationStartRequest"];
             };
         };
         responses: {
@@ -4353,7 +4443,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/x-ndjson": components["schemas"]["MigrationFrame"];
+                };
             };
         };
     };
@@ -4364,9 +4456,9 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": null | components["schemas"]["MigrationAskRequest"];
+                "application/json": components["schemas"]["MigrationAskRequest"];
             };
         };
         responses: {
@@ -4375,7 +4467,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/x-ndjson": components["schemas"]["MigrationFrame"];
+                };
             };
         };
     };
@@ -4386,9 +4480,9 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": null | components["schemas"]["MigrationRemoveCollectionRequest"];
+                "application/json": components["schemas"]["MigrationRemoveCollectionRequest"];
             };
         };
         responses: {
@@ -4417,9 +4511,9 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": null | components["schemas"]["MigrationApplyRequest"];
+                "application/json": components["schemas"]["MigrationApplyRequest"];
             };
         };
         responses: {
@@ -4560,6 +4654,7 @@ export interface operations {
     };
 }
 
+export type AbsorbedTable = components["schemas"]["AbsorbedTable"];
 export type ActivityEventDto = components["schemas"]["ActivityEventDto"];
 export type AgentDetailsResponse = components["schemas"]["AgentDetailsResponse"];
 export type AgentParameterSummary = components["schemas"]["AgentParameterSummary"];
@@ -4644,6 +4739,7 @@ export type DiscoverForeignKeyResponse = components["schemas"]["DiscoverForeignK
 export type DiscoverRequest = components["schemas"]["DiscoverRequest"];
 export type DiscoverResponse = components["schemas"]["DiscoverResponse"];
 export type DiscoverTableResponse = components["schemas"]["DiscoverTableResponse"];
+export type DroppedTable = components["schemas"]["DroppedTable"];
 export type EditAgentRequest = components["schemas"]["EditAgentRequest"];
 export type EmbeddedSettings = components["schemas"]["EmbeddedSettings"];
 export type EmbedLinkSummaryResponse = components["schemas"]["EmbedLinkSummaryResponse"];
@@ -4661,6 +4757,16 @@ export type MetricCard = components["schemas"]["MetricCard"];
 export type MigrationApplyRequest = components["schemas"]["MigrationApplyRequest"];
 export type MigrationApplyResponse = components["schemas"]["MigrationApplyResponse"];
 export type MigrationAskRequest = components["schemas"]["MigrationAskRequest"];
+export type MigrationFrame = components["schemas"]["MigrationFrame"];
+export type MigrationFrameCollectionFrame = components["schemas"]["MigrationFrameCollectionFrame"];
+export type MigrationFrameConventionsFrame = components["schemas"]["MigrationFrameConventionsFrame"];
+export type MigrationFrameDoneFrame = components["schemas"]["MigrationFrameDoneFrame"];
+export type MigrationFrameErrorFrame = components["schemas"]["MigrationFrameErrorFrame"];
+export type MigrationFrameNoteFrame = components["schemas"]["MigrationFrameNoteFrame"];
+export type MigrationFrameProposalFrame = components["schemas"]["MigrationFrameProposalFrame"];
+export type MigrationFrameRejectedFrame = components["schemas"]["MigrationFrameRejectedFrame"];
+export type MigrationFrameRemovedFrame = components["schemas"]["MigrationFrameRemovedFrame"];
+export type MigrationFrameReplyFrame = components["schemas"]["MigrationFrameReplyFrame"];
 export type MigrationRemoveCollectionRequest = components["schemas"]["MigrationRemoveCollectionRequest"];
 export type MigrationStartRequest = components["schemas"]["MigrationStartRequest"];
 export type MintEmbedLinkRequest = components["schemas"]["MintEmbedLinkRequest"];
@@ -4668,7 +4774,11 @@ export type MintEmbedLinkResponse = components["schemas"]["MintEmbedLinkResponse
 export type MistralAiSettings = components["schemas"]["MistralAiSettings"];
 export type OllamaSettings = components["schemas"]["OllamaSettings"];
 export type OpenAiSettings = components["schemas"]["OpenAiSettings"];
+export type OpenQuestion = components["schemas"]["OpenQuestion"];
 export type ProblemDetails = components["schemas"]["ProblemDetails"];
+export type PropertyCase = components["schemas"]["PropertyCase"];
+export type ProposedArea = components["schemas"]["ProposedArea"];
+export type ProposedCollection = components["schemas"]["ProposedCollection"];
 export type ProvisionAgentResponse = components["schemas"]["ProvisionAgentResponse"];
 export type ProvisionChannelRequest = components["schemas"]["ProvisionChannelRequest"];
 export type ProvisionChannelResponse = components["schemas"]["ProvisionChannelResponse"];
@@ -4913,10 +5023,10 @@ export function createServerApi(client: ApiClient) {
             connect: (request: ConnectRequest) => client.post<ConnectResult, ApiErrorResponse>(API_ENDPOINTS.setup.connect, request),
             discover: (request: DiscoverRequest) => client.post<DiscoverResponse, ApiErrorResponse>(API_ENDPOINTS.setup.discover, request),
             map: (request: MapRequest) => client.post<CdcSinkConfiguration, ApiErrorResponse>(API_ENDPOINTS.setup.map, request),
-            migrationApply: (request: string) => client.post<MigrationApplyResponse, ApiErrorResponse>(API_ENDPOINTS.setup.migrationApply, request),
-            migrationAsk: (request: string) => client.post<void>(API_ENDPOINTS.setup.migrationAsk, request),
-            migrationRemoveCollection: (request: string) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.setup.migrationRemoveCollection, request),
-            migrationStart: (request: string) => client.post<void>(API_ENDPOINTS.setup.migrationStart, request),
+            migrationApply: (request: MigrationApplyRequest) => client.post<MigrationApplyResponse, ApiErrorResponse>(API_ENDPOINTS.setup.migrationApply, request),
+            migrationAsk: (request: MigrationAskRequest) => client.post<Response>(API_ENDPOINTS.setup.migrationAsk, request, { responseType: "response" }),
+            migrationRemoveCollection: (request: MigrationRemoveCollectionRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.setup.migrationRemoveCollection, request),
+            migrationStart: (request: MigrationStartRequest) => client.post<Response>(API_ENDPOINTS.setup.migrationStart, request, { responseType: "response" }),
             provision: (request: ProvisionRequest) => client.post<ProvisionResponse, ApiErrorResponse>(API_ENDPOINTS.setup.provision, request),
             testMapping: (request: TestMappingRequest) => client.post<TestMappingResponse, ApiErrorResponse>(API_ENDPOINTS.setup.testMapping, request),
             verifyCdc: (request: VerifyCdcRequest) => client.post<VerifyCdcResponse, ApiErrorResponse>(API_ENDPOINTS.setup.verifyCdc, request),

@@ -58,11 +58,13 @@ public static class WizardEndpoints
                 "Opens an interactive planning session over the discovered schema. Streams NDJSON " +
                 "frames: the agent's proposal, then one frame per collection as it is registered or " +
                 "rejected, then its reply.")
-            .Accepts<MigrationStartRequest>("application/json");
+            .Accepts<MigrationStartRequest>("application/json")
+            .Produces<MigrationFrame>(StatusCodes.Status200OK, contentType: "application/x-ndjson");
         group.MapPost("/migration/ask", AskMigrationAsync)
             .WithName("setup.migrationAsk")
             .WithDescription("One more turn in an existing planning session. Streams the same NDJSON frames.")
-            .Accepts<MigrationAskRequest>("application/json");
+            .Accepts<MigrationAskRequest>("application/json")
+            .Produces<MigrationFrame>(StatusCodes.Status200OK, contentType: "application/x-ndjson");
         group.MapPost("/migration/remove", RemoveMigrationCollectionAsync)
             .WithName("setup.migrationRemoveCollection")
             .WithDescription("Takes a collection out of the plan, also one the planner only proposed. The planner is told on the next turn.")
@@ -404,27 +406,24 @@ public static class WizardEndpoints
     }
 
     private static Task StartMigrationAsync(
-        MigrationStartRequest? body,
+        MigrationStartRequest body,
         MigrationService service,
         HttpContext ctx,
         CancellationToken ct) =>
         StreamMigrationAsync(ctx, ct, body, (request, write) => service.StartAsync(request, write, ct));
 
     private static Task AskMigrationAsync(
-        MigrationAskRequest? body,
+        MigrationAskRequest body,
         MigrationService service,
         HttpContext ctx,
         CancellationToken ct) =>
         StreamMigrationAsync(ctx, ct, body, (request, write) => service.AskAsync(request, write, ct));
 
     private static async Task<IResult> RemoveMigrationCollectionAsync(
-        MigrationRemoveCollectionRequest? body,
+        MigrationRemoveCollectionRequest body,
         MigrationService service,
         CancellationToken ct)
     {
-        if (body is null)
-            return Results.BadRequest(new ApiErrorResponse("request body is required"));
-
         var refusal = await service.RemoveCollectionAsync(body, ct);
 
         return refusal is null
@@ -433,14 +432,11 @@ public static class WizardEndpoints
     }
 
     private static async Task<IResult> ApplyMigrationAsync(
-        MigrationApplyRequest? body,
+        MigrationApplyRequest body,
         MigrationService service,
         QuillLogger<WizardLogger> logger,
         CancellationToken ct)
     {
-        if (body is null)
-            return Results.BadRequest(new ApiErrorResponse("request body is required"));
-
         var (response, refusal) = await service.ApplyAsync(body, ct);
 
         if (refusal is not null)
@@ -468,17 +464,10 @@ public static class WizardEndpoints
     private static async Task StreamMigrationAsync<TRequest>(
         HttpContext ctx,
         CancellationToken ct,
-        TRequest? body,
+        TRequest body,
         Func<TRequest, Func<MigrationFrame, Task>, Task<MigrationService.Refusal?>> run)
         where TRequest : class
     {
-        if (body is null)
-        {
-            ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("request body is required"), ct);
-            return;
-        }
-
         var started = false;
 
         async Task WriteAsync(MigrationFrame frame)

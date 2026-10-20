@@ -1,6 +1,6 @@
 import { useFormContext } from "react-hook-form";
 import { api } from "@/api/api";
-import type { MigrationFrame } from "@/api/custom-services/migration-service";
+import type { MigrationFrame } from "@/api/generated/server-api";
 import { toError } from "@/components/form/wizard/wizard-step-error";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";

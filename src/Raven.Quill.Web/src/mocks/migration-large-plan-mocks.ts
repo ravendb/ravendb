@@ -1,5 +1,9 @@
-import type { MigrationFrame } from "@/api/custom-services/migration-service";
-import type { CdcSinkTableConfig, DiscoverResponse, DiscoverTableResponse } from "@/api/generated/server-api";
+import type {
+    CdcSinkTableConfig,
+    DiscoverResponse,
+    DiscoverTableResponse,
+    MigrationFrame,
+} from "@/api/generated/server-api";
 import { pascalCase } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import { discoveredTable } from "@/mocks/discovery-fixtures";
 import {

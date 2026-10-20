@@ -64,21 +64,36 @@ builder.Services.AddOpenApi(options =>
         if (schema.Properties is null || schema.Properties.Count == 0)
             return Task.CompletedTask;
 
-        var writableProperties = context.JsonTypeInfo.Type
+        var getterOnlyProperties = context.JsonTypeInfo.Type
             .GetProperties(BindingFlags.Instance | BindingFlags.Public)
-            .Where(static property => property.GetMethod is { IsPublic: true } && property.SetMethod is { IsPublic: true })
-            .Select(GetJsonPropertyName)
-            .ToHashSet(StringComparer.Ordinal);
-
-        var getterOnlyProperties = schema.Properties.Keys
-            .Where(propertyName => writableProperties.Contains(propertyName) == false)
-            .ToArray();
+            .Where(static property => property.GetMethod is { IsPublic: true } && property.SetMethod is not { IsPublic: true })
+            .Select(GetJsonPropertyName);
 
         foreach (var propertyName in getterOnlyProperties)
         {
             schema.Properties.Remove(propertyName);
             schema.Required?.Remove(propertyName);
         }
+
+        return Task.CompletedTask;
+    });
+
+    // A derived type's schema lists the discriminator the serializer writes, but as optional. Every
+    // derived type carries it, and a generated client tells the derived types apart by it.
+    options.AddSchemaTransformer((schema, context, _) =>
+    {
+        var type = context.JsonTypeInfo.Type;
+        var derivedType = type.BaseType?
+            .GetCustomAttributes<JsonDerivedTypeAttribute>()
+            .FirstOrDefault(attribute => attribute.DerivedType == type);
+
+        if (derivedType?.TypeDiscriminator is null)
+            return Task.CompletedTask;
+
+        var propertyName = type.BaseType!.GetCustomAttribute<JsonPolymorphicAttribute>()?.TypeDiscriminatorPropertyName ?? "$type";
+
+        schema.Required ??= new HashSet<string>();
+        schema.Required.Add(propertyName);
 
         return Task.CompletedTask;
     });

@@ -1,5 +1,5 @@
 import type { StateCreator } from "zustand";
-import type { MigrationFrame } from "@/api/custom-services/migration-service";
+import type { MigrationFrame } from "@/api/generated/server-api";
 import type { SetupWizardState } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import {
     applyPlannerFrame,

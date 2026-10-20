@@ -19,7 +19,7 @@ export function useRemovePlannerCollection() {
                 throw new Error(`Could not remove ${collection}: the planner session is gone.`);
             }
 
-            await api.services.migration.removeCollection({
+            await api.services.setup.migrationRemoveCollection({
                 slug: getValues("externalConnection").slug,
                 conversationId,
                 collection,
