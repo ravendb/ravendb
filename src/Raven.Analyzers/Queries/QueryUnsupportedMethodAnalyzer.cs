@@ -45,7 +45,7 @@ namespace Raven.Analyzers.Queries
                 if (lambdaBody == null)
                     continue;
 
-                ReportNonTranslatableCalls(context, lambdaBody);
+                ReportNonTranslatableCalls(context, lambdaBody, arg.Expression);
             }
         }
 
@@ -73,18 +73,18 @@ namespace Raven.Analyzers.Queries
                     switch (clause)
                     {
                         case WhereClauseSyntax where:
-                            ReportNonTranslatableCalls(context, where.Condition, query);
+                            ReportNonTranslatableCalls(context, where.Condition, query, query);
                             break;
                         case OrderByClauseSyntax orderBy:
                             foreach (OrderingSyntax ordering in orderBy.Orderings)
-                                ReportNonTranslatableCalls(context, ordering.Expression, query);
+                                ReportNonTranslatableCalls(context, ordering.Expression, query, query);
                             break;
                         case LetClauseSyntax let:
-                            ReportNonTranslatableCalls(context, let.Expression, query);
+                            ReportNonTranslatableCalls(context, let.Expression, query, query);
                             break;
                         case JoinClauseSyntax join:
-                            ReportNonTranslatableCalls(context, join.LeftExpression, query);
-                            ReportNonTranslatableCalls(context, join.RightExpression, query);
+                            ReportNonTranslatableCalls(context, join.LeftExpression, query, query);
+                            ReportNonTranslatableCalls(context, join.RightExpression, query, query);
                             break;
                     }
                 }
@@ -92,11 +92,11 @@ namespace Raven.Analyzers.Queries
                 switch (body.SelectOrGroup)
                 {
                     case SelectClauseSyntax select:
-                        ReportNonTranslatableCalls(context, select.Expression, query);
+                        ReportNonTranslatableCalls(context, select.Expression, query, query);
                         break;
                     case GroupClauseSyntax group:
-                        ReportNonTranslatableCalls(context, group.GroupExpression, query);
-                        ReportNonTranslatableCalls(context, group.ByExpression, query);
+                        ReportNonTranslatableCalls(context, group.GroupExpression, query, query);
+                        ReportNonTranslatableCalls(context, group.ByExpression, query, query);
                         break;
                 }
             }
@@ -105,7 +105,7 @@ namespace Raven.Analyzers.Queries
         // Reports every user-defined (non-translatable) method invocation under <paramref name="root"/>.
         // When <paramref name="owningQuery"/> is supplied (the query-expression path), invocations that
         // another callback already owns are skipped so the same call is not reported twice.
-        private static void ReportNonTranslatableCalls(SyntaxNodeAnalysisContext context, SyntaxNode root, QueryExpressionSyntax? owningQuery = null)
+        private static void ReportNonTranslatableCalls(SyntaxNodeAnalysisContext context, SyntaxNode root, SyntaxNode scope, QueryExpressionSyntax? owningQuery = null)
         {
             foreach (InvocationExpressionSyntax nested in root.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
             {
@@ -118,7 +118,10 @@ namespace Raven.Analyzers.Queries
                 if (!MethodTranslatabilityHelper.IsLikelyNonTranslatable(method, exemptObjectMethodOverrides: false))
                     continue;
 
-                if (!ReferencesQueryElement(nested, context.SemanticModel))
+                if (!ReferencesQueryElement(nested, scope, context.SemanticModel))
+                    continue;
+
+                if (IsInsideClientCompiledLambda(nested, root, context.SemanticModel))
                     continue;
 
                 context.ReportDiagnostic(Diagnostic.Create(
@@ -128,16 +131,43 @@ namespace Raven.Analyzers.Queries
             }
         }
 
-        private static bool ReferencesQueryElement(InvocationExpressionSyntax invocation, SemanticModel model)
+        private static bool ReferencesQueryElement(InvocationExpressionSyntax invocation, SyntaxNode scope, SemanticModel model)
         {
             foreach (IdentifierNameSyntax id in invocation.DescendantNodes().OfType<IdentifierNameSyntax>())
             {
                 switch (model.GetSymbolInfo(id).Symbol)
                 {
-                    case IRangeVariableSymbol:
-                    case IParameterSymbol { ContainingSymbol: IMethodSymbol { MethodKind: MethodKind.AnonymousFunction } }:
+                    case IRangeVariableSymbol rangeVariable when IsDeclaredWithin(rangeVariable, scope):
+                    case IParameterSymbol { ContainingSymbol: IMethodSymbol { MethodKind: MethodKind.AnonymousFunction } } parameter when IsDeclaredWithin(parameter, scope):
                         return true;
                 }
+            }
+
+            return false;
+        }
+
+        private static bool IsDeclaredWithin(ISymbol symbol, SyntaxNode scope)
+        {
+            foreach (SyntaxReference reference in symbol.DeclaringSyntaxReferences)
+            {
+                if (reference.SyntaxTree == scope.SyntaxTree && scope.FullSpan.Contains(reference.Span))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool IsInsideClientCompiledLambda(InvocationExpressionSyntax invocation, SyntaxNode root, SemanticModel model)
+        {
+            for (SyntaxNode? current = invocation.Parent; current != null && current != root; current = current.Parent)
+            {
+                if (current is not (SimpleLambdaExpressionSyntax or ParenthesizedLambdaExpressionSyntax))
+                    continue;
+
+                return current.Parent is ArgumentSyntax { Parent: ArgumentListSyntax { Parent: InvocationExpressionSyntax outer } }
+                       && SyntaxHelpers.GetMethodSymbol(outer, model) is { Name: KnownTypes.GroupByMethodName } groupBy
+                       && groupBy.ContainingType.Name == KnownTypes.ITimeSeriesQueryableName
+                       && SyntaxHelpers.IsInRavenClientNamespace(groupBy.ContainingType);
             }
 
             return false;

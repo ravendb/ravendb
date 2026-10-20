@@ -271,6 +271,142 @@ class Order { public string Status { get; set; } public int Qty { get; set; } }
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task UserMethod_Referencing_Captured_Outer_Lambda_Parameter_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Defaults { public static int Days(int n) => n; }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        Func<int, IQueryable<Order>> f = days => session.Query<Order>()
+            .Where(x => x.Qty > Defaults.Days(days));
+    }
+}
+
+class Order { public int Qty { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task UserMethod_Referencing_Captured_Outer_Range_Variable_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+using System.Collections.Generic;
+class Defaults { public static int Days(int n) => n; }
+
+class Test
+{
+    void Run(IDocumentSession session, List<int> windows)
+    {
+        var q = from days in windows
+                select session.Query<Order>().Where(x => x.Qty > Defaults.Days(days)).ToList();
+    }
+}
+
+class Order { public int Qty { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task UserMethod_In_Nested_Lambda_Inside_Where_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+using System.Collections.Generic;
+class H { public static bool M(string s) => s.Length > 0; }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order>()
+            .Where(o => o.Tags.Any(t => H.M(t)));
+    }
+}
+
+class Order { public List<string> Tags { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id);
+            Assert.Contains("M", d.GetMessage());
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task UserMethod_In_TimeSeries_GroupBy_Lambda_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.TimeSeries;
+
+static class PeriodExtensions
+{
+    public static ITimeSeriesAggregationOperations Period(this ITimePeriodBuilder b, int hours) => b.Hours(hours);
+}
+
+class Test
+{
+    void Run(IDocumentSession session, int granularity)
+    {
+        var q = session.Query<Sensor>()
+            .Select(x => RavenQuery.TimeSeries(x, ""Readings"")
+                .Where(e => e.Value > 0)
+                .GroupBy(g => g.Period(granularity))
+                .Select(r => r.Sum())
+                .ToList());
+    }
+}
+
+class Sensor { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task UserMethod_In_TimeSeries_Where_Lambda_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.TimeSeries;
+
+class H { public static bool Valid(double v) => v > 0; }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Sensor>()
+            .Select(x => RavenQuery.TimeSeries(x, ""Readings"")
+                .Where(e => H.Valid(e.Value))
+                .ToList());
+    }
+}
+
+class Sensor { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id);
+            Assert.Contains("Valid", d.GetMessage());
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_Not_Referencing_Element_In_QueryExpression_No_Diagnostic()
         {
             const string source = CommonUsings + @"

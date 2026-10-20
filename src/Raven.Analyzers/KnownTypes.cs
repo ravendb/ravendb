@@ -6,6 +6,7 @@ namespace Raven.Analyzers
     public static class KnownTypes
     {
         public const string IRavenQueryableName = "IRavenQueryable";
+        public const string ITimeSeriesQueryableName = "ITimeSeriesQueryable";
 
         public const string ProjectIntoMethodName = "ProjectInto";
         public const string SelectMethodName = nameof(Queryable.Select);
