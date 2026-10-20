@@ -81,6 +81,7 @@ namespace Raven.Server.Documents.Replication.Stats
         {
             return new DynamicJsonValue
             {
+                [nameof(SourceDatabaseId)] = SourceDatabaseId,
                 [nameof(SourceDatabaseName)] = SourceDatabaseName,
                 [nameof(SourceUrl)] = SourceUrl,
                 [nameof(SourceMachineName)] = SourceMachineName,

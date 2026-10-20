@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands.Replication;
@@ -25,9 +26,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
     [UsedImplicitly(Reason = "Instantiated by the generated Blittable JSON deserializer.")]
     public sealed class ReplicationActiveConnectionsPreview : IFillFromBlittableJson
     {
-        public List<IncomingConnectionInfo> IncomingConnections;
+        public List<ReplicationActiveConnectionInfo<IncomingConnectionInfo>> IncomingConnections;
 
-        public List<ReplicationNode> OutgoingConnections;
+        public List<ReplicationActiveConnectionInfo<ReplicationNode>> OutgoingConnections;
 
         public void FillFromBlittableJson(BlittableJsonReaderObject json)
         {
@@ -37,12 +38,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
         private void FillIncomingConnections(BlittableJsonReaderObject json)
         {
-            IncomingConnections = new List<IncomingConnectionInfo>();
+            IncomingConnections = new List<ReplicationActiveConnectionInfo<IncomingConnectionInfo>>();
             if (json.TryGetMember(nameof(IncomingConnections), out var result) && result is BlittableJsonReaderArray bjra)
             {
                 foreach (BlittableJsonReaderObject bjro in bjra)
                 {
-                    var incomingConnection = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<IncomingConnectionInfo>(bjro, "IncomingConnectionInfo");
+                    var incomingConnection = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<ReplicationActiveConnectionInfo<IncomingConnectionInfo>>(bjro, "IncomingConnection");
+                    incomingConnection.Connection = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<IncomingConnectionInfo>(bjro, "IncomingConnectionInfo");
                     IncomingConnections.Add(incomingConnection);
                 }
             }
@@ -50,15 +52,25 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
         private void FillOutgoingConnections(BlittableJsonReaderObject json)
         {
-            OutgoingConnections = new List<ReplicationNode>();
+            OutgoingConnections = new List<ReplicationActiveConnectionInfo<ReplicationNode>>();
             if (json.TryGetMember(nameof(OutgoingConnections), out var result) && result is BlittableJsonReaderArray bjra)
             {
                 foreach (BlittableJsonReaderObject bjro in bjra)
                 {
-                    var outgoingConnection = ReplicationHelper.GetReplicationNodeByType(bjro);
+                    var outgoingConnection = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<ReplicationActiveConnectionInfo<ReplicationNode>>(bjro, "OutgoingConnection");
+                    outgoingConnection.Connection = ReplicationHelper.GetReplicationNodeByType(bjro);
                     OutgoingConnections.Add(outgoingConnection);
                 }
             }
         }
+    }
+
+    // Read-only endpoint row: keep the original connection type without adding runtime fields to task configuration.
+    public sealed class ReplicationActiveConnectionInfo<TConnection>
+    {
+        public TConnection Connection;
+        public PullReplicationChangeVectorWireMode? ChangeVectorWireMode;
+        public PullReplicationMode? PullReplicationMode;
+        public string PullReplicationDefinitionName;
     }
 }
