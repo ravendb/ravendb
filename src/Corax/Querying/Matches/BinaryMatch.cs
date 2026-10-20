@@ -106,20 +106,27 @@ namespace Corax.Querying.Matches
             if (results > 0 && _fillCallCounter++ > 0)
                 _skipSortingResult = SkipSortingResult.SortingIsRequired;
 
-            if (typeof(TBinaryOperationMarker) == typeof(BinaryMatch.And) && _materialized == false && IsBoosting)
-            {
-                _returnedIdsTracked = true;
-                if (results > 0)
-                    _returnedIds.AddRange(buffer[..results]);
-            }
-
+            TrackReturnedIds(buffer[..results]);
             return results;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int AndWith(Span<long> buffer, int matches)
         {
-            return _andWithFunc(ref this, buffer, matches);
+            var results = _andWithFunc(ref this, buffer, matches);
+            TrackReturnedIds(buffer[..results]);
+            return results;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void TrackReturnedIds(Span<long> ids)
+        {
+            if (typeof(TBinaryOperationMarker) != typeof(BinaryMatch.And) || _materialized || IsBoosting == false)
+                return;
+
+            _returnedIdsTracked = true;
+            if (ids.IsEmpty == false)
+                _returnedIds.AddRange(ids);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
