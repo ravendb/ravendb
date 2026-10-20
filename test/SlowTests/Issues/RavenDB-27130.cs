@@ -162,8 +162,8 @@ namespace SlowTests.Issues
                 context.Transaction.InnerTransaction.CreateTree(SchemaRevisions.ConflictRevisionsCountSlice)
                     .Add(prefix, staleCount);
 
-                context.Transaction.InnerTransaction.CreateTree(SchemaRevisions.ConflictRevisionsCountWatermarkSlice)
-                    .Add(SchemaRevisions.ConflictRevisionsCountWatermarkKeySlice, 0L);
+                context.Transaction.InnerTransaction.CreateTree(SchemaRevisions.ConflictRevisionsCountSlice)
+                    .Add(SchemaRevisions.ConflictRevisionsCountWatermarkSlice, 0L);
 
                 tx.Commit();
             }

@@ -164,7 +164,6 @@ namespace Raven.Server.Documents.Revisions
         {
             tx.CreateTree(RevisionsCountSlice);
             tx.CreateTree(ConflictRevisionsCountSlice);
-            tx.CreateTree(ConflictRevisionsCountWatermarkSlice);
             _documentsStorage.TombstonesSchema.Create(tx, RevisionsTombstonesSlice, 16);
         }
 
@@ -1232,15 +1231,14 @@ namespace Raven.Server.Documents.Revisions
         private void MarkConflictRevisionsCountsUpToDate(DocumentsOperationContext context)
         {
             var tx = context.Transaction.InnerTransaction;
-            var watermark = tx.CreateTree(ConflictRevisionsCountWatermarkSlice);
 
-            watermark.Add(ConflictRevisionsCountWatermarkKeySlice, DocumentsStorage.ReadLastRevisionsEtag(tx));
+            tx.CreateTree(ConflictRevisionsCountSlice)
+                .Add(ConflictRevisionsCountWatermarkSlice, DocumentsStorage.ReadLastRevisionsEtag(tx));
         }
 
         private static long ReadConflictRevisionsCountWatermark(Transaction tx)
         {
-            var watermark = tx.ReadTree(ConflictRevisionsCountWatermarkSlice);
-            var read = watermark?.Read(ConflictRevisionsCountWatermarkKeySlice);
+            var read = tx.ReadTree(ConflictRevisionsCountSlice)?.Read(ConflictRevisionsCountWatermarkSlice);
 
             return read?.Reader.ReadLittleEndianInt64() ?? 0;
         }
