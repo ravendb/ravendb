@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         }
 
         protected override string ConnectionEstablishedLogDetails =>
-            $"{base.ConnectionEstablishedLogDetails}, Direction={IncomingPullReplicationParams.Mode}, ChangeVectorWireMode={ChangeVectorWireMode}, CertificateThumbprint={CertificateThumbprint}";
+            $"{base.FromToString}, {nameof(ReplicationInitialRequest.PullReplicationDefinitionName)}={IncomingPullReplicationParams.Name}, {nameof(PullReplicationMode)}={IncomingPullReplicationParams.Mode}, {nameof(ChangeVectorWireMode)}={ChangeVectorWireMode}, {nameof(CertificateThumbprint)}={CertificateThumbprint}";
 
         public override string FromToString => base.FromToString +
                                                $"{(IncomingPullReplicationParams?.Name == null ? null : $"(pull definition: {IncomingPullReplicationParams?.Name})")}";
@@ -146,7 +146,6 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             json[nameof(ChangeVectorWireMode)] = ChangeVectorWireMode;
             json[nameof(PullReplicationMode)] = IncomingPullReplicationParams.Mode;
-            json[nameof(ConnectionInfo.SourceDatabaseId)] = ConnectionInfo.SourceDatabaseId;
             json[nameof(ReplicationInitialRequest.PullReplicationDefinitionName)] = IncomingPullReplicationParams.Name;
 
             return json;

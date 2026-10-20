@@ -23,10 +23,10 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Outgoing;
@@ -38,6 +38,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Utils;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Operations;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
@@ -561,65 +562,121 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
         await AssertPullConnectionDiagnosticsAsync(sink, hubDatabase, expectedMode, asHub: false);
     }
 
-    private static Task AssertPullConnectionDiagnosticsAsync(DocumentStore store, DocumentDatabase remote,
+    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
+    [InlineData(PullReplicationMode.HubToSink)]
+    [InlineData(PullReplicationMode.SinkToHub)]
+    public async Task PullInitiatorReportsRequestedDirectionBeforeHandshake(PullReplicationMode mode)
+    {
+        using var handshakeGate = new ManualResetEventSlim();
+        var certificates = Certificates.SetupServerAuthentication();
+        using var hub = GetSecuredDocumentStore(certificates);
+        using var sink = GetSecuredDocumentStore(certificates);
+        using var pullCert = ExportCertificate(certificates.ClientCertificate1.Value);
+        DocumentDatabase sinkDatabase = await Databases.GetDocumentDatabaseInstanceFor(sink);
+        var started = new TaskCompletionSource<DatabaseOutgoingReplicationHandler>(TaskCreationOptions.RunContinuationsAsynchronously);
+        sinkDatabase.ReplicationLoader.ForTestingPurposesOnly().OnOutgoingReplicationStart = handler =>
+        {
+            started.TrySetResult(handler);
+            CancellationToken cancellation = handler.CancellationToken;
+            try
+            {
+                handshakeGate.Wait(cancellation);
+            }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+            {
+                // Let the existing replication error handler complete cancellation.
+            }
+        };
+        try
+        {
+            await SetupHubToSinkPullReplicationAsync(hub, sink, pullCert, FilteredPullName, withFiltering: true,
+                allowedHubToSinkPaths: [IncludedItemsPath], allowedSinkToHubPaths: [IncludedItemsPath], mode: mode);
+            Assert.IsType<OutgoingPullReplicationHandlerAsSink>(await started.Task.WaitAsync(TimeSpan.FromSeconds(30)));
+            var response = await sink.Maintenance.SendAsync(new GetReplicationActiveConnectionsInfoOperation());
+            var outgoing = Assert.Single(response.OutgoingConnections);
+            Assert.Equal(mode, outgoing.PullReplicationMode);
+            Assert.Equal(PullReplicationChangeVectorWireMode.NotNegotiated, outgoing.ChangeVectorWireMode);
+            Assert.Equal(FilteredPullName, outgoing.PullReplicationDefinitionName);
+        }
+        finally
+        {
+            sinkDatabase.ReplicationLoader.ForTestingPurposesOnly().OnOutgoingReplicationStart = null;
+            handshakeGate.Set();
+        }
+
+        DocumentStore source = mode == PullReplicationMode.HubToSink ? hub : sink;
+        DocumentStore destination = mode == PullReplicationMode.HubToSink ? sink : hub;
+        await StoreTestItemAsync(source, "items/include/after-handshake", "after-handshake");
+        Assert.True(WaitForDocument(destination, "items/include/after-handshake", 30_000));
+    }
+
+    [RavenFact(RavenTestCategory.Replication)]
+    public void ActiveConnectionsReaderAcceptsPullRowsWithoutDiagnostics()
+    {
+        using (JsonOperationContext context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject response = context.ReadObject(new DynamicJsonValue
+        {
+            ["IncomingConnections"] = new DynamicJsonArray
+            {
+                new DynamicJsonValue { ["SourceDatabaseName"] = "sink", ["SourceUrl"] = "https://sink" }
+            },
+            ["OutgoingConnections"] = new DynamicJsonArray
+            {
+                new PullReplicationAsHub { Database = "sink", Url = "https://sink", Name = FilteredPullName }.ToJson(),
+                new PullReplicationAsSink { Database = "hub", Url = "https://hub", HubName = FilteredPullName }.ToJson()
+            }
+        }, "legacy-active-connections"))
+        {
+            var command = new GetReplicationActiveConnectionsInfoCommand();
+            command.SetResponse(context, response, fromCache: false);
+            var incoming = Assert.Single(command.Result.IncomingConnections);
+            Assert.Equal("sink", incoming.Connection.SourceDatabaseName);
+            Assert.Null(incoming.ChangeVectorWireMode);
+            Assert.Null(incoming.PullReplicationMode);
+            Assert.Null(incoming.PullReplicationDefinitionName);
+            Assert.Equal(2, command.Result.OutgoingConnections.Count);
+            Assert.IsType<PullReplicationAsHub>(command.Result.OutgoingConnections[0].Connection);
+            Assert.IsType<PullReplicationAsSink>(command.Result.OutgoingConnections[1].Connection);
+            Assert.All(command.Result.OutgoingConnections, outgoing =>
+            {
+                Assert.Null(outgoing.ChangeVectorWireMode);
+                Assert.Null(outgoing.PullReplicationMode);
+                Assert.Null(outgoing.PullReplicationDefinitionName);
+            });
+        }
+    }
+
+    private static async Task AssertPullConnectionDiagnosticsAsync(DocumentStore store, DocumentDatabase remote,
         PullReplicationChangeVectorWireMode expectedMode, bool asHub)
     {
-        return AssertActiveConnectionsAsync(store, response =>
-        {
-            Assert.True(response.TryGet("IncomingConnections", out BlittableJsonReaderArray incomingRows));
-            BlittableJsonReaderObject incoming = Assert.IsType<BlittableJsonReaderObject>(Assert.Single(incomingRows));
-            Assert.True(incoming.TryGet("SourceDatabaseName", out string sourceDatabaseName));
-            Assert.Equal(remote.Name, sourceDatabaseName);
-            Assert.True(incoming.TryGet("SourceUrl", out string sourceUrl));
-            Assert.Equal(remote.ServerStore.GetNodeHttpServerUrl(), sourceUrl);
-            Assert.True(incoming.TryGet("SourceDatabaseId", out string sourceDatabaseId));
-            Assert.Equal(remote.DbId.ToString(), sourceDatabaseId);
-            Assert.True(incoming.TryGet(nameof(ReplicationInitialRequest.PullReplicationDefinitionName), out string pullReplicationDefinitionName));
-            Assert.Equal(FilteredPullName, pullReplicationDefinitionName);
-            Assert.True(incoming.TryGet(nameof(PullReplicationMode), out string direction));
-            Assert.Equal((asHub ? PullReplicationMode.SinkToHub : PullReplicationMode.HubToSink).ToString(), direction);
-            Assert.True(incoming.TryGet("ChangeVectorWireMode", out string incomingMode));
-            Assert.Equal(expectedMode.ToString(), incomingMode);
+        var response = await store.Maintenance.SendAsync(new GetReplicationActiveConnectionsInfoOperation());
+        var incoming = Assert.Single(response.IncomingConnections);
+        Assert.Equal(remote.Name, incoming.Connection.SourceDatabaseName);
+        Assert.Equal(remote.ServerStore.GetNodeHttpServerUrl(), incoming.Connection.SourceUrl);
+        Assert.Equal(remote.DbId.ToString(), incoming.Connection.SourceDatabaseId);
+        Assert.Equal(FilteredPullName, incoming.PullReplicationDefinitionName);
+        Assert.Equal(asHub ? PullReplicationMode.SinkToHub : PullReplicationMode.HubToSink, incoming.PullReplicationMode);
+        Assert.Equal(expectedMode, incoming.ChangeVectorWireMode);
 
-            Assert.True(response.TryGet("OutgoingConnections", out BlittableJsonReaderArray outgoingRows));
-            BlittableJsonReaderObject outgoing = Assert.IsType<BlittableJsonReaderObject>(Assert.Single(outgoingRows));
-            Assert.True(outgoing.TryGet("Database", out string destinationDatabase));
-            Assert.Equal(remote.Name, destinationDatabase);
-            Assert.True(outgoing.TryGet("Url", out string destinationUrl));
-            Assert.Equal(remote.ServerStore.GetNodeHttpServerUrl(), destinationUrl);
-            Assert.True(outgoing.TryGet("Type", out string type));
-            Assert.Equal((asHub ? ReplicationNode.ReplicationType.PullAsHub : ReplicationNode.ReplicationType.PullAsSink).ToString(), type);
-            Assert.True(outgoing.TryGet("ChangeVectorWireMode", out string outgoingMode));
-            Assert.Equal(expectedMode.ToString(), outgoingMode);
-        });
+        var outgoing = Assert.Single(response.OutgoingConnections);
+        Assert.Equal(remote.Name, outgoing.Connection.Database);
+        Assert.Equal(remote.ServerStore.GetNodeHttpServerUrl(), outgoing.Connection.Url);
+        Assert.Equal(asHub ? ReplicationNode.ReplicationType.PullAsHub : ReplicationNode.ReplicationType.PullAsSink, outgoing.Connection.Type);
+        Assert.Equal(FilteredPullName, outgoing.PullReplicationDefinitionName);
+        Assert.Equal(asHub ? PullReplicationMode.HubToSink : PullReplicationMode.SinkToHub, outgoing.PullReplicationMode);
+        Assert.Equal(expectedMode, outgoing.ChangeVectorWireMode);
     }
 
-    private static Task AssertOutgoingWireModeAsync(DocumentStore store, PullReplicationChangeVectorWireMode expectedMode)
+    private static async Task AssertOutgoingWireModeAsync(DocumentStore store, PullReplicationChangeVectorWireMode expectedMode)
     {
-        return AssertActiveConnectionsAsync(store, response =>
+        var response = await store.Maintenance.SendAsync(new GetReplicationActiveConnectionsInfoOperation());
+        Assert.NotEmpty(response.OutgoingConnections);
+        foreach (var row in response.OutgoingConnections)
         {
-            Assert.True(response.TryGet("OutgoingConnections", out BlittableJsonReaderArray rows));
-            Assert.NotEmpty(rows);
-            foreach (BlittableJsonReaderObject row in rows)
-            {
-                Assert.True(row.TryGet("Type", out string type));
-                Assert.Equal(ReplicationNode.ReplicationType.PullAsHub.ToString(), type);
-                Assert.True(row.TryGet("ChangeVectorWireMode", out string mode));
-                Assert.Equal(expectedMode.ToString(), mode);
-            }
-        });
-    }
-
-    private static async Task AssertActiveConnectionsAsync(DocumentStore store, Action<BlittableJsonReaderObject> assertConnections)
-    {
-        RequestExecutor executor = store.GetRequestExecutor();
-        using (executor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-        using (var command = new GetRawStreamResultCommand($"/databases/{Uri.EscapeDataString(store.Database)}/replication/active-connections"))
-        {
-            await executor.ExecuteAsync(command, context);
-            command.Result.Position = 0;
-            using (BlittableJsonReaderObject response = await context.ReadForMemoryAsync(command.Result, "active-connections"))
-                assertConnections(response);
+            Assert.Equal(ReplicationNode.ReplicationType.PullAsHub, row.Connection.Type);
+            Assert.Equal(FilteredPullName, row.PullReplicationDefinitionName);
+            Assert.Equal(PullReplicationMode.HubToSink, row.PullReplicationMode);
+            Assert.Equal(expectedMode, row.ChangeVectorWireMode);
         }
     }
 

@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         }
 
         protected override string ConnectionEstablishedLogDetails =>
-            $"{base.ConnectionEstablishedLogDetails}, ChangeVectorWireMode={ChangeVectorWireMode}, CertificateThumbprint={CertificateThumbprint}";
+            $"{base.FromToString}, {nameof(ChangeVectorWireMode)}={ChangeVectorWireMode}, {nameof(CertificateThumbprint)}={CertificateThumbprint}";
 
         internal PullReplicationChangeVectorWireMode ChangeVectorWireMode => _changeVectorWireMode;
 
@@ -134,7 +134,16 @@ namespace Raven.Server.Documents.Replication.Outgoing
             }
         }
 
-        protected override string ConnectionEstablishedLogDetails => $"{base.ConnectionEstablishedLogDetails}, Direction={PullReplicationMode.HubToSink}";
+        internal override DynamicJsonValue GetConnectionInfoAsJson()
+        {
+            DynamicJsonValue json = base.GetConnectionInfoAsJson();
+            json[nameof(PullReplicationMode)] = PullReplicationMode.HubToSink;
+            json[nameof(PullReplicationDefinitionName)] = PullReplicationDefinitionName;
+            return json;
+        }
+
+        protected override string ConnectionEstablishedLogDetails =>
+            $"{base.ConnectionEstablishedLogDetails}, {nameof(PullReplicationDefinitionName)}={PullReplicationDefinitionName}, {nameof(PullReplicationMode)}={PullReplicationMode.HubToSink}";
 
         protected override void ProcessHandshakeResponse((ReplicationMessageReply.ReplyType ReplyType, ReplicationMessageReply Reply) response)
         {
@@ -178,8 +187,16 @@ namespace Raven.Server.Documents.Replication.Outgoing
             return request;
         }
 
+        internal override DynamicJsonValue GetConnectionInfoAsJson()
+        {
+            DynamicJsonValue json = base.GetConnectionInfoAsJson();
+            json[nameof(PullReplicationMode)] = _node.Mode;
+            json[nameof(ReplicationInitialRequest.PullReplicationDefinitionName)] = _node.HubName;
+            return json;
+        }
+
         protected override string ConnectionEstablishedLogDetails =>
-            $"{base.ConnectionEstablishedLogDetails}, {nameof(ReplicationInitialRequest.PullReplicationDefinitionName)}={_node.HubName}, Direction={PullReplicationMode.SinkToHub}";
+            $"{base.ConnectionEstablishedLogDetails}, {nameof(ReplicationInitialRequest.PullReplicationDefinitionName)}={_node.HubName}, {nameof(PullReplicationMode)}={_node.Mode}";
 
         protected override void ProcessHandshakeResponse((ReplicationMessageReply.ReplyType ReplyType, ReplicationMessageReply Reply) response)
         {
