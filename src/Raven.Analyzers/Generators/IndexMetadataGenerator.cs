@@ -89,6 +89,7 @@ namespace Raven.Analyzers.Generators
                 IsMapReduce: metadata.IsMapReduce,
                 AddMapCount: metadata.AddMapCount,
                 AddMapInLoop: metadata.AddMapInLoop,
+                UsesAddMapForAll: metadata.UsesAddMapForAll,
                 UsesAdditionalCode: metadata.UsesAdditionalCode);
         }
 
@@ -142,6 +143,7 @@ namespace Raven.Analyzers.Generators
                 builder.Append(", IsMapReduce = ").Append(shape.IsMapReduce ? "true" : "false");
                 builder.Append(", AddMapCount = ").Append(shape.AddMapCount);
                 builder.Append(", AddMapInLoop = ").Append(shape.AddMapInLoop ? "true" : "false");
+                builder.Append(", UsesAddMapForAll = ").Append(shape.UsesAddMapForAll ? "true" : "false");
                 builder.Append(", UsesAdditionalCode = ").Append(shape.UsesAdditionalCode ? "true" : "false");
             }
 

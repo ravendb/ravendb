@@ -42,6 +42,27 @@ class Company { public string Name { get; set; } }
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task MultiMap_Single_AddMapForAll_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyMultiMapIndex : AbstractMultiMapIndexCreationTask<MyResult>
+{
+    public MyMultiMapIndex()
+    {
+        AddMapForAll<Animal>(animals => from a in animals select new MyResult { Name = a.Name });
+    }
+}
+
+class MyResult { public string Name { get; set; } }
+class Animal { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexDefinitionAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task MultiMap_Two_AddMap_Calls_No_Diagnostic()
         {
             const string source = CommonUsings + @"

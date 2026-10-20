@@ -23,5 +23,6 @@ namespace Raven.Analyzers.Generators
         bool IsMapReduce,
         int AddMapCount,
         bool AddMapInLoop,
+        bool UsesAddMapForAll,
         bool UsesAdditionalCode);
 }

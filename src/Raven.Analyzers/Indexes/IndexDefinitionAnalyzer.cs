@@ -116,11 +116,12 @@ namespace Raven.Analyzers.Indexes
                     classDecl.Identifier.GetLocation(),
                     classDecl.Identifier.Text));
             }
-            else if (totalAddMapCount == 1 && anyInLoop == false)
+            else if (totalAddMapCount == 1 && anyInLoop == false && metadata.UsesAddMapForAll == false)
             {
                 // RVN006 — exactly one AddMap call site; a regular index would suffice. Suppressed
-                // when that call sits in a loop, where it registers a map per iteration at runtime
-                // and the multi-map base is genuinely required.
+                // when that call sits in a loop, where it registers a map per iteration at runtime,
+                // and when it is AddMapForAll, which covers every derived collection and has no
+                // single-map equivalent; the multi-map base is genuinely required in both cases.
                 context.ReportDiagnostic(Diagnostic.Create(
                     DiagnosticDescriptors.MultiMapIndexSingleAddMap,
                     classDecl.Identifier.GetLocation(),

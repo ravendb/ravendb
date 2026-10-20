@@ -45,7 +45,7 @@ namespace Raven.Analyzers.Generators
             // an unknown here is not itself fatal.
             IndexChainSearch mapSearch = IndexInheritanceInspector.FindMapAssignmentInChain(indexClass, compilation);
             IndexChainSearch reduceSearch = IndexInheritanceInspector.FindAssignmentInChain(indexClass, compilation, KnownTypes.ReduceFieldName);
-            (int addMapCount, bool addMapInLoop, bool addMapUnknown) =
+            (int addMapCount, bool addMapInLoop, bool usesAddMapForAll, bool addMapUnknown) =
                 IndexInheritanceInspector.CountAddMapInChain(indexClass, compilation);
 
             IndexMetadata local = new(
@@ -58,6 +58,7 @@ namespace Raven.Analyzers.Generators
                 IsMapReduce: reduceSearch == IndexChainSearch.Found,
                 AddMapCount: addMapCount,
                 AddMapInLoop: addMapInLoop,
+                UsesAddMapForAll: usesAddMapForAll,
                 UsesAdditionalCode: IndexAdditionalCodeExtractor.ShipsServerSideCode(declarations, compilation));
 
             if (foreignBase == null)
@@ -89,6 +90,7 @@ namespace Raven.Analyzers.Generators
             IsMapReduce: local.IsMapReduce || inherited.IsMapReduce,
             AddMapCount: local.AddMapCount + inherited.AddMapCount,
             AddMapInLoop: local.AddMapInLoop || inherited.AddMapInLoop,
+            UsesAddMapForAll: local.UsesAddMapForAll || inherited.UsesAddMapForAll,
             UsesAdditionalCode: local.UsesAdditionalCode || inherited.UsesAdditionalCode);
     }
 }

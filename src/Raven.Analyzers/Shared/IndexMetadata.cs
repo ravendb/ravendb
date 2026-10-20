@@ -25,6 +25,7 @@ namespace Raven.Analyzers.Shared
         bool IsMapReduce,
         int AddMapCount,
         bool AddMapInLoop,
+        bool UsesAddMapForAll,
         bool UsesAdditionalCode)
     {
         /// <summary>
@@ -42,6 +43,7 @@ namespace Raven.Analyzers.Shared
             IsMapReduce: false,
             AddMapCount: 0,
             AddMapInLoop: false,
+            UsesAddMapForAll: false,
             UsesAdditionalCode: false);
     }
 
@@ -174,6 +176,7 @@ namespace Raven.Analyzers.Shared
             bool isMapReduce = false;
             int addMapCount = 0;
             bool addMapInLoop = false;
+            bool usesAddMapForAll = false;
             bool usesAdditionalCode = false;
 
             foreach (KeyValuePair<string, TypedConstant> named in attribute.NamedArguments)
@@ -207,6 +210,9 @@ namespace Raven.Analyzers.Shared
                     case nameof(IndexMetadata.AddMapInLoop):
                         addMapInLoop = named.Value.Value is true;
                         break;
+                    case nameof(IndexMetadata.UsesAddMapForAll):
+                        usesAddMapForAll = named.Value.Value is true;
+                        break;
                     case nameof(IndexMetadata.UsesAdditionalCode):
                         usesAdditionalCode = named.Value.Value is true;
                         break;
@@ -216,7 +222,7 @@ namespace Raven.Analyzers.Shared
             // A recorded but unable to be analyzed index carries no usable values; collapse it to Unknown so
             // there is a single "cannot reason about this" value for callers to test.
             return analyzable
-                ? new IndexMetadata(true, fieldsKnown, mapFields, storedFields, storeAllFields, assignsMap, isMapReduce, addMapCount, addMapInLoop, usesAdditionalCode)
+                ? new IndexMetadata(true, fieldsKnown, mapFields, storedFields, storeAllFields, assignsMap, isMapReduce, addMapCount, addMapInLoop, usesAddMapForAll, usesAdditionalCode)
                 : IndexMetadata.Unknown;
         }
 

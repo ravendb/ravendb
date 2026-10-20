@@ -192,15 +192,16 @@ namespace Raven.Analyzers.Shared
 
         /// <summary>
         /// Counts AddMap/AddMapForAll call sites across the index class and its user-defined base
-        /// classes, and reports whether any sit inside a loop and whether a base class is metadata-only
-        /// (unknown — the caller must then suppress).
+        /// classes, and reports whether any sit inside a loop, whether any is AddMapForAll, and whether
+        /// a base class is metadata-only (unknown — the caller must then suppress).
         /// </summary>
-        public static (int count, bool anyInLoop, bool unknown) CountAddMapInChain(
+        public static (int count, bool anyInLoop, bool anyForAll, bool unknown) CountAddMapInChain(
             INamedTypeSymbol classSymbol,
             Compilation compilation)
         {
             int count = 0;
             bool anyInLoop = false;
+            bool anyForAll = false;
 
             for (INamedTypeSymbol? type = classSymbol; type != null; type = type.BaseType)
             {
@@ -208,7 +209,7 @@ namespace Raven.Analyzers.Shared
                     break;
 
                 if (!IsReadableIn(type, compilation))
-                    return (count, anyInLoop, true);
+                    return (count, anyInLoop, anyForAll, true);
 
                 foreach (SyntaxReference syntaxRef in type.DeclaringSyntaxReferences)
                 {
@@ -236,12 +237,14 @@ namespace Raven.Analyzers.Shared
                             count++;
                             if (IsInsideLoop(invocation, body))
                                 anyInLoop = true;
+                            if (methodName == KnownTypes.AddMapForAllMethodName)
+                                anyForAll = true;
                         }
                     }
                 }
             }
 
-            return (count, anyInLoop, false);
+            return (count, anyInLoop, anyForAll, false);
         }
 
         private static bool ContainsAssignment(SyntaxNode node, SemanticModel model, string propertyName)

@@ -101,6 +101,12 @@ namespace Raven.Client.Documents.Indexes
         public bool AddMapInLoop { get; set; }
 
         /// <summary>
+        /// Whether any of those call sites is <c>AddMapForAll</c>, which maps every collection derived
+        /// from its type argument and therefore has no single-map equivalent.
+        /// </summary>
+        public bool UsesAddMapForAll { get; set; }
+
+        /// <summary>
         /// Whether the chain writes to <c>AdditionalSources</c> or <c>AdditionalAssemblies</c>, shipping
         /// C# for the server to compile. A helper called from the map may then be translatable after all,
         /// so rules about untranslatable calls must stand down for such an index.
