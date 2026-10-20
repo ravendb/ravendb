@@ -1017,6 +1017,35 @@ class Test
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task Stores_Dictionary_Add_Registers_Field_No_Diagnostic()
+        {
+            const string source = CommonUsings + OrderClass + @"
+class Dto { public string Name { get; set; } public string Status { get; set; } }
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex()
+    {
+        Map = orders => from o in orders select new { o.Name, o.Status };
+        Stores.Add(x => x.Name, FieldStorage.Yes);
+        StoresStrings.Add(""Status"", FieldStorage.Yes);
+    }
+}
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, OrderIndex>()
+            .Customize(x => x.Projection(ProjectionBehavior.FromIndex))
+            .ProjectInto<Dto>();
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task StoresStrings_Dictionary_Indexer_Registers_Field_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + @"

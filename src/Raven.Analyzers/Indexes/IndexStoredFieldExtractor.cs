@@ -116,7 +116,7 @@ namespace Raven.Analyzers.Indexes
                         return StoredFieldsStatus.BailCannotAnalyze;
                     }
 
-                    if (methodName == KnownTypes.StoreMethodName)
+                    if (methodName == KnownTypes.StoreMethodName || IsStoresDictionaryAdd(invocation))
                     {
                         SeparatedSyntaxList<ArgumentSyntax> args = invocation.ArgumentList.Arguments;
                         if (args.Count < 2)
@@ -161,6 +161,11 @@ namespace Raven.Analyzers.Indexes
 
             return StoredFieldsStatus.Ok;
         }
+
+        private static bool IsStoresDictionaryAdd(InvocationExpressionSyntax invocation) =>
+            invocation.Expression is MemberAccessExpressionSyntax { Name.Identifier.Text: "Add" } addAccess
+            && SyntaxHelpers.TryGetSimpleMemberName(addAccess.Expression) is SimpleNameSyntax dictName
+            && dictName.Identifier.ValueText is KnownTypes.StoresPropertyName or KnownTypes.StoresStringsPropertyName;
 
         private static bool IsFieldStorageYes(ExpressionSyntax expr, SemanticModel model) =>
             IsFieldStorageMember(expr, KnownTypes.FieldStorageYes, model);
