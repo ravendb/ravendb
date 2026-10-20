@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
@@ -36,6 +37,8 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
 
         public sealed class SpatialDistanceFieldComparator : FieldComparator
         {
+            private static readonly FieldSelector ShapeFieldSelector = new SpatialShapeFieldSelector();
+
             private readonly SpatialField _spatialField;
             private readonly DistanceValue[] _values;
             private DistanceValue _bottom;
@@ -128,7 +131,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
 
             private SpatialResult ActuallyCalculateDistance(int doc, IState state)
             {
-                var document = _currentIndexReader.Document(doc, state);
+                var document = _currentIndexReader.Document(doc, ShapeFieldSelector, state);
                 if (document == null)
                     return SpatialResult.Invalid;
                 var field = document.GetField(Constants.Documents.Indexing.Fields.SpatialShapeFieldName);
@@ -224,6 +227,16 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             }
 
             public override IComparable this[int slot] => _values[slot];
+
+            private sealed class SpatialShapeFieldSelector : FieldSelector
+            {
+                public FieldSelectorResult Accept(string fieldName)
+                {
+                    return fieldName == Constants.Documents.Indexing.Fields.SpatialShapeFieldName
+                        ? FieldSelectorResult.LOAD_AND_BREAK
+                        : FieldSelectorResult.NO_LOAD;
+                }
+            }
         }
 
         private struct DistanceValue : IComparable
