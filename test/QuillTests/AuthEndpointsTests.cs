@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -171,6 +171,34 @@ public class AuthEndpointsTests(ITestOutputHelper output) : QuillTestBase(output
         client.DefaultRequestHeaders.Add(ApiKeyAuthenticationHandler.HeaderName, "second/" + secondSecret);
         var apps = await client.GetAsync(QuillRoutes.Apps);
         Assert.True(apps.IsSuccessStatusCode, await apps.Content.ReadAsStringAsync());
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Flood_of_unknown_key_ids_does_not_evict_the_cached_primary_key()
+    {
+        await using var host = await NewHostAsync(configure: opts => opts.ApiKeyCacheDuration = TimeSpan.FromHours(1));
+
+        var warm = await host.Client.GetAsync(QuillRoutes.Apps);
+        Assert.True(warm.IsSuccessStatusCode, await warm.Content.ReadAsStringAsync());
+
+        using (var session = host.Config.OpenAsyncSession())
+        {
+            session.Delete(ApiKey.PrimaryId);
+            await session.SaveChangesAsync();
+        }
+
+        using var attacker = host.Factory.CreateClient();
+        attacker.DefaultRequestHeaders.Remove(ApiKeyAuthenticationHandler.HeaderName);
+        for (var i = 0; i < 1100; i++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, QuillRoutes.Apps);
+            request.Headers.Add(ApiKeyAuthenticationHandler.HeaderName, $"unknown-{i}/{ApplianceWebApplicationFactory.TestApiKey}");
+            using var response = await attacker.SendAsync(request);
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
+
+        var stillCached = await host.Client.GetAsync(QuillRoutes.Apps);
+        Assert.True(stillCached.IsSuccessStatusCode, await stillCached.Content.ReadAsStringAsync());
     }
 
     [RavenFact(RavenTestCategory.Quill)]
