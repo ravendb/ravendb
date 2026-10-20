@@ -184,9 +184,12 @@
          Raven.Analyzers, so MSBuild restores and builds the analyzer project transitively (its
          Raven.Analyzers.dll lands in its own bin/). These projects are not referenced by
          Raven.Client, so without an explicit Restore here a clean machine has no
-         project.assets.json and Build fails. -->
+         project.assets.json and Build fails. The Restore call carries an extra global property
+         so the Build call below evaluates the project afresh and picks up the assets file
+         Restore just wrote; with identical properties MSBuild would reuse the pre-restore
+         evaluation. -->
     <MSBuild Projects="..\Raven.Analyzers.CodeFixes\Raven.Analyzers.CodeFixes.csproj"
-             Properties="Configuration=$(Configuration)"
+             Properties="Configuration=$(Configuration);_RavenAnalyzersRestoring=true"
              Targets="Restore" />
     <MSBuild Projects="..\Raven.Analyzers.CodeFixes\Raven.Analyzers.CodeFixes.csproj"
              Properties="Configuration=$(Configuration)"
