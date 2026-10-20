@@ -100,6 +100,75 @@ namespace SlowTests.Issues
             Assert.Equal(expectedTotal, revisionsCount);
         }
 
+        // A version that does not maintain these counters can still write revisions - it is downgraded to, used,
+        // and upgraded away from. The counts it leaves behind are stale, and nothing about them says so. What does
+        // say so is the revisions etag: it moves on every revision written, by any version, so a watermark taken
+        // whenever the counters are maintained falls behind exactly when they were bypassed.
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
+        public async Task ConflictRevisionsCount_IsDroppedAndRecounted_WhenRevisionsWereWrittenWithoutIt()
+        {
+            using var store1 = GetDocumentStore();
+            using var store2 = GetDocumentStore();
+
+            var conflictConfig = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionAgeToKeep = TimeSpan.FromDays(365) };
+            await RevisionsHelper.SetupConflictedRevisionsAsync(store1, Server.ServerStore, conflictConfig);
+            await RevisionsHelper.SetupConflictedRevisionsAsync(store2, Server.ServerStore, conflictConfig);
+
+            const string id = "users/1";
+            await SetupReplicationAsync(store1, store2);
+
+            await CreateConflictRoundAsync(store1, store2, id, round: 0);
+
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store2);
+            var (expectedConflict, _) = await GetRevisionFlagCountsAsync(store2, id);
+            Assert.Equal(expectedConflict, ReadCountsFromTrees(database, id).Conflict);
+
+            // what the downgrade leaves: a count that no longer matches the revisions, and a watermark from before
+            // they were written
+            LeaveAStaleConflictRevisionsCount(database, id, staleCount: expectedConflict + 100);
+            Assert.Equal(expectedConflict + 100, ReadCountsFromTrees(database, id).Conflict);
+
+            await CreateConflictRoundAsync(store1, store2, id, round: 1);
+
+            var (conflictAfter, _) = await GetRevisionFlagCountsAsync(store2, id);
+            Assert.Equal(conflictAfter, ReadCountsFromTrees(database, id).Conflict);
+        }
+
+        private async Task CreateConflictRoundAsync(IDocumentStore store1, IDocumentStore store2, string id, int round)
+        {
+            using (var session = store2.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "local-" + round }, id);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store1.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Name = "remote-" + round }, id);
+                await session.SaveChangesAsync();
+            }
+
+            await EnsureReplicatingAsync(store1, store2);
+        }
+
+        private static void LeaveAStaleConflictRevisionsCount(DocumentDatabase database, string id, long staleCount)
+        {
+            var revisionsStorage = database.DocumentsStorage.RevisionsStorage;
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
+            using (revisionsStorage.GetKeyPrefix(context, lowerId, out Slice prefix))
+            {
+                context.Transaction.InnerTransaction.CreateTree(SchemaRevisions.ConflictRevisionsCountSlice)
+                    .Add(prefix, staleCount);
+
+                context.Transaction.InnerTransaction.CreateTree(SchemaRevisions.ConflictRevisionsCountWatermarkSlice)
+                    .Add(SchemaRevisions.ConflictRevisionsCountWatermarkKeySlice, 0L);
+
+                tx.Commit();
+            }
+        }
+
         [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
         public async Task Counts_AreTracked_AfterPruningByRevisionsConfiguration()
         {

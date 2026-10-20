@@ -164,6 +164,7 @@ namespace Raven.Server.Documents.Revisions
         {
             tx.CreateTree(RevisionsCountSlice);
             tx.CreateTree(ConflictRevisionsCountSlice);
+            tx.CreateTree(ConflictRevisionsCountWatermarkSlice);
             _documentsStorage.TombstonesSchema.Create(tx, RevisionsTombstonesSlice, 16);
         }
 
@@ -440,6 +441,10 @@ namespace Raven.Server.Documents.Revisions
             IncrementCountOfRevisions(context, lowerIdPrefix, delta);
             if (flags.Contain(DocumentFlags.Conflicted) || flags.Contain(DocumentFlags.Resolved))
                 IncrementCountOfConflictRevisions(context, table, lowerIdPrefix, delta, tableUpdated);
+
+            // every revision this class writes or deletes passes here, conflicted or not, so this is where the
+            // counters stop being behind the revisions
+            MarkConflictRevisionsCountsUpToDate(context);
         }
 
         private BlittableJsonReaderObject AddCounterAndTimeSeriesSnapshotsIfNeeded(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
@@ -1194,6 +1199,8 @@ namespace Raven.Server.Documents.Revisions
 
         private long GetConflictRevisionsCount(DocumentsOperationContext context, Table table, Slice prefixSlice)
         {
+            DropConflictRevisionsCountsIfTheyWereBypassed(context);
+
             var tree = context.Transaction.InnerTransaction.ReadTree(ConflictRevisionsCountSlice);
             var readNumber = tree.Read(prefixSlice);
             if (readNumber != null)
@@ -1202,8 +1209,46 @@ namespace Raven.Server.Documents.Revisions
             return IncrementCountOfConflictRevisions(context, table, prefixSlice, 0);
         }
 
+        // The counters are only as good as the revisions they were counted from. A version that does not maintain
+        // them can still write revisions - a downgrade, and back - and then the counts are stale while the code
+        // trusts them. Nothing can write a revision without moving the revisions etag, so a watermark taken
+        // whenever the counters are touched is enough to notice it afterwards.
+        private void DropConflictRevisionsCountsIfTheyWereBypassed(DocumentsOperationContext context)
+        {
+            var tx = context.Transaction.InnerTransaction;
+            if (tx.IsWriteTransaction == false)
+                return;
+
+            var lastRevisionsEtag = DocumentsStorage.ReadLastRevisionsEtag(tx);
+            if (ReadConflictRevisionsCountWatermark(tx) >= lastRevisionsEtag)
+                return;
+
+            tx.DeleteTree(ConflictRevisionsCountSlice);
+            tx.CreateTree(ConflictRevisionsCountSlice);
+
+            MarkConflictRevisionsCountsUpToDate(context);
+        }
+
+        private void MarkConflictRevisionsCountsUpToDate(DocumentsOperationContext context)
+        {
+            var tx = context.Transaction.InnerTransaction;
+            var watermark = tx.CreateTree(ConflictRevisionsCountWatermarkSlice);
+
+            watermark.Add(ConflictRevisionsCountWatermarkKeySlice, DocumentsStorage.ReadLastRevisionsEtag(tx));
+        }
+
+        private static long ReadConflictRevisionsCountWatermark(Transaction tx)
+        {
+            var watermark = tx.ReadTree(ConflictRevisionsCountWatermarkSlice);
+            var read = watermark?.Read(ConflictRevisionsCountWatermarkKeySlice);
+
+            return read?.Reader.ReadLittleEndianInt64() ?? 0;
+        }
+
         private long IncrementCountOfConflictRevisions(DocumentsOperationContext context, Table table, Slice prefixedLowerId, long delta, bool tableUpdated = true)
         {
+            DropConflictRevisionsCountsIfTheyWereBypassed(context);
+
             var tree = context.Transaction.InnerTransaction.ReadTree(ConflictRevisionsCountSlice);
             if (tree.Read(prefixedLowerId) == null)
             {
@@ -1532,6 +1577,8 @@ namespace Raven.Server.Documents.Revisions
 
             using (GetKeyPrefix(context, lowerId, out var lowerIdPrefix))
                 IncrementCountOfConflictRevisions(context, table, lowerIdPrefix, 1);
+
+            MarkConflictRevisionsCountsUpToDate(context);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
