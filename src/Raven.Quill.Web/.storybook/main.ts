@@ -6,9 +6,7 @@ const config: StorybookConfig = {
     stories: ["../src/**/*.stories.@(ts|tsx)"],
     addons: ["@storybook/addon-vitest"],
     framework: "@storybook/react-vite",
-    // Stories that exist only for their play function. Unlike `!dev`, which removes them from the
-    // sidebar for good, this only hides them by default: the sidebar's tag filter brings them back,
-    // so a failing test can still be opened and watched.
+    // Stories that exist only for their play function. The sidebar's tag filter brings them back
     tags: {
         "test-only": { defaultFilterSelection: "exclude" },
     },
@@ -19,8 +17,6 @@ const config: StorybookConfig = {
     // does in production. The `storybook` scripts build it first; after editing widget sources mid-session,
     // run `pnpm build:widget` again or the frame keeps serving the stale bundle.
     staticDirs: ["../public", "./public", { from: "../packages/widget/dist", to: "/widget" }],
-    // No docs addon reads the prop tables react-docgen extracts, and parsing every component for them
-    // made a story open about twice as slowly the first time.
     typescript: { reactDocgen: false },
     viteFinal: (viteConfig) =>
         mergeConfig(viteConfig, {

@@ -8,7 +8,6 @@ import { resetAllStores } from "./zustand";
 const preview: Preview = {
     decorators: [withProviders],
     loaders: [mswLoader],
-    // Switching stories does not reload the page, so the stores would keep the previous story's state.
     beforeEach: resetAllStores,
     initialGlobals: {
         theme: "light",
