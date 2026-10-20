@@ -46,6 +46,37 @@ public class AndQueryScoring(ITestOutputHelper output) : RavenTestBase(output)
         AssertAndGroupIsNotScan(plan);
     }
 
+    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    public void AndUnderOrReachedViaAndWithDoesNotScoreDocumentsItRejects()
+    {
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax, includeScoresAndDistances: true));
+        using (var bulk = store.BulkInsert())
+        {
+            bulk.Store(new Doc { A = "a1", B = "b1", C = "cx", D = "d1", E = "e1" }, "docs/T");
+            bulk.Store(new Doc { A = "a1", B = "bx", C = "c1", D = "d1", E = "e1" }, "docs/L");
+            bulk.Store(new Doc { A = "ax", B = "bx", C = "c1", D = "d1", E = "e1" }, "docs/K");
+            bulk.Store(new Doc { A = "a1", B = "b1", C = "c1", D = "d1", E = "e1" }, "docs/X");
+            for (var i = 0; i < 28; i++)
+                bulk.Store(new Doc { A = "ax", B = "b1", C = "cx", D = "dx", E = "ex" });
+            for (var i = 0; i < 3; i++)
+                bulk.Store(new Doc { A = "ax", B = "bx", C = "c1", D = "dx", E = "ex" });
+            for (var i = 0; i < 10_000; i++)
+                bulk.Store(new Doc { A = "ax", B = "bx", C = "cx", D = "dx", E = "ex" });
+        }
+
+        new DocsIndex().Execute(store);
+        Indexes.WaitForIndexing(store);
+
+        using var session = store.OpenSession();
+        var results = session.Advanced
+            .RawQuery<Doc>($"from index '{new DocsIndex().IndexName}' where ((A = 'a1' and B = 'b1') or C = 'c1') and (D = 'd1' or E = 'e1') order by score()")
+            .ToList();
+        var scores = results.ToDictionary(x => x.Id, x => (double)session.Advanced.GetMetadataFor(x)[Raven.Client.Constants.Documents.Metadata.IndexScore]);
+
+        // docs/L has A = 'a1' but fails (A and B), so it matches the same clauses as docs/K
+        Assert.Equal(scores["docs/K"], scores["docs/L"], 4);
+    }
+
     private static void AssertAndGroupIsNotScan(QueryInspectionNode plan)
     {
         var operations = Operations(plan).ToList();
@@ -95,5 +126,24 @@ public class AndQueryScoring(ITestOutputHelper output) : RavenTestBase(output)
         public string Name { get; set; }
         public string[] Tags { get; set; }
         public string Category { get; set; }
+    }
+
+    private class DocsIndex : AbstractIndexCreationTask<Doc>
+    {
+        public DocsIndex()
+        {
+            Map = docs => from doc in docs
+                select new { doc.A, doc.B, doc.C, doc.D, doc.E };
+        }
+    }
+
+    private class Doc
+    {
+        public string Id { get; set; }
+        public string A { get; set; }
+        public string B { get; set; }
+        public string C { get; set; }
+        public string D { get; set; }
+        public string E { get; set; }
     }
 }
