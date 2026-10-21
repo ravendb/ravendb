@@ -5,7 +5,6 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Quill.Agents;
-using Raven.Quill.Hosting;
 using Raven.Quill.Logging;
 using Raven.Quill.Metrics;
 using Tests.Infrastructure;
@@ -54,7 +53,6 @@ public class ConversationLifetimeE2ETests(ITestOutputHelper output, QuillCollect
     private static AgentRouter Router(QuillApp app) =>
         new(app.Store,
             new WebhookActionExecutor(new SingleClientFactory(), new QuillLogger<WebhookActionExecutor>()),
-            Microsoft.Extensions.Options.Options.Create(new ApplianceOptions()),
             new QuillLogger<AgentRouter>());
 
     private sealed class SingleClientFactory : IHttpClientFactory

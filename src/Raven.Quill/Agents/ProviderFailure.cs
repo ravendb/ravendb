@@ -30,9 +30,6 @@ public sealed record ProviderFailure(
     public const string FailedCode = "chat_failed";
 }
 
-public sealed class ProviderTimeoutException(TimeSpan limit)
-    : Exception($"the AI provider did not answer within {limit.TotalSeconds:0.#}s");
-
 public sealed class EmptyAnswerException() : Exception("the AI provider returned an answer with no content");
 
 public static partial class ProviderFailures
@@ -49,7 +46,7 @@ public static partial class ProviderFailures
             return Refused;
         if (Names(text, nameof(UnsuccessfulAiRequestException)))
             return StatusIn(text) is { } status ? FromStatus(status) : Unknown;
-        if (Names(text, nameof(ProviderTimeoutException), nameof(TaskCanceledException), nameof(TimeoutException)))
+        if (Names(text, nameof(TaskCanceledException), nameof(TimeoutException)))
             return TimedOut;
         if (Names(text, nameof(EmptyAnswerException), nameof(InvalidDataException), nameof(JsonException), "UnexpectedResponseException"))
             return Protocol;

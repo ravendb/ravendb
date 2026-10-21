@@ -76,25 +76,6 @@ public class ProviderFailureTests(ITestOutputHelper output) : QuillTestBase(outp
         Assert.Equal(0, link.InvocationCount);
     }
 
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task A_provider_that_never_answers_is_cut_off_at_the_turn_deadline()
-    {
-        await using var mock = await MockQuillServices.StartAsync(new FinalTurn("""{"reply":"too late"}"""));
-        mock.CompletionDelay = TimeSpan.FromSeconds(60);
-
-        var host = await NewHostAsync(configure: options => options.AgentTurnDeadline = TimeSpan.FromSeconds(2));
-        await using var h = await HarnessAsync(mock, host);
-
-        var started = DateTime.UtcNow;
-        var error = ErrorOf(await h.App.SendEmbedChatAsync(h.Token, "hello"));
-        var elapsed = DateTime.UtcNow - started;
-
-        Assert.True(elapsed < TimeSpan.FromSeconds(30),
-            $"the turn should be abandoned at the deadline rather than waiting the provider out, took {elapsed}");
-        Assert.True(error.Retryable);
-        Assert.Contains("too long", error.Message);
-    }
-
     /// The operator is behind the API key, so this surface names what to go and fix.
     [RavenFact(RavenTestCategory.Quill)]
     public async Task The_operator_facing_draft_run_names_the_provider_reason()
