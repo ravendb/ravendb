@@ -83,8 +83,12 @@ internal sealed class AgentRouter(
 
         var replyField = AgentOutputShape.ResolveReplyField(config);
 
-        var result = await StreamWithRetryAsync(
-            conversation, () => conversation.AddUserPrompt(request.Prompt), replyField, onChunk, ct);
+        conversation.AddUserPrompt(request.Prompt);
+
+        var result = await conversation.StreamAsync<Dictionary<string, object>>(
+            replyField,
+            async chunk => await onChunk(chunk),
+            ct);
         var tokensThisTurn = result.Usage?.TotalTokens ?? 0;
 
         using var session = store.OpenAsyncSession(request.Database);
@@ -94,16 +98,12 @@ internal sealed class AgentRouter(
         {
             var bindings = await lazyBindings.Value;
             var responses = await RunActionsAsync(conversation, config, bindings, ct);
+            foreach (var (toolId, response) in responses)
+                conversation.AddActionResponse(toolId, response);
 
-            result = await StreamWithRetryAsync(
-                conversation,
-                () =>
-                {
-                    foreach (var (toolId, response) in responses)
-                        conversation.AddActionResponse(toolId, response);
-                },
+            result = await conversation.StreamAsync<Dictionary<string, object>>(
                 replyField,
-                onChunk,
+                async chunk => await onChunk(chunk),
                 ct);
             tokensThisTurn += result.Usage?.TotalTokens ?? 0;
         }
@@ -115,48 +115,6 @@ internal sealed class AgentRouter(
         var rolled = await RecordTurnAsync(store, request, config.Identifier, conversation.Id, reply, tokensThisTurn, DateTime.UtcNow, ct);
 
         return new AgentRunResult(new { reply }, conversation.Id, rolled);
-    }
-
-    private async Task<AiAnswer<Dictionary<string, object>>> StreamWithRetryAsync(
-        IAiConversationOperations conversation, Action arm, string replyField,
-        Func<string, ValueTask> onChunk, CancellationToken ct)
-    {
-        for (var attempt = 0; ; attempt++)
-        {
-            var streamed = false;
-            arm();
-
-            try
-            {
-                return await conversation.StreamAsync<Dictionary<string, object>>(
-                    replyField,
-                    async chunk =>
-                    {
-                        streamed = true;
-                        await onChunk(chunk);
-                    },
-                    ct);
-            }
-            catch (Exception e) when (streamed == false && RetryDelayFor(e, attempt) is { } delay)
-            {
-                if (logger.IsWarnEnabled)
-                    logger.Warn(e,
-                        $"AI provider rate-limited the turn; retrying in {delay.TotalSeconds}s " +
-                        $"(attempt {attempt + 1} of {ProviderLimits.MaxRateLimitedRetries})");
-
-                await Task.Delay(delay, ct);
-            }
-        }
-    }
-
-    private static TimeSpan? RetryDelayFor(Exception e, int attempt)
-    {
-        if (attempt >= ProviderLimits.MaxRateLimitedRetries)
-            return null;
-
-        return ProviderFailures.Classify(e).Kind == ProviderFailureKind.RateLimited
-            ? ProviderLimits.RetryDelay * Math.Pow(2, attempt)
-            : null;
     }
 
     private static Dictionary<string, object?> ConvertParameters(AgentRequest request, AiAgentConfiguration config)
