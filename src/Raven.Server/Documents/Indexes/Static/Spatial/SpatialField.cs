@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
 using Corax.Utils;
 using GeoAPI;
 using Lucene.Net.Documents;
@@ -20,9 +22,15 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
 {
     public sealed class SpatialField
     {
+        internal const string LuceneCentersFieldSuffix = "_spatial(centers)";
+
+        internal const char LuceneCentersSeparator = ';';
+
         private static readonly NtsSpatialContext GeoContext;
 
         public readonly SpatialStrategy Strategy;
+
+        public readonly string LuceneCentersFieldName;
 
         private readonly SpatialOptions _options;
         private readonly NtsSpatialContext _ntsContext;
@@ -42,6 +50,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             _ntsContext = CreateNtsContext(options);
             _shapeStringReadWriter = new ShapeStringReadWriter(options, _ntsContext);
             Strategy = CreateStrategy(fieldName, options, _ntsContext);
+            LuceneCentersFieldName = fieldName + LuceneCentersFieldSuffix;
         }
 
         private static NtsSpatialContext CreateNtsContext(SpatialOptions options)
@@ -75,19 +84,49 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             return null;
         }
 
-        public AbstractField[] LuceneCreateIndexableFields(object value)
+        public AbstractField[] LuceneCreateIndexableFields(object value, bool indexCenterForSorting)
         {
             var shape = value as IShape;
             if (shape != null || TryReadShape(value, out shape))
             {
                 var fields = Strategy.CreateIndexableFields(shape);
                 Array.Resize(ref fields, fields.Length + 1);
-                fields[^1] = new Field(Constants.Documents.Indexing.Fields.SpatialShapeFieldName, WriteShape(shape), Field.Store.YES, Field.Index.NO);
+                fields[^1] = indexCenterForSorting
+                    ? CreateLuceneCenterField(LuceneCentersFieldName, FormatCenter(shape.Center))
+                    : new Field(Constants.Documents.Indexing.Fields.SpatialShapeFieldName, WriteShape(shape), Field.Store.YES, Field.Index.NO);
 
                 return fields;
             }
 
             return Array.Empty<AbstractField>();
+        }
+        
+        internal static Field CreateLuceneCenterField(string name, string centers)
+        {
+            return new Field(name, centers, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS) { OmitTermFreqAndPositions = true };
+        }
+
+        private static string FormatCenter(IPoint center)
+        {
+            return center.Y.ToString("R", CultureInfo.InvariantCulture) + " " + center.X.ToString("R", CultureInfo.InvariantCulture);
+        }
+
+        internal static void ParseCenters(ReadOnlySpan<char> centers, List<(double Latitude, double Longitude)> points)
+        {
+            while (centers.IsEmpty == false)
+            {
+                var separator = centers.IndexOf(LuceneCentersSeparator);
+                var point = separator < 0 ? centers : centers[..separator];
+                centers = separator < 0 ? ReadOnlySpan<char>.Empty : centers[(separator + 1)..];
+
+                var space = point.IndexOf(' ');
+                if (space < 0 ||
+                    double.TryParse(point[..space], NumberStyles.Float, CultureInfo.InvariantCulture, out var latitude) == false ||
+                    double.TryParse(point[(space + 1)..], NumberStyles.Float, CultureInfo.InvariantCulture, out var longitude) == false)
+                    continue; // invalid points are skipped
+
+                points.Add((latitude, longitude));
+            }
         }
 
         public CoraxSpatialPointEntry[] CoraxCreateIndexableFields(object value)
