@@ -33,7 +33,7 @@ export function PlannerTranscript({ collections }: { collections: PlanCollection
         <div
             ref={scrollRef}
             className={cn(
-                "flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-4 pb-3 tall:pt-6 tall:pb-4",
+                "flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-4 pb-3 2xl:pt-6 2xl:pb-4",
                 isScrolledDown && "mask-t-from-[calc(100%-3rem)]",
             )}
             onScroll={(event) => {

@@ -43,7 +43,7 @@ export function PlannerComposerArea({ collections }: { collections: PlanCollecti
 
     if (isAwaitingAnswers) {
         return (
-            <div className="px-6 pb-4 tall:pb-5">
+            <div className="px-6 pb-4 2xl:pb-5">
                 <PlannerQuestions
                     key={latestReply?.id}
                     ref={questionsRef}
@@ -57,7 +57,7 @@ export function PlannerComposerArea({ collections }: { collections: PlanCollecti
     const outcomes = latestReply?.status === "done" ? getTurnOutcomes(latestReply.activity) : null;
 
     return (
-        <div className="px-6 pb-4 tall:pb-5">
+        <div className="px-6 pb-4 2xl:pb-5">
             <div className={cn("mx-auto flex w-full flex-col gap-2.5", widthClass)}>
                 <SuggestedReplies outcomes={outcomes} collections={collections} />
                 <PlannerComposer collections={collections} />
