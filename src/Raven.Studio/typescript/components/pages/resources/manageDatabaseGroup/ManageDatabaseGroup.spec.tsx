@@ -5,6 +5,7 @@ import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "./ManageDatabaseGroupPage.stories";
 import { mockHooks } from "test/mocks/hooks/MockHooks";
 import { mockServices } from "test/mocks/services/MockServices";
+import studioSettings from "common/settings/studioSettings";
 
 const {
     Cluster,
@@ -166,9 +167,9 @@ describe("ManageDatabaseGroup", function () {
 
             await chooseDeleteFromGroupOption(fireClick, getNodeItem(container, "B"), "Soft Delete");
 
-            const softDeleteDialog = await screen.findByRole("dialog");
-            await fireClick(within(softDeleteDialog).getByRole("button", { name: /use hard delete instead/i }));
-            await fireClick(await screen.findByRole("button", { name: "Delete" }));
+            const dialog = await screen.findByRole("dialog");
+            await fireClick(within(dialog).getByRole("button", { name: /use hard delete instead/i }));
+            await fireClick(within(dialog).getByRole("button", { name: "Hard delete" }));
 
             await waitFor(() => expect(deleteDatabaseFromNode()).toHaveBeenCalledWith("db1", ["B"], true));
             expect(deleteDatabaseFromNode()).not.toHaveBeenCalledWith("db1", ["B"], false);
@@ -264,9 +265,34 @@ describe("ManageDatabaseGroup", function () {
             await chooseDeleteFromGroupOption(fireClick, getNodeItem(container, "B"), "Hard Delete");
 
             const dialog = await screen.findByRole("dialog");
-            await fireClick(within(dialog).getByRole("button", { name: "Delete" }));
+            expect(within(dialog).queryByPlaceholderText("DELETE")).not.toBeInTheDocument();
+            await fireClick(within(dialog).getByRole("button", { name: "Hard delete" }));
 
             await waitFor(() => expect(deleteDatabaseFromNode()).toHaveBeenCalledWith("db1", ["B"], true));
+        });
+
+        describe("with typed confirmation switched off", () => {
+            afterEach(async () => {
+                const settings = await studioSettings.default.globalSettings();
+                settings.isRequireTypedConfirmationToDeleteFromGroup.setValueLazy(true);
+            });
+
+            it("soft deletes a node without typing DELETE", async () => {
+                const { screen, container, fireClick } = rtlRender(<Cluster />);
+                await screen.findByText(selectors.pageReady);
+
+                await chooseDeleteFromGroupOption(fireClick, getNodeItem(container, "B"), "Soft Delete");
+
+                const dialog = await screen.findByRole("dialog");
+                const requireTypedConfirmationSwitch = within(dialog).getByLabelText("Require typed confirmation");
+                await waitFor(() => expect(requireTypedConfirmationSwitch).toBeEnabled());
+                await fireClick(requireTypedConfirmationSwitch);
+
+                await waitFor(() => expect(within(dialog).queryByPlaceholderText("DELETE")).not.toBeInTheDocument());
+                await fireClick(within(dialog).getByRole("button", { name: "Soft delete" }));
+
+                await waitFor(() => expect(deleteDatabaseFromNode()).toHaveBeenCalledWith("db1", ["B"], false));
+            });
         });
     });
 });
