@@ -16,8 +16,6 @@ namespace Raven.Client.Documents.Identity
         private readonly Func<object, string> _generateId;
         private readonly Func<object, Task<string>> _generateIdAsync;
 
-        // Cache backing field lookup for read-only identity properties (records, init-only).
-        // Key: (entityType, identityPropertyName). Value: FieldInfo, or null meaning "looked up, not found".
         private static readonly ConcurrentDictionary<(Type, string), FieldInfo> _backingFieldCache = new();
 
         public GenerateEntityIdOnTheClient(DocumentConventions conventions, Func<object, Task<string>> generateIdAsync)
