@@ -56,8 +56,7 @@ export default function ImportDataOptions() {
         },
         {
             title: "From NoSQL",
-            description:
-                "Import documents from Azure Cosmos DB.",
+            description: "Import documents from Azure Cosmos DB.",
             iconName: "documents",
             variant: "ImportNoSql",
             link: forCurrentDatabase.migrateDatabaseUrl(),
