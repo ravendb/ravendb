@@ -52,7 +52,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (entity is BlittableJsonReaderObject bjro)
                 return bjro;
 
-            var jsonSerializer = Conventions.CreateSerializer();
+            var jsonSerializer = ((ISerializationConventions)Conventions).CreateSerializer();
             return ToBlittable(entity, context, jsonSerializer);
         }
 
@@ -73,7 +73,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (entity is BlittableJsonReaderObject bjro)
                 return bjro;
 
-            var jsonSerializer = Conventions.CreateSerializer();
+            var jsonSerializer = ((ISerializationConventions)Conventions).CreateSerializer();
             return ToBlittable(entity, metadata, context, jsonSerializer);
         }
 

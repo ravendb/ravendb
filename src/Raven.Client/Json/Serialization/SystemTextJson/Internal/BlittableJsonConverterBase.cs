@@ -13,16 +13,20 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 {
     internal abstract class BlittableJsonConverterBase : IBlittableJsonConverterBase
     {
-        protected readonly ISerializationConventions Conventions;
+        protected readonly SystemTextJsonSerializationConventions Conventions;
 
         protected BlittableJsonConverterBase(ISerializationConventions conventions)
         {
-            Conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+            if (conventions == null)
+                throw new ArgumentNullException(nameof(conventions));
+
+            Conventions = conventions as SystemTextJsonSerializationConventions
+                          ?? throw new ArgumentException($"Expected {nameof(SystemTextJsonSerializationConventions)} but got {conventions.GetType()}", nameof(conventions));
         }
 
         public void PopulateEntity(object entity, BlittableJsonReaderObject json)
         {
-            var jsonSerializer = Conventions.CreateSerializer();
+            var jsonSerializer = ((ISerializationConventions)Conventions).CreateSerializer();
             PopulateEntity(entity, json, jsonSerializer);
         }
 

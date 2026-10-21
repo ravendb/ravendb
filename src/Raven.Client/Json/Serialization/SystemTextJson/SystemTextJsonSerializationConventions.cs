@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
@@ -16,6 +19,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
     public class SystemTextJsonSerializationConventions : ISerializationConventions
     {
         private BlittableJsonConverter _defaultConverter;
+        private readonly ConcurrentDictionary<Type, Dictionary<string, JsonPropertyInfo>> _jsonProperties = new();
         private Action<JsonSerializerOptions> _customizeJsonSerializerOptions;
         private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
         private bool _ignoreByRefMembers;
@@ -148,6 +152,25 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         T ISerializationConventions.DeserializeEntityFromBlittable<T>(BlittableJsonReaderObject json)
         {
             return (T)DeserializeEntityFromBlittable(typeof(T), json);
+        }
+
+        internal Dictionary<string, JsonPropertyInfo> GetJsonProperties(Type type)
+        {
+            return _jsonProperties.GetOrAdd(type, t =>
+            {
+                JsonSerializerOptions options = Options;
+                StringComparer comparer = options.PropertyNameCaseInsensitive ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+                var properties = new Dictionary<string, JsonPropertyInfo>(comparer);
+
+                JsonTypeInfo typeInfo = options.GetTypeInfo(t);
+                if (typeInfo.Kind != JsonTypeInfoKind.Object)
+                    return properties;
+
+                foreach (JsonPropertyInfo property in typeInfo.Properties)
+                    properties[property.Name] = property;
+
+                return properties;
+            });
         }
 
         private JsonSerializerOptions CreateJsonSerializerOptions()
