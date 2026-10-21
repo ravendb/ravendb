@@ -243,5 +243,18 @@ namespace Raven.Analyzers.Shared
             destinationSeverity: DiagnosticSeverity.Warning,
             description: "Fan-out indexes produce multiple index entries per source document by iterating over a nested collection. The RavenDB server fires a runtime warning (WarnIndexOutputsPerDocument) for the same reason. Verify the collection is intentionally fanned out and that its cardinality is acceptable.",
             helpCode: "9S4SVZ");
+
+        /// <summary>
+        /// Descriptor for <see cref="DiagnosticIds.QueryCorrelatedCollectionConditions"/>.
+        /// Fires when a dynamic query's Any/All predicate over a nested collection combines two or more conditions on the element.
+        /// </summary>
+        public static readonly DiagnosticDescriptor QueryCorrelatedCollectionConditions = Create(
+            id: DiagnosticIds.QueryCorrelatedCollectionConditions,
+            title: "Correlated conditions over a nested collection in a dynamic query",
+            messageFormat: "'{0}' over '{1}' combines conditions that the auto index matches against different elements: the auto index flattens the collection, so each condition can be satisfied by a different element. Use a static index with a fan-out map (one entry per element) to correlate the conditions per element.",
+            introducedAt: "7.2",
+            destinationSeverity: DiagnosticSeverity.Warning,
+            description: "A dynamic query over a nested collection is served by an auto index that flattens the collection into one multi-valued field per member (e.g. Members[].UserId, Members[].Role). Two conditions on the same element therefore match independently and the query returns documents where no single element satisfies both. Per-element correlation needs a static index whose map fans out one entry per element.",
+            helpCode: "3L1ESH");
     }
 }

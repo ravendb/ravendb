@@ -1,7 +1,7 @@
 # Raven.Analyzers
 
 A standalone project for developing, testing, and benchmarking the RavenDB Roslyn analyzers
-(RVN001 to RVN014) against real code. It lives under `bench/` and has its own
+against real code. It lives under `bench/` and has its own
 `Raven.Analyzers.sln`. It is **not** part of `RavenDB.sln` and is never built by CI.
 
 ## What's here
@@ -12,7 +12,7 @@ A standalone project for developing, testing, and benchmarking the RavenDB Rosly
 | `Queries/` | 5 files of correctly-written query methods (scan bloat, no diagnostics) |
 | `Indexes/` | 5 files of correctly-defined indexes (scan bloat, no diagnostics) |
 | `Models/` | 5 files of plain entity POCOs (scan bloat, no diagnostics) |
-| `.editorconfig` | Promotes all RVN001–RVN014 from `Info` (shipped default) to `Warning` so squiggles are unmistakable |
+| `.editorconfig` | Promotes every RVN rule from `Info` (shipped default) to `Warning` so squiggles are unmistakable |
 | `compare.ps1` | Timing comparison script — see below |
 
 ## Build and see warnings
@@ -127,3 +127,4 @@ dotnet build bench/Raven.Analyzers -c Release /p:UseRavenAnalyzers=false /t:Rebu
 | `RVN012_SessionLazyBatching.cs` | RVN012 | Batch independent session operations using the lazy API |
 | `RVN013_QueryUnboundedResult.cs` | RVN013 | Query result is not bounded by Take() |
 | `RVN014_IndexFanOut.cs` | RVN014 | Index Map fans out over a collection |
+| `RVN015_QueryCorrelatedCollectionConditions.cs` | RVN015 | Correlated conditions over a nested collection in a dynamic query |

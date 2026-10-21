@@ -76,5 +76,10 @@ namespace Raven.Analyzers
         /// Identifier for the "index Map fans out over a collection" diagnostic.
         /// </summary>
         public const string IndexFanOut = "RVN014";
+
+        /// <summary>
+        /// Identifier for the "correlated conditions over a nested collection in a dynamic query" diagnostic.
+        /// </summary>
+        public const string QueryCorrelatedCollectionConditions = "RVN015";
     }
 }

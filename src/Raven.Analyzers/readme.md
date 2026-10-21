@@ -781,3 +781,54 @@ class DocumentIndex : AbstractIndexCreationTask<Document>
 **Note:** Block-body lambdas are not analyzed. RavenDB index Maps almost always use expression-body lambdas.
 
 **Docs:** [Indexes: Map-reduce fan-out](https://ravendb.net/docs/article-page/latest/csharp/indexes/map-reduce-indexes)
+
+---
+
+## RVN015: Correlated conditions over a nested collection in a dynamic query
+
+**Triggered by:** a dynamic query (`session.Query<T>()` with no index) whose `Where` predicate calls `Any` or `All` on a collection member of the document, with a lambda that joins two or more conditions on the element with `&&`.
+
+The auto index that serves a dynamic query flattens the collection into one multi-valued field per member (e.g. `Members[].UserId`, `Members[].Role`). The query becomes `where Members[].UserId = $p0 and Members[].Role = $p1`, so each condition is matched independently: a document matches when *some* member has the user id and *some* member (possibly another one) has the role. The server never creates fan-out auto indexes, so per-element correlation needs a static index whose map emits one entry per element.
+
+```csharp
+// Bad: the two conditions can be satisfied by different members
+var projects = session.Query<Project>()
+    .Where(p => p.Members.Any(m => m.UserId == userId && m.Role == Role.Contributor))   // RVN015
+    .ToList();
+
+// Good: a fan-out static index correlates the conditions per member
+class Projects_ByMember : AbstractIndexCreationTask<Project>
+{
+    public Projects_ByMember()
+    {
+        Map = projects => from p in projects
+                          from m in p.Members
+                          select new { m.UserId, m.Role };
+    }
+}
+
+var projects = session.Query<Projects_ByMember.Result, Projects_ByMember>()
+    .Where(r => r.UserId == userId && r.Role == Role.Contributor)
+    .OfType<Project>()
+    .ToList();
+```
+
+The query-expression form is flagged the same way:
+
+```csharp
+var projects = from p in session.Query<Project>()
+               where p.Members.Any(m => m.UserId == userId && m.Role == Role.Contributor)   // RVN015
+               select p;
+```
+
+**Not flagged:**
+
+- a single condition on the element: `p.Members.Any(m => m.UserId == userId)`;
+- conditions joined with `||`, which match the same way with or without flattening;
+- separate `Any` calls, which state the uncorrelated matching explicitly: `p.Members.Any(m => m.UserId == userId) && p.Members.Any(m => m.Role == Role.Contributor)`;
+- queries over a static index (`session.Query<T, TIndex>()` or an index name), where RVN014 covers the fan-out on the index side;
+- `Any`/`All` over something that is not a collection member of the document.
+
+**Note:** Only LINQ queries via `session.Query<T>()` are detected. The low-level `session.Advanced.DocumentQuery<T>()` API is not covered.
+
+**Docs:** [Indexes: Indexing nested data](https://ravendb.net/docs/article-page/latest/csharp/indexes/indexing-nested-data)

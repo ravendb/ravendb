@@ -18,3 +18,4 @@ dotnet_diagnostic.RVN011.severity = warning
 dotnet_diagnostic.RVN012.severity = warning
 dotnet_diagnostic.RVN013.severity = warning
 dotnet_diagnostic.RVN014.severity = warning
+dotnet_diagnostic.RVN015.severity = warning
