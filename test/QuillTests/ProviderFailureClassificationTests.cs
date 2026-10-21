@@ -36,7 +36,7 @@ public class ProviderFailureClassificationTests(ITestOutputHelper output) : NoDi
     [RavenFact(RavenTestCategory.Quill)]
     public void An_exception_raised_in_process_is_classified_the_same_way()
     {
-        Assert.Equal(ProviderFailureKind.Timeout, ProviderFailures.Classify(new ProviderTimeoutException(TimeSpan.FromSeconds(1))).Kind);
+        Assert.Equal(ProviderFailureKind.Timeout, ProviderFailures.Classify(new TimeoutException("slow")).Kind);
         Assert.Equal(ProviderFailureKind.Protocol, ProviderFailures.Classify(new EmptyAnswerException()).Kind);
         Assert.Equal(ProviderFailureKind.Unavailable, ProviderFailures.Classify(new HttpRequestException("down")).Kind);
     }

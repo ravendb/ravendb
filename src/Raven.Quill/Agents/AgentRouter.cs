@@ -1,10 +1,8 @@
 using System.Text.Json;
-using Microsoft.Extensions.Options;
 using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Session;
-using Raven.Quill.Hosting;
 using Raven.Quill.Metrics;
 
 using Raven.Quill.Logging;
@@ -40,27 +38,9 @@ public sealed class UnknownAgentException(string agentId)
 }
 
 internal sealed class AgentRouter(
-    IDocumentStore store, WebhookActionExecutor actionExecutor, IOptions<ApplianceOptions> options,
-    QuillLogger<AgentRouter> logger) : IAgentRouter
+    IDocumentStore store, WebhookActionExecutor actionExecutor, QuillLogger<AgentRouter> logger) : IAgentRouter
 {
     public async Task<AgentRunResult> RunAsync(AgentRequest request, Func<string, ValueTask> onChunk, AiAgentConfiguration config, CancellationToken ct)
-    {
-        var deadline = options.Value.AgentTurnDeadline;
-
-        using var turn = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        turn.CancelAfter(deadline);
-
-        try
-        {
-            return await RunTurnAsync(request, onChunk, config, turn.Token);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested == false && turn.IsCancellationRequested)
-        {
-            throw new ProviderTimeoutException(deadline);
-        }
-    }
-
-    private async Task<AgentRunResult> RunTurnAsync(AgentRequest request, Func<string, ValueTask> onChunk, AiAgentConfiguration config, CancellationToken ct)
     {
         if (config is null)
             throw new UnknownAgentException(request.AgentId);

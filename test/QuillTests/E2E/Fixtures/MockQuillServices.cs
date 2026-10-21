@@ -143,9 +143,6 @@ public sealed class MockQuillServices : IAsyncDisposable
     /// When set, a completion fails with this status and body instead of streaming a turn.
     public (int Status, string Body) CompletionFailure { get; set; }
 
-    /// Simulates a provider that is slow to answer at all.
-    public TimeSpan CompletionDelay { get; set; }
-
     /// When true, a completion drops the connection instead of answering.
     public bool CompletionAbortsConnection { get; set; }
 
@@ -232,7 +229,6 @@ public sealed class MockQuillServices : IAsyncDisposable
         WebhookResponseHeaders.Clear();
         WebhookDelay = TimeSpan.Zero;
         CompletionFailure = default;
-        CompletionDelay = TimeSpan.Zero;
         CompletionAbortsConnection = false;
         _turns.Clear();
         lock (_sync)
@@ -364,9 +360,6 @@ public sealed class MockQuillServices : IAsyncDisposable
         using var request = JsonDocument.Parse(await ReadBodyAsync(ctx));
         lock (_sync)
             _completionRequests.Add(request.RootElement.Clone());
-
-        if (CompletionDelay > TimeSpan.Zero)
-            await Task.Delay(CompletionDelay, ctx.RequestAborted);
 
         if (CompletionAbortsConnection)
         {
