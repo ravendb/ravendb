@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using Raven.Client.Util;
+using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.SystemTextJson.Internal;
 
@@ -11,7 +13,30 @@ internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJ
     {
     }
 
-    protected void RegisterMissingProperties(object o, string id, object value)
+    protected void CaptureMissingProperties(object entity, Type entityType, BlittableJsonReaderObject json)
+    {
+        var knownProperties = Conventions.GetJsonProperties(entityType);
+        var propertyNames = json.GetPropertyNames();
+
+        for (int i = 0; i < propertyNames.Length; i++)
+        {
+            var propName = propertyNames[i];
+
+            if (propName == Constants.Documents.Metadata.Key)
+                continue;
+
+            if (knownProperties.ContainsKey(propName))
+                continue;
+
+            var propIndex = json.GetPropertyIndex(propName);
+            var propDetails = new BlittableJsonReaderObject.PropertyDetails();
+            json.GetPropertyByIndex(propIndex, ref propDetails);
+
+            RegisterMissingProperties(entity, propName, propDetails.Value);
+        }
+    }
+
+    private void RegisterMissingProperties(object o, string id, object value)
     {
         if (Conventions.Conventions.PreserveDocumentPropertiesNotFoundOnModel == false ||
             id == Constants.Documents.Metadata.Key)
