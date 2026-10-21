@@ -18,11 +18,7 @@ class listHostsForCertificateCommand extends commandBase {
         
         this.post(url, JSON.stringify(payload), null)
             .done(result => {
-                const cns = [];
-                cns.push(result.CN);
-                if (result.AlternativeNames) {
-                    cns.push(...result.AlternativeNames);
-                }
+                const cns = result.AlternativeNames?.length ? [...result.AlternativeNames] : [result.CN];
                 task.resolve(cns);
             })
             .fail((response: JQueryXHR) => {

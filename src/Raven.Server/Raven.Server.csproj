@@ -114,7 +114,7 @@
     <PackageReference Include="CloudNative.CloudEvents.Kafka" />
     <PackageReference Include="Confluent.Kafka" />
     <PackageReference Include="CsvHelper" />
-    <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" />
     <PackageReference Include="FluentFTP" />
     <PackageReference Include="Elastic.Clients.Elasticsearch" />
     <PackageReference Include="HtmlAgilityPack" />

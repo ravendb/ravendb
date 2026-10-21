@@ -40,7 +40,7 @@ export interface AceEditorProps extends IAceEditorProps {
     maxHeight?: number | string;
     disabled?: boolean;
     samplesPanel?: AceEditorSamplesPanelConfig;
-    aiAssistantSlot?: ReactNode;
+    overlaySlot?: ReactNode;
 }
 
 function AceEditor(props: AceEditorProps) {
@@ -59,7 +59,7 @@ function AceEditor(props: AceEditorProps) {
         readOnly,
         disabled,
         samplesPanel,
-        aiAssistantSlot,
+        overlaySlot,
         onChange,
         value,
         placeholder,
@@ -290,7 +290,7 @@ function AceEditor(props: AceEditorProps) {
                         <small>{errorMessage}</small>
                     </div>
                 )}
-                {aiAssistantSlot}
+                {overlaySlot}
                 <div
                     style={{
                         position: "absolute",

@@ -3,6 +3,9 @@ import { rtlRender, rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
 import { composeStories } from "@storybook/react-webpack5";
 import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 import moment from "moment";
+import { waitFor } from "@testing-library/react";
+import { mockServices } from "test/mocks/services/MockServices";
+import notificationCenter from "common/notifications/notificationCenter";
 
 const { CertificatesStory } = composeStories(stories);
 
@@ -10,7 +13,12 @@ const selectors = {
     authIsDisabledHeader: /Authentication is disabled/,
     renewNowButton: /Renew now/,
     renewConfirmButton: /Renew certificate/,
-    renewedDialogTitle: /Your new certificate is ready/,
+    readyDialogTitle: /Your new certificate is ready/,
+    manageUserAccessButton: /Manage user access/,
+    generateClientCertItem: /Generate client certificate/,
+    nameInput: /Name/,
+    generateCertButton: /Generate certificate/,
+    saveAnywayButton: /Save anyway/,
     browserAccessTab: /Browser Access/,
     apiAccessTab: /Application Access \(API\)/,
     renewalDate: "2025-01-15",
@@ -117,7 +125,8 @@ describe("Certificates", () => {
             expect(screen.queryByRole("button", { name: selectors.renewNowButton })).not.toBeInTheDocument();
         });
 
-        it("opens the guidance dialog after renewing the server certificate", async () => {
+        it("does not open the certificate ready dialog after renewing the server certificate", async () => {
+            const forceRenew = mockServices.manageServerService.getMock("forceRenewServerCertificate");
             const { screen, fireClick } = await rtlRender_WithWaitForLoad(
                 <CertificatesStory serverCertRenewalDate={selectors.renewalDate} serverCertSetupMode="LetsEncrypt" />
             );
@@ -128,13 +137,32 @@ describe("Certificates", () => {
             const confirmButton = await screen.findByRole("button", { name: selectors.renewConfirmButton });
             await fireClick(confirmButton);
 
-            expect(await screen.findByText(selectors.renewedDialogTitle)).toBeInTheDocument();
-            expect(screen.getByText(selectors.browserAccessTab)).toBeInTheDocument();
-            expect(screen.getByText(selectors.apiAccessTab)).toBeInTheDocument();
+            await waitFor(() => expect(forceRenew).toHaveBeenCalled());
+            expect(screen.queryByText(selectors.readyDialogTitle)).not.toBeInTheDocument();
         });
     });
 
     describe("client certificate", () => {
+        afterEach(() => {
+            jest.restoreAllMocks();
+        });
+
+        it("opens the certificate ready dialog after generating a client certificate", async () => {
+            jest.spyOn(HTMLFormElement.prototype, "submit").mockImplementation(() => {});
+            jest.spyOn(notificationCenter.instance, "monitorOperation").mockReturnValue($.Deferred<void>().resolve());
+            const { screen, fireClick, user } = await rtlRender_WithWaitForLoad(<CertificatesStory />);
+
+            await fireClick(screen.getByRole("button", { name: selectors.manageUserAccessButton }));
+            await fireClick(await screen.findByText(selectors.generateClientCertItem));
+            await user.type(await screen.findByRole("textbox", { name: selectors.nameInput }), "new-client");
+            await fireClick(screen.getByRole("button", { name: selectors.generateCertButton }));
+            await fireClick(await screen.findByRole("button", { name: selectors.saveAnywayButton }));
+
+            expect(await screen.findByText(selectors.readyDialogTitle)).toBeInTheDocument();
+            expect(screen.getByText(selectors.browserAccessTab)).toBeInTheDocument();
+            expect(screen.getByText(selectors.apiAccessTab)).toBeInTheDocument();
+        });
+
         it("can show edit button when cert is not expired", async () => {
             const { screen } = await rtlRender_WithWaitForLoad(
                 <CertificatesStory

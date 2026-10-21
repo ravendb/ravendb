@@ -84,6 +84,33 @@ describe("ImportResultModal", () => {
         expect(screen.queryByText("Not processed")).not.toBeInTheDocument();
     });
 
+    it("shows error messages after the progress log when the import fails", () => {
+        const { screen } = rtlRender(
+            <ImportResultModal
+                progress={smugglerResult({ Messages: ["Reading documents"] })}
+                error={{ Message: "Import failed" } as Raven.Client.Documents.Operations.OperationExceptionResult}
+                status="Faulted"
+                startTime={new Date()}
+                endTime={new Date()}
+                onClose={jest.fn()}
+            />
+        );
+
+        expect(screen.getByRole("log")).toHaveTextContent(/Reading documents\s*Import failed/);
+    });
+
+    it("hides the result table until progress arrives", () => {
+        const { screen } = rtlRender(modal(null));
+
+        expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    });
+
+    it("tells that a sharded import in progress reports a single shard", () => {
+        const { screen } = rtlRender(modal({ ...smugglerResult({}), ShardNumber: 2 } as SmugglerResult));
+
+        expect(screen.getByText(/Report contains progress for shard #2 only/)).toBeInTheDocument();
+    });
+
     it("keeps the log pinned to the bottom until the user scrolls up", async () => {
         const { screen, fireClick, rerender } = rtlRender(modal(smugglerResult({ Messages: ["first"] })));
         await fireClick(screen.getByRole("button", { name: /Show details/ }));

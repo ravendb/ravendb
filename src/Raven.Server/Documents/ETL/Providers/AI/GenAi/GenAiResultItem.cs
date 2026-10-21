@@ -16,6 +16,9 @@ public class GenAiResultItem
 
     internal bool UpdateHash { get; set; } = true;
 
+    // not stored, not processed, not a transient failure
+    internal bool RefusedBeforeTheModel { get; set; }
+
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue

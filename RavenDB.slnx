@@ -47,6 +47,9 @@
     <Project Path="bench/VxSort.Benchmark/VxSort.Benchmark.csproj">
       <BuildType Solution="Validate|*" Project="Release" />
     </Project>
+    <Project Path="bench/Zstd.Benchmark/Zstd.Benchmark.csproj">
+      <BuildType Solution="Validate|*" Project="Release" />
+    </Project>
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path="AGENTS.md" />

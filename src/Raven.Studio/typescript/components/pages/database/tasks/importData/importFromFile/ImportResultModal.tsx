@@ -1,6 +1,7 @@
 import React, { JSX, UIEvent, useEffect, useRef } from "react";
 import classNames from "classnames";
 import "./ImportResultModal.scss";
+import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Collapse from "react-bootstrap/Collapse";
@@ -17,6 +18,11 @@ import moment from "moment";
 type SmugglerResult = Raven.Client.Documents.Smuggler.SmugglerResult;
 type Counts = Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts;
 type OperationStatus = Raven.Client.Documents.Operations.OperationStatus;
+type OperationExceptionResult = Raven.Client.Documents.Operations.OperationExceptionResult;
+
+export type ImportProgress = Raven.Client.Documents.Smuggler.SmugglerProgressBase &
+    Pick<SmugglerResult, "Messages"> &
+    Partial<Pick<Raven.Client.Documents.Smuggler.ShardedSmugglerProgress, "ShardNumber">>;
 
 interface ImportResultRow {
     name: string;
@@ -26,21 +32,29 @@ interface ImportResultRow {
 }
 
 interface ImportResultModalProps {
-    progress: SmugglerResult | null;
+    progress: ImportProgress | null;
+    error?: OperationExceptionResult | null;
     status: OperationStatus;
     startTime: Date;
     endTime: Date | null;
     onClose: () => void;
 }
 
-export default function ImportResultModal({ progress, status, startTime, endTime, onClose }: ImportResultModalProps) {
+export default function ImportResultModal({
+    progress,
+    error,
+    status,
+    startTime,
+    endTime,
+    onClose,
+}: ImportResultModalProps) {
     const rows = buildRows(progress);
     const duration = genUtils.formatAsTimeSpan(moment(endTime ?? undefined).diff(moment(startTime)));
 
     const { value: isDetailsVisible, setTrue: showDetails, toggle: toggleDetails } = useBoolean(false);
     const { value: isLogPinnedToBottom, setValue: setIsLogPinnedToBottom } = useBoolean(true);
     const logRef = useRef<HTMLDivElement>(null);
-    const messages = progress?.Messages ?? [];
+    const messages = [...(progress?.Messages ?? []), ...[error?.Message, error?.Error].filter(Boolean)];
 
     useEffect(() => {
         if (status === "Faulted") {
@@ -79,22 +93,31 @@ export default function ImportResultModal({ progress, status, startTime, endTime
                     <span className="text-muted">Status</span>
                     <OperationStatusBadge status={status} />
                 </div>
-                <Table className="import-result-table mt-3 mb-0">
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th>Status</th>
-                            <th>Read</th>
-                            <th>Skipped</th>
-                            <th>Errors</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {rows.map((row, index) => (
-                            <ImportResultTableRow key={`${row.name}-${index}`} row={row} operationStatus={status} />
-                        ))}
-                    </tbody>
-                </Table>
+                {status === "InProgress" && progress?.ShardNumber != null && (
+                    <Alert variant="info" className="mt-3 mb-0">
+                        <Icon icon="info" />
+                        Report contains progress for shard #{progress.ShardNumber} only. Full report will be available
+                        when operation is done for all shards.
+                    </Alert>
+                )}
+                {rows.length > 0 && (
+                    <Table className="import-result-table mt-3 mb-0">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Status</th>
+                                <th>Read</th>
+                                <th>Skipped</th>
+                                <th>Errors</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rows.map((row, index) => (
+                                <ImportResultTableRow key={`${row.name}-${index}`} row={row} operationStatus={status} />
+                            ))}
+                        </tbody>
+                    </Table>
+                )}
                 <Collapse in={isDetailsVisible} onEntered={() => scrollToBottom(logRef.current)}>
                     <div>
                         <Badge bg="info" className="mt-3">
@@ -168,7 +191,7 @@ function ImportResultTableRow({ row, operationStatus }: { row: ImportResultRow; 
     );
 }
 
-function buildRows(progress: SmugglerResult): ImportResultRow[] {
+function buildRows(progress: ImportProgress | null): ImportResultRow[] {
     if (!progress) {
         return [];
     }
