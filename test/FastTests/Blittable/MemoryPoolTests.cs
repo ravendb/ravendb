@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Tests.Infrastructure;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Blittable
@@ -70,6 +71,18 @@ namespace FastTests.Blittable
                         pool.Return(tuple);
                 }
             }
+        }
+
+        [RavenFact(RavenTestCategory.Memory)]
+        public void ReturnAfterDisposeFreesTheBuffer()
+        {
+            var pool = new UnmanagedBuffersPool(string.Empty);
+            var allocation = pool.Allocate(128);
+
+            pool.Dispose();
+            pool.Return(allocation);
+
+            Assert.Equal(0, pool.GetAllocatedMemorySize());
         }
     }
 }
