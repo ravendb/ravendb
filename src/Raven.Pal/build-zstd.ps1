@@ -68,3 +68,6 @@ if ($LASTEXITCODE -ne 0) {
 
 Copy-Item (Join-Path $buildDir "lib\Release\zstd.dll") (Join-Path $artifactsPath "libzstd.win.arm64.dll")
 Remove-Item -Recurse -Force $workDir
+
+# the macOS binaries come from the osxcross stage above, or from build-libs/build-zstd-macos.sh run on a Mac into the same folder
+& (Join-Path $PSScriptRoot "pack-zstd.ps1") -BinariesPath $artifactsPath

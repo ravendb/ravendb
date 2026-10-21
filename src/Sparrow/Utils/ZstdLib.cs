@@ -15,13 +15,13 @@ namespace Sparrow.Utils
     [SuppressUnmanagedCodeSecurity]
     internal static unsafe class ZstdLib
     {
+        // the RavenDB.Zstd.Native package ships it as runtimes/<rid>/native/libzstd.*, which the .NET host resolves
         internal const string LIBZSTD = "libzstd";
 
         internal static Func<string, Exception> CreateDictionaryException;
 
         static ZstdLib()
         {
-            DynamicNativeLibraryResolver.Register(typeof(ZstdLib).Assembly, LIBZSTD);
             CreateDictionaryException = message => new InvalidOperationException(message);
         }
 

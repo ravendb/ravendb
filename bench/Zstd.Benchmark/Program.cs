@@ -18,7 +18,7 @@ namespace Zstd.Benchmark
 
               run [options] [BenchmarkDotNet args]   run benchmarks (default command)
                   --lib <id>=<path>                  libzstd binary to test, repeatable; the first one is the baseline job.
-                                                     default: shipped=<output dir>/libzstd.<platform>
+                                                     default: shipped=the libzstd of the RavenDB.Zstd.Native package in the output dir
                   --affinity pcores|none|<hexmask>   default pcores (pins to performance cores on hybrid CPUs)
                   --launches <n>                     processes per benchmark case (default 2)
                   --iterations <n>                   measured iterations per process (default 15)

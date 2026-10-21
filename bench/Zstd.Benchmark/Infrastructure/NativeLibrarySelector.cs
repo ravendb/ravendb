@@ -17,6 +17,7 @@ namespace Zstd.Benchmark.Infrastructure
 
         private static readonly object Locker = new();
         private static ZstdNativeLibrary _current;
+        private static bool _resolverRegistered;
 
         public static string SelectedPath { get; private set; }
 
@@ -37,13 +38,34 @@ namespace Zstd.Benchmark.Infrastructure
             if (File.Exists(path) == false)
                 throw new FileNotFoundException($"libzstd binary not found: {path}", path);
 
-            // ZstdLib's static constructor registers the default mapping, run it first so it does not overwrite ours
-            RuntimeHelpers.RunClassConstructor(typeof(ZstdLib).TypeHandle);
-            DynamicNativeLibraryResolver.Register(typeof(ZstdLib).Assembly, "libzstd", _ => path);
-            SelectedPath = path;
+            lock (Locker)
+            {
+                SelectedPath = path;
+
+                // Sparrow leaves libzstd to the .NET host (RavenDB.Zstd.Native package), so the resolver for its assembly is free to take
+                if (_resolverRegistered == false)
+                {
+                    NativeLibrary.SetDllImportResolver(typeof(ZstdLib).Assembly, (name, assembly, searchPath) =>
+                        name == ZstdLib.LIBZSTD && SelectedPath != null ? NativeLibrary.Load(SelectedPath) : IntPtr.Zero);
+                    _resolverRegistered = true;
+                }
+            }
         }
 
-        public static string DefaultLibraryPath => Path.Combine(AppContext.BaseDirectory, "libzstd" + PlatformSuffix);
+        /// <summary>
+        /// The libzstd from the RavenDB.Zstd.Native package: next to the application in a RID specific build, under runtimes/ otherwise.
+        /// </summary>
+        public static string DefaultLibraryPath
+        {
+            get
+            {
+                string flat = Path.Combine(AppContext.BaseDirectory, LibraryFileName);
+                if (File.Exists(flat))
+                    return flat;
+
+                return Path.Combine(AppContext.BaseDirectory, "runtimes", RuntimeId, "native", LibraryFileName);
+            }
+        }
 
         /// <summary>
         /// The binary the production binding is using in this process. Forces the production binding to load first,
@@ -81,23 +103,42 @@ namespace Zstd.Benchmark.Infrastructure
                 throw new InvalidOperationException($"Expected libzstd {expected} but {current.Version} was loaded from {current.Path}");
         }
 
-        private static string PlatformSuffix
+        private static string LibraryFileName
         {
             get
             {
-                bool isArm = RuntimeInformation.ProcessArchitecture is Architecture.Arm or Architecture.Arm64;
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    if (RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
-                        return ".win.arm64.dll";
-                    return Environment.Is64BitProcess ? ".win.x64.dll" : ".win.x86.dll";
-                }
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                    return isArm ? (Environment.Is64BitProcess ? ".linux.arm.64.so" : ".linux.arm.32.so") : ".linux.x64.so";
+                    return "libzstd.dll";
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                    return isArm ? ".mac.arm64.dylib" : ".mac.x64.dylib";
+                    return "libzstd.dylib";
+                return "libzstd.so";
+            }
+        }
 
-                throw new PlatformNotSupportedException();
+        private static string RuntimeId
+        {
+            get
+            {
+                string os;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    os = "win";
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    os = "linux";
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                    os = "osx";
+                else
+                    throw new PlatformNotSupportedException();
+
+                string arch = RuntimeInformation.ProcessArchitecture switch
+                {
+                    Architecture.X64 => "x64",
+                    Architecture.X86 => "x86",
+                    Architecture.Arm64 => "arm64",
+                    Architecture.Arm => "arm",
+                    _ => throw new PlatformNotSupportedException()
+                };
+
+                return $"{os}-{arch}";
             }
         }
     }

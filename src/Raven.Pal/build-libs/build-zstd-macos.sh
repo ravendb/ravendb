@@ -2,13 +2,13 @@
 # Builds libzstd for macOS (x64 and arm64) natively on a Mac with the Xcode command line tools.
 # Either CPU can build both architectures.
 #
-# Usage: build-zstd-macos.sh [output directory]     (default: libs/libzstd of this repository)
+# Usage: build-zstd-macos.sh [output directory]     (default: src/Raven.Pal/artifacts, where pack-zstd.ps1 takes them from)
 #        ZSTD_VERSION=v1.5.7 build-zstd-macos.sh
 
 set -euo pipefail
 
 ZSTD_VERSION="${ZSTD_VERSION:-v1.5.7}"
-OUT_DIR="${1:-$(cd "$(dirname "$0")/../../../libs/libzstd" && pwd)}"
+OUT_DIR="${1:-$(mkdir -p "$(dirname "$0")/../artifacts" && cd "$(dirname "$0")/../artifacts" && pwd)}"
 WORK_DIR="$(mktemp -d)"
 trap 'rm -rf "$WORK_DIR"' EXIT
 

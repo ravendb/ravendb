@@ -5,7 +5,7 @@ param(
     # BenchmarkDotNet filter, e.g. '*Document*'
     [string]$Filter = '*',
 
-    # libzstd binaries to compare, as <id>=<path>; the first one is the baseline. Default: the binary in libs/libzstd.
+    # libzstd binaries to compare, as <id>=<path>; the first one is the baseline. Default: the one from the RavenDB.Zstd.Native package.
     [string[]]$Lib = @(),
 
     [switch]$Quick,
