@@ -198,7 +198,7 @@ namespace Raven.Client.Documents.Linq
                 MaybeProperty = memberExpression.Member as PropertyInfo
             };
 
-            result.Path = HandleMemberExpressionPropertyRenames(memberExpression, result.Path);
+            result.Path = HandleMemberExpressionPropertyRenames(memberExpression, result.Path, _conventions);
 
             return result;
         }
@@ -233,14 +233,14 @@ namespace Raven.Client.Documents.Linq
             };
         }
 
-        private static string HandleMemberExpressionPropertyRenames(MemberExpression memberExpression, string name)
+        private static string HandleMemberExpressionPropertyRenames(MemberExpression memberExpression, string name, DocumentConventions conventions)
         {
             var member = memberExpression.Member;
 
             if (memberExpression.Expression is MemberExpression innerMemberExpression)
             {
                 var innerName = name.Substring(0, name.Length - member.Name.Length - 1);
-                name = HandleMemberExpressionPropertyRenames(innerMemberExpression, innerName);
+                name = HandleMemberExpressionPropertyRenames(innerMemberExpression, innerName, conventions);
 
                 if (member.Name != "Value" ||
                     Nullable.GetUnderlyingType(memberExpression.Expression.Type) == null)
@@ -249,12 +249,17 @@ namespace Raven.Client.Documents.Linq
                 }
             }
 
-            return HandlePropertyRenames(member, name);
+            return HandlePropertyRenames(member, name, conventions);
         }
 
         public static string HandlePropertyRenames(MemberInfo member, string name)
         {
-            string propertyName = JsonPropertyNameResolver.GetJsonPropertyName(member);
+            return HandlePropertyRenames(member, name, conventions: null);
+        }
+
+        public static string HandlePropertyRenames(MemberInfo member, string name, DocumentConventions conventions)
+        {
+            string propertyName = JsonPropertyNameResolver.GetJsonPropertyName(member, conventions);
             if (string.IsNullOrEmpty(propertyName) == false)
                 return name.Substring(0, name.Length - member.Name.Length) + propertyName;
 
