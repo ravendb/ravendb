@@ -336,6 +336,9 @@ namespace Raven.Client.Http
             try
             {
                 Dispose();
+
+                if (_leftToFinalizer == false && Logger.IsOperationsEnabled)
+                    Logger.Operations($"{GetType().Name} for '{_databaseName}' ({TopologyNodes?.FirstOrDefault()?.Url ?? _lastKnownUrls?.FirstOrDefault()}) wasn't properly disposed");
             }
 #pragma warning disable CS0168
             catch (Exception e)
@@ -2058,6 +2061,14 @@ namespace Raven.Client.Http
         protected string[] _lastKnownUrls;
         private readonly DisposeOnce<ExceptionRetry> _disposeOnceRunner;
         internal bool Disposed => _disposeOnceRunner.Disposed;
+        private bool _leftToFinalizer;
+
+        internal void ForgetAbout()
+        {
+            _leftToFinalizer = true;
+            // Dispose() also disposes the cache, so we don't want the finalizer of its unmanaged buffers to be invoked
+            Cache.SuppressUnmanagedBuffersFinalize();
+        }
 
         public static bool HasServerCertificateCustomValidationCallback => _serverCertificateCustomValidationCallback?.Length > 0;
 

@@ -32,8 +32,6 @@ namespace Raven.Client.Http
         {
             _maxSize = maxSize;
             _unmanagedBuffersPool = new UnmanagedBuffersPool(nameof(HttpCache), "Client");
-            // the pool is freed in Dispose() after the items return their buffers, its own finalizer could run first and leak them
-            GC.SuppressFinalize(_unmanagedBuffersPool);
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
 
@@ -358,6 +356,8 @@ namespace Raven.Client.Http
             }
             _unmanagedBuffersPool.Dispose();
         }
+
+        internal void SuppressUnmanagedBuffersFinalize() => GC.SuppressFinalize(_unmanagedBuffersPool);
 
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {

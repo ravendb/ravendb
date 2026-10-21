@@ -3404,8 +3404,9 @@ namespace Raven.Server.ServerWide
                 || _leaderRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
             {
                 var newExecutor = CreateNewClusterRequestExecutor(leaderUrl);
+                var oldExecutor = Interlocked.Exchange(ref _leaderRequestExecutor, newExecutor);
                 // the old executor may still be in use, its finalizer disposes it
-                Interlocked.Exchange(ref _leaderRequestExecutor, newExecutor);
+                oldExecutor?.ForgetAbout();
             }
 
             return _leaderRequestExecutor;
