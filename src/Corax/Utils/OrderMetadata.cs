@@ -15,6 +15,7 @@ public readonly struct OrderMetadata
     public readonly IPoint Point;
     public readonly double Round;
     public readonly SpatialUnits Units;
+    public readonly bool UseNearestPoint;
     public readonly int RandomSeed;
 
     public override string ToString()
@@ -37,6 +38,7 @@ public readonly struct OrderMetadata
         Unsafe.SkipInit(out Point);
         Unsafe.SkipInit(out Round);
         Unsafe.SkipInit(out Units);
+        Unsafe.SkipInit(out UseNearestPoint);
         Unsafe.SkipInit(out RandomSeed);
 
         HasBoost = hasBoost;
@@ -50,6 +52,7 @@ public readonly struct OrderMetadata
         Unsafe.SkipInit(out Point);
         Unsafe.SkipInit(out Round);
         Unsafe.SkipInit(out Units);
+        Unsafe.SkipInit(out UseNearestPoint);
 
         HasBoost = false;
         Ascending = true;
@@ -64,6 +67,7 @@ public readonly struct OrderMetadata
         Unsafe.SkipInit(out Point);
         Unsafe.SkipInit(out Round);
         Unsafe.SkipInit(out Units);
+        Unsafe.SkipInit(out UseNearestPoint);
         Unsafe.SkipInit(out RandomSeed);
 
         Field = field;
@@ -71,9 +75,9 @@ public readonly struct OrderMetadata
         FieldType = fieldType;
     }
 
-    public OrderMetadata(in FieldMetadata field, bool ascending, MatchCompareFieldType fieldType, IPoint point, double round, SpatialUnits units)
+    public OrderMetadata(in FieldMetadata field, bool ascending, MatchCompareFieldType fieldType, IPoint point, double round, SpatialUnits units, bool useNearestPoint = false)
     {
-        Unsafe.SkipInit(out HasBoost);  
+        Unsafe.SkipInit(out HasBoost);
         Unsafe.SkipInit(out RandomSeed);
 
         Field = field;
@@ -82,5 +86,6 @@ public readonly struct OrderMetadata
         Round = round;
         Point = point;
         Units = units;
+        UseNearestPoint = useNearestPoint;
     }
 }

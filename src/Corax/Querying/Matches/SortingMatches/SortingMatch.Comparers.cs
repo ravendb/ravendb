@@ -6,6 +6,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Mappings;
+using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Sparrow;
@@ -454,19 +455,13 @@ unsafe partial struct SortingMatch<TInner>
 
     private struct EntryComparerBySpatial : IEntryComparer, IComparer<UnmanagedSpan>
     {
-        private SpatialReader _reader;
-        private (double X, double Y) _center;
-        private SpatialUnits _units;
-        private double _round;
+        private SpatialDistanceReader _reader;
 
         public Slice GetSortFieldName(ref SortingMatch<TInner> match) => match._orderMetadata.Field.FieldName;
 
         public void Init(ref SortingMatch<TInner> match)
         {
-            _center = (match._orderMetadata.Point.X, match._orderMetadata.Point.Y);
-            _units = match._orderMetadata.Units;
-            _round = match._orderMetadata.Round;
-            _reader = match._searcher.SpatialReader(match._orderMetadata.Field.FieldName);
+            _reader = new SpatialDistanceReader(match._searcher, match._orderMetadata);
         }
 
         public void SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
@@ -490,17 +485,9 @@ unsafe partial struct SortingMatch<TInner>
             
             for (int i = 0; i < batchResults.Length; i++)
             {
-                SpatialResult distance; 
-                if (_reader.TryGetSpatialPoint(batchResults[i], out var coords) == false)
+                if (_reader.TryGetDistance(batchResults[i], out var distance) == false)
                 {
                     distance = new SpatialResult() { Distance = descending ? double.MinValue : double.MaxValue, Latitude = Double.NaN, Longitude = Double.NaN };
-                }
-                else
-                {
-                    distance = new SpatialResult()
-                    {
-                        Distance = SpatialUtils.GetGeoDistance(coords, _center, _round, _units), Longitude = coords.Lng, Latitude = coords.Lat
-                    };
                 }
                 heapSorter.Insert(i, distance);
             }

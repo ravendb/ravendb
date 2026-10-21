@@ -705,7 +705,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         field.Arguments[lastArgument].GetDouble(query.QueryParameters)
                         : 0;
 
-                    var dsort = new SpatialDistanceFieldComparatorSource(spatialField, point, query, roundTo);
+                    var useNearestPoint = IndexDefinitionBaseServerSide.IndexVersion.IsSpatialSortByNearestPointSupported(index.Definition.Version);
+                    var dsort = new SpatialDistanceFieldComparatorSource(spatialField, point, query, roundTo, useNearestPoint);
                     sortArray[sortIndex++] = new SortField(field.Name, dsort, field.Ascending == false);
                     continue;
                 }
