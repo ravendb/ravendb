@@ -103,7 +103,7 @@ MSYS_NO_PATHCONV=1 docker run --rm \
 ## Reports
 
 ```bash
-Zstd.Benchmark report [--lib path/to/libzstd.win.x64.dll] [--out report.md] [--no-sweep]
+Zstd.Benchmark report [--lib path/to/libzstd.dll] [--out report.md] [--no-sweep]
 Zstd.Benchmark libinfo --lib a=path1 --lib b=path2
 ```
 

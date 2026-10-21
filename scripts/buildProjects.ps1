@@ -33,7 +33,7 @@ function BuildServer ( $srcDir, $outDir, $target) {
     }
 
     #if ($target -and $global:isPublishBundlingEnabled) {
-    #    $commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:Client_IncludeZstd=false'
+    #    $commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true'
     #}
 
     if ($env:RAVEN_IS_RUNNING_ON_CI){
@@ -193,7 +193,7 @@ function BuildTool ( $toolName, $srcDir, $outDir, $target, $trim ) {
     }
     
     #if ($target -and $global:isPublishBundlingEnabled) {
-    #    $commandArgs += "/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:PublishTrimmed=$trim /p:Client_IncludeZstd=false"
+    #    $commandArgs += "/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:PublishTrimmed=$trim"
     #}
 
     if ($env:RAVEN_IS_RUNNING_ON_CI){
@@ -210,7 +210,6 @@ function BuildEmbedded ( $srcDir, $outDir, $framework) {
     $commandArgs = @( "build" )
 
     $commandArgs += "/p:GenerateDocumentationFile=true"
-    $commandArgs += "/p:Client_IncludeZstd=false"
     $commandArgs += "--no-incremental"
     $commandArgs += @( "--output", $outDir )
     $commandArgs += @( "--framework", $framework )
