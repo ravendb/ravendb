@@ -1,43 +1,39 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
+using Newtonsoft.Json;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Json.Serialization.SystemTextJson;
 
 namespace Raven.Client.Json
 {
     internal static class JsonPropertyNameResolver
     {
-        private static readonly ConcurrentDictionary<MemberInfo, string> _cache = new();
+        private static readonly ConcurrentDictionary<MemberInfo, string> _newtonsoftCache = new();
+        private static readonly ConcurrentDictionary<MemberInfo, string> _systemTextJsonCache = new();
 
-        public static string GetJsonPropertyName(MemberInfo member)
+        public static string GetJsonPropertyName(MemberInfo member, DocumentConventions conventions)
         {
-            var result = _cache.GetOrAdd(member, ResolveJsonPropertyName);
+            string result = conventions?.Serialization is SystemTextJsonSerializationConventions
+                ? _systemTextJsonCache.GetOrAdd(member, ResolveSystemTextJsonName)
+                : _newtonsoftCache.GetOrAdd(member, ResolveNewtonsoftName);
+
             return result.Length == 0 ? null : result;
         }
 
-        private static string ResolveJsonPropertyName(MemberInfo member)
+        private static string ResolveNewtonsoftName(MemberInfo member)
         {
-            foreach (var attr in member.GetCustomAttributes(true))
-            {
-                var attrType = attr.GetType();
+            string name = member.GetCustomAttribute<JsonPropertyAttribute>(inherit: true)?.PropertyName;
+            if (name != null)
+                return name;
 
-                if (attrType.Namespace == "Newtonsoft.Json" && attrType.Name == "JsonPropertyAttribute")
-                {
-                    var propertyName = ((dynamic)attr).PropertyName as string;
-                    if (propertyName != null)
-                        return propertyName;
-                }
+            return member.GetCustomAttribute<DataMemberAttribute>(inherit: true)?.Name ?? string.Empty;
+        }
 
-                if (attrType.Namespace == "System.Text.Json.Serialization" && attrType.Name == "JsonPropertyNameAttribute")
-                {
-                    var name = ((dynamic)attr).Name as string;
-                    if (name != null)
-                        return name;
-                }
-
-                if (attr is DataMemberAttribute dataMember && dataMember.Name != null)
-                    return dataMember.Name;
-            }
-            return string.Empty;
+        private static string ResolveSystemTextJsonName(MemberInfo member)
+        {
+            return member.GetCustomAttribute<JsonPropertyNameAttribute>(inherit: true)?.Name ?? string.Empty;
         }
     }
 }

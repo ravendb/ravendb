@@ -277,7 +277,7 @@ namespace Raven.Client.Documents.Indexes
                     return convertedName;
             }
 
-            var propName = JsonPropertyNameResolver.GetJsonPropertyName(memberInfo);
+            var propName = JsonPropertyNameResolver.GetJsonPropertyName(memberInfo, _conventions);
             if (propName != null)
             {
                 if (KeywordsInCSharp.Contains(propName))

@@ -1230,10 +1230,11 @@ namespace Raven.Client.Util
 
         internal sealed class JsonPropertyAttributeSupport : JavascriptConversionExtension
         {
-            public static readonly JsonPropertyAttributeSupport Instance = new JsonPropertyAttributeSupport();
+            private readonly DocumentConventions _conventions;
 
-            private JsonPropertyAttributeSupport()
+            public JsonPropertyAttributeSupport(DocumentConventions conventions)
             {
+                _conventions = conventions;
             }
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
@@ -1241,7 +1242,7 @@ namespace Raven.Client.Util
                 if (context.Node is not MemberExpression memberExpression)
                     return;
 
-                string propertyName = Raven.Client.Json.JsonPropertyNameResolver.GetJsonPropertyName(memberExpression.Member);
+                string propertyName = Raven.Client.Json.JsonPropertyNameResolver.GetJsonPropertyName(memberExpression.Member, _conventions);
                 if (propertyName == null)
                     return;
 
