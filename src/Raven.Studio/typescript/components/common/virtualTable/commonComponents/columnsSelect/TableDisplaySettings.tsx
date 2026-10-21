@@ -18,7 +18,7 @@ import { FormGroup, FormInput, FormLabel } from "components/common/Form";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { useViewSheet, ViewSheet } from "components/common/splitView/ViewSheet";
+import { useViewSheet, useViewSheetCloseConfirmation, ViewSheet } from "components/common/splitView/ViewSheet";
 import {
     closestCenter,
     DndContext,
@@ -133,7 +133,7 @@ function TableDisplaySettingsSheet({
     onApply,
     restoreDefaults,
 }: TableDisplaySettingsSheetProps) {
-    const { close } = useViewSheet();
+    const { forceClose } = useViewSheet();
 
     const initialCustomColumns = customColumns ?? [];
     const initialCustomColumnIds = new Set(initialCustomColumns.map((column) => column.id));
@@ -145,6 +145,14 @@ function TableDisplaySettingsSheet({
     const [customColumnList, setCustomColumnList] = useState<CustomColumnDefinition[]>(initialCustomColumns);
     const [editedCustomColumn, setEditedCustomColumn] = useState<CustomColumnDefinition>(null);
     const [activeDragId, setActiveDragId] = useState<string>(null);
+
+    const hasUnappliedChanges =
+        !isEqual(columnOrder, initialColumnOrder) ||
+        xor(selectedIds, initialSelectedIds).length > 0 ||
+        xor(pinnedIds, initialPinnedIds).length > 0 ||
+        !isEqual(customColumnList, initialCustomColumns);
+
+    useViewSheetCloseConfirmation(hasUnappliedChanges);
 
     const sensors = useSensors(useSensor(PointerSensor));
 
@@ -222,7 +230,7 @@ function TableDisplaySettingsSheet({
             });
         }
 
-        close();
+        forceClose();
     };
 
     const handleSaveCustomColumn = (column: CustomColumnDefinition) => {
