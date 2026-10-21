@@ -18,10 +18,19 @@ import SizeGetter from "../SizeGetter";
 import { ClassNameProps } from "components/models/common";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { splitViewActions, splitViewSelectors } from "components/common/splitView/store/splitViewSlice";
+import useConfirm from "components/common/ConfirmDialog";
+import { DirtyFlagProvider, useDirtyFlagContext } from "components/hooks/useDirtyFlag";
+
+interface PageDirtyState {
+    isDirty: boolean;
+    customDialog: () => JQueryDeferred<confirmDialogResult>;
+}
 
 const SplitViewContext = createContext<{
     sheetComponent: ReactNode;
     setSheetComponent: (sheetComponent: ReactNode) => void;
+    setIsCloseConfirmationRequired: (isConfirmationRequired: boolean) => void;
+    confirmBeforeClose: (action: () => void) => void;
     registerSheetClose: (callback: (() => void) | null) => void;
     activeSheetOwnerId: string | null;
     setActiveSheetOwnerId: (ownerId: string | null) => void;
@@ -41,6 +50,49 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
     const [activeSheetOwnerId, setActiveSheetOwnerId] = useState<string | null>(null);
     const [sheetPortalNode, setSheetPortalNode] = useState<HTMLDivElement | null>(null);
     const onSheetCloseRef = useRef<(() => void) | null>(null);
+    const isCloseConfirmationRequiredRef = useRef(false);
+    const pageDirtyStateRef = useRef<PageDirtyState>({ isDirty: false, customDialog: null });
+    const confirm = useConfirm();
+    const setIsViewModelDirty = useDirtyFlagContext()?.setIsDirty;
+
+    const syncViewModelDirtyFlag = useCallback(() => {
+        const { isDirty, customDialog } = pageDirtyStateRef.current;
+        setIsViewModelDirty?.(isDirty || isCloseConfirmationRequiredRef.current, isDirty ? customDialog : null);
+    }, [setIsViewModelDirty]);
+
+    const setIsPageDirty = useCallback(
+        (isDirty: boolean, customDialog?: PageDirtyState["customDialog"]) => {
+            pageDirtyStateRef.current = { isDirty, customDialog };
+            syncViewModelDirtyFlag();
+        },
+        [syncViewModelDirtyFlag]
+    );
+
+    const setIsCloseConfirmationRequired = useCallback(
+        (isConfirmationRequired: boolean) => {
+            isCloseConfirmationRequiredRef.current = isConfirmationRequired;
+            syncViewModelDirtyFlag();
+        },
+        [syncViewModelDirtyFlag]
+    );
+
+    const confirmBeforeClose = useCallback(
+        (action: () => void) => {
+            if (!isCloseConfirmationRequiredRef.current) {
+                action();
+                return;
+            }
+
+            confirm({
+                title: "Unsaved changes",
+                icon: "warning",
+                message: "You have unsaved changes. Do you want to discard them?",
+                confirmText: "Discard",
+                confirmIcon: "trash",
+            }).then((isConfirmed) => isConfirmed && action());
+        },
+        [confirm]
+    );
 
     const setSheetComponent = useCallback((component: ReactNode) => {
         if (component === null) {
@@ -63,21 +115,33 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
         () => ({
             sheetComponent,
             setSheetComponent,
+            setIsCloseConfirmationRequired,
+            confirmBeforeClose,
             registerSheetClose,
             activeSheetOwnerId,
             setActiveSheetOwnerId,
             sheetPortalNode,
             setSheetPortalNode,
         }),
-        [sheetComponent, setSheetComponent, registerSheetClose, activeSheetOwnerId, sheetPortalNode]
+        [
+            sheetComponent,
+            setSheetComponent,
+            setIsCloseConfirmationRequired,
+            confirmBeforeClose,
+            registerSheetClose,
+            activeSheetOwnerId,
+            sheetPortalNode,
+        ]
     );
 
     return (
         <SplitViewContext.Provider value={contextValue}>
-            <div className="split-view">
-                <BodyWrapper>{props.children}</BodyWrapper>
-                <SheetWrapper>{sheetComponent}</SheetWrapper>
-            </div>
+            <DirtyFlagProvider setIsDirty={setIsPageDirty}>
+                <div className="split-view">
+                    <BodyWrapper>{props.children}</BodyWrapper>
+                    <SheetWrapper>{sheetComponent}</SheetWrapper>
+                </div>
+            </DirtyFlagProvider>
         </SplitViewContext.Provider>
     );
 }
