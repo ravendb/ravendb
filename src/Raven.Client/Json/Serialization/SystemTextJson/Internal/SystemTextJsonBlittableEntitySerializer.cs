@@ -2,35 +2,28 @@ using System;
 using System.Text.Json;
 using Raven.Client.Documents.Identity;
 using Sparrow.Json;
-using Sparrow.Threading;
 
 namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 {
     internal sealed class SystemTextJsonBlittableEntitySerializer
     {
-        private readonly LightWeightThreadLocal<JsonSerializerOptions> _options;
+        private readonly SystemTextJsonSerializationConventions _conventions;
 
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
         public SystemTextJsonBlittableEntitySerializer(SystemTextJsonSerializationConventions conventions)
         {
+            _conventions = conventions;
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions.Conventions, generateIdAsync: null);
-            _options = new LightWeightThreadLocal<JsonSerializerOptions>(() => conventions.CreateJsonSerializerOptions());
         }
 
         public object EntityFromJsonStream(Type type, BlittableJsonReaderObject json)
         {
-            using var reader = new SystemTextJsonBlittableReader();
-            reader.Initialize(json);
-
             object entity;
-            try
+            using (var reader = new SystemTextJsonBlittableReader())
             {
-                entity = JsonSerializer.Deserialize(reader.GetUtf8Json(), type, _options.Value);
-            }
-            finally
-            {
-                reader.ReturnMemory();
+                reader.Initialize(json);
+                entity = JsonSerializer.Deserialize(reader.GetUtf8Json(), type, _conventions.Options);
             }
 
             if (entity != null)
