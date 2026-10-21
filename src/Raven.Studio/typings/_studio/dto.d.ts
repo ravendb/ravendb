@@ -491,6 +491,7 @@ interface pagedResultExtended<T> extends pagedResult<T> {
     explanations?: dictionary<Array<string>>;
     timings?: Raven.Client.Documents.Queries.Timings.QueryTimings;
     queryPlan?: Raven.Client.Documents.Queries.Timings.QueryInspectionNode;
+    fromCache?: boolean;
 }
 
 interface pagedResultWithToken<T> extends pagedResult<T> {
