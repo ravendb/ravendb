@@ -260,7 +260,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 options.Converters.Add(new JsonStringEnumConverter());
 
             options.Converters.Add(DateTimeISO8601Converter.Instance);
-            options.Converters.Add(LuceneDateTimeConverter.Instance);
             options.Converters.Add(DictionaryDateTimeKeysConverter.Instance);
             options.Converters.Add(ParametersConverter.Instance);
             options.Converters.Add(LinqEnumerableConverter.Instance);
