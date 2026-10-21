@@ -5,11 +5,6 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 {
-    /// <summary>
-    /// An IBufferWriter backed by JsonOperationContext arena memory.
-    /// Avoids managed byte[] allocations entirely - all memory comes from the context's
-    /// native arena allocator and is freed when the context is reset/disposed.
-    /// </summary>
     internal sealed unsafe class ContextMemoryBufferWriter : IBufferWriter<byte>, IDisposable
     {
         private readonly JsonOperationContext _context;
@@ -62,11 +57,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             int needed = _position + sizeHint;
             int increase = needed - _allocation.SizeInBytes;
 
-            // Try to grow in-place first (just bumps the arena pointer, no copy)
             if (_context.GrowAllocation(_allocation, increase))
                 return;
 
-            // Can't grow in-place - allocate new, copy, return old
             int newSize = Math.Max(_allocation.SizeInBytes * 2, needed);
             var newAllocation = _context.GetMemory(newSize);
             Buffer.MemoryCopy(_allocation.Address, newAllocation.Address, newAllocation.SizeInBytes, _position);
@@ -74,10 +67,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             _allocation = newAllocation;
         }
 
-        /// <summary>
-        /// Return native memory to the context immediately.
-        /// Call after the written bytes have been consumed.
-        /// </summary>
         public void ReturnMemory()
         {
             if (_allocation != null)

@@ -414,7 +414,6 @@ namespace Raven.Client.Documents.BulkInsert
                 {
                     if (_conventions.Serialization is SystemTextJsonSerializationConventions stjConventions)
                     {
-                        // Fast path: write entity + metadata directly to stream as UTF-8, bypassing blittable
                         stjConventions.WriteEntityToStream(_writer.StreamWriter.BaseStream, entity, metadata, _defaultSerializer);
                     }
                     else
