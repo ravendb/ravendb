@@ -1,4 +1,4 @@
-﻿using Sparrow.Json;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.AI.Settings;
 

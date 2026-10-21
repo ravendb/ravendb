@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -125,40 +125,36 @@ internal sealed partial class AnthropicChatCompletionProvider
         // Partial plain text is still an answer; a cut structured object or a cut tool call is not.
         var lengthTruncated = state.StopReason is Wire.StopReasonMaxTokens or Wire.StopReasonModelContextWindowExceeded;
         if (lengthTruncated && state.StructuredOutput)
-            throw new TooManyTokensException($"The model stopped because it ran out of room (stop_reason='{state.StopReason}').") { RequestId = GetRequestId(response.Headers) };
+            throw OutOfRoom(state.StopReason, response);
 
         var blocks = AsStreamState<AnthropicStreamState>(state).Blocks;
         var ordered = blocks.OrderBy(kv => kv.Key).Select(kv => kv.Value).ToList();
         var hasToolUse = ordered.Any(b => b.Type == Wire.TypeToolUse);
+        var text = string.Concat(ordered.Where(b => b.Type == Wire.TypeText).Select(b => b.Text.ToString()));
 
         if (state.StopReason == Wire.StopReasonRefusal)
-        {
-            var refusalText = string.Concat(ordered.Where(b => b.Type == Wire.TypeText).Select(b => b.Text.ToString()));
-            RefusedToAnswerException.Throw(RefusalText(refusalText), "[streaming]", state.StopReason, GetRequestId(response.Headers));
-        }
+            RefusedToAnswerException.Throw(RefusalText(text), "[streaming]", state.StopReason, GetRequestId(response.Headers));
 
         if (lengthTruncated && hasToolUse)
-            throw new TooManyTokensException($"The model stopped because it ran out of room (stop_reason='{state.StopReason}').") { RequestId = GetRequestId(response.Headers) };
+            throw OutOfRoom(state.StopReason, response);
 
         if (hasToolUse == false)
         {
             if (state.StructuredOutput == false)
             {
-                var plainText = string.Concat(ordered.Where(b => b.Type == Wire.TypeText).Select(b => b.Text.ToString()));
-                if (lengthTruncated && plainText.Length == 0)
-                    throw new TooManyTokensException($"The model stopped because it ran out of room (stop_reason='{state.StopReason}').") { RequestId = GetRequestId(response.Headers) };
+                if (lengthTruncated && text.Length == 0)
+                    throw OutOfRoom(state.StopReason, response);
 
                 return new AiResponse(AiResponseType.Result)
                 {
-                    Result = plainText,
-                    Message = CreateAssistantMessage(streamingCtx, plainText, "anthropic/streamed/text")
+                    Result = text,
+                    Message = CreateAssistantMessage(streamingCtx, text, "anthropic/streamed/text")
                 };
             }
 
             var resultMessage = state.FinalResult;
             if (resultMessage == null)
             {
-                var text = string.Concat(ordered.Where(b => b.Type == Wire.TypeText).Select(b => b.Text.ToString()));
                 if (string.IsNullOrEmpty(text))
                     throw UnexpectedResponseException.Create("No content in streamed response", response, string.Empty, GetRequestId(response.Headers));
 

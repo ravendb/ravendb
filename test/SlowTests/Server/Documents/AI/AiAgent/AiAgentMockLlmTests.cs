@@ -207,6 +207,12 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
                 Assert.Equal(toolIterations + 1, requests);
                 Assert.Equal(1, handler.LastClient.ForTestingPurposesOnly().ToolPreparationCount);
+
+                // every model iteration of the call shares one parsed-JSON cache
+                var parsedJsonPerRequest = handler.LastClient.ForTestingPurposesOnly().ParsedJsonPerRequest;
+                Assert.Equal(toolIterations + 1, parsedJsonPerRequest.Count);
+                Assert.NotNull(parsedJsonPerRequest[0]);
+                Assert.All(parsedJsonPerRequest, p => Assert.Same(parsedJsonPerRequest[0], p));
             }
         }
     }

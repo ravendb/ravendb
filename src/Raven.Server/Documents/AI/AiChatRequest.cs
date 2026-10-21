@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Sparrow.Json;
 
@@ -20,6 +20,9 @@ public sealed record AiChatRequest
     public string Schema;
 
     public string PromptCacheKey;
+
+    // JSON already parsed in this conversation call; when null, the provider parses for this write only.
+    public ParsedJsonCache ParsedJson;
 }
 
 public sealed class AiToolDescriptor

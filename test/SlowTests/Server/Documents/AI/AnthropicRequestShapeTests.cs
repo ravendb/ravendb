@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -124,7 +124,7 @@ namespace SlowTests.Server.Documents.AI
         [RavenFact(RavenTestCategory.Ai)]
         public async Task RealSubAgentSchema_IsClosedAndStrictForAnthropic()
         {
-            // The real generator emits type/properties/required and no additionalProperties.
+            // The real generator emits a closed object, so it goes to every provider closed.
             string canonical;
             using (var pool = NewContextPool())
             using (pool.AllocateOperationContext(out JsonOperationContext ctx))
@@ -136,10 +136,10 @@ namespace SlowTests.Server.Documents.AI
                 });
             }
 
-            // 1) the provider-neutral schema is what we think it is, and is open
+            // 1) the provider-neutral schema is what we think it is, and is closed
             var canonicalJson = JObject.Parse(canonical);
             Assert.Equal("object", (string)canonicalJson["type"]);
-            Assert.Null(canonicalJson["additionalProperties"]);
+            Assert.False((bool)canonicalJson["additionalProperties"]);
 
             // 2) the Anthropic copy is closed and strict
             var tool = await AnthropicTool(canonical);

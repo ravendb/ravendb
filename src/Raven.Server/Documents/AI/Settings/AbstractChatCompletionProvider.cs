@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -84,10 +84,20 @@ internal abstract class AbstractChatCompletionProvider
     public abstract DynamicJsonValue BuildTool(JsonOperationContext ctx, string name, string description, string parametersSchema);
 
     // 'request' is resolved by the client: internal messages filtered, tools in this provider's shape.
-    public abstract void WritePayload(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, AiChatRequest request, bool streaming);
+    // 'ctx' lives only for this write; keep nothing built with it.
+    public void WritePayload(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, AiChatRequest request, bool streaming)
+    {
+        if (request.ParsedJson == null)
+            request = request with { ParsedJson = new ParsedJsonCache(ctx) };
 
-    // Converts the canonical (OpenAI-shaped) messages and the attachments into this provider's message format.
-    protected abstract ProviderMessages NormalizeMessages(JsonOperationContext ctx, IEnumerable<BlittableJsonReaderObject> messages, List<AiAttachment> attachments);
+        WritePayloadCore(writer, ctx, request, streaming);
+    }
+
+    // 'request.ParsedJson' is never null here.
+    protected abstract void WritePayloadCore(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, AiChatRequest request, bool streaming);
+
+    // Converts the request's canonical (OpenAI-shaped) messages and its attachments into this provider's message format.
+    protected abstract ProviderMessages NormalizeMessages(JsonOperationContext ctx, AiChatRequest request);
 
     protected sealed class ProviderMessages
     {

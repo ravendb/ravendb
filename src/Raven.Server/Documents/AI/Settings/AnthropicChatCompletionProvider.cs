@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -49,7 +49,7 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
 
     public override DynamicJsonValue BuildTool(JsonOperationContext ctx, string name, string description, string parametersSchema)
     {
-        var inputSchema = ParseJsonObject(ctx, parametersSchema);
+        var inputSchema = ParsedJsonCache.ParseObject(ctx, parametersSchema);
 
         return new DynamicJsonValue
         {
@@ -60,7 +60,7 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
         };
     }
 
-    public override void WritePayload(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, AiChatRequest request, bool streaming)
+    protected override void WritePayloadCore(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, AiChatRequest request, bool streaming)
     {
         var body = new DynamicJsonValue
         {
@@ -75,7 +75,7 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
 
         AppendReasoning(body, ref outputConfig);
 
-        var turns = NormalizeMessages(ctx, request.Messages, request.Attachments);
+        var turns = NormalizeMessages(ctx, request);
 
         if (turns.System != null)
             body[Wire.System] = turns.System;
@@ -91,27 +91,26 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
                 body[Wire.ToolChoice] = new DynamicJsonValue { [Wire.Type] = Wire.ToolChoiceNone };
         }
 
-        var format = BuildOutputFormat(ctx, request.Schema);
+        var format = BuildOutputFormat(request);
         if (format != null)
             (outputConfig ??= new DynamicJsonValue())[Wire.Format] = format;
 
         if (outputConfig != null)
             body[Wire.OutputConfig] = outputConfig;
 
-        // Agent conversations carry a cache key; GenAI requests on Anthropic don't, so they aren't cached.
         if (request.PromptCacheKey != null && EnablePromptCaching)
             body[Wire.CacheControl] = new DynamicJsonValue { [Wire.Type] = Wire.CacheEphemeral };
 
         ctx.Write(writer, body);
     }
 
-    protected override ProviderMessages NormalizeMessages(JsonOperationContext ctx, IEnumerable<BlittableJsonReaderObject> payloadMessages, List<AiAttachment> attachments)
+    protected override ProviderMessages NormalizeMessages(JsonOperationContext ctx, AiChatRequest request)
     {
         var systemText = new StringBuilder();
         var messages = new DynamicJsonArray();
         DynamicJsonArray pendingToolResults = null;
 
-        foreach (var message in payloadMessages)
+        foreach (var message in request.Messages)
         {
             if (message.TryGet(Canonical.ResponseFields.Role, out string role) == false)
                 continue;
@@ -146,7 +145,7 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
 
             if (role == Canonical.RequestFields.RoleAssistantValue)
             {
-                if (TryBuildAssistantTurn(ctx, message, out var assistantTurn))
+                if (TryBuildAssistantTurn(message, request.ParsedJson, out var assistantTurn))
                     messages.Add(assistantTurn);
                 continue;
             }
@@ -163,7 +162,7 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
 
         FlushToolResults(messages, pendingToolResults);
 
-        AppendAttachments(messages, attachments);
+        AppendAttachments(messages, request.Attachments);
 
         if (messages.Count == 0)
             throw new InvalidOperationException(
@@ -190,12 +189,12 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
     // Anthropic's effort levels are lowercase and case-sensitive; any value goes out as given, lowercased, and the API validates it.
     private string EffortLevel() => _settings.ReasoningEffort.Trim().ToLowerInvariant();
 
-    // Anthropic's strict mode requires `additionalProperties: false` on every object in a tool schema, and RavenDB's own
-    // sub-agent schema generator does not emit it on the root. Only the root is repaired: the schemas RavenDB generates are either
-    // flat (sub-agent parameters are primitives) or already closed at every level (the sample-object generator), and a
-    // hand-written schema belongs to the agent author - if it declares something Anthropic rejects, Anthropic says so.
+    // Anthropic's strict mode requires `additionalProperties: false` on every object in a tool schema. The schemas RavenDB generates
+    // (sub-agent and sample-object) already close every object, so this only matters for a hand-written ParametersSchema. Only the
+    // root is repaired: the rest of a hand-written schema belongs to the agent author - if it declares something Anthropic rejects,
+    // Anthropic says so.
     //
-    // What RavenDB generates for a sub-agent tool (GetSchemaForSubAgentTool), e.g. one string parameter:
+    // A hand-written schema without it, e.g.:
     //   {"type":"object","properties":{"customerId":{"description":"The customer to look up","type":"string"}},"required":["customerId"]}
     // goes out to Anthropic as the same object with "additionalProperties": false appended at the root.
     // A schema that already states additionalProperties is sent as-is; a tool with no parameters gets
@@ -233,7 +232,7 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
         messages.Add(new DynamicJsonValue { [Wire.Role] = Wire.RoleUser, [Wire.Content] = pendingToolResults });
     }
 
-    private static bool TryBuildAssistantTurn(JsonOperationContext ctx, BlittableJsonReaderObject message, out DynamicJsonValue turn)
+    private static bool TryBuildAssistantTurn(BlittableJsonReaderObject message, ParsedJsonCache parsedJson, out DynamicJsonValue turn)
     {
         turn = null;
 
@@ -257,7 +256,7 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
                     [Wire.Type] = Wire.TypeToolUse,
                     [Wire.Id] = id,
                     [Wire.Name] = name,
-                    [Wire.Input] = ParseJsonObject(ctx, arguments)
+                    [Wire.Input] = parsedJson.GetOrParseToolArguments(id, arguments)
                 });
             }
         }
@@ -303,12 +302,13 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
         }
     }
 
-    private static DynamicJsonValue BuildOutputFormat(JsonOperationContext ctx, string schema)
+    private static DynamicJsonValue BuildOutputFormat(AiChatRequest request)
     {
+        var schema = request.Schema;
         if (string.IsNullOrWhiteSpace(schema))
             return null;
 
-        var wrapper = ParseJsonObject(ctx, schema);
+        var wrapper = request.ParsedJson.GetOrParseSchema(schema);
         object innerSchema = wrapper != null && wrapper.TryGetMember(Wire.Schema, out var s) ? s : wrapper;
 
         return new DynamicJsonValue
@@ -327,7 +327,7 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
         // Partial plain text is still an answer; a cut structured object or a cut tool call is not.
         var lengthTruncated = stopReason is Wire.StopReasonMaxTokens or Wire.StopReasonModelContextWindowExceeded;
         if (lengthTruncated && structuredOutput)
-            throw new TooManyTokensException($"The model stopped because it ran out of room (stop_reason='{stopReason}'). Response: {content}") { RequestId = GetRequestId(response.Headers) };
+            throw OutOfRoom(stopReason, response, content);
 
         if (content.TryGet(Wire.Content, out BlittableJsonReaderArray contentArray) == false || contentArray == null)
             throw UnexpectedResponseException.Create("No content in response", response, content, GetRequestId(response.Headers));
@@ -362,7 +362,7 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
             RefusedToAnswerException.Throw(RefusalText(text.ToString()), content.ToString(), stopReason, GetRequestId(response.Headers));
 
         if (lengthTruncated && (toolCalls != null || text.Length == 0))
-            throw new TooManyTokensException($"The model stopped because it ran out of room (stop_reason='{stopReason}'). Response: {content}") { RequestId = GetRequestId(response.Headers) };
+            throw OutOfRoom(stopReason, response, content);
 
         if (toolCalls != null)
         {
@@ -541,6 +541,13 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
         }
     }
 
+    // A streamed response has no single body to include.
+    private TooManyTokensException OutOfRoom(string stopReason, HttpResponseMessage response, BlittableJsonReaderObject content = null) =>
+        new($"The model stopped because it ran out of room (stop_reason='{stopReason}')." + (content == null ? null : $" Response: {content}"))
+        {
+            RequestId = GetRequestId(response.Headers)
+        };
+
     // A refusal from Anthropic's classifier can come with no text at all.
     private static string RefusalText(string text) => string.IsNullOrWhiteSpace(text) ? "The model refused to answer and gave no reason" : text;
 
@@ -550,14 +557,6 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
         [Wire.MediaType] = mediaType,
         [Wire.Data] = data
     };
-
-    private static BlittableJsonReaderObject ParseJsonObject(JsonOperationContext ctx, string json)
-    {
-        if (string.IsNullOrWhiteSpace(json))
-            return ctx.ReadObject(new DynamicJsonValue(), "empty/json");
-
-        return ctx.Sync.ReadForMemory(json, "json");
-    }
 
     private static class Wire
     {
