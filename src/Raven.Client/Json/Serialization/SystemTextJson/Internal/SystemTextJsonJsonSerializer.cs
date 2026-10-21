@@ -23,7 +23,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
         {
             if (writer is SystemTextJsonBlittableWriter stjWriter)
             {
-                // Serialize entity to UTF-8 in context native memory
                 using var bufferWriter = new ContextMemoryBufferWriter(stjWriter.Context);
                 using (var utf8Writer = new Utf8JsonWriter((System.Buffers.IBufferWriter<byte>)bufferWriter))
                 {
@@ -38,11 +37,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             }
         }
 
-        /// <summary>
-        /// Serialize entity to UTF-8 bytes in context native memory, then parse directly into
-        /// a BlittableJsonReaderObject using the context's own parser. Bypasses the IJsonWriter
-        /// token walk entirely.
-        /// </summary>
         internal unsafe BlittableJsonReaderObject SerializeToBlittable(object value, Type objectType, JsonOperationContext context)
         {
             using var bufferWriter = new ContextMemoryBufferWriter(context);
@@ -54,10 +48,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             return ParseBufferToBlittable(bufferWriter, context);
         }
 
-        /// <summary>
-        /// Serialize entity with @metadata prefix to UTF-8 bytes, then parse into blittable.
-        /// Same approach as WriteEntityToStream but targets a context buffer instead of HTTP stream.
-        /// </summary>
         internal unsafe BlittableJsonReaderObject SerializeToBlittableWithMetadata(object value, Type objectType,
             IMetadataDictionary metadata, JsonOperationContext context)
         {
@@ -66,7 +56,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             {
                 utf8Writer.WriteStartObject();
 
-                // Write @metadata first
                 if (metadata != null && metadata.Count > 0)
                 {
                     utf8Writer.WritePropertyName(Constants.Documents.Metadata.Key);
@@ -79,7 +68,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                     utf8Writer.WriteEndObject();
                 }
 
-                // Serialize entity properties into the same object
                 using var doc = JsonDocument.Parse(JsonSerializer.SerializeToUtf8Bytes(value, objectType, Options));
                 foreach (var property in doc.RootElement.EnumerateObject())
                 {

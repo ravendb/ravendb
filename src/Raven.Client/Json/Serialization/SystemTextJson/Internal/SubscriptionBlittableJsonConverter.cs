@@ -79,9 +79,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             }
         }
 
-        // Cache known JSON property names per entity type.
-        // Includes both CLR names and attribute-specified JSON names ([JsonPropertyName], [JsonProperty], [DataMember])
-        // so that renamed properties are not misclassified as "missing".
         private static readonly ConcurrentDictionary<Type, HashSet<string>> _knownPropertyNamesCache = new();
 
         private static HashSet<string> GetKnownPropertyNames(Type type)

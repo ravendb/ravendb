@@ -14,8 +14,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
         {
             _context = blittable._context;
 
-            // Blittable binary is more compact than UTF-8 JSON text.
-            // Allocate 2x blittable size from context native memory as initial estimate.
             int estimatedSize = Math.Max(blittable.Size * 2, 512);
             _allocation = _context.GetMemory(estimatedSize);
 
@@ -30,7 +28,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 }
                 catch (NotSupportedException)
                 {
-                    // Buffer too small - keep doubling until WriteJsonTo succeeds
                     int needed = _allocation.SizeInBytes * 2;
                     if (_context.GrowAllocation(_allocation, needed - _allocation.SizeInBytes) == false)
                     {
@@ -47,10 +44,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             return new ReadOnlySpan<byte>(_allocation.Address, _length);
         }
 
-        /// <summary>
-        /// Return the native memory to the context immediately.
-        /// Call this as soon as deserialization is complete, while still in the same context scope.
-        /// </summary>
         public void ReturnMemory()
         {
             if (_allocation != null && _context != null)
@@ -63,8 +56,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
         public void Dispose()
         {
-            // Reader is cached in LightWeightThreadLocal and outlives the session/context.
-            // Don't return memory here - use ReturnMemory() explicitly after deserialization.
         }
     }
 }

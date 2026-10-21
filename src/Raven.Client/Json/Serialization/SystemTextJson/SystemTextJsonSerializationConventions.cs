@@ -169,19 +169,14 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return options;
         }
 
-        /// <summary>
-        /// Writes an entity with @metadata directly to a stream as UTF-8 JSON,
-        /// bypassing the blittable intermediate format. Used by bulk insert.
-        /// </summary>
         internal void WriteEntityToStream(Stream stream, object entity, IMetadataDictionary metadata, IJsonSerializer serializer)
         {
             var options = ((SystemTextJsonJsonSerializer)serializer).Options;
 
-            // Serialize entity directly to stream: produces {"prop1":...,"prop2":...}
             JsonSerializer.Serialize(stream, entity, entity.GetType(), options);
             if (metadata != null && metadata.Count > 0)
             {
-                stream.SetLength(stream.Length - 1); // Remove trailing }
+                stream.SetLength(stream.Length - 1);
                 stream.WriteByte((byte)',');
 
                 using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { SkipValidation = true });
