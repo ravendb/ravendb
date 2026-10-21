@@ -716,8 +716,13 @@ namespace Raven.Server.Documents.Indexes.Static
 
             IShape shape = spatialField.GetContext().MakePoint(lng.Value, lat.Value);
             return CurrentIndexingScope.Current.Index.SearchEngineType is SearchEngineType.Lucene
-                ? spatialField.LuceneCreateIndexableFields(shape)
+                ? spatialField.LuceneCreateIndexableFields(shape, ShouldIndexSpatialCenters())
                 : spatialField.CoraxCreateIndexableFields(shape);
+        }
+
+        private static bool ShouldIndexSpatialCenters()
+        {
+            return IndexDefinitionBaseServerSide.IndexVersion.IsSpatialSortByNearestPointSupported(CurrentIndexingScope.Current.Index.Definition.Version);
         }
 
         internal static IEnumerable<object> CreateSpatialField(SpatialField spatialField, object shapeWkt)
@@ -729,7 +734,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 return null;
 
             return CurrentIndexingScope.Current.Index.SearchEngineType is SearchEngineType.Lucene
-                ? spatialField.LuceneCreateIndexableFields(shapeWkt)
+                ? spatialField.LuceneCreateIndexableFields(shapeWkt, ShouldIndexSpatialCenters())
                 : spatialField.CoraxCreateIndexableFields(shapeWkt);
         }
 
