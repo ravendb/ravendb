@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -9,7 +8,6 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.Json;
-using Sparrow.Exceptions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
@@ -332,16 +330,7 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
         if (hasContent == false && TryGetDeltaReasoning(message, out content) == false)
             throw NoUsableAnswer(response, responseContent, choice0, message, finishReason);
 
-        try
-        {
-            return ctx.Sync.ReadForMemory(content, "ai/output");
-        }
-        catch (Exception e) when (e is InvalidDataException or InvalidStartOfObjectException or EndOfStreamException)
-        {
-            throw UnexpectedResponseException.Create(
-                $"Structured output was requested but the model returned content that is not valid JSON (finish_reason='{finishReason}'). Content: {content}",
-                response, responseContent, GetRequestId(response.Headers));
-        }
+        return ReadStructuredOutput(ctx, content, $"finish_reason='{finishReason}'", response, responseContent);
     }
 
     private object GetPlainTextContent(HttpResponseMessage response, BlittableJsonReaderObject responseContent,

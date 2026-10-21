@@ -7,8 +7,10 @@ using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.ETL.Providers.AI;
+using Sparrow.Exceptions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.AI.Settings;
 
@@ -130,6 +132,20 @@ internal abstract class AbstractChatCompletionProvider
     public abstract TimeSpan? GetRetryAfter(HttpResponseMessage response, AiError error);
 
     public abstract string GetRequestId(HttpResponseHeaders headers);
+
+    protected BlittableJsonReaderObject ReadStructuredOutput(JsonOperationContext ctx, string text, string reason, HttpResponseMessage response, BlittableJsonReaderObject body)
+    {
+        try
+        {
+            return ctx.Sync.ReadForMemory(text, "ai/output");
+        }
+        catch (Exception e) when (e is InvalidDataException or InvalidStartOfObjectException or EndOfStreamException)
+        {
+            throw UnexpectedResponseException.Create(
+                $"Structured output was requested but the model returned content that is not valid JSON ({reason}). Content: {text}",
+                response, body?.ToString() ?? string.Empty, GetRequestId(response.Headers));
+        }
+    }
 
     public virtual ValueTask<BlittableJsonReaderObject> TryGetResponseContentAsync(JsonOperationContext context, Stream stream)
     {

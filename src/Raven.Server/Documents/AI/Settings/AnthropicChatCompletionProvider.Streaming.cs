@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -8,9 +7,7 @@ using System.Text;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.ETL.Providers.AI;
-using Sparrow.Exceptions;
 using Sparrow.Json;
-using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.AI.Settings;
 
@@ -158,16 +155,7 @@ internal sealed partial class AnthropicChatCompletionProvider
                 if (string.IsNullOrEmpty(text))
                     throw UnexpectedResponseException.Create("No content in streamed response", response, string.Empty, GetRequestId(response.Headers));
 
-                try
-                {
-                    resultMessage = streamingCtx.Sync.ReadForMemory(text, "ai/output");
-                }
-                catch (Exception e) when (e is InvalidDataException or InvalidStartOfObjectException or EndOfStreamException)
-                {
-                    throw UnexpectedResponseException.Create(
-                        $"Structured output was requested but the model streamed content that is not valid JSON (stop_reason='{state.StopReason}'). Content: {text}",
-                        response, string.Empty, GetRequestId(response.Headers));
-                }
+                resultMessage = ReadStructuredOutput(streamingCtx, text, $"stop_reason='{state.StopReason}'", response, body: null);
             }
 
             return new AiResponse(AiResponseType.Result)

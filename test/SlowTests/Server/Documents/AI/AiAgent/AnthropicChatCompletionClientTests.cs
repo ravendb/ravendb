@@ -231,7 +231,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         private class Post
         {
             public string Text;
-            public string Answer;
         }
 
         [RavenFact(RavenTestCategory.Ai)]
