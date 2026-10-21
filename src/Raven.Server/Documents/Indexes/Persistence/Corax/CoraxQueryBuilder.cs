@@ -1423,7 +1423,8 @@ public static class CoraxQueryBuilder
                 sortArray[sortIndex++] = new OrderMetadata(fieldMetadata, field.Ascending, MatchCompareFieldType.Spatial, point, roundTo,
                     spatialField.Units is SpatialUnits.Kilometers
                         ? global::Corax.Utils.Spatial.SpatialUnits.Kilometers
-                        : global::Corax.Utils.Spatial.SpatialUnits.Miles);
+                        : global::Corax.Utils.Spatial.SpatialUnits.Miles,
+                    useNearestPoint: IndexDefinitionBaseServerSide.IndexVersion.IsSpatialSortByNearestPointSupported(index.Definition.Version));
                 continue;
             }
 
