@@ -1,11 +1,10 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization.Metadata;
 using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
 
@@ -39,78 +38,41 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (jsonSerializer == null)
                 throw new ArgumentNullException(nameof(jsonSerializer));
 
+            var type = entity.GetType();
+            var options = ((SystemTextJsonJsonSerializer)jsonSerializer).Options;
+            object newInstance;
+
             using (var reader = new SystemTextJsonBlittableReader())
             {
                 reader.Initialize(json);
-                var type = entity.GetType();
-                var serializer = (SystemTextJsonJsonSerializer)jsonSerializer;
-                object newInstance;
-                try
-                {
-                    newInstance = JsonSerializer.Deserialize(reader.GetUtf8Json(), type, serializer.Options);
-                }
-                finally
-                {
-                    reader.ReturnMemory();
-                }
+                newInstance = JsonSerializer.Deserialize(reader.GetUtf8Json(), type, options);
+            }
 
-                if (newInstance == null)
-                    return;
+            if (newInstance == null)
+                return;
 
-                GetCompiledCopier(type)(newInstance, entity);
+            Dictionary<string, JsonPropertyInfo> properties = Conventions.GetJsonProperties(type);
+            foreach (string propertyName in json.GetPropertyNames())
+            {
+                if (properties.TryGetValue(propertyName, out JsonPropertyInfo property) == false || property.Get == null)
+                    continue;
+
+                Action<object, object> setter = property.Set ?? GetMemberSetter(property.AttributeProvider);
+                setter?.Invoke(entity, property.Get(newInstance));
             }
         }
 
-        private static readonly ConcurrentDictionary<Type, Action<object, object>> _copiers = new();
-
-        private static Action<object, object> GetCompiledCopier(Type type)
+        private static Action<object, object> GetMemberSetter(object attributeProvider)
         {
-            return _copiers.GetOrAdd(type, CompileCopier);
-        }
-
-        private static Action<object, object> CompileCopier(Type type)
-        {
-            var sourceParam = Expression.Parameter(typeof(object), "source");
-            var targetParam = Expression.Parameter(typeof(object), "target");
-
-            var sourceTyped = Expression.Variable(type, "s");
-            var targetTyped = Expression.Variable(type, "t");
-
-            var body = new List<Expression>
+            switch (attributeProvider)
             {
-                Expression.Assign(sourceTyped, Expression.Convert(sourceParam, type)),
-                Expression.Assign(targetTyped, Expression.Convert(targetParam, type))
-            };
-
-            for (Type currentType = type; currentType != null && currentType != typeof(object); currentType = currentType.BaseType)
-            {
-                PropertyInfo[] properties = currentType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-                for (int i = 0; i < properties.Length; i++)
-                {
-                    PropertyInfo property = properties[i];
-                    if (property.CanRead == false || property.CanWrite == false)
-                        continue;
-                    if (property.GetIndexParameters().Length > 0)
-                        continue;
-
-                    body.Add(Expression.Assign(
-                        Expression.Property(targetTyped, property),
-                        Expression.Property(sourceTyped, property)));
-                }
-
-                FieldInfo[] fields = currentType.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-                for (int i = 0; i < fields.Length; i++)
-                {
-                    FieldInfo field = fields[i];
-
-                    body.Add(Expression.Assign(
-                        Expression.Field(targetTyped, field),
-                        Expression.Field(sourceTyped, field)));
-                }
+                case PropertyInfo propertyInfo when propertyInfo.SetMethod != null:
+                    return (target, value) => propertyInfo.SetValue(target, value);
+                case FieldInfo fieldInfo when fieldInfo.IsInitOnly == false:
+                    return (target, value) => fieldInfo.SetValue(target, value);
+                default:
+                    return null;
             }
-
-            var block = Expression.Block(new[] { sourceTyped, targetTyped }, body);
-            return Expression.Lambda<Action<object, object>>(block, sourceParam, targetParam).Compile();
         }
 
         protected static BlittableJsonReaderObject ToBlittableInternal(
