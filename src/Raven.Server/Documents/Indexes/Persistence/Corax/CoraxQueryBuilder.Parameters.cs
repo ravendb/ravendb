@@ -82,7 +82,7 @@ public partial class CoraxQueryBuilder
                         || IsVectorSingleClause
                         || (query.Metadata.HasVectorSearch && index.Configuration.CoraxVectorSearchOrderByScoreAutomatically)
                         || HasBoostingAsOrderingType(query.Metadata.OrderBy))
-                       && (query.Metadata.HasVectorSearch || ScoresAreConsumed(query, AllowImplicitScoreOrdering));
+                       && (IsVectorSingleClause || ScoresAreConsumed(query, AllowImplicitScoreOrdering));
             Allocator = allocator;
             IndexReadOperation = indexReadOperation;
             DeduplicationDisabled = deduplicationDisabled;
