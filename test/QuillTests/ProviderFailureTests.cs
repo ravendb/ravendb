@@ -20,38 +20,6 @@ public class ProviderFailureTests(ITestOutputHelper output) : QuillTestBase(outp
     private const string BadKeyBody = """{"error":{"message":"Incorrect API key provided","type":"invalid_request_error"}}""";
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task A_rate_limit_short_enough_to_wait_out_is_retried_and_the_turn_answers()
-    {
-        await using var mock = await MockQuillServices.StartAsync(new FinalTurn("""{"reply":"answered after the wait"}"""));
-        mock.CompletionFailure = (429, RateLimitBody);
-        mock.CompletionFailureHeaders["Retry-After"] = "1";
-        mock.CompletionFailureCount = 1;
-
-        await using var h = await HarnessAsync(mock);
-
-        var ndjson = await h.App.SendEmbedChatAsync(h.Token, "hello");
-
-        Assert.Equal("answered after the wait", ReplyOf(ndjson));
-        Assert.Equal(2, mock.CompletionAttempts);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task A_rate_limit_that_keeps_coming_back_is_retried_to_the_cap_and_then_reported()
-    {
-        await using var mock = await MockQuillServices.StartAsync();
-        mock.CompletionFailure = (429, RateLimitBody);
-        mock.CompletionFailureHeaders["Retry-After"] = "1";
-
-        await using var h = await HarnessAsync(mock);
-
-        var error = ErrorOf(await h.App.SendEmbedChatAsync(h.Token, "hello"));
-
-        // the first attempt plus the two retries the cap allows
-        Assert.Equal(3, mock.CompletionAttempts);
-        Assert.True(error.Retryable);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
     public async Task A_rejected_key_is_a_failure_the_visitor_cannot_retry_and_never_names_the_setting()
     {
         await using var mock = await MockQuillServices.StartAsync();

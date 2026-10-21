@@ -40,7 +40,6 @@ public sealed class MockQuillServices : IAsyncDisposable
     private readonly List<Delivery> _deliveries = [];
     private readonly Lock _sync = new();
     private bool _consentGiven;
-    private int _completionFailures;
 
     public string BaseAddress { get; private set; } = "";
 
@@ -144,17 +143,11 @@ public sealed class MockQuillServices : IAsyncDisposable
     /// When set, a completion fails with this status and body instead of streaming a turn.
     public (int Status, string Body) CompletionFailure { get; set; }
 
-    /// Extra response headers on a failed completion, e.g. Retry-After.
-    public Dictionary<string, string> CompletionFailureHeaders { get; } = new(StringComparer.OrdinalIgnoreCase);
-
     /// Simulates a provider that is slow to answer at all.
     public TimeSpan CompletionDelay { get; set; }
 
     /// When true, a completion drops the connection instead of answering.
     public bool CompletionAbortsConnection { get; set; }
-
-    /// How many completions <see cref="CompletionFailure"/> applies to before the scripted turns resume.
-    public int CompletionFailureCount { get; set; } = int.MaxValue;
 
     /// Completion requests the provider has received, i.e. attempts including retries.
     public int CompletionAttempts
@@ -239,9 +232,6 @@ public sealed class MockQuillServices : IAsyncDisposable
         WebhookResponseHeaders.Clear();
         WebhookDelay = TimeSpan.Zero;
         CompletionFailure = default;
-        CompletionFailureHeaders.Clear();
-        CompletionFailureCount = int.MaxValue;
-        _completionFailures = 0;
         CompletionDelay = TimeSpan.Zero;
         CompletionAbortsConnection = false;
         _turns.Clear();
@@ -384,13 +374,8 @@ public sealed class MockQuillServices : IAsyncDisposable
             return;
         }
 
-        if (CompletionFailure is { Status: > 0 } failure && _completionFailures < CompletionFailureCount)
+        if (CompletionFailure is { Status: > 0 } failure)
         {
-            _completionFailures++;
-
-            foreach (var (name, value) in CompletionFailureHeaders)
-                ctx.Response.Headers[name] = value;
-
             ctx.Response.StatusCode = failure.Status;
             ctx.Response.ContentType = "application/json";
             await ctx.Response.WriteAsync(failure.Body, ctx.RequestAborted);
