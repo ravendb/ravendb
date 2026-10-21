@@ -54,7 +54,9 @@ describe("applyPlannerFrame", () => {
         const update = applyPlannerFrame(stateWithTurn(), {
             type: "proposal",
             areas: [{ area: "Sales", collections: ["Orders"], why: null }],
-            collections: [{ collection: "Orders", rootTable: "dbo.Orders", absorbs: [], why: "One per order.", fields: [] }],
+            collections: [
+                { collection: "Orders", rootTable: "dbo.Orders", absorbs: [], why: "One per order.", fields: [] },
+            ],
             dropped: [{ table: "dbo.AuditLog", why: "Nothing reads it." }],
             enables: [],
         });
@@ -206,7 +208,9 @@ describe("applyPlannerFrame", () => {
 
     it("drops a removed collection, and remembers it so the proposal does not bring it back", () => {
         const state = stateWithTurn({
-            plannerCollections: { Products: { name: "Products", outcome: "rejected", errors: [], config: null, issues: [] } },
+            plannerCollections: {
+                Products: { name: "Products", outcome: "rejected", errors: [], config: null, issues: [] },
+            },
         });
 
         const update = applyPlannerFrame(state, { type: "removed", collection: "Products", reason: null });
