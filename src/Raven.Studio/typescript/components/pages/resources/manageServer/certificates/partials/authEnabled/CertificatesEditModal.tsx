@@ -60,7 +60,7 @@ export default function CertificatesEditModal() {
 
             await manageServerService.updateCertificate(
                 certificatesUtils.mapEditToDto(formData, certificate),
-                certificate.HasTwoFactor && !formData.isRequire2FA
+                certificatesUtils.is2FARemoved(formData, certificate.HasTwoFactor)
             );
             reset(formData);
             dispatch(certificatesActions.fetchData());
@@ -127,7 +127,7 @@ const schema = yup.object({
         .nullable()
         .when(["isRequire2FA", "isRegenerate2FAKey", "$certHasTwoFactor"], {
             is: (isRequire2FA: boolean, isRegenerate2FAKey: boolean, certHasTwoFactor: boolean) =>
-                isRequire2FA && (!certHasTwoFactor || isRegenerate2FAKey),
+                certificatesUtils.isNew2FAKeyNeeded({ isRequire2FA, isRegenerate2FAKey }, certHasTwoFactor),
             then: (schema) => schema.required(),
         }),
 });

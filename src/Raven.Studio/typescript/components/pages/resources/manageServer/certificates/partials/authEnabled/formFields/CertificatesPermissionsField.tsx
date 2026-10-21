@@ -42,7 +42,7 @@ export default function CertificatesPermissionsField() {
     const removePermission = (idx: number) => {
         flushSync(() => permissionsFieldArray.remove(idx));
 
-        const removeButtons = permissionsListRef.current?.querySelectorAll("button");
+        const removeButtons = permissionsListRef.current?.querySelectorAll<HTMLElement>("[data-remove-permission]");
         const nextFocusTarget = removeButtons?.length
             ? removeButtons[Math.min(idx, removeButtons.length - 1)]
             : document.getElementById(databaseSelectId);
@@ -143,6 +143,7 @@ export default function CertificatesPermissionsField() {
                                     className="border-0 ms-3"
                                     title={`Remove ${field.databaseName}`}
                                     onClick={() => removePermission(idx)}
+                                    data-remove-permission
                                 >
                                     <Icon icon="trash" margin="m-0" />
                                 </Button>

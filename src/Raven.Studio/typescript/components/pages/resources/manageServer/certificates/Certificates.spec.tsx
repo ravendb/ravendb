@@ -1,5 +1,5 @@
 import * as stories from "./Certificates.stories";
-import { rtlRender, rtlRender_WithWaitForLoad, within } from "test/rtlTestUtils";
+import { act, rtlRender, rtlRender_WithWaitForLoad, within } from "test/rtlTestUtils";
 import { composeStories } from "@storybook/react-webpack5";
 import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 import moment from "moment";
@@ -51,6 +51,7 @@ const selectors = {
     securityClearanceSelect: "Security Clearance",
     databasePermissionsSelect: "Database Permissions",
     authenticationKeyField: "Authentication key",
+    requiredMessage: "Required",
 };
 
 const stubCertificates = ManageServerStubs.certificates().Certificates;
@@ -65,7 +66,6 @@ const disabledSsoUserCertName = stubSsoCertificates.find((x) => x.Usage === "Sso
 const certWithout2FAIndex = 1;
 const certWith2FAIndex = 2;
 const new2FAKey = ManageServerStubs.twoFactorSecret().Secret;
-const new2FAKeyInGroups = "RNHR X6WX CLZV QPJS W5NS WV64 JU65 E5WA";
 
 describe("Certificates", () => {
     async function openEditModal(certificateIndex: number) {
@@ -294,6 +294,15 @@ describe("Certificates", () => {
     describe("two-factor authentication when editing", () => {
         const { updateCertificate } = mockServices.manageServerService.mock;
 
+        function delayNextKeyRequest() {
+            let resolveKeyRequest: (result: { Secret: string }) => void;
+            jest.mocked(mockServices.manageServerService.mock.generateTwoFactorSecret).mockImplementationOnce(
+                () => new Promise((resolve) => (resolveKeyRequest = resolve))
+            );
+
+            return (key: string) => act(async () => resolveKeyRequest({ Secret: key }));
+        }
+
         beforeEach(() => {
             jest.clearAllMocks();
         });
@@ -338,7 +347,7 @@ describe("Certificates", () => {
             const { screen, fireClick } = await openEditModal(certWith2FAIndex);
 
             await fireClick(screen.getByRole("button", { name: selectors.generateNew2FAKeyButton }));
-            expect(await screen.findByDisplayValue(new2FAKeyInGroups)).toBeInTheDocument();
+            expect(await screen.findByDisplayValue(new2FAKey)).toBeInTheDocument();
             expect(screen.getByText(selectors.new2FAKeyBadge)).toBeInTheDocument();
 
             await fireClick(screen.getByRole("button", { name: selectors.saveChangesButton }));
@@ -355,7 +364,7 @@ describe("Certificates", () => {
             const { screen, fireClick } = await openEditModal(certWith2FAIndex);
 
             await fireClick(screen.getByRole("button", { name: selectors.generateNew2FAKeyButton }));
-            expect(await screen.findByDisplayValue(new2FAKeyInGroups)).toBeInTheDocument();
+            expect(await screen.findByDisplayValue(new2FAKey)).toBeInTheDocument();
             await fireClick(screen.getByRole("button", { name: selectors.keepCurrent2FAKeyButton }));
 
             await fireClick(screen.getByRole("button", { name: selectors.saveChangesButton }));
@@ -375,7 +384,7 @@ describe("Certificates", () => {
             expect(require2FASwitch).not.toBeChecked();
 
             await fireClick(require2FASwitch);
-            expect(await screen.findByDisplayValue(new2FAKeyInGroups)).toBeInTheDocument();
+            expect(await screen.findByDisplayValue(new2FAKey)).toBeInTheDocument();
             expect(screen.getByText(selectors.enable2FABadge)).toBeInTheDocument();
 
             await fireClick(screen.getByRole("button", { name: selectors.saveChangesButton }));
@@ -386,6 +395,67 @@ describe("Certificates", () => {
                     false
                 )
             );
+        });
+
+        it("keeps the current 2FA key after turning 2FA off and on again", async () => {
+            const { screen, fireClick } = await openEditModal(certWith2FAIndex);
+
+            await fireClick(screen.getByRole("button", { name: selectors.generateNew2FAKeyButton }));
+            expect(await screen.findByDisplayValue(new2FAKey)).toBeInTheDocument();
+
+            const require2FASwitch = screen.getByLabelText(selectors.require2FASwitch);
+            await fireClick(require2FASwitch);
+            await fireClick(require2FASwitch);
+
+            expect(screen.getByRole("button", { name: selectors.generateNew2FAKeyButton })).toBeInTheDocument();
+            expect(screen.queryByText(selectors.pending2FAChangeBadge)).not.toBeInTheDocument();
+
+            await fireClick(screen.getByRole("button", { name: selectors.saveChangesButton }));
+
+            await waitFor(() =>
+                expect(updateCertificate).toHaveBeenCalledWith(
+                    expect.objectContaining({ TwoFactorAuthenticationKey: null }),
+                    false
+                )
+            );
+        });
+
+        it("saves the shown 2FA key when an earlier key request finishes last", async () => {
+            const { screen, fireClick } = await openEditModal(certWithout2FAIndex);
+            const resolveEarlierKeyRequest = delayNextKeyRequest();
+
+            const require2FASwitch = screen.getByLabelText(selectors.require2FASwitch);
+            await fireClick(require2FASwitch);
+            await fireClick(require2FASwitch);
+            await fireClick(require2FASwitch);
+            expect(await screen.findByDisplayValue(new2FAKey)).toBeInTheDocument();
+
+            await resolveEarlierKeyRequest("EARLIERKEYEARLIERKEYEARLIERKEYEA");
+            expect(screen.getByDisplayValue(new2FAKey)).toBeInTheDocument();
+
+            await fireClick(screen.getByRole("button", { name: selectors.saveChangesButton }));
+
+            await waitFor(() =>
+                expect(updateCertificate).toHaveBeenCalledWith(
+                    expect.objectContaining({ TwoFactorAuthenticationKey: new2FAKey }),
+                    false
+                )
+            );
+        });
+
+        it("blocks saving until the 2FA key is generated", async () => {
+            const { screen, fireClick } = await openEditModal(certWithout2FAIndex);
+            const resolveKeyRequest = delayNextKeyRequest();
+
+            await fireClick(screen.getByLabelText(selectors.require2FASwitch));
+            await fireClick(screen.getByRole("button", { name: selectors.saveChangesButton }));
+
+            expect(await screen.findByText(selectors.requiredMessage)).toBeInTheDocument();
+            expect(updateCertificate).not.toHaveBeenCalled();
+
+            await resolveKeyRequest(new2FAKey);
+
+            await waitFor(() => expect(screen.queryByText(selectors.requiredMessage)).not.toBeInTheDocument());
         });
     });
 

@@ -1,12 +1,13 @@
 import classNames from "classnames";
 import copyToClipboard from "common/copyToClipboard";
-import { FormSwitch } from "components/common/Form";
+import { FormSwitch, FormValidationMessage } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { useServices } from "components/hooks/useServices";
 import { CertificatesCloneFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesCloneModal";
 import { CertificatesEditFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesEditModal";
 import { CertificatesGenerateFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesGenerateModal";
 import { CertificateItem } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
+import { certificatesUtils } from "components/pages/resources/manageServer/certificates/utils/certificatesUtils";
 import { QRCode } from "qrcodejs";
 import { useRef, ElementRef, useState, useEffect } from "react";
 import { flushSync } from "react-dom";
@@ -21,7 +22,7 @@ import InputGroup from "react-bootstrap/InputGroup";
 export default function Certificates2FAField({ editingCert }: { editingCert?: CertificateItem }) {
     const { manageServerService } = useServices();
 
-    const { control, setValue } = useFormContext<
+    const { control, setValue, formState } = useFormContext<
         CertificatesGenerateFormData | CertificatesCloneFormData | CertificatesEditFormData
     >();
 
@@ -34,9 +35,9 @@ export default function Certificates2FAField({ editingCert }: { editingCert?: Ce
 
     const hasCurrentKey = editingCert?.HasTwoFactor ?? false;
     const isRegenerate2FAKey = "isRegenerate2FAKey" in formValues && formValues.isRegenerate2FAKey;
-    const isNewKeyNeeded = formValues.isRequire2FA && (!hasCurrentKey || isRegenerate2FAKey);
-    const isCurrentKeyRemoved = hasCurrentKey && !formValues.isRequire2FA;
-    const authenticationKeyInGroups = formValues.authenticationKey?.match(/.{1,4}/g)?.join(" ") ?? "";
+    const isNewKeyNeeded = certificatesUtils.isNew2FAKeyNeeded(formValues, hasCurrentKey);
+    const isCurrentKeyRemoved = certificatesUtils.is2FARemoved(formValues, hasCurrentKey);
+    const authenticationKeyError = formState.errors.authenticationKey;
 
     const pendingChange = (() => {
         if (isCurrentKeyRemoved) {
@@ -51,18 +52,33 @@ export default function Certificates2FAField({ editingCert }: { editingCert?: Ce
         return null;
     })();
 
-    useAsync(async () => {
-        if (isNewKeyNeeded) {
+    useAsync(
+        async () => {
+            if (!isNewKeyNeeded) {
+                return null;
+            }
             const result = await manageServerService.generateTwoFactorSecret();
-            setValue("authenticationKey", result.Secret);
-        } else {
-            setValue("authenticationKey", null);
+            return result.Secret;
+        },
+        [isNewKeyNeeded],
+        {
+            onSuccess: (authenticationKey, { isCurrent }) => {
+                if (isCurrent()) {
+                    setValue("authenticationKey", authenticationKey, { shouldValidate: true });
+                }
+            },
         }
-    }, [isNewKeyNeeded]);
+    );
 
     const toggleRegenerate2FAKey = (isRegenerate: boolean) => {
         flushSync(() => setValue("isRegenerate2FAKey", isRegenerate));
         (isRegenerate ? authenticationKeyInputRef : generateNewKeyButtonRef).current?.focus();
+    };
+
+    const resetRegenerate2FAKey = () => {
+        if (hasCurrentKey) {
+            setValue("isRegenerate2FAKey", false);
+        }
     };
 
     const certName = "name" in formValues ? formValues.name : editingCert?.Name;
@@ -133,7 +149,12 @@ export default function Certificates2FAField({ editingCert }: { editingCert?: Ce
                             Require a code from an authenticator app in addition to the certificate.
                         </div>
                     </div>
-                    <FormSwitch control={control} name="isRequire2FA" aria-label="Require two-factor authentication" />
+                    <FormSwitch
+                        control={control}
+                        name="isRequire2FA"
+                        aria-label="Require two-factor authentication"
+                        afterChange={resetRegenerate2FAKey}
+                    />
                 </div>
                 {hasCurrentKey && formValues.isRequire2FA && !isRegenerate2FAKey && (
                     <>
@@ -168,10 +189,11 @@ export default function Certificates2FAField({ editingCert }: { editingCert?: Ce
                                     <Form.Control
                                         ref={authenticationKeyInputRef}
                                         readOnly
-                                        value={authenticationKeyInGroups}
+                                        value={formValues.authenticationKey ?? ""}
                                         placeholder="Generating key..."
                                         aria-label="Authentication key"
                                         className="font-monospace"
+                                        isInvalid={!!authenticationKeyError}
                                     />
                                     <Button
                                         onClick={() =>
@@ -186,6 +208,9 @@ export default function Certificates2FAField({ editingCert }: { editingCert?: Ce
                                         <Icon icon="copy" margin="m-0" />
                                     </Button>
                                 </InputGroup>
+                                {authenticationKeyError && (
+                                    <FormValidationMessage>{authenticationKeyError.message}</FormValidationMessage>
+                                )}
                                 {hasCurrentKey && (
                                     <div className="hstack gap-1 flex-wrap">
                                         <span className="text-warning">
