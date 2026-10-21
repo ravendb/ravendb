@@ -474,7 +474,7 @@ public class RavenDB_27289(ITestOutputHelper output) : RavenTestBase(output)
 
         var toolCalled = false;
         handler.SetClient(new MockLlm(database.DocumentsStorage.ContextPool,
-            new OpenAiChatCompletionClientSettings(new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o")),
+            new OpenAiChatCompletionProvider(new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o")),
             onRequest: _ =>
             {
                 if (toolArguments == null)

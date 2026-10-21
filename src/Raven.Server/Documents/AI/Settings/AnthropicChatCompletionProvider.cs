@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -8,10 +7,8 @@ using System.Text;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.ETL.Providers.AI;
-using Sparrow.Exceptions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server.Json.Sync;
 using Canonical = Raven.Server.Documents.AI.ChatCompletionClient.Constants;
 
 namespace Raven.Server.Documents.AI.Settings;
@@ -380,18 +377,7 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
         var answer = text.ToString();
         object result = answer;
         if (structuredOutput)
-        {
-            try
-            {
-                result = ctx.Sync.ReadForMemory(answer, "ai/output");
-            }
-            catch (Exception e) when (e is InvalidDataException or InvalidStartOfObjectException or EndOfStreamException)
-            {
-                throw UnexpectedResponseException.Create(
-                    $"Structured output was requested but the model returned content that is not valid JSON (stop_reason='{stopReason}'). Content: {text}",
-                    response, content, GetRequestId(response.Headers));
-            }
-        }
+            result = ReadStructuredOutput(ctx, answer, $"stop_reason='{stopReason}'", response, content);
 
         return new AiResponse(AiResponseType.Result)
         {
