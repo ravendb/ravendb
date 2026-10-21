@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -18,13 +19,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 {
     public class SystemTextJsonSerializationConventions : ISerializationConventions
     {
-        private BlittableJsonConverter _defaultConverter;
+        private readonly BlittableJsonConverter _defaultConverter;
         private readonly ConcurrentDictionary<Type, Dictionary<string, JsonPropertyInfo>> _jsonProperties = new();
         private Action<JsonSerializerOptions> _customizeJsonSerializerOptions;
         private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
         private bool _ignoreByRefMembers;
         private bool _ignoreUnsafeMembers;
-        private System.Text.Json.Serialization.JsonSerializerContext _sourceGenerationContext;
+        private JsonSerializerContext _sourceGenerationContext;
         private JsonSerializerOptions _options;
 
         public DocumentConventions Conventions { get; private set; }
@@ -81,11 +82,11 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         }
 
         /// <summary>
-        ///     Set a source-generated <see cref="System.Text.Json.Serialization.JsonSerializerContext"/>
+        ///     Set a source-generated <see cref="JsonSerializerContext"/>
         ///     to avoid runtime reflection. Types included in the context use compile-time
         ///     generated metadata; types not in the context fall back to reflection.
         /// </summary>
-        public System.Text.Json.Serialization.JsonSerializerContext SourceGenerationContext
+        public JsonSerializerContext SourceGenerationContext
         {
             get => _sourceGenerationContext;
             set
@@ -193,34 +194,74 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return options;
         }
 
-        internal void WriteEntityToStream(Stream stream, object entity, IMetadataDictionary metadata, IJsonSerializer serializer)
+        internal bool TryWriteEntityToStream(Stream stream, object entity, IMetadataDictionary metadata, IJsonSerializer serializer)
         {
-            var options = ((SystemTextJsonJsonSerializer)serializer).Options;
+            if (entity is IDynamicMetaObjectProvider)
+                return false;
 
-            JsonSerializer.Serialize(stream, entity, entity.GetType(), options);
+            var options = ((SystemTextJsonJsonSerializer)serializer).Options;
+            Type type = entity.GetType();
+            bool hasIdentityProperty = Conventions.GetIdentityProperty(type) != null;
+            long start = stream.Position;
+
+            RavenJsonTypeInfoResolver.RootEntity = hasIdentityProperty ? entity : null;
+            RavenJsonTypeInfoResolver.RemovedIdentityProperty = false;
+            try
+            {
+                JsonSerializer.Serialize(stream, entity, type, options);
+            }
+            finally
+            {
+                RavenJsonTypeInfoResolver.RootEntity = null;
+            }
+
+            if (hasIdentityProperty && RavenJsonTypeInfoResolver.RemovedIdentityProperty == false)
+            {
+                stream.SetLength(start);
+                stream.Position = start;
+                return false;
+            }
+
             if (metadata != null && metadata.Count > 0)
             {
-                stream.SetLength(stream.Length - 1);
-                stream.WriteByte((byte)',');
+                long end = stream.Position;
+                stream.Position = end - 1;
+                if (stream.ReadByte() != '}')
+                    throw new InvalidOperationException($"Entity of type '{type}' must serialize to a JSON object.");
 
-                using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { SkipValidation = true });
-                writer.WritePropertyName(Constants.Documents.Metadata.Key);
-                writer.WriteStartObject();
-                foreach (var kvp in metadata)
+                bool hasProperties = end - start > 2;
+                stream.SetLength(end - 1);
+                stream.Position = end - 1;
+                if (hasProperties)
+                    stream.WriteByte((byte)',');
+
+                using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { SkipValidation = true }))
                 {
-                    writer.WritePropertyName(kvp.Key);
-                    WriteMetadataValue(writer, kvp.Value);
+                    writer.WritePropertyName(Constants.Documents.Metadata.Key);
+                    WriteMetadata(writer, metadata);
                 }
-                writer.WriteEndObject();
-                writer.Flush();
+
                 stream.WriteByte((byte)'}');
             }
+
+            return true;
+        }
+
+        internal static void WriteMetadata(Utf8JsonWriter writer, IMetadataDictionary metadata)
+        {
+            writer.WriteStartObject();
+            foreach (var kvp in metadata)
+            {
+                writer.WritePropertyName(kvp.Key);
+                WriteMetadataValue(writer, kvp.Value);
+            }
+            writer.WriteEndObject();
         }
 
         internal static void WriteMetadataValue(Utf8JsonWriter writer, object value)
         {
             RuntimeHelpers.EnsureSufficientExecutionStack();
-            
+
             switch (value)
             {
                 case string s:
@@ -257,13 +298,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     writer.WriteNullValue();
                     break;
                 case IMetadataDictionary dict:
-                    writer.WriteStartObject();
-                    foreach (var kvp in dict)
-                    {
-                        writer.WritePropertyName(kvp.Key);
-                        WriteMetadataValue(writer, kvp.Value);
-                    }
-                    writer.WriteEndObject();
+                    WriteMetadata(writer, dict);
                     break;
                 case object[] arr:
                     writer.WriteStartArray();
