@@ -103,8 +103,9 @@ public class ChatCompletionClient : IDisposable
     {
         request = WithoutInternalMessages(request);
         await SimulateRequestFailureIfNeededAsync(request);
+        _forTestingPurposes?.ParsedJsonPerRequest.Add(request.ParsedJson);
 
-        using var httpRequest = CreateCompletionRequest(streamingContext, request, streaming: true, trace);
+        using var httpRequest = CreateCompletionRequest(request, streaming: true, trace);
         AddDefaultHeaders(httpRequest);
         using var streamedPropertyBuffer = new JsonOperationContextBuffer<byte>(streamingContext);
 
@@ -255,7 +256,7 @@ public class ChatCompletionClient : IDisposable
                 new("connection_test_probe", "A probe so the request matches an agent call. Do not call it.", paramsSchema)
             };
 
-            using var request = CreateCompletionRequest(context, new AiChatRequest
+            using var request = CreateCompletionRequest(new AiChatRequest
             {
                 Messages = [userMessage],
                 Tools = PrepareTools(context, descriptors),
@@ -289,7 +290,7 @@ public class ChatCompletionClient : IDisposable
                 [Constants.RequestFields.Content] = "describe the image"
             }, "probe/user");
 
-            using var request = CreateCompletionRequest(context, new AiChatRequest
+            using var request = CreateCompletionRequest(new AiChatRequest
             {
                 Messages = [userMessage],
                 Attachments = [attachment],
@@ -320,8 +321,9 @@ public class ChatCompletionClient : IDisposable
     {
         request = WithoutInternalMessages(request);
         await SimulateRequestFailureIfNeededAsync(request);
+        _forTestingPurposes?.ParsedJsonPerRequest.Add(request.ParsedJson);
 
-        using var httpRequest = CreateCompletionRequest(context, request, streaming: false, trace);
+        using var httpRequest = CreateCompletionRequest(request, streaming: false, trace);
         AddDefaultHeaders(httpRequest);
         using var response = await SendRequestAsync(httpRequest, token);
         var responseContent = await GetResponseContentAsync(context, response, token);
@@ -341,7 +343,7 @@ public class ChatCompletionClient : IDisposable
 
     protected virtual Task<HttpResponseMessage> SendStreamingRequestAsync(HttpRequestMessage request, CancellationToken token) => _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
 
-    private HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx, AiChatRequest request, bool streaming, AiDebugTrace trace)
+    private HttpRequestMessage CreateCompletionRequest(AiChatRequest request, bool streaming, AiDebugTrace trace)
     {
         if (_provider.Model is null)
             throw new ArgumentNullException(nameof(_provider.Model));
@@ -368,6 +370,8 @@ public class ChatCompletionClient : IDisposable
 
             async Task WritePayloadAsync(Stream s)
             {
+                // Own context per body, released after the write, so payload allocations don't pile up in the caller's context.
+                using var _ = _contextPool.AllocateOperationContext(out JsonOperationContext ctx);
                 await using var writer = new AsyncBlittableJsonTextWriter(ctx, s);
                 if (_forTestingPurposes?.ModifyPayload != null)
                     _forTestingPurposes.ModifyPayload.Invoke(writer);
@@ -707,6 +711,8 @@ public class ChatCompletionClient : IDisposable
         internal Func<string, Task> SimulateFailureAsync;
 
         internal int ToolPreparationCount;
+
+        internal List<ParsedJsonCache> ParsedJsonPerRequest = [];
 
         internal AbstractChatCompletionProvider Provider;
     }

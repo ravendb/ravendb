@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Sparrow.Json.Parsing;
 
@@ -53,9 +53,11 @@ public sealed class AnthropicSettings : AbstractAiSettings, IAiSettings
     public string ReasoningEffort { get; set; }
 
     /// <summary>
-    /// Enables prompt caching for agent conversations, so each turn reads the earlier conversation from the cache.
-    /// Anthropic bills a cache write above the normal input price and a cache read well below it, so caching pays off when
-    /// turns follow each other within the cache lifetime. GenAI tasks never use it. When <c>null</c>, caching is enabled.
+    /// Enables prompt caching for AI agents and GenAI tasks. Anthropic bills a cache write above the normal input price and a
+    /// cache read well below it, so caching pays off only when the same prompt is sent again within the cache lifetime: the turns
+    /// of an agent conversation, or a GenAI task whose queries the model calls. A GenAI task without queries sends each document
+    /// once, so caching only adds the write cost; give such a task its own connection string with caching disabled.
+    /// When <c>null</c>, caching is enabled.
     /// </summary>
     public bool? EnablePromptCache { get; set; }
 

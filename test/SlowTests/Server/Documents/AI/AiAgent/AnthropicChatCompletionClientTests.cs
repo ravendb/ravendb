@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,6 +22,7 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Settings;
 using Raven.Server.Documents.ETL.Providers.AI;
+using Raven.Server.Documents.ETL.Providers.AI.GenAi;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.Json;
 using Raven.Server.Logging;
@@ -169,18 +171,67 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             });
         }
 
-        [RavenFact(RavenTestCategory.Ai)]
-        public async Task GenAi_PromptCacheKey_OffForAnthropic_UnchangedForOtherProviders()
+        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
+        [InlineData(null, true)]
+        [InlineData(false, false)]
+        public async Task GenAi_FollowsThePromptCacheSetting(bool? enablePromptCache, bool cached)
         {
             using var store = GetDocumentStore();
             var database = await GetDatabase(store.Database);
 
-            var anthropic = new GenAiConfiguration { Connection = new AiConnectionString { AnthropicSettings = new AnthropicSettings("k", "claude-haiku-4-5") } };
-            var openAi = new GenAiConfiguration { Connection = new AiConnectionString { OpenAiSettings = new OpenAiSettings("k", "https://api.openai.com/v1/", "gpt-4o-mini") } };
+            var settings = new AnthropicSettings("sk-ant-test", "claude-haiku-4-5", "https://api.anthropic.com/v1/") { EnablePromptCache = enablePromptCache };
+            store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(new AiConnectionString
+            {
+                Name = "anthropic", Identifier = "anthropic", ModelType = AiModelType.Chat, AnthropicSettings = settings
+            }));
+            store.Maintenance.Send(new AddGenAiOperation(new GenAiConfiguration
+            {
+                Name = "genai",
+                ConnectionStringName = "anthropic",
+                Collection = "Posts",
+                Prompt = "Summarize the text.",
+                SampleObject = "{\"Answer\":\"summary\"}",
+                GenAiTransformation = new GenAiTransformation { Script = "ai.genContext({Text: this.Text});" },
+                UpdateScript = "this.Answer = $output.Answer;"
+            }));
 
-            Assert.Null(new GenAiConversationHandler(Server.ServerStore, database, anthropic) { Authentication = null }.GetPromptCacheKey("genai/doc/1"));
-            Assert.Equal("genai/doc/1", new GenAiConversationHandler(Server.ServerStore, database, openAi) { Authentication = null }.GetPromptCacheKey("genai/doc/1"));
-            Assert.Equal("chats/1", new ConversationHandler(Server.ServerStore, database) { Authentication = null }.GetPromptCacheKey("chats/1"));
+            GenAiTask genAi = null;
+            Assert.True(await WaitForValueAsync(() =>
+            {
+                genAi = database.EtlLoader.Processes.OfType<GenAiTask>().FirstOrDefault();
+                return Task.FromResult(genAi != null);
+            }, true, timeout: 15_000), "the GenAI process was not loaded in time");
+
+            // the process sends through this client, so the request never leaves the test
+            var sentBody = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var client = new CapturingChatCompletionClient(database.DocumentsStorage.ContextPool, new AnthropicChatCompletionProvider(settings), body =>
+            {
+                sentBody.TrySetResult(body);
+                return Ok(TextResponse);
+            });
+            var field = typeof(GenAiTask).GetField("_chatCompletionClient", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.NotNull(field);
+            var previous = (ChatCompletionClient)field.GetValue(genAi);
+            field.SetValue(genAi, client);
+            previous?.Dispose();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Post { Text = "Some text to summarize." }, "posts/1");
+                await session.SaveChangesAsync();
+            }
+
+            var cacheControl = JObject.Parse(await sentBody.Task.WaitAsync(TimeSpan.FromSeconds(30)))["cache_control"];
+            if (cached)
+                Assert.Equal("ephemeral", (string)cacheControl["type"]);
+            else
+                Assert.Null(cacheControl);
+        }
+
+        private class Post
+        {
+            public string Text;
+            public string Answer;
         }
 
         [RavenFact(RavenTestCategory.Ai)]
@@ -380,6 +431,108 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             });
         }
 
+        // ---- payload memory across model iterations -------------------------------------------------------------
+
+        [RavenFact(RavenTestCategory.Ai)]
+        public async Task Request_RepeatedIterations_DoNotGrowTheCallersContext()
+        {
+            await WithClient(_ => Ok(TextResponse), async (client, ctx) =>
+            {
+                // no argument cache: every iteration parses all 40 tool calls again, and that must not land in the caller's context
+                var request = new AiChatRequest { Messages = ToolCallHistory(ctx, rounds: 20, argumentsBytes: 2048), Schema = EmptySchema() };
+
+                await client.CompleteAsync(ctx, request, new AiUsage(), null, CancellationToken.None);
+                var before = ctx.AllocatedMemory;
+                for (var i = 0; i < 15; i++)
+                    await client.CompleteAsync(ctx, request, new AiUsage(), null, CancellationToken.None);
+
+                // the responses are parsed into the caller's context (they're kept in the history), the request bodies must not be:
+                // re-parsing 40 x 2 KB of arguments into it on each of 15 iterations adds over 2 MB
+                var grownKb = (ctx.AllocatedMemory - before) / 1024;
+                Assert.True(grownKb < 512, $"the caller's context grew by {grownKb} KB over 15 iterations");
+            });
+        }
+
+        [RavenFact(RavenTestCategory.Ai)]
+        public async Task Request_ToolArgumentsAndSchema_AreParsedOncePerConversationCall_AndTheBodyIsUnchanged()
+        {
+            await WithClient(_ => Ok(TextResponse), async (client, ctx) =>
+            {
+                var history = ToolCallHistory(ctx, rounds: 3, argumentsBytes: 300);
+
+                await client.CompleteAsync(ctx, new AiChatRequest { Messages = history, Schema = EmptySchema() }, new AiUsage(), null, CancellationToken.None);
+                var bodyWithoutCache = client.LastRequestBody;
+
+                var parsedJson = new ParsedJsonCache(ctx);
+                var request = new AiChatRequest { Messages = history, Schema = EmptySchema(), ParsedJson = parsedJson };
+                await client.CompleteAsync(ctx, request, new AiUsage(), null, CancellationToken.None);
+                await client.CompleteAsync(ctx, request, new AiUsage(), null, CancellationToken.None);
+
+                Assert.Equal(bodyWithoutCache, client.LastRequestBody);
+
+                // 6 tool calls and the schema, each parsed once over both iterations
+                Assert.Equal(7, parsedJson.ParseCount);
+            });
+        }
+
+        [RavenFact(RavenTestCategory.Ai)]
+        public async Task Request_SameToolCallId_ChangedArguments_AreParsedAgain()
+        {
+            await WithClient(_ => Ok(TextResponse), async (client, ctx) =>
+            {
+                var rome = SingleToolCallHistory(ctx, ToolCall("call_1", "find_city", "{\"City\":\"Rome\"}"));
+                await client.CompleteAsync(ctx, new AiChatRequest { Messages = rome, Schema = EmptySchema() }, new AiUsage(), null, CancellationToken.None);
+                var bodyWithoutCache = client.LastRequestBody;
+
+                var parsedJson = new ParsedJsonCache(ctx);
+                var paris = SingleToolCallHistory(ctx, ToolCall("call_1", "find_city", "{\"City\":\"Paris\"}"));
+                await client.CompleteAsync(ctx, new AiChatRequest { Messages = paris, Schema = EmptySchema(), ParsedJson = parsedJson }, new AiUsage(), null, CancellationToken.None);
+                await client.CompleteAsync(ctx, new AiChatRequest { Messages = rome, Schema = EmptySchema(), ParsedJson = parsedJson }, new AiUsage(), null, CancellationToken.None);
+
+                Assert.Equal(bodyWithoutCache, client.LastRequestBody);
+                Assert.Equal("Rome", (string)ToolUseInputs(client.LastRequestBody).Single()["City"]);
+                // Paris, the schema, then Rome
+                Assert.Equal(3, parsedJson.ParseCount);
+            });
+        }
+
+        [RavenFact(RavenTestCategory.Ai)]
+        public async Task Request_MissingToolCallId_SkipsTheCallWithoutParsingIt()
+        {
+            await WithClient(_ => Ok(TextResponse), async (client, ctx) =>
+            {
+                var call = new DynamicJsonValue { ["type"] = "function", ["function"] = new DynamicJsonValue { ["name"] = "find_city", ["arguments"] = "{\"City\":\"Rome\"}" } };
+                var parsedJson = new ParsedJsonCache(ctx);
+                await client.CompleteAsync(ctx, new AiChatRequest { Messages = SingleToolCallHistory(ctx, call), Schema = EmptySchema(), ParsedJson = parsedJson }, new AiUsage(), null, CancellationToken.None);
+
+                Assert.Empty(ToolUseInputs(client.LastRequestBody));
+                // only the schema
+                Assert.Equal(1, parsedJson.ParseCount);
+            });
+        }
+
+        [RavenFact(RavenTestCategory.Ai)]
+        public async Task Request_InvalidArgumentsThenValid_ForTheSameId_DoNotPoisonTheCache()
+        {
+            await WithClient(_ => Ok(TextResponse), async (client, ctx) =>
+            {
+                var parsedJson = new ParsedJsonCache(ctx);
+                var broken = SingleToolCallHistory(ctx, ToolCall("call_1", "find_city", "{\"City\":"));
+                var e = await Assert.ThrowsAsync<InvalidDataException>(() =>
+                    client.CompleteAsync(ctx, new AiChatRequest { Messages = broken, Schema = EmptySchema(), ParsedJson = parsedJson }, new AiUsage(), null, CancellationToken.None));
+                Assert.Contains("{\"City\":", e.Message); // the parser quotes the broken arguments
+                Assert.Equal(1, parsedJson.ParseCount); // it failed on the arguments, before the schema
+
+                var valid = new AiChatRequest { Messages = SingleToolCallHistory(ctx, ToolCall("call_1", "find_city", "{\"City\":\"Rome\"}")), Schema = EmptySchema(), ParsedJson = parsedJson };
+                await client.CompleteAsync(ctx, valid, new AiUsage(), null, CancellationToken.None);
+                await client.CompleteAsync(ctx, valid, new AiUsage(), null, CancellationToken.None);
+
+                Assert.Equal("Rome", (string)ToolUseInputs(client.LastRequestBody).Single()["City"]);
+                // the failed attempt, then the valid arguments and the schema once
+                Assert.Equal(3, parsedJson.ParseCount);
+            });
+        }
+
         // ---- extended thinking (request side) --------------------------------------------------------------------
 
         [RavenFact(RavenTestCategory.Ai)]
@@ -448,7 +601,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         [InlineData("conversations/1", null, true)]
         [InlineData("conversations/1", true, true)]
         [InlineData("conversations/1", false, false)]
-        [InlineData(null, null, false)]
+        [InlineData(null, true, false)]
         public async Task Request_PromptCaching_OnlyForRequestsWithACacheKey_UnlessDisabled(string promptCacheKey, bool? enablePromptCache, bool cached)
         {
             var settings = new AnthropicSettings("sk-ant-test", "claude-opus-5", "https://api.anthropic.com/v1/") { EnablePromptCache = enablePromptCache };
@@ -1302,6 +1455,46 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         private static string EmptySchema() => ChatCompletionClient.EmptySchema;
 
         private static AiChatRequest Simple(JsonOperationContext ctx) => new() { Messages = [Msg(ctx, "user", "hi")], Schema = ChatCompletionClient.EmptySchema };
+
+        // Each round: a user question, an assistant turn with two tool calls, their two results and an assistant answer.
+        private static List<BlittableJsonReaderObject> ToolCallHistory(JsonOperationContext ctx, int rounds, int argumentsBytes)
+        {
+            var notes = new StringBuilder();
+            while (notes.Length < argumentsBytes)
+                notes.Append("customer \\\"Q3\\\" invoice, shipping to Tel Aviv, הזמנה ממתינה; ");
+
+            var messages = new List<BlittableJsonReaderObject>();
+            for (var i = 0; i < rounds; i++)
+            {
+                messages.Add(Msg(ctx, "user", $"what is the status of order {i}?"));
+
+                var calls = new DynamicJsonArray();
+                for (var c = 0; c < 2; c++)
+                    calls.Add(ToolCall($"call_{i}_{c}", "find_orders",
+                        $"{{\"OrderId\":\"orders/{i}-A\",\"Lines\":[{{\"Sku\":\"SKU-{c}\",\"Quantity\":{c + 1},\"Price\":12.5}}],\"ShipTo\":{{\"City\":\"Berlin\",\"Zip\":\"10115\"}},\"Notes\":\"{notes}\"}}"));
+                messages.Add(ctx.ReadObject(new DynamicJsonValue { ["role"] = "assistant", ["content"] = null, ["tool_calls"] = calls }, "assistant"));
+
+                for (var c = 0; c < 2; c++)
+                    messages.Add(Msg(ctx, "tool", $"{{\"Results\":[{{\"Id\":\"orders/{i}-A\",\"Total\":{100 + c}}}]}}", toolCallId: $"call_{i}_{c}"));
+
+                messages.Add(Msg(ctx, "assistant", $"order {i} is on its way"));
+            }
+            return messages;
+        }
+
+        // A user question and an assistant turn with one tool call.
+        private static List<BlittableJsonReaderObject> SingleToolCallHistory(JsonOperationContext ctx, DynamicJsonValue call) =>
+        [
+            Msg(ctx, "user", "where is it?"),
+            ctx.ReadObject(new DynamicJsonValue { ["role"] = "assistant", ["content"] = null, ["tool_calls"] = new DynamicJsonArray { call } }, "assistant")
+        ];
+
+        private static List<JObject> ToolUseInputs(string body) =>
+            JObject.Parse(body)["messages"]!
+                .SelectMany(m => m["content"] as JArray ?? new JArray())
+                .Where(b => (string)b["type"] == "tool_use")
+                .Select(b => (JObject)b["input"])
+                .ToList();
 
         private static BlittableJsonReaderObject Msg(JsonOperationContext ctx, string role, string content, string toolCallId = null)
         {

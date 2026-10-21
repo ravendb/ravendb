@@ -1,4 +1,4 @@
-﻿using System.Net.Http;
+using System.Net.Http;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.AI.Settings;

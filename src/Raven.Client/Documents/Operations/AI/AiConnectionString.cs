@@ -96,7 +96,11 @@ public sealed class AiConnectionString : ConnectionString
         switch (configuredSettings.Length)
         {
             case 0:
-                var allSettingsNames = allSettings.Select(s => s.GetType().Name);
+                var allSettingsNames = new[]
+                {
+                    nameof(OpenAiSettings), nameof(AzureOpenAiSettings), nameof(OllamaSettings), nameof(EmbeddedSettings), nameof(GoogleSettings),
+                    nameof(HuggingFaceSettings), nameof(MistralAiSettings), nameof(VertexSettings), nameof(AnthropicSettings)
+                };
                 errors.Add($"At least one of the following settings must be set: {string.Join(", ", allSettingsNames)}");
                 break;
             case > 1:

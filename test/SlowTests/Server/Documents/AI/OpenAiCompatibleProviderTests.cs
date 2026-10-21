@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,6 +35,28 @@ namespace SlowTests.Server.Documents.AI
                         new AiUsage(), null, CancellationToken.None));
 
                 Assert.Equal("oai_req_9", ex.RequestId);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Ai)]
+        public async Task OpenAiFamily_Schema_IsParsedOncePerConversationCall_AndTheBodyIsUnchanged()
+        {
+            using var contextPool = NewContextPool();
+            using var client = NewClient(OpenAi(), _ => Ok(AiAgent.MockLlm.CreateAnswerResponse("\"x\"")), contextPool);
+
+            using (contextPool.AllocateOperationContext(out JsonOperationContext ctx))
+            {
+                var messages = new[] { UserMessage(ctx, "hi") };
+                await client.CompleteAsync(ctx, new AiChatRequest { Messages = messages, Schema = ChatCompletionClient.EmptySchema }, new AiUsage(), null, CancellationToken.None);
+                var bodyWithoutCache = client.LastRequestBody;
+
+                var parsedJson = new ParsedJsonCache(ctx);
+                var request = new AiChatRequest { Messages = messages, Schema = ChatCompletionClient.EmptySchema, ParsedJson = parsedJson };
+                await client.CompleteAsync(ctx, request, new AiUsage(), null, CancellationToken.None);
+                await client.CompleteAsync(ctx, request, new AiUsage(), null, CancellationToken.None);
+
+                Assert.Equal(bodyWithoutCache, client.LastRequestBody);
+                Assert.Equal(1, parsedJson.ParseCount);
             }
         }
 

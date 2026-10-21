@@ -13,6 +13,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents;
 internal class Talker(ConversationHandler handler, JsonOperationContext context, AiAgentConfiguration configuration, string schema, ConversationDocument document, string firstStreamPropertyPath, Func<Memory<byte>, Task> streaming) : IDisposable
 {
     private List<BlittableJsonReaderObject> _preparedTools;
+    private ParsedJsonCache _parsedJson;
 
     public AiUsage AiUsage;
     public ChatCompletionClient Client;
@@ -24,6 +25,7 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
 
         Client = handler.CreateClient();
         _preparedTools = Client.PrepareTools(context, handler.BuildToolDescriptors(context, configuration));
+        _parsedJson = new ParsedJsonCache(context);
     }
 
     public AiChatRequest CreateRequest(List<AiAttachment> attachments)
@@ -36,7 +38,8 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
             Tools = _preparedTools,
             UseTools = document.RemainingToolIterations-- > 0,
             Schema = schema,
-            PromptCacheKey = handler.GetPromptCacheKey(document.Id)
+            PromptCacheKey = document.Id,
+            ParsedJson = _parsedJson
         };
     }
 

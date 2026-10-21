@@ -435,8 +435,6 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         return _client = ChatCompletionClient.CreateChatCompletionClient(database.DocumentsStorage.ContextPool, connection);
     }
 
-    internal virtual string GetPromptCacheKey(string conversationId) => conversationId;
-
     internal List<AiToolDescriptor> BuildToolDescriptors(JsonOperationContext context, AiAgentConfiguration configuration)
     {
         // TryGetUserTools recognises the call through the configuration. Added once: this runs for the turn and again for the summary.

@@ -4,13 +4,11 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.Json;
-using Sparrow;
 using Sparrow.Exceptions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -154,7 +152,7 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
         return tool;
     }
 
-    public override void WritePayload(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, AiChatRequest request, bool streaming)
+    protected override void WritePayloadCore(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, AiChatRequest request, bool streaming)
     {
         writer.WriteStartObject();
 
@@ -164,7 +162,7 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
 
         List<LazyStringValue> filterProperties = [ctx.GetLazyString(ConversationDocument.DateProperty), ctx.GetLazyString(ConversationDocument.UsageProperty), ctx.GetLazyString(ConversationDocument.OutputSchemaProperty)];
 
-        writer.WriteArray(ctx, ChatCompletionClient.Constants.RequestFields.Messages, NormalizeMessages(ctx, request.Messages, request.Attachments).Messages, (w, context, message) =>
+        writer.WriteArray(ctx, ChatCompletionClient.Constants.RequestFields.Messages, NormalizeMessages(ctx, request).Messages, (w, context, message) =>
         {
             w.WriteStartObject();
             w.WriteObjectWithFilter((BlittableJsonReaderObject)message, filterProperties.Contains);
@@ -194,7 +192,7 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
             writer.WriteString(ChatCompletionClient.Constants.RequestFields.JsonSchema);
             writer.WriteComma();
             writer.WritePropertyName(ChatCompletionClient.Constants.RequestFields.JsonSchema);
-            writer.WriteObject(GetStructuredOutputSchemaAsBlittable(ctx, request.Schema));
+            writer.WriteObject(request.ParsedJson.GetOrParseSchema(request.Schema));
             writer.WriteEndObject();
         }
 
@@ -223,17 +221,9 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
         writer.WriteEndObject();
     }
 
-    private static BlittableJsonReaderObject GetStructuredOutputSchemaAsBlittable(JsonOperationContext ctx, string schema)
-    {
-        using (var stream = RecyclableMemoryStreamFactory.GetRecyclableStream(Encoding.UTF8.GetBytes(schema)))
-        {
-            return ctx.Sync.ReadForMemory(stream, "json");
-        }
-    }
-
     // The canonical form is already OpenAI's, so the messages pass through as they are.
-    protected override ProviderMessages NormalizeMessages(JsonOperationContext ctx, IEnumerable<BlittableJsonReaderObject> messages, List<AiAttachment> attachments) =>
-        new() { Messages = WithAttachments(ctx, messages, attachments) };
+    protected override ProviderMessages NormalizeMessages(JsonOperationContext ctx, AiChatRequest request) =>
+        new() { Messages = WithAttachments(ctx, request.Messages, request.Attachments) };
 
     private IEnumerable<BlittableJsonReaderObject> WithAttachments(JsonOperationContext context, IEnumerable<BlittableJsonReaderObject> messages, List<AiAttachment> attachments)
     {
