@@ -15,7 +15,7 @@ const serverUrlPlaceholder = "https://your_RavenDB_server_URL";
 const pfxPathPlaceholder = "C:\\path_to_your_pfx_file\\cert.pfx";
 const dbNamePlaceholder = "your_database_name";
 
-export default function CertificatesRenewedModalApiAccess() {
+export default function CertificatesReadyModalApiAccess() {
     const docsLink = useRavenLink({ hash: "RSFSL5" });
 
     const dbName = useAppSelector(databaseSelectors.activeDatabaseName);

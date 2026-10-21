@@ -257,9 +257,45 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
             SampleObject != other.SampleObject ||
             MaxConcurrency != other.MaxConcurrency ||
             ExpirationInSec != other.ExpirationInSec ||
-            EnableTracing != other.EnableTracing)
+            EnableTracing != other.EnableTracing ||
+            QueriesDiffer(Queries, other.Queries))
             differences |= EtlConfigurationCompareDifferences.Other;
 
         return differences;
+    }
+
+    // deep compare needed - AiAgentToolQuery has no equality of its own
+    private static bool QueriesDiffer(List<AiAgentToolQuery> queries, List<AiAgentToolQuery> others)
+    {
+        if (queries == null || others == null)
+            return ReferenceEquals(queries, others) == false;
+
+        if (queries.Count != others.Count)
+            return true;
+
+        for (var i = 0; i < queries.Count; i++)
+        {
+            var query = queries[i];
+            var other = others[i];
+
+            if (query == null || other == null)
+            {
+                if (ReferenceEquals(query, other) == false)
+                    return true;
+
+                continue;
+            }
+
+            if (query.Name != other.Name ||
+                query.Description != other.Description ||
+                query.Query != other.Query ||
+                query.ParametersSampleObject != other.ParametersSampleObject ||
+                query.ParametersSchema != other.ParametersSchema ||
+                query.Options?.AllowModelQueries != other.Options?.AllowModelQueries ||
+                query.Options?.AddToInitialContext != other.Options?.AddToInitialContext)
+                return true;
+        }
+
+        return false;
     }
 }

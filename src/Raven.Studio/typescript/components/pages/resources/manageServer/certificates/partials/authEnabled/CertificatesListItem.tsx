@@ -94,7 +94,6 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
         reportEvent("certificates", "renew");
         await manageServerService.forceRenewServerCertificate();
         await dispatch(certificatesActions.fetchData());
-        dispatch(certificatesActions.isRenewedModalOpenToggled());
     });
 
     const handleRenewServerCertificate = async () => {

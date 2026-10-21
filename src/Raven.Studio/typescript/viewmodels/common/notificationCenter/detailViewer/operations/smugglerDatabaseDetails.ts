@@ -27,6 +27,8 @@ import ShardNodeSmugglerResult = Raven.Client.Documents.Smuggler.ShardNodeSmuggl
 import ShardNodeBackupResult = Raven.Client.Documents.Operations.Backups.ShardNodeBackupResult;
 import BackupResult = Raven.Client.Documents.Operations.Backups.BackupResult;
 import timeAwareEWMA = require("viewmodels/common/timeAwareEWMA");
+import ImportResultModal = require("components/pages/database/tasks/importData/importFromFile/ImportResultModal");
+import OperationExceptionResult = Raven.Client.Documents.Operations.OperationExceptionResult;
 
 type smugglerListItemStatus = "processed" | "skipped" | "processing" | "pending" | "processedWithErrors";
 
@@ -121,7 +123,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         return type.includes("ShardedBackupResult");
     }
 
-    private mergeShardedResult(result: ShardedSmugglerResult | ShardedBackupResult): SmugglerProgressBase {
+    private static mergeShardedResult(result: ShardedSmugglerResult | ShardedBackupResult): SmugglerProgressBase {
         const mergeCounts = (items: Counts[]): Counts => {
             return {
                 ReadCount: items.reduce((p, c) => p + c.ReadCount, 0),
@@ -239,7 +241,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             }
 
             if (smugglerDatabaseDetails.isShardedResult(status)) {
-                status = this.mergeShardedResult(status);
+                status = smugglerDatabaseDetails.mergeShardedResult(status);
             }
 
             const result: smugglerListItem[] = [];
@@ -279,10 +281,6 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 result.push(this.mapToExportListItem("Counters", status.Counters, true));
                 result.push(this.mapToExportListItem("TimeSeries", status.TimeSeries, true));
 
-                if (this.op.taskType() === "DatabaseImport") {
-                    result.push(this.mapToExportListItem("Tombstones", status.Tombstones, true));
-                }
-
                 result.push(this.mapToExportListItem("Revisions", status.RevisionDocuments));
                 const revisionsAttachments = (status.RevisionDocuments as CountsWithLastEtagAndAttachments).Attachments;
                 result.push(this.mapToExportListItem("Attachments", revisionsAttachments, true));
@@ -291,10 +289,6 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 result.push(this.mapToExportListItem("Indexes", status.Indexes));
                 result.push(this.mapToExportListItem("Identities", status.Identities));
                 result.push(this.mapToExportListItem("Compare Exchange", status.CompareExchange));
-
-                if (this.op.taskType() === "DatabaseImport") {
-                    result.push(this.mapToExportListItem("Compare Exchange Tombstones", status.CompareExchangeTombstones, true));
-                }
 
                 result.push(this.mapToExportListItem("Subscriptions", status.Subscriptions));
 
@@ -597,7 +591,42 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
     }
 
     static showDetailsFor(op: operation, center: notificationCenter) {
+        if (op.taskType() === "DatabaseImport") {
+            center.reactModalView(smugglerDatabaseDetails.importResultModalView(op, () => center.reactModalView(null)));
+            return;
+        }
+
         return app.showBootstrapDialog(new smugglerDatabaseDetails(op, center));
+    }
+
+    static importResultModalView(op: operation, onClose: () => void): ReactInKnockout<typeof ImportResultModal.default> {
+        return ko.pureComputed(() => {
+            const status = op.status();
+            const current = (status === "Completed" ? op.result() : op.lastProgress()) as SmugglerResult | ShardedSmugglerResult;
+
+            return {
+                component: ImportResultModal.default,
+                props: {
+                    progress: current ? smugglerDatabaseDetails.toImportProgress(current) : null,
+                    error: status === "Faulted" ? op.result() as OperationExceptionResult : null,
+                    status,
+                    startTime: (op.startTime() ?? op.createdAt()).toDate(),
+                    endTime: op.endTime()?.toDate() ?? null,
+                    onClose,
+                },
+            };
+        });
+    }
+
+    private static toImportProgress(value: SmugglerResult | ShardedSmugglerResult): ImportResultModal.ImportProgress {
+        if (smugglerDatabaseDetails.isShardedResult(value)) {
+            return {
+                ...smugglerDatabaseDetails.mergeShardedResult(value),
+                Messages: value.Results.flatMap(x => x.Result.Messages),
+            };
+        }
+
+        return value;
     }
 
     static merge(existing: operation, incoming: OperationChanged): boolean {

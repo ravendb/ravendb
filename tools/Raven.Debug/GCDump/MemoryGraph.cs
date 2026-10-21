@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using FastSerialization;
@@ -33,6 +34,13 @@ namespace Graphs
         {
             Serializer serializer = new(outputFileName, this);
             serializer.Close();
+        }
+        public static MemoryGraph ReadFromBinaryFile(string inputFileName)
+        {
+            Deserializer deserializer = new(inputFileName, SerializationSettings.Default);
+            deserializer.RegisterFactory(typeof(MemoryGraph), delegate { return new MemoryGraph(1); });
+            deserializer.RegisterFactory(typeof(Module), delegate { return new Module(0); });
+            return (MemoryGraph)deserializer.GetEntryObject();
         }
 
         /// <summary>

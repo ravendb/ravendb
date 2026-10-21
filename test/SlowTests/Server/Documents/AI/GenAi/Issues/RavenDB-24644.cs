@@ -243,7 +243,7 @@ ai.genContext({}).withPdf(pdf);
 
         // Debug helper: surfaces, per GenAI task, exactly which request/item failed in the batch and the actual
         // exception. The GenAI ETL records this in TaskErrorsStorage:
-        //  - item load errors  (GenAiTask: "Model call failed for context in document '<id>' (<ExType>). Context was: ... <full exception>")
+        //  - item load errors  (GenAiTask: "Execution failed for context in document '<id>' (<ExType>). Context was: ... <full exception>")
         //  - process/batch load errors (the whole-batch AggregateException + fallback message)
         // We also dump the per-task counters so it's clear whether nothing was sent, something errored, or it stalled.
         private async Task<string> GetGenAiBatchErrorsAsync(DocumentStore store)

@@ -6,7 +6,7 @@ import RichAlert from "components/common/RichAlert";
 import { NumberedList, NumberedListItem } from "components/common/NumberedList";
 import genUtils from "common/generalUtils";
 
-export default function CertificatesRenewedModalBrowserAccess() {
+export default function CertificatesReadyModalBrowserAccess() {
     const [browserTab, setBrowserTab] = useState<Browser>(genUtils.getBrowser());
 
     return (

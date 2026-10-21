@@ -2,8 +2,9 @@
 
 export ZSTD_LOG=${PWD}/build_zstd.log
 
-LIBZSTD_VER="ravendb"
-LIBZSTD_REPO="https://github.com/ravendb/zstd.git"
+# upstream release tag; the ravendb/zstd fork is archived and no longer needed
+LIBZSTD_VER="${LIBZSTD_VER:-v1.5.7}"
+LIBZSTD_REPO="${LIBZSTD_REPO:-https://github.com/facebook/zstd.git}"
 
 function zstd_install_build_deps {
     pushd zstd >> ${ZSTD_LOG} 2>&1
