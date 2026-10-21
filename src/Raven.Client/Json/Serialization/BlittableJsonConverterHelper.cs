@@ -140,8 +140,6 @@ namespace Raven.Client.Json.Serialization
             return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
         }
 
-        // Cache: (rootType, propertyName) → property/field Type.
-        // Types are immutable, so the mapping never changes.
         private static readonly ConcurrentDictionary<(Type, string), Type> _propertyTypeCache = new();
 
         internal static Type GetPropertyType(string propertyName, Type rootType)

@@ -139,7 +139,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             using (var writer = new SystemTextJsonBlittableWriter(_session.Context, documentInfo))
                 document = ToBlittableInternal(entity, _session.Conventions, _session.Context, _session.JsonSerializer, writer);
 
-            // Inject missing properties (properties in the original JSON that aren't on the CLR type)
             if (MissingProperties != null && MissingProperties.TryGetValue(entity, out var missingProps) && missingProps.Count > 0)
             {
                 if (document.Modifications == null)
@@ -164,7 +163,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             var conventions = _session.Conventions;
             var type = entity.GetType();
 
-            // Set up identity removal via the resolver
             bool isDynamicObject = entity is IDynamicMetaObjectProvider;
             bool hasIdentityProperty = conventions.GetIdentityProperty(type) != null;
 
@@ -184,14 +182,12 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 RavenJsonTypeInfoResolver.RootEntity = null;
             }
 
-            // Remove identity property if the resolver didn't handle it
             bool changes = false;
             if (isDynamicObject || (hasIdentityProperty && RavenJsonTypeInfoResolver.RemovedIdentityProperty == false))
             {
                 changes = BlittableJsonConverterHelper.TryRemoveIdentityProperty(document, type, conventions, isDynamicObject);
             }
 
-            // Inject @metadata
             changes |= InjectMetadata(document, documentInfo);
 
             if (changes)
@@ -214,13 +210,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
             if (documentInfo.Metadata?.Modifications != null && documentInfo.Metadata.Modifications.Properties.Count > 0)
             {
-                // Modified metadata blittable — apply modifications, then use the blittable itself
-                // (ReadObject will handle the Modifications overlay)
                 metadataValue = documentInfo.Metadata;
             }
             else if (documentInfo.Metadata != null)
             {
-                // Existing metadata blittable — use directly as nested value
                 metadataValue = documentInfo.Metadata;
             }
             else if (documentInfo.MetadataInstance != null)
@@ -259,11 +252,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             MissingProperties?.Remove(entity);
         }
 
-        /// <summary>
-        /// Compare the blittable's property names against the entity type's known CLR properties.
-        /// Any properties in the JSON that don't exist on the CLR type are captured as missing
-        /// properties for later round-trip preservation.
-        /// </summary>
         private void CaptureMissingProperties(object entity, Type entityType, BlittableJsonReaderObject json)
         {
             var knownProperties = GetKnownPropertyNames(entityType);
@@ -279,7 +267,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 if (knownProperties.Contains(propName))
                     continue;
 
-                // This property exists in JSON but not on the CLR type — capture its value
                 var propIndex = json.GetPropertyIndex(propName);
                 var propDetails = new BlittableJsonReaderObject.PropertyDetails();
                 json.GetPropertyByIndex(propIndex, ref propDetails);
@@ -288,9 +275,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             }
         }
 
-        // Cache known JSON property names per entity type.
-        // Includes both CLR names and attribute-specified JSON names ([JsonPropertyName], [JsonProperty], [DataMember])
-        // so that renamed properties are not misclassified as "missing".
         private static readonly ConcurrentDictionary<Type, HashSet<string>> _knownPropertyNamesCache = new();
 
         private static HashSet<string> GetKnownPropertyNames(Type type)

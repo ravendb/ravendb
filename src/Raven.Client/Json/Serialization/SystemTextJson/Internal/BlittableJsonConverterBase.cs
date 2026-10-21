@@ -35,7 +35,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (jsonSerializer == null)
                 throw new ArgumentNullException(nameof(jsonSerializer));
 
-            // STJ has no Populate() equivalent. Deserialize to a new instance and copy properties.
             using (var reader = new SystemTextJsonBlittableReader())
             {
                 reader.Initialize(json);
@@ -90,7 +89,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                     if (property.GetIndexParameters().Length > 0)
                         continue;
 
-                    // t.Prop = s.Prop
                     body.Add(Expression.Assign(
                         Expression.Property(targetTyped, property),
                         Expression.Property(sourceTyped, property)));
@@ -101,7 +99,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 {
                     FieldInfo field = fields[i];
 
-                    // t.Field = s.Field
                     body.Add(Expression.Assign(
                         Expression.Field(targetTyped, field),
                         Expression.Field(sourceTyped, field)));

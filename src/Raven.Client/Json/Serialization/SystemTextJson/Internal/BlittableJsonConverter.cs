@@ -61,8 +61,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (entity is BlittableJsonReaderObject bjro)
                 return bjro;
 
-            // Fast path: serialize entity → UTF-8 → ParseBuffer → blittable directly.
-            // No identity removal needed, no metadata, no token walk.
             if (jsonSerializer is SystemTextJsonJsonSerializer stjSerializer)
                 return stjSerializer.SerializeToBlittable(entity, entity.GetType(), context);
 
@@ -84,7 +82,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (entity is BlittableJsonReaderObject bjro)
                 return bjro;
 
-            // Fast path: serialize entity + metadata → UTF-8 → ParseBuffer → blittable directly.
             if (jsonSerializer is SystemTextJsonJsonSerializer stjSerializer)
                 return stjSerializer.SerializeToBlittableWithMetadata(entity, entity.GetType(), metadata, context);
 

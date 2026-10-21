@@ -30,7 +30,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             }
             finally
             {
-                // Return native memory immediately - we're done with the UTF-8 bytes
                 reader.ReturnMemory();
             }
 
