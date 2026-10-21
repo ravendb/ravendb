@@ -270,7 +270,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             options.Converters.Add(TimeOnlyConverter.Instance);
 #endif
             options.Converters.Add(VectorConverter.Instance);
-            options.Converters.Add(EnumerableConverter.Instance);
         }
     }
 }
