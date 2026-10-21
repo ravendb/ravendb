@@ -593,6 +593,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
     {
         private SpatialDistanceReader _reader;
         private Dictionary<long, double> _distances;
+        private double _missingDistance;
         private int _comparerId;
         private UnmanagedSpan<long> _batchResults;
         public Slice GetSortFieldName(ref SortingMultiMatch<TInner> match) => match._orderMetadata[_comparerId].Field.FieldName;
@@ -603,6 +604,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             _comparerId = comparerId;
             _reader = new SpatialDistanceReader(match._searcher, match._orderMetadata[_comparerId]);
             _distances = match._orderMetadata[_comparerId].UseNearestPoint ? new Dictionary<long, double>() : null;
+            _missingDistance = match._orderMetadata[_comparerId].Ascending ? double.MaxValue : double.MinValue;
         }
 
         private double GetDistanceForCompare(long entryId)
@@ -611,7 +613,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
                 return cached;
 
             var distance = _reader.TryGetDistance(entryId, out var result) == false
-                ? double.MaxValue
+                ? _missingDistance
                 : result.Distance;
 
             _distances?.Add(entryId, distance);

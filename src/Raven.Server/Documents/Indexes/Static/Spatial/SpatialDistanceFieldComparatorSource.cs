@@ -33,8 +33,8 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
         public override FieldComparator NewComparator(string fieldname, int numHits, int sortPos, bool reversed)
         {
             SpatialDistanceFieldComparator comp = _useNearestPoint
-                ? new NearestPointSpatialDistanceFieldComparator(_spatialField, _center, numHits, _roundFactor)
-                : new StoredShapeSpatialDistanceFieldComparator(_spatialField, _center, numHits, _roundFactor);
+                ? new NearestPointSpatialDistanceFieldComparator(_spatialField, _center, numHits, _roundFactor, reversed)
+                : new StoredShapeSpatialDistanceFieldComparator(_spatialField, _center, numHits, _roundFactor, reversed);
 
             if (_query.Distances == null)
                 _query.Distances = comp; // we will only push the distance for the first one
@@ -51,6 +51,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             private readonly Dictionary<int, SpatialResult> _cache = new Dictionary<int, SpatialResult>();
             private int _currentDocBase;
             private readonly double _roundFactor;
+            private readonly double _missingDistance;
 
             public SpatialUnits Units => SpatialField.Units;
 
@@ -61,13 +62,14 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                 return null;
             }
 
-            protected SpatialDistanceFieldComparator(SpatialField spatialField, IPoint origin, int numHits, double roundFactor)
+            protected SpatialDistanceFieldComparator(SpatialField spatialField, IPoint origin, int numHits, double roundFactor, bool reversed)
             {
                 SpatialField = spatialField;
                 _values = new DistanceValue[numHits];
                 _originPt = origin;
                 _isGeo = SpatialField.GetContext().IsGeo;
                 _roundFactor = roundFactor;
+                _missingDistance = reversed ? double.MinValue : double.MaxValue;
             }
 
             public override int Compare(int slot1, int slot2)
@@ -118,6 +120,9 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                     return GetRoundedValue(cache.Distance);
 
                 cache = ActuallyCalculateDistance(doc, state);
+
+                if (double.IsNaN(cache.Distance))
+                    cache.Distance = _missingDistance;
 
                 _cache[actualDocId] = cache;
 
@@ -218,8 +223,8 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
 
             private IndexReader _currentIndexReader;
 
-            public StoredShapeSpatialDistanceFieldComparator(SpatialField spatialField, IPoint origin, int numHits, double roundFactor)
-                : base(spatialField, origin, numHits, roundFactor)
+            public StoredShapeSpatialDistanceFieldComparator(SpatialField spatialField, IPoint origin, int numHits, double roundFactor, bool reversed)
+                : base(spatialField, origin, numHits, roundFactor, reversed)
             {
             }
 
@@ -270,8 +275,8 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             private StringIndex _centersIndex;
             private SpatialCenters _centers;
 
-            public NearestPointSpatialDistanceFieldComparator(SpatialField spatialField, IPoint origin, int numHits, double roundFactor)
-                : base(spatialField, origin, numHits, roundFactor)
+            public NearestPointSpatialDistanceFieldComparator(SpatialField spatialField, IPoint origin, int numHits, double roundFactor, bool reversed)
+                : base(spatialField, origin, numHits, roundFactor, reversed)
             {
             }
 

@@ -115,13 +115,18 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
                 case OrderByFieldType.Distance:
                 {
                     double m = double.MaxValue;
+                    var hasPoint = false;
                     while (reader.FindNextSpatial(fieldRootPage))
                     {
                         var coordinates = (reader.Latitude, reader.Longitude);
-                     
+
                         var distance = SpatialUtils.GetGeoDistance(in coordinates, (orderByFieldMetadata.Point.X, orderByFieldMetadata.Point.Y), orderByFieldMetadata.Round, orderByFieldMetadata.Units);
                         m = double.Min(m, distance);
+                        hasPoint = true;
                     }
+
+                    if (hasPoint == false)
+                        m = orderByField.Ascending ? double.MaxValue : double.MinValue;
 
                     result.AddDoubleOrderByField(m);
                     break;

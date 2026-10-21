@@ -61,7 +61,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void OrderByDistanceUsesTheNearestPointOfTheField(Options options)
         {
             options.ModifyDatabaseRecord += record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.CoraxIncludeSpatialDistance)] = true.ToString();
@@ -76,21 +76,20 @@ namespace SlowTests.Tests.Spatial
                 using (var session = store.OpenSession())
                 {
                     // the first (and lowest latitude) branch of X is the farthest one, the nearest one is closer than the branch of Y
+                    // Z has no branches, so it is last in both directions
                     var ascending = session.Query<Shop, Shops_ByBranches>()
                         .OrderByDistance("Branches", 10, 10)
                         .Select(x => x.Name)
                         .ToList();
 
-                    Assert.Equal(3, ascending.Count);
-                    Assert.Equal(new[] { "X", "Y" }, ascending.Where(x => x != "Z"));
+                    Assert.Equal(new[] { "X", "Y", "Z" }, ascending);
 
                     var descending = session.Query<Shop, Shops_ByBranches>()
                         .OrderByDistanceDescending("Branches", 10, 10)
                         .Select(x => x.Name)
                         .ToList();
 
-                    Assert.Equal(3, descending.Count);
-                    Assert.Equal(new[] { "Y", "X" }, descending.Where(x => x != "Z"));
+                    Assert.Equal(new[] { "Y", "X", "Z" }, descending);
                 }
 
                 using (var session = store.OpenSession())
@@ -165,7 +164,7 @@ namespace SlowTests.Tests.Spatial
 
                     // legacy behavior: Lucene calculates the distance from the first shape stored in the entry, regardless of the requested field,
                     // Corax from the point with the lowest latitude of the requested field
-                    AssertOrder(store, databaseName, expectedShops: new[] { "Y", "X" }, expectedByWork: isLucene ? new[] { "A", "B" } : new[] { "B", "A" });
+                    AssertOrder(store, databaseName, expectedShops: new[] { "Y", "X", "Z" }, expectedByWork: isLucene ? new[] { "A", "B" } : new[] { "B", "A" });
 
                     store.Maintenance.ForDatabase(databaseName).Send(new ResetIndexOperation(shopsIndex.IndexName));
                     store.Maintenance.ForDatabase(databaseName).Send(new ResetIndexOperation(peopleIndex.IndexName));
@@ -179,7 +178,7 @@ namespace SlowTests.Tests.Spatial
 
                     Indexes.WaitForIndexing(store, databaseName);
 
-                    AssertOrder(store, databaseName, expectedShops: new[] { "X", "Y" }, expectedByWork: new[] { "B", "A" });
+                    AssertOrder(store, databaseName, expectedShops: new[] { "X", "Y", "Z" }, expectedByWork: new[] { "B", "A" });
                 }
             }
 
@@ -192,7 +191,7 @@ namespace SlowTests.Tests.Spatial
                         .Select(x => x.Name)
                         .ToList();
 
-                    Assert.Equal(expectedShops, shops.Where(x => x != "Z"));
+                    Assert.Equal(expectedShops, shops);
 
                     var byWork = session.Query<Person, People_ByHomeAndWork>()
                         .OrderByDistance("Work", 10, 10)
@@ -200,6 +199,37 @@ namespace SlowTests.Tests.Spatial
                         .ToList();
 
                     Assert.Equal(expectedByWork, byWork);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Spatial | RavenTestCategory.JavaScript)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void JavaScriptIndexOrdersByDistanceUsingTheNearestPointOfTheField(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var index = new Shops_ByBranches_JavaScript();
+                index.Execute(store);
+                StoreShops(store);
+
+                Indexes.WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var ascending = session.Advanced.DocumentQuery<Shop>(index.IndexName)
+                        .OrderByDistance("Branches", 10, 10)
+                        .ToList()
+                        .Select(x => x.Name);
+
+                    Assert.Equal(new[] { "X", "Y", "Z" }, ascending);
+
+                    var descending = session.Advanced.DocumentQuery<Shop>(index.IndexName)
+                        .OrderByDistanceDescending("Branches", 10, 10)
+                        .ToList()
+                        .Select(x => x.Name);
+
+                    Assert.Equal(new[] { "Y", "X", "Z" }, descending);
                 }
             }
         }
@@ -321,6 +351,65 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void EntriesWithoutASpatialValueAreSortedLast(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                new Spots_ByGroupAndLocation().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Spot { Name = "A", Group = "g1", Lat = 10.5, Lng = 10.5 });
+                    session.Store(new Spot { Name = "B", Group = "g1", Lat = 12, Lng = 12 });
+                    session.Store(new Spot { Name = "C", Group = "g1" }); // no coordinates
+                    session.Store(new Spot { Name = "D", Group = "g2", Lat = 11, Lng = 11 });
+                    session.Store(new Spot { Name = "E", Group = "g2" }); // no coordinates
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    // the distance as the only ordering, the order between the entries without a value is not defined
+                    var ascending = session.Query<Spot, Spots_ByGroupAndLocation>()
+                        .OrderByDistance("Location", 10, 10)
+                        .Select(x => x.Name)
+                        .ToList();
+
+                    Assert.Equal(new[] { "A", "D", "B" }, ascending.Take(3));
+                    Assert.Equal(new[] { "C", "E" }, ascending.Skip(3).OrderBy(x => x));
+
+                    var descending = session.Query<Spot, Spots_ByGroupAndLocation>()
+                        .OrderByDistanceDescending("Location", 10, 10)
+                        .Select(x => x.Name)
+                        .ToList();
+
+                    Assert.Equal(new[] { "B", "D", "A" }, descending.Take(3));
+                    Assert.Equal(new[] { "C", "E" }, descending.Skip(3).OrderBy(x => x));
+
+                    // the distance as a secondary ordering
+                    var byGroupThenDistance = session.Advanced.DocumentQuery<Spot, Spots_ByGroupAndLocation>()
+                        .OrderBy(x => x.Group)
+                        .OrderByDistance("Location", 10, 10)
+                        .ToList()
+                        .Select(x => x.Name);
+
+                    Assert.Equal(new[] { "A", "B", "C", "D", "E" }, byGroupThenDistance);
+
+                    var byGroupThenDistanceDescending = session.Advanced.DocumentQuery<Spot, Spots_ByGroupAndLocation>()
+                        .OrderBy(x => x.Group)
+                        .OrderByDistanceDescending("Location", 10, 10)
+                        .ToList()
+                        .Select(x => x.Name);
+
+                    Assert.Equal(new[] { "B", "A", "C", "D", "E" }, byGroupThenDistanceDescending);
+                }
+            }
+        }
+
         private static void StoreShops(IDocumentStore store)
         {
             using (var session = store.OpenSession())
@@ -362,6 +451,29 @@ namespace SlowTests.Tests.Spatial
             public double Lng { get; set; }
         }
 
+        private class Spot
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public string Group { get; set; }
+            public double? Lat { get; set; }
+            public double? Lng { get; set; }
+        }
+
+        private class Spots_ByGroupAndLocation : AbstractIndexCreationTask<Spot>
+        {
+            public Spots_ByGroupAndLocation()
+            {
+                Map = spots => from s in spots
+                               select new
+                               {
+                                   s.Name,
+                                   s.Group,
+                                   Location = CreateSpatialField(s.Lat, s.Lng)
+                               };
+            }
+        }
+
         private class People_ByHomeAndWork : AbstractIndexCreationTask<Person>
         {
             public People_ByHomeAndWork()
@@ -386,6 +498,17 @@ namespace SlowTests.Tests.Spatial
                                    s.Name,
                                    Branches = s.Branches.Select(b => CreateSpatialField(b.Lat, b.Lng))
                                };
+            }
+        }
+
+        private class Shops_ByBranches_JavaScript : AbstractJavaScriptIndexCreationTask
+        {
+            public Shops_ByBranches_JavaScript()
+            {
+                Maps = new HashSet<string>
+                {
+                    "map('Shops', s => ({ Name: s.Name, Branches: s.Branches.map(b => createSpatialField(b.Lat, b.Lng)) }))"
+                };
             }
         }
 
