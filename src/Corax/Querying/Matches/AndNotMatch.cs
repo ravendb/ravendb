@@ -359,6 +359,23 @@ namespace Corax.Querying.Matches
                 return;
             }
 
+            if (_inner.IsBoosting && _isAndWithBuffer && _excludedBitmapInitialized == false)
+            {
+                if (_buffer.Count == 0)
+                    return;
+
+                using var own = new BinaryMatchScoringBuffer(_context, Math.Min(matches.Length, _buffer.Count));
+                for (var i = 0; i < matches.Length; i++)
+                {
+                    if (_buffer.Results.BinarySearch(matches[i]) >= 0)
+                        own.Add(matches[i], i);
+                }
+
+                _inner.Score(own.Matches, own.Scores, boostFactor);
+                own.AddScoresTo(scores);
+                return;
+            }
+
             _inner.Score(matches, scores, boostFactor);
         }
 

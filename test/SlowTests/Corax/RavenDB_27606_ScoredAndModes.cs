@@ -27,6 +27,7 @@ public class RavenDB_27606_ScoredAndModes(ITestOutputHelper output) : StorageTes
         ["(A=a2 and B=b2) or (C=c2 and D=d2)"] = s => s.Or(s.And(T(s, "A", "a2"), T(s, "B", "b2")), s.And(T(s, "C", "c2"), T(s, "D", "d2"))),
         ["((A=a1 and B=b2) or C=c2) and D=d1"] = s => s.And(s.Or(s.And(T(s, "A", "a1"), T(s, "B", "b2")), T(s, "C", "c2")), T(s, "D", "d1")),
         ["B=b2 and ((A=a1 and D=d1) or C=c2)"] = s => s.And(T(s, "B", "b2"), s.Or(s.And(T(s, "A", "a1"), T(s, "D", "d1")), T(s, "C", "c2"))),
+        ["B=b2 and ((A=a1 and not D=d1) or C=c2)"] = s => s.And(T(s, "B", "b2"), s.Or(s.AndNot(T(s, "A", "a1"), T(s, "D", "d1")), T(s, "C", "c2"))),
         ["((A=a1 and B=b1) and C=c2) or D=d2"] = s => s.Or(s.And(s.And(T(s, "A", "a1"), T(s, "B", "b1")), T(s, "C", "c2")), T(s, "D", "d2")),
         ["((A=a1 and B=b2) and not D=d1) or C=c2"] = s => s.Or(s.AndNot(s.And(T(s, "A", "a1"), T(s, "B", "b2")), T(s, "D", "d1")), T(s, "C", "c2")),
         ["(A=a1 and startsWith(P, 'p1')) or C=c2"] = s => s.Or(s.And(T(s, "A", "a1"), s.StartWithQuery(F(s, "P"), "p1")), T(s, "C", "c2")),
