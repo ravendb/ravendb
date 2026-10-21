@@ -73,6 +73,35 @@ public class ScoringOnlyWhenScoresAreConsumed(ITestOutputHelper output) : RavenT
         Assert.All(HasIndexScore(store, "order by Age as long, score()"), Assert.True);
     }
 
+    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    public void VectorSearchWithFieldOrderBuildsNoScoringState()
+    {
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using (var session = store.OpenSession())
+        {
+            for (var i = 0; i < 5; i++)
+                session.Store(new VectorDoc { Text = "car", Counter0 = 1, Counter1 = 3 });
+            session.Store(new VectorDoc { Text = "cars", Counter0 = 2, Counter1 = 3 });
+            session.Store(new VectorDoc { Text = "bike", Counter0 = 1, Counter1 = 2 });
+            session.SaveChanges();
+        }
+
+        new VectorDocsIndex().Execute(store);
+        Indexes.WaitForIndexing(store);
+
+        using (var session = store.OpenSession())
+        {
+            session.Advanced
+                .RawQuery<VectorDoc>($"from index '{new VectorDocsIndex().IndexName}' where Counter0 = 1 and Counter1 <= 3 and vector.search(Text, 'car') order by Counter0 include timings()")
+                .Timings(out QueryTimings timings)
+                .ToList();
+
+            var plan = (QueryInspectionNode)timings.QueryPlan;
+            Assert.DoesNotContain("True", IsBoostingValues(plan));
+            Assert.NotNull(Find(plan, "MultiUnaryMatch"));
+        }
+    }
+
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Facets)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void FacetsWithWhereOnDocumentBoostedIndex(Options options)
@@ -164,5 +193,23 @@ public class ScoringOnlyWhenScoresAreConsumed(ITestOutputHelper output) : RavenT
         public string Name { get; set; }
         public string Tag { get; set; }
         public int Age { get; set; }
+    }
+
+    private class VectorDocsIndex : AbstractIndexCreationTask<VectorDoc>
+    {
+        public VectorDocsIndex()
+        {
+            Map = docs => from doc in docs
+                select new { Text = CreateVector(doc.Text), doc.Counter0, doc.Counter1 };
+            SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
+        }
+    }
+
+    private class VectorDoc
+    {
+        public string Id { get; set; }
+        public string Text { get; set; }
+        public int Counter0 { get; set; }
+        public int Counter1 { get; set; }
     }
 }
