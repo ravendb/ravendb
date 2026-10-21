@@ -150,6 +150,17 @@ function mapUploadToDto(formData: CertificatesUploadFormData): UploadCertificate
     };
 }
 
+function isNew2FAKeyNeeded(
+    formData: Pick<CertificatesEditFormData, "isRequire2FA" | "isRegenerate2FAKey">,
+    hasTwoFactor: boolean
+): boolean {
+    return formData.isRequire2FA && (!hasTwoFactor || formData.isRegenerate2FAKey);
+}
+
+function is2FARemoved(formData: Pick<CertificatesEditFormData, "isRequire2FA">, hasTwoFactor: boolean): boolean {
+    return hasTwoFactor && !formData.isRequire2FA;
+}
+
 function mapEditToDto(formData: CertificatesEditFormData, certificate: CertificateItem): UpdateCertificateDto {
     return {
         Name: certificate.Name,
@@ -159,7 +170,9 @@ function mapEditToDto(formData: CertificatesEditFormData, certificate: Certifica
             securityClearance: formData.securityClearance,
             databasePermissions: formData.databasePermissions,
         }),
-        TwoFactorAuthenticationKey: formData.isRequire2FA ? formData.authenticationKey : null,
+        TwoFactorAuthenticationKey: isNew2FAKeyNeeded(formData, certificate.HasTwoFactor)
+            ? formData.authenticationKey
+            : null,
         Disabled: certificate.Disabled ?? false,
     };
 }
@@ -211,6 +224,8 @@ export const certificatesUtils = {
     getStateDateColor,
     mapGenerateToDto,
     mapUploadToDto,
+    isNew2FAKeyNeeded,
+    is2FARemoved,
     mapEditToDto,
     mapReplaceServerToDto,
     mapDatabasePermissionsFromDto,
