@@ -272,7 +272,7 @@ namespace Raven.Client.Documents.Indexes
             if (propName != null)
                 return propName;
 
-            propName = JsonPropertyNameResolver.GetJsonPropertyName(memberInfo);
+            propName = JsonPropertyNameResolver.GetJsonPropertyName(memberInfo, _conventions);
             if (propName != null)
             {
                 if (KeywordsInCSharp.Contains(propName))
