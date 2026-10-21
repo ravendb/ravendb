@@ -8,6 +8,7 @@ import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDat
 class databaseStorageReportItem extends storageReportItem {
 
     readonly isDisabled: boolean;
+    readonly loadError: string;
 
     constructor(state: StudioDatabaseState, isDisabled: boolean) {
         const isSizeKnown = state.TotalSize != null;
@@ -18,7 +19,8 @@ class databaseStorageReportItem extends storageReportItem {
         super(DatabaseUtils.default.formatName(state.Name), type, true, dataSize + tempBuffersSize);
 
         this.isDisabled = isDisabled;
-        this.link = isDisabled ? null : appUrl.forStatusStorageReport(state.Name);
+        this.loadError = state.LoadError ?? null;
+        this.link = isDisabled || this.loadError ? null : appUrl.forStatusStorageReport(state.Name);
 
         if (isSizeKnown) {
             this.dataSize = dataSize;
