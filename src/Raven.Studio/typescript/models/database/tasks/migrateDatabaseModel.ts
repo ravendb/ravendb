@@ -151,15 +151,6 @@ class migrateDatabaseModel {
     }
     
     private initValidation() {
-        this.selectMigrationOption.extend({
-            validation: [
-                {
-                    validator: (value: migrationOptions) => !!value,
-                    message: "Please choose source"
-                }
-            ]
-        });
-
         this.cosmosDbConfiguration.databaseName.extend({
             required: {
                 onlyIf: () => this.showCosmosDbOptions()
@@ -181,7 +172,6 @@ class migrateDatabaseModel {
 
         this.validationGroup = ko.validatedObservable({
             migratorFullPath: this.migratorFullPath,
-            selectMigrationOption: this.selectMigrationOption,
             cosmosDbDatabaseName: this.cosmosDbConfiguration.databaseName,
             azureEndpointUrl: this.cosmosDbConfiguration.azureEndpointUrl,
             primaryKey: this.cosmosDbConfiguration.primaryKey
@@ -189,7 +179,6 @@ class migrateDatabaseModel {
 
         this.validationGroupDatabaseNames = ko.validatedObservable({
             migratorFullPath: this.migratorFullPath,
-            selectMigrationOption: this.selectMigrationOption,
             azureEndpointUrl: this.cosmosDbConfiguration.azureEndpointUrl,
             primaryKey: this.cosmosDbConfiguration.primaryKey
         });
