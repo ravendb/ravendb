@@ -29,8 +29,10 @@ import {
 import { useGroup } from "components/pages/resources/manageDatabaseGroup/partials/useGroup";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { Icon } from "components/common/Icon";
-import useConfirm from "components/common/ConfirmDialog";
-import { SoftDeleteFromGroupModal } from "components/pages/resources/manageDatabaseGroup/partials/SoftDeleteFromGroupModal";
+import {
+    DeleteFromGroupModal,
+    NodeDeletion,
+} from "components/pages/resources/manageDatabaseGroup/partials/DeleteFromGroupModal";
 
 export interface ShardsGroupProps {
     db: DatabaseSharedInfo;
@@ -53,8 +55,7 @@ export function ShardsGroup(props: ShardsGroupProps) {
 
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
-    const confirm = useConfirm();
-    const [softDeleteNodeTag, setSoftDeleteNodeTag] = useState<string>(null);
+    const [deletion, setDeletion] = useState<NodeDeletion>(null);
 
     const addNode = useCallback(() => {
         const addKeyView = new addNewNodeToDatabaseGroup(db.name, db.nodes, db.isEncrypted);
@@ -70,31 +71,9 @@ export function ShardsGroup(props: ShardsGroupProps) {
         [databasesService, db.name, reportEvent, exitReorder]
     );
 
-    const deleteNodeFromGroup = useCallback(
-        async (nodeTag: string, hardDelete: boolean) => {
-            if (!hardDelete) {
-                setSoftDeleteNodeTag(nodeTag);
-                return;
-            }
-
-            const isConfirmed = await confirm({
-                icon: "trash",
-                title: (
-                    <span>
-                        Do you want to delete shard #<strong>{DatabaseUtils.shardNumber(db.name)}</strong> from node{" "}
-                        <strong>{nodeTag}</strong>?
-                    </span>
-                ),
-                confirmText: "Delete",
-                actionColor: "danger",
-            });
-
-            if (isConfirmed) {
-                await databasesService.deleteDatabaseFromNode(db.name, [nodeTag], hardDelete);
-            }
-        },
-        [confirm, db.name, databasesService]
-    );
+    const deleteNodeFromGroup = (nodeTag: string, isHardDelete: boolean) => {
+        setDeletion({ nodeTag, isHardDelete });
+    };
 
     const onSave = async () => {
         await saveNewOrder(
@@ -171,15 +150,12 @@ export function ShardsGroup(props: ShardsGroupProps) {
                     </DatabaseGroup>
                 </React.Fragment>
             )}
-            {softDeleteNodeTag && (
-                <SoftDeleteFromGroupModal
+            {deletion && (
+                <DeleteFromGroupModal
                     db={db}
-                    nodeTag={softDeleteNodeTag}
-                    onClose={() => setSoftDeleteNodeTag(null)}
-                    onHardDeleteInstead={() => {
-                        setSoftDeleteNodeTag(null);
-                        deleteNodeFromGroup(softDeleteNodeTag, true);
-                    }}
+                    deletion={deletion}
+                    onHardDeleteInstead={() => setDeletion({ ...deletion, isHardDelete: true })}
+                    onClose={() => setDeletion(null)}
                 />
             )}
         </RichPanel>
