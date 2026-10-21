@@ -27,6 +27,20 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             _position += count;
         }
 
+        public void Truncate(int count)
+        {
+            if (count < 0 || count > _position)
+                throw new ArgumentOutOfRangeException(nameof(count));
+
+            _position -= count;
+        }
+
+        public void WriteByte(byte value)
+        {
+            GetSpan(1)[0] = value;
+            _position++;
+        }
+
         public Memory<byte> GetMemory(int sizeHint = 0)
         {
             EnsureCapacity(sizeHint);

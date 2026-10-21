@@ -83,11 +83,27 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             IJsonWriter writer,
             bool removeIdentityProperty = true)
         {
+            return ConvertToBlittable(entity, conventions, context, removeIdentityProperty, () =>
+            {
+                serializer.Serialize(writer, entity);
+                writer.FinalizeDocument();
+                return writer.CreateReader();
+            });
+        }
+
+        protected static BlittableJsonReaderObject ConvertToBlittable(
+            object entity,
+            DocumentConventions conventions,
+            JsonOperationContext context,
+            bool removeIdentityProperty,
+            Func<BlittableJsonReaderObject> serialize)
+        {
             var type = entity.GetType();
             var isDynamicObject = entity is IDynamicMetaObjectProvider;
             var hasIdentityProperty = conventions.GetIdentityProperty(type) != null;
             var useResolver = isDynamicObject == false;
 
+            BlittableJsonReaderObject reader;
             if (useResolver)
             {
                 RavenJsonTypeInfoResolver.RootEntity = removeIdentityProperty && hasIdentityProperty ? entity : null;
@@ -95,7 +111,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
                 try
                 {
-                    serializer.Serialize(writer, entity);
+                    reader = serialize();
                 }
                 finally
                 {
@@ -104,12 +120,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             }
             else
             {
-                serializer.Serialize(writer, entity);
+                reader = serialize();
             }
-
-            writer.FinalizeDocument();
-
-            var reader = writer.CreateReader();
 
             if (useResolver == false || hasIdentityProperty && RavenJsonTypeInfoResolver.RemovedIdentityProperty == false)
             {

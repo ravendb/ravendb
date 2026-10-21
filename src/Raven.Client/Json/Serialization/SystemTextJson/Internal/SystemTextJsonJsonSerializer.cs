@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Text.Json;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
@@ -24,7 +25,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (writer is SystemTextJsonBlittableWriter stjWriter)
             {
                 using var bufferWriter = new ContextMemoryBufferWriter(stjWriter.Context);
-                using (var utf8Writer = new Utf8JsonWriter((System.Buffers.IBufferWriter<byte>)bufferWriter))
+                using (var utf8Writer = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter))
                 {
                     JsonSerializer.Serialize(utf8Writer, value, objectType, Options);
                 }
@@ -40,7 +41,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
         internal unsafe BlittableJsonReaderObject SerializeToBlittable(object value, Type objectType, JsonOperationContext context)
         {
             using var bufferWriter = new ContextMemoryBufferWriter(context);
-            using (var utf8Writer = new Utf8JsonWriter((System.Buffers.IBufferWriter<byte>)bufferWriter))
+            using (var utf8Writer = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter))
             {
                 JsonSerializer.Serialize(utf8Writer, value, objectType, Options);
             }
@@ -52,31 +53,29 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             IMetadataDictionary metadata, JsonOperationContext context)
         {
             using var bufferWriter = new ContextMemoryBufferWriter(context);
-            using (var utf8Writer = new Utf8JsonWriter((System.Buffers.IBufferWriter<byte>)bufferWriter, new System.Text.Json.JsonWriterOptions { SkipValidation = true }))
+            using (var utf8Writer = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter))
             {
-                utf8Writer.WriteStartObject();
+                JsonSerializer.Serialize(utf8Writer, value, objectType, Options);
+            }
 
-                if (metadata != null && metadata.Count > 0)
+            if (metadata != null && metadata.Count > 0)
+            {
+                ReadOnlySpan<byte> written = bufferWriter.WrittenSpan;
+                if (written.Length < 2 || written[written.Length - 1] != '}')
+                    throw new InvalidOperationException($"Entity of type '{objectType}' must serialize to a JSON object.");
+
+                bool hasProperties = written.Length > 2;
+                bufferWriter.Truncate(1);
+                if (hasProperties)
+                    bufferWriter.WriteByte((byte)',');
+
+                using (var metadataWriter = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter, new JsonWriterOptions { SkipValidation = true }))
                 {
-                    utf8Writer.WritePropertyName(Constants.Documents.Metadata.Key);
-                    utf8Writer.WriteStartObject();
-                    foreach (var kvp in metadata)
-                    {
-                        utf8Writer.WritePropertyName(kvp.Key);
-                        SystemTextJsonSerializationConventions.WriteMetadataValue(utf8Writer, kvp.Value);
-                    }
-                    utf8Writer.WriteEndObject();
+                    metadataWriter.WritePropertyName(Constants.Documents.Metadata.Key);
+                    SystemTextJsonSerializationConventions.WriteMetadata(metadataWriter, metadata);
                 }
 
-                using var doc = JsonDocument.Parse(JsonSerializer.SerializeToUtf8Bytes(value, objectType, Options));
-                foreach (var property in doc.RootElement.EnumerateObject())
-                {
-                    if (property.Name == Constants.Documents.Metadata.Key)
-                        continue;
-                    property.WriteTo(utf8Writer);
-                }
-
-                utf8Writer.WriteEndObject();
+                bufferWriter.WriteByte((byte)'}');
             }
 
             return ParseBufferToBlittable(bufferWriter, context);
