@@ -523,7 +523,7 @@ class storageReport extends viewModelBase {
         if (this.shouldDisplayNumberOfEntries(d)) {
             html += "<span>Entries: <strong>" + d.numberOfEntries.toLocaleString() + "</strong></span>";
         }
-        html += "<span class='size'>Size: <strong>" + generalUtils.formatBytesToSize(d.size) + "</strong></span>";
+        html += "<span class='size'>Size: <strong>" + d.formatSize(true) + "</strong></span>";
 
         this.tooltip.html(html);
         this.onMouseMove();
@@ -531,14 +531,6 @@ class storageReport extends viewModelBase {
 
     private shouldDisplayNumberOfEntries(d: storageReportItem) {
         return d.type === "tree" || d.type === "table";
-    }
-
-    dataSizeFormatted(item: storageReportItem) {
-        return item.dataSize == null ? "n/a" : generalUtils.formatBytesToSize(item.dataSize);
-    }
-
-    tempSizeFormatted(item: storageReportItem) {
-        return item.tempBuffersSize == null ? "n/a" : generalUtils.formatBytesToSize(item.tempBuffersSize);
     }
 
     private onMouseOut() {

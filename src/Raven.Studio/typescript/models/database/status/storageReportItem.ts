@@ -45,6 +45,14 @@ class storageReportItem {
         return (this.size * 100 / parentSize).toFixed(2) + '%';
     }
 
+    formatDataSize() {
+        return this.dataSize == null ? "n/a" : generalUtils.formatBytesToSize(this.dataSize);
+    }
+
+    formatTempBuffersSize() {
+        return this.tempBuffersSize == null ? "n/a" : generalUtils.formatBytesToSize(this.tempBuffersSize);
+    }
+
     hasChildren(): boolean {
         return (this.internalChildren && this.internalChildren.length > 0) || (this.lazyLoadChildren === true);
     }

@@ -672,14 +672,6 @@ class storageReport extends shardViewModelBase {
             .style("opacity", 0);
     }
 
-    dataSizeFormatted(item: storageReportItem) {
-        return item.dataSize == null ? "n/a" : generalUtils.formatBytesToSize(item.dataSize);
-    }
-
-    tempSizeFormatted(item: storageReportItem) {
-        return item.tempBuffersSize == null ? "n/a" : generalUtils.formatBytesToSize(item.tempBuffersSize);
-    }
-
     compactDatabase() {
         router.navigate(appUrl.forDatabases("compact", this.db.name, this.location?.shardNumber));
     }
