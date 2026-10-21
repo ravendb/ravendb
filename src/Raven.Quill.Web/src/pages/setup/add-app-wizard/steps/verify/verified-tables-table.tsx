@@ -8,15 +8,19 @@ import type { DiscoverTableResponse } from "@/api/generated/server-api";
 import { TooltipProvider } from "@/components/shadcn/ui/tooltip";
 import { RANGE_PREVIEW_ROW_CLASSNAME, useRowRangeSelection } from "@/components/table/row-range-selection";
 import { VirtualDataTable } from "@/components/table/virtual-data-table";
-import { getTableKey, MAX_SELECTED_TABLES } from "@/pages/setup/add-app-wizard/discover-utils";
+import { getTableKey, MAX_SELECTED_TABLES, type WarningsFilter } from "@/pages/setup/add-app-wizard/discover-utils";
 import { VerifySchemaButton } from "@/pages/setup/add-app-wizard/steps/verify/verify-schema-button";
-import { createVerifiedColumns } from "@/pages/setup/add-app-wizard/steps/verify/verify-schema-columns";
+import {
+    createVerifiedColumns,
+    WARNINGS_COLUMN_ID,
+} from "@/pages/setup/add-app-wizard/steps/verify/verify-schema-columns";
 
 type VerifiedTablesTableProps = {
     tables: DiscoverTableResponse[];
     /** Total number of discovered tables, shown in the "x out of y" selection summary. */
     totalTableCount: number;
     search: string;
+    warningsFilter: WarningsFilter;
     rowSelection: RowSelectionState;
     onRowSelectionChange: (selection: RowSelectionState) => void;
     /** The selection is read-only: an imported configuration is locked, or a dry run is in flight. */
@@ -29,6 +33,7 @@ export function VerifiedTablesTable({
     tables,
     totalTableCount,
     search,
+    warningsFilter,
     rowSelection,
     onRowSelectionChange,
     disabled,
@@ -38,7 +43,13 @@ export function VerifiedTablesTable({
     // every render makes it recompute row models and queue state resets, ending in a re-render
     // loop. "use no memo" opts this file out of the React Compiler (incompatible with react-table),
     // so the explicit useMemo matters. The `tables` data array is memoized by the parent.
-    const columnFilters = useMemo(() => [{ id: "tableName", value: search }], [search]);
+    const columnFilters = useMemo(
+        () => [
+            { id: "tableName", value: search },
+            { id: WARNINGS_COLUMN_ID, value: warningsFilter },
+        ],
+        [search, warningsFilter],
+    );
     const rangeSelection = useRowRangeSelection<DiscoverTableResponse>(MAX_SELECTED_TABLES);
     const columns = useMemo(
         () => createVerifiedColumns(rangeSelection.anchorRowIdRef),
@@ -53,6 +64,9 @@ export function VerifiedTablesTable({
         getCoreRowModel: getCoreRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         getRowId: getTableKey,
+        initialState: {
+            columnVisibility: { [WARNINGS_COLUMN_ID]: false },
+        },
         // At the limit only the already selected rows stay togglable, so the operator has to free a
         // slot before picking another table.
         enableRowSelection: (row) =>
@@ -74,7 +88,7 @@ export function VerifiedTablesTable({
         <TooltipProvider>
             <VirtualDataTable
                 table={table}
-                columnCount={columns.length}
+                columnCount={table.getVisibleLeafColumns().length}
                 emptyMessage="No tables match the current filter."
                 maxHeight="fill"
                 getRowState={(rowId) => (rowSelection[rowId] ? "selected" : "")}

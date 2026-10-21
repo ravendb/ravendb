@@ -187,7 +187,7 @@ namespace Raven.Server.Documents.Revisions
                 return ConflictConfiguration.Default;
             }
 
-            if (Configuration?.Default != null)
+            if (Configuration?.Default != null && CollectionName.IsSystemCollection(collection) == false)
                 return Configuration.Default;
 
             return deleteRevisionsWhenNoCofiguration ? ZeroConfiguration : _emptyConfiguration;

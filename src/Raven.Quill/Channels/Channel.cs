@@ -23,7 +23,7 @@ internal sealed class Channel
 
     public DateTime CreatedAt { get; set; }
 
-    /// Null means "follow the app-level default" (see <see cref="WidgetThemeResolution"/>). Web-widget only.
+    /// Null means "follow the app-level default" (see <see cref="WidgetThemeResolution"/>). Embedded chat only.
     public WidgetTheme? Theme { get; set; }
 
     public TelegramSettings? Telegram { get; set; }

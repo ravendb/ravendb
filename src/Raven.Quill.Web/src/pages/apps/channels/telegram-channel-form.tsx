@@ -28,7 +28,7 @@ import {
     TELEGRAM_SOURCE_VALUES,
     telegramParameterSourceHint,
 } from "@/pages/apps/channels/telegram-parameter-sources";
-import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
+import type { FixedAgent } from "@/pages/apps/channels/channel-form-types";
 
 const parameterBindingSchema = z
     .object({

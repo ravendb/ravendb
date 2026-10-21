@@ -73,6 +73,7 @@ export default function CertificatesCloneModal() {
                 reset(formData);
                 dispatch(certificatesActions.fetchData());
                 dispatch(certificatesActions.cloneModalClosed());
+                dispatch(certificatesActions.isReadyModalOpenToggled());
             } catch {
                 notificationCenter.instance.openDetailsForOperationById(null, operationId);
             }

@@ -1,4 +1,3 @@
-﻿
 import document = require("models/database/documents/document");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import databasesManager = require("common/shell/databasesManager");
@@ -15,7 +14,7 @@ class continueTest {
     showContinueButton = ko.observable<boolean>(false);
     private databaseName = ko.observable<string>();
 
-    init(args: { withStop: string; database: string }) {
+    init(args: { withStop?: string; database?: string }) {
         if (!this.initialized) {
             this.showContinueButton("withStop" in args);
             if (this.showContinueButton()) {

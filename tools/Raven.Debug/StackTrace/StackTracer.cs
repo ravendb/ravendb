@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Symbols;
@@ -38,12 +39,13 @@ namespace Raven.Debug.StackTrace
                 // is too short in a given environment, e.g., resource constrained systems
                 // N.B. - This trace INCLUDES rundown.  For sufficiently large applications, it may take non-trivial time to collect
                 //        the symbol data in rundown.
-                using (EventPipeSession session = client.StartEventPipeSession(providers))
+                EventPipeSession session = await client.StartEventPipeSessionAsync(providers, requestRundown: true, token: CancellationToken.None);
+                using (session)
                 await using (FileStream fs = File.OpenWrite(tempNetTraceFilename))
                 {
                     Task copyTask = session.EventStream.CopyToAsync(fs);
                     await Task.Delay(TimeSpan.FromMilliseconds(attachTimeout));
-                    session.Stop();
+                    await session.StopAsync(CancellationToken.None);
 
                     await copyTask;
                 }

@@ -185,14 +185,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         {
             AssertNotServerWideConnectionString(ConnectionString.Name);
 
-            try
-            {
-                ConnectionString.Identifier ??= ConnectionString.GenerateIdentifier();
-            }
-            catch (Exception e)
-            {
-                throw new RachisApplyException("Failed to generate AI connection string identifier", e);
-            }
+            PutServerWideConnectionStringCommand.EnsureAiIdentifier(ConnectionString);
 
             InClusterValidation(record);
 
@@ -206,15 +199,11 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
                 if (databaseRecord == null)
                     throw new RachisApplyException("Failed to get database record, but it is required for further validation");
 
-                if (string.IsNullOrWhiteSpace(ConnectionString.Identifier))
-                    throw new RachisApplyException("Connection string identifier must be set, but it is not");
-
-                if (ConnectionString.ValidateIdentifier(out var errors) == false)
-                    throw new RachisApplyException( $"Invalid identifier format. Validation errors:{Environment.NewLine} - {string.Join($"{Environment.NewLine} - ", errors)}");
-
                 var isUpdate = databaseRecord.AiConnectionStrings.TryGetValue(ConnectionString.Name, out var oldAiConnectionString) && oldAiConnectionString != null;
                 var identifierConflicts = databaseRecord?.AiConnectionStrings
-                    .Where(x => x.Value != null && x.Value.Identifier == ConnectionString.Identifier && x.Key != ConnectionString.Name)
+                    .Where(x => x.Value != null &&
+                                x.Key != ConnectionString.Name &&
+                                PutServerWideConnectionStringCommand.GetEffectiveAiIdentifier(x.Value.Identifier, x.Key) == ConnectionString.Identifier)
                     .ToArray();
 
                 if (identifierConflicts.Length > 0)

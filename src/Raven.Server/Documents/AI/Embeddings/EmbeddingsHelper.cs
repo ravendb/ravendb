@@ -60,9 +60,11 @@ public static class EmbeddingsHelper
         return $"embeddings/{documentId}";
     }
 
+    public const string EmbeddingDocumentCollectionNamePrefix = "@embeddings/";
+
     public static string GetEmbeddingDocumentCollectionName(string sourceCollectionName)
     {
-        return $"@embeddings/{sourceCollectionName}";
+        return $"{EmbeddingDocumentCollectionNamePrefix}{sourceCollectionName}";
     }
 
     public static string GetEmbeddingCacheDocumentId(AiConnectionStringIdentifier id, string valueHash, VectorEmbeddingType targetQuantization)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Hl7.Fhir.ElementModel;
 using Hl7.Fhir.Model;
@@ -103,6 +104,62 @@ namespace FastTests.Client.Documents
             }
         }
 
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void Fhir_Supports_Serialize_Deserialize_As_Nested_Property()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = store =>
+                {
+                    var serializationConventions = (NewtonsoftJsonSerializationConventions)store.Conventions.Serialization;
+                    serializationConventions.CustomizeJsonSerializer = serializer =>
+                    {
+                        serializer.Converters.Add(new FhirResourceConverter<Observation>());
+                    };
+                }
+            }))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new ObservationHolder
+                    {
+                        Before = "before",
+                        Observation = new Observation
+                        {
+                            Status = ObservationStatus.Final,
+                            Value = new Quantity(1.50m, "mg")
+                        },
+                        After = 42
+                    }, "holders/1");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var holder = session.Load<ObservationHolder>("holders/1");
+
+                    Assert.Equal("before", holder.Before);
+                    Assert.Equal(42, holder.After);
+                    Assert.Equal(ObservationStatus.Final, holder.Observation.Status);
+
+                    var quantity = Assert.IsType<Quantity>(holder.Observation.Value);
+                    Assert.Equal("mg", quantity.Unit);
+                    Assert.Equal(1.50m, quantity.Value);
+                    Assert.Equal("1.50", quantity.Value.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                }
+            }
+        }
+
+        private class ObservationHolder
+        {
+            public string Before { get; set; }
+
+            public Observation Observation { get; set; }
+
+            public int After { get; set; }
+        }
+
         public class FhirResourceConverter<T> : JsonConverter<T> where T : Base
         {
             private static readonly PocoBuilderSettings _builderSettings = new()
@@ -117,8 +174,14 @@ namespace FastTests.Client.Documents
 
             public override void WriteJson(JsonWriter writer, T value, JsonSerializer serializer)
             {
-                var fhirSerializer = new FhirJsonSerializer();
-                fhirSerializer.Serialize(value, writer);
+                // Hl7.Fhir 6+ Serialize(Base, JsonWriter) passes the serialized resource to JsonWriter.WriteRaw (which leaves the writer
+                // in an invalid state when the resource is not the root), so we write the serialized resource as JSON tokens instead
+                var json = new FhirJsonSerializer().SerializeToString(value);
+
+                using (var reader = new JsonTextReader(new StringReader(json)) { DateParseHandling = DateParseHandling.None, FloatParseHandling = FloatParseHandling.Decimal })
+                {
+                    writer.WriteToken(reader);
+                }
             }
         }
     }

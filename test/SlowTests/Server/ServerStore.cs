@@ -25,9 +25,7 @@ namespace SlowTests.Server
         {
             using (GetDocumentStore())
             {
-#pragma warning disable SYSLIB0057
-                var certificate = new X509Certificate2(Certificates.GenerateAndSaveSelfSignedCertificate().ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet);
-#pragma warning restore SYSLIB0057
+                var certificate = Certificates.GenerateAndSaveSelfSignedCertificate().ServerCertificate.Value;
 
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
@@ -62,9 +60,7 @@ namespace SlowTests.Server
         {
             using (GetDocumentStore())
             {
-#pragma warning disable SYSLIB0057
-                var certificate = new X509Certificate2(Certificates.GenerateAndSaveSelfSignedCertificate().ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet);
-#pragma warning restore SYSLIB0057
+                var certificate = Certificates.GenerateAndSaveSelfSignedCertificate().ServerCertificate.Value;
 
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
