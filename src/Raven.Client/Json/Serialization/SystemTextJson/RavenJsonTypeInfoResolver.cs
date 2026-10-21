@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
+using Raven.Client.Documents.Conventions;
 using Sparrow.Extensions;
 using Sparrow.Json;
 
@@ -69,8 +70,28 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             bool isRecord = typeInfo.Type.IsRecord();
 
             FilterProperties(typeInfo, isRecord);
+            ApplyPropertyNameConverter(typeInfo);
             SetupNonPublicConstructor(typeInfo);
             SetupIdentityPropertyConditionalSerialization(typeInfo);
+        }
+
+        private void ApplyPropertyNameConverter(JsonTypeInfo typeInfo)
+        {
+            DocumentConventions conventions = _conventions.Conventions;
+            if (conventions?.PropertyNameConverter == null)
+                return;
+
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                JsonPropertyInfo property = typeInfo.Properties[i];
+                if (property.AttributeProvider is not MemberInfo member)
+                    continue;
+
+                if (member.IsDefined(typeof(JsonPropertyNameAttribute), inherit: true))
+                    continue;
+
+                property.Name = conventions.GetConvertedPropertyNameFor(member);
+            }
         }
 
         private void FilterProperties(JsonTypeInfo typeInfo, bool isRecord)
@@ -204,7 +225,11 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             for (int i = 0; i < typeInfo.Properties.Count; i++)
             {
                 JsonPropertyInfo property = typeInfo.Properties[i];
-                if (property.Name == identityProperty.Name)
+                bool isIdentityProperty = property.AttributeProvider is MemberInfo member
+                    ? member.Name == identityProperty.Name
+                    : property.Name == identityProperty.Name;
+
+                if (isIdentityProperty)
                 {
                     property.ShouldSerialize = ShouldSerializeIdentityProperty;
                     break;
