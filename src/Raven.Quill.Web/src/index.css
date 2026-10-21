@@ -20,9 +20,6 @@
 @custom-variant data-open (&:is([data-open], [data-state="open"]));
 @custom-variant data-closed (&:is([data-closed], [data-state="closed"]));
 
-/* For vertical breathing room only where the viewport can spare it; on a 720p screen every row counts. */
-@custom-variant tall (@media (min-height: 45rem));
-
 @layer base {
     * {
         border-color: var(--color-border);

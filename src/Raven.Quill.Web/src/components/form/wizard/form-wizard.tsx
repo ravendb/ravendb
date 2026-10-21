@@ -9,8 +9,10 @@ import {
     type UseFormGetValues,
 } from "react-hook-form";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
 import { ConfirmDialog } from "@/components/shadcn/ui/confirm-dialog";
+import { Progress } from "@/components/shadcn/ui/progress";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { useUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { Heading, Text } from "@/components/typography";
@@ -272,27 +274,26 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
         <div className="flex h-full min-h-full text-foreground">
             {/* grid-cols-1 matters: an implicit auto column would size to its content's max-content
                 width, letting a wide table prop the layout open instead of shrinking with the window. */}
-            <div className="grid min-h-full w-full grid-cols-1 lg:grid-cols-[minmax(0,1fr)_13.75rem]">
+            <div className="grid min-h-full w-full grid-cols-1 2xl:grid-cols-[minmax(0,1fr)_13.75rem]">
                 <div className="flex min-h-0 flex-col">
-                    <div className="border-b px-5 py-3 lg:hidden">
-                        <p className="mt-1 text-sm font-semibold">{currentStep.title}</p>
-                    </div>
-
-                    <main className="min-h-0 flex-1 overflow-auto px-5 py-6 sm:px-8 lg:px-24 tall:py-12 lg:tall:py-20">
+                    <main className="min-h-0 flex-1 overflow-auto p-6 2xl:p-12">
                         <section
                             key={currentStepIdInFlow}
                             className={cn(
                                 "mx-auto w-full max-w-7xl",
                                 currentStep.isFullHeight
-                                    ? "flex h-full flex-col gap-3 tall:gap-5"
-                                    : "grid gap-3 tall:gap-5",
+                                    ? "flex h-full flex-col gap-4 2xl:gap-5"
+                                    : "grid gap-4 2xl:gap-5",
                             )}
                         >
-                            <div className="flex flex-wrap items-start justify-between gap-3">
+                            <header className="flex flex-wrap items-start justify-between gap-3">
                                 <div>
-                                    <Heading as="h1" variant="page">
-                                        {currentStep.title}
-                                    </Heading>
+                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                        <Heading as="h1" variant="page">
+                                            {currentStep.title}
+                                        </Heading>
+                                        <WizardStepCount currentIndex={currentIndex} stepCount={flow.length} />
+                                    </div>
                                     {currentStep.description && (
                                         <Text variant="muted" className="mt-3">
                                             {currentStep.description}
@@ -306,7 +307,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                                         advanceWith={advanceWith}
                                     />
                                 )}
-                            </div>
+                            </header>
 
                             <currentStep.bodyComponent
                                 currentStepId={currentStepIdInFlow}
@@ -348,7 +349,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                     )}
                 </div>
 
-                <aside className="hidden border-l bg-sidebar/30 px-4 py-5 lg:block" aria-label="Setup steps">
+                <aside className="hidden border-l bg-sidebar/30 px-4 py-5 2xl:block" aria-label="Setup steps">
                     <WizardStepper
                         flow={flow}
                         steps={steps}
@@ -359,6 +360,18 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                 </aside>
             </div>
         </div>
+    );
+}
+
+/** Stands in for the stepper on screens too narrow to show it. */
+function WizardStepCount({ currentIndex, stepCount }: { currentIndex: number; stepCount: number }) {
+    const stepNumber = currentIndex + 1;
+
+    return (
+        <Badge variant="outline" className="h-7 gap-3 px-3 2xl:hidden">
+            <Progress value={(stepNumber / stepCount) * 100} className="w-14" aria-hidden="true" />
+            Step {stepNumber}/{stepCount}
+        </Badge>
     );
 }
 
@@ -506,7 +519,7 @@ function WizardFooter<StepId extends string>({
         progressLabel ?? (isBusy ? busyLabel : null) ?? idleLabel;
 
     return (
-        <div className="border-t px-5 py-3 sm:px-8 lg:px-24">
+        <div className="border-t px-6 py-3 2xl:px-12">
             <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2">
                 <div className="flex gap-2">
                     {canCancel && (

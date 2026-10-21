@@ -74,8 +74,7 @@ export const ImportConfiguration: Story = {
         expect(canvas.getByLabelText(/app name/i)).toHaveValue("");
         expect(importButton).toBeEnabled();
 
-        // The heading sits in the title block, whose row also carries the header action.
-        expect(heading.parentElement?.parentElement).toContainElement(importButton);
+        expect(heading.closest("header")).toContainElement(importButton);
     },
 };
 
