@@ -56,6 +56,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
         public void Dispose()
         {
+            ReturnMemory();
         }
     }
 }

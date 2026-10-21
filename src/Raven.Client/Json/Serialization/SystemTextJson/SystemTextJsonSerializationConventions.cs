@@ -21,8 +21,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         private bool _ignoreByRefMembers;
         private bool _ignoreUnsafeMembers;
         private System.Text.Json.Serialization.JsonSerializerContext _sourceGenerationContext;
-        private JsonSerializerOptions _cachedSerializerOptions;
-        private JsonSerializerOptions _cachedDeserializerOptions;
+        private JsonSerializerOptions _options;
 
         public DocumentConventions Conventions { get; private set; }
 
@@ -92,6 +91,20 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             }
         }
 
+        internal JsonSerializerOptions Options
+        {
+            get
+            {
+                JsonSerializerOptions options = _options;
+                if (options != null)
+                    return options;
+
+                options = CreateJsonSerializerOptions();
+                _options = options;
+                return options;
+            }
+        }
+
         void ISerializationConventions.Initialize(DocumentConventions conventions)
         {
             Conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
@@ -114,14 +127,12 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         IJsonSerializer ISerializationConventions.CreateDeserializer(CreateDeserializerOptions options)
         {
-            JsonSerializerOptions jsonOptions = GetOrCreateOptions(ref _cachedDeserializerOptions);
-            return new SystemTextJsonJsonSerializer(jsonOptions);
+            return new SystemTextJsonJsonSerializer(Options);
         }
 
         IJsonSerializer ISerializationConventions.CreateSerializer(CreateSerializerOptions options)
         {
-            JsonSerializerOptions jsonOptions = GetOrCreateOptions(ref _cachedSerializerOptions);
-            return new SystemTextJsonJsonSerializer(jsonOptions);
+            return new SystemTextJsonJsonSerializer(Options);
         }
 
         IJsonWriter ISerializationConventions.CreateWriter(JsonOperationContext context)
@@ -139,17 +150,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return (T)DeserializeEntityFromBlittable(typeof(T), json);
         }
 
-        private JsonSerializerOptions GetOrCreateOptions(ref JsonSerializerOptions cached)
-        {
-            if (cached != null)
-                return cached;
-
-            JsonSerializerOptions options = CreateJsonSerializerOptions();
-            cached = options;
-            return options;
-        }
-
-        internal JsonSerializerOptions CreateJsonSerializerOptions()
+        private JsonSerializerOptions CreateJsonSerializerOptions()
         {
             var ravenResolver = new RavenJsonTypeInfoResolver(this);
 
