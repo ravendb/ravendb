@@ -999,7 +999,7 @@ class query extends shardViewModelBase {
         this.saveQueryOptions(criteria);
         
         const criteriaDto = criteria.toStorageDto();
-        const disableCache = !this.cacheEnabled();
+        const cacheEnabled = this.cacheEnabled();
         const disableAutoIndexCreation = this.disableAutoIndexCreation();
         const projectionBehavior = this.projectionBehavior();
 
@@ -1015,7 +1015,7 @@ class query extends shardViewModelBase {
                 skip: 0,
                 take: 25,
                 criteria,
-                disableCache,
+                cacheEnabled,
                 disableAutoIndexCreation,
                 projectionBehavior
             });
@@ -1043,7 +1043,7 @@ class query extends shardViewModelBase {
                     skip: skip + totalSkippedResults,
                     take: take + 1,
                     criteria: criteriaForFetcher,
-                    disableCache,
+                    cacheEnabled,
                     disableAutoIndexCreation,
                     queryId: query.clientQueryId,
                     projectionBehavior
@@ -1054,10 +1054,6 @@ class query extends shardViewModelBase {
                 const resultsTask = $.Deferred<pagedResultExtended<document>>();
                 const queryForAllFields = criteriaForFetcher.showFields();
                 
-                // Note: 
-                // When server response is '304 Not Modified' then the browser cached data contains duration time from the 'first' execution
-                // If we ask browser to report the 304 state then 'response content' is empty 
-                // This is why we need to measure the execution time here ourselves..
                 const startQueryTime = new Date().getTime();
                 
                 command.execute()
@@ -1136,7 +1132,7 @@ class query extends shardViewModelBase {
                         
                         const endQueryTime = new Date().getTime();
                         const localQueryTime = endQueryTime - startQueryTime;
-                        if (!disableCache && localQueryTime < queryResults.additionalResultInfo.DurationInMs) {
+                        if (queryResults.fromCache) {
                             this.originalRequestTime(queryResults.additionalResultInfo.DurationInMs);
                             queryResults.additionalResultInfo.DurationInMs = localQueryTime;
                             this.fromCache(true);
@@ -1697,7 +1693,7 @@ class query extends shardViewModelBase {
             skip: this.allSpatialResultsItems().length,
             take: query.maxSpatialResultsToFetch + 1,
             criteria: this.criteria().clone(),
-            disableCache: !this.cacheEnabled(),
+            cacheEnabled: this.cacheEnabled(),
             disableAutoIndexCreation: this.disableAutoIndexCreation()
         });
         

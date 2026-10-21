@@ -2,6 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import document = require("models/database/documents/document");
 import endpoints = require("endpoints");
+import appUrl = require("common/appUrl");
 import queryCriteria = require("models/database/query/queryCriteria");
 import queryUtil = require("common/queryUtil");
 
@@ -10,15 +11,24 @@ interface QueryCommandProps {
     skip: number;
     take: number;
     criteria: queryCriteria;
-    disableCache?: boolean;
+    cacheEnabled?: boolean;
     disableAutoIndexCreation?: boolean;
     queryId?: string;
     projectionBehavior?: Raven.Client.Documents.Queries.ProjectionBehavior;
 }
 
+type QueryResult = Raven.Client.Documents.Queries.QueryResult<Array<any>, any>;
+
+interface CachedQueryResult {
+    etag: string;
+    results: QueryResult;
+}
+
 class queryCommand extends commandBase {
 
     private static readonly missingEndOfQuery = "Expected end of query";
+    private static readonly maxCachedResults = 20;
+    private static readonly cachedResults = new Map<string, CachedQueryResult>();
     private readonly props: QueryCommandProps;
     
     constructor(props: QueryCommandProps) {
@@ -27,7 +37,7 @@ class queryCommand extends commandBase {
     }
 
     execute(): JQueryPromise<pagedResultExtended<document>> {
-        const selector = (results: Raven.Client.Documents.Queries.QueryResult<Array<any>, any>): pagedResultExtended<document> =>
+        const selector = (results: QueryResult, fromCache: boolean): pagedResultExtended<document> =>
             ({
                 items: results.Results.map(d => new document(d)), 
                 totalResultCount: results.CappedMaxResults || results.TotalResults, 
@@ -38,11 +48,25 @@ class queryCommand extends commandBase {
                 timings: results.Timings,
                 queryPlan: (results.Timings as any)?.QueryPlan,
                 includes: results.Includes,
-                includesRevisions: results.RevisionIncludes
+                includesRevisions: results.RevisionIncludes,
+                fromCache
             });
-        
-        return this.post<pagedResultExtended<document>>(this.getUrl(), this.getPayload(), this.props.db)
-            .then((results) => selector(results))
+
+        const url = this.getUrl();
+        const payload = this.getPayload();
+        const cacheKey = appUrl.forDatabaseQuery(this.props.db) + url + payload;
+        const cachedResult = this.props.cacheEnabled ? queryCommand.cachedResults.get(cacheKey) : null;
+        const options: JQueryAjaxSettings = cachedResult ? { headers: { "If-None-Match": cachedResult.etag } } : undefined;
+
+        return this.post<pagedResultExtended<document>>(url, payload, this.props.db, options)
+            .then((results: QueryResult, status: string, xhr: JQueryXHR) => {
+                if (xhr.status === 304) {
+                    return selector(structuredClone(cachedResult.results), true);
+                }
+
+                queryCommand.cacheResults(cacheKey, this.extractEtag(xhr), results);
+                return selector(results, false);
+            })
             .fail((response: JQueryXHR) => {
                 if (response.status === 404) {
                     this.reportError("Error querying index", "Index was not found", response.statusText)
@@ -57,6 +81,20 @@ class queryCommand extends commandBase {
                     this.reportError(errorTitle, responseText, response.statusText);
                 }
             });
+    }
+
+    private static cacheResults(key: string, etag: string, results: QueryResult) {
+        if (!etag) {
+            return;
+        }
+
+        const cache = queryCommand.cachedResults;
+        cache.delete(key);
+        cache.set(key, { etag, results: structuredClone(results) });
+
+        if (cache.size > queryCommand.maxCachedResults) {
+            cache.delete(cache.keys().next().value);
+        }
     }
 
     private getQueryText() {
@@ -138,7 +176,6 @@ f();
             Query: rql,
             Start: this.props.skip,
             PageSize: this.props.take,
-            DisableCaching: this.props.disableCache ? Date.now() : undefined,
             QueryParameters: parameters,
             ProjectionBehavior: this.props.projectionBehavior
         }
@@ -172,7 +209,7 @@ f();
                 parameters: JSON.stringify(parameters),
                 start: this.props.skip,
                 pageSize: this.props.take,
-                disableCache: this.props.disableCache ? Date.now() : undefined
+                disableCache: this.props.cacheEnabled ? undefined : Date.now()
             };
             
             urlArgs = this.urlEncodeArgs(argsForGET);
