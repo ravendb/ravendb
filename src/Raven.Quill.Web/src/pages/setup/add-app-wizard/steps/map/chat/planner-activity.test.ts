@@ -122,7 +122,13 @@ describe("describeWork", () => {
     });
 
     it("claims building once an attempt failed and is being retried", () => {
-        const retrying: PlannerActivity = { type: "transientError", collection: "Products", errors: ["x"], rejections: 1, maxRejections: 2 };
+        const retrying: PlannerActivity = {
+            type: "transientError",
+            collection: "Products",
+            errors: ["x"],
+            rejections: 1,
+            maxRejections: 2,
+        };
 
         expect(describeWork(turn([retrying], "working"))).toBe("Building collections");
     });

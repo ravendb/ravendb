@@ -60,7 +60,8 @@ export function hasCollectionOutcomes(outcomes: TurnOutcomes): boolean {
 
 export function isBuildingCollections(turn: PlannerReplyTurn): boolean {
     return turn.activity.some(
-        (activity) => activity.type === "registered" || activity.type === "rejected" || activity.type === "transientError",
+        (activity) =>
+            activity.type === "registered" || activity.type === "rejected" || activity.type === "transientError",
     );
 }
 

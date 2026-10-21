@@ -87,7 +87,12 @@ export function createPlannerSession({ getSlug, getSelectedTables }: PlannerSess
             return Promise.resolve();
         }
 
-        const turn: PlannerPromptTurn = { kind: "prompt", id: createTurnId(), text: "", mentions: [...areas, ...collections] };
+        const turn: PlannerPromptTurn = {
+            kind: "prompt",
+            id: createTurnId(),
+            text: "",
+            mentions: [...areas, ...collections],
+        };
 
         return askInConversation(turn, {
             ...(areas.length > 0 ? { selectedAreas: areas } : {}),

@@ -95,7 +95,13 @@ describe("buildPlanCollections", () => {
         const collections = buildPlanCollections(
             source({
                 Orders: registered("Orders", 2),
-                Customers: { name: "Customers", outcome: "rejected", errors: ["Id is mapped twice."], config: null, issues: [] },
+                Customers: {
+                    name: "Customers",
+                    outcome: "rejected",
+                    errors: ["Id is mapped twice."],
+                    config: null,
+                    issues: [],
+                },
                 Products: registered("Products", 1),
             }),
             index,
