@@ -50,7 +50,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                         return time;
                     }
 
-                    DateTime lucene = LuceneDateTimeConverter.TryParseLucene(s, isOffset: false);
+                    DateTime lucene = LuceneDateTimeConverter.TryParseLucene(s);
                     if (lucene != default)
                         return DateTime.SpecifyKind(lucene, DateTimeKind.Local);
                 }
@@ -85,7 +85,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                         return time;
                     }
 
-                    DateTime lucene = LuceneDateTimeConverter.TryParseLucene(s, isOffset: false);
+                    DateTime lucene = LuceneDateTimeConverter.TryParseLucene(s);
                     if (lucene != default)
                         return DateTime.SpecifyKind(lucene, DateTimeKind.Local);
                 }
@@ -120,7 +120,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                     if (DateTimeOffset.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTimeOffset time))
                         return time;
 
-                    DateTime lucene = LuceneDateTimeConverter.TryParseLucene(s, isOffset: true);
+                    DateTime lucene = LuceneDateTimeConverter.TryParseLucene(s);
                     if (lucene != default)
                         return new DateTimeOffset(lucene, DateTimeOffset.Now.Offset);
                 }
@@ -149,7 +149,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                     if (DateTimeOffset.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTimeOffset time))
                         return time;
 
-                    DateTime lucene = LuceneDateTimeConverter.TryParseLucene(s, isOffset: true);
+                    DateTime lucene = LuceneDateTimeConverter.TryParseLucene(s);
                     if (lucene != default)
                         return new DateTimeOffset(lucene, DateTimeOffset.Now.Offset);
                 }
