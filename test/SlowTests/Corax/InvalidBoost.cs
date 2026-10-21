@@ -45,13 +45,17 @@ public class InvalidBoost(ITestOutputHelper output) : RavenTestBase(output)
             session.Store(new Item { Name = "a" }, "items/1");
             session.Store(new Item { Name = "nan" }, "items/2");
             session.Store(new Item { Name = "inf" }, "items/3");
+            session.Store(new Item { Name = "-inf" }, "items/4");
             session.SaveChanges();
         }
 
         store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
         {
             Name = "BoostedItems",
-            Maps = { "from item in docs.Items select new { item.Name }.Boost(item.Name == \"nan\" ? float.NaN : item.Name == \"inf\" ? float.PositiveInfinity : 2f)" }
+            Maps =
+            {
+                "from item in docs.Items select new { item.Name }.Boost(item.Name == \"nan\" ? float.NaN : item.Name == \"inf\" ? float.PositiveInfinity : item.Name == \"-inf\" ? float.NegativeInfinity : 2f)"
+            }
         }));
         Indexes.WaitForIndexing(store, allowErrors: true);
 
