@@ -37,6 +37,20 @@ public class VectorQueryCorrectnessTests(ITestOutputHelper output) : StorageTest
         Assert.Equal(ids.Order(), found.Order());
     }
 
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void StreamedResultsHoldEachEntryOnceNearestFirst(bool isExact)
+    {
+        using var _ = GetMappings(out var mapping, out var getVector);
+        var ids = Index(mapping, getVector, [("a", [[1f, 0f], [1f, 0.05f]]), ("a", [[1f, 0.1f]])]);
+
+        using var indexSearcher = new IndexSearcher(Env, mapping);
+        Span<long> matches = stackalloc long[16];
+        var read = indexSearcher.VectorSearch(mapping.GetByFieldId(1).Metadata, getVector([1f, 0f]), 0.9f, 16, isExact, true).Fill(matches);
+        Assert.Equal(ids, matches[..read].ToArray());
+    }
+
     private static List<long> All(IQueryMatch match)
     {
         var all = new List<long>();

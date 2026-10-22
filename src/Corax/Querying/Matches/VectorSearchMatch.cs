@@ -210,7 +210,7 @@ public struct VectorSearchMatch : IQueryMatch
             return 0;
         }
         
-        Sorting.SortAndMinOnDuplicates(matches[..read], distancesBuffer[..read]);
+        read = Sorting.SortAndMinOnDuplicates(matches[..read], distancesBuffer[..read]);
         distancesBuffer[..read].Sort(matches[..read]);
         return read;
     }
