@@ -7,7 +7,6 @@ using Raven.Quill.Logging;
 namespace Raven.Quill.Discord;
 
 internal sealed class DiscordRuntimeFactory(
-    IDiscordClient discord,
     DiscordSdk sdk,
     ChannelChatsFactory chats,
     IOptions<ApplianceOptions> options,
@@ -19,9 +18,10 @@ internal sealed class DiscordRuntimeFactory(
 
     public IChannelRuntime Start(string database, Channel channel, string? changeVector, ChannelConnectionHealth? previous)
     {
-        var turns = new DiscordTurns(channel.Discord!, discord, options.Value.Discord, logger);
+        var bot = new DiscordBotClient(sdk, channel.Discord!.BotToken);
+        var turns = new DiscordTurns(channel.Discord, bot, options.Value.Discord, logger);
 
-        return DiscordRuntime.Start(database, channel, changeVector, turns, chats,
+        return DiscordRuntime.Start(database, channel, changeVector, turns, bot, chats,
             sdk, options.Value.Discord, logger, previous);
     }
 }
