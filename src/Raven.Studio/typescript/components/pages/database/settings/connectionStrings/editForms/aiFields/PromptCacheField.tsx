@@ -56,11 +56,16 @@ export default function PromptCacheField({
                                 <br />
                                 <ul className="mb-0">
                                     <li>
-                                        <strong>Default:</strong> <code>{serverDefaultValue ? "True" : "False"}</code>
-                                        <br />
-                                        {serverDefaultValue
-                                            ? "The server sends the cache key by default."
-                                            : "The server does not send the cache key by default."}
+                                        <strong>Default:</strong>{" "}
+                                        {serverDefaultValue ? (
+                                            "sent for AI agents, and for GenAI tasks only when they have query tools. A GenAI task without query tools sends each document once, so the key wouldn't help there."
+                                        ) : (
+                                            <>
+                                                <code>False</code>
+                                                <br />
+                                                The server does not send the cache key by default.
+                                            </>
+                                        )}
                                     </li>
                                     <li className="mt-1">
                                         <strong>True:</strong> Always send the cache key.

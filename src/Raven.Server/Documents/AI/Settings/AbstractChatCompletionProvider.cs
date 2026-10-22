@@ -40,7 +40,7 @@ internal abstract class AbstractChatCompletionProvider
 
     public abstract string GetRelativeModelsUri();
 
-    public virtual bool ShouldCachePrompt(AiChatRequest request) => true;
+    public virtual bool ShouldCachePrompt(AiChatRequest request) => _settings.EnablePromptCache ?? request.MayRepeatPrompt;
 
     internal static bool TryGetParameters(AiConnectionString connectionString, out AbstractChatCompletionProvider provider)
     {
