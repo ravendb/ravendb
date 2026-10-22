@@ -107,7 +107,7 @@ export function parseConfigTables(tables: CdcSinkTableConfig[]) {
             firstIssueMessage(
                 result.error,
                 "The configuration's table mapping is invalid or was exported from an incompatible version.",
-                "tables",
+                tables,
             ),
         );
     }
@@ -115,22 +115,37 @@ export function parseConfigTables(tables: CdcSinkTableConfig[]) {
     return result.data;
 }
 
-const ZOD_DEFAULT_MESSAGE = /^Invalid input: /;
+// Every message zod's English locale generates starts with one of these; anything else was written by
+// the schema and already says where the problem is.
+const ZOD_DEFAULT_MESSAGE = /^(Invalid |Too (big|small)|Unrecognized key)/;
 
-function firstIssueMessage(error: z.ZodError, fallback: string, root = "") {
+function firstIssueMessage(error: z.ZodError, fallback: string, tables: CdcSinkTableConfig[] = []) {
     const issue = error.issues[0];
     if (!issue?.message) return fallback;
-    if (!ZOD_DEFAULT_MESSAGE.test(issue.message)) return issue.message;
+    if (issue.code === "custom" || !ZOD_DEFAULT_MESSAGE.test(issue.message)) return issue.message;
 
-    const location = describeIssuePath(issue.path, root);
+    const location = describeIssuePath(issue.path, tables);
     return location ? `${location}: ${issue.message}` : issue.message;
 }
 
-function describeIssuePath(path: PropertyKey[], root: string) {
-    return path.reduce<string>((described, segment) => {
-        if (typeof segment === "number") return `${described}[${segment + 1}]`;
-        return described ? `${described}.${String(segment)}` : String(segment);
-    }, root);
+// Table rows are named by their collection so the message matches what the operator sees in the
+// file; "value" segments come from the form shape's string-list wrappers and mean nothing there.
+function describeIssuePath(path: PropertyKey[], tables: CdcSinkTableConfig[]) {
+    const [first, ...rest] = path;
+    const head =
+        typeof first === "number"
+            ? `table "${tables[first]?.collectionName || `#${first + 1}`}"`
+            : first === undefined
+              ? ""
+              : String(first);
+
+    return rest
+        .filter((segment) => segment !== "value")
+        .reduce<string>(
+            (described, segment) =>
+                typeof segment === "number" ? `${described}[${segment + 1}]` : `${described}.${String(segment)}`,
+            head,
+        );
 }
 
 type AnyTableConfig = {
