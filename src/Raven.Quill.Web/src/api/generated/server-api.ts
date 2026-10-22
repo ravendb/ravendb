@@ -1862,7 +1862,6 @@ export interface components {
         TelegramChannelMessages: {
             greeting?: null | string;
             conversationCleared?: null | string;
-            conversationExpired?: null | string;
             usernameMissing?: null | string;
             phoneNumberRequest?: null | string;
             sharePhoneNumberButton?: null | string;

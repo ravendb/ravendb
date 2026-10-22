@@ -18,7 +18,7 @@ public sealed record AgentRequest(
     IReadOnlyDictionary<string, JsonElement> Parameters,
     TimeSpan? IdleWindow = null);
 
-public sealed record AgentRunResult(object Answer, string ConversationId, bool StartedFresh = false);
+public sealed record AgentRunResult(object Answer, string ConversationId);
 
 public interface IAgentRouter
 {
@@ -92,9 +92,9 @@ internal sealed class AgentRouter(
         if (string.IsNullOrWhiteSpace(reply))
             throw new EmptyAnswerException();
 
-        var rolled = await RecordTurnAsync(store, request, config.Identifier, conversation.Id, reply, tokensThisTurn, DateTime.UtcNow, ct);
+        await RecordTurnAsync(store, request, config.Identifier, conversation.Id, reply, tokensThisTurn, DateTime.UtcNow, ct);
 
-        return new AgentRunResult(new { reply }, conversation.Id, rolled);
+        return new AgentRunResult(new { reply }, conversation.Id);
     }
 
     private static Dictionary<string, object?> ConvertParameters(AgentRequest request, AiAgentConfiguration config)
@@ -149,28 +149,26 @@ internal sealed class AgentRouter(
         return Task.FromResult($"action failed: no binding configured for '{action.Name}'");
     }
 
-    internal static async Task<bool> RecordTurnAsync(
+    internal static async Task RecordTurnAsync(
         IDocumentStore store, AgentRequest request, string agent, string conversationId, string reply,
         long tokens, DateTime nowUtc, CancellationToken ct)
     {
         using var session = store.OpenAsyncSession(request.Database);
-        var (isNewConversation, rolled) = await UpsertPreviewAsync(session, request, agent, conversationId, reply, nowUtc, ct);
+        var isNewConversation = await UpsertPreviewAsync(session, request, agent, conversationId, reply, nowUtc, ct);
         await UsageMetrics.IncrementAsync(session, agent, request.ChannelId, nowUtc,
             conversations: isNewConversation ? 1 : 0, messages: 1, tokens, ct);
         await session.SaveChangesAsync(ct);
-        return rolled;
     }
 
-    internal static async Task<(bool IsNewConversation, bool Rolled)> UpsertPreviewAsync(
+    internal static async Task<bool> UpsertPreviewAsync(
         IAsyncDocumentSession session, AgentRequest request, string agent, string conversationId, string reply,
         DateTime nowUtc, CancellationToken ct)
     {
         var id = ConversationPreview.IdFor(conversationId);
         var preview = await session.LoadAsync<ConversationPreview>(id, ct);
 
-        var rolled = preview is not null &&
-            request.IdleWindow is { } idleWindow && nowUtc - preview.LastMessageAt > idleWindow;
-        var isNewConversation = preview is null || rolled;
+        var isNewConversation = preview is null ||
+            (request.IdleWindow is { } idleWindow && nowUtc - preview.LastMessageAt > idleWindow);
 
         preview ??= new ConversationPreview
         {
@@ -196,7 +194,7 @@ internal sealed class AgentRouter(
             session.Advanced.GetMetadataFor(preview)[Client.Constants.Documents.Metadata.Expires] =
                 nowUtc.Add(expiresAfter);
 
-        return (isNewConversation, rolled);
+        return isNewConversation;
     }
 
     internal static string NormalizeConversationId(string? conversationId)

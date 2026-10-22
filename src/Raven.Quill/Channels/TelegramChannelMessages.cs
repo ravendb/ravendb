@@ -11,8 +11,6 @@ public sealed class TelegramChannelMessages
 
     public string? ConversationCleared { get; set; }
 
-    public string? ConversationExpired { get; set; }
-
     public string? UsernameMissing { get; set; }
 
     public string? PhoneNumberRequest { get; set; }
@@ -66,7 +64,6 @@ public sealed class TelegramChannelMessages
     [
         ("greeting", Greeting, v => Greeting = v),
         ("conversationCleared", ConversationCleared, v => ConversationCleared = v),
-        ("conversationExpired", ConversationExpired, v => ConversationExpired = v),
         ("usernameMissing", UsernameMissing, v => UsernameMissing = v),
         ("phoneNumberRequest", PhoneNumberRequest, v => PhoneNumberRequest = v),
         ("sharePhoneNumberButton", SharePhoneNumberButton, v => SharePhoneNumberButton = v),
@@ -82,7 +79,6 @@ public sealed class TelegramChannelMessages
 internal sealed record ResolvedTelegramMessages(
     string Greeting,
     string ConversationCleared,
-    string ConversationExpired,
     string UsernameMissing,
     string PhoneNumberRequest,
     string SharePhoneNumberButton,
@@ -96,7 +92,6 @@ internal sealed record ResolvedTelegramMessages(
     internal static readonly ResolvedTelegramMessages Defaults = new(
         Greeting: "Hi! Ask me anything and I'll answer. Send /clear anytime to start a fresh conversation.",
         ConversationCleared: "Conversation cleared. The next message starts a fresh one.",
-        ConversationExpired: "By the way, this is a fresh conversation - our previous one ended after a period of inactivity, so I no longer have its context.",
         UsernameMissing: "This assistant needs your Telegram username. Set one in Telegram Settings and send your message again.",
         PhoneNumberRequest: "This assistant needs your phone number. Tap the button below to share it, then send your message again.",
         SharePhoneNumberButton: "Share phone number",
@@ -112,7 +107,6 @@ internal sealed record ResolvedTelegramMessages(
         : new ResolvedTelegramMessages(
             Pick(overrides.Greeting, Defaults.Greeting),
             Pick(overrides.ConversationCleared, Defaults.ConversationCleared),
-            Pick(overrides.ConversationExpired, Defaults.ConversationExpired),
             Pick(overrides.UsernameMissing, Defaults.UsernameMissing),
             Pick(overrides.PhoneNumberRequest, Defaults.PhoneNumberRequest),
             Pick(overrides.SharePhoneNumberButton, Defaults.SharePhoneNumberButton),
