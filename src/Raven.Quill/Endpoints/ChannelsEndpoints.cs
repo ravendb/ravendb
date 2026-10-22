@@ -70,7 +70,7 @@ public static class ChannelsEndpoints
         ChannelManager channelManager,
         TelegramBotClientFactory botFactory,
         ISlackClient slackClient,
-        IDiscordClient discordClient,
+        DiscordSdk discord,
         QuillLogger<ChannelsLogger> logger,
         HttpContext ctx,
         CancellationToken ct)
@@ -93,7 +93,7 @@ public static class ChannelsEndpoints
             ChannelType.Telegram => await ProvisionTelegramAsync(app, body, store, channelManager, botFactory, logger, ctx, ct),
             ChannelType.WhatsApp => ProvisionWhatsAppAsync(),
             ChannelType.Slack => await ProvisionSlackAsync(app, body, store, slackClient, channelManager, logger, ct),
-            ChannelType.Discord => await ProvisionDiscordAsync(app, body, store, discordClient, channelManager, logger, ct),
+            ChannelType.Discord => await ProvisionDiscordAsync(app, body, store, discord, channelManager, logger, ct),
             null => Results.BadRequest(new ApiErrorResponse("type is required")),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{body.Type}'")),
         };
@@ -417,7 +417,7 @@ public static class ChannelsEndpoints
         App app,
         ProvisionChannelRequest body,
         IDocumentStore store,
-        IDiscordClient discordClient,
+        DiscordSdk discord,
         ChannelManager channelManager,
         QuillLogger<ChannelsLogger> logger,
         CancellationToken ct)
@@ -439,7 +439,7 @@ public static class ChannelsEndpoints
         if (ChannelParameterBindings.TryResolve(config, ChannelType.Discord, body.Discord!.ParameterBindings, out var bindings, out var paramError) == false)
             return Results.BadRequest(new ApiErrorResponse(paramError!, Code: "missing_parameters"));
 
-        var (identity, identityError, _) = await discordClient.GetBotIdentityAsync(botToken, ct);
+        var (identity, identityError, _) = await discord.GetBotIdentityAsync(botToken, ct);
         if (identity is null)
             return Results.BadRequest(new ApiErrorResponse(identityError!));
 
@@ -539,7 +539,7 @@ public static class ChannelsEndpoints
         ChannelManager channelManager,
         TelegramBotClientFactory botFactory,
         ISlackClient slackClient,
-        IDiscordClient discordClient,
+        DiscordSdk discord,
         QuillLogger<ChannelsLogger> logger,
         HttpContext ctx,
         CancellationToken ct)
@@ -565,7 +565,7 @@ public static class ChannelsEndpoints
             ChannelType.Telegram => await UpdateTelegramChannelAsync(session, channel, body, app, channelId, store, channelManager, botFactory, logger, ctx, ct),
             ChannelType.WhatsApp => UpdateWhatsAppChannelAsync(),
             ChannelType.Slack => await UpdateSlackChannelAsync(session, channel, body, app, channelId, store, slackClient, channelManager, logger, ct),
-            ChannelType.Discord => await UpdateDiscordChannelAsync(session, channel, body, app, channelId, store, discordClient, channelManager, logger, ct),
+            ChannelType.Discord => await UpdateDiscordChannelAsync(session, channel, body, app, channelId, store, discord, channelManager, logger, ct),
             _ => Results.BadRequest(new ApiErrorResponse($"unsupported channel type '{channel.Type}'")),
         };
     }
@@ -884,7 +884,7 @@ public static class ChannelsEndpoints
         App app,
         string channelId,
         IDocumentStore store,
-        IDiscordClient discordClient,
+        DiscordSdk discord,
         ChannelManager channelManager,
         QuillLogger<ChannelsLogger> logger,
         CancellationToken ct)
@@ -906,7 +906,7 @@ public static class ChannelsEndpoints
         {
             var botToken = body.Discord.BotToken.Trim();
 
-            var (identity, identityError, _) = await discordClient.GetBotIdentityAsync(botToken, ct);
+            var (identity, identityError, _) = await discord.GetBotIdentityAsync(botToken, ct);
             if (identity is null)
                 return Results.BadRequest(new ApiErrorResponse(identityError!));
 

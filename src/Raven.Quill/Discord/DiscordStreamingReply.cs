@@ -10,6 +10,7 @@ internal sealed class DiscordStreamingReply(
     DiscordOptions options,
     QuillLogger<DiscordRuntime> logger) : ChannelStreamingReply(options.MessageLimit, options.EditDebounce)
 {
+    private DiscordDmChannel? _channel;
     private string _currentMessageId = "";
 
     protected override bool HasOpenMessage => _currentMessageId.Length > 0;
@@ -24,15 +25,19 @@ internal sealed class DiscordStreamingReply(
 
     protected override async Task ShowPreviewAsync(string text, CancellationToken token)
     {
+        var channel = await ChannelAsync(token);
         if (_currentMessageId.Length == 0)
-            _currentMessageId = await bot.CreateMessageAsync(dmChannelId, text, suppressEmbeds: true, token);
+            _currentMessageId = await channel.CreateMessageAsync(text, suppressEmbeds: true, token);
         else
-            await bot.EditMessageAsync(dmChannelId, _currentMessageId, text, suppressEmbeds: true, token);
+            await channel.EditMessageAsync(_currentMessageId, text, suppressEmbeds: true, token);
     }
 
-    protected override Task SendFinalAsync(string text, CancellationToken token) =>
-        bot.CreateMessageAsync(dmChannelId, text, suppressEmbeds: false, token);
+    protected override async Task SendFinalAsync(string text, CancellationToken token) =>
+        await (await ChannelAsync(token)).CreateMessageAsync(text, suppressEmbeds: false, token);
 
-    protected override Task EditFinalAsync(string text, CancellationToken token) =>
-        bot.EditMessageAsync(dmChannelId, _currentMessageId, text, suppressEmbeds: false, token);
+    protected override async Task EditFinalAsync(string text, CancellationToken token) =>
+        await (await ChannelAsync(token)).EditMessageAsync(_currentMessageId, text, suppressEmbeds: false, token);
+
+    private async Task<DiscordDmChannel> ChannelAsync(CancellationToken token) =>
+        _channel ??= await bot.ChannelAsync(dmChannelId, token);
 }

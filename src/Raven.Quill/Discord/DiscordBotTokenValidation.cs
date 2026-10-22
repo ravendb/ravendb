@@ -1,17 +1,27 @@
-using System.Globalization;
 using System.Net;
 using Discord;
 using Discord.Net;
 
 namespace Raven.Quill.Discord;
 
-internal sealed class DiscordApiClient(DiscordSdk sdk) : IDiscordClient
+internal sealed record DiscordBotIdentity(
+    string ApplicationId,
+    string BotUserId,
+    string BotUsername);
+
+internal sealed class DiscordApiException(string message, HttpStatusCode? status = null, Exception? inner = null)
+    : Exception(message, inner)
 {
-    private const string TokenRejected =
+    public HttpStatusCode? Status { get; } = status;
+}
+
+internal static class DiscordBotTokenValidation
+{
+    internal const string TokenRejected =
         "discord rejected the bot token; reset it on the app's Bot page and try again";
 
-    public async Task<(DiscordBotIdentity? Identity, string? Error, bool DiscordResponded)> GetBotIdentityAsync(
-        string botToken, CancellationToken ct)
+    public static async Task<(DiscordBotIdentity? Identity, string? Error, bool DiscordResponded)> GetBotIdentityAsync(
+        this DiscordSdk sdk, string botToken, CancellationToken ct)
     {
         try
         {
@@ -29,7 +39,8 @@ internal sealed class DiscordApiClient(DiscordSdk sdk) : IDiscordClient
             if (application is null)
                 return (null, "discord returned an unrecognized oauth2/applications/@me payload", true);
 
-            return (new DiscordBotIdentity(Snowflake(application.Id), Snowflake(user.Id), user.Username), null, true);
+            return (new DiscordBotIdentity(
+                DiscordBotClient.Snowflake(application.Id), DiscordBotClient.Snowflake(user.Id), user.Username), null, true);
         }
         catch (RateLimitedException)
         {
@@ -60,6 +71,4 @@ internal sealed class DiscordApiClient(DiscordSdk sdk) : IDiscordClient
             return (null, $"could not reach the Discord API: {e.Message}", false);
         }
     }
-
-    private static string Snowflake(ulong id) => id.ToString(CultureInfo.InvariantCulture);
 }

@@ -15,14 +15,14 @@ internal sealed class DiscordTurns(
     DiscordOptions options,
     QuillLogger<DiscordRuntime> logger) : IPlatformTurns<DiscordMessage>
 {
-    public Task SendAsync(DiscordMessage replyTo, string text, CancellationToken ct) =>
-        bot.CreateMessageAsync(replyTo.DmChannel, text, suppressEmbeds: false, ct);
+    public async Task SendAsync(DiscordMessage replyTo, string text, CancellationToken ct) =>
+        await (await bot.ChannelAsync(replyTo.DmChannel, ct)).CreateMessageAsync(text, suppressEmbeds: false, ct);
 
     public async Task TypingAsync(DiscordMessage replyTo, CancellationToken ct)
     {
         try
         {
-            await bot.TriggerTypingAsync(replyTo.DmChannel, ct);
+            await (await bot.ChannelAsync(replyTo.DmChannel, ct)).TriggerTypingAsync(ct);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
