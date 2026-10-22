@@ -139,11 +139,11 @@ public class AuthEndpointsTests(ITestOutputHelper output) : QuillTestBase(output
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Throttled_client_is_rejected_before_validation_and_recovers_after_the_window()
     {
-        var clock = new TestClock();
+        var window = TimeSpan.FromMilliseconds(500);
         await using var host = await NewHostAsync(configureServices: services =>
         {
-            services.RemoveAll<TimeProvider>();
-            services.AddSingleton<TimeProvider>(clock);
+            services.RemoveAll<LoginFailureLimiter>();
+            services.AddSingleton(_ => new LoginFailureLimiter(window));
         });
         host.Client.DefaultRequestHeaders.Remove(ApiKeyAuthenticationHandler.HeaderName);
 
@@ -159,7 +159,7 @@ public class AuthEndpointsTests(ITestOutputHelper output) : QuillTestBase(output
             new { apiKey = ApplianceWebApplicationFactory.TestApiKey });
         Assert.Equal(HttpStatusCode.TooManyRequests, duringLockout.StatusCode);
 
-        clock.Advance(LoginFailureLimiter.Window + TimeSpan.FromSeconds(1));
+        await Task.Delay(window * 2);
 
         var login = await host.Client.PostAsJsonAsync(QuillRoutes.AuthLogin,
             new { apiKey = ApplianceWebApplicationFactory.TestApiKey });
@@ -167,14 +167,5 @@ public class AuthEndpointsTests(ITestOutputHelper output) : QuillTestBase(output
 
         var wrongAfterReset = await host.Client.PostAsJsonAsync(QuillRoutes.AuthLogin, new { apiKey = "wrong-key" });
         Assert.Equal(HttpStatusCode.Unauthorized, wrongAfterReset.StatusCode);
-    }
-
-    private sealed class TestClock : TimeProvider
-    {
-        private DateTimeOffset _now = DateTimeOffset.UtcNow;
-
-        public override DateTimeOffset GetUtcNow() => _now;
-
-        public void Advance(TimeSpan by) => _now += by;
     }
 }
