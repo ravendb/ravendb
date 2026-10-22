@@ -276,7 +276,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.IoRingQueueSize", ConfigurationEntryScope.ServerWideOnly)]
         public int IoRingQueueSize { get; set; }
 
-        [Description("EXPERT: The write mode for writing to the data file (Auto/VectoredFileIo,FileIo,IoRing,Mmap).")]
+        [Description("EXPERT: The write mode for writing to the data file (Auto/VectoredFileIo/FileIo/IoRing).")]
         [DefaultValue(Pal.RvnWriteMode.Auto)]
         [ConfigurationEntry("Storage.WriteMode", ConfigurationEntryScope.ServerWideOnly)]
         public Pal.RvnWriteMode WriteMode { get; set; }

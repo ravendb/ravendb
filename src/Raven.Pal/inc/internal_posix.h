@@ -118,27 +118,6 @@ int32_t rvn_write_file_io(
     int32_t *detailed_error_code);
 
 PRIVATE
-int32_t rvn_write_invalid_setup(
-    void *handle,
-    struct page_to_write *buffers,
-    int32_t count,
-    int32_t *detailed_error_code);
-
-PRIVATE
-int32_t rvn_write_mmap(
-    void *handle,
-    struct page_to_write *buffers,
-    int32_t count,
-    int32_t *detailed_error_code);
-
-PRIVATE
-int32_t rvn_write_mmap32(
-    void *handle,
-    struct page_to_write *buffers,
-    int32_t count,
-    int32_t *detailed_error_code);
-
-PRIVATE
 bool _io_ring_supported();
 
 PRIVATE void

@@ -199,11 +199,6 @@ _writeback_range_complete(struct handle *handle_ptr, int64_t offset, int64_t len
 EXPORT
 rvn_writer rvn_get_writer(void *handle)
 {
-    struct handle *handle_ptr = handle;
-
-    if (handle_ptr->write_address)
-        return rvn_write_mmap;
-
     switch (g_cfg.write_mode)
     {
     case rvn_write_mode_vectored_file_io:
@@ -212,10 +207,6 @@ rvn_writer rvn_get_writer(void *handle)
         return rvn_write_file_io;
     case rvn_write_mode_io_ring:
         return rvn_write_io_ring;
-    case rvn_write_mode_mmap:
-        if (handle_ptr->global_state->open_flags & OPEN_FILE_DO_NOT_MAP)
-            return rvn_write_mmap32;
-        return rvn_write_invalid_setup;
     default:
         return io_ring_setup_successful() ? rvn_write_io_ring : rvn_write_vectored_file_io;
     }

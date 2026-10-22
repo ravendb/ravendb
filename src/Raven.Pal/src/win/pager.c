@@ -607,10 +607,6 @@ rvn_init_pager(const char *filename,
     dwFlagsAndAttributes |= open_flags & OPEN_FILE_READ_ONLY ? FILE_ATTRIBUTE_READONLY : 0;
 
     rvn_write_mode write_mode = g_cfg.write_mode;
-    if (write_mode == rvn_write_mode_mmap && ((open_flags & OPEN_FILE_READ_ONLY) != OPEN_FILE_READ_ONLY))
-    {
-        open_flags |= OPEN_FILE_WRITABLE_MAP;
-    }
 
     struct handle_global_state *global_state = calloc(1, sizeof(struct handle_global_state));
     if (global_state == NULL)
@@ -848,154 +844,13 @@ int32_t rvn_write_file_io(
     return SUCCESS;
 }
 
-int32_t rvn_write_mmap32(
-    void *handle,
-    struct page_to_write *buffers,
-    int32_t count,
-    int32_t *detailed_error_code)
-{
-    int32_t rc = SUCCESS;
-
-    void* mapped_view = NULL;
-    int64_t mapped_start_page = -1;  // Start page of currently mapped region
-    int64_t mapped_page_count = 0;   // Number of pages in currently mapped region
-
-    for (int32_t i = 0; i < count; i++)
-    {
-        int64_t page_number = buffers[i].page_num;
-        int64_t number_of_pages = buffers[i].count_of_pages;
-
-        // Check if the current write fits in the currently mapped region
-        bool needs_remap = (mapped_view == NULL) ||
-                          (page_number < mapped_start_page) ||
-                          (page_number + number_of_pages > mapped_start_page + mapped_page_count);
-
-        if (needs_remap)
-        {
-            // Flush and unmap the previous region if it exists
-            if (mapped_view != NULL)
-            {
-                int64_t mapped_size = mapped_page_count * VORON_PAGE_SIZE;
-
-                if (!FlushViewOfFile(mapped_view, (SIZE_T)mapped_size))
-                {
-                    *detailed_error_code = GetLastError();
-                    int32_t dummy_error = 0;
-                    rvn_unmap_memory(handle, mapped_view, mapped_size, &dummy_error);
-                    return FAIL_FLUSH_VIEW_OF_FILE;
-                }
-
-                rc = rvn_unmap_memory(handle, mapped_view, mapped_size, detailed_error_code);
-                if (rc != SUCCESS)
-                {
-                    return rc;
-                }
-                mapped_view = NULL;
-            }
-
-            // Calculate mapping parameters for the current write
-            int64_t distance_from_start = page_number % NUMBER_OF_PAGES_IN_ALLOCATION_GRANULARITY;
-            int64_t allocation_start_position = page_number - distance_from_start;
-
-            // Map enough to cover the current write, rounded to allocation granularity
-            int64_t pages_needed = distance_from_start + number_of_pages;
-            int64_t mapped_offset = allocation_start_position * VORON_PAGE_SIZE;
-            int64_t mapped_size = nearest_size_to_allocation_granularity(pages_needed * VORON_PAGE_SIZE);
-
-            // Map the memory
-            rc = rvn_map_memory(handle, mapped_offset, mapped_size, &mapped_view, detailed_error_code);
-            if (rc != SUCCESS)
-            {
-                return rc;
-            }
-
-            mapped_start_page = allocation_start_position;
-            mapped_page_count = mapped_size / VORON_PAGE_SIZE;
-        }
-
-        // Write to the mapped region
-        int64_t offset_in_mapping = (page_number - mapped_start_page) * VORON_PAGE_SIZE;
-        char* write_position = (char*)mapped_view + offset_in_mapping;
-        int64_t bytes_to_write = number_of_pages * VORON_PAGE_SIZE;
-        char* source_ptr = buffers[i].ptr;
-
-        memcpy(write_position, source_ptr, (size_t)bytes_to_write);
-    }
-
-    // Flush and unmap the last mapped region
-    if (mapped_view != NULL)
-    {
-        int64_t mapped_size = mapped_page_count * VORON_PAGE_SIZE;
-
-        if (!FlushViewOfFile(mapped_view, (SIZE_T)mapped_size))
-        {
-            *detailed_error_code = GetLastError();
-            int32_t dummy_error = 0;
-            rvn_unmap_memory(handle, mapped_view, mapped_size, &dummy_error);
-            return FAIL_FLUSH_VIEW_OF_FILE;
-        }
-
-        rc = rvn_unmap_memory(handle, mapped_view, mapped_size, detailed_error_code);
-        if (rc != SUCCESS)
-        {
-            return rc;
-        }
-    }
-
-    return SUCCESS;
-}
-
-
-
-int32_t rvn_write_mmap(
-    void *handle,
-    struct page_to_write *buffers,
-    int32_t count,
-    int32_t *detailed_error_code)
-{
-    struct handle *handle_ptr = handle;
-    for (int32_t i = 0; i < count; i++)
-    {
-        int64_t offset = buffers[i].page_num * VORON_PAGE_SIZE;
-        int64_t size = (int64_t)buffers[i].count_of_pages * VORON_PAGE_SIZE;
-        memcpy((char *)handle_ptr->write_address + offset, buffers[i].ptr, (size_t)size);
-    }
-    if (!FlushViewOfFile(handle_ptr->write_address, 0))
-    {
-        *detailed_error_code = GetLastError();
-        return FAIL_FLUSH_VIEW_OF_FILE;
-    }
-    return SUCCESS;
-}
-
-int32_t rvn_write_invalid_setup(
-    void *handle,
-    struct page_to_write *buffers,
-    int32_t count,
-    int32_t *detailed_error_code)
-{
-    *detailed_error_code = ERROR_NOT_SUPPORTED;
-    return FAIL_INVALID_HANDLE;
-}
-
 EXPORT
 rvn_writer rvn_get_writer(void *handle)
 {
-    struct handle *handle_ptr = handle;
-    if (handle_ptr->write_address)
-        return rvn_write_mmap;
-
-    rvn_write_mode mode = g_cfg.write_mode;
-    switch (mode)
+    switch (g_cfg.write_mode)
     {
     case rvn_write_mode_io_ring:
         return rvn_write_io_ring;
-
-    case rvn_write_mode_mmap:
-        if (handle_ptr->global_state->open_flags & OPEN_FILE_DO_NOT_MAP)
-            return rvn_write_mmap32;
-    
-        return rvn_write_invalid_setup;
 
     case rvn_write_mode_vectored_file_io:
     case rvn_write_mode_file_io:
