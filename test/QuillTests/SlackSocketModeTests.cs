@@ -671,7 +671,35 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Editing_the_channel_cancels_a_running_turn_and_drops_its_queue_silently()
+    public async Task Renaming_the_channel_keeps_the_runtime_and_its_running_turn()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        await Slack.WaitUntilConnectedAsync();
+
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt == "hold" ? gate.Task : Task.CompletedTask;
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-rename-0", DmMessage(Sender, "hold"));
+        await Slack.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-rename-1", DmMessage(Sender, "queued"));
+        await WaitUntilQueuedAsync(channel.TeamId, "Ev-rename-marker");
+
+        var before = RuntimeFor(app, channel);
+        var connectsBefore = Slack.Connects;
+        await app.UpdateChannelAsync(channel.ChannelId, new UpdateChannelRequest("Renamed bot", null, null));
+        await Task.Delay(1500);
+        Assert.Same(before, RuntimeFor(app, channel));
+        Assert.Equal(connectsBefore, Slack.Connects);
+
+        gate.SetResult();
+        await Slack.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "queued"), "the queued turn after the rename");
+        await Slack.WaitUntilAsync(
+            () => Slack.EditedMessages.Count(e => e.Text == "Hello from the fake agent.") >= 2, "both replies");
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Rotating_credentials_cancels_a_running_turn_and_drops_its_queue_silently()
     {
         await using var app = await NewAppAsync();
         var channel = await NewChannelAsync(app);
@@ -685,8 +713,8 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
         await WaitUntilQueuedAsync(channel.TeamId, "Ev-edit-marker");
 
         var before = RuntimeFor(app, channel);
-        await app.UpdateChannelAsync(channel.ChannelId, new UpdateChannelRequest("Renamed bot", null, null));
-        await Slack.WaitUntilAsync(() => RuntimeFor(app, channel) is { } now && now != before, "the runtime swap after the edit");
+        await app.UpdateChannelAsync(channel.ChannelId, new UpdateChannelRequest(null, null, null, Slack: new(AppToken: NewAppToken())));
+        await Slack.WaitUntilAsync(() => RuntimeFor(app, channel) is { } now && now != before, "the runtime swap after the rotation");
         var sent = Slack.SentMessages.Count;
         var edited = Slack.EditedMessages.Count;
 

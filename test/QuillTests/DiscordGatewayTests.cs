@@ -276,7 +276,34 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Editing_the_channel_cancels_a_running_turn_and_drops_its_queue_silently()
+    public async Task Renaming_the_channel_keeps_the_runtime_and_its_running_turn()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        await Discord.WaitUntilConnectedAsync();
+
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt == "hold" ? gate.Task : Task.CompletedTask;
+
+        await Discord.DispatchDmAsync("msg-rename-0", DmChannel, Sender, "hold");
+        await Discord.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+        await Discord.DispatchDmAsync("msg-rename-1", DmChannel, Sender, "queued");
+
+        var before = RuntimeFor(app, channel);
+        var connectsBefore = Discord.Connects;
+        await app.UpdateChannelAsync(channel.ChannelId, new UpdateChannelRequest("Renamed bot", null, null));
+        await Task.Delay(1500);
+        Assert.Same(before, RuntimeFor(app, channel));
+        Assert.Equal(connectsBefore, Discord.Connects);
+
+        gate.SetResult();
+        await Discord.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "queued"), "the queued turn after the rename");
+        await Discord.WaitUntilAsync(
+            () => Discord.EditedMessages.Count(e => e.Content == "Hello from the fake agent.") >= 2, "both replies");
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Rotating_credentials_cancels_a_running_turn_and_drops_its_queue_silently()
     {
         await using var app = await NewAppAsync();
         var channel = await NewChannelAsync(app);
@@ -293,8 +320,10 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
             () => Router.Requests.Any(r => r.Prompt == "marker"), "a later sender's turn, so the earlier message is queued");
 
         var before = RuntimeFor(app, channel);
-        await app.UpdateChannelAsync(channel.ChannelId, new UpdateChannelRequest("Renamed bot", null, null));
-        await Discord.WaitUntilAsync(() => RuntimeFor(app, channel) is { } now && now != before, "the runtime swap after the edit");
+        var rotatedToken = NewBotToken();
+        Discord.AddBot(rotatedToken, channel.ApplicationId, channel.BotUserId);
+        await app.UpdateChannelAsync(channel.ChannelId, new UpdateChannelRequest(null, null, null, Discord: new(BotToken: rotatedToken)));
+        await Discord.WaitUntilAsync(() => RuntimeFor(app, channel) is { } now && now != before, "the runtime swap after the rotation");
         var sent = Discord.SentMessages.Count;
         var edited = Discord.EditedMessages.Count;
 

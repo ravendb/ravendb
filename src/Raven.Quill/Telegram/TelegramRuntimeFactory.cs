@@ -18,13 +18,13 @@ internal sealed class TelegramRuntimeFactory(
 
     public bool CanStart(Channel channel) => channel.Telegram is { BotToken.Length: > 0 };
 
-    public IChannelRuntime Start(string database, Channel channel, string? changeVector, ChannelConnectionHealth? previous)
+    public IChannelRuntime Start(string database, Channel channel, string fingerprint, ChannelConnectionHealth? previous)
     {
         var client = botFactory.Create(channel.Telegram!.BotToken);
         var messages = ResolvedTelegramMessages.Resolve(channel.Telegram.Messages);
         var turns = new TelegramTurns(database, channel, client, messages, store, options.Value.Telegram, logger);
 
-        return TelegramRuntime.Start(database, channel, changeVector, client, messages, turns, chats,
+        return TelegramRuntime.Start(database, channel, fingerprint, client, messages, turns, chats,
             options.Value.Telegram, logger);
     }
 }
