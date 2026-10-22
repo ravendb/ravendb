@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-        "baseUrl": ".",
+        "strict": false,
         "noImplicitAny": true,
         "noEmitOnError": true,
         "removeComments": false,
@@ -44,49 +44,52 @@
         ],
         "paths": {
             "Favico": [
-                "node_modules/favico.js/favico.js"
+                "./node_modules/favico.js/favico.js"
             ],
             "jszip": [
-                "typings/jszip.d.ts"
+                "./typings/jszip.d.ts"
             ],
             "viewmodels/*": [
-                "typescript/viewmodels/*"
+                "./typescript/viewmodels/*"
             ],
             "components/*": [
-                "typescript/components/*"
+                "./typescript/components/*"
             ],
             "models/*": [
-                "typescript/models/*"
+                "./typescript/models/*"
             ],
             "common/*": [
-                "typescript/common/*"
+                "./typescript/common/*"
             ],
             "external/*": [
-                "typescript/external/*"
+                "./typescript/external/*"
             ],
             "test/*": [
-                "typescript/test/*"
+                "./typescript/test/*"
             ],
             "widgets/*": [
-                "typescript/widgets/*"
+                "./typescript/widgets/*"
             ],
             "commands/*": [
-                "typescript/commands/*"
+                "./typescript/commands/*"
             ],
             "knockout": [
-                "node_modules/@types/knockout"
+                "./node_modules/@types/knockout"
             ],
             "endpoints": [
-                "typings/server/endpoints"
+                "./typings/server/endpoints"
             ],
             "configuration": [
-                "typings/server/configuration"
+                "./typings/server/configuration"
             ],
             "node-forge": [
-                "typings/custom_node-forge.d.ts"
+                "./typings/custom_node-forge.d.ts"
+            ],
+            "typings/*": [
+                "./typings/*"
             ],
             "hooks/*": [
-                "typescript/components/hooks/*"
+                "./typescript/components/hooks/*"
             ]
         },
         "jsx": "react-jsx"

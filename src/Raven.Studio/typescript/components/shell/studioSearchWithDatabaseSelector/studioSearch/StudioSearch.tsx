@@ -1,6 +1,6 @@
 import "./StudioSearch.scss";
 import { studioSearchBackdropId, studioSearchInputId, useStudioSearch } from "./hooks/useStudioSearch";
-import React from "react";
+import React, { ChangeEvent } from "react";
 import Form from "react-bootstrap/Form";
 import classNames from "classnames";
 import StudioSearchLegend from "./bits/StudioSearchLegend";
@@ -38,7 +38,7 @@ export default function StudioSearch(props: { menuItems?: menuItem[] }) {
                         type="search"
                         placeholder={operatingSystem === "MacOS" ? "Use ⌘ + K to search" : "Use Ctrl + K to search"}
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
                         className="flex-grow-1 studio-search__input align-self-stretch pe-2"
                         autoComplete="off"
                     />

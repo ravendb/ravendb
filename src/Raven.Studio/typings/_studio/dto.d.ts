@@ -414,7 +414,7 @@ interface recentErrorDto extends Raven.Server.NotificationCenter.Notifications.N
     HttpStatus?: string;
 }
 
-declare module studio.settings {
+declare namespace studio.settings {
     type numberFormatting = "raw" | "formatted";
     type dontShowAgain = "UnsupportedBrowser";
     type saveLocation = "local" | "remote";
@@ -675,7 +675,7 @@ type virtualNotificationType =
     | "CumulativeDeleteByQuery"
     | "CumulativeDeleteByQueryFailures";
 
-declare module Raven.Server.NotificationCenter.Notifications {
+declare namespace Raven.Server.NotificationCenter.Notifications {
     interface Notification {
         // extend server side type to contain local virtual notifications 
         Type: Raven.Server.NotificationCenter.Notifications.NotificationType | virtualNotificationType;

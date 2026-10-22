@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { ChangeEvent, useRef } from "react";
 import moment from "moment";
 import classNames from "classnames";
 import Form from "react-bootstrap/Form";
@@ -114,7 +114,7 @@ export default function TimePicker({ value, invalid, timezone, onChange }: TimeP
                 value={value}
                 isInvalid={invalid}
                 placeholder={TIME_FORMAT}
-                onChange={(e) => onChange(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
                 onFocus={openMenu}
                 onBlur={() => {
                     // Normalise a partial-but-valid entry to the full format so buildInstant's

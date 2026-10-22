@@ -18,7 +18,7 @@ interface DefaultStoryArgs {
 
 export const Default: StoryObj<DefaultStoryArgs> = {
     name: "SplitView",
-    render: (args) => {
+    render: function SplitViewExample(args) {
         const { open, close } = useViewSheet();
 
         const handleOpenSheet = () => {

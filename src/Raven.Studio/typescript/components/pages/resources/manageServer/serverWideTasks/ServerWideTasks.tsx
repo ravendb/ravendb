@@ -1,4 +1,4 @@
-import React, { ReactNode, useEffect, useState } from "react";
+import React, { ChangeEvent, ReactNode, useEffect, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import { AsyncStateStatus } from "react-async-hook";
@@ -195,7 +195,7 @@ function ServerWideTasksBody({
                                 title="Filter server-wide tasks"
                                 className="filtering-input"
                                 value={nameFilter}
-                                onChange={(e) => setNameFilter(e.target.value)}
+                                onChange={(e: ChangeEvent<HTMLInputElement>) => setNameFilter(e.target.value)}
                             />
                         </div>
                         <div>
