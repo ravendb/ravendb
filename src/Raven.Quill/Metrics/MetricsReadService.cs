@@ -417,9 +417,10 @@ internal static class MetricsReadService
 
     private static async Task<bool> HasSyncErrorsAsync(IDocumentStore store, App app, CancellationToken ct)
     {
-        var errors = await CdcPerformanceReader.ReadErrorsAsync(store.Maintenance.ForDatabase(app.Database), ct);
-        var (_, lastModified) = await AppLookup.LoadCdcStateAsync(store, app.Database, app.CdcTaskName, ct);
-        return CdcPerformanceShaper.ErrorsSince(errors, lastModified).Any();
+        var errors = CdcPerformanceReader.ReadErrorsAsync(store.Maintenance.ForDatabase(app.Database), ct);
+        var state = AppLookup.LoadCdcStateAsync(store, app.Database, app.CdcTaskName, ct);
+        await Task.WhenAll(errors, state);
+        return CdcPerformanceShaper.ErrorsSince(errors.Result, state.Result.LastModified).Any();
     }
 
     internal static (string Status, string? Subtitle) DeriveAppStatus(
