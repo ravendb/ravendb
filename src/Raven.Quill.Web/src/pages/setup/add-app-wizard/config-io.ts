@@ -115,8 +115,6 @@ export function parseConfigTables(tables: CdcSinkTableConfig[]) {
     return result.data;
 }
 
-// Every message zod's English locale generates starts with one of these; anything else was written by
-// the schema and already says where the problem is.
 const ZOD_DEFAULT_MESSAGE = /^(Invalid |Too (big|small)|Unrecognized key)/;
 
 function firstIssueMessage(error: z.ZodError, fallback: string, tables: CdcSinkTableConfig[] = []) {
@@ -128,8 +126,6 @@ function firstIssueMessage(error: z.ZodError, fallback: string, tables: CdcSinkT
     return location ? `${location}: ${issue.message}` : issue.message;
 }
 
-// Table rows are named by their collection so the message matches what the operator sees in the
-// file; "value" segments come from the form shape's string-list wrappers and mean nothing there.
 function describeIssuePath(path: PropertyKey[], tables: CdcSinkTableConfig[]) {
     const [first, ...rest] = path;
     const head =
