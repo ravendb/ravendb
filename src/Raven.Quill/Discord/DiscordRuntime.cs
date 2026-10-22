@@ -83,6 +83,8 @@ internal sealed class DiscordRuntime : IChannelRuntime
         return runtime;
     }
 
+    public bool IsStopping => _stop.IsValueCreated;
+
     public Task StopAsync() => _stop.Value;
 
     private async Task StopCoreAsync()
