@@ -65,7 +65,7 @@ internal static class CdcPerformanceShaper
 
         var errorsSince = Later(lastCleanSyncAt, lastActivityUtc);
         var batchErrors = batches.Where(b => IsAfter(Utc(b.Started), errorsSince)).Sum(ErrorsOf);
-        var errorCount = Math.Max(batchErrors, CountErrors(storedErrors, errorsSince));
+        var errorCount = Math.Max(batchErrors, ErrorsSince(storedErrors, errorsSince).Count());
 
         int? lagSeconds = effectiveActivity is { } last ? Math.Max(0, (int)(nowUtc - last).TotalSeconds) : null;
 
@@ -85,18 +85,14 @@ internal static class CdcPerformanceShaper
 
     private static bool IsAfter(DateTime at, DateTime? since) => since is null || at > since;
 
-    private static int CountErrors(CdcSinkErrorsRaw? raw, DateTime? since) =>
+    public static IEnumerable<CdcTaskErrorRaw> ErrorsSince(CdcSinkErrorsRaw? raw, DateTime? since) =>
         (raw?.Results ?? new List<CdcTaskErrorsRaw>())
             .SelectMany(t => (t.ProcessErrors ?? new List<CdcTaskErrorRaw>())
                 .Concat(t.ItemErrors ?? new List<CdcTaskErrorRaw>()))
-            .Count(e => IsAfter(Utc(e.CreatedAt), since));
+            .Where(e => IsAfter(Utc(e.CreatedAt), since));
 
     // Default cap on returned error details — mirrors the rolling perf window (~25 entries).
     private const int MaxErrors = 25;
-
-    public static bool HasErrors(CdcSinkErrorsRaw raw) =>
-        (raw.Results ?? new List<CdcTaskErrorsRaw>())
-            .Any(t => t.ProcessErrors?.Count > 0 || t.ItemErrors?.Count > 0);
 
     public static CdcError[] ShapeErrors(CdcSinkErrorsRaw raw) =>
         (raw.Results ?? new List<CdcTaskErrorsRaw>())
