@@ -280,6 +280,11 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
 
                                 Database.TxMerger.EnqueueSync(command);
 
+                                foreach (var message in messages)
+                                {
+                                    message.Dispose();
+                                }
+
                                 processedSuccessfully = command.ProcessedSuccessfully;
 
                                 _consumer.Commit();
