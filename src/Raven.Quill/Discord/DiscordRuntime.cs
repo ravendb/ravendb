@@ -27,6 +27,8 @@ internal sealed class DiscordRuntime : IChannelRuntime
     private readonly CancellationTokenSource _cts = new();
 
     private volatile bool _canRestart = true;
+    private volatile string? _status;
+    private volatile DiscordSocketClient? _client;
     private Task _run = Task.CompletedTask;
     private Task? _stop;
     private TimeSpan _backoff = MinBackoff;
@@ -48,6 +50,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
         _sdk = sdk;
         _options = options;
         _logger = logger;
+        _status = channel.DisplayName;
         ChannelFingerprint = channelFingerprint;
     }
 
@@ -88,6 +91,16 @@ internal sealed class DiscordRuntime : IChannelRuntime
             .ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         await _bot.DisposeAsync();
         _cts.Dispose();
+    }
+
+    public void Apply(Channel channel)
+    {
+        if (channel.DisplayName == _status)
+            return;
+
+        _status = channel.DisplayName;
+        if (_client is { } client && Health.IsConnected)
+            _ = ShowStatusAsync(client);
     }
 
     private async Task RunAsync()
@@ -140,6 +153,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
         var exit = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var client = _sdk.NewSocketClient();
+        _client = client;
 
         client.Log += message =>
         {
@@ -191,6 +205,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
         }
         finally
         {
+            _client = null;
             await client.StopAsync();
             Health.MarkDisconnected(null);
         }
@@ -206,12 +221,13 @@ internal sealed class DiscordRuntime : IChannelRuntime
 
     private async Task ShowStatusAsync(DiscordSocketClient client)
     {
-        if (string.IsNullOrWhiteSpace(_channel.DisplayName))
+        var status = _status;
+        if (string.IsNullOrWhiteSpace(status))
             return;
 
         try
         {
-            await client.SetCustomStatusAsync(_channel.DisplayName);
+            await client.SetCustomStatusAsync(status);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
