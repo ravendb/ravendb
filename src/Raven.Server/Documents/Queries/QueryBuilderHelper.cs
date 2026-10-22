@@ -49,8 +49,8 @@ public static class QueryBuilderHelper
         if (minType == maxType)
             return false;
 
-        lower = new BinaryExpression(between.Source, between.Min, between.MinInclusive ? OperatorType.GreaterThanEqual : OperatorType.GreaterThan);
-        upper = new BinaryExpression(between.Source, between.Max, between.MaxInclusive ? OperatorType.LessThanEqual : OperatorType.LessThan);
+        lower = between.LowerBound();
+        upper = between.UpperBound();
         return true;
     }
 
@@ -139,26 +139,28 @@ public static class QueryBuilderHelper
         return true;
     }
 
-    // numbers compare as numbers, dates as ticks when the index knows the field holds dates; anything else is not comparable
+    // two longs compare as longs, two doubles as doubles, two dates as ticks when the index knows the field holds dates.
+    // A long against a double is not comparable: each queries its own term of the field (see WhereClauseNormalizer).
     private static int? CompareBoundValues(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, Index index, QueryFieldName fieldName,
         ValueExpression first, ValueExpression second)
     {
         var (firstValue, firstType) = GetValue(query, metadata, parameters, first);
         var (secondValue, secondType) = GetValue(query, metadata, parameters, second);
 
-        if (firstType == ValueTokenType.Long && secondType == ValueTokenType.Long)
-            return ((long)firstValue).CompareTo((long)secondValue);
+        if (firstType != secondType)
+            return null;
 
-        if (IsNumber(firstType) && IsNumber(secondType))
-            return Convert.ToDouble(firstValue, CultureInfo.InvariantCulture).CompareTo(Convert.ToDouble(secondValue, CultureInfo.InvariantCulture));
-
-        if (firstType == ValueTokenType.String && secondType == ValueTokenType.String &&
-            TryUseTime(index, fieldName, firstValue, secondValue, exact: false, out var firstTicks, out var secondTicks))
-            return firstTicks.CompareTo(secondTicks);
-
-        return null;
-
-        static bool IsNumber(ValueTokenType type) => type is ValueTokenType.Long or ValueTokenType.Double;
+        switch (firstType)
+        {
+            case ValueTokenType.Long:
+                return ((long)firstValue).CompareTo((long)secondValue);
+            case ValueTokenType.Double:
+                return ((double)firstValue).CompareTo((double)secondValue);
+            case ValueTokenType.String when TryUseTime(index, fieldName, firstValue, secondValue, exact: false, out var firstTicks, out var secondTicks):
+                return firstTicks.CompareTo(secondTicks);
+            default:
+                return null;
+        }
     }
 
     internal static IEnumerable<(object Value, ValueTokenType Type)> GetValues(Query query, QueryMetadata metadata,

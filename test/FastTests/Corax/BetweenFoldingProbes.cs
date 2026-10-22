@@ -196,6 +196,50 @@ namespace FastTests.Corax
             Assert.Equal(new[] { "items/in-range" }, Query(store, "from index 'Items/ByTag' where Tag = 't' and Values between 1 and 4"));
         }
 
+        // N1: on a sharded database a query with skip > 0 is re-rendered from the cached AST and sent to the shards; the
+        // exclusive bounds of '>' and '<' must survive that
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void ExclusiveBoundsSurviveTheShardedRewrite(Options options)
+        {
+            using var store = Seed(options,
+                new Item { Id = "items/10", Tag = "t", Price = 10 },
+                new Item { Id = "items/12", Tag = "t", Price = 12 },
+                new Item { Id = "items/15", Tag = "t", Price = 15 },
+                new Item { Id = "items/20", Tag = "t", Price = 20 });
+
+            const string rql = "from index 'Items/ByTag' where Tag = 't' and Price > 10 and Price < 20 order by Price";
+
+            using var session = store.OpenSession();
+            Assert.Equal(new[] { "items/12", "items/15" }, session.Advanced.RawQuery<Item>(rql).ToList().Select(x => x.Id).ToArray());
+            Assert.Equal(new[] { "items/15" }, session.Advanced.RawQuery<Item>(rql).Skip(1).ToList().Select(x => x.Id).ToArray());
+        }
+
+        // N2: same-direction literal bounds of mixed numeric kinds on one field; a long literal compares against the long
+        // term, so 10.5 fails 'Price > 10' even though it passes 'Price > 10.1'
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void SameDirectionLongAndDoubleLiteralBoundsKeepBothComparisons(Options options)
+        {
+            using var store = Seed(options,
+                new Item { Id = "items/10.5", Tag = "t", Price = 10.5 },
+                new Item { Id = "items/11.5", Tag = "t", Price = 11.5 });
+
+            Assert.Equal(new[] { "items/11.5" }, Query(store, "from index 'Items/ByTag' where Tag = 't' and Price > 10 and Price > 10.1"));
+        }
+
+        // N3: the same through parameters, a JSON client sends 10 as an integer and 10.1 as a double
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void SameDirectionLongAndDoubleParameterBoundsKeepBothComparisons(Options options)
+        {
+            using var store = Seed(options,
+                new Item { Id = "items/10.5", Tag = "t", Price = 10.5 },
+                new Item { Id = "items/11.5", Tag = "t", Price = 11.5 });
+
+            Assert.Equal(new[] { "items/11.5" }, Query(store, "from index 'Items/ByTag' where Tag = 't' and Price > $a and Price > $b", ("a", 10), ("b", 10.1)));
+        }
+
         private IDocumentStore Seed(Options options, params Item[] items) => Seed(options, new Items_ByTag(), items);
 
         private IDocumentStore Seed(Options options, Items_ByTag index, params Item[] items)
