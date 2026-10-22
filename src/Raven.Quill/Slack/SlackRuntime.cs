@@ -29,7 +29,7 @@ internal sealed class SlackRuntime : IChannelRuntime, SlackSdk.ISocketObserver
     private volatile bool _canRestart = true;
     private long _restartDueTicks;
     private int _replacing;
-    private Task? _stop;
+    private readonly Lazy<Task> _stop;
 
     private SlackRuntime(
         string database, Channel channel, string channelFingerprint, SlackSdk sdk, SlackTurns turns,
@@ -51,6 +51,7 @@ internal sealed class SlackRuntime : IChannelRuntime, SlackSdk.ISocketObserver
         _handler = new SlackMessageHandler(channel, _chats, Health);
         _netLogger = new SlackNetLogger(this, channel.ShortId, logger);
         _client = sdk.NewSocketClient(_appToken, _handler, _netLogger, this);
+        _stop = new Lazy<Task>(StopCoreAsync);
     }
 
     public string ChannelFingerprint { get; }
@@ -79,7 +80,7 @@ internal sealed class SlackRuntime : IChannelRuntime, SlackSdk.ISocketObserver
         return runtime;
     }
 
-    public Task StopAsync() => _stop ??= StopCoreAsync();
+    public Task StopAsync() => _stop.Value;
 
     private async Task StopCoreAsync()
     {
