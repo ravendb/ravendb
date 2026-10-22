@@ -26,6 +26,7 @@ internal sealed class TelegramRuntime : IChannelRuntime
     private readonly QuillLogger<TelegramRuntime> _logger;
     private readonly bool _acceptsContactShares;
     private Task _receive = Task.CompletedTask;
+    private Task? _stop;
     private TimeSpan _backoff = MinBackoff;
 
     private TelegramRuntime(
@@ -151,7 +152,9 @@ internal sealed class TelegramRuntime : IChannelRuntime
         }
     }
 
-    public async Task StopAsync()
+    public Task StopAsync() => _stop ??= StopCoreAsync();
+
+    private async Task StopCoreAsync()
     {
         Client.OnApiResponseReceived -= OnApiResponseReceived;
         await _cts.CancelAsync();
