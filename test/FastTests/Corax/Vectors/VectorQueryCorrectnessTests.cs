@@ -65,7 +65,35 @@ public class VectorQueryCorrectnessTests(ITestOutputHelper output) : StorageTest
         Assert.Equal(streamed ? expected : expected.Order(), found);
     }
 
-    private static List<long> All(IQueryMatch match)
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    public void FilteredApproximateSearchIsDeterministic()
+    {
+        var random = new Random(3);
+        using var _ = GetMappings(out var mapping, out var getVector);
+        Index(mapping, getVector, Enumerable.Range(0, 1500).Select(_ => (random.Next(3) == 0 ? "a" : "b", new[] { Gaussian(random) })).ToArray());
+        var query = Gaussian(random);
+
+        using var indexSearcher = new IndexSearcher(Env, mapping);
+        var runs = Enumerable.Range(0, 4).Select(_ => Run(indexSearcher, mapping, getVector(query), indexSearcher.TermQuery("Tag", "a"))).ToList();
+        Assert.NotEmpty(runs[0].Entries);
+        Assert.All(runs, run =>
+        {
+            Assert.Equal(runs[0].Entries, run.Entries);
+            Assert.Equal(runs[0].Processed, run.Processed);
+        });
+    }
+
+    private static (List<long> Entries, string Processed) Run(IndexSearcher indexSearcher, IndexFieldsMapping mapping, VectorValue query, IQueryMatch filter)
+    {
+        var match = indexSearcher.VectorSearch(mapping.GetByFieldId(1).Metadata, query, 0f, 10, false, true, filter, 0);
+        var entries = All(ref match);
+        return (entries, match.Inspect().Children.Single(child => child.Operation == "VectorSearchMatch").Parameters["Number of candidates scanned"]);
+    }
+
+    private static List<long> All(IQueryMatch match) => All(ref match);
+
+    // The match is a struct: it must be drained in place for Inspect to see the retriever.
+    private static List<long> All<T>(ref T match) where T : IQueryMatch
     {
         var all = new List<long>();
         var buffer = new long[256];
@@ -73,6 +101,9 @@ public class VectorQueryCorrectnessTests(ITestOutputHelper output) : StorageTest
             all.AddRange(buffer[..read]);
         return all;
     }
+
+    private static float[] Gaussian(Random random) =>
+        Enumerable.Range(0, 16).Select(_ => (float)(Math.Sqrt(-2 * Math.Log(1 - random.NextDouble())) * Math.Cos(2 * Math.PI * random.NextDouble()))).ToArray();
 
     private long[] Index(IndexFieldsMapping mapping, Func<float[], VectorValue> getVector, (string Tag, float[][] Vectors)[] docs)
     {

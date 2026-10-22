@@ -30,7 +30,6 @@ public unsafe partial class Hnsw
             private readonly HashSet<int> _alreadyReturnedEdges;
             private long _vectorReadCounter = 0;
             private readonly int _startingPointIndex;
-            private ContextBoundNativeList<int> _startingPointIndexes;
 
             // Traversal state carried across MoveNextBatch calls so the caller can consume
             // one batch at a time. _needsRestart triggers a fresh InitState; _isDone short-circuits
@@ -43,13 +42,14 @@ public unsafe partial class Hnsw
             public long CandidatesProcessed { get => _vectorReadCounter; }
             public int NumberOfCandidates { get; init; }
 
-            private NearestSearcher(SearchState searchState, Memory<byte> vector,
+            public NearestSearcher(SearchState searchState, int startingPointIndex, Memory<byte> vector,
                 int level, int numberOfCandidates,
                 ContextBoundNativeList<int> candidates,
                 NearestEdgesFlags flags,
                 bool hasFilterMatch)
             {
                 _searchState = searchState;
+                _startingPointIndex = startingPointIndex;
                 _vector = vector;
                 _level = level;
                 NumberOfCandidates = numberOfCandidates;
@@ -67,64 +67,8 @@ public unsafe partial class Hnsw
                     _alreadyReturnedEdges = new();
                 }
             }
-            
-            
-            public NearestSearcher(SearchState searchState, ContextBoundNativeList<int> startingPointsIndexes, Memory<byte> vector, int level, int numberOfCandidates, ContextBoundNativeList<int> candidates, NearestEdgesFlags flags) : this(searchState, vector, level, numberOfCandidates, candidates, flags, true)
-            {
-                _startingPointIndexes = startingPointsIndexes;
-                _startingPointIndex = -1;
-            }
-
-            public NearestSearcher(SearchState searchState, int startingPointIndex, Memory<byte> vector,
-                int level, int numberOfCandidates,
-                ContextBoundNativeList<int> candidates,
-                NearestEdgesFlags flags,
-                bool hasFilterMatch) : this(searchState, vector, level, numberOfCandidates, candidates, flags, hasFilterMatch)
-            {
-                _startingPointIndex = startingPointIndex;
-            }
 
             private void InitState(out float lowerBound, out int visitedCounter)
-            {
-                if (_startingPointIndex != -1)
-                {
-                    Deepest(out lowerBound, out visitedCounter);
-                }
-                else
-                {
-                    Multi(out lowerBound, out visitedCounter);
-                }
-            }
-
-            private void Multi(out float lowerBound, out int visitedCounter)
-            {
-                var candidatesQ = _searchState._candidatesQ;
-                var nearestEdgesQ = _searchState._nearestEdgesQ;
-
-                Debug.Assert(candidatesQ.Count == 0, "_candidatesQ.Count == 0");
-                Debug.Assert(nearestEdgesQ.Count == 0, "_nearestEdgesQ.Count == 0");
-
-                lowerBound = float.MaxValue;
-                visitedCounter = ++_searchState._visitsCounter;
-                _searchState.OnQueryVector(_vector);
-
-                foreach (var nodeIdx in _startingPointIndexes)
-                {
-                    ref var startingPoint = ref _searchState.GetNodeByIndex(nodeIdx);
-                    startingPoint.Visited = visitedCounter;
-                    var currentDistance = -_searchState.QueryDistance(_vector.Span, nodeIdx, ref _vectorReadCounter);
-                    lowerBound = Math.Min(lowerBound, currentDistance);
-                    candidatesQ.Enqueue(nodeIdx, -currentDistance);
-                    if (_flags.HasFlag(NearestEdgesFlags.StartingPointAsEdge) &&
-                        ((startingPoint.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask) != Constants.Graphs.VectorId.Tombstone
-                         || _flags.HasFlag(NearestEdgesFlags.FilterNodesWithEmptyPostingLists) is false))
-                    {
-                        nearestEdgesQ.Enqueue(nodeIdx, currentDistance);
-                    }
-                }
-            }
-
-            private void Deepest(out float lowerBound, out int visitedCounter)
             {
                 var candidatesQ = _searchState._candidatesQ;
                 var nearestEdgesQ = _searchState._nearestEdgesQ;
@@ -344,8 +288,6 @@ public unsafe partial class Hnsw
 
             public void Dispose()
             {
-                if (_startingPointIndex == -1)
-                    _startingPointIndexes.Dispose();
                 _candidates.Dispose();
                 _nodeIds.Dispose(_searchState.Llt.Allocator);
                 _indexes.Dispose(_searchState.Llt.Allocator);
