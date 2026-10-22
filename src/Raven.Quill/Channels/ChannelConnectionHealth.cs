@@ -1,39 +1,77 @@
 namespace Raven.Quill.Channels;
 
+internal sealed record ChannelConnectionSnapshot(
+    bool IsConnected,
+    DateTime? LastConnectedAt,
+    string? LastConnectionError,
+    DateTime? LastInboundAt,
+    DateTime? LastSendErrorAt,
+    string? LastSendError);
+
 internal sealed class ChannelConnectionHealth
 {
-    public bool IsConnected { get; private set; }
-    public DateTime? LastConnectedAt { get; private set; }
-    public string? LastConnectionError { get; private set; }
-    public DateTime? LastInboundAt { get; private set; }
-    public DateTime? LastSendErrorAt { get; private set; }
-    public string? LastSendError { get; private set; }
+    private readonly object _sync = new();
+
+    private bool _isConnected;
+    private DateTime? _lastConnectedAt;
+    private string? _lastConnectionError;
+    private DateTime? _lastInboundAt;
+    private DateTime? _lastSendErrorAt;
+    private string? _lastSendError;
+
+    public bool IsConnected
+    {
+        get { lock (_sync) return _isConnected; }
+    }
+
+    public ChannelConnectionSnapshot Snapshot()
+    {
+        lock (_sync)
+            return new ChannelConnectionSnapshot(
+                _isConnected, _lastConnectedAt, _lastConnectionError, _lastInboundAt, _lastSendErrorAt, _lastSendError);
+    }
 
     public void MarkConnected()
     {
-        IsConnected = true;
-        LastConnectedAt = DateTime.UtcNow;
-        LastConnectionError = null;
+        lock (_sync)
+        {
+            _isConnected = true;
+            _lastConnectedAt = DateTime.UtcNow;
+            _lastConnectionError = null;
+        }
     }
 
     public void MarkDisconnected(string? error)
     {
-        IsConnected = false;
-        if (error is not null)
-            LastConnectionError = error;
+        lock (_sync)
+        {
+            _isConnected = false;
+            if (error is not null)
+                _lastConnectionError = error;
+        }
     }
 
-    public void MarkReceived() => LastInboundAt = DateTime.UtcNow;
+    public void MarkReceived()
+    {
+        lock (_sync)
+            _lastInboundAt = DateTime.UtcNow;
+    }
 
     public void MarkSendFailed(string error)
     {
-        LastSendErrorAt = DateTime.UtcNow;
-        LastSendError = error;
+        lock (_sync)
+        {
+            _lastSendErrorAt = DateTime.UtcNow;
+            _lastSendError = error;
+        }
     }
 
     public void MarkSendSucceeded()
     {
-        LastSendErrorAt = null;
-        LastSendError = null;
+        lock (_sync)
+        {
+            _lastSendErrorAt = null;
+            _lastSendError = null;
+        }
     }
 }
