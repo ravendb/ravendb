@@ -223,8 +223,7 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 
-builder.Services.TryAddSingleton(TimeProvider.System);
-builder.Services.AddSingleton<LoginFailureLimiter>();
+builder.Services.AddSingleton(_ => new LoginFailureLimiter());
 
 builder.Services.Configure<RouteHandlerOptions>(static options => options.ThrowOnBadRequest = true);
 

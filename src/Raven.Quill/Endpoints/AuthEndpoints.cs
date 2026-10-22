@@ -49,8 +49,6 @@ public static class AuthEndpoints
                 statusCode: isLimited ? StatusCodes.Status429TooManyRequests : StatusCodes.Status401Unauthorized);
         }
 
-        limiter.Reset(client);
-
         var identity = new ClaimsIdentity(CookieAuthenticationDefaults.AuthenticationScheme);
         identity.AddClaim(new Claim(ClaimTypes.Name, "operator"));
         var principal = new ClaimsPrincipal(identity);
