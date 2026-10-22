@@ -1,4 +1,4 @@
-import React, { ComponentProps, ReactNode, useCallback, useRef, useState } from "react";
+import React, { ChangeEvent, ComponentProps, ReactNode, useCallback, useRef, useState } from "react";
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
 import { Control, ControllerProps, FieldPath, FieldValues, PathValue, useController } from "react-hook-form";
@@ -596,7 +596,7 @@ function FormInputGeneral<
                             name={name}
                             type={actualInputType}
                             onBlur={onBlur}
-                            onChange={(x) => handleValueChange(x.currentTarget.value)}
+                            onChange={(x: ChangeEvent<HTMLInputElement>) => handleValueChange(x.currentTarget.value)}
                             value={value == null ? "" : value}
                             isInvalid={invalid}
                             className={classNames(
@@ -750,7 +750,7 @@ export function FormPathSelector<
                         ref={inputRef}
                         name={name}
                         type="text"
-                        onChange={(x) => onChange(x.currentTarget.value)}
+                        onChange={(x: ChangeEvent<HTMLInputElement>) => onChange(x.currentTarget.value)}
                         value={formValuePath == null ? "" : formValuePath}
                         isInvalid={invalid}
                         className="position-relative d-flex flex-grow-1"
