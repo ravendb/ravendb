@@ -107,7 +107,6 @@ internal sealed class DiscordRuntime : IChannelRuntime
     {
         try
         {
-            await _bot.LoginAsync(_cts.Token);
             await SessionLoopAsync();
         }
         catch (OperationCanceledException) when (_cts.IsCancellationRequested)
@@ -150,6 +149,22 @@ internal sealed class DiscordRuntime : IChannelRuntime
 
     private async Task<string?> RunClientAsync()
     {
+        try
+        {
+            await _bot.LoginAsync(_cts.Token);
+        }
+        catch (DiscordApiException e) when (e.Status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        {
+            return e.Message;
+        }
+        catch (DiscordApiException e)
+        {
+            Health.MarkDisconnected(e.Message);
+            if (_logger.IsWarnEnabled)
+                _logger.Warn($"Discord REST login failed for channel {_channel.ShortId}: {e.Message}");
+            return null;
+        }
+
         var exit = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var client = _sdk.NewSocketClient();
