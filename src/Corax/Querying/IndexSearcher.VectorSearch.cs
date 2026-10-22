@@ -24,11 +24,17 @@ public partial class IndexSearcher
     {
         public static bool ShouldScan(IndexSearcher indexSearcher, long filterMatchesCount, bool isExact, IQueryMatch filterQuery, int scanningThreshold, int numberOfCandidates)
         {
-            var shouldScan = filterQuery != null && (filterMatchesCount < scanningThreshold || isExact || filterMatchesCount * 0.5 < numberOfCandidates);
+            if (filterQuery == null)
+                return false;
+
+            // An exact search finds the same nodes by scanning the nodes of the filter as by scanning the graph, and reads fewer.
+            if (isExact)
+                return true;
+
             if (indexSearcher._testingConfiguration is {DisableVectorSearchScanning: true})
                 return false;
-             
-            return shouldScan;
+
+            return filterMatchesCount < scanningThreshold || filterMatchesCount * 0.5 < numberOfCandidates;
         }
 
         public static GrowableBitArray LoadFilterMatches(IndexSearcher indexSearcher, ref IQueryMatch query)

@@ -51,6 +51,20 @@ public class VectorQueryCorrectnessTests(ITestOutputHelper output) : StorageTest
         Assert.Equal(ids, matches[..read].ToArray());
     }
 
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ExactFilteredSearchReturnsTheNearestMatches(bool streamed)
+    {
+        using var _ = GetMappings(out var mapping, out var getVector);
+        var ids = Index(mapping, getVector, Enumerable.Range(0, 40).Select(i => (i % 2 == 0 ? "a" : "b", new[] { new[] { MathF.Cos(i * 0.03f), MathF.Sin(i * 0.03f) } })).ToArray());
+
+        using var indexSearcher = new IndexSearcher(Env, mapping);
+        var found = All(indexSearcher.VectorSearch(mapping.GetByFieldId(1).Metadata, getVector([1f, 0f]), 0f, 4, true, streamed, indexSearcher.TermQuery("Tag", "a")));
+        long[] expected = [ids[0], ids[2], ids[4], ids[6]];
+        Assert.Equal(streamed ? expected : expected.Order(), found);
+    }
+
     private static List<long> All(IQueryMatch match)
     {
         var all = new List<long>();

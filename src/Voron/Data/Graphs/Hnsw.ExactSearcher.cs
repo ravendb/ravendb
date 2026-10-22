@@ -15,20 +15,16 @@ public partial class Hnsw
         {
             private readonly SearchState _searchState;
             private readonly Memory<byte> _vector;
-            private readonly bool _hasFilterMatch;
             private ContextBoundNativeList<int> _candidates;
             private readonly ContextBoundNativeList<long>? _nodesToScan;
             private PriorityQueue<long, float> _pq;
             private long _vectorReadCounter = 0;
             private bool _initialized;
             
-            public ExactSearcher(SearchState searchState, Memory<byte> vector, bool hasFilterMatch, int numberOfCandidates, ContextBoundNativeList<long>? nodesToScan)
+            public ExactSearcher(SearchState searchState, Memory<byte> vector, int numberOfCandidates, ContextBoundNativeList<long>? nodesToScan)
             {
                 _searchState = searchState;
                 _vector = vector;
-                _hasFilterMatch = hasFilterMatch;
-                PortableExceptions.ThrowIf<NotSupportedException>(_searchState.Options.CountOfVectors >= int.MaxValue && hasFilterMatch, $"Cannot have more than {int.MaxValue} vectors and filter match");
-                
                 NumberOfCandidates = numberOfCandidates;
                 _nodesToScan = nodesToScan;
 
@@ -98,7 +94,8 @@ public partial class Hnsw
                     return;
 
                 var distance = _searchState.QueryDistance(_vector.Span, nodeIndex, ref _vectorReadCounter);
-                if (_pq.Count < NumberOfCandidates || _hasFilterMatch)
+                // The queue keeps the nearest candidates with the farthest on top.
+                if (_pq.Count < NumberOfCandidates)
                     _pq.Enqueue(nodeId, -distance);
                 else
                     _pq.EnqueueDequeue(nodeId, -distance);

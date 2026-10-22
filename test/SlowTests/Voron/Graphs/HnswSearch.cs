@@ -51,14 +51,14 @@ public class HnswSearch(ITestOutputHelper output) : StorageTest(output)
         using (var rTx = Env.ReadTransaction())
         {
             var qV = MemoryMarshal.Cast<float, byte>(queryVector);
-            using var nearest = Hnsw.ExactNearest(rTx.LowLevelTransaction, treeName,
-                numberOfCandidates: totalEntries, qV.ToArray(), minimumSimilarity: 0f, hasFilterMatch: true);
-
             var filter = new GrowableBitArray(Allocator, totalEntries + 1);
             using var __ = filter;
             for (int i = 1; i <= totalEntries; i++)
                 filter.Add(i);
             filter.Count = totalEntries;
+
+            using var nearest = Hnsw.ExactNearest(rTx.LowLevelTransaction, treeName,
+                numberOfCandidates: totalEntries, qV.ToArray(), minimumSimilarity: 0f, filter);
 
             var matches = new long[128];
             var distances = new float[128];
@@ -105,15 +105,15 @@ public class HnswSearch(ITestOutputHelper output) : StorageTest(output)
         using (var rTx = Env.ReadTransaction())
         {
             var qV = MemoryMarshal.Cast<float, byte>(commonVector);
-            using var nearest = Hnsw.ExactNearest(rTx.LowLevelTransaction, treeName,
-                numberOfCandidates: 100, qV.ToArray(), minimumSimilarity: 0f, hasFilterMatch: true);
-
             var filter = new GrowableBitArray(Allocator, entriesWithSameVector + 1);
             using var __ = filter;
 
             for (int i = 1; i <= entriesWithSameVector; i++)
                 filter.Add(i);
             filter.Count = entriesWithSameVector;
+
+            using var nearest = Hnsw.ExactNearest(rTx.LowLevelTransaction, treeName,
+                numberOfCandidates: 100, qV.ToArray(), minimumSimilarity: 0f, filter);
 
             var matches = new long[matchesBufferSize];
             var distances = new float[matchesBufferSize];
@@ -166,7 +166,7 @@ public class HnswSearch(ITestOutputHelper output) : StorageTest(output)
         using (var rTx = Env.ReadTransaction())
         {
             var qV = MemoryMarshal.Cast<float, byte>(storage[random.Next(1, storage.Count + 1)]);
-            using var nearest = Hnsw.ExactNearest(rTx.LowLevelTransaction, treeName, 1024, qV.ToArray(), 0f, false);
+            using var nearest = Hnsw.ExactNearest(rTx.LowLevelTransaction, treeName, 1024, qV.ToArray(), 0f);
 
             var totalReturned = 0;
             var matches = new long[64];

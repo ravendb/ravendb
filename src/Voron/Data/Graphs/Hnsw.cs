@@ -693,7 +693,7 @@ public unsafe partial class Hnsw
 
         public IHnswSearcher EmptySearch() => new EmptySearcher();
         
-        public IHnswSearcher ExactSearch(Memory<byte> vector, bool hasFilterMatch, int numberOfCandidates, ContextBoundNativeList<long>? nodesToScan) => new ExactSearcher(this, vector, hasFilterMatch, numberOfCandidates, nodesToScan);
+        public IHnswSearcher ExactSearch(Memory<byte> vector, int numberOfCandidates, ContextBoundNativeList<long>? nodesToScan) => new ExactSearcher(this, vector, numberOfCandidates, nodesToScan);
 
 
         public void SearchFilteredNearest<TNodes>(ref ContextBoundNativeList<int> nearestIndexes, TNodes nodesFromFilter, int candidatesRequested, int maximumNumberOfNodesVisitedWithoutFindingBetterCandidate)
@@ -1531,10 +1531,10 @@ public unsafe partial class Hnsw
         return new Registration(llt, name, random);
     }
     
-    public static VectorSearchRetriever ExactNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, bool hasFilterMatch, ContextBoundNativeList<long>? nodesToScan = null)
+    public static VectorSearchRetriever ExactNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, ContextBoundNativeList<long>? nodesToScan = null)
     {
         var searchState = new SearchState(llt, name, ref vector);
-        var results = searchState.ExactSearch(vector, hasFilterMatch, numberOfCandidates, nodesToScan);
+        var results = searchState.ExactSearch(vector, numberOfCandidates, nodesToScan);
         return new VectorSearchRetriever(searchState,  results, vector, minimumSimilarity);
     }
 
@@ -1606,11 +1606,11 @@ public unsafe partial class Hnsw
     /// Exact nearest neighbor search using a caller-owned SearchState.
     /// The caller is responsible for disposing the SearchState.
     /// </summary>
-    public static VectorSearchRetriever ExactNearest(SearchState searchState, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, bool hasFilterMatch, ContextBoundNativeList<long>? nodesToScan = null)
+    public static VectorSearchRetriever ExactNearest(SearchState searchState, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, ContextBoundNativeList<long>? nodesToScan = null)
     {
         TryNormalizeQueryVector(searchState.Options, searchState.Llt.Allocator, ref vector, out var queryVectorScope);
         searchState.OnQueryVector(vector);
-        var results = searchState.ExactSearch(vector, hasFilterMatch, numberOfCandidates, nodesToScan);
+        var results = searchState.ExactSearch(vector, numberOfCandidates, nodesToScan);
         return new VectorSearchRetriever(searchState, results, vector, minimumSimilarity, ownsSearchState: false, queryVectorScope);
     }
 
