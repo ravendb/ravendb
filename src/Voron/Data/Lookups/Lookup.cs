@@ -533,11 +533,11 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     {
         Debug.Assert(_internalCursor._pos > 0, "_internalCursor._pos > 0");
         ref var parent = ref _internalCursor._stk[_internalCursor._pos - 1];
-        parent.Page = _llt.ModifyPage(parent.Page.PageNumber);
         Debug.Assert(parent.Header->NumberOfEntries >= 2,"parent.Header->NumberOfEntries >= 2");
 
         if (destinationState.Header->NumberOfEntries == 0)
         {
+            parent.Page = _llt.ModifyPage(parent.Page.PageNumber);
             RemovePageFromParent(ref destinationState, ref parent);
             return true;
         }
@@ -552,7 +552,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         var siblingPage = GetValue(ref parent, parent.LastSearchPosition + 1);
         var sourceState = new CursorState
         {
-            Page = _llt.ModifyPage(siblingPage)
+            Page = _llt.GetPage(siblingPage)
         };
 
         if (sourceState.Header->IsBranch != destinationState.Header->IsBranch 
@@ -581,6 +581,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         Debug.Assert(_llt.IsDirty(destinationState.Page.PageNumber));
         Memory.Copy(destinationState.Page.Pointer, temp.Ptr, Constants.Storage.PageSize);
         destinationState.Header->CollapsedLevels = Math.Max(destinationState.Header->CollapsedLevels, sourceState.Header->CollapsedLevels);
+        parent.Page = _llt.ModifyPage(parent.Page.PageNumber);
         // We update the entries offsets on the source page, now that we have moved the entries.
         parent.LastSearchPosition++;
         FreePageFor(ref destinationState, ref sourceState, ref parent);
