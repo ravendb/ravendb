@@ -493,7 +493,7 @@ interface TextFilterProps {
 
 function TextFilter({ value, placeholder, onChange, onEnter }: TextFilterProps) {
     return (
-        <div className="px-3 py-1">
+        <div className="px-2 py-1">
             <Form.Control
                 type="text"
                 placeholder={placeholder}
@@ -527,7 +527,7 @@ function CheckboxListFilter<T extends string>({
     return (
         <div>
             {options.map((option) => (
-                <div key={option.value} className="px-3 py-1">
+                <div key={option.value} className="px-2 py-1">
                     <Checkbox
                         selected={selectedValues.includes(option.value)}
                         toggleSelection={() => toggleValue(option.value)}

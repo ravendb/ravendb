@@ -188,7 +188,7 @@
         align-items: center;
         justify-content: space-between;
         gap: sizes.$gutter-xxs;
-        padding: sizes.$gutter-xs sizes.$gutter-sm;
+        padding: sizes.$gutter-xs;
         margin-bottom: sizes.$gutter-xxxs;
         border-bottom: sizes.$border-width solid colors.$border-color-light-var;
         color: colors.$text-emphasis-var;
@@ -198,7 +198,7 @@
     .sinks-sort-selects {
         display: flex;
         gap: sizes.$gutter-xxs;
-        padding: sizes.$gutter-xs sizes.$gutter-xs (sizes.$gutter-xs - sizes.$gutter-xxxs);
+        padding: sizes.$gutter-xs sizes.$gutter-xxxs (sizes.$gutter-xs - sizes.$gutter-xxxs);
 
         .sinks-sort-field-select {
             min-width: 220px;
