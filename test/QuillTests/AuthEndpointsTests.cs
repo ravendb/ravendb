@@ -1,8 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using QuillTests.E2E.Fixtures;
 using Raven.Quill.Auth;
 using Tests.Infrastructure;
@@ -140,11 +138,7 @@ public class AuthEndpointsTests(ITestOutputHelper output) : QuillTestBase(output
     public async Task Throttled_client_is_rejected_before_validation_and_recovers_after_the_window()
     {
         var window = TimeSpan.FromMilliseconds(500);
-        await using var host = await NewHostAsync(configureServices: services =>
-        {
-            services.RemoveAll<LoginFailureLimiter>();
-            services.AddSingleton(_ => new LoginFailureLimiter(window));
-        });
+        await using var host = await NewHostAsync(configure: options => options.LoginAttemptWindow = window);
         host.Client.DefaultRequestHeaders.Remove(ApiKeyAuthenticationHandler.HeaderName);
 
         HttpStatusCode? last = null;

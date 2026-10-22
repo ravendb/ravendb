@@ -12,6 +12,8 @@ namespace Raven.Quill.Endpoints;
 
 public static class AuthEndpoints
 {
+    public const string LoginRateLimitPolicy = "auth-login";
+
     public static void Map(WebApplication app)
     {
         var group = app.MapGroup("/api/auth").WithTags("auth");
@@ -19,9 +21,10 @@ public static class AuthEndpoints
         group.MapPost("/login", LoginAsync)
             .WithName("auth.login")
             .Accepts<LoginRequest>("application/json")
+            .RequireRateLimiting(LoginRateLimitPolicy)
             .Produces<AuthStatusResponse>()
             .Produces<AuthStatusResponse>(StatusCodes.Status401Unauthorized)
-            .Produces<AuthStatusResponse>(StatusCodes.Status429TooManyRequests);
+            .Produces(StatusCodes.Status429TooManyRequests);
 
         group.MapPost("/logout", LogoutAsync)
             .WithName("auth.logout")
@@ -33,20 +36,14 @@ public static class AuthEndpoints
     }
 
     private static async Task<IResult> LoginAsync(
-        LoginRequest body, IApiKeyStore keys, LoginFailureLimiter limiter, QuillLogger<AuthLogger> logger, HttpContext ctx, CancellationToken ct)
+        LoginRequest body, IApiKeyStore keys, QuillLogger<AuthLogger> logger, HttpContext ctx, CancellationToken ct)
     {
-        var client = ClientKey(ctx);
-        if (limiter.IsThrottled(client))
-            return Results.Json(new AuthStatusResponse(false), statusCode: StatusCodes.Status429TooManyRequests);
-
         if (body is null || string.IsNullOrWhiteSpace(body.ApiKey) ||
             await keys.ValidateAsync(body.ApiKey, ct) == false)
         {
             if (logger.AuditEnabled)
                 logger.Audit("LOGIN", "failed", ctx);
-            var isLimited = limiter.RegisterFailure(client);
-            return Results.Json(new AuthStatusResponse(false),
-                statusCode: isLimited ? StatusCodes.Status429TooManyRequests : StatusCodes.Status401Unauthorized);
+            return Results.Json(new AuthStatusResponse(false), statusCode: StatusCodes.Status401Unauthorized);
         }
 
         var identity = new ClaimsIdentity(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -69,9 +66,6 @@ public static class AuthEndpoints
             logger.Audit("LOGOUT", "session ended", ctx, principal);
         return Results.NoContent();
     }
-
-    private static string ClientKey(HttpContext ctx) =>
-        ctx.Connection.RemoteIpAddress?.ToString() ?? ctx.Connection.Id ?? "unknown";
 
     private static async Task<IResult> GetStatusAsync(HttpContext ctx, CancellationToken ct)
     {
