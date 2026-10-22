@@ -303,7 +303,7 @@ function ChannelCard({
                     )}
                 </CardTitle>
                 <CardAction>
-                    <EnabledStatus isEnabled={channel.enabled} />
+                    <EnabledStatus isEnabled={channel.enabled} setupError={channel.setupError} />
                 </CardAction>
             </CardHeader>
 

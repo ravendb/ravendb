@@ -9,9 +9,6 @@ namespace Raven.Quill.Endpoints;
 
 public static class SlackEndpoints
 {
-    internal const string AppTokenMissingError =
-        "this channel predates Socket Mode; rotate its credentials and paste the app-level (xapp-) token to connect it";
-
     public static void Map(WebApplication app)
     {
         var group = app.MapGroup("/api/apps/{slug}").WithTags("slack").RequireAuthorization();
@@ -76,7 +73,7 @@ public static class SlackEndpoints
                 checks[i].Error,
                 channelManager.IsConnectedFor(app.Database, channel.ShortId),
                 health?.LastConnectedAt,
-                settings.AppToken.Length == 0 ? AppTokenMissingError : health?.LastConnectionError,
+                SlackSettings.SetupErrorOf(settings) ?? health?.LastConnectionError,
                 health?.LastInboundAt,
                 health?.LastSendErrorAt,
                 health?.LastSendError);
