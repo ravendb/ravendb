@@ -604,8 +604,22 @@ namespace Corax.Indexing
         private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage,
             HashSet<long> nullTermMarkers, HashSet<long> nonExistingTermMarkers, long dicId, DocumentEntryId entryToDelete, int termsPerEntryIndex)
         {
-            var reader = new EntryTermsReader(llt, nullTermMarkers, nonExistingTermMarkers, entryTerms.Address, entryTerms.Length, dicId, _persistedVectorRootPages);
 
+            var compactKey = llt.AcquireCompactKey();
+            try
+            {
+                var reader = new EntryTermsReader(llt, nullTermMarkers, nonExistingTermMarkers, entryTerms.Address, entryTerms.Length, dicId, _persistedVectorRootPages, compactKey);
+                RecordTermDeletionsForEntry(ref reader, llt, fieldsByRootPage, entryToDelete, termsPerEntryIndex);
+            }
+            finally
+            {
+                llt.ReleaseCompactKey(ref compactKey);
+            }
+        }
+
+        private void RecordTermDeletionsForEntry(ref EntryTermsReader reader, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage,
+            DocumentEntryId entryToDelete, int termsPerEntryIndex)
+        {
             reader.Reset();
             while (reader.MoveNextStoredField())
             {
