@@ -717,7 +717,7 @@ internal static class MetricsReadService
         return results.Where(r => r.HasValue).Select(r => r.Value).ToList();
     }
 
-    private sealed record UsageMetricRow(
+    internal sealed record UsageMetricRow(
         string Agent, string ChannelId, DateTime Bucket, long Conversations, long Messages, long Tokens);
 
     private static Task<List<UsageMetricRow>> QueryAllMetricRowsAsync(
@@ -728,10 +728,12 @@ internal static class MetricsReadService
         IAsyncDocumentSession session, DateTime start, DateTime end, CancellationToken ct) =>
         QueryMetricRowsAsync(session, start, end, ct);
 
-    private static async Task<List<UsageMetricRow>> QueryMetricRowsAsync(
+    internal static async Task<List<UsageMetricRow>> QueryMetricRowsAsync(
         IAsyncDocumentSession session, DateTime? from, DateTime? to, CancellationToken ct)
     {
-        var docs = await session.LoadAllStartingWithAsync<UsageMetrics>(UsageMetrics.IdPrefix, ct);
+        var docs = await session.Query<UsageMetrics>()
+            .Include(builder => builder.IncludeTimeSeries(UsageMetrics.SeriesName, from, to))
+            .ToListAsync(ct);
 
         var rows = new List<UsageMetricRow>();
         foreach (var doc in docs)
