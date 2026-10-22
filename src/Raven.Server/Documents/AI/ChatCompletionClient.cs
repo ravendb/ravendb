@@ -509,6 +509,40 @@ public class ChatCompletionClient : IDisposable
         }
     }
 
+    internal static bool TryGetRetryAfter(HttpResponseMessage response, out TimeSpan retryAfter)
+    {
+        retryAfter = TimeSpan.Zero;
+
+        if (response.Headers.TryGetValues(Constants.Headers.RetryAfterMs, out var milliseconds) &&
+            double.TryParse(milliseconds.FirstOrDefault(), NumberStyles.Float, CultureInfo.InvariantCulture, out var ms) &&
+            double.IsFinite(ms) && ms > 0)
+        {
+            retryAfter = ClampRetryAfter(TimeSpan.FromMilliseconds(Math.Min(ms, MaxRetryAfter.TotalMilliseconds)));
+            return true;
+        }
+
+        if (response.Headers.RetryAfter is not { } header)
+            return false;
+
+        if (header.Delta is { } delta && delta > TimeSpan.Zero)
+        {
+            retryAfter = ClampRetryAfter(delta);
+            return true;
+        }
+
+        if (header.Date is { } date && date - DateTimeOffset.UtcNow is { Ticks: > 0 } until)
+        {
+            retryAfter = ClampRetryAfter(until);
+            return true;
+        }
+
+        return false;
+    }
+
+    internal static readonly TimeSpan MaxRetryAfter = TimeSpan.FromDays(1);
+
+    private static TimeSpan ClampRetryAfter(TimeSpan value) => value > MaxRetryAfter ? MaxRetryAfter : value;
+
     private static readonly Regex GoDurationRegex = new(
         @"(?<value>\d+(?:\.\d+)?)(?<unit>ns|us|µs|ms|s|m|h)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant
@@ -529,9 +563,9 @@ public class ChatCompletionClient : IDisposable
         }
 
         // As double: 33011.382867097855
-        if (double.TryParse(input, provider: CultureInfo.InvariantCulture, out var seconds2))
+        if (double.TryParse(input, provider: CultureInfo.InvariantCulture, out var seconds2) && double.IsFinite(seconds2))
         {
-            time = TimeSpan.FromSeconds(seconds2);
+            time = ClampRetryAfter(TimeSpan.FromSeconds(Math.Min(seconds2, MaxRetryAfter.TotalSeconds)));
             return true;
         }
 
