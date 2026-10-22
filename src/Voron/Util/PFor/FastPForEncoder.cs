@@ -329,6 +329,7 @@ public sealed unsafe class FastPForEncoder  : IDisposable
         _entries[Math.Min(_offset, _count-1)];
 #endif
 
+    [SkipLocalsInit]
     private int WriteLastBatchAsVarIntDelta(int count, byte* output, int outputSize)
     {
         Debug.Assert(count <= 256);
