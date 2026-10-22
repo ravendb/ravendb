@@ -12,4 +12,15 @@ describe("TombstonesState", () => {
         expect(await screen.findByRole("heading", { name: /Per Collection/ })).toBeInTheDocument();
         expect(await screen.findByRole("heading", { name: /Per Task/ })).toBeInTheDocument();
     });
+
+    it("shows ~ prefix for estimated tombstone counts", async () => {
+        const { screen } = rtlRender(<Tombstones />);
+
+        const format = (n: number) => n.toLocaleString();
+
+        expect(await screen.findByText(`~${format(1500)}`)).toBeInTheDocument();
+        expect(
+            await screen.findByText(`Documents: ~${format(1200)}, TimeSeries: ~200, Counters: 0`)
+        ).toBeInTheDocument();
+    });
 });
