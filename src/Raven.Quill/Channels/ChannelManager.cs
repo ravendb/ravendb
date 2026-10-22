@@ -14,7 +14,7 @@ namespace Raven.Quill.Channels;
 
 internal interface IChannelRuntime
 {
-    string? ChannelChangeVector { get; }
+    string ChannelFingerprint { get; }
 
     ChannelConnectionHealth? Health => null;
 
@@ -31,7 +31,7 @@ internal interface IChannelRuntimeFactory
 
     bool CanStart(Channel channel);
 
-    IChannelRuntime Start(string database, Channel channel, string? changeVector, ChannelConnectionHealth? previous);
+    IChannelRuntime Start(string database, Channel channel, string fingerprint, ChannelConnectionHealth? previous);
 }
 
 internal sealed class ChannelManager(
@@ -91,7 +91,7 @@ internal sealed class ChannelManager(
     private async Task ApplyChangesAsync(CancellationToken ct)
     {
         var desired = new Dictionary<(string Database, string ChannelId),
-            (Channel Channel, string? ChangeVector, IChannelRuntimeFactory Factory)>();
+            (Channel Channel, string Fingerprint, IChannelRuntimeFactory Factory)>();
 
         var unreadable = new HashSet<string>();
 
@@ -122,7 +122,7 @@ internal sealed class ChannelManager(
                     if (channel.Enabled && _factories.TryGetValue(channel.Type, out var factory) &&
                         factory.CanStart(channel))
                         desired[(app.Database, channel.ShortId)] =
-                            (channel, session.Advanced.GetChangeVectorFor(channel), factory);
+                            (channel, ChannelRuntimeFingerprint.Of(channel), factory);
                 }
             }
             catch (DatabaseDoesNotExistException)
@@ -145,7 +145,7 @@ internal sealed class ChannelManager(
             if (unreadable.Contains(key.Database))
                 continue;
 
-            var unchanged = desired.TryGetValue(key, out var current) && runtime.ChannelChangeVector == current.ChangeVector;
+            var unchanged = desired.TryGetValue(key, out var current) && runtime.ChannelFingerprint == current.Fingerprint;
             if (unchanged && runtime.IsRestartDue(now) == false)
                 continue;
 
@@ -170,7 +170,7 @@ internal sealed class ChannelManager(
             try
             {
                 _runtimes[key] = entry.Factory.Start(
-                    key.Database, entry.Channel, entry.ChangeVector, restarting.GetValueOrDefault(key));
+                    key.Database, entry.Channel, entry.Fingerprint, restarting.GetValueOrDefault(key));
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
