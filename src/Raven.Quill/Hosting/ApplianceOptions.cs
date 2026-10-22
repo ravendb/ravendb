@@ -55,6 +55,10 @@ public sealed class ApplianceOptions
 
     public TimeSpan ChannelRuntimeStopTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
+    public int LoginAttemptLimit { get; set; } = 10;
+
+    public TimeSpan LoginAttemptWindow { get; set; } = TimeSpan.FromMinutes(1);
+
     public TimeSpan ReadinessInitialDelay { get; set; } = TimeSpan.FromSeconds(15);
 
     public TimeSpan ReadinessAttemptTimeout { get; set; } = TimeSpan.FromSeconds(2);
