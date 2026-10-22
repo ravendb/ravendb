@@ -33,10 +33,11 @@ internal sealed class DiscordRuntime : IChannelRuntime
     private DiscordRuntime(
         string database, Channel channel, string? channelChangeVector,
         DiscordTurns turns, ChannelChatsFactory chats, DiscordSdk sdk,
-        DiscordOptions options, QuillLogger<DiscordRuntime> logger)
+        DiscordOptions options, QuillLogger<DiscordRuntime> logger, ChannelConnectionHealth? previous)
     {
         var settings = channel.Discord!;
 
+        Health = previous is null ? new ChannelConnectionHealth() : ChannelConnectionHealth.Continuing(previous);
         _channel = channel;
         _botToken = settings.BotToken;
         _botUserId = settings.BotUserId;
@@ -49,7 +50,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
 
     public string? ChannelChangeVector { get; }
 
-    public ChannelConnectionHealth Health { get; } = new();
+    public ChannelConnectionHealth Health { get; }
 
     public bool IsRestartDue(DateTime now) =>
         _canRestart && ExitedAt is { } exitedAt && now - exitedAt >= _options.GatewayRestartDelay;
@@ -66,10 +67,10 @@ internal sealed class DiscordRuntime : IChannelRuntime
     public static DiscordRuntime Start(
         string database, Channel channel, string? channelChangeVector, DiscordTurns turns,
         ChannelChatsFactory chats, DiscordSdk sdk, DiscordOptions options,
-        QuillLogger<DiscordRuntime> logger)
+        QuillLogger<DiscordRuntime> logger, ChannelConnectionHealth? previous = null)
     {
         var runtime = new DiscordRuntime(
-            database, channel, channelChangeVector, turns, chats, sdk, options, logger);
+            database, channel, channelChangeVector, turns, chats, sdk, options, logger, previous);
 
         runtime._run = Task.Run(runtime.RunAsync);
         return runtime;

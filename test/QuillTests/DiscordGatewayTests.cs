@@ -571,6 +571,39 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_fatal_gateway_error_stays_in_health_across_the_timed_restart()
+    {
+        await using var app = await NewAppAsync();
+        Discord.CloseAfterIdentify = 4014;
+        var channel = await NewChannelAsync(app);
+
+        await Discord.WaitUntilAsync(
+            async () =>
+            {
+                var rows = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
+                    Host.Client, QuillRoutes.DiscordHealth(app.Slug));
+                return rows.Single(r => r.ChannelId == channel.ChannelId).LastGatewayError is not null;
+            },
+            "the recorded gateway error");
+
+        var identifiesAfterFatal = Discord.Identifies.Count;
+        var deadline = DateTime.UtcNow + GatewayRestartDelay + TimeSpan.FromSeconds(3);
+        while (DateTime.UtcNow < deadline)
+        {
+            var rows = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
+                Host.Client, QuillRoutes.DiscordHealth(app.Slug));
+            var row = rows.Single(r => r.ChannelId == channel.ChannelId);
+            Assert.Contains("direct messages intent", row.LastGatewayError);
+            Assert.False(row.GatewayConnected);
+            if (Discord.Identifies.Count > identifiesAfterFatal)
+                return;
+            await Task.Delay(50);
+        }
+
+        Assert.Fail("the runtime was never restarted after the restart delay");
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task A_rejected_bot_token_is_not_retried_after_the_restart_delay()
     {
         await using var app = await NewAppAsync();
