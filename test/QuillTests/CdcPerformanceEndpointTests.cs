@@ -11,6 +11,21 @@ namespace QuillTests;
 
 public class CdcPerformanceEndpointTests(ITestOutputHelper output) : QuillTestBase(output)
 {
+    private static CdcSinkErrorsRaw Errors(DateTime createdAt, int count) =>
+        new()
+        {
+            Results =
+            [
+                new CdcTaskErrorsRaw
+                {
+                    TaskName = "cdc",
+                    ProcessErrors = Enumerable.Range(0, count)
+                        .Select(i => new CdcTaskErrorRaw { TaskName = "cdc", CreatedAt = createdAt, Step = "Load", Error = $"boom {i}" })
+                        .ToList(),
+                },
+            ],
+        };
+
     private static CdcSinkPerformanceRaw Raw(params CdcPerfBatchRaw[] batches) =>
         new()
         {
@@ -87,7 +102,7 @@ public class CdcPerformanceEndpointTests(ITestOutputHelper output) : QuillTestBa
         var now = new DateTime(2026, 6, 25, 12, 0, 0, DateTimeKind.Utc);
 
         var snap = CdcPerformanceShaper.Shape(
-            new CdcSinkPerformanceRaw(), disabled: false, now, lastActivityAt: null, storedErrorCount: 3);
+            new CdcSinkPerformanceRaw(), disabled: false, now, lastActivityAt: null, storedErrors: Errors(now.AddMinutes(-5), 3));
 
         Assert.Equal("error", snap.Status);
         Assert.Equal(3, snap.ErrorCount);
@@ -100,9 +115,31 @@ public class CdcPerformanceEndpointTests(ITestOutputHelper output) : QuillTestBa
         var raw = Raw(new CdcPerfBatchRaw { Id = 1, Started = now.AddSeconds(-10), Completed = now.AddSeconds(-10), ScriptProcessingErrorCount = 5 });
 
         // the same failure is counted in both places, so summing them would double-report it
-        var snap = CdcPerformanceShaper.Shape(raw, disabled: false, now, lastActivityAt: null, storedErrorCount: 2);
+        var snap = CdcPerformanceShaper.Shape(raw, disabled: false, now, lastActivityAt: null, storedErrors: Errors(now.AddSeconds(-10), 2));
 
         Assert.Equal(5, snap.ErrorCount);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void Shape_forgets_errors_older_than_the_last_clean_sync()
+    {
+        var now = new DateTime(2026, 6, 25, 12, 0, 0, DateTimeKind.Utc);
+        var raw = Raw(
+            new CdcPerfBatchRaw { Id = 1, Started = now.AddMinutes(-10), Completed = now.AddMinutes(-10), ReadErrorCount = 2 },
+            new CdcPerfBatchRaw { Id = 2, Started = now.AddSeconds(-30), Completed = now.AddSeconds(-30), NumberOfProcessedMessages = 7 });
+
+        var recovered = CdcPerformanceShaper.Shape(raw, disabled: false, now, lastActivityAt: null, storedErrors: Errors(now.AddMinutes(-10), 2));
+        Assert.Equal("active", recovered.Status);
+        Assert.Equal(0, recovered.ErrorCount);
+
+        var restarted = CdcPerformanceShaper.Shape(
+            new CdcSinkPerformanceRaw(), disabled: false, now, lastActivityAt: now.AddSeconds(-30), storedErrors: Errors(now.AddMinutes(-10), 4));
+        Assert.Equal("active", restarted.Status);
+        Assert.Equal(0, restarted.ErrorCount);
+
+        var failingAgain = CdcPerformanceShaper.Shape(raw, disabled: false, now, lastActivityAt: null, storedErrors: Errors(now.AddSeconds(-10), 1));
+        Assert.Equal("error", failingAgain.Status);
+        Assert.Equal(1, failingAgain.ErrorCount);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -111,7 +148,7 @@ public class CdcPerformanceEndpointTests(ITestOutputHelper output) : QuillTestBa
         var now = new DateTime(2026, 6, 25, 12, 0, 0, DateTimeKind.Utc);
 
         var snap = CdcPerformanceShaper.Shape(
-            new CdcSinkPerformanceRaw(), disabled: true, now, lastActivityAt: null, storedErrorCount: 4);
+            new CdcSinkPerformanceRaw(), disabled: true, now, lastActivityAt: null, storedErrors: Errors(now, 4));
 
         Assert.Equal("disabled", snap.Status);
     }
