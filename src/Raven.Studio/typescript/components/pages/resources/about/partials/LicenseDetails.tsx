@@ -1,9 +1,9 @@
-﻿import Table from "react-bootstrap/Table";
+import Table from "react-bootstrap/Table";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import { Icon } from "components/common/Icon";
-import React, { useState } from "react";
+import React, { ChangeEvent, useState } from "react";
 import { RadioToggleWithIcon, RadioToggleWithIconInputItem } from "components/common/toggles/RadioToggle";
 import classNames from "classnames";
 import { aboutPageUrls } from "components/pages/resources/about/partials/common";
@@ -145,7 +145,7 @@ function LicenseTable(props: LicenseTableProps) {
                         title="Filter indexes"
                         className="filtering-input"
                         value={searchText}
-                        onChange={(e) => onSearchTextChange(e.target.value)}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => onSearchTextChange(e.target.value)}
                     />
                     {searchText && (
                         <div className="clear-button">

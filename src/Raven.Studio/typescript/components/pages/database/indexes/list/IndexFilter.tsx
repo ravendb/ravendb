@@ -1,4 +1,5 @@
-﻿import { IndexStatus, IndexFilterCriteria, IndexType, IndexGroupBy, IndexSortBy } from "components/models/indexes";
+import { IndexStatus, IndexFilterCriteria, IndexType, IndexGroupBy, IndexSortBy } from "components/models/indexes";
+import { ChangeEvent } from "react";
 import Form from "react-bootstrap/Form";
 import { produce } from "immer";
 import { Icon } from "components/common/Icon";
@@ -86,7 +87,9 @@ export default function IndexFilter(props: IndexFilterProps) {
                         title="Filter indexes"
                         className="filtering-input"
                         value={filter.searchText}
-                        onChange={(e) => onFilterValueChange("searchText", e.target.value)}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                            onFilterValueChange("searchText", e.target.value)
+                        }
                     />
                     {filter.searchText && (
                         <div className="clear-button">
