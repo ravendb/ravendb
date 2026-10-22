@@ -9,6 +9,9 @@ namespace Raven.Quill.Slack;
 
 internal sealed class SlackRuntime : IChannelRuntime, SlackSdk.ISocketObserver
 {
+    private static readonly TimeSpan MinReconnectDelay = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan MaxReconnectDelay = TimeSpan.FromSeconds(30);
+
     private readonly string _shortChannelId;
     private readonly string _botUserId;
     private readonly string _appToken;
@@ -24,6 +27,7 @@ internal sealed class SlackRuntime : IChannelRuntime, SlackSdk.ISocketObserver
     private Task _run = Task.CompletedTask;
     private volatile bool _canRestart = true;
     private long _restartDueTicks;
+    private int _replacing;
 
     private SlackRuntime(
         string database, Channel channel, string? channelChangeVector, SlackSdk sdk, SlackTurns turns,
@@ -120,10 +124,67 @@ internal sealed class SlackRuntime : IChannelRuntime, SlackSdk.ISocketObserver
     // link_disabled is deliberately unhandled
     internal void OnReconnectGiveUp(Exception e)
     {
+        if (_cts.IsCancellationRequested || Exited)
+            return;
+
         if (ExitIfAppTokenRejected(e))
             return;
 
-        Exit(SlackApiErrors.Describe(e), TimeSpan.Zero);
+        Health.MarkDisconnected(SlackApiErrors.Describe(e));
+        if (Interlocked.CompareExchange(ref _replacing, 1, 0) == 0)
+            _ = Task.Run(ReplaceSocketAsync);
+    }
+
+    private async Task ReplaceSocketAsync()
+    {
+        var delay = TimeSpan.Zero;
+        try
+        {
+            while (_cts.IsCancellationRequested == false && Exited == false)
+            {
+                if (delay > TimeSpan.Zero)
+                    await Task.Delay(delay, _cts.Token);
+
+                var fresh = _sdk.NewSocketClient(_appToken, _handler, _netLogger, this);
+                var old = Interlocked.Exchange(ref _client, fresh);
+                await old.DisposeAsync().AsTask().ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                if (_cts.IsCancellationRequested)
+                {
+                    await fresh.DisposeAsync();
+                    return;
+                }
+
+                try
+                {
+                    await fresh.Connect(new SocketModeConnectionOptions { NumberOfConnections = 1 }, _cts.Token);
+                    return;
+                }
+                catch (Exception e) when (e is not OperationCanceledException)
+                {
+                    if (ExitIfAppTokenRejected(e))
+                        return;
+
+                    var reason = SlackApiErrors.Describe(e);
+                    Health.MarkDisconnected(reason);
+                    delay = SlackApiErrors.RetryAfterOf(e) ?? NextDelay(delay);
+                    if (_logger.IsWarnEnabled)
+                        _logger.Warn($"Slack socket for channel {_shortChannelId} failed to reconnect: {reason}; retrying in {delay}");
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _replacing, 0);
+        }
+    }
+
+    private static TimeSpan NextDelay(TimeSpan previous)
+    {
+        var next = previous < MinReconnectDelay ? MinReconnectDelay : previous * 2;
+        return next > MaxReconnectDelay ? MaxReconnectDelay : next;
     }
 
     private bool ExitIfAppTokenRejected(Exception e)

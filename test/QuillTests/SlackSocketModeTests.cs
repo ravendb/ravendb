@@ -607,7 +607,7 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task A_transient_reconnect_give_up_restarts_without_waiting_out_the_socket_restart_delay()
+    public async Task A_transient_reconnect_give_up_replaces_the_socket_and_keeps_the_runtime()
     {
         await using var host = await NewHostAsync(configure: opts => opts.Slack.SocketRestartDelay = TimeSpan.FromMinutes(10));
         var app = await NewAppAsync(host);
@@ -620,9 +620,10 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
         Slack.NextSocketOpenError = "internal_error";
         await Slack.CloseCurrentAsync();
 
-        await Slack.WaitUntilAsync(() => RuntimeFor(app, channel) is { } now && now != before, "the runtime restart");
-        await Slack.WaitUntilAsync(() => Slack.Connects > connectsBefore, "the restarted runtime's connection");
+        await Slack.WaitUntilAsync(() => Slack.Connects > connectsBefore, "the replacement socket's connection");
         await Slack.WaitUntilConnectedAsync();
+        await Slack.WaitUntilAsync(async () => (await QuillHttp.GetAsync<SlackChannelHealthResponse[]>(host.Client, QuillRoutes.SlackHealth(app.Slug))).Single(r => r.ChannelId == channel.ChannelId).SocketConnected, "health to report the new socket");
+        Assert.Same(before, RuntimeFor(app, channel));
     }
 
     [RavenFact(RavenTestCategory.Quill)]
