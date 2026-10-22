@@ -543,5 +543,71 @@ namespace MyApp
 
             Assert.Empty(diagnostics);
         }
+
+        // ── Session barriers and branches ────────────────────────────────────────
+
+        private static string SegmentSource(string body) => CommonUsings + @"
+class Test
+{
+    async Task Run(IDocumentSession session, IAsyncDocumentSession asyncSession, IDocumentSession other, string a1, string b1, bool flag)
+    {
+" + body + @"
+    }
+
+    static void Helper(IDocumentSession s) { }
+}
+
+class User { public string Id { get; set; } public string Name { get; set; } }
+";
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData(@"var a = session.Load<User>(""users/1""); session.Advanced.Evict(a); a = session.Load<User>(""users/1"");")]
+        [InlineData(@"var a = session.Load<User>(a1); session.Advanced.Clear(); var b = session.Load<User>(b1);")]
+        [InlineData(@"var a = session.Load<User>(a1); session.Advanced.Refresh(a); var b = session.Load<User>(a1);")]
+        [InlineData(@"var a = session.Load<User>(a1); a.Name = ""CEO""; session.SaveChanges(); var list = session.Query<User>().Where(u => u.Name == ""CEO"").ToList();")]
+        [InlineData(@"var a = session.Load<User>(a1); session.Store(new User { Name = ""Probe"" }); session.SaveChanges(); var list = session.Query<User>().Where(u => u.Name == ""Probe"").ToList();")]
+        [InlineData(@"var a = await asyncSession.LoadAsync<User>(a1); await asyncSession.SaveChangesAsync(); var list = await asyncSession.Query<User>().ToListAsync();")]
+        [InlineData(@"var a = session.Load<User>(a1); session.Advanced.IgnoreChangesFor(a); var b = session.Load<User>(b1);")]
+        [InlineData(@"var a = session.Load<User>(a1); Helper(session); var b = session.Load<User>(b1);")]
+        [InlineData(@"var a = session.Load<User>(a1); new List<User>().ForEach(u => session.Store(u)); var b = session.Load<User>(b1);")]
+        [InlineData(@"void Save() => session.SaveChanges(); var a = session.Load<User>(a1); Save(); var b = session.Load<User>(b1);")]
+        [InlineData(@"User a; try { a = session.Load<User>(a1); session.SaveChanges(); } catch { a = session.Load<User>(b1); }")]
+        [InlineData(@"User a; if (flag) { a = session.Load<User>(a1); } else { a = session.Load<User>(b1); }")]
+        [InlineData(@"var a = flag ? session.Load<User>(a1) : session.Load<User>(b1);")]
+        [InlineData(@"var a = session.Load<User>(a1) ?? session.Load<User>(b1);")]
+        public async Task Reads_SeparatedByBarrierOrBranch_No_Diagnostic(string body)
+        {
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<SessionLazyBatchingAnalyzer>(SegmentSource(body));
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData(@"var a = session.Load<User>(a1); var b = session.Load<User>(b1); session.SaveChanges(); var c = session.Load<User>(""users/3""); var d = session.Load<User>(""users/4"");", 4)]
+        [InlineData(@"var a = session.Load<User>(a1); var n = session.Advanced.NumberOfRequests; var loaded = session.Advanced.IsLoaded(b1); var b = session.Load<User>(b1);", 2)]
+        [InlineData(@"var a = session.Query<User>().Where(u => u.Name == ""x"").ToList(); var id = session.Advanced.GetDocumentId(a1); var b = session.Query<User>().Where(u => u.Name == ""y"").ToList();", 2)]
+        [InlineData(@"var a = session.Load<User>(a1); other.SaveChanges(); var b = session.Load<User>(b1);", 2)]
+        [InlineData(@"var a = session.Load<User>(a1); if (flag) { other.SaveChanges(); } var b = session.Load<User>(b1);", 2)]
+        public async Task Reads_InSameSegment_Report_Diagnostics(string body, int expected)
+        {
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<SessionLazyBatchingAnalyzer>(SegmentSource(body));
+
+            Assert.Equal(expected, diagnostics.Length);
+            Assert.All(diagnostics, d => Assert.Equal(DiagnosticIds.SessionLazyBatching, d.Id));
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task Reads_AroundSaveChanges_OnlyPairBefore_Reported()
+        {
+            string source = SegmentSource(@"var a = session.Load<User>(a1); var b = session.Load<User>(b1); session.SaveChanges(); var c = session.Load<User>(""users/3"");");
+
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<SessionLazyBatchingAnalyzer>(source);
+
+            Assert.Equal(2, diagnostics.Length);
+            Assert.All(diagnostics, d => Assert.True(d.Location.SourceSpan.Start < source.IndexOf("SaveChanges", System.StringComparison.Ordinal)));
+        }
     }
 }

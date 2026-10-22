@@ -259,5 +259,21 @@ namespace Raven.Analyzers
             "ToList", "ToListAsync",
             "ToArray", "ToArrayAsync"
         ];
+
+        public const string AdvancedPropertyName = "Advanced";
+
+        public static readonly HashSet<string> SessionNonBarrierMethods =
+        [
+            with(System.StringComparer.Ordinal),
+            LoadMethodName, LoadAsyncMethodName,
+            QueryMethods.Query, "Include",
+            "DocumentQuery", "AsyncDocumentQuery",
+            "RawQuery", "AsyncRawQuery",
+            "IsLoaded", "HasChanged",
+            "WhatChanged", "WhatChangedFor",
+            "GetDocumentId", "GetMetadataFor", "GetChangeVectorFor",
+            "GetCountersFor", "GetTimeSeriesFor", "GetLastModifiedFor",
+            "GetTrackedEntities", "GetCurrentSessionNode"
+        ];
     }
 }

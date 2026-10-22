@@ -49,7 +49,7 @@ namespace Raven.Analyzers.Sessions
             var pass1 = new Pass1CollectMaterializationDerivedLocals(context.SemanticModel, derivedSet);
             pass1.Visit(context.CodeBlock);
 
-            var collector = new MaterializingCallCollector(context.SemanticModel, derivedSet);
+            var collector = new MaterializingCallCollector(context.SemanticModel, derivedSet, context.CodeBlock);
             collector.Visit(context.CodeBlock);
 
             if (collector.BatchableCalls.Count < 2)
@@ -58,29 +58,37 @@ namespace Raven.Analyzers.Sessions
             // Group by session receiver: only flag when 2+ batchable operations resolve to
             // the same session instance. Calls on different sessions can't share a multi-get.
             // Calls whose session symbol cannot be resolved are excluded from grouping.
-            IEnumerable<IGrouping<ISymbol, (InvocationExpressionSyntax invocation, string methodName, ISymbol sessionSymbol)>> groups =
+            IEnumerable<IGrouping<(int sessionSegment, int globalSegment, SyntaxNode branchScope), BatchableCall>> groups =
                 collector.BatchableCalls
-                    .Where(c => c.sessionSymbol != null)
-                    .Select(c => (c.invocation, c.methodName, sessionSymbol: c.sessionSymbol!))
-                    .GroupBy(c => c.sessionSymbol, SymbolEqualityComparer.Default);
+                    .Where(c => c.SessionSymbol != null)
+                    .GroupBy(c => c.SessionSymbol!, SymbolEqualityComparer.Default)
+                    .SelectMany(sessionGroup => sessionGroup.GroupBy(c => (c.SessionSegment, c.GlobalSegment, c.BranchScope)));
 
             foreach (var group in groups)
             {
                 if (group.Count() < 2)
                     continue;
 
-                foreach ((InvocationExpressionSyntax invocation, string methodName, ISymbol _) in group)
+                foreach (BatchableCall call in group)
                 {
-                    if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
+                    if (call.Invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
                         continue;
 
                     context.ReportDiagnostic(Diagnostic.Create(
                         DiagnosticDescriptors.SessionLazyBatching,
                         memberAccess.Name.GetLocation(),
-                        methodName));
+                        call.MethodName));
                 }
             }
         }
+
+        private sealed record BatchableCall(
+            InvocationExpressionSyntax Invocation,
+            string MethodName,
+            ISymbol? SessionSymbol,
+            int SessionSegment,
+            int GlobalSegment,
+            SyntaxNode BranchScope);
 
         private sealed class MaterializingCallCollector : CSharpSyntaxWalker
         {
@@ -95,49 +103,71 @@ namespace Raven.Analyzers.Sessions
 
             private readonly SemanticModel _model;
             private readonly HashSet<ISymbol> _materializationDerivedSet;
-            public readonly List<(InvocationExpressionSyntax invocation, string methodName, ISymbol? sessionSymbol)> BatchableCalls;
+            private readonly SyntaxNode _codeBlock;
+            private readonly Dictionary<ISymbol, int> _sessionSegments = new(SymbolEqualityComparer.Default);
+            private int _globalSegment;
+            public readonly List<BatchableCall> BatchableCalls = [];
 
-            public MaterializingCallCollector(SemanticModel model, HashSet<ISymbol> derivedSet)
+            public MaterializingCallCollector(SemanticModel model, HashSet<ISymbol> derivedSet, SyntaxNode codeBlock)
             {
                 _model = model;
                 _materializationDerivedSet = derivedSet;
-                BatchableCalls = new List<(InvocationExpressionSyntax, string, ISymbol?)>();
+                _codeBlock = codeBlock;
             }
 
-            public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node)
-            {
-                // Skip nested lambdas (they have separate execution context)
-            }
+            public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => SkipNestedFunction(node);
 
-            public override void VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node)
-            {
-                // Skip nested lambdas
-            }
+            public override void VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node) => SkipNestedFunction(node);
 
-            public override void VisitAnonymousMethodExpression(AnonymousMethodExpressionSyntax node)
-            {
-                // Skip anonymous methods
-            }
+            public override void VisitAnonymousMethodExpression(AnonymousMethodExpressionSyntax node) => SkipNestedFunction(node);
 
             public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node)
             {
-                // Skip local functions (they have their own code block)
+            }
+
+            private void SkipNestedFunction(SyntaxNode node)
+            {
+                if (SessionBatchSegments.ContainsBarrier(node, _model))
+                    _globalSegment++;
             }
 
             public override void VisitInvocationExpression(InvocationExpressionSyntax invocation)
             {
+                RecordBatchableCall(invocation);
+
+                base.VisitInvocationExpression(invocation);
+
+                if (SessionBatchSegments.IsBarrier(invocation, _model, out ISymbol? barrierSession) == false)
+                    return;
+
+                if (barrierSession == null)
+                    _globalSegment++;
+                else
+                    _sessionSegments[barrierSession] = SegmentOf(barrierSession) + 1;
+            }
+
+            private int SegmentOf(ISymbol session) => _sessionSegments.TryGetValue(session, out int segment) ? segment : 0;
+
+            private void AddBatchableCall(InvocationExpressionSyntax invocation, string methodName, ISymbol? sessionSymbol)
+            {
+                ISymbol? stableSession = SyntaxHelpers.AsStableSessionInstance(sessionSymbol);
+                BatchableCalls.Add(new BatchableCall(
+                    invocation,
+                    methodName,
+                    stableSession,
+                    stableSession == null ? 0 : SegmentOf(stableSession),
+                    _globalSegment,
+                    SessionBatchSegments.GetBranchScope(invocation, _codeBlock)));
+            }
+
+            private void RecordBatchableCall(InvocationExpressionSyntax invocation)
+            {
                 string? methodName = SyntaxHelpers.GetMethodName(invocation);
                 if (methodName == null)
-                {
-                    base.VisitInvocationExpression(invocation);
                     return;
-                }
 
                 if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
-                {
-                    base.VisitInvocationExpression(invocation);
                     return;
-                }
 
                 ITypeSymbol? receiverType = _model.GetTypeInfo(memberAccess.Expression).Type;
 
@@ -156,9 +186,7 @@ namespace Raven.Analyzers.Sessions
                     // check: a query whose chain (a Where/Select predicate, an id argument, …)
                     // references a local produced by a prior materialized call genuinely depends on
                     // that result and cannot share a multi-get batch, so it must not be flagged.
-                    ISymbol? sessionSymbol = ResolveQuerySessionSymbol(memberAccess.Expression);
-                    BatchableCalls.Add((invocation, methodName, SyntaxHelpers.AsStableSessionInstance(sessionSymbol)));
-                    base.VisitInvocationExpression(invocation);
+                    AddBatchableCall(invocation, methodName, ResolveQuerySessionSymbol(memberAccess.Expression));
                     return;
                 }
 
@@ -171,20 +199,9 @@ namespace Raven.Analyzers.Sessions
                 if ((methodName == KnownTypes.LoadMethodName || methodName == KnownTypes.LoadAsyncMethodName) &&
                     SyntaxHelpers.IsSessionType(receiverType))
                 {
-                    if (invocation.ArgumentList.Arguments.Count == 1)
-                    {
-                        ArgumentSyntax firstArg = invocation.ArgumentList.Arguments[0];
-                        if (IsIndependentArg(firstArg))
-                        {
-                            ISymbol? sessionSymbol = _model.GetSymbolInfo(memberAccess.Expression).Symbol;
-                            BatchableCalls.Add((invocation, methodName, SyntaxHelpers.AsStableSessionInstance(sessionSymbol)));
-                        }
-                    }
-                    base.VisitInvocationExpression(invocation);
-                    return;
+                    if (invocation.ArgumentList.Arguments.Count == 1 && IsIndependentArg(invocation.ArgumentList.Arguments[0]))
+                        AddBatchableCall(invocation, methodName, _model.GetSymbolInfo(memberAccess.Expression).Symbol);
                 }
-
-                base.VisitInvocationExpression(invocation);
             }
 
             // Resolves the session instance a materializing query executes against, for grouping. Walks the
