@@ -221,9 +221,19 @@ builder.Services.AddRateLimiter(options =>
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0,
             }));
+    options.AddPolicy(AuthEndpoints.LoginRateLimitPolicy, httpContext =>
+    {
+        var appliance = httpContext.RequestServices.GetRequiredService<IOptions<ApplianceOptions>>().Value;
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? httpContext.Connection.Id,
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = appliance.LoginAttemptLimit,
+                Window = appliance.LoginAttemptWindow,
+                QueueLimit = 0,
+            });
+    });
 });
-
-builder.Services.AddSingleton(_ => new LoginFailureLimiter());
 
 builder.Services.Configure<RouteHandlerOptions>(static options => options.ThrowOnBadRequest = true);
 
