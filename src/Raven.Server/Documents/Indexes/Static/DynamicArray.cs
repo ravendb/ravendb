@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class DynamicArray : DynamicObject, IOrderedEnumerable<object>
+    public partial class DynamicArray : DynamicObject, IOrderedEnumerable<object>
     {
         private readonly IEnumerable<object> _inner;
 
@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 case BlittableJsonReaderArray.BlittableJsonArrayEnumerator bjae:
                     return new DynamicArrayIterator<BlittableJsonReaderArray.BlittableJsonArrayEnumerator>(bjae);
             }
-            return new DynamicArrayIterator(_inner);
+            return new DynamicArrayIterator(enumerator);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 case BlittableJsonReaderArray.BlittableJsonArrayEnumerator bjae:
                     return new DynamicArrayIterator<BlittableJsonReaderArray.BlittableJsonArrayEnumerator>(bjae);
             }
-            return new DynamicArrayIterator(_inner);
+            return new DynamicArrayIterator(enumerator);
         }
 
 
@@ -236,6 +236,35 @@ namespace Raven.Server.Documents.Indexes.Static
             var itemToWorkOn = InternalConvert(item);
 
             return Enumerable.Contains(this, itemToWorkOn);
+        }
+
+        public bool Contains(object item, IEqualityComparer comparer)
+        {
+            if (comparer == null)
+                return Contains(item);
+
+            var itemToWorkOn = InternalConvert(item);
+            return Enumerable.Contains<object>(this, itemToWorkOn, new NonGenericEqualityComparerAdapter(comparer));
+        }
+
+        private sealed class NonGenericEqualityComparerAdapter : IEqualityComparer<object>
+        {
+            private readonly IEqualityComparer _comparer;
+
+            public NonGenericEqualityComparerAdapter(IEqualityComparer comparer)
+            {
+                _comparer = comparer;
+            }
+
+            bool IEqualityComparer<object>.Equals(object x, object y)
+            {
+                return _comparer.Equals(ConvertComparerValue(x), ConvertComparerValue(y));
+            }
+
+            int IEqualityComparer<object>.GetHashCode(object obj)
+            {
+                return _comparer.GetHashCode(ConvertComparerValue(obj));
+            }
         }
 
         public int Sum(Func<dynamic, int> selector)
@@ -373,6 +402,11 @@ namespace Raven.Server.Documents.Indexes.Static
             return new DynamicArray(Enumerable.OrderBy(this, comparable));
         }
 
+        public IEnumerable<dynamic> OrderBy(Func<dynamic, dynamic> comparable, IComparer comparer)
+        {
+            return new DynamicArray(Enumerable.OrderBy<object, object>(this, comparable, AsObjectComparer(comparer)));
+        }
+
         public IEnumerable<dynamic> OrderBy(Func<IGrouping<dynamic, dynamic>, dynamic> comparable)
         {
             return new DynamicArray(_inner.Cast<DynamicGrouping>().OrderBy(comparable));
@@ -381,6 +415,11 @@ namespace Raven.Server.Documents.Indexes.Static
         public IEnumerable<dynamic> OrderByDescending(Func<dynamic, dynamic> comparable)
         {
             return new DynamicArray(Enumerable.OrderByDescending(this, comparable));
+        }
+
+        public IEnumerable<dynamic> OrderByDescending(Func<dynamic, dynamic> comparable, IComparer comparer)
+        {
+            return new DynamicArray(Enumerable.OrderByDescending<object, object>(this, comparable, AsObjectComparer(comparer)));
         }
 
         public IEnumerable<dynamic> OrderByDescending(Func<IGrouping<dynamic, dynamic>, dynamic> comparable)
@@ -428,6 +467,11 @@ namespace Raven.Server.Documents.Indexes.Static
             return new DynamicArray(Enumerable.ThenBy(this, comparable, comparer));
         }
 
+        public IEnumerable<dynamic> ThenBy(Func<dynamic, dynamic> comparable, object comparer)
+        {
+            return new DynamicArray(Enumerable.ThenBy<object, object>(this, comparable, AsObjectComparer((IComparer)comparer)));
+        }
+
         public IEnumerable<dynamic> ThenByDescending(Func<dynamic, dynamic> keySelector)
         {
             return new DynamicArray(Enumerable.ThenByDescending(this, keySelector));
@@ -436,6 +480,11 @@ namespace Raven.Server.Documents.Indexes.Static
         public IEnumerable<dynamic> ThenByDescending(Func<dynamic, dynamic> keySelector, IComparer<dynamic> comparer)
         {
             return new DynamicArray(Enumerable.ThenByDescending(this, keySelector, comparer));
+        }
+
+        public IEnumerable<dynamic> ThenByDescending(Func<dynamic, dynamic> keySelector, object comparer)
+        {
+            return new DynamicArray(Enumerable.ThenByDescending<object, object>(this, keySelector, AsObjectComparer((IComparer)comparer)));
         }
 
         public dynamic GroupBy(Func<dynamic, dynamic> keySelector)
@@ -618,9 +667,9 @@ namespace Raven.Server.Documents.Indexes.Static
             return new DynamicArray(Enumerable.Reverse(this));
         }
 
-        public bool SequenceEqual(IEnumerable<dynamic> second)
+        public bool SequenceEqual(IEnumerable second)
         {
-            return Enumerable.SequenceEqual(this, second);
+            return Enumerable.SequenceEqual(this, second.Cast<object>());
         }
 
         public IEnumerable<dynamic> AsEnumerable()
@@ -816,16 +865,19 @@ namespace Raven.Server.Documents.Indexes.Static
 
             object IEnumerator.Current => Current;
 
-            public void Dispose() { }
+            public void Dispose()
+            {
+                _inner.Dispose();
+            }
         }
 
         public struct DynamicArrayIterator : IEnumerator<object>
         {
-            private IEnumerator<object> _inner;
+            private readonly IEnumerator<object> _inner;
 
-            public DynamicArrayIterator(IEnumerable<object> items)
+            public DynamicArrayIterator(IEnumerator<object> inner)
             {
-                _inner = items.GetEnumerator();
+                _inner = inner;
                 Current = null;
             }
 
@@ -848,7 +900,10 @@ namespace Raven.Server.Documents.Indexes.Static
 
             object IEnumerator.Current => Current;
 
-            public void Dispose() { }
+            public void Dispose()
+            {
+                _inner.Dispose();
+            }
         }
 
         public override bool Equals(object obj)
