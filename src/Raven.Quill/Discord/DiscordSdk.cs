@@ -11,6 +11,8 @@ internal sealed class DiscordSdk(IOptions<ApplianceOptions> options)
 {
     private readonly DiscordOptions _options = options.Value.Discord;
 
+    public TimeSpan RequestTimeout => _options.RequestTimeout;
+
     public DiscordRestClient NewRestClient() => new(Configure(new DiscordRestConfig()));
 
     public DiscordSocketClient NewSocketClient() => new(Configure(new DiscordSocketConfig
