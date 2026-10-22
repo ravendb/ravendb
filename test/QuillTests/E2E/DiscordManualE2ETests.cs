@@ -43,10 +43,12 @@ public class DiscordManualE2ETests(ITestOutputHelper output) : QuillTestBase(out
 
         await using var bot = new Raven.Quill.Discord.DiscordBotClient(
             host.Services.GetRequiredService<Raven.Quill.Discord.DiscordSdk>(), botToken);
+        await bot.LoginAsync(CancellationToken.None);
+        var dm = await bot.ChannelAsync(channel, CancellationToken.None);
 
-        var messageId = await bot.CreateMessageAsync(channel,
+        var messageId = await dm.CreateMessageAsync(
             "Quill Discord E2E: outbound post works.", suppressEmbeds: false, CancellationToken.None);
-        await bot.EditMessageAsync(channel, messageId,
+        await dm.EditMessageAsync(messageId,
             "Quill Discord E2E: outbound post and edit work.", suppressEmbeds: false, CancellationToken.None);
 
         await app.DeleteChannelAsync(created.ChannelId);

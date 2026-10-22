@@ -22,7 +22,6 @@ internal static class DiscordChannelRegistration
             .Validate(o => o.Discord.GatewayRestartDelay > TimeSpan.Zero, "Discord GatewayRestartDelay must be positive");
 
         services.AddSingleton<DiscordSdk>();
-        services.AddSingleton<IDiscordClient, DiscordApiClient>();
 
         return services.AddSingleton<IChannelRuntimeFactory, DiscordRuntimeFactory>();
     }
