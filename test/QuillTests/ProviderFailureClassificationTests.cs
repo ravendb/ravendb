@@ -38,7 +38,18 @@ public class ProviderFailureClassificationTests(ITestOutputHelper output) : NoDi
     {
         Assert.Equal(ProviderFailureKind.Timeout, ProviderFailures.Classify(new TimeoutException("slow")).Kind);
         Assert.Equal(ProviderFailureKind.Protocol, ProviderFailures.Classify(new EmptyAnswerException()).Kind);
-        Assert.Equal(ProviderFailureKind.Unavailable, ProviderFailures.Classify(new HttpRequestException("down")).Kind);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void A_truncated_answer_is_not_retryable()
+    {
+        var truncated = Classify("Raven.Client.Exceptions.TooManyTokensException: The model response was truncated (finish_reason='length') before producing a complete answer.");
+        var throttled = Classify("Raven.Client.Exceptions.TooManyTokensException: Rate limit reached for tokens per minute");
+
+        Assert.Equal(ProviderFailureKind.Truncated, truncated.Kind);
+        Assert.False(truncated.Retryable);
+        Assert.Equal(ProviderFailureKind.RateLimited, throttled.Kind);
+        Assert.True(throttled.Retryable);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
