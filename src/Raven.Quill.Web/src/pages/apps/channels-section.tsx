@@ -111,7 +111,7 @@ export function ChannelsSection({
                                     </TableCell>
                                     {!fixedAgent && <TableCell className="font-medium">{agent?.name}</TableCell>}
                                     <TableCell>
-                                        <EnabledStatus isEnabled={channel.enabled} />
+                                        <EnabledStatus isEnabled={channel.enabled} setupError={channel.setupError} />
                                     </TableCell>
                                     <TableCell>{channel.type ? CHANNEL_TYPE_LABELS[channel.type] : "—"}</TableCell>
                                     <TableCell className="text-muted-foreground tabular-nums">

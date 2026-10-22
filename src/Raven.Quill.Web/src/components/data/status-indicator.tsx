@@ -52,6 +52,9 @@ export function StatusIndicator({
 
 // Channels and agents share one on/off state, so the wording lives here only — otherwise it
 // drifts between the channel cards, the tables, the detail header and the capability wizard.
-export function EnabledStatus({ isEnabled }: { isEnabled: boolean }) {
+export function EnabledStatus({ isEnabled, setupError }: { isEnabled: boolean; setupError?: string | null }) {
+    if (isEnabled && setupError) {
+        return <StatusIndicator tone="warning" label="Needs setup" title={setupError} />;
+    }
     return <StatusIndicator tone={isEnabled ? "positive" : "muted"} label={isEnabled ? "Active" : "Disabled"} />;
 }

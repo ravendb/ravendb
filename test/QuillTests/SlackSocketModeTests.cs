@@ -707,6 +707,10 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
         var row = Assert.Single(rows, r => r.ChannelId == channel.ChannelId);
         Assert.False(row.SocketConnected);
         Assert.Contains("predates Socket Mode", row.LastSocketError);
+
+        var summary = Assert.Single(await app.GetChannelsAsync(), c => c.ChannelId == channel.ChannelId);
+        Assert.True(summary.Enabled);
+        Assert.Contains("predates Socket Mode", summary.SetupError);
     }
 
     private async Task<SlackChannelHealthResponse> HealthRowAsync(QuillApp app, ProvisionedChannel channel)
