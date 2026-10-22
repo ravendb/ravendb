@@ -29,6 +29,7 @@ internal sealed class SlackRuntime : IChannelRuntime, SlackSdk.ISocketObserver
     private volatile bool _canRestart = true;
     private long _restartDueTicks;
     private int _replacing;
+    private Task? _stop;
 
     private SlackRuntime(
         string database, Channel channel, string channelFingerprint, SlackSdk sdk, SlackTurns turns,
@@ -78,7 +79,9 @@ internal sealed class SlackRuntime : IChannelRuntime, SlackSdk.ISocketObserver
         return runtime;
     }
 
-    public async Task StopAsync()
+    public Task StopAsync() => _stop ??= StopCoreAsync();
+
+    private async Task StopCoreAsync()
     {
         await _cts.CancelAsync();
         await _replace.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);

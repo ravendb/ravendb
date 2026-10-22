@@ -43,7 +43,6 @@ internal sealed class ChannelManager(
 {
     private readonly Dictionary<ChannelType, IChannelRuntimeFactory> _factories = factories.ToDictionary(f => f.Type);
     private readonly ConcurrentDictionary<(string Database, string ChannelId), IChannelRuntime> _runtimes = new();
-    private readonly ConcurrentDictionary<(string Database, string ChannelId), Task> _draining = new();
 
     private volatile AsyncManualResetEvent? _wake;
 
@@ -149,9 +148,6 @@ internal sealed class ChannelManager(
             if (unchanged && runtime.IsRestartDue(now) == false)
                 continue;
 
-            if (_runtimes.TryRemove(key, out _) == false)
-                continue;
-
             stopping.Add((key, runtime));
             if (unchanged && runtime.Health is { } health)
                 restarting[key] = health;
@@ -164,7 +160,7 @@ internal sealed class ChannelManager(
             if (_stopped)
                 return;
 
-            if (_runtimes.ContainsKey(key) || IsDraining(key))
+            if (_runtimes.ContainsKey(key))
                 continue;
 
             try
@@ -186,28 +182,14 @@ internal sealed class ChannelManager(
         }
     }
 
-    private bool IsDraining((string Database, string ChannelId) key)
-    {
-        if (_draining.TryGetValue(key, out var stop) == false)
-            return false;
-
-        if (stop.IsCompleted == false)
-            return true;
-
-        _draining.TryRemove(new KeyValuePair<(string Database, string ChannelId), Task>(key, stop));
-        return false;
-    }
-
     private async Task StopRuntimeAsync((string Database, string ChannelId) key, IChannelRuntime runtime)
     {
-        var stop = runtime.StopAsync();
         try
         {
-            await stop.WaitAsync(options.Value.ChannelRuntimeStopTimeout);
+            await runtime.StopAsync().WaitAsync(options.Value.ChannelRuntimeStopTimeout);
         }
         catch (TimeoutException)
         {
-            _draining[key] = stop;
             if (logger.IsWarnEnabled)
                 logger.Warn(
                     $"Runtime for channel {key.ChannelId} on {key.Database} did not stop within " +
@@ -219,9 +201,9 @@ internal sealed class ChannelManager(
             if (logger.IsWarnEnabled)
                 logger.Warn(
                     $"Runtime for channel {key.ChannelId} on {key.Database} did not stop: {e.Message}; giving up on it");
-            return;
         }
 
+        _runtimes.TryRemove(new KeyValuePair<(string Database, string ChannelId), IChannelRuntime>(key, runtime));
         if (logger.IsInfoEnabled)
             logger.Info($"Runtime stopped for channel {key.ChannelId} on {key.Database}");
     }
