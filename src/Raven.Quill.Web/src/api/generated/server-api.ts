@@ -1394,6 +1394,7 @@ export interface components {
             telegram?: null | components["schemas"]["TelegramSummaryResponse"];
             slack?: null | components["schemas"]["SlackSummaryResponse"];
             discord?: null | components["schemas"]["DiscordSummaryResponse"];
+            setupError?: null | string;
         };
         /** @enum {unknown} */
         ChannelType: "IFrame" | "Telegram" | "WhatsApp" | "Slack" | "Discord";
