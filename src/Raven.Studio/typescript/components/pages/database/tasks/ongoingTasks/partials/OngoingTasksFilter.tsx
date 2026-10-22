@@ -2,7 +2,7 @@ import { Icon } from "components/common/Icon";
 import { MultiCheckboxToggle } from "components/common/toggles/MultiCheckboxToggle";
 import { InputItem } from "components/models/common";
 import { produce } from "immer";
-import React from "react";
+import React, { ChangeEvent } from "react";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 
@@ -51,7 +51,7 @@ export default function OngoingTasksFilter(props: OngoingTasksFilterProps) {
                         title="Filter ongoing tasks"
                         className="filtering-input"
                         value={filter.searchText}
-                        onChange={(e) => onSearchTextChange(e.target.value)}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => onSearchTextChange(e.target.value)}
                     />
                     {filter.searchText && (
                         <div className="clear-button">

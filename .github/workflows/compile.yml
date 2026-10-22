@@ -52,6 +52,11 @@ jobs:
           npm run restore
         working-directory: src/Raven.Studio
 
+      - name: Typecheck Studio
+        run: |
+          npm run typecheck
+        working-directory: src/Raven.Studio
+
       - name: Compile Studio
         run: |
           npm run compile

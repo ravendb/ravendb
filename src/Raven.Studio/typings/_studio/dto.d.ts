@@ -395,7 +395,7 @@ interface recentErrorDto extends Raven.Server.NotificationCenter.Notifications.N
     HttpStatus?: string;
 }
 
-declare module studio.settings {
+declare namespace studio.settings {
     type numberFormatting = "raw" | "formatted";
     type dontShowAgain = "UnsupportedBrowser";
     type saveLocation = "local" | "remote";
@@ -647,7 +647,7 @@ type virtualNotificationType =
     | "CumulativeDeleteByQuery"
     | "CumulativeDeleteByQueryFailures";
 
-declare module Raven.Server.NotificationCenter.Notifications {
+declare namespace Raven.Server.NotificationCenter.Notifications {
     interface Notification {
         // extend server side type to contain local virtual notifications 
         Type: Raven.Server.NotificationCenter.Notifications.NotificationType | virtualNotificationType;
@@ -702,27 +702,27 @@ interface testEtlScriptResult {
     TransformationErrors: Array<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>;
 }
 
-declare module Raven.Server.Documents.ETL.Providers.SQL.Test {
+declare namespace Raven.Server.Documents.ETL.Providers.SQL.Test {
     interface SqlEtlTestScriptResult extends testEtlScriptResult {
     }
 }
 
-declare module Raven.Server.Documents.ETL.Providers.Raven.Test {
+declare namespace Raven.Server.Documents.ETL.Providers.Raven.Test {
     interface RavenEtlTestScriptResult extends testEtlScriptResult {
     }
 }
 
-declare module Raven.Server.Documents.ETL.Providers.OLAP.Test {
+declare namespace Raven.Server.Documents.ETL.Providers.OLAP.Test {
     interface OlapEtlTestScriptResult extends testEtlScriptResult {
     }
 }
 
-declare module Raven.Server.Documents.ETL.Providers.ElasticSearch.Test {
+declare namespace Raven.Server.Documents.ETL.Providers.ElasticSearch.Test {
     interface ElasticSearchEtlTestScriptResult extends testEtlScriptResult {
     }
 }
 
-declare module Raven.Server.Documents.ETL.Providers.Queue.Test {
+declare namespace Raven.Server.Documents.ETL.Providers.Queue.Test {
     interface QueueEtlTestScriptResult extends testEtlScriptResult {
     }
 }

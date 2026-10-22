@@ -4,7 +4,7 @@ import { AboutViewHeading } from "components/common/AboutView";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
-import React, { ReactNode, useEffect, useState } from "react";
+import React, { ChangeEvent, ReactNode, useEffect, useState } from "react";
 import studioSettings = require("common/settings/studioSettings");
 import { Icon } from "components/common/Icon";
 import IconName from "typings/server/icons";
@@ -154,7 +154,7 @@ function TaskSearchInput({
                 title="Filter tasks"
                 className="filtering-input"
                 value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchText(e.target.value)}
             />
         </div>
     );

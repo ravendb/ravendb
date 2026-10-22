@@ -93,12 +93,7 @@ const config: StorybookConfig = {
 
         config.module?.rules?.push(...incomingRules);
 
-        const incomingPluginsNames = [
-            "ProvidePlugin",
-            "MiniCssExtractPlugin",
-            "ForkTsCheckerWebpackPlugin",
-            "CopyPlugin",
-        ];
+        const incomingPluginsNames = ["ProvidePlugin", "MiniCssExtractPlugin", "CopyPlugin"];
 
         // it runs on every file save and it is very slow (+5s) - let's skip it
         config.plugins = config.plugins.filter(
