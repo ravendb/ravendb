@@ -24,10 +24,11 @@ internal sealed class SlackRuntime : IChannelRuntime
     private SlackRuntime(
         string database, Channel channel, string? channelChangeVector, SlackSdk sdk, SlackTurns turns,
         ChannelChatsFactory chats, SlackOptions options,
-        QuillLogger<SlackRuntime> logger)
+        QuillLogger<SlackRuntime> logger, ChannelConnectionHealth? previous)
     {
         var settings = channel.Slack!;
 
+        Health = previous is null ? new ChannelConnectionHealth() : ChannelConnectionHealth.Continuing(previous);
         _shortChannelId = channel.ShortId;
         _botUserId = settings.BotUserId;
         _options = options;
@@ -41,7 +42,7 @@ internal sealed class SlackRuntime : IChannelRuntime
 
     public string? ChannelChangeVector { get; }
 
-    public ChannelConnectionHealth Health { get; } = new();
+    public ChannelConnectionHealth Health { get; }
 
     public bool IsConnected => Health.IsConnected && _client.Connected;
 
@@ -56,10 +57,10 @@ internal sealed class SlackRuntime : IChannelRuntime
     public static SlackRuntime Start(
         string database, Channel channel, string? channelChangeVector, SlackSdk sdk, SlackTurns turns,
         ChannelChatsFactory chats, SlackOptions options,
-        QuillLogger<SlackRuntime> logger)
+        QuillLogger<SlackRuntime> logger, ChannelConnectionHealth? previous = null)
     {
         var runtime = new SlackRuntime(
-            database, channel, channelChangeVector, sdk, turns, chats, options, logger);
+            database, channel, channelChangeVector, sdk, turns, chats, options, logger, previous);
 
         runtime._run = Task.Run(runtime.ConnectAsync);
         return runtime;
