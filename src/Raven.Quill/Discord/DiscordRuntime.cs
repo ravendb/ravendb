@@ -247,7 +247,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
         {
             await client.SetCustomStatusAsync(status);
         }
-        catch (Exception e) when (e is not OperationCanceledException)
+        catch (Exception e)
         {
             if (_logger.IsDebugEnabled)
                 _logger.Debug($"Discord custom status failed for channel {_channel.ShortId}: {e.Message}");
