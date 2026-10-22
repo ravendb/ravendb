@@ -58,6 +58,14 @@ print_urls() {
     say "Database:  https://db.$base"
 }
 
+runs_on_desktop_or_wsl() {
+    kernel="$(uname -r 2>/dev/null) $(cat /proc/version 2>/dev/null)"
+    case "$kernel" in
+        *[Mm]icrosoft*|*WSL*|*wsl*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 printf '\033[38;5;208m'
 cat <<'BANNER'
  _______  __   __  ___   ___      ___ 
@@ -80,6 +88,12 @@ report() {
         ready)
             say "Status:    READY"
             print_urls
+            if [ -z "$NOTED" ] && runs_on_desktop_or_wsl; then
+                NOTED=yes
+                say "Note:      On Docker Desktop or WSL, other devices may be unable to reach Quill,"
+                say "           even when they resolve its address. To allow them, set WSL networking"
+                say "           to mirrored mode with hostAddressLoopback enabled. see <LINK_DOCS_PH>"
+            fi
             ;;
         degraded)
             err "Status:    DEGRADED - the appliance is not serving requests"
@@ -140,6 +154,7 @@ watch_services() {
 LAST=""
 STARTED=""
 WARNED=""
+NOTED=""
 TICKS=0
 while true; do
     TICKS=$((TICKS + 1))
