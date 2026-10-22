@@ -25,8 +25,8 @@ internal sealed class TelegramRuntime : IChannelRuntime
     private readonly TelegramOptions _options;
     private readonly QuillLogger<TelegramRuntime> _logger;
     private readonly bool _acceptsContactShares;
+    private readonly Lazy<Task> _stop;
     private Task _receive = Task.CompletedTask;
-    private Task? _stop;
     private TimeSpan _backoff = MinBackoff;
 
     private TelegramRuntime(
@@ -43,6 +43,7 @@ internal sealed class TelegramRuntime : IChannelRuntime
         _logger = logger;
         _acceptsContactShares = channel.Telegram!.ParameterBindings.Values
             .Any(binding => binding.Source == ChannelParameterSource.PhoneNumber);
+        _stop = new Lazy<Task>(StopCoreAsync);
     }
 
     public ITelegramBotClient Client { get; }
@@ -152,7 +153,7 @@ internal sealed class TelegramRuntime : IChannelRuntime
         }
     }
 
-    public Task StopAsync() => _stop ??= StopCoreAsync();
+    public Task StopAsync() => _stop.Value;
 
     private async Task StopCoreAsync()
     {
