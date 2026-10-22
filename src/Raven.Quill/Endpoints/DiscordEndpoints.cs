@@ -55,7 +55,7 @@ public static class DiscordEndpoints
         {
             var channel = discordChannels[i];
             var settings = channel.Discord!;
-            var health = channelManager.HealthFor(app.Database, channel.ShortId);
+            var health = channelManager.HealthFor(app.Database, channel.ShortId)?.Snapshot();
             rows[i] = new DiscordChannelHealthResponse(
                 channel.ShortId,
                 settings.ApplicationId,

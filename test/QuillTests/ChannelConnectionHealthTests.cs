@@ -16,8 +16,8 @@ public class ChannelConnectionHealthTests(ITestOutputHelper output) : NoDisposal
         health.MarkConnected();
 
         Assert.True(health.IsConnected);
-        Assert.NotNull(health.LastConnectedAt);
-        Assert.Null(health.LastConnectionError);
+        Assert.NotNull(health.Snapshot().LastConnectedAt);
+        Assert.Null(health.Snapshot().LastConnectionError);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -25,14 +25,14 @@ public class ChannelConnectionHealthTests(ITestOutputHelper output) : NoDisposal
     {
         var health = new ChannelConnectionHealth();
         health.MarkConnected();
-        var connectedAt = health.LastConnectedAt;
+        var connectedAt = health.Snapshot().LastConnectedAt;
         health.MarkDisconnected("discord did not send a hello frame within 00:00:15");
 
         health.MarkDisconnected(null);
 
         Assert.False(health.IsConnected);
-        Assert.Equal(connectedAt, health.LastConnectedAt);
-        Assert.Equal("discord did not send a hello frame within 00:00:15", health.LastConnectionError);
+        Assert.Equal(connectedAt, health.Snapshot().LastConnectedAt);
+        Assert.Equal("discord did not send a hello frame within 00:00:15", health.Snapshot().LastConnectionError);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -42,9 +42,9 @@ public class ChannelConnectionHealthTests(ITestOutputHelper output) : NoDisposal
 
         health.MarkSendFailed("channel_not_found");
 
-        Assert.NotNull(health.LastSendErrorAt);
-        Assert.Equal("channel_not_found", health.LastSendError);
-        Assert.Null(health.LastInboundAt);
+        Assert.NotNull(health.Snapshot().LastSendErrorAt);
+        Assert.Equal("channel_not_found", health.Snapshot().LastSendError);
+        Assert.Null(health.Snapshot().LastInboundAt);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -56,8 +56,8 @@ public class ChannelConnectionHealthTests(ITestOutputHelper output) : NoDisposal
 
         health.MarkSendSucceeded();
 
-        Assert.Null(health.LastSendError);
-        Assert.Null(health.LastSendErrorAt);
-        Assert.NotNull(health.LastInboundAt);
+        Assert.Null(health.Snapshot().LastSendError);
+        Assert.Null(health.Snapshot().LastSendErrorAt);
+        Assert.NotNull(health.Snapshot().LastInboundAt);
     }
 }

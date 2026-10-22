@@ -65,7 +65,7 @@ public static class SlackEndpoints
         {
             var channel = slackChannels[i];
             var settings = channel.Slack!;
-            var health = channelManager.HealthFor(app.Database, channel.ShortId);
+            var health = channelManager.HealthFor(app.Database, channel.ShortId)?.Snapshot();
             rows[i] = new SlackChannelHealthResponse(
                 channel.ShortId,
                 settings.TeamId,
