@@ -23,10 +23,10 @@ const GENERIC_MESSAGE = "Something went wrong. Please try again.";
 /** The server answers 429 from two places: a link whose invocation budget is spent (a JSON body carrying
  *  `code: "invocation_limit"`) and a per-IP throttle (an empty body). Only the first is terminal — a
  *  throttled visitor just has to wait, so anything else stays a retryable failure. */
-async function carriesInvocationLimitCode(response: Response): Promise<boolean> {
+async function carriesCode(response: Response, code: string): Promise<boolean> {
     try {
         const body = (await response.json()) as { code?: unknown } | null;
-        return body?.code === "invocation_limit";
+        return body?.code === code;
     } catch {
         return false;
     }
@@ -36,10 +36,12 @@ async function statusFailure(response: Response): Promise<ChatEvent | null> {
     if (response.status === 404 || response.status === 410)
         return { type: "error", kind: "expired", message: LINK_INACTIVE_MESSAGE };
     if (response.status === 429)
-        return (await carriesInvocationLimitCode(response))
+        return (await carriesCode(response, "invocation_limit"))
             ? { type: "error", kind: "limit", message: LIMIT_MESSAGE }
             : { type: "error", kind: "failed", message: RATE_LIMITED_MESSAGE };
     if (response.status === 413) return { type: "error", kind: "failed", message: TOO_LONG_MESSAGE };
+    if (response.status === 400 && (await carriesCode(response, "prompt_too_long")))
+        return { type: "error", kind: "failed", message: TOO_LONG_MESSAGE };
     return null;
 }
 
