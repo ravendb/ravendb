@@ -297,7 +297,10 @@ app.UseExceptionHandler(static errorApp => errorApp.Run(static async ctx =>
 
     var logger = ctx.RequestServices.GetRequiredService<QuillLogger<Program.UnhandledRequestError>>();
     if (error is not null && logger.IsErrorEnabled)
-        logger.Error(error, $"Unhandled error for {ctx.Request.Method} {ctx.Request.Path}");
+    {
+        var route = (ctx.Features.Get<IExceptionHandlerFeature>()?.Endpoint as RouteEndpoint)?.RoutePattern.RawText;
+        logger.Error(error, $"Unhandled error for {ctx.Request.Method} {route ?? "unmatched route"}");
+    }
 
     ctx.Response.StatusCode = StatusCodes.Status500InternalServerError;
     await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("Unexpected server error. See server logs for details."));
