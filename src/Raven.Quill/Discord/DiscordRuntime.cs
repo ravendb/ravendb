@@ -20,6 +20,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
     private readonly string _botUserId;
     private readonly DiscordOptions _options;
     private readonly ChannelChats<DiscordMessage> _chats;
+    private readonly DiscordBotClient _bot;
     private readonly DiscordSdk _sdk;
     private readonly QuillLogger<DiscordRuntime> _logger;
 
@@ -32,13 +33,14 @@ internal sealed class DiscordRuntime : IChannelRuntime
 
     private DiscordRuntime(
         string database, Channel channel, string? channelChangeVector,
-        DiscordTurns turns, ChannelChatsFactory chats, DiscordSdk sdk,
+        DiscordTurns turns, DiscordBotClient bot, ChannelChatsFactory chats, DiscordSdk sdk,
         DiscordOptions options, QuillLogger<DiscordRuntime> logger, ChannelConnectionHealth? previous)
     {
         var settings = channel.Discord!;
 
         Health = previous is null ? new ChannelConnectionHealth() : ChannelConnectionHealth.Continuing(previous);
         _channel = channel;
+        _bot = bot;
         _botToken = settings.BotToken;
         _botUserId = settings.BotUserId;
         _chats = chats.Create(database, channel, turns, Health, logger.RavenLogger);
@@ -65,12 +67,12 @@ internal sealed class DiscordRuntime : IChannelRuntime
     }
 
     public static DiscordRuntime Start(
-        string database, Channel channel, string? channelChangeVector, DiscordTurns turns,
+        string database, Channel channel, string? channelChangeVector, DiscordTurns turns, DiscordBotClient bot,
         ChannelChatsFactory chats, DiscordSdk sdk, DiscordOptions options,
         QuillLogger<DiscordRuntime> logger, ChannelConnectionHealth? previous = null)
     {
         var runtime = new DiscordRuntime(
-            database, channel, channelChangeVector, turns, chats, sdk, options, logger, previous);
+            database, channel, channelChangeVector, turns, bot, chats, sdk, options, logger, previous);
 
         runtime._run = Task.Run(runtime.RunAsync);
         return runtime;
@@ -81,6 +83,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
         await _cts.CancelAsync();
         await Task.WhenAll(_run, _chats.StopAsync())
             .ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        await _bot.DisposeAsync();
         _cts.Dispose();
     }
 

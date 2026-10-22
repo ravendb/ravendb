@@ -5,8 +5,7 @@ using Raven.Quill.Hosting;
 namespace Raven.Quill.Discord;
 
 internal sealed class DiscordStreamingReply(
-    IDiscordClient discord,
-    string botToken,
+    DiscordBotClient bot,
     string dmChannelId,
     DiscordOptions options,
     QuillLogger<DiscordRuntime> logger) : ChannelStreamingReply(options.MessageLimit, options.EditDebounce)
@@ -26,14 +25,14 @@ internal sealed class DiscordStreamingReply(
     protected override async Task ShowPreviewAsync(string text, CancellationToken token)
     {
         if (_currentMessageId.Length == 0)
-            _currentMessageId = await discord.CreateMessageAsync(botToken, dmChannelId, text, suppressEmbeds: true, token);
+            _currentMessageId = await bot.CreateMessageAsync(dmChannelId, text, suppressEmbeds: true, token);
         else
-            await discord.EditMessageAsync(botToken, dmChannelId, _currentMessageId, text, suppressEmbeds: true, token);
+            await bot.EditMessageAsync(dmChannelId, _currentMessageId, text, suppressEmbeds: true, token);
     }
 
     protected override Task SendFinalAsync(string text, CancellationToken token) =>
-        discord.CreateMessageAsync(botToken, dmChannelId, text, suppressEmbeds: false, token);
+        bot.CreateMessageAsync(dmChannelId, text, suppressEmbeds: false, token);
 
     protected override Task EditFinalAsync(string text, CancellationToken token) =>
-        discord.EditMessageAsync(botToken, dmChannelId, _currentMessageId, text, suppressEmbeds: false, token);
+        bot.EditMessageAsync(dmChannelId, _currentMessageId, text, suppressEmbeds: false, token);
 }

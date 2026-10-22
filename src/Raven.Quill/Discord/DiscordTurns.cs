@@ -11,18 +11,18 @@ internal sealed record DiscordMessage(
 
 internal sealed class DiscordTurns(
     DiscordSettings settings,
-    IDiscordClient discord,
+    DiscordBotClient bot,
     DiscordOptions options,
     QuillLogger<DiscordRuntime> logger) : IPlatformTurns<DiscordMessage>
 {
     public Task SendAsync(DiscordMessage replyTo, string text, CancellationToken ct) =>
-        discord.CreateMessageAsync(settings.BotToken, replyTo.DmChannel, text, suppressEmbeds: false, ct);
+        bot.CreateMessageAsync(replyTo.DmChannel, text, suppressEmbeds: false, ct);
 
     public async Task TypingAsync(DiscordMessage replyTo, CancellationToken ct)
     {
         try
         {
-            await discord.TriggerTypingAsync(settings.BotToken, replyTo.DmChannel, ct);
+            await bot.TriggerTypingAsync(replyTo.DmChannel, ct);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
@@ -32,7 +32,7 @@ internal sealed class DiscordTurns(
     }
 
     public ChannelStreamingReply CreateReply(DiscordMessage replyTo) =>
-        new DiscordStreamingReply(discord, settings.BotToken, replyTo.DmChannel, options, logger);
+        new DiscordStreamingReply(bot, replyTo.DmChannel, options, logger);
 
     public string? DescribeApiFailure(Exception e) => e is DiscordApiException apiError ? apiError.Message : null;
 
