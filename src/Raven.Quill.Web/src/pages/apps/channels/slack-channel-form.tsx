@@ -160,8 +160,8 @@ function LoadedSlackChannelForm({
                             Bot connected
                         </Heading>
                         <Text variant="muted">
-                            The appliance is opening its Socket Mode connection. Finish the Slack-side setup below so
-                            direct messages start flowing.
+                            Quill is opening its Socket Mode connection. Finish the Slack-side setup below so direct
+                            messages start flowing.
                         </Text>
                     </div>
                     <SlackStatusPanel slug={slug} channelId={createdChannelId} />

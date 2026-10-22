@@ -123,8 +123,8 @@ export function SlackSetupSteps() {
                         Slack app settings
                         <ExternalLink className="size-3" aria-hidden="true" />
                     </a>
-                    , open <span className="font-medium">Socket Mode</span> and enable it. Apps created from the Quill
-                    manifest already have it on.
+                    , open <span className="font-medium">Socket Mode</span> and enable it. Apps created from the current
+                    Quill manifest already have it on.
                 </Text>
             ),
         },
@@ -135,7 +135,7 @@ export function SlackSetupSteps() {
                     Under <span className="font-medium">Event Subscriptions</span>, switch{" "}
                     <span className="font-medium">Enable Events</span> on, add{" "}
                     <span className="font-medium">message.im</span> under bot events and save. Apps created from the
-                    Quill manifest start with this in place.
+                    current Quill manifest start with this in place.
                 </Text>
             ),
         },
@@ -149,7 +149,7 @@ export function SlackSetupSteps() {
         <div className="space-y-4">
             <NumberedSteps steps={steps} />
             <Text variant="caption">
-                The appliance connects out to Slack over a WebSocket, so it needs no public URL. An app created before
+                Quill connects out to Slack over a WebSocket, so it needs no public URL. An app created before
                 users:read and users:read.email were added to the manifest must be reinstalled to the workspace before a
                 parameter can bind to the sender&apos;s email.
             </Text>
