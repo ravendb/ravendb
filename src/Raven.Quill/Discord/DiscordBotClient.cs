@@ -11,7 +11,9 @@ internal sealed class DiscordBotClient(DiscordSdk sdk, string botToken) : IAsync
     private readonly DiscordRestClient _client = sdk.NewRestClient();
 
     public Task LoginAsync(CancellationToken ct) =>
-        GuardAsync("login", ct, _client.LoginAsync(TokenType.Bot, botToken, validateToken: false).WaitAsync(sdk.RequestTimeout, ct));
+        _client.LoginState == LoginState.LoggedIn
+            ? Task.CompletedTask
+            : GuardAsync("login", ct, _client.LoginAsync(TokenType.Bot, botToken, validateToken: false).WaitAsync(sdk.RequestTimeout, ct));
 
     public async Task<DiscordDmChannel> ChannelAsync(string channelId, CancellationToken ct)
     {
