@@ -61,20 +61,6 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task An_idle_rolled_turn_sends_a_fresh_conversation_notice_after_the_reply()
-    {
-        await using var app = await NewAppAsync();
-        var channel = await NewChannelAsync(app);
-        Router.StartedFresh = true;
-
-        await Slack.DispatchEventAsync(channel.TeamId, "EvFresh1", DmMessage(Sender, "hello again"));
-
-        await Slack.WaitUntilAsync(
-            () => Slack.SentMessages.Any(m => m.Channel == DmChannel && m.Text.Contains("fresh conversation")),
-            "the fresh-conversation notice");
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
     public async Task Updating_a_constant_binding_starts_a_fresh_conversation_with_the_new_value()
     {
         await using var app = await NewAppAsync();

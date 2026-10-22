@@ -21,8 +21,6 @@ internal sealed class FakeAgentRouter : IAgentRouter
 
     public Exception? Failure { get; set; }
 
-    public bool StartedFresh { get; set; }
-
     public async Task<AgentRunResult> RunAsync(
         AgentRequest request, Func<string, ValueTask> onChunk, AiAgentConfiguration config, CancellationToken ct)
     {
@@ -43,7 +41,7 @@ internal sealed class FakeAgentRouter : IAgentRouter
         }
 
         var reply = string.Concat(Chunks);
-        return new AgentRunResult(new { reply }, request.ConversationId, StartedFresh);
+        return new AgentRunResult(new { reply }, request.ConversationId);
     }
 
     public void Reset()
@@ -54,6 +52,5 @@ internal sealed class FakeAgentRouter : IAgentRouter
         ChunkDelay = TimeSpan.Zero;
         BeforeRun = null;
         Failure = null;
-        StartedFresh = false;
     }
 }
