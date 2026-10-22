@@ -24,6 +24,11 @@ jobs:
       with:
         global-json-file: global.json
 
+    - name: Setup nodejs
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: 'src/Raven.Studio/.nvmrc'
+
     - name: Install dependencies
       run: dotnet restore
 
