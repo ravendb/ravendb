@@ -54,8 +54,10 @@ namespace FastTests.Voron.Tables
                             b.Add(id);
                             b.Add(Bits.SwapBytes(etags[i]));
                             fixed (byte* p = payload)
+                            {
                                 b.Add(p, 800 + (i % 200));
-                            table.Set(b);
+                                table.Set(b); // the builder keeps the pointer, payload must stay pinned until the copy
+                            }
                         }
                     }
                     tx.Commit();
@@ -77,8 +79,10 @@ namespace FastTests.Voron.Tables
                             b.Add(id);
                             b.Add(Bits.SwapBytes(etags[victim]));
                             fixed (byte* p = payload)
+                            {
                                 b.Add(p, 800 + rnd.Next(400)); // vary size -> new slot + defrag churn
-                            table.Set(b); // overwrite: deletes old etag from BOTH indexes, adds the new
+                                table.Set(b); // overwrite: deletes old etag from BOTH indexes, adds the new
+                            }
                         }
                     }
                     tx.Commit();
