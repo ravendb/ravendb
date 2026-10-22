@@ -353,8 +353,7 @@ namespace Voron
 
         public static StorageEnvironmentOptions CreateMemoryOnly(string name, string tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource, LoggingComponent loggingComponent)
         {
-            var tempPathSetting = new VoronPathSetting(tempPath ?? GetTempPath());
-            return new PureMemoryStorageEnvironmentOptions(name, tempPathSetting, ioChangesNotifications, catastrophicFailureNotification, loggingResource, loggingComponent);
+            return new PureMemoryStorageEnvironmentOptions(name, tempPath, ioChangesNotifications, catastrophicFailureNotification, loggingResource, loggingComponent);
         }
 
         public static StorageEnvironmentOptions CreateMemoryOnlyForTests([CallerMemberName] string caller = null, LoggingResource loggingResource = null, LoggingComponent loggingComponent = null)
@@ -365,11 +364,7 @@ namespace Voron
         public static StorageEnvironmentOptions ForPath(string path, string tempPath, string journalPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource,
             LoggingComponent loggingComponent)
         {
-            var pathSetting = new VoronPathSetting(path);
-            var tempPathSetting = new VoronPathSetting(tempPath ?? GetTempPath(path));
-            var journalPathSetting = journalPath != null ? new VoronPathSetting(journalPath) : pathSetting.Combine("Journals");
-
-            return new DirectoryStorageEnvironmentOptions(pathSetting, tempPathSetting, journalPathSetting, ioChangesNotifications, catastrophicFailureNotification, loggingResource, loggingComponent);
+            return new DirectoryStorageEnvironmentOptions(path, tempPath, journalPath, ioChangesNotifications, catastrophicFailureNotification, loggingResource, loggingComponent);
         }
 
         public static StorageEnvironmentOptions ForPathForTests(string path, LoggingResource loggingResource = null, LoggingComponent loggingComponent = null)
@@ -415,7 +410,7 @@ namespace Voron
             return tempPath;
         }
 
-        public sealed class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
+        public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
         {
             public const string TempFileExtension = ".tmp";
             public const string BuffersFileExtension = ".buffers";
@@ -430,6 +425,15 @@ namespace Voron
 
             private readonly ConcurrentDictionary<string, LazyWithExceptionRetry<IJournalWriter>> _journals =
                 new ConcurrentDictionary<string, LazyWithExceptionRetry<IJournalWriter>>(StringComparer.OrdinalIgnoreCase);
+
+            public DirectoryStorageEnvironmentOptions(string path, string tempPath, string journalPath,
+                IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification,
+                LoggingResource loggingResource, LoggingComponent loggingComponent)
+                : this(new VoronPathSetting(path), new VoronPathSetting(tempPath ?? GetTempPath(path)),
+                    journalPath != null ? new VoronPathSetting(journalPath) : new VoronPathSetting(path).Combine("Journals"),
+                    ioChangesNotifications, catastrophicFailureNotification, loggingResource, loggingComponent)
+            {
+            }
 
             public DirectoryStorageEnvironmentOptions(VoronPathSetting basePath, VoronPathSetting tempPath, VoronPathSetting journalPath,
                 IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource,
@@ -998,7 +1002,7 @@ namespace Voron
             }
         }
 
-        public sealed class PureMemoryStorageEnvironmentOptions : StorageEnvironmentOptions
+        public class PureMemoryStorageEnvironmentOptions : StorageEnvironmentOptions
         {
             private readonly string _name;
             private static int _counter;
@@ -1013,6 +1017,14 @@ namespace Voron
             private readonly int _instanceId;
 
 
+
+            public PureMemoryStorageEnvironmentOptions(string name, string tempPath,
+                IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification,
+                LoggingResource loggingResource, LoggingComponent loggingComponent)
+                : this(name, new VoronPathSetting(tempPath ?? GetTempPath()), ioChangesNotifications, catastrophicFailureNotification,
+                    loggingResource, loggingComponent)
+            {
+            }
 
             public PureMemoryStorageEnvironmentOptions(string name, VoronPathSetting tempPath,
                 IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource,

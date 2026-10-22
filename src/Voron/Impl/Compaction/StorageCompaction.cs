@@ -98,9 +98,9 @@ namespace Voron.Impl.Compaction
             }
         }
 
-        private static void CopyTrees(StorageEnvironment existingEnv, StorageEnvironment compactedEnv, 
+        private static void CopyTrees(StorageEnvironment existingEnv, StorageEnvironment compactedEnv,
             Action<string, TableSchema> modifyTableSchema,
-            Action<StorageCompactionProgress> progressReport, 
+            Action<StorageCompactionProgress> progressReport,
             CancellationToken token)
         {
             var context = new TransactionPersistentContext(true);
@@ -186,9 +186,16 @@ namespace Voron.Impl.Compaction
                             copiedTrees = CopyFixedSizeTreeFromRoot(compactedEnv, progressReport, txr, rootIterator, treeName, copiedTrees, totalTreesCount, context, token);
                             break;
                         case RootObjectType.Table:
-                            copiedTrees = CopyTableTree(compactedEnv, modifyTableSchema, 
-                                progressReport, txr, treeName, copiedTrees, 
-                                totalTreesCount, context, token);
+                            try
+                            {
+                                copiedTrees = CopyTableTree(compactedEnv, modifyTableSchema,
+                                    progressReport, txr, treeName, copiedTrees,
+                                    totalTreesCount, context, token);
+                            }
+                            catch (InvalidOperationException e)
+                            {
+                                throw new InvalidOperationException($"Cannot compact table '{treeName}'. {e.Message}", e);
+                            }
                             break;
                         default:
                             throw new ArgumentOutOfRangeException("Unknown " + objectType);
@@ -556,7 +563,7 @@ namespace Voron.Impl.Compaction
                             var fixedSizeIndex = schema.FixedSizeIndexes.Values.FirstOrDefault(x => x.IsGlobal == false);
 
                             if (fixedSizeIndex == null)
-                                throw new InvalidOperationException("Cannot compact table " + inputTable.Name + " because is has no local indexes, only global ones");
+                                throw new InvalidOperationException("It has no local indexes, only global ones");
 
                             foreach (var entry in inputTable.SeekForwardFrom(fixedSizeIndex, lastFixedIndex, lastFixedIndex > 0 ? 1 : 0))
                             {

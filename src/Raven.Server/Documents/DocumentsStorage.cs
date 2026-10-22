@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Config;
 using Raven.Server.Documents.DataArchival;
 using Raven.Server.Documents.Expiration;
@@ -205,7 +206,8 @@ namespace Raven.Server.Documents
 
             }
 
-            var options = GetStorageEnvironmentOptionsFromConfiguration(DocumentDatabase.Configuration, DocumentDatabase.IoChanges, DocumentDatabase.CatastrophicFailureNotification, LoggingResource.Database(_name));
+            var options = GetStorageEnvironmentOptionsFromConfiguration(DocumentDatabase.Configuration, DocumentDatabase.IoChanges,
+                DocumentDatabase.CatastrophicFailureNotification, LoggingResource.Database(_name), DocumentDatabase as ShardedDocumentDatabase);
 
             options.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
             options.OnRecoveryError += DocumentDatabase.HandleOnDatabaseRecoveryError;
@@ -245,25 +247,46 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static StorageEnvironmentOptions GetStorageEnvironmentOptionsFromConfiguration(RavenConfiguration config, IoChangesNotifications ioChanges, CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource)
+        public static StorageEnvironmentOptions GetStorageEnvironmentOptionsFromConfiguration(RavenConfiguration config, IoChangesNotifications ioChanges,
+            CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource)
         {
-            if (config.Core.RunInMemory)
-                return StorageEnvironmentOptions.CreateMemoryOnly(
-                    config.Core.DataDirectory.FullPath,
-                    config.Storage.TempPath?.FullPath,
-                    ioChanges,
-                    catastrophicFailureNotification,
-                    loggingResource,
-                    loggingComponent: null);
+            var dataDirectory = config.Core.DataDirectory.FullPath;
+            var tempPath = config.Storage.TempPath?.FullPath;
 
-            return StorageEnvironmentOptions.ForPath(
-                config.Core.DataDirectory.FullPath,
-                config.Storage.TempPath?.FullPath,
-                null,
-                ioChanges,
-                catastrophicFailureNotification,
-                loggingResource,
-                loggingComponent: null);
+            if (config.Core.RunInMemory)
+                return StorageEnvironmentOptions.CreateMemoryOnly(dataDirectory, tempPath, ioChanges, catastrophicFailureNotification, loggingResource, loggingComponent: null);
+
+            return StorageEnvironmentOptions.ForPath(dataDirectory, tempPath, null, ioChanges, catastrophicFailureNotification, loggingResource, loggingComponent: null);
+        }
+
+        public static StorageEnvironmentOptions GetStorageEnvironmentOptionsFromConfiguration(RavenConfiguration config, IoChangesNotifications ioChanges,
+            CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource, ShardedDocumentDatabase database)
+        {
+            if (database == null)
+                return GetStorageEnvironmentOptionsFromConfiguration(config, ioChanges, catastrophicFailureNotification, loggingResource);
+
+            var dataDirectory = config.Core.DataDirectory.FullPath;
+            var tempPath = config.Storage.TempPath?.FullPath;
+
+            if (config.Core.RunInMemory)
+                return new ShardedPureMemoryStorageEnvironmentOptions(dataDirectory, tempPath, ioChanges, catastrophicFailureNotification, loggingResource, database);
+
+            return new ShardedDirectoryStorageEnvironmentOptions(dataDirectory, tempPath, journalPath: null, ioChanges, catastrophicFailureNotification, loggingResource, database);
+        }
+
+        public static StorageEnvironmentOptions GetStorageEnvironmentOptionsFromConfiguration(RavenConfiguration config, IoChangesNotifications ioChanges,
+            CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource, ShardingConfiguration sharding)
+        {
+            if (sharding == null)
+                return GetStorageEnvironmentOptionsFromConfiguration(config, ioChanges, catastrophicFailureNotification, loggingResource);
+
+            var dataDirectory = config.Core.DataDirectory.FullPath;
+            var tempPath = config.Storage.TempPath?.FullPath;
+
+            if (config.Core.RunInMemory)
+                return new ShardedPureMemoryStorageEnvironmentOptions(dataDirectory, tempPath, ioChanges, catastrophicFailureNotification, loggingResource, sharding);
+
+            return new ShardedDirectoryStorageEnvironmentOptions(dataDirectory, tempPath, journalPath: null, ioChanges, catastrophicFailureNotification, loggingResource, sharding);
         }
 
         private void Initialize(StorageEnvironmentOptions options)
