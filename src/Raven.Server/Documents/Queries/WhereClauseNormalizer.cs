@@ -8,9 +8,9 @@ namespace Raven.Server.Documents.Queries;
 /// <summary>
 /// Rewrites a where clause once, when its query metadata is built, so every request sharing the cached query text gets
 /// the cheaper shape: a lower and an upper bound on the same field become one <see cref="BetweenExpression"/> regardless
-/// of how the 'and' chain is nested or parenthesized, duplicated bounds are dropped, literal bounds in the same direction
-/// keep only the tighter one, and same-direction bounds whose values are parameters are moved next to each other so the
-/// query builders can keep the tighter one once the values are known. Only the structure is looked at, never a parameter
+/// of how the 'and' chain is nested or parenthesized, duplicated bounds are dropped, literal bounds of one kind in the same
+/// direction keep only the tighter one, and same-direction bounds whose values are parameters are moved next to each other
+/// so the query builders can keep the tighter one once the values are known. Only the structure is looked at, never a parameter
 /// value, because the cached metadata serves requests with different parameter values. The input tree is never mutated
 /// and unchanged subtrees come back as the same instances.
 /// </summary>
@@ -131,9 +131,9 @@ public static class WhereClauseNormalizer
         return changed;
     }
 
-    // 'Foo > 1 and Foo > 2' is 'Foo > 2'. Only numeric literals can be compared here: a parameter's value is not known
-    // until the query is built, and the order of two string literals in the index depends on the analyzer and on whether
-    // the field holds dates, which only the query builders know. Both are left to them.
+    // 'Foo > 1 and Foo > 2' is 'Foo > 2'. Only numeric literals of one kind are compared here. A parameter's value is not
+    // known until the query is built, and the order of two string literals in the index depends on the analyzer and on
+    // whether the field holds dates, which only the query builders know; both are left to them.
     private static bool MergeLiteralBoundsInTheSameDirection(List<QueryExpression> operands)
     {
         var changed = false;
@@ -232,37 +232,29 @@ public static class WhereClauseNormalizer
         return QueryBuilderHelper.IsSameField(first.Left, second.Left);
     }
 
-    // two longs compare as longs: past 2^53 a double cannot tell neighbouring values apart, and a tick count is that large;
-    // a long against a double, or two doubles, compare as doubles
+    // A long bound queries the long term of a numeric field and a double bound its double term, and the long term holds the
+    // value truncated: 'Price > 10' rejects 10.5 while 'Price > 10.1' accepts it. Neither bound can stand in for the other,
+    // so only bounds of one kind are compared. Two longs compare as longs: past 2^53 a double cannot tell neighbouring
+    // values apart, and a tick count is that large.
     private static bool TryCompareNumericLiterals(ValueExpression first, ValueExpression second, out int comparison)
     {
         comparison = 0;
 
-        if (first.Value == ValueTokenType.Long && second.Value == ValueTokenType.Long)
-        {
-            comparison = QueryBuilderHelper.ParseInt64WithSeparators(first.Token.Value).CompareTo(QueryBuilderHelper.ParseInt64WithSeparators(second.Token.Value));
-            return true;
-        }
-
-        if (TryGetNumericLiteral(first, out var firstNumber) == false || TryGetNumericLiteral(second, out var secondNumber) == false)
+        if (first.Value != second.Value)
             return false;
 
-        comparison = firstNumber.CompareTo(secondNumber);
-        return true;
-    }
-
-    private static bool TryGetNumericLiteral(ValueExpression value, out double number)
-    {
-        switch (value.Value)
+        switch (first.Value)
         {
             case ValueTokenType.Long:
-                number = QueryBuilderHelper.ParseInt64WithSeparators(value.Token.Value);
+                comparison = QueryBuilderHelper.ParseInt64WithSeparators(first.Token.Value).CompareTo(QueryBuilderHelper.ParseInt64WithSeparators(second.Token.Value));
                 return true;
             case ValueTokenType.Double:
-                return double.TryParse(value.Token.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out number);
+                comparison = ParseDouble(first).CompareTo(ParseDouble(second));
+                return true;
             default:
-                number = 0;
                 return false;
         }
+
+        static double ParseDouble(ValueExpression value) => double.Parse(value.Token.Value, NumberStyles.Float, CultureInfo.InvariantCulture);
     }
 }
