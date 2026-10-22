@@ -337,7 +337,7 @@ public static class AppsEndpoints
 
         var snapshot = CdcPerformanceShaper.Shape(
             raw, disabled: cdc.Configuration.Disabled, DateTime.UtcNow, lastActivityAt: lastModified,
-            storedErrorCount: CdcPerformanceShaper.CountErrors(errors));
+            storedErrors: errors);
         return Results.Ok(snapshot);
     }
 
