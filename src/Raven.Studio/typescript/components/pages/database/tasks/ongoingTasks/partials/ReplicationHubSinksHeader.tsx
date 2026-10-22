@@ -183,6 +183,7 @@ function SortMenu({ sinksState }: { sinksState: ReplicationHubSinksState }) {
                 onChange={(x) => setSort({ ...sort, field: x.value })}
                 components={{ Option: OptionWithIcon, SingleValue: SingleValueWithIcon }}
                 isSearchable={false}
+                menuPortalTarget={null}
             />
             <Select<SelectOption<SortDirection>>
                 aria-label="Sort direction"
@@ -191,6 +192,7 @@ function SortMenu({ sinksState }: { sinksState: ReplicationHubSinksState }) {
                 value={sortDirectionOptions.find((x) => x.value === sort.direction)}
                 onChange={(x) => setSort({ ...sort, direction: x.value })}
                 isSearchable={false}
+                menuPortalTarget={null}
             />
         </div>
     );
