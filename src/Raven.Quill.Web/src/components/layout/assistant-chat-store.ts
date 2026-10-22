@@ -1,3 +1,4 @@
+import type { QueryClient } from "@tanstack/react-query";
 import { create } from "zustand";
 import { api } from "@/api/api";
 import {
@@ -6,7 +7,7 @@ import {
     isQuillSessionExpired,
     type AssistantRelevantLink,
 } from "@/api/custom-services/assistant-service";
-import { markSessionExpired, queryClient } from "@/lib/query-client";
+import { markSessionExpired } from "@/lib/query-client";
 
 export type AssistantMessage = {
     id: string;
@@ -25,7 +26,7 @@ function nextMessageId() {
 // Kept out of the store: aborting is a transport concern, and nothing renders from it.
 let streamAbortController: AbortController | null = null;
 
-function markConsentRequired() {
+function markConsentRequired(queryClient: QueryClient) {
     queryClient.setQueryData(api.queries.assistant.consent().queryKey, { status: "ConsentRequired" });
 }
 
@@ -34,7 +35,7 @@ type AssistantChatState = {
     /** Ties the next turn to the same upstream conversation; null starts a fresh one. */
     conversationId: string | null;
     isStreaming: boolean;
-    sendPrompt: (prompt: string) => Promise<void>;
+    sendPrompt: (prompt: string, queryClient: QueryClient) => Promise<void>;
     stopStreaming: () => void;
     clearMessages: () => void;
 };
@@ -43,7 +44,7 @@ export const useAssistantChatStore = create<AssistantChatState>((set, get) => ({
     messages: [],
     conversationId: null,
     isStreaming: false,
-    sendPrompt: async (prompt) => {
+    sendPrompt: async (prompt, queryClient) => {
         if (get().isStreaming) {
             return;
         }
@@ -93,7 +94,7 @@ export const useAssistantChatStore = create<AssistantChatState>((set, get) => ({
                     set({ conversationId: ConversationId ?? null });
                 } else {
                     if (event.status === "ConsentRequired") {
-                        markConsentRequired();
+                        markConsentRequired(queryClient);
                     }
 
                     updateAnswer({ role: "error", text: event.message });
@@ -112,12 +113,12 @@ export const useAssistantChatStore = create<AssistantChatState>((set, get) => ({
                     role: "error",
                     text: "Your session expired before the assistant could answer. Please send the message again.",
                 });
-                markSessionExpired();
+                markSessionExpired(queryClient);
                 return;
             }
 
             if (isAssistantConsentRequired(error)) {
-                markConsentRequired();
+                markConsentRequired(queryClient);
             }
 
             updateAnswer({ role: "error", text: describeAssistantError(error) });

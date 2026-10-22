@@ -63,7 +63,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         {
             private readonly MockResponseBehavior _behavior;
 
-            internal MockLlm(IMemoryContextPool contextPool, AbstractChatCompletionClientSettings settings, DocumentConventions conventions, MockResponseBehavior behavior)
+            internal MockLlm(IMemoryContextPool contextPool, AbstractChatCompletionProvider settings, DocumentConventions conventions, MockResponseBehavior behavior)
                 : base(contextPool, settings, conventions)
             {
                 _behavior = behavior;
@@ -114,7 +114,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 OpenAiSettings = new OpenAiSettings(apiKey: "sk-test-dummy", endpoint: "https://api.openai.com/", model: "gpt-4.1-mini")
             };
 
-            Assert.True(AbstractChatCompletionClientSettings.TryGetParameters(connection, out var settings));
+            Assert.True(AbstractChatCompletionProvider.TryGetParameters(connection, out var settings));
 
             StorageEnvironment storageEnv = null;
             TransactionContextPool contextPool = null;

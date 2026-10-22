@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI;
@@ -13,7 +12,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents;
 
 internal class Talker(ConversationHandler handler, JsonOperationContext context, AiAgentConfiguration configuration, string schema, ConversationDocument document, string firstStreamPropertyPath, Func<Memory<byte>, Task> streaming) : IDisposable
 {
-    private List<BlittableJsonReaderObject> _tools;
+    private List<BlittableJsonReaderObject> _preparedTools;
+    private ParsedJsonCache _parsedJson;
 
     public AiUsage AiUsage;
     public ChatCompletionClient Client;
@@ -24,16 +24,27 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
         document.EnsureInitialized();
 
         Client = handler.CreateClient();
-        _tools = Client.GenerateTools(context, configuration, handler);
+        _preparedTools = Client.PrepareTools(context, handler.BuildToolDescriptors(context, configuration));
+        _parsedJson = new ParsedJsonCache(context);
     }
 
-    public HttpRequestMessage CreateCompletionRequest(List<AiAttachment> attachments, AiDebugTrace trace)
+    public AiChatRequest CreateRequest(List<AiAttachment> attachments)
     {
         AiUsage = new();
-        return Client.CreateCompletionRequest(context, document.Messages, attachments, _tools, useTools: document.RemainingToolIterations-- > 0, streaming != null, schema, promptCacheKey: document.Id, trace: trace);
+        return new AiChatRequest
+        {
+            Messages = document.Messages,
+            Attachments = attachments,
+            Tools = _preparedTools,
+            UseTools = document.RemainingToolIterations-- > 0,
+            Schema = schema,
+            PromptCacheKey = document.Id,
+            MayRepeatPrompt = handler.MayRepeatPrompt(_preparedTools),
+            ParsedJson = _parsedJson
+        };
     }
 
-    public async Task<AiResponse> RunAsync(IMemoryContextPool contextPool, HttpRequestMessage request, AiDebugTrace trace, CancellationToken token)
+    public async Task<AiResponse> RunAsync(IMemoryContextPool contextPool, AiChatRequest request, AiDebugTrace trace, CancellationToken token)
     {
         if (streaming is null)
         {
@@ -41,7 +52,6 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
                 context,
                 request,
                 AiUsage,
-                schema,
                 trace,
                 token
             );
@@ -54,7 +64,6 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
             request,
             streaming,
             AiUsage,
-            schema,
             trace,
             token
         );
