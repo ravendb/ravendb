@@ -558,6 +558,7 @@ class Test
 }
 
 class User { public string Id { get; set; } public string Name { get; set; } }
+class Order { public string Id { get; set; } }
 ";
 
         [RavenTheory(RavenTestCategory.ClientApi)]
@@ -596,6 +597,31 @@ class User { public string Id { get; set; } public string Name { get; set; } }
 
             Assert.Equal(expected, diagnostics.Length);
             Assert.All(diagnostics, d => Assert.Equal(DiagnosticIds.SessionLazyBatching, d.Id));
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData(@"var a = session.Load<User>(""users/8-A""); var b = session.Load<User>(""users/8-A"");")]
+        [InlineData(@"var a = session.Load<User>(a1); var b = session.Load<User>(a1);")]
+        [InlineData(@"var id = ""users/8-A""; var a = session.Load<User>(id); var b = session.Load<User>(id);")]
+        [InlineData(@"var a = await asyncSession.LoadAsync<User>(a1); var b = await asyncSession.LoadAsync<User>(a1);")]
+        public async Task SameIdLoadedTwice_No_Diagnostic(string body)
+        {
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<SessionLazyBatchingAnalyzer>(SegmentSource(body));
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData(@"var a = session.Load<User>(a1); var b = session.Load<User>(a1); var c = session.Load<User>(b1);", 2)]
+        [InlineData(@"var id = a1; var a = session.Load<User>(id); id = b1; var b = session.Load<User>(id);", 2)]
+        [InlineData(@"var a = session.Load<User>(""users/1""); var b = session.Load<Order>(""users/1"");", 2)]
+        public async Task DistinctLoads_Report_One_Diagnostic_Per_Operation(string body, int expected)
+        {
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<SessionLazyBatchingAnalyzer>(SegmentSource(body));
+
+            Assert.Equal(expected, diagnostics.Length);
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]

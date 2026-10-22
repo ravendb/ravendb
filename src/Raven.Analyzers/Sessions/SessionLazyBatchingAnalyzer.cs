@@ -66,10 +66,17 @@ namespace Raven.Analyzers.Sessions
 
             foreach (var group in groups)
             {
-                if (group.Count() < 2)
+                List<BatchableCall> distinctCalls = [];
+                foreach (BatchableCall call in group)
+                {
+                    if (distinctCalls.Any(kept => IsSameLoad(kept, call, context.SemanticModel, context.CodeBlock)) == false)
+                        distinctCalls.Add(call);
+                }
+
+                if (distinctCalls.Count < 2)
                     continue;
 
-                foreach (BatchableCall call in group)
+                foreach (BatchableCall call in distinctCalls)
                 {
                     if (call.Invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
                         continue;
@@ -80,6 +87,51 @@ namespace Raven.Analyzers.Sessions
                         call.MethodName));
                 }
             }
+        }
+
+        private static bool IsSameLoad(BatchableCall first, BatchableCall second, SemanticModel model, SyntaxNode codeBlock)
+        {
+            if (first.MethodName is not (KnownTypes.LoadMethodName or KnownTypes.LoadAsyncMethodName)
+                || second.MethodName != first.MethodName)
+                return false;
+
+            if (model.GetSymbolInfo(first.Invocation).Symbol is not IMethodSymbol { TypeArguments.Length: 1 } firstMethod
+                || model.GetSymbolInfo(second.Invocation).Symbol is not IMethodSymbol { TypeArguments.Length: 1 } secondMethod
+                || SymbolEqualityComparer.Default.Equals(firstMethod.TypeArguments[0], secondMethod.TypeArguments[0]) == false)
+                return false;
+
+            ExpressionSyntax firstId = first.Invocation.ArgumentList.Arguments[0].Expression;
+            ExpressionSyntax secondId = second.Invocation.ArgumentList.Arguments[0].Expression;
+
+            Optional<object?> firstConstant = model.GetConstantValue(firstId);
+            Optional<object?> secondConstant = model.GetConstantValue(secondId);
+            if (firstConstant.HasValue || secondConstant.HasValue)
+                return firstConstant.HasValue && secondConstant.HasValue && Equals(firstConstant.Value, secondConstant.Value);
+
+            ISymbol? idSymbol = model.GetSymbolInfo(firstId).Symbol;
+            return idSymbol is IParameterSymbol { RefKind: RefKind.None } or ILocalSymbol { RefKind: RefKind.None }
+                   && SymbolEqualityComparer.Default.Equals(idSymbol, model.GetSymbolInfo(secondId).Symbol)
+                   && IsWrittenAfterDeclaration(idSymbol, model, codeBlock) == false;
+        }
+
+        private static bool IsWrittenAfterDeclaration(ISymbol symbol, SemanticModel model, SyntaxNode codeBlock)
+        {
+            foreach (SyntaxNode node in codeBlock.DescendantNodes())
+            {
+                ExpressionSyntax? target = node switch
+                {
+                    AssignmentExpressionSyntax assignment => assignment.Left,
+                    PrefixUnaryExpressionSyntax prefix when prefix.IsKind(SyntaxKind.PreIncrementExpression) || prefix.IsKind(SyntaxKind.PreDecrementExpression) => prefix.Operand,
+                    PostfixUnaryExpressionSyntax postfix when postfix.IsKind(SyntaxKind.PostIncrementExpression) || postfix.IsKind(SyntaxKind.PostDecrementExpression) => postfix.Operand,
+                    ArgumentSyntax argument when argument.RefKindKeyword.IsKind(SyntaxKind.RefKeyword) || argument.RefKindKeyword.IsKind(SyntaxKind.OutKeyword) => argument.Expression,
+                    _ => null
+                };
+
+                if (target != null && SymbolEqualityComparer.Default.Equals(model.GetSymbolInfo(target).Symbol, symbol))
+                    return true;
+            }
+
+            return false;
         }
 
         private sealed record BatchableCall(
