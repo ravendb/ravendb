@@ -16,6 +16,12 @@ namespace Raven.Server.Documents.Queries.AST
             Type = ExpressionType.Between;
         }
 
+        // the two comparisons the between stands for, each with its own inclusivity; a between written in RQL is inclusive on
+        // both ends, one folded from 'Foo > $a and Foo < $b' is not
+        public BinaryExpression LowerBound() => new BinaryExpression(Source, Min, MinInclusive ? OperatorType.GreaterThanEqual : OperatorType.GreaterThan);
+
+        public BinaryExpression UpperBound() => new BinaryExpression(Source, Max, MaxInclusive ? OperatorType.LessThanEqual : OperatorType.LessThan);
+
         public override string ToString()
         {
             return Source + " between " + Min + " and " + Max;
