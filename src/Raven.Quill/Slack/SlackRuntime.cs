@@ -25,6 +25,7 @@ internal sealed class SlackRuntime : IChannelRuntime, SlackSdk.ISocketObserver
 
     private volatile ISlackSocketModeClient _client;
     private Task _run = Task.CompletedTask;
+    private volatile Task _replace = Task.CompletedTask;
     private volatile bool _canRestart = true;
     private long _restartDueTicks;
     private int _replacing;
@@ -80,6 +81,7 @@ internal sealed class SlackRuntime : IChannelRuntime, SlackSdk.ISocketObserver
     public async Task StopAsync()
     {
         await _cts.CancelAsync();
+        await _replace.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         await Task.WhenAll(_run, _client.DisposeAsync().AsTask(), _chats.StopAsync())
             .ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         _cts.Dispose();
@@ -132,7 +134,7 @@ internal sealed class SlackRuntime : IChannelRuntime, SlackSdk.ISocketObserver
 
         Health.MarkDisconnected(SlackApiErrors.Describe(e));
         if (Interlocked.CompareExchange(ref _replacing, 1, 0) == 0)
-            _ = Task.Run(ReplaceSocketAsync);
+            _replace = Task.Run(ReplaceSocketAsync);
     }
 
     private async Task ReplaceSocketAsync()
