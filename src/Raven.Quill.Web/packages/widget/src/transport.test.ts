@@ -54,6 +54,20 @@ describe("streamChat on 413", () => {
     });
 });
 
+describe("streamChat on a prompt_too_long 400", () => {
+    it("asks the visitor to shorten the message like a 413 does", async () => {
+        const body = JSON.stringify({ error: "prompt exceeds 32000 characters", code: "prompt_too_long" });
+        const events = await eventsFor(new Response(body, { status: 400 }));
+
+        expect(events).toHaveLength(1);
+        expect(events[0]).toMatchObject({
+            type: "error",
+            kind: "failed",
+            message: expect.stringContaining("too long"),
+        });
+    });
+});
+
 describe("streamChat on a dead link", () => {
     it("maps 404 and 410 to the terminal expired state", async () => {
         for (const status of [404, 410]) {
