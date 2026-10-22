@@ -1822,6 +1822,7 @@ export interface components {
             parameterBindings?: null | {
                 [key: string]: components["schemas"]["ChannelParameterBinding"];
             };
+            signingSecret?: null | string;
         };
         SuggestAgentRequest: {
             intentPrompt: null | string;
