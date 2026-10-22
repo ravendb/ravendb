@@ -14,7 +14,7 @@ internal sealed class SlackNetLogger(SlackRuntime runtime, string shortChannelId
             return;
 
         if (IsReconnectGiveUp(logEvent))
-            runtime.ExitAfterReconnectFailure(logEvent.Exception!);
+            runtime.OnReconnectGiveUp(logEvent.Exception!);
 
         if (logger.IsWarnEnabled == false)
             return;

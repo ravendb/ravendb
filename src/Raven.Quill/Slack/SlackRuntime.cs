@@ -7,16 +7,20 @@ using Channel = Raven.Quill.Channels.Channel;
 
 namespace Raven.Quill.Slack;
 
-internal sealed class SlackRuntime : IChannelRuntime
+internal sealed class SlackRuntime : IChannelRuntime, SlackSdk.ISocketObserver
 {
     private readonly string _shortChannelId;
     private readonly string _botUserId;
+    private readonly string _appToken;
+    private readonly SlackSdk _sdk;
     private readonly SlackOptions _options;
     private readonly QuillLogger<SlackRuntime> _logger;
-    private readonly ISlackSocketModeClient _client;
+    private readonly SlackMessageHandler _handler;
+    private readonly SlackNetLogger _netLogger;
     private readonly ChannelChats<SlackMessage> _chats;
     private readonly CancellationTokenSource _cts = new();
 
+    private volatile ISlackSocketModeClient _client;
     private Task _run = Task.CompletedTask;
     private volatile bool _canRestart = true;
     private long _restartDueTicks;
@@ -31,20 +35,23 @@ internal sealed class SlackRuntime : IChannelRuntime
         Health = previous is null ? new ChannelConnectionHealth() : ChannelConnectionHealth.Continuing(previous);
         _shortChannelId = channel.ShortId;
         _botUserId = settings.BotUserId;
+        _appToken = settings.AppToken;
+        _sdk = sdk;
         _options = options;
         _logger = logger;
         ChannelChangeVector = channelChangeVector;
         _chats = chats.Create(database, channel, turns, Health, logger.RavenLogger);
 
-        var handler = new SlackMessageHandler(channel, _chats, Health);
-        _client = sdk.NewSocketClient(settings.AppToken, handler, new SlackNetLogger(this, channel.ShortId, logger));
+        _handler = new SlackMessageHandler(channel, _chats, Health);
+        _netLogger = new SlackNetLogger(this, channel.ShortId, logger);
+        _client = sdk.NewSocketClient(_appToken, _handler, _netLogger, this);
     }
 
     public string? ChannelChangeVector { get; }
 
     public ChannelConnectionHealth Health { get; }
 
-    public bool IsConnected => Health.IsConnected && _client.Connected;
+    public bool IsConnected => Health.IsConnected;
 
     public bool IsRestartDue(DateTime now)
     {
@@ -74,15 +81,32 @@ internal sealed class SlackRuntime : IChannelRuntime
         _cts.Dispose();
     }
 
+    void SlackSdk.ISocketObserver.OnSocketOpened()
+    {
+        if (Exited || _cts.IsCancellationRequested)
+            return;
+
+        Health.MarkConnected();
+        if (_logger.IsInfoEnabled)
+            _logger.Info($"Slack socket connected for channel {_shortChannelId} (bot {_botUserId})");
+    }
+
+    void SlackSdk.ISocketObserver.OnSocketClosed(Exception? error)
+    {
+        if (_cts.IsCancellationRequested)
+            return;
+
+        var reason = error is null ? null : SlackApiErrors.Describe(error);
+        Health.MarkDisconnected(reason);
+        if (_logger.IsInfoEnabled)
+            _logger.Info($"Slack socket closed for channel {_shortChannelId}" + (reason is null ? "" : $": {reason}"));
+    }
+
     private async Task ConnectAsync()
     {
         try
         {
             await _client.Connect(new SocketModeConnectionOptions { NumberOfConnections = 1 }, _cts.Token);
-            if (Exited == false)
-                Health.MarkConnected();
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Slack socket connected for channel {_shortChannelId} (bot {_botUserId})");
         }
         catch (OperationCanceledException) when (_cts.IsCancellationRequested)
         {
@@ -94,17 +118,32 @@ internal sealed class SlackRuntime : IChannelRuntime
     }
 
     // link_disabled is deliberately unhandled
-    internal void ExitAfterReconnectFailure(Exception e) => ExitAfterFailure(e, TimeSpan.Zero);
+    internal void OnReconnectGiveUp(Exception e)
+    {
+        if (ExitIfAppTokenRejected(e))
+            return;
 
-    private void ExitAfterConnectFailure(Exception e) => ExitAfterFailure(e, _options.SocketRestartDelay);
+        Exit(SlackApiErrors.Describe(e), TimeSpan.Zero);
+    }
 
-    private void ExitAfterFailure(Exception e, TimeSpan transientRestartDelay)
+    private bool ExitIfAppTokenRejected(Exception e)
     {
         var code = SlackApiErrors.ErrorCodeOf(e);
         var tokenError = SlackApiErrors.DescribeAppTokenError(code);
-        _canRestart = tokenError is null || SlackApiErrors.AppTokenErrorIsFixableInSlack(code);
-        Exit(tokenError ?? SlackApiErrors.Describe(e),
-            tokenError is null ? transientRestartDelay : _options.SocketRestartDelay);
+        if (tokenError is null)
+            return false;
+
+        _canRestart = SlackApiErrors.AppTokenErrorIsFixableInSlack(code);
+        Exit(tokenError, _options.SocketRestartDelay);
+        return true;
+    }
+
+    private void ExitAfterConnectFailure(Exception e)
+    {
+        if (ExitIfAppTokenRejected(e))
+            return;
+
+        Exit(SlackApiErrors.Describe(e), _options.SocketRestartDelay);
     }
 
     private void Exit(string error, TimeSpan restartDelay)

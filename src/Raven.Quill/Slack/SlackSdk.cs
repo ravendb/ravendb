@@ -27,7 +27,8 @@ internal sealed class SlackSdk
 
     public ISlackApiClient Api { get; }
 
-    public ISlackSocketModeClient NewSocketClient(string appToken, IEventHandler handler, SlackNet.ILogger logger)
+    public ISlackSocketModeClient NewSocketClient(
+        string appToken, IEventHandler handler, SlackNet.ILogger logger, ISocketObserver observer)
     {
         var services = new SlackServiceBuilder()
             .UseHttp(_ => _http)
@@ -38,10 +39,64 @@ internal sealed class SlackSdk
 
         var core = new CoreSocketModeClient(
             new SlackNet.SlackApiClient(_http, _urlBuilder, Json, appToken),
-            KeepAliveSockets.Instance, Json, Default.Scheduler, logger);
+            new ObservedSockets(observer), Json, Default.Scheduler, logger);
 
         return new SlackSocketModeClient(
             core, Json, services.GetRequestListeners(), services.GetHandlerFactory(), logger);
+    }
+
+    internal interface ISocketObserver
+    {
+        void OnSocketOpened();
+
+        void OnSocketClosed(Exception? error);
+    }
+
+    private sealed class ObservedSockets(ISocketObserver observer) : IWebSocketFactory
+    {
+        public IWebSocket Create(string uri) => new ObservedSocket(KeepAliveSockets.Instance.Create(uri), observer);
+    }
+
+    private sealed class ObservedSocket(IWebSocket inner, ISocketObserver observer) : IWebSocket
+    {
+        public WebSocketState State => inner.State;
+
+        public Task Closed => inner.Closed;
+
+        public IObservable<string> Messages => inner.Messages;
+
+        public Task Send(string message) => inner.Send(message);
+
+        public async Task<bool> Open(CancellationToken cancellationToken)
+        {
+            var opened = await inner.Open(cancellationToken);
+            if (opened)
+            {
+                observer.OnSocketOpened();
+                _ = ReportClosedAsync();
+            }
+
+            return opened;
+        }
+
+        public void Dispose() => inner.Dispose();
+
+        private async Task ReportClosedAsync()
+        {
+            Exception? error;
+            try
+            {
+                error = inner.Closed is Task<object> withResult ? await withResult as Exception : null;
+                if (inner.Closed is not Task<object>)
+                    await inner.Closed;
+            }
+            catch (Exception e)
+            {
+                error = e;
+            }
+
+            observer.OnSocketClosed(error);
+        }
     }
 
     private sealed class BaseUrlBuilder(ISlackUrlBuilder inner, string apiUrl) : ISlackUrlBuilder
