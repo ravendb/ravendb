@@ -30,7 +30,7 @@ public sealed unsafe class CompactKey : IDisposable
 
     private static (ArrayPool<T> ArrayPool, int PoolIndex) GetPoolFrom<T>(ArrayPool<T>[] perCore, int? poolIndex = null)
     {
-        Debug.Assert(poolIndex is null or > 0);
+        Debug.Assert(poolIndex is null or >= 0);
         
         // casting to uint here to avoid -1 from GetCurrentProcessorId (the modulus will handle high values anyway)
         var index = poolIndex ?? (int)((uint)Thread.GetCurrentProcessorId() % perCore.Length);
