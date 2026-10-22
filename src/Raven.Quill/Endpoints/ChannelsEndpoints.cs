@@ -359,6 +359,14 @@ public static class ChannelsEndpoints
         if (reserved == false)
             return Results.BadRequest(new ApiErrorResponse(SlackBotAlreadyConnected(auth.TeamName, auth.BotUserId, owner)));
 
+        var (appTokenReserved, appTokenOwner, appTokenCv) = await TryReserveSlackAppTokenAsync(
+            store, appToken, app.Database, channel.Id!, ct);
+        if (appTokenReserved == false)
+        {
+            await TryReleaseSlackAsync(store, auth.TeamId, auth.BotUserId, app.Database, channel.Id!);
+            return Results.BadRequest(new ApiErrorResponse(SlackAppTokenAlreadyUsed(appTokenOwner)));
+        }
+
         try
         {
             using var session = store.OpenAsyncSession(app.Database);
@@ -368,11 +376,15 @@ public static class ChannelsEndpoints
         catch
         {
             await TryReleaseSlackAsync(store, auth.TeamId, auth.BotUserId, app.Database, channel.Id!);
+            await TryReleaseSlackAppTokenAsync(store, appToken, app.Database, channel.Id!);
             throw;
         }
 
-        if (await ConfirmSlackReservationAsync(
-                store, auth.TeamId, auth.BotUserId, app.Database, channel.Id!, reservationCv!, ct) == false)
+        var botConfirmed = await ConfirmSlackReservationAsync(
+            store, auth.TeamId, auth.BotUserId, app.Database, channel.Id!, reservationCv!, ct);
+        var appTokenConfirmed = botConfirmed &&
+                                await ConfirmSlackAppTokenAsync(store, appToken, app.Database, channel.Id!, appTokenCv!, ct);
+        if (appTokenConfirmed == false)
         {
             try
             {
@@ -383,11 +395,14 @@ public static class ChannelsEndpoints
             catch (Exception e)
             {
                 if (logger.IsWarnEnabled)
-                    logger.Warn($"Slack channel {channelId} was not rolled back after losing the bot reservation: {e.Message}");
+                    logger.Warn($"Slack channel {channelId} was not rolled back after losing its reservation: {e.Message}");
             }
 
             await TryReleaseSlackAsync(store, auth.TeamId, auth.BotUserId, app.Database, channel.Id!);
-            return Results.BadRequest(new ApiErrorResponse(SlackBotAlreadyConnected(auth.TeamName, auth.BotUserId, null)));
+            await TryReleaseSlackAppTokenAsync(store, appToken, app.Database, channel.Id!);
+            return Results.BadRequest(new ApiErrorResponse(botConfirmed
+                ? SlackAppTokenAlreadyUsed(null)
+                : SlackBotAlreadyConnected(auth.TeamName, auth.BotUserId, null)));
         }
 
         channelManager.Wake();
@@ -789,6 +804,8 @@ public static class ChannelsEndpoints
         }
 
         var appTokenRotated = false;
+        var previousAppToken = settings.AppToken;
+        string? appTokenCv = null;
         if (string.IsNullOrWhiteSpace(body.Slack?.AppToken) == false)
         {
             var appToken = body.Slack.AppToken.Trim();
@@ -798,6 +815,14 @@ public static class ChannelsEndpoints
 
             if (await ValidateSlackAppTokenAsync(slackClient, appToken, ct) is { } appTokenError)
                 return Results.BadRequest(new ApiErrorResponse(appTokenError));
+
+            if (appToken != previousAppToken)
+            {
+                var (reserved, owner, cv) = await TryReserveSlackAppTokenAsync(store, appToken, app.Database, channel.Id!, ct);
+                if (reserved == false)
+                    return Results.BadRequest(new ApiErrorResponse(SlackAppTokenAlreadyUsed(owner)));
+                appTokenCv = cv;
+            }
 
             settings.AppToken = appToken;
             appTokenRotated = true;
@@ -818,7 +843,31 @@ public static class ChannelsEndpoints
         if (body.Enabled is not null)
             channel.Enabled = body.Enabled.Value;
 
-        await session.SaveChangesAsync(ct);
+        try
+        {
+            await session.SaveChangesAsync(ct);
+        }
+        catch
+        {
+            if (appTokenCv is not null)
+                await TryReleaseSlackAppTokenAsync(store, settings.AppToken, app.Database, channel.Id!);
+            throw;
+        }
+
+        if (appTokenCv is not null)
+        {
+            if (await ConfirmSlackAppTokenAsync(store, settings.AppToken, app.Database, channel.Id!, appTokenCv, ct) == false)
+            {
+                var lost = settings.AppToken;
+                settings.AppToken = previousAppToken;
+                await session.SaveChangesAsync(ct);
+                await TryReleaseSlackAppTokenAsync(store, lost, app.Database, channel.Id!);
+                return Results.BadRequest(new ApiErrorResponse(SlackAppTokenAlreadyUsed(null)));
+            }
+
+            if (previousAppToken.Length > 0)
+                await TryReleaseSlackAppTokenAsync(store, previousAppToken, app.Database, channel.Id!);
+        }
 
         channelManager.Wake();
 
@@ -1003,6 +1052,9 @@ public static class ChannelsEndpoints
         if (channel.Slack is { TeamId.Length: > 0, BotUserId.Length: > 0 } settings)
             await TryReleaseSlackAsync(store, settings.TeamId, settings.BotUserId, app.Database, channel.Id!);
 
+        if (channel.Slack is { AppToken.Length: > 0 } withAppToken)
+            await TryReleaseSlackAppTokenAsync(store, withAppToken.AppToken, app.Database, channel.Id!);
+
         channelManager.Wake();
 
         if (logger.IsInfoEnabled)
@@ -1090,6 +1142,35 @@ public static class ChannelsEndpoints
         IDocumentStore store, string teamId, string botUserId, string database, string channelId) =>
         ChannelBotReservations.ReleaseAsync<SlackBotReservation>(
             store, SlackBotReservation.IdFor(teamId, botUserId), database, channelId, releaseCompanions: null);
+
+    private static string SlackAppTokenAlreadyUsed(string? ownerDatabase) =>
+        ownerDatabase is null
+            ? "this app-level token is already used by another Slack channel; each channel needs its own Slack app"
+            : $"this app-level token is already used by a Slack channel in app '{ownerDatabase}'; each channel needs its own Slack app";
+
+    private static Task<ChannelBotReservations.Claim> TryReserveSlackAppTokenAsync(
+        IDocumentStore store, string appToken, string database, string channelId, CancellationToken ct)
+    {
+        var reservationId = SlackAppTokenReservation.IdFor(appToken);
+        return ChannelBotReservations.TryClaimAsync<SlackAppTokenReservation>(
+            store, reservationId, database, channelId,
+            channel => channel?.Slack is { AppToken.Length: > 0 } settings &&
+                       SlackAppTokenReservation.IdFor(settings.AppToken) == reservationId,
+            storeCompanions: null, ct);
+    }
+
+    private static Task<bool> ConfirmSlackAppTokenAsync(
+        IDocumentStore store, string appToken, string database, string channelId, string changeVector,
+        CancellationToken ct) =>
+        ChannelBotReservations.TryConfirmAsync(
+            store, SlackAppTokenReservation.IdFor(appToken),
+            new SlackAppTokenReservation { Database = database, ChannelId = channelId },
+            changeVector, ct);
+
+    private static Task TryReleaseSlackAppTokenAsync(
+        IDocumentStore store, string appToken, string database, string channelId) =>
+        ChannelBotReservations.ReleaseAsync<SlackAppTokenReservation>(
+            store, SlackAppTokenReservation.IdFor(appToken), database, channelId, releaseCompanions: null);
 
     private static async Task<string?> ValidateSlackAppTokenAsync(
         ISlackClient slackClient, string appToken, CancellationToken ct)
