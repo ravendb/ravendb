@@ -128,6 +128,10 @@ function mapMessagesFromDoc({ conversationDocument, config }: MapMessagesFromDoc
 
     const messages: AiAgentMessage[] = [];
     for (const docMessage of docMessages) {
+        if (docMessage.attachments_content) {
+            continue;
+        }
+
         // User parameters are filled by the server. We don't want to show it on the UI
         if (
             docMessage.role === "user" &&
