@@ -1073,9 +1073,9 @@ public class ChatCompletionClient : IDisposable
 
         if (response.Headers.TryGetValues(Constants.Headers.RetryAfterMs, out var milliseconds) &&
             double.TryParse(milliseconds.FirstOrDefault(), NumberStyles.Float, CultureInfo.InvariantCulture, out var ms) &&
-            ms > 0)
+            double.IsFinite(ms) && ms > 0)
         {
-            retryAfter = TimeSpan.FromMilliseconds(ms);
+            retryAfter = ClampRetryAfter(TimeSpan.FromMilliseconds(Math.Min(ms, MaxRetryAfter.TotalMilliseconds)));
             return true;
         }
 
@@ -1084,18 +1084,22 @@ public class ChatCompletionClient : IDisposable
 
         if (header.Delta is { } delta && delta > TimeSpan.Zero)
         {
-            retryAfter = delta;
+            retryAfter = ClampRetryAfter(delta);
             return true;
         }
 
         if (header.Date is { } date && date - DateTimeOffset.UtcNow is { Ticks: > 0 } until)
         {
-            retryAfter = until;
+            retryAfter = ClampRetryAfter(until);
             return true;
         }
 
         return false;
     }
+
+    internal static readonly TimeSpan MaxRetryAfter = TimeSpan.FromDays(1);
+
+    private static TimeSpan ClampRetryAfter(TimeSpan value) => value > MaxRetryAfter ? MaxRetryAfter : value;
 
     private string GetRefusal(BlittableJsonReaderObject choice0, BlittableJsonReaderObject message) => _settings.GetRefusal(choice0, message);
 
@@ -1137,9 +1141,9 @@ public class ChatCompletionClient : IDisposable
         }
 
         // As double: 33011.382867097855
-        if (double.TryParse(input, provider: CultureInfo.InvariantCulture, out var seconds2))
+        if (double.TryParse(input, provider: CultureInfo.InvariantCulture, out var seconds2) && double.IsFinite(seconds2))
         {
-            time = TimeSpan.FromSeconds(seconds2);
+            time = ClampRetryAfter(TimeSpan.FromSeconds(Math.Min(seconds2, MaxRetryAfter.TotalSeconds)));
             return true;
         }
 
