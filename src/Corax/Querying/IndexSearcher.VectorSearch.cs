@@ -253,25 +253,40 @@ public partial class IndexSearcher
 
         PortableExceptions.ThrowIf<InvalidOperationException>(reader.IsVectorHash is false, "Expected vector field, but got " + metadata.FieldName + ", which isn't a vector");
 
+        List<VectorValue> vectors;
         Span<byte> hash = reader.StoredField.Value.ToSpan();
-        if (vectorsByHash.TryGetValue(hash, out var vectorId) is false)
-            return EmptyMatch();
+        if (vectorsByHash.TryGetValue(hash, out var vectorId))
+        {
+            var vectorSpan = Hnsw.NodeReader.ReadVector(vectorId, searchState);
+            var vectorValue = new VectorValue(null, vectorSpan.AsMemory());
+            if (reader.FindNextStored(vectorRootPage) is false) // just a single vector
+                return new VectorSearchMatch(this, metadata, vectorValue, minimumMatch, numberOfCandidates, isExact, isSingleVectorSearch, filterQuery, scanningThreshold);
 
-        var vectorSpan = Hnsw.NodeReader.ReadVector(vectorId, searchState);
+            vectors = [vectorValue];
+        }
+        else
+        {
+            // The first hash has no vector, so the loop reads it again and skips it.
+            vectors = [];
+        }
 
-        var vectorValue = new VectorValue(null, vectorSpan.AsMemory());
-        if (reader.FindNextStored(vectorRootPage) is false) // just a single vector
-            return new VectorSearchMatch(this, metadata, vectorValue, minimumMatch, numberOfCandidates, isExact, isSingleVectorSearch, filterQuery, scanningThreshold);
-
-        List<VectorValue> vectors = [vectorValue];
         do
         {
-            vectorSpan = Hnsw.NodeReader.ReadVector(vectorId, searchState);
-            vectorValue = new VectorValue(null, vectorSpan.AsMemory());
-            vectors.Add(vectorValue);
+            PortableExceptions.ThrowIf<InvalidOperationException>(reader.IsVectorHash is false, "Expected vector field, but got " + metadata.FieldName + ", which isn't a vector");
+
+            if (vectorsByHash.TryGetValue(reader.StoredField.Value.ToSpan(), out vectorId) is false)
+                continue;
+
+            var vectorSpan = Hnsw.NodeReader.ReadVector(vectorId, searchState);
+            vectors.Add(new VectorValue(null, vectorSpan.AsMemory()));
         } while (reader.FindNextStored(vectorRootPage));
 
-        return new MultiVectorSearchMatch(this, metadata, vectors.ToArray(), minimumMatch, numberOfCandidates, isExact, isSingleVectorSearch, filterQuery, scanningThreshold);
+        return vectors.Count switch
+        {
+            0 => EmptyMatch(),
+            1 => new VectorSearchMatch(this, metadata, vectors[0], minimumMatch, numberOfCandidates, isExact, isSingleVectorSearch, filterQuery, scanningThreshold),
+            _ => new MultiVectorSearchMatch(this, metadata, vectors.ToArray(), minimumMatch, numberOfCandidates, isExact, isSingleVectorSearch, filterQuery, scanningThreshold)
+        };
     }
 
     public MultiVectorSearchMatch MultiVectorSearch(in FieldMetadata metadata, in VectorValue[] vectorValues, float minimumMatch, in int numberOfCandidates, bool isExact, bool isSingleVectorSearch, IQueryMatch filterQuery = null, int scanningThreshold = 1024, Random random = null)
