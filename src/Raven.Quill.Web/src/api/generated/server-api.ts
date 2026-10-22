@@ -2364,9 +2364,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["AuthStatusResponse"];
-                };
+                content?: never;
             };
         };
     };
