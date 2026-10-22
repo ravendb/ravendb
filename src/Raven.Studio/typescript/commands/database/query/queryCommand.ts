@@ -21,7 +21,7 @@ type QueryResult = Raven.Client.Documents.Queries.QueryResult<Array<any>, any>;
 
 interface CachedQueryResult {
     etag: string;
-    results: QueryResult;
+    responseText: string;
 }
 
 class queryCommand extends commandBase {
@@ -61,10 +61,12 @@ class queryCommand extends commandBase {
         return this.post<pagedResultExtended<document>>(url, payload, this.props.db, options)
             .then((results: QueryResult, status: string, xhr: JQueryXHR) => {
                 if (xhr.status === 304) {
-                    return selector(structuredClone(cachedResult.results), true);
+                    return selector(JSON.parse(cachedResult.responseText), true);
                 }
 
-                queryCommand.cacheResults(cacheKey, this.extractEtag(xhr), results);
+                if (this.props.cacheEnabled) {
+                    queryCommand.cacheResults(cacheKey, this.extractEtag(xhr), xhr.responseText);
+                }
                 return selector(results, false);
             })
             .fail((response: JQueryXHR) => {
@@ -83,14 +85,14 @@ class queryCommand extends commandBase {
             });
     }
 
-    private static cacheResults(key: string, etag: string, results: QueryResult) {
+    private static cacheResults(key: string, etag: string, responseText: string) {
         if (!etag) {
             return;
         }
 
         const cache = queryCommand.cachedResults;
         cache.delete(key);
-        cache.set(key, { etag, results: structuredClone(results) });
+        cache.set(key, { etag, responseText });
 
         if (cache.size > queryCommand.maxCachedResults) {
             cache.delete(cache.keys().next().value);

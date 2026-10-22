@@ -129,16 +129,11 @@
                     <small class="on-base-background" data-bind="if: queryStats(), visible: queryStats()">
                         <span>
                             <strong data-bind="if: !hasEditableIndex(), visible: !hasEditableIndex()">
-                                <i class="icon-documents"></i><span data-bind="text: queriedIndexDescription"></span>
-                            </strong>
-                            <span data-bind="visible: queriedIndex() && queriedIndex().indexOf('collection') === 0">&nbsp;collection</span>
-                            &nbsp;was used to get <span data-bind="text: fromCache() ? 'cached' : 'the'"></span> results in
-                            <strong data-bind="text: $root.formatTime(queryStats().DurationInMs)"></strong>
-                            <span data-bind="visible: originalRequestTime, if: originalRequestTime">(original request took: <strong data-bind="text: $root.formatTime(originalRequestTime())"></strong>)</span>
-                            <span data-bind="visible: queriedFieldsOnly">
-                                . Showing <strong>stored index fields</strong> only.
-                            </span>
-                            <span data-bind="visible: queriedIndexEntries">. Showing <strong>raw index entries</strong>.</span>
+                                <i class="icon-documents"></i><span data-bind="text: queriedIndexDescription"></span></strong><span data-bind="visible: queriedIndex() && queriedIndex().indexOf('collection') === 0">&nbsp;collection</span>&nbsp;was used to get
+                            <span data-bind="if: fromCache"><strong>cached</strong> results (original request took: <strong data-bind="text: $root.formatTime(queryStats().DurationInMs)"></strong>)</span><span
+                                data-bind="ifnot: fromCache">the results in <strong data-bind="text: $root.formatTime(queryStats().DurationInMs)"></strong></span><span
+                                data-bind="visible: queriedFieldsOnly">. Showing <strong>stored index fields</strong> only.</span><span
+                                data-bind="visible: queriedIndexEntries">. Showing <strong>raw index entries</strong>.</span>
                         </span>
                     </small>
                     <small data-bind="visible: queryStats()">

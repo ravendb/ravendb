@@ -222,7 +222,6 @@ class query extends shardViewModelBase {
     queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any, any>>();
     staleResult: KnockoutComputed<boolean>;
     fromCache = ko.observable<boolean>(false);
-    originalRequestTime = ko.observable<number>();
     dirtyResult = ko.observable<boolean>();
     currentTab = ko.observable<queryResultTab | highlightSection | perCollectionIncludes | timeSeriesPlotDetails | timeSeriesTableDetails | spatialQueryMap>("results");
     totalResultsForUi = ko.observable<number>(0);
@@ -1053,9 +1052,7 @@ class query extends shardViewModelBase {
                 
                 const resultsTask = $.Deferred<pagedResultExtended<document>>();
                 const queryForAllFields = criteriaForFetcher.showFields();
-                
-                const startQueryTime = new Date().getTime();
-                
+
                 command.execute()
                     .always(() => {
                         this.spinners.isLoading(false);
@@ -1130,16 +1127,7 @@ class query extends shardViewModelBase {
                             this.totalResultsForUi(this.hasMoreUnboundedResults() ? itemsSoFar - 1 : itemsSoFar);
                         }
                         
-                        const endQueryTime = new Date().getTime();
-                        const localQueryTime = endQueryTime - startQueryTime;
-                        if (queryResults.fromCache) {
-                            this.originalRequestTime(queryResults.additionalResultInfo.DurationInMs);
-                            queryResults.additionalResultInfo.DurationInMs = localQueryTime;
-                            this.fromCache(true);
-                        } else {
-                            this.originalRequestTime(null);
-                            this.fromCache(false);
-                        }
+                        this.fromCache(queryResults.fromCache);
                         
                         const emptyFieldsResult = queryForAllFields
                             && queryResults.totalResultCount > 0
