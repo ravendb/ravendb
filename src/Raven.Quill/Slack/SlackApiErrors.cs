@@ -3,6 +3,8 @@ using SlackNet;
 
 namespace Raven.Quill.Slack;
 
+internal sealed class SlackApiUnavailableException(string message, Exception inner) : Exception(message, inner);
+
 internal static class SlackApiErrors
 {
     internal const string MissingScope = "missing_scope";
@@ -10,7 +12,10 @@ internal static class SlackApiErrors
     private const string RateLimited = "ratelimited";
 
     public static bool IsApiFailure(Exception e) =>
-        e is SlackException or SlackRateLimitException or HttpRequestException or JsonException || IsTimeout(e);
+        e is SlackException or SlackRateLimitException or SlackApiUnavailableException;
+
+    public static bool IsTransportFailure(Exception e) =>
+        e is HttpRequestException or JsonException || IsTimeout(e);
 
     public static bool IsRateLimited(Exception e) => e is SlackRateLimitException or SlackException { ErrorCode: RateLimited };
 
