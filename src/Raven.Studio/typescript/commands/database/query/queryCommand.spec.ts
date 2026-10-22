@@ -22,6 +22,7 @@ describe("queryCommand", () => {
                 $.Deferred()
                     .resolve(body, status === 304 ? "notmodified" : "success", {
                         status,
+                        responseText: JSON.stringify(body),
                         getResponseHeader: () => etag,
                     })
                     .promise()
@@ -60,11 +61,20 @@ describe("queryCommand", () => {
     it("does not send the etag when the cache is disabled", async () => {
         mockServer({ status: 200, etag: "6", body: ordersResult }, { status: 200, etag: "6", body: ordersResult });
 
-        await runQuery("from Orders where Freight > 20", false);
+        await runQuery("from Orders where Freight > 20");
         const second = await runQuery("from Orders where Freight > 20", false);
 
         expect(sentEtags()).toEqual([undefined, undefined]);
         expect(second.fromCache).toBeFalse();
+    });
+
+    it("does not cache results fetched with the cache disabled", async () => {
+        mockServer({ status: 200, etag: "9", body: ordersResult }, { status: 200, etag: "9", body: ordersResult });
+
+        await runQuery("from Orders where Freight > 40", false);
+        await runQuery("from Orders where Freight > 40");
+
+        expect(sentEtags()).toEqual([undefined, undefined]);
     });
 
     it("does not send the etag of a different query", async () => {
