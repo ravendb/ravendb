@@ -18,6 +18,7 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
 using Voron;
+using Voron.Data.CompactTrees;
 using Voron.Impl;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using RangeType = Raven.Client.Documents.Indexes.RangeType;
@@ -31,12 +32,14 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
     private readonly IndexSearcher _indexSearcher;
     private readonly ByteStringContext _allocator;
     private readonly Dictionary<string, Slice> _fieldNameCache;
+    private readonly LowLevelTransaction _llt;
 
     public CoraxIndexFacetedReadOperation(Index index, RavenLogger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories,
         IndexFieldsMapping fieldsMapping) : base(index, queryBuilderFactories, logger)
     {
         _fieldMappings = fieldsMapping;
         _allocator = readTransaction.Allocator;
+        _llt = readTransaction.LowLevelTransaction;
         _fieldMappings = fieldsMapping;
         _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings)
         {
@@ -269,11 +272,15 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         CreateMappingForRanges(results, facetsByRange, facetQuery);
 
         Page page = default;
+        // one key serves the entry reader of every matched document instead of a new one per document, as in v7.2;
+        // the reader initializes it again for every entry
+        using var key = new CompactKey();
+        key.Initialize(_llt);
         if (matches != null)
         {
             // the indexed path has run the where clause and holds its matches, there is no need to run it a second time
             foreach (var id in matches)
-                ScanEntry(id, ref page, results, facetsByName, facetsByRange, facetQuery, queryTimings, token);
+                ScanEntry(id, ref page, key, results, facetsByName, facetsByRange, facetQuery, queryTimings, token);
         }
         else
         {
@@ -289,7 +296,7 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
             while ((read = baseQuery.Fill(ids)) != 0)
             {
                 for (int docId = 0; docId < read; docId++)
-                    ScanEntry(ids[docId], ref page, results, facetsByName, facetsByRange, facetQuery, queryTimings, token);
+                    ScanEntry(ids[docId], ref page, key, results, facetsByName, facetsByRange, facetQuery, queryTimings, token);
 
                 token.ThrowIfCancellationRequested();
             }
@@ -307,11 +314,11 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
             .ToList();
     }
 
-    private void ScanEntry(long entryId, ref Page page, Dictionary<string, FacetedQueryParser.FacetResult> results,
+    private void ScanEntry(long entryId, ref Page page, CompactKey key, Dictionary<string, FacetedQueryParser.FacetResult> results,
         Dictionary<string, Dictionary<string, FacetValues>> facetsByName, Dictionary<string, Dictionary<string, FacetValues>> facetsByRange,
         FacetQuery facetQuery, QueryTimingsScope queryTimings, CancellationToken token)
     {
-        var reader = _indexSearcher.GetEntryTermsReader(entryId, ref page);
+        var reader = _indexSearcher.GetEntryTermsReader(entryId, ref page, key);
         foreach (var result in results)
         {
             token.ThrowIfCancellationRequested();
