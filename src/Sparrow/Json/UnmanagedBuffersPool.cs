@@ -20,7 +20,7 @@ namespace Sparrow.Json
 
         private readonly ConcurrentStack<AllocatedMemoryData>[] _freeSegments;
 
-        private bool _isDisposed;
+        private volatile bool _isDisposed;
 
         public UnmanagedBuffersPool(IRavenLogger logger, string debugTag, string databaseName = null)
         {
@@ -107,9 +107,8 @@ namespace Sparrow.Json
             if (_isDisposed)
                 return;
 
-            FreeAllPooledMemory();
-
             _isDisposed = true;
+            FreeAllPooledMemory();
             GC.SuppressFinalize(this);
         }
 
@@ -192,13 +191,16 @@ namespace Sparrow.Json
 
             if (returned == null) throw new ArgumentNullException(nameof(returned));
             var index = GetIndexFromSize(returned.SizeInBytes);
-            if (index == -1)
+            if (index == -1 || _isDisposed)
             {
                 NativeMemory.Free(returned.Address, returned.SizeInBytes, returned.AllocatingThread);
 
-                return; // strange size, just free it
+                return; // strange size or disposed pool, just free it
             }
             _freeSegments[index].Push(returned);
+
+            if (_isDisposed)
+                FreeAllPooledMemory(); // raced with Dispose
 #endif
 
         }
