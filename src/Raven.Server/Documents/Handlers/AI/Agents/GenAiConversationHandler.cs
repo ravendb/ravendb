@@ -34,6 +34,9 @@ internal class GenAiConversationHandler(ServerStore server, DocumentDatabase dat
         return result;
     }
 
+    // Without tools a GenAI task makes one call per document, so no later call reuses the prompt.
+    protected internal override bool MayRepeatPrompt(List<BlittableJsonReaderObject> tools) => tools is { Count: > 0 };
+
     protected override Task<string> TryPersistAsync(JsonOperationContext context, List<BlittableJsonReaderObject> historyDocs)
     {
         if (configuration.EnableTracing == false || configuration.TestMode)

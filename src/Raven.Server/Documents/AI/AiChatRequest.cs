@@ -21,6 +21,9 @@ public sealed record AiChatRequest
 
     public string PromptCacheKey;
 
+    // False when no later call can reuse this prompt, so caching it would only add the write cost.
+    public bool MayRepeatPrompt = true;
+
     // JSON already parsed in this conversation call; when null, the provider parses for this write only.
     public ParsedJsonCache ParsedJson;
 }

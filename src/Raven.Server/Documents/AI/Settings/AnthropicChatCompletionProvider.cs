@@ -27,7 +27,7 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
 
     private int MaxOutputTokens => _settings.MaxOutputTokens ?? AnthropicSettings.DefaultMaxOutputTokens;
 
-    public override bool EnablePromptCaching => _settings.EnablePromptCache ?? true;
+    public override bool ShouldCachePrompt(AiChatRequest request) => _settings.EnablePromptCache ?? request.MayRepeatPrompt;
 
     public override string GetRelativeCompletionUri() => "messages";
 
@@ -95,7 +95,7 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
         if (outputConfig != null)
             body[Wire.OutputConfig] = outputConfig;
 
-        if (request.PromptCacheKey != null && EnablePromptCaching)
+        if (request.PromptCacheKey != null && ShouldCachePrompt(request))
             body[Wire.CacheControl] = new DynamicJsonValue { [Wire.Type] = Wire.CacheEphemeral };
 
         ctx.Write(writer, body);

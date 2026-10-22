@@ -7,7 +7,7 @@ internal abstract class AbstractOpenAiChatCompletionProvider : AbstractOpenAiCom
 {
     protected readonly OpenAiBaseSettings _settings;
 
-    public override bool EnablePromptCaching => _settings.EnablePromptCache ?? true;
+    public override bool ShouldCachePrompt(AiChatRequest request) => _settings.EnablePromptCache ?? true;
 
     protected AbstractOpenAiChatCompletionProvider(OpenAiBaseSettings settings)
         : base(settings)

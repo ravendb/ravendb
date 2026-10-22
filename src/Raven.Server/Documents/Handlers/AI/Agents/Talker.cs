@@ -39,6 +39,7 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
             UseTools = document.RemainingToolIterations-- > 0,
             Schema = schema,
             PromptCacheKey = document.Id,
+            MayRepeatPrompt = handler.MayRepeatPrompt(_preparedTools),
             ParsedJson = _parsedJson
         };
     }

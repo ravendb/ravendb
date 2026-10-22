@@ -55,9 +55,9 @@ public sealed class AnthropicSettings : AbstractAiSettings, IAiSettings
     /// <summary>
     /// Enables prompt caching for AI agents and GenAI tasks. Anthropic bills a cache write above the normal input price and a
     /// cache read well below it, so caching pays off only when the same prompt is sent again within the cache lifetime: the turns
-    /// of an agent conversation, or a GenAI task whose queries the model calls. A GenAI task without queries sends each document
-    /// once, so caching only adds the write cost; give such a task its own connection string with caching disabled.
-    /// When <c>null</c>, caching is enabled.
+    /// of an agent conversation, or a GenAI task whose query tools the model calls. A GenAI task without query tools sends each
+    /// document once, so caching would only add the write cost.
+    /// When <c>null</c>, caching is enabled for AI agents and for GenAI tasks with query tools, and disabled for other GenAI tasks.
     /// </summary>
     public bool? EnablePromptCache { get; set; }
 

@@ -187,14 +187,13 @@ export default function AnthropicSettings({ isUsedByAnyTask }: { isUsedByAnyTask
                         Caches the prompt sent to Anthropic, for AI agents and GenAI tasks. Anthropic bills a cache
                         write above the normal input price and a cache read well below it, so caching pays off only when
                         the same prompt is sent again within the cache lifetime: the turns of an AI agent conversation,
-                        or a GenAI task whose queries the model calls. A GenAI task without queries sends each document
-                        once, so caching only adds the write cost; give such a task its own connection string with
-                        caching disabled.
+                        or a GenAI task whose query tools the model calls. A GenAI task without query tools sends each
+                        document once, so caching would only add the write cost.
                         <br />
                         <br />
                         <ul className="mb-0">
                             <li>
-                                <strong>Default:</strong> <code>True</code>
+                                <strong>Default:</strong> Cache AI agents and GenAI tasks with query tools.
                             </li>
                             <li className="mt-1">
                                 <strong>True:</strong> Cache prompts.

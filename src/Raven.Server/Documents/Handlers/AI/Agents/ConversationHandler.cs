@@ -435,6 +435,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         return _client = ChatCompletionClient.CreateChatCompletionClient(database.DocumentsStorage.ContextPool, connection);
     }
 
+    // An agent conversation sends its prompt again on the next turn.
+    protected internal virtual bool MayRepeatPrompt(List<BlittableJsonReaderObject> tools) => true;
+
     internal List<AiToolDescriptor> BuildToolDescriptors(JsonOperationContext context, AiAgentConfiguration configuration)
     {
         // TryGetUserTools recognises the call through the configuration. Added once: this runs for the turn and again for the summary.

@@ -172,9 +172,11 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-        [InlineData(null, true)]
-        [InlineData(false, false)]
-        public async Task GenAi_FollowsThePromptCacheSetting(bool? enablePromptCache, bool cached)
+        [InlineData(null, false, false)]
+        [InlineData(null, true, true)]
+        [InlineData(true, false, true)]
+        [InlineData(false, true, false)]
+        public async Task GenAi_PromptCaching_ByDefaultOnlyForTasksWithQueries_UnlessSet(bool? enablePromptCache, bool withQuery, bool cached)
         {
             using var store = GetDocumentStore();
             var database = await GetDatabase(store.Database);
@@ -192,7 +194,10 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 Prompt = "Summarize the text.",
                 SampleObject = "{\"Answer\":\"summary\"}",
                 GenAiTransformation = new GenAiTransformation { Script = "ai.genContext({Text: this.Text});" },
-                UpdateScript = "this.Answer = $output.Answer;"
+                UpdateScript = "this.Answer = $output.Answer;",
+                Queries = withQuery
+                    ? [new AiAgentToolQuery { Name = "posts-by-text", Description = "Find posts by text", Query = "from Posts where Text = $text", ParametersSampleObject = "{\"text\":\"some text\"}" }]
+                    : []
             }));
 
             GenAiTask genAi = null;
