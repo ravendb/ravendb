@@ -91,6 +91,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
     {
         try
         {
+            await _bot.LoginAsync(_cts.Token);
             await SessionLoopAsync();
         }
         catch (OperationCanceledException) when (_cts.IsCancellationRequested)

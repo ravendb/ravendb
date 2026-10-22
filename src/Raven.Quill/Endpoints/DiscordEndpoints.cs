@@ -26,7 +26,7 @@ public static class DiscordEndpoints
     private static async Task<IResult> GetHealthAsync(
         string slug,
         IDocumentStore store,
-        IDiscordClient discordClient,
+        DiscordSdk discord,
         ChannelManager channelManager,
         CancellationToken ct)
     {
@@ -46,7 +46,7 @@ public static class DiscordEndpoints
         await Task.WhenAll(discordChannels.Select(async (channel, i) =>
         {
             var (identity, error, discordResponded) =
-                await discordClient.GetBotIdentityAsync(channel.Discord!.BotToken, ct);
+                await discord.GetBotIdentityAsync(channel.Discord!.BotToken, ct);
             checks[i] = (identity is not null ? true : discordResponded ? false : null, identity is null ? error : null);
         }));
 
