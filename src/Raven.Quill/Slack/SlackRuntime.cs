@@ -80,6 +80,8 @@ internal sealed class SlackRuntime : IChannelRuntime, SlackSdk.ISocketObserver
         return runtime;
     }
 
+    public bool IsStopping => _stop.IsValueCreated;
+
     public Task StopAsync() => _stop.Value;
 
     private async Task StopCoreAsync()

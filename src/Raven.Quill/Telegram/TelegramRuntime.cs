@@ -153,6 +153,8 @@ internal sealed class TelegramRuntime : IChannelRuntime
         }
     }
 
+    public bool IsStopping => _stop.IsValueCreated;
+
     public Task StopAsync() => _stop.Value;
 
     private async Task StopCoreAsync()
