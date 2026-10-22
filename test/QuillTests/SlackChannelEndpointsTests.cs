@@ -347,6 +347,11 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
             new UpdateChannelRequest(null, null, null, Slack: new(AppToken: "xoxb-wrong-kind"))));
         Assert.Contains("must be the app-level token (xapp-)", badAppToken.Body);
 
+        var legacySecret = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync(created.ChannelId,
+            new UpdateChannelRequest(null, null, null, Slack: new(SigningSecret: "legacy-signing-secret"))));
+        Assert.Equal(HttpStatusCode.BadRequest, legacySecret.StatusCode);
+        Assert.Contains("slack.signingSecret is no longer used", legacySecret.Body);
+
         var revokedAppToken = "xapp-1-A0MOCK-" + Guid.NewGuid().ToString("N");
         var rejectedAppToken = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync(created.ChannelId,
             new UpdateChannelRequest(null, null, null, Slack: new(AppToken: revokedAppToken))));

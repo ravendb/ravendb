@@ -748,6 +748,10 @@ public static class ChannelsEndpoints
         if (body.AllowedOrigins is { Length: > 0 })
             return Results.BadRequest(new ApiErrorResponse("allowedOrigins does not apply to Slack channels"));
 
+        if (body.Slack?.SigningSecret is not null)
+            return Results.BadRequest(new ApiErrorResponse(
+                "slack.signingSecret is no longer used; Socket Mode channels take slack.appToken instead"));
+
         if (body.DisplayName is not null)
         {
             if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
