@@ -628,6 +628,7 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
         await Slack.CloseCurrentAsync();
 
         await Slack.WaitUntilAsync(async () => (await HealthRowAsync(app, channel)).SocketConnected == false, "health to notice the drop");
+        await Slack.WaitUntilAsync(async () => (await HealthRowAsync(app, channel)).LastSocketError is not null, "health to record the failed reconnect attempts");
 
         Slack.SocketOpenError = null;
         await Slack.WaitUntilAsync(() => Slack.Connects > connectsBefore, "the reconnect");

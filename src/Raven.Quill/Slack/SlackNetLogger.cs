@@ -10,6 +10,12 @@ internal sealed class SlackNetLogger(SlackRuntime runtime, string shortChannelId
 
     public void Log(ILogEvent logEvent)
     {
+        if (IsReconnectRetry(logEvent))
+        {
+            runtime.OnReconnectRetryFailed(logEvent.Exception!);
+            return;
+        }
+
         if (logEvent.Category != LogCategory.Error)
             return;
 
@@ -25,8 +31,16 @@ internal sealed class SlackNetLogger(SlackRuntime runtime, string shortChannelId
             : $"SlackNet error for channel {shortChannelId}: {message}");
     }
 
+    private static bool IsReconnectRetry(ILogEvent logEvent) =>
+        logEvent.Exception is not null &&
+        IsFromReconnectingWebSocket(logEvent) &&
+        logEvent.MessageTemplate.Contains("retrying in", StringComparison.Ordinal);
+
     private static bool IsReconnectGiveUp(ILogEvent logEvent) =>
         logEvent.Exception is SlackException or TaskCanceledException &&
+        IsFromReconnectingWebSocket(logEvent);
+
+    private static bool IsFromReconnectingWebSocket(ILogEvent logEvent) =>
         logEvent.Properties.TryGetValue("Source", out var source) &&
         source is ReconnectingWebSocketSource;
 }

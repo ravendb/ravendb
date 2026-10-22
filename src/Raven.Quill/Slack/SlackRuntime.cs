@@ -123,6 +123,17 @@ internal sealed class SlackRuntime : IChannelRuntime, SlackSdk.ISocketObserver
         }
     }
 
+    internal void OnReconnectRetryFailed(Exception e)
+    {
+        if (_cts.IsCancellationRequested || Exited)
+            return;
+
+        var reason = SlackApiErrors.Describe(e);
+        Health.MarkDisconnected(reason);
+        if (_logger.IsWarnEnabled)
+            _logger.Warn($"Slack socket for channel {_shortChannelId} failed to reconnect: {reason}");
+    }
+
     // link_disabled is deliberately unhandled
     internal void OnReconnectGiveUp(Exception e)
     {
