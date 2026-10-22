@@ -288,6 +288,41 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task An_app_level_token_serves_one_channel_at_a_time()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+        var sharedAppToken = NewAppToken();
+        var firstBot = NewBotToken();
+        var secondBot = NewBotToken();
+        Slack.AddBot(firstBot, NewTeamId(), "Acme", NewBotUserId());
+        Slack.AddBot(secondBot, NewTeamId(), "Globex", NewBotUserId());
+
+        var first = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
+            ChannelType.Slack, agentId, null, DisplayName: "Acme bot", Slack: new(firstBot, sharedAppToken)));
+
+        var duplicate = await Assert.ThrowsAsync<QuillHttpException>(() => app.ProvisionChannelAsync(
+            new ProvisionChannelRequest(ChannelType.Slack, agentId, null, DisplayName: "Globex bot", Slack: new(secondBot, sharedAppToken))));
+        Assert.Equal(HttpStatusCode.BadRequest, duplicate.StatusCode);
+        Assert.Contains("app-level token is already used", duplicate.Body);
+
+        var second = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
+            ChannelType.Slack, agentId, null, DisplayName: "Globex bot", Slack: new(secondBot, NewAppToken())));
+
+        var rotatedOntoUsed = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync(second.ChannelId,
+            new UpdateChannelRequest(null, null, null, Slack: new(AppToken: sharedAppToken))));
+        Assert.Contains("app-level token is already used", rotatedOntoUsed.Body);
+
+        await app.DeleteChannelAsync(first.ChannelId);
+
+        await app.UpdateChannelAsync(second.ChannelId, new UpdateChannelRequest(null, null, null, Slack: new(AppToken: sharedAppToken)));
+
+        using var configSession = Host.Config.OpenAsyncSession();
+        var reservation = await configSession.LoadAsync<SlackAppTokenReservation>(SlackAppTokenReservation.IdFor(sharedAppToken));
+        Assert.Equal(Channel.IdPrefix + second.ChannelId, reservation.ChannelId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Provision_reclaims_an_orphaned_bot_reservation()
     {
         await using var app = await NewAppAsync();
@@ -446,15 +481,19 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
         var botUserId = NewBotUserId();
         Slack.AddBot(botToken, teamId, "Acme", botUserId);
 
+        var appToken = NewAppToken();
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
-            ChannelType.Slack, agentId, null, DisplayName: "Support bot", Slack: new(botToken, NewAppToken())));
+            ChannelType.Slack, agentId, null, DisplayName: "Support bot", Slack: new(botToken, appToken)));
         await Slack.WaitUntilConnectedAsync();
 
         await app.DeleteChannelAsync(created.ChannelId);
         await Slack.WaitUntilAsync(() => Slack.IsConnected == false, "the socket to close");
 
         using (var configSession = Host.Config.OpenAsyncSession())
+        {
             Assert.Null(await configSession.LoadAsync<SlackBotReservation>(SlackBotReservation.IdFor(teamId, botUserId)));
+            Assert.Null(await configSession.LoadAsync<SlackAppTokenReservation>(SlackAppTokenReservation.IdFor(appToken)));
+        }
 
         var recreated = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Slack, agentId, null, DisplayName: "Support bot", Slack: new(botToken, NewAppToken())));
