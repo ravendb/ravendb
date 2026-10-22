@@ -182,15 +182,26 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
         return GenerateBucketAndEtagSlice(tx, keyPtr, sizeOfDocId, etag, out slice);
     }
 
+    internal static int GetBucketFor(Transaction tx, ReadOnlySpan<byte> lowerId)
+    {
+        if (tx.LowLevelTransaction.Environment.Options is not IShardedStorageEnvironmentOptions sharded)
+            throw new InvalidOperationException(
+                "This environment was not opened for a shard, so a table in it that is indexed by bucket cannot be modified");
+
+        var configuration = sharded.ShardingConfiguration;
+
+        if (configuration == null)
+            throw new InvalidOperationException(
+                "This shard has no sharding configuration yet, so a bucket cannot be computed without ignoring its prefixed settings");
+
+        return ShardHelper.GetBucketFor(configuration, lowerId);
+    }
+
     private static ByteStringContext.Scope GenerateBucketAndEtagSlice(Transaction tx, byte* idPtr, int idSize, long etag, out Slice slice)
     {
         var scope = tx.Allocator.Allocate(sizeof(long) + sizeof(int), out var buffer);
 
-        var span = new ReadOnlySpan<byte>(idPtr, idSize);
-        
-        var docsCtx = tx.Owner as DocumentsOperationContext;
-        var database = ShardedDocumentDatabase.CastToShardedDocumentDatabase(docsCtx?.DocumentDatabase);
-        var bucket = ShardHelper.GetBucketFor(database?.ShardingConfiguration, span);
+        var bucket = GetBucketFor(tx, new ReadOnlySpan<byte>(idPtr, idSize));
 
         *(int*)buffer.Ptr = Bits.SwapBytes(bucket);
         *(long*)(buffer.Ptr + sizeof(int)) = etag;
