@@ -35,7 +35,10 @@ public abstract class AbstractExecutor : IDisposable
     {
         // the event handler holds a strong reference to this object, so it will not be collected by the gc
         ServerStore.Server.ServerCertificateChanged -= OnCertificateChange;
+        ForgetAboutExecutors();
     }
+
+    protected abstract void ForgetAboutExecutors();
 
     public abstract RequestExecutor GetRequestExecutorAt(int position);
 

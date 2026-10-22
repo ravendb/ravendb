@@ -358,6 +358,8 @@ namespace Raven.Client.Http
             _unmanagedBuffersPool.Dispose();
         }
 
+        internal void SuppressUnmanagedBuffersFinalize() => GC.SuppressFinalize(_unmanagedBuffersPool);
+
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
             if (lowMemorySeverity != LowMemorySeverity.ExtremelyLow)

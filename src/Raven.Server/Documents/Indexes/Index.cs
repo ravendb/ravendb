@@ -3463,6 +3463,7 @@ namespace Raven.Server.Documents.Indexes
                                 Reference<long> totalResults = new();
                                 Reference<long> skippedResults = new();
                                 Reference<long> scannedResults = new();
+                                reader.TrackResultsForLogging(totalResults, skippedResults);
                                 IncludeCountersCommand includeCountersCommand = null;
                                 IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
                                 IncludeRevisionsCommand includeRevisionsCommand = new(DocumentDatabase, queryContext.Documents, query.Metadata.RevisionIncludes);
