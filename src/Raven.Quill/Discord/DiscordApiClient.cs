@@ -24,7 +24,7 @@ internal sealed class DiscordApiClient(DiscordSdk sdk) : IDiscordClient, IAsyncD
         try
         {
             await using var client = sdk.NewRestClient();
-            await client.LoginAsync(TokenType.Bot, botToken, validateToken: false).WaitAsync(ct);
+            await client.LoginAsync(TokenType.Bot, botToken, validateToken: false).WaitAsync(sdk.RequestTimeout, ct);
 
             var user = client.CurrentUser;
             if (user is null || string.IsNullOrEmpty(user.Username))
@@ -212,7 +212,7 @@ internal sealed class DiscordApiClient(DiscordSdk sdk) : IDiscordClient, IAsyncD
             var client = sdk.NewRestClient();
             try
             {
-                await client.LoginAsync(TokenType.Bot, botToken, validateToken: false);
+                await client.LoginAsync(TokenType.Bot, botToken, validateToken: false).WaitAsync(sdk.RequestTimeout);
             }
             catch (Exception)
             {
