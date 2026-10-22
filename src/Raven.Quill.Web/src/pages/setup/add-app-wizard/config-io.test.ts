@@ -77,6 +77,12 @@ describe("parseConfigTables", () => {
         expect(() => parseConfigTables(duplicated)).toThrowError(/Customers/);
     });
 
+    it("names the table and field a structural error points at", () => {
+        const broken = [{ ...rootTable("Customers"), sourceTableName: undefined }] as unknown as CdcSinkTableConfig[];
+
+        expect(() => parseConfigTables(broken)).toThrowError(/tables\[1\]\.sourceTableName/);
+    });
+
     it("accepts a mapping the wizard would accept", () => {
         expect(parseConfigTables([rootTable("Customers")])).toHaveLength(1);
     });
