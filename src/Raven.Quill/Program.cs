@@ -296,6 +296,10 @@ app.UseExceptionHandler(static errorApp => errorApp.Run(static async ctx =>
         return;
     }
 
+    var logger = ctx.RequestServices.GetRequiredService<QuillLogger<Program.UnhandledRequestError>>();
+    if (error is not null && logger.IsErrorEnabled)
+        logger.Error(error, $"Unhandled error for {ctx.Request.Method} {ctx.Request.Path}");
+
     ctx.Response.StatusCode = StatusCodes.Status500InternalServerError;
     await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse("Unexpected server error. See server logs for details."));
 }));
@@ -387,6 +391,8 @@ static string GetJsonPropertyName(System.Reflection.PropertyInfo property)
 
 public partial class Program
 {
+    internal sealed class UnhandledRequestError;
+
     // RavenLogManager is process-wide, so this runs once per process the way Raven.Server and the test
     // base do it - as a top-level statement it would re-run on every WebApplicationFactory host boot.
     static Program()
