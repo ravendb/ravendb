@@ -16,6 +16,7 @@ public enum ProviderFailureKind
     Refused,
     Timeout,
     Truncated,
+    DatabaseUnavailable,
     Unknown,
 }
 
@@ -37,6 +38,9 @@ public static partial class ProviderFailures
 {
     public static ProviderFailure Classify(Exception exception)
     {
+        if (exception is not AiException && IsNetworkFailure(exception))
+            return DatabaseUnavailable;
+
         var text = exception.ToString();
 
         if (Names(text, nameof(TooManyTokensException)) && text.Contains(TruncationMarker, StringComparison.Ordinal))
@@ -60,6 +64,10 @@ public static partial class ProviderFailures
     }
 
     private const string TruncationMarker = "finish_reason='length'";
+
+    private static bool IsNetworkFailure(Exception exception) =>
+        exception is HttpRequestException or SocketException or IOException or AllTopologyNodesDownException ||
+        exception.InnerException is { } inner && IsNetworkFailure(inner);
 
     private static bool Names(string text, params string[] typeNames) =>
         typeNames.Any(name => text.Contains($".{name}:", StringComparison.Ordinal));
@@ -131,6 +139,12 @@ public static partial class ProviderFailures
         Retryable: false,
         "The assistant's answer was too long to complete. Please ask a narrower question.",
         "the model hit its output token limit before finishing the answer");
+
+    private static readonly ProviderFailure DatabaseUnavailable = new(
+        ProviderFailureKind.DatabaseUnavailable,
+        Retryable: true,
+        "The assistant is temporarily unavailable. Please try again in a moment.",
+        "the RavenDB server is unreachable");
 
     private static readonly ProviderFailure Unknown = new(
         ProviderFailureKind.Unknown,

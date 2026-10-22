@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using FastTests;
 using Raven.Client.Exceptions;
 using Raven.Quill.Agents;
@@ -38,6 +39,18 @@ public class ProviderFailureClassificationTests(ITestOutputHelper output) : NoDi
     {
         Assert.Equal(ProviderFailureKind.Timeout, ProviderFailures.Classify(new TimeoutException("slow")).Kind);
         Assert.Equal(ProviderFailureKind.Protocol, ProviderFailures.Classify(new EmptyAnswerException()).Kind);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void A_network_failure_outside_the_provider_call_blames_the_database_and_stays_retryable()
+    {
+        var direct = ProviderFailures.Classify(new HttpRequestException("down"));
+        var wrapped = ProviderFailures.Classify(new InvalidOperationException("load failed", new SocketException()));
+
+        Assert.Equal(ProviderFailureKind.DatabaseUnavailable, direct.Kind);
+        Assert.True(direct.Retryable);
+        Assert.Equal(ProviderFailureKind.DatabaseUnavailable, wrapped.Kind);
+        Assert.Equal(ProviderFailureKind.Unavailable, Classify("System.Net.Http.HttpRequestException: Connection refused").Kind);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
