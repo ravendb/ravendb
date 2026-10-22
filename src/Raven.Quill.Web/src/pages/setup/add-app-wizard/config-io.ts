@@ -107,6 +107,7 @@ export function parseConfigTables(tables: CdcSinkTableConfig[]) {
             firstIssueMessage(
                 result.error,
                 "The configuration's table mapping is invalid or was exported from an incompatible version.",
+                "tables",
             ),
         );
     }
@@ -114,8 +115,22 @@ export function parseConfigTables(tables: CdcSinkTableConfig[]) {
     return result.data;
 }
 
-function firstIssueMessage(error: z.ZodError, fallback: string) {
-    return error.issues[0]?.message || fallback;
+const ZOD_DEFAULT_MESSAGE = /^Invalid input: /;
+
+function firstIssueMessage(error: z.ZodError, fallback: string, root = "") {
+    const issue = error.issues[0];
+    if (!issue?.message) return fallback;
+    if (!ZOD_DEFAULT_MESSAGE.test(issue.message)) return issue.message;
+
+    const location = describeIssuePath(issue.path, root);
+    return location ? `${location}: ${issue.message}` : issue.message;
+}
+
+function describeIssuePath(path: PropertyKey[], root: string) {
+    return path.reduce<string>((described, segment) => {
+        if (typeof segment === "number") return `${described}[${segment + 1}]`;
+        return described ? `${described}.${String(segment)}` : String(segment);
+    }, root);
 }
 
 type AnyTableConfig = {
