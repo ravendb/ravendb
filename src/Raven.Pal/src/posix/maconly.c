@@ -144,9 +144,6 @@ int io_ring_setup_successful(void)
 EXPORT
 rvn_writer rvn_get_writer(void *handle)
 {
-    struct handle *handle_ptr = handle;
-    if (handle_ptr->write_address)
-        return rvn_write_mmap;
     return rvn_write_file_io;
 }
 

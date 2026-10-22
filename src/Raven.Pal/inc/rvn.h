@@ -48,8 +48,6 @@ enum
 
 #define VORON_PAGE_SIZE (8192)
 
-#define NUMBER_OF_PAGES_IN_ALLOCATION_GRANULARITY (ALLOCATION_GRANULARITY / VORON_PAGE_SIZE)
-
 struct SYSTEM_INFORMATION
 {
     int32_t page_size;
@@ -94,7 +92,6 @@ typedef enum rvn_write_mode
     rvn_write_mode_vectored_file_io,
     rvn_write_mode_file_io,
     rvn_write_mode_io_ring,
-    rvn_write_mode_mmap,
 } rvn_write_mode;
 
 typedef enum rvn_configuration_version
