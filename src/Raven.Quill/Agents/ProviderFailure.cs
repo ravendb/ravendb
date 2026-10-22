@@ -15,6 +15,7 @@ public enum ProviderFailureKind
     Protocol,
     Refused,
     Timeout,
+    Truncated,
     Unknown,
 }
 
@@ -38,6 +39,8 @@ public static partial class ProviderFailures
     {
         var text = exception.ToString();
 
+        if (Names(text, nameof(TooManyTokensException)) && text.Contains(TruncationMarker, StringComparison.Ordinal))
+            return Truncated;
         if (Names(text, nameof(RateLimitException), nameof(TooManyRequestsException), nameof(TooManyTokensException)))
             return RateLimited;
         if (Names(text, nameof(InsufficientQuotaException)))
@@ -55,6 +58,8 @@ public static partial class ProviderFailures
 
         return Unknown;
     }
+
+    private const string TruncationMarker = "finish_reason='length'";
 
     private static bool Names(string text, params string[] typeNames) =>
         typeNames.Any(name => text.Contains($".{name}:", StringComparison.Ordinal));
@@ -120,6 +125,12 @@ public static partial class ProviderFailures
         Retryable: true,
         "The assistant took too long to answer. Please try again.",
         "the AI provider did not answer within the time limit");
+
+    private static readonly ProviderFailure Truncated = new(
+        ProviderFailureKind.Truncated,
+        Retryable: false,
+        "The assistant's answer was too long to complete. Please ask a narrower question.",
+        "the model hit its output token limit before finishing the answer");
 
     private static readonly ProviderFailure Unknown = new(
         ProviderFailureKind.Unknown,
