@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 using Polly;
 using Raven.Quill.Agents;
 using Raven.Quill.AiHelper;
+using Raven.Quill.AiHelper.Migration;
 using Raven.Quill.Auth;
 using Raven.Quill.Embed;
 using Raven.Quill.Endpoints;
@@ -63,21 +64,40 @@ builder.Services.AddOpenApi(options =>
         if (schema.Properties is null || schema.Properties.Count == 0)
             return Task.CompletedTask;
 
-        var writableProperties = context.JsonTypeInfo.Type
+        var getterOnlyProperties = context.JsonTypeInfo.Type
             .GetProperties(BindingFlags.Instance | BindingFlags.Public)
-            .Where(static property => property.GetMethod is { IsPublic: true } && property.SetMethod is { IsPublic: true })
-            .Select(GetJsonPropertyName)
-            .ToHashSet(StringComparer.Ordinal);
-
-        var getterOnlyProperties = schema.Properties.Keys
-            .Where(propertyName => writableProperties.Contains(propertyName) == false)
-            .ToArray();
+            .Where(static property => property.GetMethod is { IsPublic: true } && property.SetMethod is not { IsPublic: true })
+            .Select(GetJsonPropertyName);
 
         foreach (var propertyName in getterOnlyProperties)
         {
             schema.Properties.Remove(propertyName);
             schema.Required?.Remove(propertyName);
         }
+
+        return Task.CompletedTask;
+    });
+
+    // A derived type's schema lists the discriminator the serializer writes, but as optional. Every
+    // derived type carries it, and a generated client tells the derived types apart by it.
+    options.AddSchemaTransformer((schema, context, _) =>
+    {
+        var type = context.JsonTypeInfo.Type;
+        var polymorphicBase = type.BaseType;
+        while (polymorphicBase is not null && polymorphicBase.GetCustomAttribute<JsonPolymorphicAttribute>() is null)
+            polymorphicBase = polymorphicBase.BaseType;
+
+        var derivedType = polymorphicBase?
+            .GetCustomAttributes<JsonDerivedTypeAttribute>()
+            .FirstOrDefault(attribute => attribute.DerivedType == type);
+
+        if (derivedType?.TypeDiscriminator is null)
+            return Task.CompletedTask;
+
+        var propertyName = polymorphicBase!.GetCustomAttribute<JsonPolymorphicAttribute>()?.TypeDiscriminatorPropertyName ?? "$type";
+
+        schema.Required ??= new HashSet<string>();
+        schema.Required.Add(propertyName);
 
         return Task.CompletedTask;
     });
@@ -227,24 +247,13 @@ builder.Services.AddHttpClient<IDiscordClient, DiscordApiClient>(static (sp, htt
     http.Timeout = opts.RequestTimeout;
 });
 
-builder.Services.AddHttpClient<IAiHelperClient, AiHelperInternalClient>(static (sp, http) =>
-    {
-        var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value;
-        var store = sp.GetRequiredService<IDocumentStore>();
-        http.BaseAddress = new Uri(string.IsNullOrEmpty(opts.AiApiUrl) ? store.Urls[0] : opts.AiApiUrl);
-        http.Timeout = opts.AiAssistTimeout;
-    })
-    .ConfigurePrimaryHttpMessageHandler(static sp =>
-    {
-        var store = sp.GetRequiredService<IDocumentStore>();
-        var handler = new HttpClientHandler
-        {
-            AllowAutoRedirect = false
-        };
-        if (store.Certificate is not null)
-            handler.ClientCertificates.Add(store.Certificate);
-        return handler;
-    });
+builder.Services.AddHttpClient<IAiHelperClient, AiHelperInternalClient>(ConfigureRavenServerClient)
+    .ConfigurePrimaryHttpMessageHandler(CreateRavenServerHandler);
+
+builder.Services.AddSingleton<MigrationTurns>();
+
+builder.Services.AddHttpClient<MigrationService>(ConfigureRavenServerClient)
+    .ConfigurePrimaryHttpMessageHandler(CreateRavenServerHandler);
 
 builder.Services.AddSingleton<ILicenseClient, LicenseHttpClient>();
 
@@ -434,6 +443,26 @@ static TimeSpan ParsePositiveSeconds(string name, string value)
     if (int.TryParse(value, out var seconds) == false || seconds <= 0)
         throw new InvalidOperationException($"{name} must be a positive number of seconds, got '{value}'");
     return TimeSpan.FromSeconds(seconds);
+}
+
+static void ConfigureRavenServerClient(IServiceProvider sp, HttpClient http)
+{
+    var opts = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value;
+    var store = sp.GetRequiredService<IDocumentStore>();
+    http.BaseAddress = new Uri(string.IsNullOrEmpty(opts.AiApiUrl) ? store.Urls[0] : opts.AiApiUrl);
+    http.Timeout = opts.AiAssistTimeout;
+}
+
+static HttpMessageHandler CreateRavenServerHandler(IServiceProvider sp)
+{
+    var store = sp.GetRequiredService<IDocumentStore>();
+    var handler = new HttpClientHandler
+    {
+        AllowAutoRedirect = false
+    };
+    if (store.Certificate is not null)
+        handler.ClientCertificates.Add(store.Certificate);
+    return handler;
 }
 
 static string GetJsonPropertyName(System.Reflection.PropertyInfo property)

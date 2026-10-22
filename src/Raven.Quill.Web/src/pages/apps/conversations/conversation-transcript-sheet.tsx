@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { ConversationParams } from "@/pages/apps/conversations/conversation-params";
 import { ConversationSystemPrompt } from "@/pages/apps/conversations/conversation-system-prompt";
 import { ConversationToolCall } from "@/pages/apps/conversations/conversation-tool-call";
-import { TranscriptDisclosureState } from "@/pages/apps/conversations/transcript-disclosure";
+import { TranscriptDisclosureState } from "@/components/chat/transcript-disclosure";
 
 type ConversationTranscriptSheetProps = {
     slug: string;

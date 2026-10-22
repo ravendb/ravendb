@@ -42,13 +42,9 @@ public sealed class MockQuillServices : IAsyncDisposable
 
     // ---- /assistant/* — the bundled RavenDB's AI proxy hop, as Quill sees it ----
 
-    public string? LastCdcRequestBody { get; private set; }
-
     public string? LastAgentRequestBody { get; private set; }
 
     public string? LastChatbotRequestBody { get; private set; }
-
-    public (int Status, string Body) CdcResponse { get; set; } = (200, "{}");
 
     public (int Status, string Body) AgentResponse { get; set; } = (200, "{}");
 
@@ -189,10 +185,8 @@ public sealed class MockQuillServices : IAsyncDisposable
     /// Only the collection-shared instances need this; a per-test instance is disposed instead.
     public void Reset()
     {
-        LastCdcRequestBody = null;
         LastAgentRequestBody = null;
         LastChatbotRequestBody = null;
-        CdcResponse = (200, "{}");
         AgentResponse = (200, "{}");
         ChatbotChunks = [];
         ChatbotResult = ChatbotResultBody();
@@ -240,11 +234,6 @@ public sealed class MockQuillServices : IAsyncDisposable
 
             switch (operationType)
             {
-                case "CdcConfigSetup":
-                    LastCdcRequestBody = body;
-                    if (RequireConsentForAssist && _consentGiven == false)
-                        return Results.Content("{\"Status\":\"ConsentRequired\"}", "application/json", statusCode: 401);
-                    return Results.Content(CdcResponse.Body, "application/json", statusCode: CdcResponse.Status);
                 case "CdcBasedAgentConfigSetup":
                     LastAgentRequestBody = body;
                     if (RequireConsentForAssist && _consentGiven == false)

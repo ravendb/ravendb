@@ -1,5 +1,6 @@
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.CdcSink.Schema;
+using Raven.Quill.AiHelper.Migration.Planning;
 
 namespace Raven.Quill.Wizard;
 
@@ -19,4 +20,6 @@ internal sealed class WizardState
 
     public CdcSinkConfiguration? LastMapConfiguration { get; set; }
     public DateTime? LastMapAt { get; set; }
+
+    public MigrationPlan? MigrationPlan { get; set; }
 }

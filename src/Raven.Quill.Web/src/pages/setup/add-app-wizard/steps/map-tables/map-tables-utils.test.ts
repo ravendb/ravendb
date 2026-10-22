@@ -8,6 +8,8 @@ import {
     collectMappedSourceTables,
     createEmptyEmbeddedTable,
     createEmptyRootTable,
+    addUnmappedSelectedTables,
+    haveSameTables,
     makeUniquePropertyName,
     propertyNameFromJoinColumn,
     scaffoldRootTable,
@@ -218,6 +220,28 @@ describe("collectMappedSourceTables", () => {
     });
 });
 
+describe("addUnmappedSelectedTables", () => {
+    const selected = (...names: string[]) =>
+        names.map((name) => ({ sourceTableSchema: "public", sourceTableName: name }));
+
+    it("keeps the whole mapping, also outside the selection, and scaffolds what nothing maps yet", () => {
+        const tables = [
+            rootTable("Customer", { collectionName: "Clients", embeddedTables: [embeddedTable("Address")] }),
+            rootTable("Order", { collectionName: "Orders" }),
+            rootTable("", { collectionName: "Draft" }),
+        ];
+
+        const completed = addUnmappedSelectedTables(tables, selected("Customer", "Address", "Invoice"), null);
+
+        expect(completed.map((table) => [table.sourceTableName, table.collectionName])).toEqual([
+            ["Customer", "Clients"],
+            ["Order", "Orders"],
+            ["", "Draft"],
+            ["Invoice", "Invoice"],
+        ]);
+    });
+});
+
 describe("collectMappedSourceTableKeys", () => {
     it("keeps disabled roots, so the unmapped alert does not offer to map them again", () => {
         const tables = [rootTable("Customer", { disabled: true, embeddedTables: [embeddedTable("Address")] })];
@@ -231,5 +255,31 @@ describe("toTakenPropertyNames", () => {
         expect(toTakenPropertyNames(["Language", " Currency ", "", null, undefined])).toEqual(
             new Set(["language", "currency"]),
         );
+    });
+});
+
+describe("haveSameTables", () => {
+    it("ignores order and name case", () => {
+        expect(
+            haveSameTables(
+                [
+                    { sourceTableSchema: "public", sourceTableName: "Orders" },
+                    { sourceTableSchema: "public", sourceTableName: "lines" },
+                ],
+                [
+                    { sourceTableSchema: "PUBLIC", sourceTableName: "LINES" },
+                    { sourceTableSchema: "public", sourceTableName: "orders" },
+                ],
+            ),
+        ).toBe(true);
+    });
+
+    it("tells a different length or a swapped table apart", () => {
+        const orders = { sourceTableSchema: "public", sourceTableName: "orders" };
+
+        expect(haveSameTables([orders], [orders, { sourceTableSchema: "public", sourceTableName: "lines" }])).toBe(
+            false,
+        );
+        expect(haveSameTables([orders], [{ sourceTableSchema: "sales", sourceTableName: "orders" }])).toBe(false);
     });
 });

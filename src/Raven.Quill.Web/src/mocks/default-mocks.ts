@@ -1,4 +1,5 @@
 import type { RequestHandler } from "msw";
+import type { AiHelperStatus, DiscoverResponse } from "@/api/generated/server-api";
 import { agentsMocks } from "./agents-mocks";
 import { aiConnectionStringsMocks } from "./ai-connection-strings-mocks";
 import { aiModelsMocks } from "./ai-models-mocks";
@@ -11,6 +12,7 @@ import { discordMocks } from "./discord-mocks";
 import { dnsMocks } from "./dns-mocks";
 import { embedLinksMocks } from "./embed-links-mocks";
 import { iframeHandlers } from "./iframe-mocks";
+import { migrationMocks } from "./migration-mocks";
 import { settingsMocks } from "./settings-mocks";
 import { setupMocks } from "./setup-mocks";
 import { slackMocks } from "./slack-mocks";
@@ -84,9 +86,12 @@ export const defaultApiMocks = {
         setupMocks.discover(),
         setupMocks.verifyCdc(),
         setupMocks.map(),
-        setupMocks.suggestCdc(),
         setupMocks.testMapping(),
         setupMocks.provision(),
+        migrationMocks.start(),
+        migrationMocks.ask(),
+        migrationMocks.apply(),
+        migrationMocks.edit(),
     ],
 } satisfies Record<string, RequestHandler[]>;
 
@@ -102,4 +107,14 @@ declare module "storybook/internal/csf" {
             handlers: MockHandlers;
         };
     }
+}
+
+// Each override goes first because MSW answers with the first matching handler; the rest of the
+// service keeps its defaults.
+export function discoverHandlers(discovery: DiscoverResponse): MockHandlers {
+    return { setup: [setupMocks.discover(discovery), ...defaultApiMocks.setup] };
+}
+
+export function consentHandlers(status: AiHelperStatus): MockHandlers {
+    return { assistant: [assistantMocks.consent({ status }), ...defaultApiMocks.assistant] };
 }

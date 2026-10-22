@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
     useFormContext,
     useFormState,
@@ -9,13 +9,15 @@ import {
     type UseFormGetValues,
 } from "react-hook-form";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
+import { ConfirmDialog } from "@/components/shadcn/ui/confirm-dialog";
+import { Progress } from "@/components/shadcn/ui/progress";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { useUnsavedChanges } from "@/components/form/unsaved-changes/use-unsaved-changes";
 import { Heading, Text } from "@/components/typography";
 import { WizardErrorAlert } from "@/components/form/wizard/wizard-error-alert";
 import { toError, WizardHandledError } from "@/components/form/wizard/wizard-step-error";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 export type WizardProgress = {
@@ -35,7 +37,27 @@ export type WizardCompletion =
     | { type: "submit"; label?: ReactNode; busyLabel?: ReactNode }
     | { type: "action"; label?: ReactNode; busyLabel?: ReactNode; onComplete: WizardAction };
 
-export type WizardBodyComponentProps<StepId extends string = string> = {
+export type WizardConfirmNext = {
+    isRequired: boolean;
+    title: ReactNode;
+    description?: ReactNode;
+    confirmLabel?: ReactNode;
+    /** Runs only once Next passed its checks and `beforeNext`, right before the wizard moves on. */
+    onConfirm?: () => void;
+};
+
+/** Lets a step move the wizard itself, for actions inside the step that end in another step. */
+export type WizardStepNavigation = {
+    goToPreviousStep: () => void;
+    /**
+     * Moves on once `action` succeeds, for a step that can finish another way than its Next. The action
+     * runs like Next does - busy, guarded against a second click, its failure shown - but in place of the
+     * step's own checks and `beforeNext`.
+     */
+    advanceWith: (action: () => void | Promise<void>) => void;
+};
+
+export type WizardBodyComponentProps<StepId extends string = string> = WizardStepNavigation & {
     currentStepId: StepId;
     isBusy: boolean;
 };
@@ -44,7 +66,7 @@ export type WizardFooterComponentProps = {
     isBusy: boolean;
 };
 
-export type WizardHeaderComponentProps = {
+export type WizardHeaderComponentProps = WizardStepNavigation & {
     isBusy: boolean;
 };
 
@@ -72,9 +94,10 @@ export type WizardStep<StepId extends string, Values extends FieldValues = Field
     validate: WizardValidationTarget<Values>;
     onValidationFailed?: WizardAction;
     beforeNext?: WizardAction;
+    confirmNext?: WizardConfirmNext;
     isNextDisabled?: boolean;
-    /** Shown as a tooltip on the disabled button. */
-    nextDisabledReason?: ReactNode;
+    /** Shown beside the Next button and announced with it: what Next will do, or why it is held back. */
+    nextNote?: ReactNode;
     nextLabel?: ReactNode;
     canCancel?: boolean;
     canGoBack?: boolean;
@@ -120,6 +143,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
     const [isAdvancing, setIsAdvancing] = useState(false);
     const [progressLabel, setProgressLabel] = useState<string | null>(null);
     const [advanceError, setAdvanceError] = useState<Error | null>(null);
+    const [isConfirmingNext, setIsConfirmingNext] = useState(false);
     const isAdvancingRef = useRef(false);
 
     // A failure describes the values it ran against, so any edit makes it stale. Steps that edit values
@@ -144,7 +168,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
     };
 
     const goPrev = () => {
-        if (currentIndex === 0) {
+        if (currentIndex === 0 || isAdvancingRef.current) {
             return;
         }
 
@@ -193,20 +217,43 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
         }
     };
 
-    const handleNext = async () => {
+    const advanceWith = (action: () => void | Promise<void>) => {
         if (currentIndex >= flow.length - 1) {
             return;
         }
 
+        void runAction(async () => {
+            await action();
+            setActiveStepIndex(currentIndex + 1);
+        });
+    };
+
+    const advance = async (onPassed?: () => void) => {
         await runAction(async (progress) => {
             if (!(await validateCurrentStep(progress))) {
                 return;
             }
 
             await currentStep.beforeNext?.(progress);
+            onPassed?.();
             setActiveStepIndex(currentIndex + 1);
         });
     };
+
+    const handleNext = async () => {
+        if (currentIndex >= flow.length - 1) {
+            return;
+        }
+
+        if (currentStep.confirmNext?.isRequired) {
+            setIsConfirmingNext(true);
+            return;
+        }
+
+        await advance();
+    };
+
+    const confirmNext = () => void advance(currentStep.confirmNext?.onConfirm);
 
     const handleComplete = async () => {
         if (completion.type !== "action") {
@@ -227,35 +274,47 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
         <div className="flex h-full min-h-full text-foreground">
             {/* grid-cols-1 matters: an implicit auto column would size to its content's max-content
                 width, letting a wide table prop the layout open instead of shrinking with the window. */}
-            <div className="grid min-h-full w-full grid-cols-1 lg:grid-cols-[minmax(0,1fr)_13.75rem]">
+            <div className="grid min-h-full w-full grid-cols-1 2xl:grid-cols-[minmax(0,1fr)_13.75rem]">
                 <div className="flex min-h-0 flex-col">
-                    <div className="border-b px-5 py-3 lg:hidden">
-                        <p className="mt-1 text-sm font-semibold">{currentStep.title}</p>
-                    </div>
-
-                    <main className="min-h-0 flex-1 overflow-auto px-5 py-12 sm:px-8 lg:px-24 lg:py-20">
+                    <main className="min-h-0 flex-1 overflow-auto p-6 2xl:p-12">
                         <section
                             key={currentStepIdInFlow}
                             className={cn(
                                 "mx-auto w-full max-w-7xl",
-                                currentStep.isFullHeight ? "flex h-full flex-col gap-5" : "grid gap-5",
+                                currentStep.isFullHeight
+                                    ? "flex h-full flex-col gap-4 2xl:gap-5"
+                                    : "grid gap-4 2xl:gap-5",
                             )}
                         >
-                            <div className="flex flex-wrap items-start justify-between gap-3">
+                            <header className="flex flex-wrap items-start justify-between gap-3">
                                 <div>
-                                    <Heading as="h1" variant="page">
-                                        {currentStep.title}
-                                    </Heading>
+                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                        <Heading as="h1" variant="page">
+                                            {currentStep.title}
+                                        </Heading>
+                                        <WizardStepCount currentIndex={currentIndex} stepCount={flow.length} />
+                                    </div>
                                     {currentStep.description && (
                                         <Text variant="muted" className="mt-3">
                                             {currentStep.description}
                                         </Text>
                                     )}
                                 </div>
-                                {currentStep.headerAction && <currentStep.headerAction isBusy={isBusy} />}
-                            </div>
+                                {currentStep.headerAction && (
+                                    <currentStep.headerAction
+                                        isBusy={isBusy}
+                                        goToPreviousStep={goPrev}
+                                        advanceWith={advanceWith}
+                                    />
+                                )}
+                            </header>
 
-                            <currentStep.bodyComponent currentStepId={currentStepIdInFlow} isBusy={isBusy} />
+                            <currentStep.bodyComponent
+                                currentStepId={currentStepIdInFlow}
+                                isBusy={isBusy}
+                                goToPreviousStep={goPrev}
+                                advanceWith={advanceWith}
+                            />
                             {advanceError && <WizardErrorAlert error={advanceError} />}
                         </section>
                     </main>
@@ -269,7 +328,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                         isBusy={isBusy}
                         progressLabel={progressLabel}
                         isNextDisabled={currentStep.isNextDisabled === true}
-                        nextDisabledReason={currentStep.nextDisabledReason}
+                        nextNote={currentStep.nextNote}
                         currentStepId={currentStepIdInFlow}
                         nextLabel={currentStep.nextLabel}
                         canCancel={currentStep.canCancel !== false}
@@ -277,9 +336,20 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                         completion={completion}
                         footerComponent={currentStep.footerComponent}
                     />
+                    {currentStep.confirmNext && (
+                        <ConfirmDialog
+                            variant="warning"
+                            open={isConfirmingNext}
+                            onOpenChange={setIsConfirmingNext}
+                            title={currentStep.confirmNext.title}
+                            description={currentStep.confirmNext.description}
+                            confirmLabel={currentStep.confirmNext.confirmLabel}
+                            onConfirm={confirmNext}
+                        />
+                    )}
                 </div>
 
-                <aside className="hidden border-l bg-sidebar/30 px-4 py-5 lg:block" aria-label="Setup steps">
+                <aside className="hidden border-l bg-sidebar/30 px-4 py-5 2xl:block" aria-label="Setup steps">
                     <WizardStepper
                         flow={flow}
                         steps={steps}
@@ -290,6 +360,18 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                 </aside>
             </div>
         </div>
+    );
+}
+
+/** Stands in for the stepper on screens too narrow to show it. */
+function WizardStepCount({ currentIndex, stepCount }: { currentIndex: number; stepCount: number }) {
+    const stepNumber = currentIndex + 1;
+
+    return (
+        <Badge variant="outline" className="h-7 gap-3 px-3 2xl:hidden">
+            <Progress value={(stepNumber / stepCount) * 100} className="w-14" aria-hidden="true" />
+            Step {stepNumber}/{stepCount}
+        </Badge>
     );
 }
 
@@ -403,7 +485,7 @@ type WizardFooterProps<StepId extends string> = {
     isBusy: boolean;
     progressLabel: string | null;
     isNextDisabled: boolean;
-    nextDisabledReason?: ReactNode;
+    nextNote?: ReactNode;
     nextLabel?: ReactNode;
     canCancel: boolean;
     canGoBack: boolean;
@@ -421,13 +503,14 @@ function WizardFooter<StepId extends string>({
     isBusy,
     progressLabel,
     isNextDisabled,
-    nextDisabledReason,
+    nextNote,
     nextLabel,
     canCancel,
     canGoBack,
     completion,
     footerComponent: FooterComponent,
 }: WizardFooterProps<StepId>) {
+    const nextNoteId = useId();
     const isLast = stepPosition === "last";
     const isCompletionDisabled = isBusy || isNextDisabled;
 
@@ -436,8 +519,8 @@ function WizardFooter<StepId extends string>({
         progressLabel ?? (isBusy ? busyLabel : null) ?? idleLabel;
 
     return (
-        <div className="border-t px-5 py-3 sm:px-8 lg:px-24">
-            <div className={cn("mx-auto flex w-full max-w-7xl items-center")}>
+        <div className="border-t px-6 py-3 2xl:px-12">
+            <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2">
                 <div className="flex gap-2">
                     {canCancel && (
                         <Button onClick={cancel} variant="outline" size="lg" disabled={isBusy}>
@@ -451,9 +534,14 @@ function WizardFooter<StepId extends string>({
                         </Button>
                     )}
                 </div>
-                <div className="ml-auto flex items-center gap-2" aria-live="polite">
-                    {FooterComponent && <FooterComponent isBusy={isBusy} />}
-                    <BlockedReasonTooltip reason={isNextDisabled && !isBusy ? nextDisabledReason : undefined}>
+                <div className="ml-auto flex flex-wrap items-center justify-end gap-x-4 gap-y-2" aria-live="polite">
+                    {nextNote && (
+                        <Text variant="muted" as="span" id={nextNoteId}>
+                            {nextNote}
+                        </Text>
+                    )}
+                    <div className="flex items-center gap-2">
+                        {FooterComponent && <FooterComponent isBusy={isBusy} />}
                         {isLast && completion.type === "action" ? (
                             <Button
                                 type="button"
@@ -461,6 +549,7 @@ function WizardFooter<StepId extends string>({
                                 size="lg"
                                 disabled={isCompletionDisabled}
                                 key={`${currentStepId}:complete`}
+                                aria-describedby={nextNote ? nextNoteId : undefined}
                             >
                                 {isBusy ? <Spinner /> : <Check aria-hidden="true" />}
                                 <span>{resolveLabel(completion.label ?? "Finish", completion.busyLabel)}</span>
@@ -471,6 +560,7 @@ function WizardFooter<StepId extends string>({
                                 size="lg"
                                 disabled={isCompletionDisabled}
                                 key={`${currentStepId}:submit`}
+                                aria-describedby={nextNote ? nextNoteId : undefined}
                             >
                                 {isBusy ? <Spinner /> : <Check aria-hidden="true" />}
                                 <span>{resolveLabel(completion.label ?? "Submit", completion.busyLabel)}</span>
@@ -481,32 +571,16 @@ function WizardFooter<StepId extends string>({
                                 size="lg"
                                 disabled={isCompletionDisabled}
                                 key={`${currentStepId}:next`}
+                                aria-describedby={nextNote ? nextNoteId : undefined}
                             >
                                 {isBusy && <Spinner />}
                                 <span>{resolveLabel(nextLabel ?? "Next")}</span>
                                 {!isBusy && <ArrowRight aria-hidden="true" />}
                             </Button>
                         )}
-                    </BlockedReasonTooltip>
+                    </div>
                 </div>
             </div>
         </div>
-    );
-}
-
-/** A disabled button swallows pointer events, so the reason it is disabled hangs off a wrapper. */
-function BlockedReasonTooltip({ reason, children }: { reason: ReactNode; children: ReactNode }) {
-    return (
-        // Its own provider: a wizard is mounted on its own in tests and stories, outside the app shell.
-        <TooltipProvider>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    {/* Always wrapping keeps the keyed button from remounting, and focus from dropping
-                        to the document, whenever the reason comes and goes. */}
-                    <span tabIndex={reason ? 0 : undefined}>{children}</span>
-                </TooltipTrigger>
-                {reason && <TooltipContent>{reason}</TooltipContent>}
-            </Tooltip>
-        </TooltipProvider>
     );
 }

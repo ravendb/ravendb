@@ -126,7 +126,10 @@ internal static class QuillRoutes
     public const string SetupVerifyCdc = "/api/setup/verify-cdc";
     public const string SetupProvision = "/api/setup/provision";
     public const string SetupTestMapping = "/api/setup/test-mapping";
-    public const string SuggestCdc = "/api/setup/suggest/cdc";
+    public const string MigrationStart = "/api/setup/migration/start";
+    public const string MigrationAsk = "/api/setup/migration/ask";
+    public const string MigrationApply = "/api/setup/migration/apply";
+    public const string MigrationEdit = "/api/setup/migration/edit";
 
     // global (config-DB fan-out)
     public const string Usage = "/api/usage";

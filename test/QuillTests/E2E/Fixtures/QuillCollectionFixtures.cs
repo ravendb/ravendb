@@ -389,9 +389,6 @@ internal sealed class RecordingAiHelperClient : IAiHelperClient
         return Task.FromResult((Transport, Content));
     }
 
-    public Task<SuggestCdcInternalResult> SuggestCdcAsync(object? schema, object? samples, string prompt, CancellationToken ct) =>
-        throw new NotSupportedException();
-
     public Task<SuggestAiAgentInternalResult> SuggestAiAgentAsync(CdcSinkConfiguration cdcConfig, object? collectionsSample, string mode, string? prompt, CancellationToken ct) =>
         throw new NotSupportedException();
 

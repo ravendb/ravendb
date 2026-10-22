@@ -6,7 +6,7 @@ import type {
     CdcSinkTableConfig,
 } from "@/api/generated/server-api";
 import { type AppFormData, providerSchema } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { resolveConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
+import { type Provider, resolveConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
 import { resolveProviderFromSourceType } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-options";
 import { mapFormTablesToDto } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 
@@ -64,7 +64,7 @@ export function downloadConfig(config: WizardConfig, fileName = "Quill-app-confi
     URL.revokeObjectURL(url);
 }
 
-export async function parseConfigFile(file: File): Promise<WizardConfig> {
+export async function parseConfigFile(file: File): Promise<WizardConfig & { provider: Provider }> {
     let raw: string;
 
     try {

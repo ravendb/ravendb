@@ -28,10 +28,6 @@ function getDefaultValues(): AppFormData {
         verifySchema: {
             tables: [],
         },
-        map: {
-            source: "ai-suggested",
-            aiPrompt: "",
-        },
         mapTables: {
             tables: [],
         },

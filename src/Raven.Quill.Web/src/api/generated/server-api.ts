@@ -913,7 +913,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/setup/suggest/cdc": {
+    "/api/setup/migration/start": {
         parameters: {
             query?: never;
             header?: never;
@@ -922,7 +922,59 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["setup.suggestCdc"];
+        /** @description Opens an interactive planning session over the discovered schema. Streams NDJSON frames: the agent's proposal, then one frame per collection as it is registered or rejected, then its reply. */
+        post: operations["setup.migrationStart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/migration/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description One more turn in an existing planning session. Streams the same NDJSON frames. */
+        post: operations["setup.migrationAsk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/migration/edit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The operator's change to one collection of the plan: a null config deletes it (also one the planner only proposed), a config naming another collection renames it, and a collection the plan does not hold is added. Refused with 409 while a planner turn is running. The planner is told on the next turn. */
+        post: operations["setup.migrationEditCollection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/migration/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Assembles the registered plan into a CDC configuration and hands it to the map step. */
+        post: operations["setup.migrationApply"];
         delete?: never;
         options?: never;
         head?: never;
@@ -982,6 +1034,11 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AbsorbedTable: {
+            table?: null | string;
+            how?: null | string;
+            why?: null | string;
+        };
         ActivityEventDto: {
             id: string;
             appId: string;
@@ -1553,6 +1610,10 @@ export interface components {
             unsupportedReason?: null | string;
             warnings: string[];
         };
+        DroppedTable: {
+            table?: null | string;
+            why?: null | string;
+        };
         EditAgentRequest: {
             configuration: components["schemas"]["AiAgentConfiguration"];
             actionBindings: null | {
@@ -1651,6 +1712,110 @@ export interface components {
             delta: number;
             sparkline: number[];
         };
+        MigrationApplyRequest: {
+            slug: string;
+            conversationId: string;
+            collections?: null | string[];
+        };
+        MigrationApplyResponse: {
+            configuration: null | components["schemas"]["CdcSinkConfiguration"];
+            unmappedTables: string[];
+            errors: string[];
+        };
+        MigrationAskRequest: {
+            slug: string;
+            conversationId: string;
+            prompt?: null | string;
+            selectedAreas?: null | string[];
+            selectedCollections?: null | string[];
+        };
+        MigrationEditCollectionRequest: {
+            slug: string;
+            conversationId: string;
+            collection: string;
+            config?: null | components["schemas"]["CdcSinkTableConfig"];
+        };
+        MigrationEditCollectionResponse: {
+            warnings: string[];
+        };
+        MigrationFrame: components["schemas"]["MigrationFrameProposalFrame"] | components["schemas"]["MigrationFrameCollectionFrame"] | components["schemas"]["MigrationFrameTransientCollectionErrorFrame"] | components["schemas"]["MigrationFrameRejectedCollectionFrame"] | components["schemas"]["MigrationFrameRemovedFrame"] | components["schemas"]["MigrationFrameConventionsFrame"] | components["schemas"]["MigrationFrameNoteFrame"] | components["schemas"]["MigrationFrameReplyFrame"] | components["schemas"]["MigrationFrameDoneFrame"] | components["schemas"]["MigrationFrameErrorFrame"];
+        MigrationFrameCollectionFrame: {
+            /** @enum {string} */
+            type: "collection";
+            status: string;
+            collection: string;
+            /** Format: int32 */
+            version: number;
+            rationale?: null | string;
+            config?: null | components["schemas"]["CdcSinkTableConfig"];
+            warnings: string[];
+        };
+        MigrationFrameConventionsFrame: {
+            /** @enum {string} */
+            type: "conventions";
+            propertyCase: components["schemas"]["PropertyCase"];
+            propertyLanguage?: null | string;
+            notes?: null | string;
+            mustReEmit: string[];
+        };
+        MigrationFrameDoneFrame: {
+            /** @enum {string} */
+            type: "done";
+            conversationId: string;
+        };
+        MigrationFrameErrorFrame: {
+            /** @enum {string} */
+            type: "error";
+            message: string;
+        };
+        MigrationFrameNoteFrame: {
+            /** @enum {string} */
+            type: "note";
+            text: string;
+        };
+        MigrationFrameProposalFrame: {
+            /** @enum {string} */
+            type: "proposal";
+            areas: components["schemas"]["ProposedArea"][];
+            collections: components["schemas"]["ProposedCollection"][];
+            dropped: components["schemas"]["DroppedTable"][];
+            enables: string[];
+        };
+        MigrationFrameRejectedCollectionFrame: {
+            /** @enum {string} */
+            type: "rejectedCollection";
+            config?: null | components["schemas"]["CdcSinkTableConfig"];
+            collection: string;
+            errors: components["schemas"]["ValidationIssue"][];
+        };
+        MigrationFrameRemovedFrame: {
+            /** @enum {string} */
+            type: "removed";
+            collection?: null | string;
+            reason?: null | string;
+        };
+        MigrationFrameReplyFrame: {
+            /** @enum {string} */
+            type: "reply";
+            reply?: null | string;
+            gaps?: null | string[];
+            openQuestions?: null | components["schemas"]["OpenQuestion"][];
+        };
+        MigrationFrameTransientCollectionErrorFrame: {
+            /** @enum {string} */
+            type: "transientCollectionError";
+            /** Format: int32 */
+            rejections: number;
+            /** Format: int32 */
+            maxRejections: number;
+            collection: string;
+            errors: components["schemas"]["ValidationIssue"][];
+        };
+        MigrationStartRequest: {
+            slug: string;
+            selectedTables?: null | components["schemas"]["SelectedSourceTable"][];
+            prompt?: null | string;
+        };
         MintEmbedLinkRequest: {
             channelId: string;
             parameters?: null | Record<string, unknown>;
@@ -1700,6 +1865,12 @@ export interface components {
             /** Format: int32 */
             embeddingsMaxConcurrentBatches?: null | number;
         };
+        OpenQuestion: {
+            question: string;
+            options: string[];
+            /** Format: int32 */
+            recommended?: null | number;
+        };
         ProblemDetails: {
             type?: null | string;
             title?: null | string;
@@ -1707,6 +1878,25 @@ export interface components {
             status?: null | number;
             detail?: null | string;
             instance?: null | string;
+        };
+        /** @enum {unknown} */
+        PropertyCase: "Unspecified" | "SnakeCase" | "CamelCase" | "PascalCase";
+        ProposedArea: {
+            area?: null | string;
+            collections: string[];
+            why?: null | string;
+        };
+        ProposedCollection: {
+            collection?: null | string;
+            rootTable?: null | string;
+            absorbs: components["schemas"]["AbsorbedTable"][];
+            why?: null | string;
+            fields: components["schemas"]["ProposedField"][];
+        };
+        ProposedField: {
+            table: string;
+            column: string;
+            property: string;
         };
         ProvisionAgentResponse: {
             agentId: string;
@@ -1848,18 +2038,6 @@ export interface components {
             rationale: string[];
             status: string;
         };
-        SuggestCdcRequest: {
-            intentPrompt: null | string;
-            selectedTables: components["schemas"]["SelectedSourceTable"][];
-            /** @default  */
-            slug: string;
-        };
-        SuggestCdcResponse: {
-            configuration: null | components["schemas"]["CdcSinkConfiguration"];
-            rationale: string[];
-            status: string;
-            unmappedTables: string[];
-        };
         TelegramChannelMessages: {
             greeting?: null | string;
             conversationCleared?: null | string;
@@ -1956,6 +2134,13 @@ export interface components {
             points: components["schemas"]["UsagePoint"][];
             writesByApp: components["schemas"]["AppWrites"][];
             isWritesUnavailable: boolean;
+        };
+        ValidationIssue: {
+            message: string;
+            path?: null | string;
+            table?: null | string;
+            column?: null | string;
+            property?: null | string;
         };
         VerifyCdcRequest: {
             tables: components["schemas"]["VerifyCdcTableRequest"][];
@@ -4270,7 +4455,7 @@ export interface operations {
             };
         };
     };
-    "setup.suggestCdc": {
+    "setup.migrationStart": {
         parameters: {
             query?: never;
             header?: never;
@@ -4279,7 +4464,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SuggestCdcRequest"];
+                "application/json": components["schemas"]["MigrationStartRequest"];
             };
         };
         responses: {
@@ -4289,7 +4474,106 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuggestCdcResponse"];
+                    "application/x-ndjson": components["schemas"]["MigrationFrame"];
+                };
+            };
+        };
+    };
+    "setup.migrationAsk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrationAskRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/x-ndjson": components["schemas"]["MigrationFrame"];
+                };
+            };
+        };
+    };
+    "setup.migrationEditCollection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrationEditCollectionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationEditCollectionResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "setup.migrationApply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrationApplyRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationApplyResponse"];
                 };
             };
             /** @description Bad Request */
@@ -4420,6 +4704,7 @@ export interface operations {
     };
 }
 
+export type AbsorbedTable = components["schemas"]["AbsorbedTable"];
 export type ActivityEventDto = components["schemas"]["ActivityEventDto"];
 export type AgentDetailsResponse = components["schemas"]["AgentDetailsResponse"];
 export type AgentParameterSummary = components["schemas"]["AgentParameterSummary"];
@@ -4504,6 +4789,7 @@ export type DiscoverForeignKeyResponse = components["schemas"]["DiscoverForeignK
 export type DiscoverRequest = components["schemas"]["DiscoverRequest"];
 export type DiscoverResponse = components["schemas"]["DiscoverResponse"];
 export type DiscoverTableResponse = components["schemas"]["DiscoverTableResponse"];
+export type DroppedTable = components["schemas"]["DroppedTable"];
 export type EditAgentRequest = components["schemas"]["EditAgentRequest"];
 export type EmbeddedSettings = components["schemas"]["EmbeddedSettings"];
 export type EmbedLinkSummaryResponse = components["schemas"]["EmbedLinkSummaryResponse"];
@@ -4518,12 +4804,34 @@ export type LicenseResponse = components["schemas"]["LicenseResponse"];
 export type LoginRequest = components["schemas"]["LoginRequest"];
 export type MapRequest = components["schemas"]["MapRequest"];
 export type MetricCard = components["schemas"]["MetricCard"];
+export type MigrationApplyRequest = components["schemas"]["MigrationApplyRequest"];
+export type MigrationApplyResponse = components["schemas"]["MigrationApplyResponse"];
+export type MigrationAskRequest = components["schemas"]["MigrationAskRequest"];
+export type MigrationEditCollectionRequest = components["schemas"]["MigrationEditCollectionRequest"];
+export type MigrationEditCollectionResponse = components["schemas"]["MigrationEditCollectionResponse"];
+export type MigrationFrame = components["schemas"]["MigrationFrame"];
+export type MigrationFrameCollectionFrame = components["schemas"]["MigrationFrameCollectionFrame"];
+export type MigrationFrameConventionsFrame = components["schemas"]["MigrationFrameConventionsFrame"];
+export type MigrationFrameDoneFrame = components["schemas"]["MigrationFrameDoneFrame"];
+export type MigrationFrameErrorFrame = components["schemas"]["MigrationFrameErrorFrame"];
+export type MigrationFrameNoteFrame = components["schemas"]["MigrationFrameNoteFrame"];
+export type MigrationFrameProposalFrame = components["schemas"]["MigrationFrameProposalFrame"];
+export type MigrationFrameRejectedCollectionFrame = components["schemas"]["MigrationFrameRejectedCollectionFrame"];
+export type MigrationFrameRemovedFrame = components["schemas"]["MigrationFrameRemovedFrame"];
+export type MigrationFrameReplyFrame = components["schemas"]["MigrationFrameReplyFrame"];
+export type MigrationFrameTransientCollectionErrorFrame = components["schemas"]["MigrationFrameTransientCollectionErrorFrame"];
+export type MigrationStartRequest = components["schemas"]["MigrationStartRequest"];
 export type MintEmbedLinkRequest = components["schemas"]["MintEmbedLinkRequest"];
 export type MintEmbedLinkResponse = components["schemas"]["MintEmbedLinkResponse"];
 export type MistralAiSettings = components["schemas"]["MistralAiSettings"];
 export type OllamaSettings = components["schemas"]["OllamaSettings"];
 export type OpenAiSettings = components["schemas"]["OpenAiSettings"];
+export type OpenQuestion = components["schemas"]["OpenQuestion"];
 export type ProblemDetails = components["schemas"]["ProblemDetails"];
+export type PropertyCase = components["schemas"]["PropertyCase"];
+export type ProposedArea = components["schemas"]["ProposedArea"];
+export type ProposedCollection = components["schemas"]["ProposedCollection"];
+export type ProposedField = components["schemas"]["ProposedField"];
 export type ProvisionAgentResponse = components["schemas"]["ProvisionAgentResponse"];
 export type ProvisionChannelRequest = components["schemas"]["ProvisionChannelRequest"];
 export type ProvisionChannelResponse = components["schemas"]["ProvisionChannelResponse"];
@@ -4547,8 +4855,6 @@ export type SlackUpdateRequest = components["schemas"]["SlackUpdateRequest"];
 export type SlackWebhookInfoResponse = components["schemas"]["SlackWebhookInfoResponse"];
 export type SuggestAgentRequest = components["schemas"]["SuggestAgentRequest"];
 export type SuggestAgentResponse = components["schemas"]["SuggestAgentResponse"];
-export type SuggestCdcRequest = components["schemas"]["SuggestCdcRequest"];
-export type SuggestCdcResponse = components["schemas"]["SuggestCdcResponse"];
 export type TelegramChannelMessages = components["schemas"]["TelegramChannelMessages"];
 export type TelegramProvisionRequest = components["schemas"]["TelegramProvisionRequest"];
 export type TelegramSummaryResponse = components["schemas"]["TelegramSummaryResponse"];
@@ -4562,6 +4868,7 @@ export type UpdateChannelRequest = components["schemas"]["UpdateChannelRequest"]
 export type UpdateWidgetThemeRequest = components["schemas"]["UpdateWidgetThemeRequest"];
 export type UsagePoint = components["schemas"]["UsagePoint"];
 export type UsageResponse = components["schemas"]["UsageResponse"];
+export type ValidationIssue = components["schemas"]["ValidationIssue"];
 export type VerifyCdcRequest = components["schemas"]["VerifyCdcRequest"];
 export type VerifyCdcResponse = components["schemas"]["VerifyCdcResponse"];
 export type VerifyCdcTableRequest = components["schemas"]["VerifyCdcTableRequest"];
@@ -4660,8 +4967,11 @@ export const API_ENDPOINTS = {
         connect: "/setup/connect",
         discover: "/setup/discover",
         map: "/setup/map",
+        migrationApply: "/setup/migration/apply",
+        migrationAsk: "/setup/migration/ask",
+        migrationEditCollection: "/setup/migration/edit",
+        migrationStart: "/setup/migration/start",
         provision: "/setup/provision",
-        suggestCdc: "/setup/suggest/cdc",
         testMapping: "/setup/test-mapping",
         verifyCdc: "/setup/verify-cdc",
     },
@@ -4767,8 +5077,11 @@ export function createServerApi(client: ApiClient) {
             connect: (request: ConnectRequest) => client.post<ConnectResult, ApiErrorResponse>(API_ENDPOINTS.setup.connect, request),
             discover: (request: DiscoverRequest) => client.post<DiscoverResponse, ApiErrorResponse>(API_ENDPOINTS.setup.discover, request),
             map: (request: MapRequest) => client.post<CdcSinkConfiguration, ApiErrorResponse>(API_ENDPOINTS.setup.map, request),
+            migrationApply: (request: MigrationApplyRequest) => client.post<MigrationApplyResponse, ApiErrorResponse>(API_ENDPOINTS.setup.migrationApply, request),
+            migrationAsk: (request: MigrationAskRequest) => client.post<Response>(API_ENDPOINTS.setup.migrationAsk, request, { responseType: "response" }),
+            migrationEditCollection: (request: MigrationEditCollectionRequest) => client.post<MigrationEditCollectionResponse, ApiErrorResponse>(API_ENDPOINTS.setup.migrationEditCollection, request),
+            migrationStart: (request: MigrationStartRequest) => client.post<Response>(API_ENDPOINTS.setup.migrationStart, request, { responseType: "response" }),
             provision: (request: ProvisionRequest) => client.post<ProvisionResponse, ApiErrorResponse>(API_ENDPOINTS.setup.provision, request),
-            suggestCdc: (request: SuggestCdcRequest) => client.post<SuggestCdcResponse, ApiErrorResponse>(API_ENDPOINTS.setup.suggestCdc, request),
             testMapping: (request: TestMappingRequest) => client.post<TestMappingResponse, ApiErrorResponse>(API_ENDPOINTS.setup.testMapping, request),
             verifyCdc: (request: VerifyCdcRequest) => client.post<VerifyCdcResponse, ApiErrorResponse>(API_ENDPOINTS.setup.verifyCdc, request),
         },

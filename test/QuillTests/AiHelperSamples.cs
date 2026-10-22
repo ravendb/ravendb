@@ -63,20 +63,6 @@ internal static class AiHelperSamples
         Parameters = [new AiAgentParameter { Name = "customerId", Description = "the customer id" }],
     };
 
-    public static string CdcEnvelope(CdcSinkConfiguration config, string status = "Success", int inputTokens = 11, int outputTokens = 22)
-    {
-        using var ctx = JsonOperationContext.ShortTermSingleUse();
-        var envelope = new
-        {
-            Status = status,
-            Configuration = config,
-            Rationale = new[] { "uses the orders table" },
-            InputTokenCount = inputTokens,
-            OutputTokenCount = outputTokens,
-        };
-        return DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(envelope, ctx).ToString();
-    }
-
     public static string AgentEnvelope(params AiAgentConfiguration[] agents)
     {
         using var ctx = JsonOperationContext.ShortTermSingleUse();

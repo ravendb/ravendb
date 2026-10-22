@@ -17,6 +17,20 @@ public class AiAssistantHandler : ServerRequestHandler
             await processor.ExecuteAsync();
     }
     
+    [RavenAction("/assistant/migration/start", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    public async Task MigrationStart()
+    {
+        using (var processor = new AiAssistantMigrationProcessor(this, "/api/v1/ai/quill/cdc-planner/start"))
+            await processor.ExecuteAsync();
+    }
+
+    [RavenAction("/assistant/migration/ask", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    public async Task MigrationAsk()
+    {
+        using (var processor = new AiAssistantMigrationProcessor(this, "/api/v1/ai/quill/cdc-planner/ask"))
+            await processor.ExecuteAsync();
+    }
+
     [RavenAction("/assistant/give-consent", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
     public async Task GiveConsent()
     {

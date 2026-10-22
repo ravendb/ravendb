@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions;
 using Raven.Quill.AiHelper;
+using Raven.Quill.AiHelper.Migration;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Infrastructure;
@@ -19,16 +20,9 @@ namespace Raven.Quill.Endpoints;
 public static class WizardEndpoints
 {
     // the source connection string's name on the app DB once provisioned (used when the map didn't set one)
-    private const string SourceConnectionStringName = "quill-cdc-connection";
-    private const string DefaultCdcTaskName = "quill-cdc";
+    internal const string SourceConnectionStringName = "quill-cdc-connection";
+    internal const string DefaultCdcTaskName = "quill-cdc";
     private const string CdcDryRunTaskName = "quill-cdc-dry-run";
-
-    private const string DefaultIntentPrompt =
-        "Propose a sensible RavenDB CDC document model from the discovered relational schema: " +
-        "map each root/aggregate table to its own collection, embed parent-owned child rows " +
-        "(1:N ownership) as nested arrays, and keep many-to-many or shared references as separate " +
-        "collections linked by id. Use idiomatic collection names derived from the table names; " +
-        "prefer a minimal, query-friendly shape over a literal table-per-collection mirror.";
 
     public static void Map(WebApplication app)
     {
@@ -58,10 +52,35 @@ public static class WizardEndpoints
             .Accepts<MapRequest>("application/json")
             .Produces<CdcSinkConfiguration>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
-        group.MapPost("/suggest/cdc", SuggestCdcAsync)
-            .WithName("setup.suggestCdc")
-            .Accepts<SuggestCdcRequest>("application/json")
-            .Produces<SuggestCdcResponse>()
+        group.MapPost("/migration/start", StartMigrationAsync)
+            .WithName("setup.migrationStart")
+            .WithDescription(
+                "Opens an interactive planning session over the discovered schema. Streams NDJSON " +
+                "frames: the agent's proposal, then one frame per collection as it is registered or " +
+                "rejected, then its reply.")
+            .Accepts<MigrationStartRequest>("application/json")
+            .Produces<MigrationFrame>(StatusCodes.Status200OK, contentType: "application/x-ndjson");
+        group.MapPost("/migration/ask", AskMigrationAsync)
+            .WithName("setup.migrationAsk")
+            .WithDescription("One more turn in an existing planning session. Streams the same NDJSON frames.")
+            .Accepts<MigrationAskRequest>("application/json")
+            .Produces<MigrationFrame>(StatusCodes.Status200OK, contentType: "application/x-ndjson");
+        group.MapPost("/migration/edit", EditMigrationCollectionAsync)
+            .WithName("setup.migrationEditCollection")
+            .WithDescription(
+                "The operator's change to one collection of the plan: a null config deletes it (also one the planner only " +
+                "proposed), a config naming another collection renames it, and a collection the plan does not hold is added. " +
+                "Refused with 409 while a planner turn is running. The planner is told on the next turn.")
+            .Accepts<MigrationEditCollectionRequest>("application/json")
+            .Produces<MigrationEditCollectionResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict)
+            .Produces<ApiErrorResponse>(StatusCodes.Status422UnprocessableEntity);
+        group.MapPost("/migration/apply", ApplyMigrationAsync)
+            .WithName("setup.migrationApply")
+            .WithDescription("Assembles the registered plan into a CDC configuration and hands it to the map step.")
+            .Accepts<MigrationApplyRequest>("application/json")
+            .Produces<MigrationApplyResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status422UnprocessableEntity);
         group.MapPost("/test-mapping", TestMappingAsync)
@@ -126,6 +145,7 @@ public static class WizardEndpoints
                 state.LastDiscoverAt = null;
                 state.LastMapConfiguration = null;
                 state.LastMapAt = null;
+                state.MigrationPlan = null;
             }
 
             state.Provider = factoryName;
@@ -390,87 +410,105 @@ public static class WizardEndpoints
         return Results.Ok(cdcConfig);
     }
 
-    private static async Task<IResult> SuggestCdcAsync(
-        SuggestCdcRequest body,
-        IDocumentStore store,
-        IAiHelperClient aiClient,
+    private static Task StartMigrationAsync(
+        MigrationStartRequest body,
+        MigrationService service,
+        HttpContext ctx,
+        CancellationToken ct) =>
+        StreamMigrationAsync(ctx, ct, body, (request, write) => service.StartAsync(request, write, ct));
+
+    private static Task AskMigrationAsync(
+        MigrationAskRequest body,
+        MigrationService service,
+        HttpContext ctx,
+        CancellationToken ct) =>
+        StreamMigrationAsync(ctx, ct, body, (request, write) => service.AskAsync(request, write, ct));
+
+    private static async Task<IResult> EditMigrationCollectionAsync(
+        MigrationEditCollectionRequest body,
+        MigrationService service,
+        CancellationToken ct)
+    {
+        var outcome = await service.EditCollectionAsync(body, ct);
+
+        if (outcome.Refusal is not null)
+            return Results.BadRequest(new ApiErrorResponse(outcome.Refusal.Message));
+
+        if (outcome.TurnRunning)
+            return Results.Conflict(new ApiErrorResponse("the planner is working on the plan; save again when it finishes"));
+
+        if (outcome.Errors is { Length: > 0 } errors)
+            return Results.UnprocessableEntity(new ApiErrorResponse(Errors: errors));
+
+        return Results.Ok(new MigrationEditCollectionResponse(outcome.Warnings ?? []));
+    }
+
+    private static async Task<IResult> ApplyMigrationAsync(
+        MigrationApplyRequest body,
+        MigrationService service,
         QuillLogger<WizardLogger> logger,
         CancellationToken ct)
     {
-        if (body is null)
-            return Results.BadRequest(new ApiErrorResponse("request body is required"));
-        if (string.IsNullOrWhiteSpace(body.Slug))
-            return Results.BadRequest(new ApiErrorResponse("slug is required"));
+        var (response, refusal) = await service.ApplyAsync(body, ct);
 
-        if (body.SelectedTables is not { Length: > 0 })
-            return Results.BadRequest(new ApiErrorResponse("selectedTables must list at least one table"));
+        if (refusal is not null)
+            return Results.BadRequest(new ApiErrorResponse(refusal.Message));
 
-        var intentPrompt = string.IsNullOrWhiteSpace(body.IntentPrompt) ? DefaultIntentPrompt : body.IntentPrompt!;
-
-        WizardState? state;
-        using (var session = store.OpenAsyncSession())
-            state = await session.LoadAsync<WizardState>(WizardState.DocumentIdFor(body.Slug), ct);
-
-        if (state?.LastDiscoveredSchema is null)
-            return Results.BadRequest(new ApiErrorResponse("no discovered schema found; call /api/setup/discover first"));
-
-        var selectedSchema = SelectTables(state.LastDiscoveredSchema, body.SelectedTables);
-        if (selectedSchema.Tables.Count == 0)
-            return Results.BadRequest(new ApiErrorResponse(
-                "none of the selected tables are part of the discovered schema; call /api/setup/discover first"));
-
-        var result = await aiClient.SuggestCdcAsync(selectedSchema, samples: null, intentPrompt, ct);
-
-        if (result.Status != AiHelperStatus.Success)
-            return Results.Ok(new SuggestCdcResponse(Configuration: null, result.Rationale, result.Status.ToString(), UnmappedTables: []));
-
-        if (result.Configuration is null)
-            return Results.UnprocessableEntity(new ApiErrorResponse("AI service returned a success status but no configuration"));
-
-        if (!result.Configuration.Validate(out var errors, validateName: false, validateConnection: false))
+        if (response!.Errors.Length > 0)
         {
             if (logger.IsInfoEnabled)
-                logger.Info($"SuggestCdc: returned configuration failed validation ({errors.Count} errors)");
-            return Results.UnprocessableEntity(new ApiErrorResponse(Errors: errors.ToArray()));
+                logger.Info($"Migration apply: assembled configuration failed validation ({response.Errors.Length} errors)");
+
+            return Results.UnprocessableEntity(new ApiErrorResponse(Errors: response.Errors));
         }
 
-        ValidateJoinColumnsAgainstSchema(result.Configuration, state.LastDiscoveredSchema, errors);
-        if (errors.Count > 0)
-        {
-            if (logger.IsInfoEnabled)
-                logger.Info(
-                    $"SuggestCdc: returned configuration has {errors.Count} join column(s) the source " +
-                    "schema does not have");
-            return Results.UnprocessableEntity(new ApiErrorResponse(Errors: errors.ToArray()));
-        }
+        if (response.UnmappedTables.Length > 0 && logger.IsInfoEnabled)
+            logger.Info($"Migration apply: {response.UnmappedTables.Length} discovered table(s) are not covered by the plan");
 
-        var defaultSchema = SqlConnectionStringValidation.DefaultSchemaFor(state.Provider, state.LastDiscoveredSchema.CatalogName);
-        var unmappedTables = CollectUnmappedTables(selectedSchema, result.Configuration, defaultSchema);
-        if (unmappedTables.Count > 0 && logger.IsInfoEnabled)
-            logger.Info(
-                $"SuggestCdc: configuration leaves {unmappedTables.Count} of {selectedSchema.Tables.Count} " +
-                "selected table(s) unmapped");
-
-        return Results.Ok(new SuggestCdcResponse(result.Configuration, result.Rationale, result.Status.ToString(), unmappedTables));
+        return Results.Ok(response);
     }
 
-    private static List<string> CollectUnmappedTables(
-        CdcSinkSourceSchema selectedSchema,
-        CdcSinkConfiguration configuration,
-        string? defaultSchema)
+    /// <summary>
+    /// Streams migration frames as NDJSON. The response headers are only committed once there is a
+    /// frame to write, so a request that is refused before the turn starts can still answer with a
+    /// status code rather than a 200 carrying an error frame.
+    /// </summary>
+    private static async Task StreamMigrationAsync<TRequest>(
+        HttpContext ctx,
+        CancellationToken ct,
+        TRequest body,
+        Func<TRequest, Func<MigrationFrame, Task>, Task<MigrationService.Refusal?>> run)
+        where TRequest : class
     {
-        var covered = new HashSet<CdcSinkConfiguration.TableInfo>(configuration.CollectAllTablesFlat(defaultSchema ?? string.Empty));
+        var started = false;
 
-        return selectedSchema.Tables
-            .Where(table => covered.Contains(new CdcSinkConfiguration.TableInfo
+        async Task WriteAsync(MigrationFrame frame)
+        {
+            if (started == false)
             {
-                Schema = table.SourceTableSchema,
-                TableName = table.SourceTableName,
-            }) == false)
-            .Select(table => string.IsNullOrWhiteSpace(table.SourceTableSchema)
-                ? table.SourceTableName
-                : $"{table.SourceTableSchema}.{table.SourceTableName}")
-            .ToList();
+                NdjsonStream.SetHeaders(ctx);
+                started = true;
+            }
+
+            await NdjsonStream.WriteLineAsync(ctx, frame);
+        }
+
+        var refusal = await run(body, WriteAsync);
+
+        if (refusal is null || started)
+            return;
+
+        // A status the AI service reported is the operator's to act on; no status at all means the
+        // request itself was wrong, and a status it never got to report means the service is down.
+        ctx.Response.StatusCode = refusal.Status switch
+        {
+            null when refusal.IsConflict => StatusCodes.Status409Conflict,
+            null => StatusCodes.Status400BadRequest,
+            var status when status.Value.ServiceAnswered() => StatusCodes.Status401Unauthorized,
+            _ => StatusCodes.Status502BadGateway
+        };
+
+        await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse(refusal.Message), ct);
     }
 
     private static async Task<IResult> TestMappingAsync(
@@ -631,12 +669,7 @@ public static class WizardEndpoints
         }
     }
 
-    /// <summary>
-    /// Narrows the persisted discovery result to the tables the operator selected on the verify step.
-    /// Discovery enumerates whole schemas, so handing the AI everything it found would map tables the
-    /// operator deliberately left out.
-    /// </summary>
-    private static void ValidateJoinColumnsAgainstSchema(CdcSinkConfiguration configuration, CdcSinkSourceSchema schema, List<string> errors)
+    internal static void ValidateJoinColumnsAgainstSchema(CdcSinkConfiguration configuration, CdcSinkSourceSchema schema, List<string> errors)
     {
         foreach (var table in configuration.Tables)
             ValidateScope(table.SourceTableSchema, table.SourceTableName, table.CollectionName, table.EmbeddedTables, table.LinkedTables);
@@ -685,7 +718,12 @@ public static class WizardEndpoints
         }
     }
 
-    private static CdcSinkSourceSchema SelectTables(CdcSinkSourceSchema schema, SelectedSourceTable[] selectedTables)
+    /// <summary>
+    /// Narrows the persisted discovery result to the tables the operator selected on the verify step.
+    /// Discovery enumerates whole schemas, so handing the AI everything it found would map tables the
+    /// operator deliberately left out.
+    /// </summary>
+    internal static CdcSinkSourceSchema SelectTables(CdcSinkSourceSchema schema, SelectedSourceTable[] selectedTables)
     {
         var selectedKeys = selectedTables
             .Select(table => TableKey(table.SourceTableSchema, table.SourceTableName))

@@ -56,18 +56,4 @@ internal static class SqlConnectionStringValidation
         error = default!;
         return true;
     }
-
-    public static string? DefaultSchemaFor(string? provider, string? catalogName)
-    {
-        if (string.IsNullOrWhiteSpace(provider))
-            return null;
-
-        return SqlProviderParser.GetSupportedProvider(provider) switch
-        {
-            SqlProvider.Npgsql => "public",
-            SqlProvider.SqlClient => "dbo",
-            SqlProvider.MySqlConnectorFactory => catalogName,
-            _ => null,
-        };
-    }
 }

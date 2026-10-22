@@ -190,8 +190,8 @@ export function VerifySchemaStep({ isBusy }: WizardBodyComponentProps) {
 
                     {currentTab === "verified" && countSelectedRows(rowSelection) >= MAX_SELECTED_TABLES && (
                         <WarningNotice>
-                            During the beta, one app processes at most {MAX_SELECTED_TABLES} tables - support for
-                            unlimited tables is coming later. Deselect a table to pick a different one.
+                            One app processes at most {MAX_SELECTED_TABLES} tables - support for unlimited tables is
+                            coming later. Deselect a table to pick a different one.
                         </WarningNotice>
                     )}
 

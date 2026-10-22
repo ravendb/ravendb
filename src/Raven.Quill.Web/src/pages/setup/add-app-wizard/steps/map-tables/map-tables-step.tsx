@@ -1,16 +1,13 @@
 import { useFormContext, useFormState } from "react-hook-form";
-import { RefreshCwIcon } from "lucide-react";
 import { toast } from "sonner";
 import AceEditor from "@/components/ace-editor/ace-editor";
 import { WizardErrorAlert } from "@/components/form/wizard/wizard-error-alert";
 import { Alert } from "@/components/shadcn/ui/alert";
-import { Button } from "@/components/shadcn/ui/button";
 import { Field, FieldLabel } from "@/components/shadcn/ui/field";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/shadcn/ui/resizable";
 import { Switch } from "@/components/shadcn/ui/switch";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { MapTablesSuggestionProgress } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-suggestion-progress";
 import { RootTablesFieldArrayProvider } from "@/pages/setup/add-app-wizard/steps/map-tables/root-tables-field-array";
 import {
     parseRawTablesToForm,
@@ -23,7 +20,6 @@ import { UnmappedTablesAlert } from "@/pages/setup/add-app-wizard/steps/map-tabl
 import { UnselectedMappedTablesAlert } from "@/pages/setup/add-app-wizard/steps/map-tables/unselected-mapped-tables-alert";
 import { useApplyMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-apply-map-tables";
 import { useFocusMapTablesError } from "@/pages/setup/add-app-wizard/steps/map-tables/use-focus-map-tables-error";
-import { useSuggestedMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-suggested-map-tables";
 import { useVerifyMapTablesState } from "@/pages/setup/add-app-wizard/steps/map-tables/use-verify-map-tables";
 import { VerifyCdcButton } from "@/pages/setup/add-app-wizard/steps/verify/verify-cdc-button";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
@@ -38,12 +34,6 @@ export function MapTablesStep({ isBusy }: WizardBodyComponentProps) {
     const { getValues, setValue, trigger } = useFormContext<AppFormData>();
     const applyMapTables = useApplyMapTables();
     const focusMapTablesError = useFocusMapTablesError();
-    const {
-        isSuggesting,
-        startedAt: suggestionStartedAt,
-        error: suggestionError,
-        retry: retrySuggestion,
-    } = useSuggestedMapTables();
 
     const isRawView = useSetupWizardStore((state) => state.isMapTablesRawView);
     const rawContent = useSetupWizardStore((state) => state.mapTablesRawContent);
@@ -86,22 +76,6 @@ export function MapTablesStep({ isBusy }: WizardBodyComponentProps) {
             setValue("mapTables.tables", tables);
         }
     };
-
-    if (isSuggesting) {
-        return <MapTablesSuggestionProgress startedAt={suggestionStartedAt} />;
-    }
-
-    if (suggestionError) {
-        return (
-            <div className="grid gap-3">
-                <WizardErrorAlert error={suggestionError} />
-                <Button type="button" variant="outline" className="justify-self-start" onClick={retrySuggestion}>
-                    <RefreshCwIcon aria-hidden="true" />
-                    Try again
-                </Button>
-            </div>
-        );
-    }
 
     return (
         <RootTablesFieldArrayProvider>

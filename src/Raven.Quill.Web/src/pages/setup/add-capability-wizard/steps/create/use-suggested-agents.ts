@@ -1,4 +1,4 @@
-import { useLayoutEffect, type ReactNode } from "react";
+import { useLayoutEffect } from "react";
 import { useIsFetching, useQuery } from "@tanstack/react-query";
 import { useFormContext, useWatch } from "react-hook-form";
 import { useParams } from "react-router";
@@ -70,7 +70,7 @@ export function useSuggestedAgents(): {
  * only carry an empty one into the review step. Observes the cache instead of the query so the step
  * definitions never start a fetch of their own.
  */
-export function useCreateAgentNextBlock(): { isNextDisabled: boolean; nextDisabledReason?: ReactNode } {
+export function useCreateAgentNextBlock(): { isNextDisabled: boolean; note?: string } {
     const { slug = "" } = useParams();
     const { control } = useFormContext<AgentFormData>();
     const mode = useWatch({ control, name: "create.mode" });
@@ -81,11 +81,11 @@ export function useCreateAgentNextBlock(): { isNextDisabled: boolean; nextDisabl
     const consentBlock =
         mode === "manual" ? undefined : describeAiConsentBlock(consent, "Or set the agent up manually.");
     if (consentBlock) {
-        return { isNextDisabled: true, nextDisabledReason: consentBlock };
+        return { isNextDisabled: true, note: consentBlock };
     }
 
     if (mode === "ai" && isFetching && !hasSuggestions) {
-        return { isNextDisabled: true, nextDisabledReason: "Waiting for the AI-suggested agents." };
+        return { isNextDisabled: true, note: "Waiting for the AI-suggested agents." };
     }
 
     return { isNextDisabled: false };
