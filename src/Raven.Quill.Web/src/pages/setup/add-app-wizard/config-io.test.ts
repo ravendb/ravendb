@@ -78,9 +78,26 @@ describe("parseConfigTables", () => {
     });
 
     it("names the table and field a structural error points at", () => {
-        const broken = [{ ...rootTable("Customers"), sourceTableName: undefined }] as unknown as CdcSinkTableConfig[];
+        const broken = [
+            rootTable("Orders"),
+            { ...rootTable("Customers"), sourceTableName: undefined },
+        ] as unknown as CdcSinkTableConfig[];
 
-        expect(() => parseConfigTables(broken)).toThrowError(/tables\[1\]\.sourceTableName/);
+        expect(() => parseConfigTables(broken)).toThrowError(/^table "Customers"\.sourceTableName: /);
+    });
+
+    it("names the table and field an enum error points at", () => {
+        const broken = [
+            { ...rootTable("Customers"), columns: [{ column: "id", name: "Id", type: "Bogus" }] },
+        ] as unknown as CdcSinkTableConfig[];
+
+        expect(() => parseConfigTables(broken)).toThrowError(/^table "Customers"\.columns\[1\]\.type: /);
+    });
+
+    it("falls back to the row number when the broken table has no collection name", () => {
+        const broken = [{ ...rootTable("Customers"), collectionName: undefined }] as unknown as CdcSinkTableConfig[];
+
+        expect(() => parseConfigTables(broken)).toThrowError(/^table "#1"\.collectionName: /);
     });
 
     it("accepts a mapping the wizard would accept", () => {
