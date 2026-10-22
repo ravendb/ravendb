@@ -86,7 +86,7 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         {
             var parameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, null, null, query, _index,
                 query.QueryParameters, _queryBuilderFactories, _fieldMappings, null, null, -1,
-                deduplicationDisabled: true, token: token);
+                deduplicationDisabled: true, token: token, allowImplicitScoreOrdering: false);
             var baseQuery = CoraxQueryBuilder.BuildQuery(parameters, out _);
             queryTimings?.SetQueryPlan(baseQuery.Inspect());
             var maxMatchingIds = _indexSearcher.MaxMemoizationSizeInBytes / sizeof(long);
@@ -233,7 +233,7 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
 
         FieldMetadata GetFieldMetadata(string name) => QueryBuilderHelper.GetFieldMetadata(_allocator, name, _index, _fieldMappings, null,
             _index.Definition.HasDynamicFields,
-            _index.Definition.HasDynamicFields ? new Lazy<List<string>>(() => _indexSearcher.GetFields()) : null, exact: true, hasBoost: true);
+            _index.Definition.HasDynamicFields ? new Lazy<List<string>>(() => _indexSearcher.GetFields()) : null, exact: true);
     }
 
     private List<FacetResult> ScanningFacetedQuery(Dictionary<string, FacetedQueryParser.FacetResult> results, FacetQuery facetQuery, QueryTimingsScope queryTimings,
@@ -245,7 +245,7 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         Dictionary<string, Dictionary<string, FacetValues>> facetsByRange = new();
 
         var parameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, null, null, query, _index, query.QueryParameters, _queryBuilderFactories,
-            _fieldMappings, null, null, -1, deduplicationDisabled: false, token: token, queryTime: queryTime);
+            _fieldMappings, null, null, -1, deduplicationDisabled: false, token: token, queryTime: queryTime, allowImplicitScoreOrdering: false);
         var baseQuery = CoraxQueryBuilder.BuildQuery(parameters, out _);
 
         var coraxPageSize = CoraxBufferSize(_indexSearcher, facetQuery.Query.PageSize, query);
