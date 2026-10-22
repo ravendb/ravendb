@@ -29,8 +29,8 @@ internal sealed class DiscordRuntime : IChannelRuntime
     private volatile bool _canRestart = true;
     private volatile string? _status;
     private volatile DiscordSocketClient? _client;
+    private readonly Lazy<Task> _stop;
     private Task _run = Task.CompletedTask;
-    private Task? _stop;
     private TimeSpan _backoff = MinBackoff;
     private long _exitedAtTicks;
 
@@ -51,6 +51,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
         _options = options;
         _logger = logger;
         _status = channel.DisplayName;
+        _stop = new Lazy<Task>(StopCoreAsync);
         ChannelFingerprint = channelFingerprint;
     }
 
@@ -82,7 +83,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
         return runtime;
     }
 
-    public Task StopAsync() => _stop ??= StopCoreAsync();
+    public Task StopAsync() => _stop.Value;
 
     private async Task StopCoreAsync()
     {
