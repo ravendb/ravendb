@@ -626,6 +626,31 @@ public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fi
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Health_follows_the_socket_through_a_drop_and_the_reconnect()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        await Slack.WaitUntilConnectedAsync();
+        await Slack.WaitUntilAsync(async () => (await HealthRowAsync(app, channel)).SocketConnected, "the first connection in health");
+        var firstConnectedAt = (await HealthRowAsync(app, channel)).LastConnectedAt;
+        Assert.NotNull(firstConnectedAt);
+
+        Slack.SocketOpenError = "internal_error";
+        var connectsBefore = Slack.Connects;
+        await Task.Delay(20);
+        await Slack.CloseCurrentAsync();
+
+        await Slack.WaitUntilAsync(async () => (await HealthRowAsync(app, channel)).SocketConnected == false, "health to notice the drop");
+
+        Slack.SocketOpenError = null;
+        await Slack.WaitUntilAsync(() => Slack.Connects > connectsBefore, "the reconnect");
+        await Slack.WaitUntilAsync(
+            async () => (await HealthRowAsync(app, channel)) is { SocketConnected: true } row && row.LastConnectedAt > firstConnectedAt,
+            "health to record the reconnect time");
+        Assert.Null((await HealthRowAsync(app, channel)).LastSocketError);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task A_socket_outage_keeps_the_runtime_and_finishes_the_running_turn()
     {
         await using var app = await NewAppAsync();
