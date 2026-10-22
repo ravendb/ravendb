@@ -43,6 +43,7 @@ internal sealed class ChannelManager(
 {
     private readonly Dictionary<ChannelType, IChannelRuntimeFactory> _factories = factories.ToDictionary(f => f.Type);
     private readonly ConcurrentDictionary<(string Database, string ChannelId), IChannelRuntime> _runtimes = new();
+    private readonly ConcurrentDictionary<(string Database, string ChannelId), Task> _draining = new();
 
     private volatile AsyncManualResetEvent? _wake;
 
@@ -158,7 +159,7 @@ internal sealed class ChannelManager(
             if (_stopped)
                 return;
 
-            if (_runtimes.ContainsKey(key))
+            if (_runtimes.ContainsKey(key) || IsDraining(key))
                 continue;
 
             try
@@ -179,11 +180,33 @@ internal sealed class ChannelManager(
         }
     }
 
+    private bool IsDraining((string Database, string ChannelId) key)
+    {
+        if (_draining.TryGetValue(key, out var stop) == false)
+            return false;
+
+        if (stop.IsCompleted == false)
+            return true;
+
+        _draining.TryRemove(new KeyValuePair<(string Database, string ChannelId), Task>(key, stop));
+        return false;
+    }
+
     private async Task StopRuntimeAsync((string Database, string ChannelId) key, IChannelRuntime runtime)
     {
+        var stop = runtime.StopAsync();
         try
         {
-            await runtime.StopAsync().WaitAsync(options.Value.ChannelRuntimeStopTimeout);
+            await stop.WaitAsync(options.Value.ChannelRuntimeStopTimeout);
+        }
+        catch (TimeoutException)
+        {
+            _draining[key] = stop;
+            if (logger.IsWarnEnabled)
+                logger.Warn(
+                    $"Runtime for channel {key.ChannelId} on {key.Database} did not stop within " +
+                    $"{options.Value.ChannelRuntimeStopTimeout}; its successor waits until it does");
+            return;
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
