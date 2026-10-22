@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,12 +16,10 @@ using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Settings;
 using Raven.Server.Documents.ETL.Providers.AI;
-using Raven.Server.Documents.ETL.Providers.AI.GenAi;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.Json;
 using Raven.Server.Logging;
@@ -169,73 +166,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
                 Assert.Equal("2099-01-01", client.LastHeader("anthropic-version"));
             });
-        }
-
-        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-        [InlineData(null, false, false)]
-        [InlineData(null, true, true)]
-        [InlineData(true, false, true)]
-        [InlineData(false, true, false)]
-        public async Task GenAi_PromptCaching_ByDefaultOnlyForTasksWithQueries_UnlessSet(bool? enablePromptCache, bool withQuery, bool cached)
-        {
-            using var store = GetDocumentStore();
-            var database = await GetDatabase(store.Database);
-
-            var settings = new AnthropicSettings("sk-ant-test", "claude-haiku-4-5", "https://api.anthropic.com/v1/") { EnablePromptCache = enablePromptCache };
-            store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(new AiConnectionString
-            {
-                Name = "anthropic", Identifier = "anthropic", ModelType = AiModelType.Chat, AnthropicSettings = settings
-            }));
-            store.Maintenance.Send(new AddGenAiOperation(new GenAiConfiguration
-            {
-                Name = "genai",
-                ConnectionStringName = "anthropic",
-                Collection = "Posts",
-                Prompt = "Summarize the text.",
-                SampleObject = "{\"Answer\":\"summary\"}",
-                GenAiTransformation = new GenAiTransformation { Script = "ai.genContext({Text: this.Text});" },
-                UpdateScript = "this.Answer = $output.Answer;",
-                Queries = withQuery
-                    ? [new AiAgentToolQuery { Name = "posts-by-text", Description = "Find posts by text", Query = "from Posts where Text = $text", ParametersSampleObject = "{\"text\":\"some text\"}" }]
-                    : []
-            }));
-
-            GenAiTask genAi = null;
-            Assert.True(await WaitForValueAsync(() =>
-            {
-                genAi = database.EtlLoader.Processes.OfType<GenAiTask>().FirstOrDefault();
-                return Task.FromResult(genAi != null);
-            }, true, timeout: 15_000), "the GenAI process was not loaded in time");
-
-            // the process sends through this client, so the request never leaves the test
-            var sentBody = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-            var client = new CapturingChatCompletionClient(database.DocumentsStorage.ContextPool, new AnthropicChatCompletionProvider(settings), body =>
-            {
-                sentBody.TrySetResult(body);
-                return Ok(TextResponse);
-            });
-            var field = typeof(GenAiTask).GetField("_chatCompletionClient", BindingFlags.NonPublic | BindingFlags.Instance);
-            Assert.NotNull(field);
-            var previous = (ChatCompletionClient)field.GetValue(genAi);
-            field.SetValue(genAi, client);
-            previous?.Dispose();
-
-            using (var session = store.OpenAsyncSession())
-            {
-                await session.StoreAsync(new Post { Text = "Some text to summarize." }, "posts/1");
-                await session.SaveChangesAsync();
-            }
-
-            var cacheControl = JObject.Parse(await sentBody.Task.WaitAsync(TimeSpan.FromSeconds(30)))["cache_control"];
-            if (cached)
-                Assert.Equal("ephemeral", (string)cacheControl["type"]);
-            else
-                Assert.Null(cacheControl);
-        }
-
-        private class Post
-        {
-            public string Text;
         }
 
         [RavenFact(RavenTestCategory.Ai)]

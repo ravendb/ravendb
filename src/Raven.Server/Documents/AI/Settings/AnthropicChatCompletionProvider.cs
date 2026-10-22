@@ -27,8 +27,6 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
 
     private int MaxOutputTokens => _settings.MaxOutputTokens ?? AnthropicSettings.DefaultMaxOutputTokens;
 
-    public override bool ShouldCachePrompt(AiChatRequest request) => _settings.EnablePromptCache ?? request.MayRepeatPrompt;
-
     public override string GetRelativeCompletionUri() => "messages";
 
     public override string GetRelativeModelsUri() => $"models?limit={MaxModelsPageSize}";
