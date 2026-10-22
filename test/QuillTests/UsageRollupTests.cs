@@ -100,6 +100,27 @@ public class UsageRollupTests(ITestOutputHelper output) : QuillTestBase(output)
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task Reading_the_usage_series_of_every_agent_channel_pair_takes_one_round_trip()
+    {
+        await using var app = await NewAppAsync();
+        var at = new DateTime(2026, 8, 17, 12, 0, 0, DateTimeKind.Utc);
+
+        for (var i = 0; i < 20; i++)
+        {
+            var request = new AgentRequest(app.Slug, "support", $"chats/{i}", "hello", $"channels/c{i}",
+                new Dictionary<string, JsonElement>(), ChannelIdleWindow);
+            await AgentRouter.RecordTurnAsync(app.Store, request, "support", $"chats/{i}", "hi", 5, at, CancellationToken.None);
+        }
+
+        using var session = app.Store.OpenAsyncSession(app.Slug);
+        var rows = await MetricsReadService.QueryMetricRowsAsync(session, at.AddDays(-1), at.AddDays(1), CancellationToken.None);
+
+        Assert.Equal(20, rows.Count);
+        Assert.Equal(100, rows.Sum(r => r.Tokens));
+        Assert.Equal(1, session.Advanced.NumberOfRequests);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Concurrent_increments_on_the_same_bucket_both_land()
     {
         await using var app = await NewAppAsync();
