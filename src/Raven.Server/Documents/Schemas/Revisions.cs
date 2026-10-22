@@ -32,6 +32,11 @@ namespace Raven.Server.Documents.Schemas
         internal static readonly Slice AllRevisionsEtagsSlice;
         internal static readonly Slice CollectionRevisionsEtagsSlice;
         internal static readonly Slice RevisionsCountSlice;
+        internal static readonly Slice ConflictRevisionsCountSlice;
+
+        // lives in the tree above, next to the per-document counts. Every key there is a document id followed by
+        // the record separator, so a key without one cannot collide with any of them.
+        internal static readonly Slice ConflictRevisionsCountWatermarkSlice;
         internal static readonly Slice RevisionsTombstonesSlice;
         internal static readonly Slice RevisionsPrefix;
         internal static Slice ResolvedFlagByEtagSlice;
@@ -70,6 +75,8 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, "AllRevisionsEtags", ByteStringType.Immutable, out AllRevisionsEtagsSlice);
                 Slice.From(ctx, "CollectionRevisionsEtags", ByteStringType.Immutable, out CollectionRevisionsEtagsSlice);
                 Slice.From(ctx, "RevisionsCount", ByteStringType.Immutable, out RevisionsCountSlice);
+                Slice.From(ctx, "ConflictRevisionsCountSlice", ByteStringType.Immutable, out ConflictRevisionsCountSlice);
+                Slice.From(ctx, "LastRevisionsEtag", ByteStringType.Immutable, out ConflictRevisionsCountWatermarkSlice);
                 Slice.From(ctx, "RevisionsBucketAndEtag", ByteStringType.Immutable, out RevisionsBucketAndEtagSlice);
                 Slice.From(ctx, nameof(ResolvedFlagByEtagSlice), ByteStringType.Immutable, out ResolvedFlagByEtagSlice);
                 Slice.From(ctx, RevisionsTombstones, ByteStringType.Immutable, out RevisionsTombstonesSlice);
