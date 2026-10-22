@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Indexes.Workers
     {
         private readonly ReferencesState _referencesState = new ReferencesState();
 
-        private bool _canHandleReferences;
+        private bool _mapReachedIndexCreationEtag;
 
         private readonly Logger _logger;
 
@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         public (bool MoreWorkFound, Index.CanContinueBatchResult BatchContinuationResult) Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperationBase> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
-            if (CanHandleReferences(queryContext, indexContext, stats) == false)
+            if (HasMapReachedIndexCreationEtag(queryContext, indexContext, stats) == false)
                 return (false, Index.CanContinueBatchResult.None);
 
             const long pageSize = long.MaxValue;
@@ -403,9 +403,9 @@ namespace Raven.Server.Documents.Indexes.Workers
             return (moreWorkFound, batchContinuationResult);
         }
 
-        private bool CanHandleReferences(QueryOperationContext queryContext, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        private bool HasMapReachedIndexCreationEtag(QueryOperationContext queryContext, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            if (_canHandleReferences)
+            if (_mapReachedIndexCreationEtag)
                 return true;
 
             // a new index first maps everything that existed when it was created and only then starts to handle references,
@@ -437,7 +437,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                 }
             }
 
-            _canHandleReferences = true;
+            _mapReachedIndexCreationEtag = true;
             return true;
         }
 
