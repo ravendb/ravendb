@@ -732,5 +732,93 @@ class User { public string Id { get; set; } }
             await Assert.ThrowsAsync<System.InvalidOperationException>(
                 () => RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source));
         }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task TwoPairs_AroundSaveChanges_Become_Two_Batches()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string a1, string b1, string c1, string d1)
+    {
+        var a = session.Load<User>(a1);
+        var b = session.Load<User>(b1);
+        session.SaveChanges();
+        var c = session.Load<User>(c1);
+        var d = session.Load<User>(d1);
+    }
+}
+
+class User { public string Id { get; set; } }
+";
+
+            string firstPass = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
+
+            Assert.Contains("session.Advanced.Lazily.Load<User>(a1)", firstPass);
+            Assert.Contains("session.Advanced.Lazily.Load<User>(b1)", firstPass);
+            Assert.Contains("var c = session.Load<User>(c1);", firstPass);
+            Assert.Contains("var d = session.Load<User>(d1);", firstPass);
+
+            string secondPass = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(firstPass);
+
+            int firstBatchEnd = secondPass.IndexOf("var b = lazyB.Value;", System.StringComparison.Ordinal);
+            int saveChanges = secondPass.IndexOf("session.SaveChanges();", System.StringComparison.Ordinal);
+            int secondBatchStart = secondPass.IndexOf("session.Advanced.Lazily.Load<User>(c1)", System.StringComparison.Ordinal);
+            int secondBatchEnd = secondPass.IndexOf("var d = lazyD.Value;", System.StringComparison.Ordinal);
+
+            Assert.True(firstBatchEnd >= 0 && firstBatchEnd < saveChanges);
+            Assert.True(saveChanges < secondBatchStart && secondBatchStart < secondBatchEnd);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task Fix_Rewrites_Only_The_Run_Of_The_Diagnosed_Statement()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string a1, string b1, string c1)
+    {
+        var a = session.Load<User>(a1);
+        var b = session.Load<User>(b1);
+        Console.WriteLine();
+        var c = session.Load<User>(c1);
+    }
+}
+
+class User { public string Id { get; set; } }
+";
+
+            string fixedCode = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
+
+            Assert.Contains("session.Advanced.Lazily.Load<User>(a1)", fixedCode);
+            Assert.Contains("session.Advanced.Lazily.Load<User>(b1)", fixedCode);
+            Assert.Contains("var c = session.Load<User>(c1);", fixedCode);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task Statement_Containing_Barrier_Ends_The_Run()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string a1, string b1)
+    {
+        var a = session.Load<User>(a1);
+        var b = session.Load<User>(b1);
+        var c = session.Load<User>(Save(session));
+    }
+
+    static string Save(IDocumentSession s) { s.SaveChanges(); return ""users/1""; }
+}
+
+class User { public string Id { get; set; } }
+";
+
+            string fixedCode = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
+
+            Assert.Contains("session.Advanced.Lazily.Load<User>(a1)", fixedCode);
+            Assert.Contains("session.Advanced.Lazily.Load<User>(b1)", fixedCode);
+            Assert.Contains("var c = session.Load<User>(Save(session));", fixedCode);
+        }
     }
 }

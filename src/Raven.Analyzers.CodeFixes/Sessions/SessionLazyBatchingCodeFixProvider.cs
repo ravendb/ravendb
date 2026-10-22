@@ -9,6 +9,7 @@ using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Raven.Analyzers.Sessions;
 using Raven.Analyzers.Shared;
 
 namespace Raven.Analyzers.CodeFixes.Sessions
@@ -51,41 +52,48 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             if (collector.BatchableCalls.Count < 2)
                 return;
 
-            // Find indices of batchable statements that are direct children of this block.
-            // The collector may include calls from nested blocks; we only fix direct statements.
-            List<int> batchableIndices = [];
-            List<(LocalDeclarationStatementSyntax statement, string methodName, ExpressionSyntax receiver, bool isLoad, ISymbol? sessionSymbol)> directBatchableCalls = [];
-
-            for (int i = 0; i < block.Statements.Count; i++)
+            (LocalDeclarationStatementSyntax statement, string methodName, ExpressionSyntax receiver, bool isLoad, ISymbol? sessionSymbol)? RunMemberAt(int index)
             {
-                if (block.Statements[i] is not LocalDeclarationStatementSyntax localDecl)
-                    continue;
+                StatementSyntax statement = block.Statements[index];
+                if (SessionBatchSegments.ContainsBarrier(statement, semanticModel))
+                    return null;
 
                 foreach (var call in collector.BatchableCalls)
                 {
-                    if (call.statement == localDecl)
-                    {
-                        batchableIndices.Add(i);
-                        directBatchableCalls.Add(call);
-                        break;
-                    }
+                    if (call.statement == statement)
+                        return call;
+                }
+
+                return null;
+            }
+
+            int diagnosedIndex = -1;
+            for (int i = 0; i < block.Statements.Count; i++)
+            {
+                if (block.Statements[i].Span.Contains(invocation!.Span))
+                {
+                    diagnosedIndex = i;
+                    break;
                 }
             }
 
-            // Check if indices form a consecutive range
-            if (batchableIndices.Count < 2)
+            if (diagnosedIndex < 0 || RunMemberAt(diagnosedIndex) == null)
                 return;
 
-            // The auto-fix only rewrites a contiguous run of batchable statements: a non-batchable
-            // statement between them may read one load's result or have side effects, so folding them
-            // into a single lazy batch could reorder observable behavior. The RVN012 diagnostic is still
-            // reported by the analyzer in this case (batching is valid advice a developer can apply by
-            // reordering); the fix deliberately declines rather than emit a risky rewrite.
-            for (int i = 1; i < batchableIndices.Count; i++)
+            int runStart = diagnosedIndex;
+            while (runStart > 0 && RunMemberAt(runStart - 1) != null)
+                runStart--;
+
+            List<int> batchableIndices = [];
+            List<(LocalDeclarationStatementSyntax statement, string methodName, ExpressionSyntax receiver, bool isLoad, ISymbol? sessionSymbol)> directBatchableCalls = [];
+            for (int i = runStart; i < block.Statements.Count && RunMemberAt(i) is { } call; i++)
             {
-                if (batchableIndices[i] != batchableIndices[i - 1] + 1)
-                    return; // Non-consecutive
+                batchableIndices.Add(i);
+                directBatchableCalls.Add(call);
             }
+
+            if (batchableIndices.Count < 2)
+                return;
 
             // Bail unless every batchable call resolves to the same session symbol —
             // routing different sessions through one shared receiver would silently
