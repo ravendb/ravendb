@@ -16,7 +16,7 @@ internal class GoogleChatCompletionProvider : AbstractOpenAiChatCompletionProvid
 {
     private readonly string _aiVersion;
     public override bool SupportStrictTools => false;  // Google AI does not support strict tools, so we set this to false by default.
-    public override bool EnablePromptCaching => _settings.EnablePromptCache ?? false; // Google AI returns errors if we send this
+    public override bool ShouldCachePrompt(AiChatRequest request) => _settings.EnablePromptCache ?? false; // Google AI returns errors if we send this
 
     public GoogleChatCompletionProvider(GoogleSettings settings) : base(settings)
     {

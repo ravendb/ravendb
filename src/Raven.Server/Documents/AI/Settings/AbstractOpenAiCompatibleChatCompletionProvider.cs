@@ -207,7 +207,7 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
             writer.WriteEndObject();
         }
 
-        if (request.PromptCacheKey != null && EnablePromptCaching)
+        if (request.PromptCacheKey != null && ShouldCachePrompt(request))
         {
             writer.WriteComma();
             writer.WritePropertyName(ChatCompletionClient.Constants.RequestFields.PromptCacheKey);
