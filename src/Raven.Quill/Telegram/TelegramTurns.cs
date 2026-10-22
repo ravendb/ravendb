@@ -47,7 +47,7 @@ internal sealed class TelegramTurns(
     private readonly ResolvedTelegramMessages _messages = messages;
 
     public ChannelReplies Replies { get; } =
-        new(messages.SomethingWentWrong, messages.ConversationExpired, messages.Overloaded);
+        new(messages.SomethingWentWrong, messages.Overloaded);
 
     public Task SendAsync(TelegramMessage replyTo, string text, CancellationToken ct) =>
         client.SendMessage(replyTo.Message.Chat.Id, text, cancellationToken: ct);

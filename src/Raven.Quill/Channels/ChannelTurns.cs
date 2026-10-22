@@ -7,14 +7,12 @@ using Sparrow.Logging;
 
 namespace Raven.Quill.Channels;
 
-internal sealed record ChannelReplies(string Error, string ConversationExpired, string Overloaded)
+internal sealed record ChannelReplies(string Error, string Overloaded)
 {
     internal const string UnsupportedKind = "I can only read text messages right now.";
 
     internal static readonly ChannelReplies Default = new(
         Error: "Sorry - something went wrong handling that message. Please try again.",
-        ConversationExpired:
-        "By the way, this is a fresh conversation - our previous one ended after a period of inactivity, so I no longer have its context.",
         Overloaded:
         "I'm still working through your earlier messages, so that one didn't make it. Please resend it once I've replied.");
 }
@@ -127,7 +125,7 @@ internal sealed class ChannelTurns<TMessage>(
         await platform.TypingAsync(last, ct);
         var reply = platform.CreateReply(last);
 
-        var result = await router.RunAsync(
+        await router.RunAsync(
             new AgentRequest(database, config.Identifier, conversationId, prompt, channel.Id!,
                 parameters.ToDictionary(
                     parameter => parameter.Key,
@@ -137,9 +135,6 @@ internal sealed class ChannelTurns<TMessage>(
 
         await reply.FinalizeAsync(ct);
         health?.MarkSendSucceeded();
-
-        if (result.StartedFresh)
-            await TrySendAsync(last, platform.Replies.ConversationExpired, ct);
 
         if (reply.IsEmpty && logger.IsWarnEnabled)
             logger.Warn($"{channel.Type} agent turn produced an empty reply for channel {channel.Id}");

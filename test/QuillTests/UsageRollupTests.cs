@@ -15,7 +15,7 @@ public class UsageRollupTests(ITestOutputHelper output) : QuillTestBase(output)
         new(database, "support", conversationId, "hello", "channels/abc123",
             new Dictionary<string, JsonElement>(), idleWindow);
 
-    private static Task<bool> TurnAsync(QuillApp app, string conversationId, DateTime at,
+    private static Task TurnAsync(QuillApp app, string conversationId, DateTime at,
         long tokens = 0, bool withIdleWindow = true) =>
         AgentRouter.RecordTurnAsync(app.Store, Request(app.Slug, conversationId, withIdleWindow ? ChannelIdleWindow : null),
             "support", conversationId, "hi", tokens, at, CancellationToken.None);
@@ -70,8 +70,8 @@ public class UsageRollupTests(ITestOutputHelper output) : QuillTestBase(output)
         var first = new DateTime(2026, 8, 17, 12, 0, 0, DateTimeKind.Utc);
         var later = first.AddHours(30);
 
-        Assert.False(await TurnAsync(app, "chats/one", first));
-        Assert.True(await TurnAsync(app, "chats/one", later));
+        await TurnAsync(app, "chats/one", first);
+        await TurnAsync(app, "chats/one", later);
 
         var entries = await EntriesAsync(app);
         Assert.Equal(2, entries.Sum(e => e.Value.Conversations));
@@ -87,8 +87,8 @@ public class UsageRollupTests(ITestOutputHelper output) : QuillTestBase(output)
         await using var app = await NewAppAsync();
         var first = new DateTime(2026, 8, 17, 12, 0, 0, DateTimeKind.Utc);
 
-        Assert.False(await TurnAsync(app, "chats/one", first, withIdleWindow: false));
-        Assert.False(await TurnAsync(app, "chats/one", first.AddDays(90), withIdleWindow: false));
+        await TurnAsync(app, "chats/one", first, withIdleWindow: false);
+        await TurnAsync(app, "chats/one", first.AddDays(90), withIdleWindow: false);
 
         var entries = await EntriesAsync(app);
         Assert.Equal(1, entries.Sum(e => e.Value.Conversations));
