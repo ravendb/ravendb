@@ -28,6 +28,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
 
     private volatile bool _canRestart = true;
     private Task _run = Task.CompletedTask;
+    private Task? _stop;
     private TimeSpan _backoff = MinBackoff;
     private long _exitedAtTicks;
 
@@ -78,7 +79,9 @@ internal sealed class DiscordRuntime : IChannelRuntime
         return runtime;
     }
 
-    public async Task StopAsync()
+    public Task StopAsync() => _stop ??= StopCoreAsync();
+
+    private async Task StopCoreAsync()
     {
         await _cts.CancelAsync();
         await Task.WhenAll(_run, _chats.StopAsync())
