@@ -22,6 +22,10 @@ internal interface IChannelRuntime
 
     bool IsRestartDue(DateTime now) => false;
 
+    void Apply(Channel channel)
+    {
+    }
+
     Task StopAsync();
 }
 
@@ -146,7 +150,10 @@ internal sealed class ChannelManager(
 
             var unchanged = desired.TryGetValue(key, out var current) && runtime.ChannelFingerprint == current.Fingerprint;
             if (unchanged && runtime.IsRestartDue(now) == false)
+            {
+                runtime.Apply(current.Channel);
                 continue;
+            }
 
             stopping.Add((key, runtime));
             if (unchanged && runtime.Health is { } health)

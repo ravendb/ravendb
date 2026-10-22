@@ -292,7 +292,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         var before = RuntimeFor(app, channel);
         var connectsBefore = Discord.Connects;
         await app.UpdateChannelAsync(channel.ChannelId, new UpdateChannelRequest("Renamed bot", null, null));
-        await Task.Delay(1500);
+        await Discord.WaitUntilAsync(() => Discord.PresenceUpdates.Contains("Renamed bot"), "the renamed custom status");
         Assert.Same(before, RuntimeFor(app, channel));
         Assert.Equal(connectsBefore, Discord.Connects);
 
