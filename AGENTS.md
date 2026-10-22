@@ -31,8 +31,9 @@ dotnet build RavenDB.sln -c Release
 # Studio initial setup
 cd src/Raven.Studio && npm ci && npm run restore_compile
 
-# Studio development (watch mode)
+# Studio development (watch mode, run both in separate terminals)
 cd src/Raven.Studio && npm run webpack-watch
+cd src/Raven.Studio && npm run typecheck-watch
 
 # Full release build (rarely needed)
 ./build.ps1 -LinuxX64                  # Windows
