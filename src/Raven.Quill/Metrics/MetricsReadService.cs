@@ -368,7 +368,7 @@ internal static class MetricsReadService
             }
         }
         var agentsCount = record.AiAgents?.Count ?? 0;
-        var hasSyncErrors = cdc is { Disabled: false } && await HasSyncErrorsAsync(store, app.Database, ct);
+        var hasSyncErrors = cdc is { Disabled: false } && await HasSyncErrorsAsync(store, app, ct);
         var (status, subtitle) = DeriveAppStatus(
             agentsCount, channels.Count, enabledChannels, cdc?.Disabled ?? false, hasSyncErrors);
 
@@ -415,10 +415,11 @@ internal static class MetricsReadService
         return "";
     }
 
-    private static async Task<bool> HasSyncErrorsAsync(IDocumentStore store, string database, CancellationToken ct)
+    private static async Task<bool> HasSyncErrorsAsync(IDocumentStore store, App app, CancellationToken ct)
     {
-        var errors = await CdcPerformanceReader.ReadErrorsAsync(store.Maintenance.ForDatabase(database), ct);
-        return CdcPerformanceShaper.HasErrors(errors);
+        var errors = await CdcPerformanceReader.ReadErrorsAsync(store.Maintenance.ForDatabase(app.Database), ct);
+        var (_, lastModified) = await AppLookup.LoadCdcStateAsync(store, app.Database, app.CdcTaskName, ct);
+        return CdcPerformanceShaper.ErrorsSince(errors, lastModified).Any();
     }
 
     internal static (string Status, string? Subtitle) DeriveAppStatus(
