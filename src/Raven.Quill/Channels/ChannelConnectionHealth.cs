@@ -19,6 +19,19 @@ internal sealed class ChannelConnectionHealth
     private DateTime? _lastSendErrorAt;
     private string? _lastSendError;
 
+    public static ChannelConnectionHealth Continuing(ChannelConnectionHealth previous)
+    {
+        var snapshot = previous.Snapshot();
+        return new ChannelConnectionHealth
+        {
+            _lastConnectedAt = snapshot.LastConnectedAt,
+            _lastConnectionError = snapshot.LastConnectionError,
+            _lastInboundAt = snapshot.LastInboundAt,
+            _lastSendErrorAt = snapshot.LastSendErrorAt,
+            _lastSendError = snapshot.LastSendError,
+        };
+    }
+
     public bool IsConnected
     {
         get { lock (_sync) return _isConnected; }

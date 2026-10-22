@@ -31,7 +31,7 @@ internal interface IChannelRuntimeFactory
 
     bool CanStart(Channel channel);
 
-    IChannelRuntime Start(string database, Channel channel, string? changeVector);
+    IChannelRuntime Start(string database, Channel channel, string? changeVector, ChannelConnectionHealth? previous);
 }
 
 internal sealed class ChannelManager(
@@ -138,18 +138,23 @@ internal sealed class ChannelManager(
 
         var now = DateTime.UtcNow;
         var stopping = new List<((string Database, string ChannelId) Key, IChannelRuntime Runtime)>();
+        var restarting = new Dictionary<(string Database, string ChannelId), ChannelConnectionHealth>();
 
         foreach (var (key, runtime) in _runtimes)
         {
             if (unreadable.Contains(key.Database))
                 continue;
 
-            if (desired.TryGetValue(key, out var current) && runtime.ChannelChangeVector == current.ChangeVector &&
-                runtime.IsRestartDue(now) == false)
+            var unchanged = desired.TryGetValue(key, out var current) && runtime.ChannelChangeVector == current.ChangeVector;
+            if (unchanged && runtime.IsRestartDue(now) == false)
                 continue;
 
-            if (_runtimes.TryRemove(key, out _))
-                stopping.Add((key, runtime));
+            if (_runtimes.TryRemove(key, out _) == false)
+                continue;
+
+            stopping.Add((key, runtime));
+            if (unchanged && runtime.Health is { } health)
+                restarting[key] = health;
         }
 
         await Task.WhenAll(stopping.Select(s => StopRuntimeAsync(s.Key, s.Runtime)));
@@ -164,7 +169,8 @@ internal sealed class ChannelManager(
 
             try
             {
-                _runtimes[key] = entry.Factory.Start(key.Database, entry.Channel, entry.ChangeVector);
+                _runtimes[key] = entry.Factory.Start(
+                    key.Database, entry.Channel, entry.ChangeVector, restarting.GetValueOrDefault(key));
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
