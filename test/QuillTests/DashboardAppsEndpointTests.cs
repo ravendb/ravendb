@@ -152,6 +152,38 @@ public class DashboardAppsEndpointTests(ITestOutputHelper output, QuillCollectio
         Assert.Null(subtitle);
     }
 
+    [RavenFact(RavenTestCategory.Quill)]
+    public void DashboardApps_status_ignores_errors_older_than_the_last_clean_batch_like_the_panel()
+    {
+        var performance = new CdcSinkPerformanceRaw
+        {
+            Results =
+            [
+                new CdcPerfTaskRaw
+                {
+                    TaskId = 1,
+                    TaskName = "cdc",
+                    Stats =
+                    [
+                        new CdcPerfProcessRaw
+                        {
+                            Performance =
+                            [
+                                new CdcPerfBatchRaw { Id = 1, Started = ErrorTime, Completed = ErrorTime.AddSeconds(1), ScriptProcessingErrorCount = 1 },
+                                new CdcPerfBatchRaw { Id = 2, Started = ErrorTime.AddMinutes(1), Completed = ErrorTime.AddMinutes(1).AddSeconds(1) },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        };
+        var stateWrittenBeforeTheError = ErrorTime.AddMinutes(-1);
+
+        Assert.False(CdcPerformanceShaper.HasErrorsSince(performance, StoredErrorAt(ErrorTime), stateWrittenBeforeTheError));
+        Assert.Equal(0, CdcPerformanceShaper.Shape(
+            performance, disabled: false, ErrorTime.AddMinutes(2), stateWrittenBeforeTheError, StoredErrorAt(ErrorTime)).ErrorCount);
+    }
+
     private static readonly DateTime ErrorTime = new(2026, 6, 25, 12, 0, 0, DateTimeKind.Utc);
 
     private static CdcSinkErrorsRaw StoredErrorAt(DateTime createdAt) => new()
