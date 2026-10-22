@@ -29,12 +29,12 @@ internal sealed class TelegramRuntime : IChannelRuntime
     private TimeSpan _backoff = MinBackoff;
 
     private TelegramRuntime(
-        string database, Channel channel, string? channelChangeVector, ITelegramBotClient client,
+        string database, Channel channel, string channelFingerprint, ITelegramBotClient client,
         ResolvedTelegramMessages messages, TelegramTurns turns, ChannelChatsFactory chats, TelegramOptions options,
         QuillLogger<TelegramRuntime> logger)
     {
         Client = client;
-        ChannelChangeVector = channelChangeVector;
+        ChannelFingerprint = channelFingerprint;
         _channel = channel;
         _groupChatRefusal = messages.GroupChatRefusal;
         _chats = chats.Create(database, channel, turns, health: null, logger.RavenLogger);
@@ -47,17 +47,17 @@ internal sealed class TelegramRuntime : IChannelRuntime
     public ITelegramBotClient Client { get; }
 
     /// The channel document's change vector at start; the manager restarts the bot when it moves.
-    public string? ChannelChangeVector { get; }
+    public string ChannelFingerprint { get; }
 
     internal int ActiveChatCount => _chats.ActiveChatCount;
 
     public static TelegramRuntime Start(
-        string database, Channel channel, string? channelChangeVector, ITelegramBotClient client,
+        string database, Channel channel, string channelFingerprint, ITelegramBotClient client,
         ResolvedTelegramMessages messages, TelegramTurns turns, ChannelChatsFactory chats, TelegramOptions options,
         QuillLogger<TelegramRuntime> logger)
     {
         var runtime = new TelegramRuntime(
-            database, channel, channelChangeVector, client, messages, turns, chats, options, logger);
+            database, channel, channelFingerprint, client, messages, turns, chats, options, logger);
 
         runtime.Run();
         return runtime;

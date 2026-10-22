@@ -16,12 +16,12 @@ internal sealed class DiscordRuntimeFactory(
 
     public bool CanStart(Channel channel) => channel.Discord is { BotToken.Length: > 0 };
 
-    public IChannelRuntime Start(string database, Channel channel, string? changeVector, ChannelConnectionHealth? previous)
+    public IChannelRuntime Start(string database, Channel channel, string fingerprint, ChannelConnectionHealth? previous)
     {
         var bot = new DiscordBotClient(sdk, channel.Discord!.BotToken);
         var turns = new DiscordTurns(channel.Discord, bot, options.Value.Discord, logger);
 
-        return DiscordRuntime.Start(database, channel, changeVector, turns, bot, chats,
+        return DiscordRuntime.Start(database, channel, fingerprint, turns, bot, chats,
             sdk, options.Value.Discord, logger, previous);
     }
 }

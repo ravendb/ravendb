@@ -32,7 +32,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
     private long _exitedAtTicks;
 
     private DiscordRuntime(
-        string database, Channel channel, string? channelChangeVector,
+        string database, Channel channel, string channelFingerprint,
         DiscordTurns turns, DiscordBotClient bot, ChannelChatsFactory chats, DiscordSdk sdk,
         DiscordOptions options, QuillLogger<DiscordRuntime> logger, ChannelConnectionHealth? previous)
     {
@@ -47,10 +47,10 @@ internal sealed class DiscordRuntime : IChannelRuntime
         _sdk = sdk;
         _options = options;
         _logger = logger;
-        ChannelChangeVector = channelChangeVector;
+        ChannelFingerprint = channelFingerprint;
     }
 
-    public string? ChannelChangeVector { get; }
+    public string ChannelFingerprint { get; }
 
     public ChannelConnectionHealth Health { get; }
 
@@ -67,12 +67,12 @@ internal sealed class DiscordRuntime : IChannelRuntime
     }
 
     public static DiscordRuntime Start(
-        string database, Channel channel, string? channelChangeVector, DiscordTurns turns, DiscordBotClient bot,
+        string database, Channel channel, string channelFingerprint, DiscordTurns turns, DiscordBotClient bot,
         ChannelChatsFactory chats, DiscordSdk sdk, DiscordOptions options,
         QuillLogger<DiscordRuntime> logger, ChannelConnectionHealth? previous = null)
     {
         var runtime = new DiscordRuntime(
-            database, channel, channelChangeVector, turns, bot, chats, sdk, options, logger, previous);
+            database, channel, channelFingerprint, turns, bot, chats, sdk, options, logger, previous);
 
         runtime._run = Task.Run(runtime.RunAsync);
         return runtime;

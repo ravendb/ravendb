@@ -30,7 +30,7 @@ internal sealed class SlackRuntime : IChannelRuntime, SlackSdk.ISocketObserver
     private int _replacing;
 
     private SlackRuntime(
-        string database, Channel channel, string? channelChangeVector, SlackSdk sdk, SlackTurns turns,
+        string database, Channel channel, string channelFingerprint, SlackSdk sdk, SlackTurns turns,
         ChannelChatsFactory chats, SlackOptions options,
         QuillLogger<SlackRuntime> logger, ChannelConnectionHealth? previous)
     {
@@ -43,7 +43,7 @@ internal sealed class SlackRuntime : IChannelRuntime, SlackSdk.ISocketObserver
         _sdk = sdk;
         _options = options;
         _logger = logger;
-        ChannelChangeVector = channelChangeVector;
+        ChannelFingerprint = channelFingerprint;
         _chats = chats.Create(database, channel, turns, Health, logger.RavenLogger);
 
         _handler = new SlackMessageHandler(channel, _chats, Health);
@@ -51,7 +51,7 @@ internal sealed class SlackRuntime : IChannelRuntime, SlackSdk.ISocketObserver
         _client = sdk.NewSocketClient(_appToken, _handler, _netLogger, this);
     }
 
-    public string? ChannelChangeVector { get; }
+    public string ChannelFingerprint { get; }
 
     public ChannelConnectionHealth Health { get; }
 
@@ -66,12 +66,12 @@ internal sealed class SlackRuntime : IChannelRuntime, SlackSdk.ISocketObserver
     private bool Exited => Interlocked.Read(ref _restartDueTicks) != 0;
 
     public static SlackRuntime Start(
-        string database, Channel channel, string? channelChangeVector, SlackSdk sdk, SlackTurns turns,
+        string database, Channel channel, string channelFingerprint, SlackSdk sdk, SlackTurns turns,
         ChannelChatsFactory chats, SlackOptions options,
         QuillLogger<SlackRuntime> logger, ChannelConnectionHealth? previous = null)
     {
         var runtime = new SlackRuntime(
-            database, channel, channelChangeVector, sdk, turns, chats, options, logger, previous);
+            database, channel, channelFingerprint, sdk, turns, chats, options, logger, previous);
 
         runtime._run = Task.Run(runtime.ConnectAsync);
         return runtime;
