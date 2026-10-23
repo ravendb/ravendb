@@ -568,6 +568,9 @@ public sealed partial class CompactTree : IPrepareForCommit
 
         return read;
     }
+    
+    public int BulkUpdateResume(Span<CompactKeyLookup> keys, Span<long> values, Span<int> offsets, out long pageNum) =>
+        _inner.BulkUpdateResume(keys, values, offsets, out pageNum);
 
     public List<long> AllPages() => _inner.AllPages();
 

@@ -1573,7 +1573,16 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     /// values with all the _other_ keys that belong in the same page as the first key. Note that the key is whatever
     /// they *should* go there, so missing values are also included. 
     /// </summary>
-    public int BulkUpdateStart(Span<TLookupKey> keys, Span<long> values, Span<int> offsets, out long pageNum)
+    public int BulkUpdateStart(Span<TLookupKey> keys, Span<long> values, Span<int> offsets, out long pageNum) =>
+        BulkUpdateStart(keys, values, offsets, out pageNum, resetKeyPastPage: true);
+
+    /// <summary>
+    /// Only finds the page and the positions again, the keys are kept as they are.
+    /// </summary>
+    public int BulkUpdateResume(Span<TLookupKey> keys, Span<long> values, Span<int> offsets, out long pageNum) =>
+        BulkUpdateStart(keys, values, offsets, out pageNum, resetKeyPastPage: false);
+
+    private int BulkUpdateStart(Span<TLookupKey> keys, Span<long> values, Span<int> offsets, out long pageNum, bool resetKeyPastPage)
     {
         Debug.Assert(keys.IsEmpty == false);
         // here we find the right page to start
@@ -1591,7 +1600,8 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             {
                 if (curKey.CompareTo(this, limit.Value) >= 0)
                 {
-                    curKey.Reset(); // we don't want to retain any knowledge of this 
+                    if (resetKeyPastPage)
+                        curKey.Reset(); // we don't want to retain any knowledge of this
                     break; // hit the limits of the page...
                 }
             }
