@@ -147,6 +147,12 @@ public sealed class MockDiscordApi : IAsyncDisposable
             _bots[botToken] = new BotEntry(applicationId, botUserId, username);
     }
 
+    public void RemoveBot(string botToken)
+    {
+        lock (_lock)
+            _bots.Remove(botToken);
+    }
+
     public void Reset()
     {
         GatewaySession? session;
