@@ -1388,6 +1388,11 @@ namespace Raven.Server.Documents
 
         private void NextScheduledActivityCallback(string databaseName, IdleDatabaseActivity nextIdleDatabaseActivity)
         {
+            _ = NextScheduledActivityCallbackAsync(databaseName, nextIdleDatabaseActivity);
+        }
+
+        private async Task NextScheduledActivityCallbackAsync(string databaseName, IdleDatabaseActivity nextIdleDatabaseActivity)
+        {
             try
             {
                 if (_disposing.TryEnter(out var idx) == false)
@@ -1410,7 +1415,7 @@ namespace Raven.Server.Documents
                             var backupResult = new BackupResult();
                             backupResult.AddMessage($"Skipping incremental backup because no changes were made from last full backup on {backupStatus.LastFullBackup}.");
                             
-                            BackupUtils.SaveBackupStatus(backupStatus, databaseName, _serverStore, _logger, backupResult);
+                            await BackupUtils.SaveBackupStatusAsync(backupStatus, databaseName, _serverStore, _logger, backupResult);
 
                             // choose the next backup that will arrive the earliest
                             nextIdleDatabaseActivity = BackupUtils.GetEarliestIdleDatabaseActivity(new BackupUtils.EarliestIdleDatabaseActivityParameters
