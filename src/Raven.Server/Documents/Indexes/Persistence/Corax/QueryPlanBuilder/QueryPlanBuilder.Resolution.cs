@@ -18,6 +18,7 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
+using Voron.Data.Lookups;
 using Voron.Impl;
 using Constants = Corax.Constants;
 using EntryIdPaginationSupportStatus = Corax.EntryIdPaginationSupportStatus;
@@ -503,48 +504,132 @@ internal static partial class QueryPlanBuilder
     private static bool IsNullOrMissingValue(QueryExecution exec, PackedParam packed) =>
         packed.IsNone || (packed.ValueType == PackedParam.TypeString && exec.StringValues[packed.Param1] is null or "");
 
-    private static bool TryCreateCompoundExactMatch(ref InstantiateContext ctx, out string rejectReason)
-    {
-        // The only thing still unknown is value-dependent — a value can resolve to "none" (missing) or to null, neither of which has a composite-key encoding.
-        if (IsNullOrMissingValue(ctx.Exec, ctx.Exec.CompoundExactFirst.PackedParamValue) ||
-            IsNullOrMissingValue(ctx.Exec, ctx.Exec.CompoundExactSecond.PackedParamValue))
-        {
-            rejectReason = "the combined-key lookup needs both values, but one is null or missing";
-            return false;
-        }
-
-        rejectReason = null;
-        return true;
-    }
-
-    private static IQueryMatch ConstructCompoundExact(ref InstantiateContext ctx)
+    [SkipLocalsInit]
+    private static IQueryMatch ConstructCompoundExact(ref InstantiateContext ctx, ResolutionContext walkerCtx)
     {
         var indexSearcher = ctx.PlanParams.IndexSearcher;
-        var eA = ctx.Exec.CompoundExactFirst;
-        var eB = ctx.Exec.CompoundExactSecond;
+        var (firstExec, secondExec) = ctx.Exec.Plan.Template.CompoundExactAFirst
+            ? (ctx.Exec.CompoundExactFirst, ctx.Exec.CompoundExactSecond)
+            : (ctx.Exec.CompoundExactSecond, ctx.Exec.CompoundExactFirst);
 
-        var (firstField, secondField, firstExec, secondExec) = ctx.Exec.Plan.Template.CompoundExactAFirst
-            ? (eA.Clause.ResolvedFieldName ?? eA.Clause.FieldName, eB.Clause.ResolvedFieldName ?? eB.Clause.FieldName, eA, eB)
-            : (eB.Clause.ResolvedFieldName ?? eB.Clause.FieldName, eA.Clause.ResolvedFieldName ?? eA.Clause.FieldName, eB, eA);
-        
-        if (TryGetCompoundFieldEncoding(ref ctx, firstField, firstExec.PackedParamValue, firstExec.PackedParamValue.Param1, out var enc1) == false || 
-            TryGetCompoundFieldEncoding(ref ctx, secondField, secondExec.PackedParamValue, secondExec.PackedParamValue.Param1, out var enc2) == false)
+        Span<long> firstKeys = stackalloc long[2], secondKeys = stackalloc long[2];
+        if (TryGetCompoundKeyComponent(ref ctx, walkerCtx, firstExec, firstKeys, out var firstText, out int firstCount) == false ||
+            TryGetCompoundKeyComponent(ref ctx, walkerCtx, secondExec, secondKeys, out var secondText, out int secondCount) == false)
             return null;
 
-        int totalLen = enc1.Size + enc2.Size + 1;
-        if (totalLen > Constants.Terms.MaxLength) 
-            return null;
-
+        int firstSize = firstText.HasValue ? firstText.Size : sizeof(long);
+        int secondSize = secondText.HasValue ? secondText.Size : sizeof(long);
+        int totalLen = firstSize + secondSize + 1;
         ctx.PlanParams.Allocator.Allocate(totalLen, out ByteString keyBuf);
         var keySpan = keyBuf.ToSpan();
-        var compoundNumericXorMask = ctx.BuilderParams.CompoundFieldNumericXorMask;
-        WriteCompoundFieldEncoding(keySpan.Slice(0, enc1.Size), enc1, ctx.Exec, compoundNumericXorMask);
-        WriteCompoundFieldEncoding(keySpan.Slice(enc1.Size, enc2.Size), enc2, ctx.Exec, compoundNumericXorMask);
-        keySpan[totalLen - 1] = (byte)enc1.Size;
+        firstText.AsReadOnlySpan().CopyTo(keySpan);
+        secondText.AsReadOnlySpan().CopyTo(keySpan.Slice(firstSize));
+        keySpan[totalLen - 1] = (byte)firstSize;
 
         var compoundFieldMeta = indexSearcher.FieldMetadataBuilder(ctx.Exec.Plan.Template.CompoundExactName, hasBoost: false);
+        IQueryMatch result = null;
+        for (int i = 0; i < firstCount; i++)
+        {
+            if (firstText.HasValue == false)
+                BinaryPrimitives.WriteInt64BigEndian(keySpan, firstKeys[i]);
+            for (int j = 0; j < secondCount; j++)
+            {
+                if (secondText.HasValue == false)
+                    BinaryPrimitives.WriteInt64BigEndian(keySpan.Slice(firstSize), secondKeys[j]);
+                var term = indexSearcher.TermQuery(compoundFieldMeta, new Slice(keyBuf));
+                if (term.Count > 0)
+                    result = result is null ? term : new LazyOrMatch(indexSearcher.Allocator, result, term, ctx.Token);
+            }
+        }
 
-        return indexSearcher.TermQuery(compoundFieldMeta, new Slice(keyBuf));
+        return result ?? EmptyQueryMatch.Instance;
+    }
+
+    // The key holds each value as its type is written: text as its analyzed term, a bool as one byte, a char as 1-2 of its UTF-16 bytes, a number or
+    // date as 8 bytes. A value is looked up only where those bytes are exactly what its equality matches.
+    private static bool TryGetCompoundKeyComponent(ref InstantiateContext ctx, ResolutionContext walkerCtx, ClauseExecution exec,
+        scoped Span<long> keys, out Slice text, out int count)
+    {
+        text = default;
+        count = 1;
+        var fieldMeta = ResolveFieldMetadata(exec.Clause, walkerCtx); // analyze like the equality, exact() included
+        if (ctx.BuilderParams.IndexFieldsMapping.TryGetByFieldId(fieldMeta.FieldId, out var binding) == false || binding.IsIndexed == false)
+            return false; // the equality finds nothing in an unindexed field, while the key holds its values
+
+        if (exec.PackedParamValue.ValueType != PackedParam.TypeString)
+            return TryGetNumericKeys(ref ctx, exec, fieldMeta, binding, keys, out count);
+
+        // a keyword analyzer indexes a bool as "true" / "false" and a char as at most 3 bytes; any other may split or rewrite them
+        var indexSearcher = ctx.PlanParams.IndexSearcher;
+        if (binding.Analyzer is not { IsCompoundFieldCompatible: true } ||
+            indexSearcher.TryAnalyzeSingleToken(fieldMeta, ctx.Exec.StringValues[exec.PackedParamValue.Param1], out text) == false ||
+            text.Size is < 3 or > byte.MaxValue) // a char's text (1-2 bytes), null and ""
+            return false;
+
+        var bytes = text.AsReadOnlySpan();
+        return bytes is not [>= 0x80, _, _] && // a char's text lowercased into a 3-byte letter, e.g. Ⱥ -> ⱥ
+               bytes.SequenceEqual("true"u8) == false && bytes.SequenceEqual("false"u8) == false &&
+               // a number or date is indexed as its text too, but keyed as 8 bytes; -L exists for every field, so its entries are counted
+               indexSearcher.GetLongTermsFor(binding.FieldNameLong) is not { NumberOfEntries: > 0 };
+    }
+
+    // The equality reads -L for a long, which also holds the doubles truncated to it, and -D for a double, which also holds the longs converted
+    // to it. The key holds a long as v ^ mask and a double as its sortable bits, so both keys are looked up where that gives the same rows.
+    [SkipLocalsInit]
+    private static bool TryGetNumericKeys(ref InstantiateContext ctx, ClauseExecution exec, in FieldMetadata fieldMeta, IndexFieldBinding binding, scoped Span<long> keys, out int count)
+    {
+        count = 0;
+        if (ctx.BuilderParams.Index.IndexFieldsPersistence.HasTimeValues(exec.Clause.ResolvedFieldName ?? exec.Clause.FieldName))
+            return false; // a DateTimeOffset is keyed by its local ticks, while -L holds its UTC ones
+
+        var searcher = ctx.PlanParams.IndexSearcher;
+        var longs = searcher.GetLongTermsFor(binding.FieldNameLong);
+        var doubles = searcher.GetDoubleTermsFor(binding.FieldNameDouble);
+        var mask = ctx.BuilderParams.CompoundFieldNumericXorMask;
+        var packed = exec.PackedParamValue;
+        double d;
+        switch (packed.ValueType)
+        {
+            case PackedParam.TypeLong:
+                long l = ctx.Exec.LongValues[packed.Param1];
+                d = l;
+                // below 2^53 -D(d) is within -L(l), above it -L(l) is within -D(d), so equal counts are the same rows. Not 0: -0.0 has its own key;
+                // nor the ends: every double beyond them saturates into -L
+                if (l is 0 or long.MinValue or long.MaxValue || Docs<Int64LookupKey>(longs, l) != Docs<DoubleLookupKey>(doubles, d))
+                    return false;
+                keys[count++] = l ^ mask;
+                break;
+            case PackedParam.TypeDouble:
+                d = ctx.Exec.DoubleValues[packed.Param1];
+                // from 2^53 several longs convert to d (NaN fails here too); 0.0 and -0.0 are one -D term but two keys
+                if (d == 0 || (Math.Abs(d) < 1L << 53) == false)
+                    return false;
+                if (d == Math.Truncate(d))
+                    keys[count++] = (long)d ^ mask;
+                break;
+            default:
+                return false;
+        }
+
+        keys[count++] = Bits.DoubleToSortableLong(d);
+
+        // the 8 bytes don't say their type: turned down where a text, a double (for the long key) or a long (for the double key) is keyed the same
+        var texts = searcher.GetTermsFor(fieldMeta.FieldName);
+        Span<byte> bytes = stackalloc byte[sizeof(long)];
+        for (int i = 0; i < count; i++)
+        {
+            BinaryPrimitives.WriteInt64BigEndian(bytes, keys[i]);
+            if (texts?.TryGetValue(bytes, out _) == true ||
+                (i < count - 1
+                    ? doubles?.TryGetValue(BitConverter.Int64BitsToDouble(keys[i] < 0 ? keys[i] ^ long.MaxValue : keys[i]), out _) == true
+                    : longs?.TryGetValue(keys[i] ^ mask, out _) == true))
+                return false;
+        }
+
+        return true;
+
+        long Docs<TKey>(Lookup<TKey> tree, TKey key) where TKey : struct, ILookupKey =>
+            tree?.TryGetValue(key, out long id) == true ? searcher.NumberOfDocumentsUnderSpecificTerm(id) : 0;
     }
 
     private static bool TryCreateCompoundFieldMatch(ref InstantiateContext ctx, out string rejectReason)
