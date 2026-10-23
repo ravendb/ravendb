@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using Raven.Quill.Channels;
 using Raven.Quill.Hosting;
 
@@ -21,6 +22,10 @@ internal static class DiscordChannelRegistration
                 "Discord GatewayHandshakeTimeout must be positive")
             .Validate(o => o.Discord.GatewayRestartDelay > TimeSpan.Zero, "Discord GatewayRestartDelay must be positive");
 
+        services.AddHttpClient(DiscordSdk.HttpClientName, static (sp, http) =>
+        {
+            http.Timeout = sp.GetRequiredService<IOptions<ApplianceOptions>>().Value.Discord.RequestTimeout;
+        });
         services.AddSingleton<DiscordSdk>();
 
         return services.AddSingleton<IChannelRuntimeFactory, DiscordRuntimeFactory>();

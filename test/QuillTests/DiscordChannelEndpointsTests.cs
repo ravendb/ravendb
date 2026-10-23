@@ -325,16 +325,21 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Discord, agentId, null, DisplayName: "Support bot", Discord: new(botToken)));
+        await Discord.WaitUntilConnectedAsync();
+        await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, Enabled: false));
+        await Discord.WaitUntilAsync(() => Discord.IsConnected == false, "the gateway to disconnect");
+        var applicationCallsAfterProvision = Discord.ApplicationCalls.Count(t => t == botToken);
 
         var rows = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
             Host.Client, QuillRoutes.DiscordHealth(app.Slug));
 
+        Assert.Equal(applicationCallsAfterProvision, Discord.ApplicationCalls.Count(t => t == botToken));
         var row = Assert.Single(rows, r => r.ChannelId == created.ChannelId);
         Assert.True(row.TokenValid);
         Assert.Null(row.TokenError);
         Assert.Equal(applicationId, row.ApplicationId);
         Assert.Equal(botUserId, row.BotUserId);
-        Assert.True(row.Enabled);
+        Assert.False(row.Enabled);
         Assert.Null(row.LastInboundAt);
     }
 

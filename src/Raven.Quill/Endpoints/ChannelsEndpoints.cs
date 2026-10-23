@@ -906,17 +906,16 @@ public static class ChannelsEndpoints
         {
             var botToken = body.Discord.BotToken.Trim();
 
-            var (identity, identityError, _) = await discord.GetBotIdentityAsync(botToken, ct);
-            if (identity is null)
-                return Results.BadRequest(new ApiErrorResponse(identityError!));
+            var (user, userError, _) = await discord.CheckBotTokenAsync(botToken, ct);
+            if (user is null)
+                return Results.BadRequest(new ApiErrorResponse(userError!));
 
-            if (identity.BotUserId != settings.BotUserId)
+            if (user.BotUserId != settings.BotUserId)
                 return Results.BadRequest(new ApiErrorResponse(
                     "the token belongs to a different bot; connect it as a new channel instead"));
 
             settings.BotToken = botToken;
-            settings.BotUsername = identity.BotUsername;
-            settings.ApplicationId = identity.ApplicationId;
+            settings.BotUsername = user.BotUsername;
             tokenRotated = true;
         }
 

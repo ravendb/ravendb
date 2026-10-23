@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Net;
 using Discord;
-using Discord.Net;
 using Discord.Rest;
 
 namespace Raven.Quill.Discord;
@@ -33,29 +32,9 @@ internal sealed class DiscordBotClient(DiscordSdk sdk, string botToken) : IAsync
         {
             return await call;
         }
-        catch (HttpException e) when (e.HttpCode is HttpStatusCode.Unauthorized)
+        catch (Exception e) when (ct.IsCancellationRequested == false && DiscordApiErrors.IsApiFailure(e))
         {
-            throw new DiscordApiException(DiscordApiErrors.TokenRejected, e.HttpCode, e);
-        }
-        catch (RateLimitedException e)
-        {
-            throw new DiscordApiException($"discord rate-limited {what}", HttpStatusCode.TooManyRequests, e);
-        }
-        catch (HttpException e)
-        {
-            throw new DiscordApiException($"discord refused {what}: {ErrorTextOf(e)}", e.HttpCode, e);
-        }
-        catch (TimeoutException e)
-        {
-            throw new DiscordApiException($"the Discord API did not respond to {what}", inner: e);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested == false)
-        {
-            throw new DiscordApiException($"the Discord API did not respond to {what}");
-        }
-        catch (HttpRequestException e)
-        {
-            throw new DiscordApiException($"could not reach the Discord API: {e.Message}", inner: e);
+            throw new DiscordApiException(DiscordApiErrors.Describe(e, what), DiscordApiErrors.StatusOf(e), e);
         }
     }
 
@@ -69,9 +48,6 @@ internal sealed class DiscordBotClient(DiscordSdk sdk, string botToken) : IAsync
             return true;
         }
     }
-
-    internal static string ErrorTextOf(HttpException e) =>
-        string.IsNullOrWhiteSpace(e.Reason) ? $"status {(int)e.HttpCode}" : e.Reason;
 
     internal static string Snowflake(ulong id) => id.ToString(CultureInfo.InvariantCulture);
 
