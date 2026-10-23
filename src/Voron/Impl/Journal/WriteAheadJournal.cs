@@ -316,7 +316,7 @@ namespace Voron.Impl.Journal
                         if (sp.Elapsed.TotalSeconds >= 60)
                         {
                             sp.Restart();
-                            addToInitLog?.Invoke(LogMode.Information, $"Still calculating checksum... {(sortedPages.Length - i) / sortedPages.Length * 100:0.00}% ({(sortedPages.Length - i):#,#;;0} out of {sortedPages.Length:#,#;;0}");
+                            addToInitLog?.Invoke(LogMode.Information, $"Still calculating checksum... {100.0 * (sortedPages.Length - i) / sortedPages.Length:0.00}% ({(sortedPages.Length - i):#,#;;0} out of {sortedPages.Length:#,#;;0})");
                         }
 
                         using (tempTx) // release any resources, we just wanted to validate things
