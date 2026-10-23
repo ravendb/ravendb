@@ -291,7 +291,6 @@ public sealed class MockDiscordApi : IAsyncDisposable
         app.MapGet("/users/@me", (HttpContext ctx) => instance.HandleCurrentUser(ctx));
         app.MapGet("/oauth2/applications/@me", (HttpContext ctx) => instance.HandleCurrentApplication(ctx));
         app.MapGet("/gateway/bot", (HttpContext ctx) => instance.HandleGatewayBot(ctx));
-        app.MapGet("/channels/{channelId}", (string channelId, HttpContext ctx) => instance.HandleGetChannel(ctx, channelId));
         app.MapPost("/channels/{channelId}/typing", (string channelId, HttpContext ctx) => instance.HandleTyping(ctx, channelId));
 
         app.MapPost("/channels/{channelId}/messages", async (string channelId, HttpContext ctx) =>
@@ -660,19 +659,6 @@ public sealed class MockDiscordApi : IAsyncDisposable
         {
             ["url"] = GatewayUrl,
             ["shards"] = 1,
-        });
-    }
-
-    private IResult HandleGetChannel(HttpContext ctx, string channelId)
-    {
-        if (BotFor(BotToken(ctx)) is null)
-            return DiscordError(401, "401: Unauthorized");
-
-        return Results.Json(new JsonObject
-        {
-            ["id"] = channelId,
-            ["type"] = 1,
-            ["recipients"] = new JsonArray(new JsonObject { ["id"] = "1", ["username"] = "dana" }),
         });
     }
 
