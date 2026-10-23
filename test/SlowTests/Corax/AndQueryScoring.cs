@@ -77,6 +77,30 @@ public class AndQueryScoring(ITestOutputHelper output) : RavenTestBase(output)
         Assert.Equal(scores["docs/K"], scores["docs/L"], 4);
     }
 
+    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    public void MoreLikeThisKeepsFilterBoostWithFieldOrderBy()
+    {
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Article { Category = "src", Title = "a", Body = "ravendb corax scoring engine ranking" }, "articles/1");
+            session.Store(new Article { Category = "blog", Title = "b", Body = "ravendb corax scoring engine ranking fast" }, "articles/2");
+            session.Store(new Article { Category = "news", Title = "c", Body = "ravendb corax" }, "articles/3");
+            session.SaveChanges();
+        }
+
+        new Articles().Execute(store);
+        Indexes.WaitForIndexing(store);
+
+        using var s = store.OpenSession();
+        const string where = "from index 'Articles' where morelikethis(id() = 'articles/1', '{\"Fields\":[\"Body\"],\"MinimumTermFrequency\":1,\"MinimumDocumentFrequency\":1}') and (boost(Category = 'news', 10) or Category = 'blog')";
+        var noOrder = s.Advanced.RawQuery<Article>(where).NoCaching().ToList().Select(x => x.Id).ToList();
+        var byTitle = s.Advanced.RawQuery<Article>(where + " order by Title").NoCaching().ToList().Select(x => x.Id).ToList();
+
+        Assert.Equal("articles/3", noOrder.First());
+        Assert.Equal(noOrder, byTitle);
+    }
+
     private static void AssertAndGroupIsNotScan(QueryInspectionNode plan)
     {
         var operations = Operations(plan).ToList();
@@ -145,5 +169,22 @@ public class AndQueryScoring(ITestOutputHelper output) : RavenTestBase(output)
         public string C { get; set; }
         public string D { get; set; }
         public string E { get; set; }
+    }
+
+    private class Articles : AbstractIndexCreationTask<Article>
+    {
+        public Articles()
+        {
+            Map = articles => from a in articles select new { a.Category, a.Body, a.Title };
+            Index(x => x.Body, FieldIndexing.Search);
+        }
+    }
+
+    private class Article
+    {
+        public string Id { get; set; }
+        public string Category { get; set; }
+        public string Body { get; set; }
+        public string Title { get; set; }
     }
 }
