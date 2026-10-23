@@ -108,6 +108,13 @@ public partial class IndexWriter
                             bulkEnd = idX + _fieldTree.BulkUpdateResume(keys[idX..read], postingListIds[idX..read], pageOffsets[idX..read], out _curPage);
                         }
 
+                        if (FieldInserterHelper.CanRemoveInBulk(_jobs.ToSpan()[idX..bulkEnd], pageOffsets[idX..bulkEnd], treeChanged.Changed, out int removals))
+                        {
+                            _fieldTree.BulkUpdateRemoveRange(keys.Slice(idX, removals), _curPage, pageOffsets[idX], ref _offsetAdjustment);
+                            idX += removals - 1;  // adjust `for` loop +1 op 
+                            continue;
+                        }
+
                         ProcessLookupOperation(_jobs[idX], ref keys[idX], treeChanged, pageOffsets[idX], sortedTerms[idX]);
                     }
 
