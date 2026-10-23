@@ -1101,5 +1101,86 @@ class Test
             // Name and Status are on the source document (Order) — retrievable under Default behavior
             Assert.Empty(diagnostics);
         }
+        private const string UsingsWithoutRavenLinq = @"
+using System.Collections.Generic;
+using System.Linq;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries;
+";
+
+        private const string NameOnlyStoredIndex = @"
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex()
+    {
+        Map = orders => from o in orders select new { o.Name };
+        Store(x => x.Name, FieldStorage.Yes);
+    }
+}
+";
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task Select_FromIndex_WithoutRavenLinqUsing_Reports_Diagnostic()
+        {
+            const string source = UsingsWithoutRavenLinq + OrderClass + NameOnlyStoredIndex + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, OrderIndex>()
+            .Customize(x => x.Projection(ProjectionBehavior.FromIndex))
+            .Where(o => o.Name == ""x"")
+            .Select(o => new { o.Name, o.Price });
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryProjectionFieldNotRetrievable, d.Id);
+            Assert.Contains("Price", d.GetMessage());
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task Select_After_OfType_No_Diagnostic()
+        {
+            const string source = CommonUsings + OrderClass + NameOnlyStoredIndex + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, OrderIndex>()
+            .Customize(x => x.Projection(ProjectionBehavior.FromIndex))
+            .OfType<Order>()
+            .Select(o => new { o.Name, o.Price });
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task Select_After_GroupBy_No_Diagnostic()
+        {
+            const string source = CommonUsings + OrderClass + NameOnlyStoredIndex + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, OrderIndex>()
+            .Customize(x => x.Projection(ProjectionBehavior.FromIndex))
+            .GroupBy(o => o.Name)
+            .Select(g => new { Name = g.Key, Count = g.Count() });
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
     }
 }

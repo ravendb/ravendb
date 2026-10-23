@@ -58,8 +58,7 @@ namespace Raven.Analyzers.Queries
             var query = (QueryExpressionSyntax)context.Node;
 
             // Only RavenDB queries: the initial 'from … in <source>' must be an IRavenQueryable.
-            ITypeSymbol? sourceType = context.SemanticModel.GetTypeInfo(query.FromClause.Expression).Type;
-            if (!SyntaxHelpers.IsRavenQueryable(sourceType))
+            if (!SyntaxHelpers.IsRavenQueryableRooted(query.FromClause.Expression, context.SemanticModel))
                 return;
 
             // Scan the server-translated clause expressions (where / orderby / let / join keys /

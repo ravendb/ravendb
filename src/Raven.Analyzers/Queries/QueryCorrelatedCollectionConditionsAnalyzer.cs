@@ -57,7 +57,7 @@ namespace Raven.Analyzers.Queries
         {
             var query = (QueryExpressionSyntax)context.Node;
 
-            if (!SyntaxHelpers.IsRavenQueryable(context.SemanticModel.GetTypeInfo(query.FromClause.Expression).Type))
+            if (!SyntaxHelpers.IsRavenQueryableRooted(query.FromClause.Expression, context.SemanticModel))
                 return;
 
             if (!IsDynamicQueryChain(query.FromClause.Expression, context.SemanticModel))

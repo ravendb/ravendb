@@ -215,19 +215,21 @@ namespace Raven.Analyzers.Shared
 
         /// <summary>
         /// When <paramref name="invocation"/> is a member call (<c>receiver.Method(...)</c>) whose receiver
-        /// is an <c>IRavenQueryable&lt;T&gt;</c>, returns that member access (its <c>.Expression</c> is the
-        /// receiver); otherwise null. Collapses the repeated "require a member-access receiver, then
-        /// <see cref="IsRavenQueryable"/> its static type" guard shared by the query analyzers so they cannot
-        /// drift on what counts as a Raven-queryable receiver. The namespace gate inside
-        /// <see cref="IsRavenQueryable"/> is preserved.
+        /// chain is rooted in an <c>IRavenQueryable&lt;T&gt;</c> (walking back through <c>System.Linq</c>
+        /// operators and <c>IQueryable&lt;T&gt;</c> locals), returns that member access (its
+        /// <c>.Expression</c> is the receiver); otherwise null. Shared by the LINQ query analyzers so they
+        /// cannot drift on what counts as a Raven-queryable receiver.
         /// </summary>
         public static MemberAccessExpressionSyntax? GetRavenQueryableReceiver(InvocationExpressionSyntax invocation, SemanticModel model)
         {
             if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
                 return null;
 
-            return IsRavenQueryable(model.GetTypeInfo(memberAccess.Expression).Type) ? memberAccess : null;
+            return IsRavenQueryableRooted(memberAccess.Expression, model) ? memberAccess : null;
         }
+
+        public static bool IsRavenQueryableRooted(ExpressionSyntax? expression, SemanticModel model) =>
+            IsRootedIn(expression, model, IsRavenQueryable);
 
         public static bool IsRavenQuery(ITypeSymbol? type) =>
             IsRavenQueryable(type)
@@ -268,7 +270,10 @@ namespace Raven.Analyzers.Shared
             return IsRavenQueryRooted(memberAccess.Expression, model) ? memberAccess : null;
         }
 
-        internal static bool IsRavenQueryRooted(ExpressionSyntax? expression, SemanticModel model)
+        internal static bool IsRavenQueryRooted(ExpressionSyntax? expression, SemanticModel model) =>
+            IsRootedIn(expression, model, IsRavenQuery);
+
+        private static bool IsRootedIn(ExpressionSyntax? expression, SemanticModel model, Func<ITypeSymbol?, bool> isRoot)
         {
             int hops = 0;
             while (expression != null && hops++ < MaxInvocationChainHops)
@@ -280,7 +285,7 @@ namespace Raven.Analyzers.Shared
                 }
 
                 ITypeSymbol? type = model.GetTypeInfo(expression).Type;
-                if (IsRavenQuery(type))
+                if (isRoot(type))
                     return true;
 
                 if (!IsSystemQueryable(type))

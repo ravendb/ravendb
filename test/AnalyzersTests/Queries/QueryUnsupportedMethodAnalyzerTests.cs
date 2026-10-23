@@ -719,5 +719,88 @@ namespace MyApp
 
             Assert.Empty(diagnostics);
         }
+        private const string UsingsWithoutRavenLinq = @"
+using System;
+using System.Linq;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
+";
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task UserMethod_In_Where_WithoutRavenLinqUsing_Reports_Diagnostic()
+        {
+            const string source = UsingsWithoutRavenLinq + @"
+class MyFilters { public static bool IsActive(string status) => status == ""Active""; }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order>()
+            .Where(o => MyFilters.IsActive(o.Status));
+    }
+}
+
+class Order { public string Status { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id);
+            Assert.Contains("IsActive", d.GetMessage());
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task UserMethod_In_Where_After_OfType_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyFilters { public static bool IsActive(string status) => status == ""Active""; }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order>()
+            .OfType<Order>()
+            .Where(o => MyFilters.IsActive(o.Status));
+    }
+}
+
+class Order { public string Status { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id);
+            Assert.Contains("IsActive", d.GetMessage());
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task UserMethod_In_InMemory_Where_After_ToList_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyFilters { public static bool IsActive(string status) => status == ""Active""; }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order>()
+            .Take(5)
+            .ToList()
+            .Where(o => MyFilters.IsActive(o.Status))
+            .ToList();
+    }
+}
+
+class Order { public string Status { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
     }
 }

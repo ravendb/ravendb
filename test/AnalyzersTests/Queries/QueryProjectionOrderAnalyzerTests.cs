@@ -417,5 +417,60 @@ class Test
             Assert.Contains(diagnostics, d => d.Id == DiagnosticIds.QueryFilteringAfterProjection);
             Assert.Contains(diagnostics, d => d.Id == DiagnosticIds.DoubleProjectInto);
         }
+        private const string UsingsWithoutRavenLinq = @"
+using System.Linq;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
+";
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task Where_After_Select_WithoutRavenLinqUsing_Reports_Diagnostic()
+        {
+            const string source = UsingsWithoutRavenLinq + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order>()
+            .Select(x => new { Full = x.Id + x.Id })
+            .Where(x => x.Full == ""1"");
+    }
+
+    class Order { public string Id { get; set; } }
+}
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionOrderAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryFilteringAfterProjection, d.Id);
+            Assert.Contains("Where", d.GetMessage());
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task Where_After_ProjectInto_Through_OfType_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order>()
+            .ProjectInto<OrderView>()
+            .OfType<OrderView>()
+            .Where(x => x.Id == ""1"");
+    }
+
+    class Order { public string Id { get; set; } }
+    class OrderView { public string Id { get; set; } }
+}
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionOrderAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryFilteringAfterProjection, d.Id);
+            Assert.Contains("Where", d.GetMessage());
+        }
     }
 }

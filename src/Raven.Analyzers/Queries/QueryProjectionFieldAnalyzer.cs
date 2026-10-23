@@ -127,7 +127,7 @@ namespace Raven.Analyzers.Queries
                 return;
 
             ExpressionSyntax sourceExpression = query.FromClause.Expression;
-            if (!SyntaxHelpers.IsRavenQueryable(model.GetTypeInfo(sourceExpression).Type))
+            if (!SyntaxHelpers.IsRavenQueryableRooted(sourceExpression, model))
                 return;
 
             InvocationExpressionSyntax? queryCall = FindQueryCall(sourceExpression, model);
@@ -222,7 +222,7 @@ namespace Raven.Analyzers.Queries
                 string? name = SyntaxHelpers.GetMethodName(inv);
                 if (name == KnownTypes.QueryMethods.Query)
                     return false;
-                if (name is KnownTypes.SelectMethodName or KnownTypes.ProjectIntoMethodName)
+                if (KnownTypes.ShapeChangingQueryMethods.Contains(name))
                     return true;
             }
             return false;

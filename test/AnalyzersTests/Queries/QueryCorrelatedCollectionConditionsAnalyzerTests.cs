@@ -365,5 +365,56 @@ class Test
 
             Assert.Single(diagnostics);
         }
+        private const string UsingsWithoutRavenLinq = @"
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
+";
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task CorrelatedAny_WithoutRavenLinqUsing_Reports_Diagnostic()
+        {
+            const string source = UsingsWithoutRavenLinq + @"
+class Test
+{
+    void Run(IDocumentSession session, string id)
+    {
+        var projects = session.Query<Project>()
+            .Where(x => x.Members.Any(y => y.UserId == id && y.Role == Role.Contributor))
+            .ToList();
+    }
+}
+" + Model;
+
+            var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryCorrelatedCollectionConditionsAnalyzer>(source);
+
+            var diagnostic = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryCorrelatedCollectionConditions, diagnostic.Id);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task CorrelatedAny_After_OfType_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string id)
+    {
+        var projects = session.Query<Project>()
+            .OfType<Project>()
+            .Where(x => x.Members.Any(y => y.UserId == id && y.Role == Role.Contributor))
+            .ToList();
+    }
+}
+" + Model;
+
+            var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryCorrelatedCollectionConditionsAnalyzer>(source);
+
+            var diagnostic = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryCorrelatedCollectionConditions, diagnostic.Id);
+        }
     }
 }

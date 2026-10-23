@@ -13,6 +13,17 @@ namespace Raven.Analyzers
         public const string SelectManyMethodName = nameof(Queryable.SelectMany);
         public const string GroupByMethodName = nameof(Queryable.GroupBy);
 
+        public static readonly HashSet<string> ShapeChangingQueryMethods =
+        [
+            ProjectIntoMethodName,
+            SelectMethodName,
+            SelectManyMethodName,
+            GroupByMethodName,
+            nameof(Queryable.OfType),
+            nameof(Queryable.Cast),
+            "As",
+        ];
+
         /// <summary>
         /// Query chain methods that must not appear after a projection (Select / ProjectInto) in a
         /// RavenDB LINQ query. All of these operate on the source document / index shape and will
