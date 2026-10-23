@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CdcSinkTableConfig } from "@/api/generated/server-api";
+import type { CdcSinkEmbeddedTableConfig, CdcSinkTableConfig } from "@/api/generated/server-api";
 import { parseConfigFile, parseConfigTables } from "@/pages/setup/add-app-wizard/config-io";
 
 function configFile(config: unknown) {
@@ -25,6 +25,22 @@ function rootTable(collectionName: string): CdcSinkTableConfig {
         patch: null,
         onDelete: { patch: null, ignoreDeletes: false },
         disabled: false,
+        embeddedTables: [],
+        linkedTables: [],
+    };
+}
+
+function embeddedTable(propertyName: string): CdcSinkEmbeddedTableConfig {
+    return {
+        sourceTableSchema: "public",
+        sourceTableName: "orders",
+        propertyName,
+        columns: [{ column: "id", name: "Id", type: "Default" }],
+        primaryKeyColumns: ["id"],
+        joinColumns: ["customer_id"],
+        type: "Array",
+        patch: null,
+        onDelete: { patch: null, ignoreDeletes: false },
         embeddedTables: [],
         linkedTables: [],
     };
@@ -98,6 +114,34 @@ describe("parseConfigTables", () => {
         const broken = [{ ...rootTable("Customers"), collectionName: undefined }] as unknown as CdcSinkTableConfig[];
 
         expect(() => parseConfigTables(broken)).toThrowError(/^table "#1"\.collectionName: /);
+    });
+
+    it("names the table and field a schema message points at", () => {
+        const broken = [{ ...rootTable("Customers"), sourceTableName: "" }];
+
+        expect(() => parseConfigTables(broken)).toThrowError(
+            'table "Customers".sourceTableName: Source table name is required',
+        );
+    });
+
+    it("names the embedded table and field a schema message points at", () => {
+        const broken = [
+            { ...rootTable("Customers"), embeddedTables: [{ ...embeddedTable("Orders"), sourceTableName: "" }] },
+        ];
+
+        expect(() => parseConfigTables(broken)).toThrowError(
+            'table "Customers".embeddedTables[1].sourceTableName: Source table name is required',
+        );
+    });
+
+    it("names the embedded table list entry an empty key points at", () => {
+        const broken = [
+            { ...rootTable("Customers"), embeddedTables: [{ ...embeddedTable("Orders"), primaryKeyColumns: [""] }] },
+        ];
+
+        expect(() => parseConfigTables(broken)).toThrowError(
+            'table "Customers".embeddedTables[1].primaryKeyColumns[1]: Value is required',
+        );
     });
 
     it("accepts a mapping the wizard would accept", () => {

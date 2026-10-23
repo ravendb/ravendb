@@ -89,7 +89,7 @@ export async function parseConfigFile(file: File): Promise<WizardConfig> {
     const result = wizardConfigSchema.safeParse(json);
 
     if (!result.success) {
-        throw new Error(firstIssueMessage(result.error, "The file does not look like an exported configuration."));
+        throw new Error(result.error.issues[0]?.message || "The file does not look like an exported configuration.");
     }
 
     return {
@@ -103,24 +103,18 @@ export function parseConfigTables(tables: CdcSinkTableConfig[]) {
     const result = tablesSchema.safeParse(wrapDtoTablesToFormShape(tables));
 
     if (!result.success) {
-        throw new Error(
-            firstIssueMessage(
-                result.error,
-                "The configuration's table mapping is invalid or was exported from an incompatible version.",
-                tables,
-            ),
-        );
+        throw new Error(firstTableIssueMessage(result.error, tables));
     }
 
     return result.data;
 }
 
-const ZOD_DEFAULT_MESSAGE = /^(Invalid |Too (big|small)|Unrecognized key)/;
-
-function firstIssueMessage(error: z.ZodError, fallback: string, tables: CdcSinkTableConfig[] = []) {
+function firstTableIssueMessage(error: z.ZodError, tables: CdcSinkTableConfig[]) {
     const issue = error.issues[0];
-    if (!issue?.message) return fallback;
-    if (issue.code === "custom" || !ZOD_DEFAULT_MESSAGE.test(issue.message)) return issue.message;
+    if (!issue?.message) {
+        return "The configuration's table mapping is invalid or was exported from an incompatible version.";
+    }
+    if (issue.code === "custom") return issue.message;
 
     const location = describeIssuePath(issue.path, tables);
     return location ? `${location}: ${issue.message}` : issue.message;
