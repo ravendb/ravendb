@@ -1394,5 +1394,36 @@ class Test
             Assert.All(diagnostics, d => Assert.Equal(DiagnosticIds.QueryProjectionFieldNotRetrievable, d.Id));
             Assert.Contains(diagnostics, d => d.GetMessage().Contains("Company"));
         }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task ProjectInto_Document_Through_Entry_Type_Of_MultiMap_Index_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Order { public string Id { get; set; } public string Company { get; set; } public decimal Freight { get; set; } }
+class Company { public string Id { get; set; } public string Name { get; set; } }
+class Entry { public string Name { get; set; } }
+class Names : AbstractMultiMapIndexCreationTask<Entry>
+{
+    public Names()
+    {
+        AddMap<Order>(orders => from o in orders select new Entry { Name = o.Company });
+        AddMap<Company>(companies => from c in companies select new Entry { Name = c.Name });
+    }
+}
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var orders = session.Query<Entry, Names>()
+            .Where(x => x.Name == ""x"")
+            .ProjectInto<Order>()
+            .ToList();
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
     }
 }
