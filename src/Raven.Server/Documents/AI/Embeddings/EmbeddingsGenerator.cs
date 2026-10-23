@@ -525,16 +525,12 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         throw new InvalidOperationException($"Could not find connection string '{task.ConnectionStringName}' for '{task.ConnectionStringName}'");
     }
 
-    protected override void InitializeWork()
-    {
-        var record = _database.ReadDatabaseRecord();
-        HandleDatabaseRecordChange(record);
-    }
-
     protected override async Task DoWork()
     {
         try
         {
+            HandleDatabaseRecordChange(_database.ReadDatabaseRecord());
+
             while (await _work.WaitToReadAsync(CancellationToken))
             {
                 await SubmitAndWaitForWorkAsync(GetBatch());
