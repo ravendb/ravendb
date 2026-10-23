@@ -1204,5 +1204,195 @@ class Test
 
             Assert.Empty(diagnostics);
         }
+
+        private const string EntryIndex = @"
+class Order { public string Id { get; set; } public string Company { get; set; } public decimal Freight { get; set; } }
+class Entry { public string OrderId { get; set; } public string CompanyName { get; set; } public decimal Freight { get; set; } }
+class Orders_ByCompany : AbstractIndexCreationTask<Order, Entry>
+{
+    public Orders_ByCompany()
+    {
+        Map = orders => from o in orders select new Entry { OrderId = o.Id, CompanyName = o.Company, Freight = o.Freight };
+        Stores.Add(x => x.OrderId, FieldStorage.Yes);
+        Stores.Add(x => x.CompanyName, FieldStorage.Yes);
+    }
+}
+";
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task ProjectInto_Document_Through_Entry_Type_No_Diagnostic()
+        {
+            const string source = CommonUsings + EntryIndex + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var orders = session.Query<Entry, Orders_ByCompany>()
+            .Where(x => x.CompanyName == ""x"")
+            .ProjectInto<Order>()
+            .ToList();
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task Select_Unstored_Document_Field_Through_Entry_Type_No_Diagnostic()
+        {
+            const string source = CommonUsings + EntryIndex + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var a = session.Query<Entry, Orders_ByCompany>()
+            .Select(x => new { x.Freight })
+            .ToList();
+        var b = (from x in session.Query<Entry, Orders_ByCompany>()
+                 select new { x.Freight }).ToList();
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task ProjectInto_Document_Through_Nested_Entry_Of_Single_Type_Index_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Employee { public string Id { get; set; } public string FirstName { get; set; } public string Title { get; set; } }
+class Employees_ByTitle : AbstractIndexCreationTask<Employee>
+{
+    public class Entry { public string Title { get; set; } }
+    public Employees_ByTitle()
+    {
+        Map = employees => from e in employees select new Entry { Title = e.Title };
+    }
+}
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var employees = session.Query<Employees_ByTitle.Entry, Employees_ByTitle>()
+            .Where(x => x.Title == ""x"")
+            .ProjectInto<Employee>()
+            .ToList();
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task ProjectInto_Document_Through_Entry_Type_Of_Index_With_User_Base_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Order { public string Id { get; set; } public string Company { get; set; } public decimal Freight { get; set; } }
+class Entry { public string CompanyName { get; set; } }
+abstract class OrderIndexBase : AbstractIndexCreationTask<Order, Entry>
+{
+    protected OrderIndexBase()
+    {
+        Map = orders => from o in orders select new Entry { CompanyName = o.Company };
+        Stores.Add(x => x.CompanyName, FieldStorage.Yes);
+    }
+}
+class Orders_ByCompany : OrderIndexBase { }
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var orders = session.Query<Entry, Orders_ByCompany>()
+            .ProjectInto<Order>()
+            .ToList();
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task ProjectInto_Entry_Field_Neither_Stored_Nor_On_Document_Names_Document()
+        {
+            const string source = CommonUsings + @"
+class Person { public string Id { get; set; } public string Name { get; set; } }
+class Entry { public string SoundexName { get; set; } }
+class People_BySoundex : AbstractIndexCreationTask<Person>
+{
+    public People_BySoundex()
+    {
+        Map = people => from p in people select new Entry { SoundexName = p.Name };
+    }
+}
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var people = session.Query<Entry, People_BySoundex>()
+            .ProjectInto<Entry>()
+            .ToList();
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryProjectionFieldNotRetrievable, d.Id);
+            Assert.Contains("SoundexName", d.GetMessage());
+            Assert.Contains("'Person'", d.GetMessage());
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task ProjectInto_View_Field_Not_On_Document_Through_Entry_Type_Names_Document()
+        {
+            const string source = CommonUsings + EntryIndex + @"
+class View { public string CompanyName { get; set; } public decimal Freight { get; set; } public string Extra { get; set; } }
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var views = session.Query<Entry, Orders_ByCompany>()
+            .ProjectInto<View>()
+            .ToList();
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryProjectionFieldNotRetrievable, d.Id);
+            Assert.Contains("Extra", d.GetMessage());
+            Assert.Contains("'Order'", d.GetMessage());
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task ProjectInto_Document_Through_Entry_Type_FromIndex_Reports_Unstored_Fields()
+        {
+            const string source = CommonUsings + EntryIndex + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var orders = session.Query<Entry, Orders_ByCompany>()
+            .Customize(x => x.Projection(ProjectionBehavior.FromIndex))
+            .ProjectInto<Order>()
+            .ToList();
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Assert.NotEmpty(diagnostics);
+            Assert.All(diagnostics, d => Assert.Equal(DiagnosticIds.QueryProjectionFieldNotRetrievable, d.Id));
+            Assert.Contains(diagnostics, d => d.GetMessage().Contains("Company"));
+        }
     }
 }

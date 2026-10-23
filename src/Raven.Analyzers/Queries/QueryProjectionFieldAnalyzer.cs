@@ -171,7 +171,8 @@ namespace Raven.Analyzers.Queries
             if (indexClass == null)
                 return false;
 
-            INamedTypeSymbol? sourceType = QueryIndexResolver.ResolveSourceType(queryCall, model);
+            INamedTypeSymbol? sourceType = QueryIndexResolver.ResolveIndexSourceDocumentType(indexClass)
+                ?? QueryIndexResolver.ResolveSourceType(queryCall, model);
             if (sourceType == null)
                 return false;
 

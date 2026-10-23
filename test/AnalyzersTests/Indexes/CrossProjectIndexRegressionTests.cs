@@ -279,5 +279,40 @@ namespace AnalyzersTests.Indexes
 
             Assert.Empty(diagnostics);
         }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData(ReferenceKind.CompiledDll)]
+        [InlineData(ReferenceKind.CompilationReference)]
+        [InlineData(ReferenceKind.CompilationReferenceWithoutGeneratedOutput)]
+        public async Task Projection_Into_Document_Through_Entry_Type_Of_Referenced_Index_Is_Not_Reported(
+            ReferenceKind referenceKind)
+        {
+            const string source = """
+                using System.Linq;
+                using Model;
+                using Raven.Client.Documents;
+                using Raven.Client.Documents.Linq;
+                using Raven.Client.Documents.Session;
+
+                public class BookEntry { public string AuthorId { get; set; } }
+
+                public static class Queries
+                {
+                    public static void Project(IDocumentSession session)
+                    {
+                        var books = session.Query<BookEntry, BooksByAuthor>()
+                            .Where(x => x.AuthorId == "authors/1")
+                            .ProjectInto<Book>()
+                            .ToList();
+                    }
+                }
+                """;
+
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeWithReferencedProjectAsync<QueryProjectionFieldAnalyzer>(
+                    IndexProject, source, referenceKind);
+
+            Assert.Empty(diagnostics);
+        }
     }
 }

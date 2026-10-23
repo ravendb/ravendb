@@ -192,6 +192,29 @@ namespace Raven.Analyzers.Shared
             return sourceType;
         }
 
+        internal static INamedTypeSymbol? ResolveIndexSourceDocumentType(INamedTypeSymbol indexClass)
+        {
+            for (INamedTypeSymbol? type = indexClass.BaseType; type != null; type = type.BaseType)
+            {
+                if (type.Name != KnownTypes.AbstractIndexCreationTaskGenericName
+                    || !type.IsGenericType
+                    || !SyntaxHelpers.IsInRavenClientNamespace(type))
+                {
+                    continue;
+                }
+
+                if (type.TypeArguments[0] is INamedTypeSymbol { TypeKind: not TypeKind.TypeParameter } document
+                    && !document.IsUnboundGenericType)
+                {
+                    return document;
+                }
+
+                return null;
+            }
+
+            return null;
+        }
+
         private static string? TryGetIndexNameLiteral(InvocationExpressionSyntax invocation)
         {
             SeparatedSyntaxList<ArgumentSyntax> args = invocation.ArgumentList.Arguments;
