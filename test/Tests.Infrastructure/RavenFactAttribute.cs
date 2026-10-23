@@ -59,12 +59,6 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute, Xunit.v3.IFact
         set => Requires = value ? Requires | RavenServiceRequirement.NpgSql : Requires & ~RavenServiceRequirement.NpgSql;
     }
 
-    public bool MongoDBRequired
-    {
-        get => Requires.HasFlag(RavenServiceRequirement.MongoDB);
-        set => Requires = value ? Requires | RavenServiceRequirement.MongoDB : Requires & ~RavenServiceRequirement.MongoDB;
-    }
-
     public bool SnowflakeRequired
     {
         get => Requires.HasFlag(RavenServiceRequirement.Snowflake);
@@ -137,9 +131,6 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute, Xunit.v3.IFact
             return skip;
 
         if (serviceRequirement.HasFlag(RavenServiceRequirement.NpgSql) && ShouldSkipNpgSql(out skip))
-            return skip;
-
-        if (serviceRequirement.HasFlag(RavenServiceRequirement.MongoDB) && ShouldSkipMongoDB(out skip))
             return skip;
 
         if (serviceRequirement.HasFlag(RavenServiceRequirement.ElasticSearch) && ShouldSkipElasticSearch(out skip))
@@ -370,9 +361,6 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute, Xunit.v3.IFact
 
     private static bool ShouldSkipNpgSql(out string skipMessage) =>
         ShouldSkipService(() => NpgSqlConnectionString.Instance.CanConnect, "NpgSQL database", out skipMessage);
-
-    private static bool ShouldSkipMongoDB(out string skipMessage) =>
-        ShouldSkipService(() => MongoDBConnectionString.Instance.CanConnect, "MongoDB", out skipMessage);
 
     private static bool ShouldSkipElasticSearch(out string skipMessage) =>
         ShouldSkipService(() => ElasticSearchTestNodes.Instance.CanConnect, "ElasticSearch instance", out skipMessage);

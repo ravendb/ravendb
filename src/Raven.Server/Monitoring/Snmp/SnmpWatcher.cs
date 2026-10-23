@@ -366,7 +366,7 @@ namespace Raven.Server.Monitoring.Snmp
 
         private static ObjectStore CreateStore(RavenServer server)
         {
-            var store = new ConcurrentObjectStore();
+            var store = new SnmpObjectStore();
 
             store.Add(new ServerUrl(server.Configuration));
             store.Add(new ServerPublicUrl(server.Configuration));

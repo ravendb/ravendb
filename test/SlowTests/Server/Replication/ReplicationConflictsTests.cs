@@ -1686,11 +1686,14 @@ namespace SlowTests.Server.Replication
             WaitUntilHasConflict(store2, id);
 
             DocumentDatabase db = await GetDocumentDatabaseInstanceFor(store2);
-            db.NotificationCenter.GetStored(out var actions);
 
-            var alerts = actions
-                .Select(item => AlertRaised.FromJson("", item.Json))
-                .ToArray();
+            AlertRaised[] alerts;
+            using (db.NotificationCenter.GetStored(out var actions))
+            {
+                alerts = actions
+                    .Select(item => AlertRaised.FromJson("", item.Json))
+                    .ToArray();
+            }
 
             AlertRaised alert = Assert.Single(alerts);
             
@@ -1741,11 +1744,14 @@ namespace SlowTests.Server.Replication
             WaitUntilHasConflict(store2, id);
 
             var db = await GetDocumentDatabaseInstanceFor(store2);
-            db.NotificationCenter.GetStored(out var actions);
 
-            var alerts = actions
-                .Select(item => AlertRaised.FromJson("", item.Json))
-                .ToArray();
+            AlertRaised[] alerts;
+            using (db.NotificationCenter.GetStored(out var actions))
+            {
+                alerts = actions
+                    .Select(item => AlertRaised.FromJson("", item.Json))
+                    .ToArray();
+            }
 
             // Alerts should not be raised now.
             Assert.Empty(alerts);

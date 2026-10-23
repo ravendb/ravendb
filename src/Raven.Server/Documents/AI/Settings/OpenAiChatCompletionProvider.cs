@@ -8,14 +8,14 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.AI.Settings;
 
-internal class OpenAiChatCompletionClientSettings : AbstractOpenAiChatCompletionClientSettings
+internal class OpenAiChatCompletionProvider : AbstractOpenAiChatCompletionProvider
 {
     private new readonly OpenAiSettings _settings;
     private readonly bool _disableReasoning;
     private const string GptModelPrefix = "gpt-";
     private static readonly Version MinVersionRequiringReasoningDisabled = new(5, 4);
 
-    public OpenAiChatCompletionClientSettings(OpenAiSettings settings)
+    public OpenAiChatCompletionProvider(OpenAiSettings settings)
         : base(settings)
     {
         _settings = settings;
@@ -63,10 +63,10 @@ internal class OpenAiChatCompletionClientSettings : AbstractOpenAiChatCompletion
     public override void AddHeaders(HttpRequestMessage request)
     {
         if (string.IsNullOrEmpty(_settings.OrganizationId) == false)
-            request.Headers.TryAddWithoutValidation(Constants.Headers.OpenAiOrganization, _settings.OrganizationId);
+            request.Headers.TryAddWithoutValidation(Wire.Headers.OpenAiOrganization, _settings.OrganizationId);
 
         if (string.IsNullOrEmpty(_settings.ProjectId) == false)
-            request.Headers.TryAddWithoutValidation(Constants.Headers.OpenAiProject, _settings.ProjectId);
+            request.Headers.TryAddWithoutValidation(Wire.Headers.OpenAiProject, _settings.ProjectId);
     }
 
     public override AiError ParseError(BlittableJsonReaderObject content, HttpResponseMessage response)
@@ -104,7 +104,7 @@ internal class OpenAiChatCompletionClientSettings : AbstractOpenAiChatCompletion
         if (reasoningEffort != null)
         {
             writer.WriteComma();
-            writer.WritePropertyName(Constants.RequestFields.ReasoningEffort);
+            writer.WritePropertyName(Wire.RequestFields.ReasoningEffort);
             writer.WriteString(reasoningEffort);
         }
         if (_settings.Seed.HasValue)
@@ -113,7 +113,7 @@ internal class OpenAiChatCompletionClientSettings : AbstractOpenAiChatCompletion
             // This helps stabilize tests. Combined with a low reasoning_effort
             // it further reduces the probability of flaky responses.
             writer.WriteComma();
-            writer.WritePropertyName(Constants.RequestFields.Seed);
+            writer.WritePropertyName(Wire.RequestFields.Seed);
             writer.WriteInteger(_settings.Seed.Value);
         }
         base.HandleCompletionRequestPayload(writer);
@@ -123,7 +123,7 @@ internal class OpenAiChatCompletionClientSettings : AbstractOpenAiChatCompletion
     private string GetEffectiveReasoningEffort()
     {
         if (_disableReasoning)
-            return Constants.RequestFields.ReasoningEffortNoneValue;
+            return Wire.RequestFields.ReasoningEffortNoneValue;
 
         var reasoningEffort = _settings.ReasoningEffort;
         if (string.IsNullOrWhiteSpace(reasoningEffort))

@@ -10,5 +10,7 @@ internal interface IAiSettings
 
     public string Endpoint { get; }
 
+    public bool? EnablePromptCache { get; }
+
     public Uri GetBaseEndpointUri();
 }

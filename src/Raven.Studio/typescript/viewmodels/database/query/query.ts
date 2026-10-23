@@ -1889,7 +1889,7 @@ class query extends shardViewModelBase {
             format: this.exportAsFileSettings.format(),
             field: this.exportAsFileSettings.allColumns() ? undefined : this.columnsSelector.getSimpleColumnsFields(),
             debug: this.criteria().indexEntries() ? "entries" : undefined,
-            includeLimit: this.criteria().ignoreIndexQueryLimit() ? "true" : undefined
+            ignoreLimit: this.criteria().ignoreIndexQueryLimit() ? "true" : undefined
         }
 
         let payload: { Query: string, QueryParameters: string };

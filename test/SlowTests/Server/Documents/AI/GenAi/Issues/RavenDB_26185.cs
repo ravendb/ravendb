@@ -65,7 +65,7 @@ public class RavenDB_26185(ITestOutputHelper output) : RavenTestBase(output)
 
     private static string LiveLengthInput => string.Join(" ", Enumerable.Repeat("The blue boat crossed the quiet lake.", 100));
 
-    private static AbstractChatCompletionClientSettings CreateLiveLengthSettings(GenAiConfiguration config,
+    private static AbstractChatCompletionProvider CreateLiveLengthSettings(GenAiConfiguration config,
         LiveResponseObservation observation)
     {
         if (config.Connection.OpenAiSettings is { } openAi)
@@ -109,8 +109,7 @@ public class RavenDB_26185(ITestOutputHelper output) : RavenTestBase(output)
                 ["content"] = LiveLengthInput
             }, "live-length/user");
 
-            using var request = client.CreateCompletionRequest(ctx, [system, user], attachments: null,
-                tools: null, useTools: false, streaming: streaming, schema: AnswerSchema);
+            var request = new AiChatRequest { Messages = [system, user], Schema = AnswerSchema };
             var usage = new AiUsage();
 
             await Assert.ThrowsAsync<TooManyTokensException>(async () =>
@@ -118,11 +117,11 @@ public class RavenDB_26185(ITestOutputHelper output) : RavenTestBase(output)
                 if (streaming)
                 {
                     await client.StreamingCompleteAsync(ctx, pool, StreamProperty, request,
-                        _ => Task.CompletedTask, usage, AnswerSchema, trace: null, token: timeout.Token);
+                        _ => Task.CompletedTask, usage, trace: null, token: timeout.Token);
                 }
                 else
                 {
-                    await client.CompleteAsync(ctx, request, usage, AnswerSchema, trace: null, token: timeout.Token);
+                    await client.CompleteAsync(ctx, request, usage, trace: null, token: timeout.Token);
                 }
             });
 
@@ -178,8 +177,13 @@ public class RavenDB_26185(ITestOutputHelper output) : RavenTestBase(output)
                 ["content"] = LiveLengthInput
             }, "live-tool-length/user");
 
-            using var request = client.CreateCompletionRequest(ctx, [system, user], attachments: null,
-                tools: [CreateLiveTool(ctx)], useTools: true, streaming: streaming, schema: null);
+            var request = new AiChatRequest
+            {
+                Messages = [system, user],
+                Tools = [CreateLiveTool(ctx)],
+                UseTools = true,
+                Schema = null
+            };
             var usage = new AiUsage();
 
             await Assert.ThrowsAsync<TooManyTokensException>(async () =>
@@ -187,11 +191,11 @@ public class RavenDB_26185(ITestOutputHelper output) : RavenTestBase(output)
                 if (streaming)
                 {
                     await client.StreamingCompleteAsync(ctx, pool, StreamProperty, request,
-                        _ => Task.CompletedTask, usage, schema: null, trace: null, token: timeout.Token);
+                        _ => Task.CompletedTask, usage, trace: null, token: timeout.Token);
                 }
                 else
                 {
-                    await client.CompleteAsync(ctx, request, usage, schema: null, trace: null, token: timeout.Token);
+                    await client.CompleteAsync(ctx, request, usage, trace: null, token: timeout.Token);
                 }
             });
 
@@ -342,14 +346,14 @@ this.Comments[idx].Result = $output.Result;";
     }
 
     private sealed class ObservedLiveOpenAiSettings(OpenAiSettings settings, LiveResponseObservation observation)
-        : OpenAiChatCompletionClientSettings(settings)
+        : OpenAiChatCompletionProvider(settings)
     {
         public override string GetFinishReason(BlittableJsonReaderObject choice0)
             => observation.Observe(choice0, base.GetFinishReason(choice0));
     }
 
     private sealed class ObservedLiveGoogleSettings(GoogleSettings settings, LiveResponseObservation observation)
-        : GoogleChatCompletionClientSettings(settings)
+        : GoogleChatCompletionProvider(settings)
     {
         public override string GetFinishReason(BlittableJsonReaderObject choice0)
             => observation.Observe(choice0, base.GetFinishReason(choice0));
@@ -366,7 +370,7 @@ this.Comments[idx].Result = $output.Result;";
         public int RequestCount => Volatile.Read(ref _requestCount);
         public string LastHttpStatus => _lastHttpStatus;
 
-        public TokenLimitedLiveClient(IMemoryContextPool pool, AbstractChatCompletionClientSettings settings,
+        public TokenLimitedLiveClient(IMemoryContextPool pool, AbstractChatCompletionProvider settings,
             CancellationToken deadline, int maxRequests, string forcedTool = null)
             : base(pool, settings, ConventionsToUse)
         {
