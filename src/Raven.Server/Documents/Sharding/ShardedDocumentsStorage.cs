@@ -183,15 +183,24 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
         return GenerateBucketAndEtagSlice(tx, keyPtr, sizeOfDocId, etag, out slice);
     }
 
+    internal static int GetBucketFor(Transaction tx, ReadOnlySpan<byte> lowerId)
+    {
+        var configuration = tx.LowLevelTransaction.Environment.Options switch
+        {
+            ShardedDirectoryStorageEnvironmentOptions directory => directory.ShardingConfiguration,
+            ShardedPureMemoryStorageEnvironmentOptions memory => memory.ShardingConfiguration,
+            _ => throw new InvalidOperationException(
+                "This environment was not opened for a shard, so a table in it that is indexed by bucket cannot be modified")
+        };
+
+        return ShardHelper.GetBucketFor(configuration, lowerId);
+    }
+
     private static ByteStringContext.Scope GenerateBucketAndEtagSlice(Transaction tx, byte* idPtr, int idSize, long etag, out Slice slice)
     {
         var scope = tx.Allocator.Allocate(sizeof(long) + sizeof(int), out var buffer);
 
-        var span = new ReadOnlySpan<byte>(idPtr, idSize);
-        
-        var docsCtx = tx.Owner as DocumentsOperationContext;
-        var database = ShardedDocumentDatabase.CastToShardedDocumentDatabase(docsCtx?.DocumentDatabase);
-        var bucket = ShardHelper.GetBucketFor(database?.ShardingConfiguration, span);
+        var bucket = GetBucketFor(tx, new ReadOnlySpan<byte>(idPtr, idSize));
 
         *(int*)buffer.Ptr = Bits.SwapBytes(bucket);
         *(long*)(buffer.Ptr + sizeof(int)) = etag;

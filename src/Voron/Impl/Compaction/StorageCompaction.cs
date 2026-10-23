@@ -98,9 +98,9 @@ namespace Voron.Impl.Compaction
             }
         }
 
-        private static void CopyTrees(StorageEnvironment existingEnv, StorageEnvironment compactedEnv, 
+        private static void CopyTrees(StorageEnvironment existingEnv, StorageEnvironment compactedEnv,
             Action<string, TableSchema> modifyTableSchema,
-            Action<StorageCompactionProgress> progressReport, 
+            Action<StorageCompactionProgress> progressReport,
             CancellationToken token)
         {
             var context = new TransactionPersistentContext(true);
@@ -137,6 +137,11 @@ namespace Voron.Impl.Compaction
                             globalTableIndexesToSkipCopying.Add(index.Name.ToString());
                     }
                     foreach (var index in schema.FixedSizeIndexes.Values)
+                    {
+                        if (index.IsGlobal)
+                            globalTableIndexesToSkipCopying.Add(index.Name.ToString());
+                    }
+                    foreach (var index in schema.DynamicKeyIndexes.Values)
                     {
                         if (index.IsGlobal)
                             globalTableIndexesToSkipCopying.Add(index.Name.ToString());
@@ -181,8 +186,8 @@ namespace Voron.Impl.Compaction
                             copiedTrees = CopyFixedSizeTreeFromRoot(compactedEnv, progressReport, txr, rootIterator, treeName, copiedTrees, totalTreesCount, context, token);
                             break;
                         case RootObjectType.Table:
-                            copiedTrees = CopyTableTree(compactedEnv, modifyTableSchema, 
-                                progressReport, txr, treeName, copiedTrees, 
+                            copiedTrees = CopyTableTree(compactedEnv, modifyTableSchema,
+                                progressReport, txr, treeName, copiedTrees,
                                 totalTreesCount, context, token);
                             break;
                         default:
@@ -448,6 +453,9 @@ namespace Voron.Impl.Compaction
             TransactionPersistentContext context, CancellationToken token)
         {
             TableSchema schema = GetTableSchema(txr, treeName, modifyTableSchema);
+
+            if (compactedEnv.Options.CanRebuildDynamicKeyIndexes == false && schema.DynamicKeyIndexes.Count > 0)
+                throw new InvalidOperationException("Cannot compact table " + treeName + " because it has a dynamic key index that has to be rebuilt, and the destination was not opened with options that can rebuild one");
 
             (long numberOfEntries, int numberOfPagesInActiveSection) = GetNumberOfEntries(txr, treeName, schema);
 

@@ -50,10 +50,7 @@ namespace Raven.Server.Documents
 
         private static ByteStringContext.Scope GenerateBucketAndHash(Transaction tx, int keyIndex, int hashIndex, ref TableValueReader tvr, out Slice slice)
         {
-            var docsCtx = tx.Owner as DocumentsOperationContext;
-            var database = ShardedDocumentDatabase.CastToShardedDocumentDatabase(docsCtx!.DocumentDatabase);
-
-            var bucket = GetBucketFromAttachmentKey(keyIndex, tvr, database);
+            var bucket = GetBucketFromAttachmentKey(tx, keyIndex, tvr);
             bucket = Bits.SwapBytes(bucket);
 
             var hashPtr = tvr.Read(hashIndex, out var hashSize);
@@ -67,12 +64,11 @@ namespace Raven.Server.Documents
             return scope;
         }
 
-        private static int GetBucketFromAttachmentKey(int keyIndex, TableValueReader tvr, ShardedDocumentDatabase database)
+        private static int GetBucketFromAttachmentKey(Transaction tx, int keyIndex, TableValueReader tvr)
         {
             var keyPtr = tvr.Read(keyIndex, out var keySize);
             int sizeOfDocId = AttachmentKey.GetSizeOfDocId(new ReadOnlySpan<byte>(keyPtr, keySize));
-            var keySpan = new ReadOnlySpan<byte>(keyPtr, sizeOfDocId);
-            return ShardHelper.GetBucketFor(database.ShardingConfiguration, keySpan);
+            return ShardedDocumentsStorage.GetBucketFor(tx, new ReadOnlySpan<byte>(keyPtr, sizeOfDocId));
         }
 
         public (long TotalSize, int UniqueAttachmets) GetStreamInfoForBucket(Transaction tx, int bucket)
@@ -110,11 +106,8 @@ namespace Raven.Server.Documents
 
         internal static void UpdateBucketStatsForAttachments(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
         {
-            if (tx.Owner is not DocumentsOperationContext { DocumentDatabase: ShardedDocumentDatabase documentDatabase })
-            {
-                Debug.Assert(false, $"tx.Owner is not DocumentsOperationContext");
+            if (tx.Owner is not DocumentsOperationContext { DocumentDatabase: ShardedDocumentDatabase })
                 return;
-            }
 
             var streamSize = 0L;
             var tree = tx.CreateTree(AttachmentsSlice);
@@ -131,12 +124,11 @@ namespace Raven.Server.Documents
             key.AsReadOnlySpan().Slice(0, sizeof(int)).CopyTo(bufferAsSpan);
             old.CopyTo(bufferAsSpan.Slice(sizeof(int)));
 
-            var schema = documentDatabase.ShardedDocumentsStorage.AttachmentsStorage.AttachmentsSchema;
-            var table = tx.OpenTable(schema, AttachmentsMetadataSlice);
+            var table = tx.OpenTable(ShardingAttachmentsSchemaBase, AttachmentsMetadataSlice);
             using (Slice.External(tx.Allocator, buffer, sizeof(int) + oldHashSize, ByteStringType.Immutable, out var slice))
             using (Slice.External(tx.Allocator, oldHashPtr, oldHashSize, ByteStringType.Immutable, out var hashSlice))
             {
-                var refCount = table.GetCountOfMatchesFor(schema.DynamicKeyIndexes[AttachmentsBucketAndHashSlice], slice);
+                var refCount = table.GetCountOfMatchesFor(ShardingAttachmentsSchemaBase.DynamicKeyIndexes[AttachmentsBucketAndHashSlice], slice);
                 switch (refCount)
                 {
                     case 1:

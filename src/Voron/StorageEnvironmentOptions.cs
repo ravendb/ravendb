@@ -54,6 +54,8 @@ namespace Voron
 
         public bool GenerateNewDatabaseId { get; set; }
 
+        public virtual bool CanRebuildDynamicKeyIndexes => false;
+
         public LazyWithExceptionRetry<DriveInfoByPath> DriveInfoByPath { get; private set; }
 
         public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
@@ -367,7 +369,7 @@ namespace Voron
             return ForPath(path, null, null, null, null);
         }
 
-        private static string GetTempPath(string basePath = null)
+        internal static string GetTempPath(string basePath = null)
         {
             bool useSystemTemp = false;
             // We need to use a Temp directory for storage. There's two ways to do this: either the user provides a full path
@@ -405,7 +407,7 @@ namespace Voron
             return tempPath;
         }
 
-        public sealed class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
+        public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
         {
             public const string TempFileExtension = ".tmp";
             public const string BuffersFileExtension = ".buffers";
@@ -987,7 +989,7 @@ namespace Voron
             }
         }
 
-        public sealed class PureMemoryStorageEnvironmentOptions : StorageEnvironmentOptions
+        public class PureMemoryStorageEnvironmentOptions : StorageEnvironmentOptions
         {
             private readonly string _name;
             private static int _counter;
