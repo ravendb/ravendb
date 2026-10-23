@@ -1,4 +1,3 @@
-using System.Globalization;
 using Discord;
 using Discord.Net;
 using Discord.WebSocket;
@@ -19,7 +18,6 @@ internal sealed class DiscordRuntime : IChannelRuntime
     private readonly string _botUserId;
     private readonly DiscordOptions _options;
     private readonly ChannelChats<DiscordMessage> _chats;
-    private readonly DiscordBotClient _bot;
     private readonly DiscordSdk _sdk;
     private readonly QuillLogger<DiscordRuntime> _logger;
 
@@ -35,14 +33,13 @@ internal sealed class DiscordRuntime : IChannelRuntime
 
     private DiscordRuntime(
         string database, Channel channel, string channelFingerprint,
-        DiscordTurns turns, DiscordBotClient bot, ChannelChatsFactory chats, DiscordSdk sdk,
+        DiscordTurns turns, ChannelChatsFactory chats, DiscordSdk sdk,
         DiscordOptions options, QuillLogger<DiscordRuntime> logger, ChannelConnectionHealth? previous)
     {
         var settings = channel.Discord!;
 
         Health = previous is null ? new ChannelConnectionHealth() : ChannelConnectionHealth.Continuing(previous);
         _channel = channel;
-        _bot = bot;
         _botToken = settings.BotToken;
         _botUserId = settings.BotUserId;
         _chats = chats.Create(database, channel, turns, Health, logger.RavenLogger);
@@ -71,12 +68,12 @@ internal sealed class DiscordRuntime : IChannelRuntime
     }
 
     public static DiscordRuntime Start(
-        string database, Channel channel, string channelFingerprint, DiscordTurns turns, DiscordBotClient bot,
+        string database, Channel channel, string channelFingerprint, DiscordTurns turns,
         ChannelChatsFactory chats, DiscordSdk sdk, DiscordOptions options,
         QuillLogger<DiscordRuntime> logger, ChannelConnectionHealth? previous = null)
     {
         var runtime = new DiscordRuntime(
-            database, channel, channelFingerprint, turns, bot, chats, sdk, options, logger, previous);
+            database, channel, channelFingerprint, turns, chats, sdk, options, logger, previous);
 
         runtime._run = Task.Run(runtime.RunAsync);
         return runtime;
@@ -91,7 +88,6 @@ internal sealed class DiscordRuntime : IChannelRuntime
         await _cts.CancelAsync();
         await Task.WhenAll(_run, _chats.StopAsync())
             .ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
-        await _bot.DisposeAsync();
         _cts.Dispose();
     }
 
@@ -151,21 +147,6 @@ internal sealed class DiscordRuntime : IChannelRuntime
 
     private async Task<string?> RunClientAsync()
     {
-        try
-        {
-            await _bot.LoginAsync(_cts.Token);
-        }
-        catch (DiscordApiException e)
-        {
-            if (FatalReasonFor(e) is { } fatal)
-                return fatal;
-
-            Health.MarkDisconnected(e.Message);
-            if (_logger.IsWarnEnabled)
-                _logger.Warn($"Discord REST login failed for channel {_channel.ShortId}: {e.Message}");
-            return null;
-        }
-
         var exit = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var client = _sdk.NewSocketClient();
@@ -219,6 +200,13 @@ internal sealed class DiscordRuntime : IChannelRuntime
 
             return await exit.Task.WaitAsync(_cts.Token);
         }
+        catch (HttpException e)
+        {
+            if (FatalReasonFor(e) is { } fatal)
+                return fatal;
+
+            throw;
+        }
         finally
         {
             _client = null;
@@ -270,7 +258,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
             : ChannelMessageKind.Prompt;
 
         Health.MarkReceived();
-        _chats.Enqueue(new DiscordMessage(Snowflake(author.Id), author.Username, Snowflake(dm.Id), kind, content));
+        _chats.Enqueue(new DiscordMessage(Snowflake(author.Id), author.Username, Snowflake(dm.Id), dm, kind, content));
     }
 
     private void Log(LogMessage message)
@@ -327,7 +315,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
     private static bool NeedsNewClient(Exception error) =>
         DiscordApiErrors.CloseOf(error)?.CloseCode is 4006 or 4007 or 4009 || error.Message == SdkReadyFailure;
 
-    private static string Snowflake(ulong id) => id.ToString(CultureInfo.InvariantCulture);
+    private static string Snowflake(ulong id) => DiscordMessages.Snowflake(id);
 
     private static string? FatalReasonFor(int closeCode) => closeCode switch
     {
