@@ -45,9 +45,9 @@ public static class DiscordEndpoints
         var checks = new (bool? Valid, string? Error)[discordChannels.Length];
         await Task.WhenAll(discordChannels.Select(async (channel, i) =>
         {
-            var (identity, error, discordResponded) =
-                await discord.GetBotIdentityAsync(channel.Discord!.BotToken, ct);
-            checks[i] = (identity is not null ? true : discordResponded ? false : null, identity is null ? error : null);
+            var (user, error, discordResponded) =
+                await discord.CheckBotTokenAsync(channel.Discord!.BotToken, ct);
+            checks[i] = (user is not null ? true : discordResponded ? false : null, user is null ? error : null);
         }));
 
         var rows = new DiscordChannelHealthResponse[discordChannels.Length];

@@ -30,6 +30,7 @@ public sealed class MockDiscordApi : IAsyncDisposable
     private readonly List<IdentifyCall> _identifies = [];
     private readonly List<ResumeCall> _resumes = [];
     private readonly List<string> _identityCalls = [];
+    private readonly List<string> _applicationCalls = [];
     private readonly List<string> _typingCalls = [];
     private readonly List<string> _presenceUpdates = [];
     private readonly Dictionary<string, long> _inboundMessageIds = new();
@@ -123,6 +124,11 @@ public sealed class MockDiscordApi : IAsyncDisposable
         get { lock (_lock) return _identityCalls.ToArray(); }
     }
 
+    public IReadOnlyList<string> ApplicationCalls
+    {
+        get { lock (_lock) return _applicationCalls.ToArray(); }
+    }
+
     public IReadOnlyList<string> TypingCalls
     {
         get { lock (_lock) return _typingCalls.ToArray(); }
@@ -164,6 +170,7 @@ public sealed class MockDiscordApi : IAsyncDisposable
             _identifies.Clear();
             _resumes.Clear();
             _identityCalls.Clear();
+            _applicationCalls.Clear();
             _typingCalls.Clear();
             _presenceUpdates.Clear();
             session = _session;
@@ -628,7 +635,15 @@ public sealed class MockDiscordApi : IAsyncDisposable
 
     private IResult HandleCurrentApplication(HttpContext ctx)
     {
-        var entry = BotFor(BotToken(ctx));
+        var token = BotToken(ctx);
+
+        BotEntry? entry;
+        lock (_lock)
+        {
+            _applicationCalls.Add(token);
+            entry = _bots.GetValueOrDefault(token);
+        }
+
         if (entry is null)
             return DiscordError(401, "401: Unauthorized");
 
