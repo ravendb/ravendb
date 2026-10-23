@@ -87,6 +87,7 @@ internal sealed class SlackRuntime : IChannelRuntime, SlackSdk.ISocketObserver
     private async Task StopCoreAsync()
     {
         await _cts.CancelAsync();
+        Health.MarkDisconnected(null);
         await _replace.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         await Task.WhenAll(_run, _client.DisposeAsync().AsTask(), _chats.StopAsync())
             .ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
