@@ -396,6 +396,28 @@ class Test
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task QueryExpressionSyntax_WithoutRavenLinqUsing_Reports_Diagnostic()
+        {
+            const string source = UsingsWithoutRavenLinq + @"
+class Test
+{
+    void Run(IDocumentSession session, string id)
+    {
+        var projects = (from x in session.Query<Project>()
+                        where x.Members.Any(y => y.UserId == id && y.Role == Role.Contributor)
+                        select x).ToList();
+    }
+}
+" + Model;
+
+            var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryCorrelatedCollectionConditionsAnalyzer>(source);
+
+            var diagnostic = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryCorrelatedCollectionConditions, diagnostic.Id);
+            Assert.Contains("'Any' over 'x.Members'", diagnostic.GetMessage());
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CorrelatedAny_After_OfType_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"

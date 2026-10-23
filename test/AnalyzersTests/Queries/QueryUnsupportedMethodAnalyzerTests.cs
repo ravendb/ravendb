@@ -752,6 +752,32 @@ class Order { public string Status { get; set; } }
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task UserMethod_In_QueryExpression_Where_WithoutRavenLinqUsing_Reports_Diagnostic()
+        {
+            const string source = UsingsWithoutRavenLinq + @"
+class MyFilters { public static bool IsActive(string status) => status == ""Active""; }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = (from o in session.Query<Order>()
+                 where MyFilters.IsActive(o.Status)
+                 select o).ToList();
+    }
+}
+
+class Order { public string Status { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id);
+            Assert.Contains("IsActive", d.GetMessage());
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethod_In_Where_After_OfType_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"

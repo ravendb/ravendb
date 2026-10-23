@@ -1144,6 +1144,28 @@ class Test
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task QueryExpression_Select_FromIndex_WithoutRavenLinqUsing_Reports_Diagnostic()
+        {
+            const string source = UsingsWithoutRavenLinq + OrderClass + NameOnlyStoredIndex + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = from o in session.Query<Order, OrderIndex>()
+                    .Customize(x => x.Projection(ProjectionBehavior.FromIndex))
+                where o.Name == ""x""
+                select new { o.Name, o.Price };
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryProjectionFieldNotRetrievable, d.Id);
+            Assert.Contains("Price", d.GetMessage());
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Select_After_OfType_No_Diagnostic()
         {
             const string source = CommonUsings + OrderClass + NameOnlyStoredIndex + @"
