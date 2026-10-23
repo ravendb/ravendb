@@ -99,6 +99,9 @@ public partial class CoraxQueryBuilder
             if (query.PageSize == 0)
                 return false;
 
+            if (query.Metadata.HasMoreLikeThis)
+                return true;
+
             if (query.Metadata.OrderBy is not null)
                 return HasBoostingAsOrderingType(query.Metadata.OrderBy);
 
