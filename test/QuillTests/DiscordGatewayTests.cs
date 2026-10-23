@@ -514,6 +514,33 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_rejected_rest_login_stops_reconnecting_and_surfaces_in_health()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        await Discord.WaitUntilConnectedAsync();
+
+        await app.UpdateChannelAsync(channel.ChannelId, new UpdateChannelRequest(null, null, Enabled: false));
+        await Discord.WaitUntilAsync(() => Discord.IsConnected == false, "the gateway to disconnect");
+        Discord.RemoveBot(channel.BotToken);
+        var identifiesBeforeRestart = Discord.Identifies.Count;
+
+        await app.UpdateChannelAsync(channel.ChannelId, new UpdateChannelRequest(null, null, Enabled: true));
+
+        await Discord.WaitUntilAsync(
+            async () =>
+            {
+                var rows = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
+                    Host.Client, QuillRoutes.DiscordHealth(app.Slug));
+                return rows.Single(r => r.ChannelId == channel.ChannelId).LastGatewayError?.Contains("rejected the bot token") == true;
+            },
+            "the rejected-token gateway error");
+
+        await Task.Delay(750);
+        Assert.Equal(identifiesBeforeRestart, Discord.Identifies.Count);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task A_gateway_that_never_sends_hello_times_out_and_the_runtime_retries()
     {
         await using var app = await NewAppAsync();

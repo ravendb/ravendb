@@ -35,7 +35,7 @@ internal sealed class DiscordBotClient(DiscordSdk sdk, string botToken) : IAsync
         }
         catch (HttpException e) when (e.HttpCode is HttpStatusCode.Unauthorized)
         {
-            throw new DiscordApiException(DiscordBotTokenValidation.TokenRejected, e.HttpCode, e);
+            throw new DiscordApiException(DiscordApiErrors.TokenRejected, e.HttpCode, e);
         }
         catch (RateLimitedException e)
         {
