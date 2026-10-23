@@ -52,12 +52,7 @@ public class RavenDB_27536 : RavenTestBase
         Assert.DoesNotContain(page, x => x.Key == target.Key);
         Assert.Equal(duplicate.Key, Similar<Widgets_ByCategoryAndName>(s, target, boost: true, take: 100)[0].Key);
         Assert.Equal(duplicate.Key, Similar<Widgets_ByCategoryAndName>(s, target, boost: false, take: 100, orderByScore: true)[0].Key);
-
-        if (options.SearchEngineMode == RavenSearchEngineMode.Corax)
-        {
-            // Corax budgets the sort for the rows the loop drops; Lucene bounds its collector by the page size and returns 99
-            Assert.Equal(100, page.Length);
-        }
+        Assert.Equal(100, page.Length);
     }
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
@@ -88,14 +83,8 @@ public class RavenDB_27536 : RavenTestBase
         var page = Similar<Widgets_ByTag>(s, target, boost: false, take: 10);
 
         Assert.Equal(page.Length, page.Select(x => x.Key).Distinct().Count()); // one row per document, not one per entry
-
-        if (options.SearchEngineMode == RavenSearchEngineMode.Corax)
-        {
-            Assert.Equal(10, page.Length);
-
-            // blacklisted by id, so the sibling entries stay out too; Lucene compares one entry id and returns the base document
-            Assert.DoesNotContain(page, x => x.Key == target.Key);
-        }
+        Assert.Equal(10, page.Length);
+        Assert.DoesNotContain(page, x => x.Key == target.Key);
     }
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
