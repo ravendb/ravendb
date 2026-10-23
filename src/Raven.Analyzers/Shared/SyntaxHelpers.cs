@@ -229,6 +229,74 @@ namespace Raven.Analyzers.Shared
             return IsRavenQueryable(model.GetTypeInfo(memberAccess.Expression).Type) ? memberAccess : null;
         }
 
+        public static bool IsRavenQuery(ITypeSymbol? type) =>
+            IsRavenQueryable(type)
+            || IsTypeOrImplements(type, KnownTypes.IDocumentQueryName)
+            || IsTypeOrImplements(type, KnownTypes.IAsyncDocumentQueryName)
+            || IsTypeOrImplements(type, KnownTypes.IRawDocumentQueryName)
+            || IsTypeOrImplements(type, KnownTypes.IAsyncRawDocumentQueryName);
+
+        internal static bool IsSystemQueryable(ITypeSymbol? type)
+        {
+            if (type == null)
+                return false;
+
+            if (IsSystemLinqQueryable(type))
+                return true;
+
+            foreach (INamedTypeSymbol iface in type.AllInterfaces)
+            {
+                if (IsSystemLinqQueryable(iface))
+                    return true;
+            }
+
+            return false;
+
+            static bool IsSystemLinqQueryable(ITypeSymbol t) =>
+                t.Name == KnownTypes.IQueryableName
+                && t.ContainingNamespace?.ToDisplayString() == KnownTypes.SystemLinqNamespace;
+        }
+
+        public static bool IsRavenQueryOrQueryable(ITypeSymbol? type) =>
+            IsRavenQuery(type) || IsSystemQueryable(type);
+
+        public static MemberAccessExpressionSyntax? GetRavenQueryReceiver(InvocationExpressionSyntax invocation, SemanticModel model)
+        {
+            if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
+                return null;
+
+            return IsRavenQueryRooted(memberAccess.Expression, model) ? memberAccess : null;
+        }
+
+        internal static bool IsRavenQueryRooted(ExpressionSyntax? expression, SemanticModel model)
+        {
+            int hops = 0;
+            while (expression != null && hops++ < MaxInvocationChainHops)
+            {
+                if (expression is ParenthesizedExpressionSyntax paren)
+                {
+                    expression = paren.Expression;
+                    continue;
+                }
+
+                ITypeSymbol? type = model.GetTypeInfo(expression).Type;
+                if (IsRavenQuery(type))
+                    return true;
+
+                if (!IsSystemQueryable(type))
+                    return false;
+
+                expression = expression switch
+                {
+                    InvocationExpressionSyntax { Expression: MemberAccessExpressionSyntax ma } => ma.Expression,
+                    IdentifierNameSyntax id => TryResolveLocalInitializer(id, model),
+                    _ => null,
+                };
+            }
+
+            return false;
+        }
+
         /// <summary>
         /// Returns true when <paramref name="type"/> is, or implements, IDocumentSession or
         /// IAsyncDocumentSession.

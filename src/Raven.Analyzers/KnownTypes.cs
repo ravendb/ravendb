@@ -165,6 +165,17 @@ namespace Raven.Analyzers
         public const string IDocumentSessionName = "IDocumentSession";
         public const string IAsyncDocumentSessionName = "IAsyncDocumentSession";
 
+        public const string IDocumentQueryName = "IDocumentQuery";
+        public const string IAsyncDocumentQueryName = "IAsyncDocumentQuery";
+        public const string IRawDocumentQueryName = "IRawDocumentQuery";
+        public const string IAsyncRawDocumentQueryName = "IAsyncRawDocumentQuery";
+
+        public const string SystemLinqNamespace = "System.Linq";
+        public const string IQueryableName = "IQueryable";
+
+        public const string RawQueryMethodName = "RawQuery";
+        public const string AsyncRawQueryMethodName = "AsyncRawQuery";
+
         // JS index base (bail on dynamic field creation)
         public const string AbstractJavaScriptIndexCreationTaskName = "AbstractJavaScriptIndexCreationTask";
 

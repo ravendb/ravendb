@@ -670,7 +670,7 @@ async Task GetDataAsync(IAsyncDocumentSession session, string userId, string ord
 
 ## RVN013: Query result is not bounded by Take()
 
-**Triggered by:** calling `ToList()`, `ToArray()`, `ToListAsync()`, or `ToArrayAsync()` on an `IRavenQueryable<T>` chain that does not have a `.Take(n)` call anywhere in the chain.
+**Triggered by:** calling `ToList()`, `ToArray()`, `ToListAsync()`, or `ToArrayAsync()` on a chain rooted in a RavenDB query (`session.Query<T>()`, `session.Advanced.DocumentQuery<T>()`, or `session.Advanced.RawQuery<T>()`, including their async forms) that does not have a `.Take(n)` call anywhere in the chain. The chain is followed through standard `System.Linq` operators such as `OfType<T>()`, `As<T>()`, `GroupBy` and `Select`, and through locals typed as `IQueryable<T>`, so the rule still fires when the file lacks `using Raven.Client.Documents.Linq;`.
 
 An unbounded query returns **every** matching document: the server applies no default limit (`IndexQueryServerSide.PageSize` starts at `int.MaxValue`), and the client only sends a `limit` when you set one. Without an explicit `.Take(n)` the result size is whatever the dataset happens to hold, so a query that was fine against test data can pull the whole collection in production. Add `.Take(n)` to bound it.
 
@@ -709,7 +709,19 @@ var users = await session.Query<User>().Take(10).ToListAsync();
 
 **Not flagged** (inherently bounded or scalar): `First()`, `FirstOrDefault()`, `Single()`, `SingleOrDefault()`, `Any()`, `Count()`, `LongCount()`.
 
-**Note:** Only LINQ queries via `session.Query<T>()` are detected. The low-level `session.Advanced.DocumentQuery<T>()` API is not covered.
+**Not flagged** (in-memory LINQ, not a database query): any `ToList()` after the query has already been materialized, e.g. `session.Query<User>().Take(5).ToList().Where(...).ToList()` or `session.TimeSeriesFor(...).Get().GroupBy(...).ToList()`.
+
+`DocumentQuery<T>()` is bounded by its own `.Take(n)`. A `RawQuery<T>(rql)` is bounded by a `limit` clause in the RQL text; when the text is not known at compile time (a variable, a method result) the rule stays silent.
+
+```csharp
+// ❌ Bad: unbounded, returns every match
+var users = session.Advanced.DocumentQuery<User>().WhereEquals(u => u.Active, true).ToList();   // RVN013
+var orders = session.Advanced.RawQuery<Order>("from Orders").ToList();   // RVN013
+
+// ✅ Good: explicit bound
+var users = session.Advanced.DocumentQuery<User>().WhereEquals(u => u.Active, true).Take(10).ToList();
+var orders = session.Advanced.RawQuery<Order>("from Orders limit 10").ToList();
+```
 
 **Docs:** [Querying: Paging](https://ravendb.net/docs/article-page/latest/csharp/client-api/session/querying/paging)
 

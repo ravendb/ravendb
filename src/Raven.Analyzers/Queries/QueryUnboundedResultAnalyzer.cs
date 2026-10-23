@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -34,7 +36,7 @@ namespace Raven.Analyzers.Queries
             if (methodName == null || !KnownTypes.UnboundedMaterializingMethods.Contains(methodName))
                 return;
 
-            if (SyntaxHelpers.GetRavenQueryableReceiver(invocation, context.SemanticModel) is not MemberAccessExpressionSyntax memberAccess)
+            if (SyntaxHelpers.GetRavenQueryReceiver(invocation, context.SemanticModel) is not MemberAccessExpressionSyntax memberAccess)
                 return;
 
             // Walk the receiver chain. A .Take(...) call anywhere before the materializing
@@ -44,15 +46,18 @@ namespace Raven.Analyzers.Queries
             //
             // The Take match is intentionally SYNTACTIC (by method name, not by resolved symbol).
             // This is safe and deliberate for this Info-severity heuristic: the materializing call's
-            // receiver has already been proven to be IRavenQueryable<T> above, so every invocation in
-            // this chain operates on IRavenQueryable/IQueryable, where the only result-bounding operator
-            // is the standard Queryable.Take. A name-based check also degrades gracefully on partial or
+            // receiver has already been proven to be rooted in a RavenDB query above, so every invocation
+            // in this chain operates on a Raven query or IQueryable, where the only result-bounding
+            // operator is Take. A name-based check also degrades gracefully on partial or
             // erroneous compilations (where the Take symbol may not bind), whereas a symbol-based check
             // would fail to see the Take and turn a legitimately bounded query into a false positive.
             // Do not "upgrade" this to a semantic symbol lookup without that trade-off in mind.
             foreach (InvocationExpressionSyntax chainCall in SyntaxHelpers.EnumerateInvocationChain(memberAccess.Expression, context.SemanticModel))
             {
                 if (SyntaxHelpers.GetMethodName(chainCall) == KnownTypes.QueryMethods.Take)
+                    return;
+
+                if (RawQueryMayBeBoundedByLimit(chainCall, context.SemanticModel))
                     return;
             }
 
@@ -80,7 +85,7 @@ namespace Raven.Analyzers.Queries
             // captured inside a Where) are not on the spine and must not trigger suppression.
             foreach (ILocalSymbol local in EnumerateSpineLocals(receiver, model))
             {
-                if (!SyntaxHelpers.IsRavenQueryable(local.Type))
+                if (!SyntaxHelpers.IsRavenQueryOrQueryable(local.Type))
                     continue;
 
                 if (LocalHasTakeInAnyAssignment(local, materializingCall, model))
@@ -176,6 +181,45 @@ namespace Raven.Analyzers.Queries
             }
 
             return false;
+        }
+
+        private static bool RawQueryMayBeBoundedByLimit(InvocationExpressionSyntax call, SemanticModel model)
+        {
+            string? name = SyntaxHelpers.GetMethodName(call);
+            if (name != KnownTypes.RawQueryMethodName && name != KnownTypes.AsyncRawQueryMethodName)
+                return false;
+
+            if (!SyntaxHelpers.IsRavenQuery(model.GetTypeInfo(call).Type))
+                return false;
+
+            if (call.ArgumentList.Arguments.Count == 0)
+                return true;
+
+            string? rql = TryGetKnownText(call.ArgumentList.Arguments[0].Expression, model);
+            return rql == null || RqlLimitClause.IsMatch(rql);
+        }
+
+        private static readonly Regex RqlLimitClause = new(@"\blimit\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static string? TryGetKnownText(ExpressionSyntax expression, SemanticModel model)
+        {
+            Optional<object?> constant = model.GetConstantValue(expression);
+            if (constant.HasValue)
+                return constant.Value as string;
+
+            if (expression is not InterpolatedStringExpressionSyntax interpolated)
+                return null;
+
+            var text = new StringBuilder();
+            foreach (InterpolatedStringContentSyntax content in interpolated.Contents)
+            {
+                if (content is InterpolatedStringTextSyntax literal)
+                    text.Append(literal.TextToken.ValueText);
+                else
+                    text.Append(' ');
+            }
+
+            return text.ToString();
         }
 
         private static bool ChainContainsTake(ExpressionSyntax expression)
