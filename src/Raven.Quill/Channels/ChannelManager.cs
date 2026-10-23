@@ -150,6 +150,9 @@ internal sealed class ChannelManager(
             if (unreadable.Contains(key.Database))
                 continue;
 
+            if (runtime.IsStopping && runtime.StopAsync().IsCompleted == false)
+                continue;
+
             var unchanged = desired.TryGetValue(key, out var current) && runtime.ChannelFingerprint == current.Fingerprint;
             if (unchanged && runtime.IsStopping == false && runtime.IsRestartDue(now) == false)
             {
