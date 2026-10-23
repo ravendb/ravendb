@@ -17,11 +17,15 @@ import { LazyLoad } from "components/common/LazyLoad";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import classNames from "classnames";
 import Modal from "components/common/Modal";
+import useUniqueId from "components/hooks/useUniqueId";
 
 export default function CertificatesReplaceServerModal() {
     const dispatch = useAppDispatch();
     const { manageServerService } = useServices();
     const { reportEvent } = useEventsCollector();
+    const titleId = useUniqueId("replace-server-certificate-title");
+
+    const close = () => dispatch(certificatesActions.isReplaceServerModalOpenToggled());
 
     const form = useForm<FormData>({
         resolver: yupResolver(schema),
@@ -52,17 +56,22 @@ export default function CertificatesReplaceServerModal() {
     };
 
     return (
-        <Modal show size="lg" centered contentClassName="modal-border bulge-warning">
+        <Modal
+            show
+            size="lg"
+            centered
+            contentClassName="modal-border bulge-warning"
+            backdrop="static"
+            onHide={close}
+            aria-labelledby={titleId}
+        >
             <FormProvider {...form}>
                 <form onSubmit={handleSubmit(handleReplace)}>
-                    <Modal.Header
-                        className="vstack gap-4"
-                        onCloseClick={() => dispatch(certificatesActions.isReplaceServerModalOpenToggled())}
-                    >
-                        <div className="text-center">
-                            <Icon icon="refresh" className="fs-1" color="warning" margin="m-0" />
-                        </div>
-                        <div className="text-center lead">Replace server certificates (cluster-wide)</div>
+                    <Modal.Header className="pt-3 pb-0" onCloseClick={close}>
+                        <Icon icon="refresh" size="lg" color="warning" margin="me-3" />
+                        <h3 id={titleId} className="mb-0">
+                            Replace server certificates (cluster-wide)
+                        </h3>
                     </Modal.Header>
                     <Modal.Body>
                         <LazyLoad active={asyncGetClusterDomains.loading}>
@@ -102,11 +111,7 @@ export default function CertificatesReplaceServerModal() {
                         )}
                     </Modal.Body>
                     <Modal.Footer>
-                        <Button
-                            variant="link"
-                            onClick={() => dispatch(certificatesActions.isReplaceServerModalOpenToggled())}
-                            className="link-muted"
-                        >
+                        <Button variant="link" onClick={close} className="link-muted">
                             Cancel
                         </Button>
                         <ButtonWithSpinner
