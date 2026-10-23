@@ -692,7 +692,7 @@ namespace Voron
             private unsafe void PrepareRecyclableJournal(long size, WriteAheadJournal journal)
             {
                 var path = Path.Combine(JournalPath.FullPath, RecyclableJournalName(Interlocked.Increment(ref _reuseCounter)));
-                string zeroingPath = path + TempFileExtension;
+                string zeroingPath = new VoronPathSetting(path + TempFileExtension).FullPath;
 
                 long zeroedBytes;
                 var pacingHandle = GCHandle.Alloc(new JournalZeroingPacingState { Journal = journal });
@@ -1116,7 +1116,7 @@ namespace Voron
                                 headerWriter.WriteHeaderRecord(journalHeaderRecord);
                             }
 
-                            MoveFileDurably(filename, desiredPath.FullPath);
+                            MoveFileDurably(new VoronPathSetting(filename).FullPath, desiredPath.FullPath);
                             reusedSize = journalFile.Length;
                             reused = true;
                             break;
