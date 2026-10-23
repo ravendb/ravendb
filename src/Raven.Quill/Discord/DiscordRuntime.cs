@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Net;
 using Discord;
 using Discord.Net;
 using Discord.WebSocket;
@@ -156,12 +155,11 @@ internal sealed class DiscordRuntime : IChannelRuntime
         {
             await _bot.LoginAsync(_cts.Token);
         }
-        catch (DiscordApiException e) when (e.Status is HttpStatusCode.Unauthorized)
-        {
-            return e.Message;
-        }
         catch (DiscordApiException e)
         {
+            if (FatalReasonFor(e) is { } fatal)
+                return fatal;
+
             Health.MarkDisconnected(e.Message);
             if (_logger.IsWarnEnabled)
                 _logger.Warn($"Discord REST login failed for channel {_channel.ShortId}: {e.Message}");
@@ -302,21 +300,19 @@ internal sealed class DiscordRuntime : IChannelRuntime
 
     private string? FatalReasonFor(Exception error)
     {
-        if (CloseOf(error) is { } closed)
-        {
-            var fatal = FatalReasonFor(closed.CloseCode);
-            if (fatal is not null)
-                _canRestart = closed.CloseCode is 4013 or 4014;
-            return fatal;
-        }
+        if (DiscordApiErrors.IsTokenRejected(error))
+            return Exit(DiscordApiErrors.TokenRejected, canRestart: false);
 
-        if (error is HttpException { HttpCode: HttpStatusCode.Unauthorized })
-        {
-            _canRestart = true;
-            return "discord rejected the bot token; reset it on the app's Bot page and reconnect the channel";
-        }
+        if (DiscordApiErrors.CloseOf(error) is { } closed && FatalReasonFor(closed.CloseCode) is { } fatal)
+            return Exit(fatal, DiscordApiErrors.IsFixableInDiscord(closed.CloseCode));
 
         return null;
+    }
+
+    private string Exit(string reason, bool canRestart)
+    {
+        _canRestart = canRestart;
+        return reason;
     }
 
     private string? TransientReasonFor(Exception error) => error switch
@@ -324,21 +320,17 @@ internal sealed class DiscordRuntime : IChannelRuntime
         GatewayReconnectException or OperationCanceledException => null,
         RateLimitedException => error.Message,
         TimeoutException => $"discord gateway did not become ready within {_options.GatewayHandshakeTimeout}",
-        _ when CloseOf(error) is not null => null,
+        _ when DiscordApiErrors.CloseOf(error) is not null => null,
         _ => error.Message,
     };
 
     private static bool NeedsNewClient(Exception error) =>
-        CloseOf(error)?.CloseCode is 4006 or 4007 or 4009 || error.Message == SdkReadyFailure;
-
-    private static WebSocketClosedException? CloseOf(Exception error) =>
-        error as WebSocketClosedException ?? error.InnerException as WebSocketClosedException;
+        DiscordApiErrors.CloseOf(error)?.CloseCode is 4006 or 4007 or 4009 || error.Message == SdkReadyFailure;
 
     private static string Snowflake(ulong id) => id.ToString(CultureInfo.InvariantCulture);
 
     private static string? FatalReasonFor(int closeCode) => closeCode switch
     {
-        4004 => "discord rejected the bot token; reset it on the app's Bot page and reconnect the channel",
         4010 => "discord rejected the shard this appliance identified with",
         4011 => "this bot is in too many servers for a single gateway connection",
         4012 => "discord no longer supports the gateway version this appliance uses",

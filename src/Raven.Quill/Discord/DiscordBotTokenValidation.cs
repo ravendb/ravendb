@@ -17,9 +17,6 @@ internal sealed class DiscordApiException(string message, HttpStatusCode? status
 
 internal static class DiscordBotTokenValidation
 {
-    internal const string TokenRejected =
-        "discord rejected the bot token; reset it on the app's Bot page and try again";
-
     public static async Task<(DiscordBotIdentity? Identity, string? Error, bool DiscordResponded)> GetBotIdentityAsync(
         this DiscordSdk sdk, string botToken, CancellationToken ct)
     {
@@ -52,7 +49,7 @@ internal static class DiscordBotTokenValidation
         }
         catch (HttpException e) when (e.HttpCode is HttpStatusCode.Unauthorized)
         {
-            return (null, TokenRejected, true);
+            return (null, DiscordApiErrors.TokenRejected, true);
         }
         catch (HttpException e)
         {
