@@ -133,4 +133,33 @@ public class AuthEndpointsTests(ITestOutputHelper output) : QuillTestBase(output
 
         Assert.Contains(HttpStatusCode.TooManyRequests, statuses);
     }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Throttled_client_is_rejected_before_validation_and_recovers_after_the_window()
+    {
+        var window = TimeSpan.FromMilliseconds(500);
+        await using var host = await NewHostAsync(configure: options => options.LoginAttemptWindow = window);
+        host.Client.DefaultRequestHeaders.Remove(ApiKeyAuthenticationHandler.HeaderName);
+
+        HttpStatusCode? last = null;
+        for (var i = 0; i < 15; i++)
+        {
+            var resp = await host.Client.PostAsJsonAsync(QuillRoutes.AuthLogin, new { apiKey = "wrong-key" });
+            last = resp.StatusCode;
+        }
+        Assert.Equal(HttpStatusCode.TooManyRequests, last);
+
+        var duringLockout = await host.Client.PostAsJsonAsync(QuillRoutes.AuthLogin,
+            new { apiKey = ApplianceWebApplicationFactory.TestApiKey });
+        Assert.Equal(HttpStatusCode.TooManyRequests, duringLockout.StatusCode);
+
+        await Task.Delay(window * 2);
+
+        var login = await host.Client.PostAsJsonAsync(QuillRoutes.AuthLogin,
+            new { apiKey = ApplianceWebApplicationFactory.TestApiKey });
+        Assert.True(login.IsSuccessStatusCode, await login.Content.ReadAsStringAsync());
+
+        var wrongAfterReset = await host.Client.PostAsJsonAsync(QuillRoutes.AuthLogin, new { apiKey = "wrong-key" });
+        Assert.Equal(HttpStatusCode.Unauthorized, wrongAfterReset.StatusCode);
+    }
 }

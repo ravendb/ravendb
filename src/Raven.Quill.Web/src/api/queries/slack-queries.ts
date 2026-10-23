@@ -1,21 +1,23 @@
 import { queryOptions } from "@tanstack/react-query";
-import type { ServerApi } from "@/api/generated/server-api";
-import { MS_IN } from "@/lib/time";
+import type { ServerApi, SlackChannelHealthResponse } from "@/api/generated/server-api";
+import { createConnectingPoll } from "@/api/queries/connecting-poll";
 
 const baseKey = "slack";
 
+const pollInterval = createConnectingPoll<SlackChannelHealthResponse>(baseKey, (row) => ({
+    channelId: row.channelId,
+    enabled: row.enabled,
+    connected: row.socketConnected,
+    error: row.lastSocketError,
+}));
+
 export function createSlackQueries(api: ServerApi["slack"]) {
     return {
-        webhookInfo: (slug: string, channelId: string) =>
-            queryOptions({
-                queryKey: [baseKey, "webhook-info", slug, channelId],
-                queryFn: () => api.webhookInfo(slug, channelId),
-            }),
         health: (slug: string) =>
             queryOptions({
                 queryKey: [baseKey, "health", slug],
                 queryFn: () => api.health(slug),
-                refetchInterval: 30 * MS_IN.second,
+                refetchInterval: (query) => pollInterval(slug, query.state.data ?? []),
             }),
     };
 }

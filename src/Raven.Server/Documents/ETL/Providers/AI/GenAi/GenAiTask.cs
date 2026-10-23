@@ -119,7 +119,9 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
         if (rateLimitException != null)
         {
-            FallbackTime = rateLimitException.RetryAfter;
+            var maxFallbackTime = Database.Configuration.Etl.MaxFallbackTime.AsTimeSpan;
+            FallbackTime = rateLimitException.RetryAfter > maxFallbackTime ? maxFallbackTime : rateLimitException.RetryAfter;
+            Statistics.NextBatchRetryTime = Database.Time.GetUtcNow() + FallbackTime;
             return;
         }
 

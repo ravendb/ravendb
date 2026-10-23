@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Channels;
@@ -14,6 +15,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
     : QuillDiscordTestBase(output, fixture)
 {
     private const string Sender = "800000000000000001";
+    private const string OtherSender = "800000000000000002";
     private const string DmChannel = "900000000000000001";
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -27,6 +29,8 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         var identify = Assert.Single(Discord.Identifies);
         Assert.Equal(channel.BotToken, identify.Token);
         Assert.Equal(MockDiscordApi.DirectMessagesIntent, identify.Intents & MockDiscordApi.DirectMessagesIntent);
+
+        await Discord.WaitUntilAsync(() => Discord.PresenceUpdates.Contains("Support bot"), "the custom status");
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -42,8 +46,9 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         var request = Assert.Single(Router.Requests);
         Assert.Equal("What are your hours?", request.Prompt);
         Assert.Equal(Channel.IdPrefix + channel.ChannelId, request.ChannelId);
-        Assert.Matches($"^chats/discord/{channel.ChannelId}/{Sender}/\\d{{4}}-\\d{{2}}-\\d{{2}}$", request.ConversationId);
+        Assert.Matches($"^chats/discord/{channel.ChannelId}/{Sender}/[0-9a-f]{{16}}$", request.ConversationId);
         Assert.Equal(Sender, request.Parameters["discordUser"].GetString());
+        Assert.NotNull(request.IdleWindow);
 
         await Discord.WaitUntilAsync(
             () => Discord.EditedMessages.Any(e => e.Content == "Hello from the fake agent."), "the finalized edit");
@@ -51,6 +56,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         var sent = Assert.Single(Discord.SentMessages);
         Assert.Equal(DmChannel, sent.ChannelId);
         Assert.All(Discord.EditedMessages, e => Assert.Equal(sent.MessageId, e.MessageId));
+        Assert.Equal(DmChannel, Assert.Single(Discord.TypingCalls));
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -64,11 +70,16 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         await Discord.DispatchDmAsync("msg-in-2", DmChannel, Sender, "count");
 
         await Discord.WaitUntilAsync(
-            () => Discord.EditedMessages.Any(e => e.Content == "One two three."), "the finalized edit");
+            () => Discord.EditedMessages.Any(e => e.Content == "One two three." && e.EmbedsSuppressed == false),
+            "the finalized edit");
 
         var sent = Assert.Single(Discord.SentMessages);
         Assert.All(Discord.EditedMessages, e => Assert.Equal(sent.MessageId, e.MessageId));
         Assert.True(Discord.EditedMessages.Count >= 2, "mid-stream previews must edit, not re-post");
+
+        Assert.True(sent.EmbedsSuppressed, "the first preview must not unfurl links");
+        Assert.All(Discord.EditedMessages.SkipLast(1), e => Assert.True(e.EmbedsSuppressed));
+        Assert.False(Discord.EditedMessages[^1].EmbedsSuppressed, "the final edit must let links unfurl");
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -104,20 +115,6 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Redelivered_message_ids_dispatch_once()
-    {
-        await using var app = await NewAppAsync();
-        await NewChannelAsync(app);
-
-        await Discord.DispatchDmAsync("msg-dupe", DmChannel, Sender, "only once");
-        await Discord.DispatchDmAsync("msg-dupe", DmChannel, Sender, "only once");
-
-        await Discord.WaitUntilAsync(() => Router.Requests.Count == 1, "the single agent dispatch");
-        await Task.Delay(250);
-        Assert.Single(Router.Requests);
-    }
-
-    [RavenFact(RavenTestCategory.Quill)]
     public async Task Bot_authors_self_messages_and_guild_messages_are_ignored()
     {
         await using var app = await NewAppAsync();
@@ -142,7 +139,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         await Discord.DispatchDmAsync("msg-file", DmChannel, Sender, "", withAttachment: true);
 
         await Discord.WaitUntilAsync(
-            () => Discord.SentMessages.Any(m => m.Content == DiscordInboundProcessor.UnsupportedKindReply),
+            () => Discord.SentMessages.Any(m => m.Content == ChannelReplies.UnsupportedKind),
             "the unsupported-kind reply");
         Assert.Empty(Router.Requests);
     }
@@ -157,7 +154,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
             "msg-file-text", DmChannel, Sender, "here's the error I'm getting", withAttachment: true);
 
         await Discord.WaitUntilAsync(
-            () => Discord.SentMessages.Any(m => m.Content == DiscordInboundProcessor.UnsupportedKindReply),
+            () => Discord.SentMessages.Any(m => m.Content == ChannelReplies.UnsupportedKind),
             "the unsupported-kind reply");
         Assert.Empty(Router.Requests);
     }
@@ -171,7 +168,7 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         await Discord.DispatchDmAsync("msg-sticker", DmChannel, Sender, "");
 
         await Discord.WaitUntilAsync(
-            () => Discord.SentMessages.Any(m => m.Content == DiscordInboundProcessor.UnsupportedKindReply),
+            () => Discord.SentMessages.Any(m => m.Content == ChannelReplies.UnsupportedKind),
             "the unsupported-kind reply");
         Assert.Empty(Router.Requests);
 
@@ -217,6 +214,8 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         Router.ChunkDelay = TimeSpan.FromMilliseconds(200);
 
         await Discord.DispatchDmAsync("msg-seq-1", DmChannel, Sender, "first");
+        await Discord.WaitUntilAsync(() => Router.Requests.Count == 1, "the first agent dispatch");
+
         await Discord.DispatchDmAsync("msg-seq-2", DmChannel, Sender, "second");
 
         await Discord.WaitUntilAsync(() => Router.Requests.Count == 2, "both agent dispatches");
@@ -242,8 +241,107 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
             },
             "the recorded send error");
 
+        var rows = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
+            Host.Client, QuillRoutes.DiscordHealth(app.Slug));
+        var sendError = rows.Single(r => r.ChannelId == channel.ChannelId).LastSendError;
+        Assert.Contains("discord refused create message", sendError);
+        Assert.DoesNotContain("rejected the bot token", sendError);
         Assert.Empty(Discord.SentMessages);
     }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_failed_final_edit_stays_in_health_after_the_error_reply()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        await Discord.WaitUntilConnectedAsync();
+        Discord.EditErrorStatus = 403;
+
+        await Discord.DispatchDmAsync("msg-edit-error", DmChannel, Sender, "streamed then refused");
+
+        await Discord.WaitUntilAsync(
+            () => Discord.SentMessages.Any(m => m.Content == ChannelReplies.Default.Error), "the error reply");
+
+        var rows = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
+            Host.Client, QuillRoutes.DiscordHealth(app.Slug));
+        Assert.NotNull(rows.Single(r => r.ChannelId == channel.ChannelId).LastSendErrorAt);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_timed_out_agent_call_gets_the_error_reply()
+    {
+        await using var app = await NewAppAsync();
+        await NewChannelAsync(app);
+        Router.Failure = new TaskCanceledException("the agent call timed out");
+
+        await Discord.DispatchDmAsync("msg-timeout", DmChannel, Sender, "slow question");
+
+        await Discord.WaitUntilAsync(
+            () => Discord.SentMessages.Any(m => m.Content == ChannelReplies.Default.Error), "the error reply");
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Renaming_the_channel_keeps_the_runtime_and_its_running_turn()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        await Discord.WaitUntilConnectedAsync();
+
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt == "hold" ? gate.Task : Task.CompletedTask;
+
+        await Discord.DispatchDmAsync("msg-rename-0", DmChannel, Sender, "hold");
+        await Discord.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+        await Discord.DispatchDmAsync("msg-rename-1", DmChannel, Sender, "queued");
+
+        var before = RuntimeFor(app, channel);
+        var connectsBefore = Discord.Connects;
+        await app.UpdateChannelAsync(channel.ChannelId, new UpdateChannelRequest("Renamed bot", null, null));
+        await Discord.WaitUntilAsync(() => Discord.PresenceUpdates.Contains("Renamed bot"), "the renamed custom status");
+        Assert.Same(before, RuntimeFor(app, channel));
+        Assert.Equal(connectsBefore, Discord.Connects);
+
+        gate.SetResult();
+        await Discord.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "queued"), "the queued turn after the rename");
+        await Discord.WaitUntilAsync(
+            () => Discord.EditedMessages.Count(e => e.Content == "Hello from the fake agent.") >= 2, "both replies");
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Rotating_credentials_cancels_a_running_turn_and_drops_its_queue_silently()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        await Discord.WaitUntilConnectedAsync();
+
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt == "hold" ? gate.Task : Task.CompletedTask;
+
+        await Discord.DispatchDmAsync("msg-edit-0", DmChannel, Sender, "hold");
+        await Discord.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+        await Discord.DispatchDmAsync("msg-edit-1", DmChannel, Sender, "queued");
+        await Discord.DispatchDmAsync("msg-edit-marker", DmChannel, OtherSender, "marker");
+        await Discord.WaitUntilAsync(
+            () => Router.Requests.Any(r => r.Prompt == "marker"), "a later sender's turn, so the earlier message is queued");
+
+        var before = RuntimeFor(app, channel);
+        var rotatedToken = NewBotToken();
+        Discord.AddBot(rotatedToken, channel.ApplicationId, channel.BotUserId);
+        await app.UpdateChannelAsync(channel.ChannelId, new UpdateChannelRequest(null, null, null, Discord: new(BotToken: rotatedToken)));
+        await Discord.WaitUntilAsync(() => RuntimeFor(app, channel) is { } now && now != before, "the runtime swap after the rotation");
+        var sent = Discord.SentMessages.Count;
+        var edited = Discord.EditedMessages.Count;
+
+        gate.SetResult();
+        await Task.Delay(400);
+
+        Assert.DoesNotContain(Router.Requests, r => r.Prompt == "queued");
+        Assert.Equal(sent, Discord.SentMessages.Count);
+        Assert.Equal(edited, Discord.EditedMessages.Count);
+    }
+
+    private static IChannelRuntime? RuntimeFor(QuillApp app, ProvisionedChannel channel) =>
+        app.Host.Services.GetRequiredService<ChannelManager>().RuntimeFor(app.Slug, channel.ChannelId);
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Username_bound_parameters_resolve_from_the_message_author()
@@ -256,6 +354,51 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
 
         await Discord.WaitUntilAsync(() => Router.Requests.Count == 1, "the agent dispatch");
         Assert.Equal("dana.dev", Assert.Single(Router.Requests).Parameters["handle"].GetString());
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Updating_a_constant_binding_starts_a_fresh_conversation_with_the_new_value()
+    {
+        await using var app = await NewAppAsync();
+
+        var agentId = "discord-agent-" + Guid.NewGuid().ToString("N")[..8];
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = agentId,
+            Name = "Discord Demo Agent",
+            SystemPrompt = "You are a placeholder demo agent.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+            Parameters = [new AiAgentParameter("userId", "the customer's document id")],
+        });
+
+        var botToken = NewBotToken();
+        Discord.AddBot(botToken, NewApplicationId(), NewBotUserId());
+        var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
+            ChannelType.Discord, agentId, null,
+            DisplayName: "Support bot",
+            Discord: new(botToken, ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+            {
+                ["userId"] = new() { Source = ChannelParameterSource.Constant, Value = "users/1" },
+            })));
+
+        await Discord.DispatchDmAsync("msg-const-1", DmChannel, Sender, "first question");
+        await Discord.WaitUntilAsync(() => Router.Requests.Count == 1, "the first agent dispatch");
+
+        await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+            Discord: new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+            {
+                ["userId"] = new() { Source = ChannelParameterSource.Constant, Value = "users/2" },
+            })));
+
+        await Discord.WaitUntilAsync(() => Discord.Identifies.Count >= 2, "the gateway swap after the update");
+        await Discord.DispatchDmAsync("msg-const-2", DmChannel, Sender, "second question");
+        await Discord.WaitUntilAsync(() => Router.Requests.Count == 2, "the second agent dispatch");
+
+        var first = Router.Requests[0];
+        var second = Router.Requests[1];
+        Assert.Equal("users/1", first.Parameters["userId"].GetString());
+        Assert.Equal("users/2", second.Parameters["userId"].GetString());
+        Assert.NotEqual(first.ConversationId, second.ConversationId);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -371,6 +514,33 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_rejected_rest_login_stops_reconnecting_and_surfaces_in_health()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        await Discord.WaitUntilConnectedAsync();
+
+        await app.UpdateChannelAsync(channel.ChannelId, new UpdateChannelRequest(null, null, Enabled: false));
+        await Discord.WaitUntilAsync(() => Discord.IsConnected == false, "the gateway to disconnect");
+        Discord.RemoveBot(channel.BotToken);
+        var identifiesBeforeRestart = Discord.Identifies.Count;
+
+        await app.UpdateChannelAsync(channel.ChannelId, new UpdateChannelRequest(null, null, Enabled: true));
+
+        await Discord.WaitUntilAsync(
+            async () =>
+            {
+                var rows = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
+                    Host.Client, QuillRoutes.DiscordHealth(app.Slug));
+                return rows.Single(r => r.ChannelId == channel.ChannelId).LastGatewayError?.Contains("rejected the bot token") == true;
+            },
+            "the rejected-token gateway error");
+
+        await Task.Delay(750);
+        Assert.Equal(identifiesBeforeRestart, Discord.Identifies.Count);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task A_gateway_that_never_sends_hello_times_out_and_the_runtime_retries()
     {
         await using var app = await NewAppAsync();
@@ -388,14 +558,14 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
 
         var health = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
             Host.Client, QuillRoutes.DiscordHealth(app.Slug));
-        Assert.Contains("hello frame", health.Single(r => r.ChannelId == channel.ChannelId).LastGatewayError);
+        Assert.Contains("did not become ready", health.Single(r => r.ChannelId == channel.ChannelId).LastGatewayError);
 
         Discord.StallBeforeHello = false;
         await Discord.WaitUntilConnectedAsync();
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Repeated_failures_before_the_first_frame_drop_the_cached_session()
+    public async Task Repeated_failures_before_the_first_frame_resume_the_session_once_the_gateway_is_back()
     {
         await using var app = await NewAppAsync();
         await NewChannelAsync(app);
@@ -406,13 +576,23 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
         await Discord.RequestReconnectAsync();
 
         await Discord.WaitUntilAsync(
-            () => Discord.Connects >= connectsBefore + 4, "the attempts that never reach a frame");
+            () => Discord.Connects >= connectsBefore + 2, "the attempts that never reach a frame");
         Discord.CloseOnConnect = null;
 
-        await Discord.WaitUntilAsync(
-            () => Discord.Identifies.Count >= 2, "a fresh identify once the cached session is dropped");
+        await Discord.WaitUntilAsync(() => Discord.Resumes.Count >= 1, "the resume once the gateway is back");
         await Discord.WaitUntilConnectedAsync();
-        Assert.Empty(Discord.Resumes);
+        Assert.Single(Discord.Identifies);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_ready_the_sdk_cannot_process_replaces_the_client()
+    {
+        await using var app = await NewAppAsync();
+        Discord.BreakNextReady = true;
+        await NewChannelAsync(app);
+
+        await Discord.WaitUntilAsync(() => Discord.Identifies.Count >= 2, "a fresh identify after the broken ready");
+        await Discord.WaitUntilConnectedAsync();
     }
 
     [RavenFact(RavenTestCategory.Quill)]
@@ -438,6 +618,39 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_fatal_gateway_error_stays_in_health_across_the_timed_restart()
+    {
+        await using var app = await NewAppAsync();
+        Discord.CloseAfterIdentify = 4014;
+        var channel = await NewChannelAsync(app);
+
+        await Discord.WaitUntilAsync(
+            async () =>
+            {
+                var rows = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
+                    Host.Client, QuillRoutes.DiscordHealth(app.Slug));
+                return rows.Single(r => r.ChannelId == channel.ChannelId).LastGatewayError is not null;
+            },
+            "the recorded gateway error");
+
+        var identifiesAfterFatal = Discord.Identifies.Count;
+        var deadline = DateTime.UtcNow + GatewayRestartDelay + TimeSpan.FromSeconds(3);
+        while (DateTime.UtcNow < deadline)
+        {
+            var rows = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
+                Host.Client, QuillRoutes.DiscordHealth(app.Slug));
+            var row = rows.Single(r => r.ChannelId == channel.ChannelId);
+            Assert.Contains("direct messages intent", row.LastGatewayError);
+            Assert.False(row.GatewayConnected);
+            if (Discord.Identifies.Count > identifiesAfterFatal)
+                return;
+            await Task.Delay(50);
+        }
+
+        Assert.Fail("the runtime was never restarted after the restart delay");
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task A_rejected_bot_token_is_not_retried_after_the_restart_delay()
     {
         await using var app = await NewAppAsync();
@@ -460,45 +673,6 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
 
         Assert.Equal(identifiesAfterFatal, Discord.Identifies.Count);
     }
-
-    [RavenFact(RavenTestCategory.Quill)]
-    public async Task A_flooding_sender_is_capped_and_notified_once_per_burst()
-    {
-        await using var app = await NewAppAsync();
-        await NewChannelAsync(app);
-        await Discord.WaitUntilConnectedAsync();
-
-        var capacity = new DiscordOptions().SenderQueueCapacity;
-        Router.Chunks = ["done"];
-
-        var firstBurst = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        Router.BeforeRun = _ => firstBurst.Task;
-
-        for (var i = 0; i < capacity + 2; i++)
-            await Discord.DispatchDmAsync($"msg-flood-{i}", DmChannel, Sender, $"flood {i}");
-
-        await Discord.WaitUntilAsync(() => OverloadNotices() == 1, "the single overload notice");
-        Assert.Single(Router.Requests);
-
-        firstBurst.SetResult();
-        await Discord.WaitUntilAsync(() => Router.Requests.Count == capacity, "the capped burst to drain");
-        Assert.Equal(1, OverloadNotices());
-
-        var secondBurst = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        Router.BeforeRun = _ => secondBurst.Task;
-
-        for (var i = 0; i < capacity + 2; i++)
-            await Discord.DispatchDmAsync($"msg-flood2-{i}", DmChannel, Sender, $"again {i}");
-
-        await Discord.WaitUntilAsync(() => OverloadNotices() == 2, "a fresh overload notice once the chain retired");
-
-        secondBurst.SetResult();
-        await Discord.WaitUntilAsync(
-            () => Router.Requests.Count == capacity * 2, "the second capped burst to drain");
-    }
-
-    private int OverloadNotices() =>
-        Discord.SentMessages.Count(m => m.Content == DiscordInboundProcessor.OverloadReply);
 
     private sealed record ProvisionedChannel(
         string ChannelId, string BotToken, string ApplicationId, string BotUserId);

@@ -193,7 +193,7 @@ public abstract class QuillTelegramTestBase(ITestOutputHelper output, QuillTeleg
     {
         opts.Telegram.ApiUrl = fixture.Mock.BaseAddress;
         opts.Telegram.EditDebounce = TimeSpan.FromMilliseconds(50);
-        opts.Telegram.ApplyChangesInterval = TimeSpan.FromMilliseconds(250);
+        opts.ChannelApplyChangesInterval = TimeSpan.FromMilliseconds(250);
     }
 
     public override async ValueTask InitializeAsync()
@@ -262,6 +262,8 @@ public abstract class QuillSlackTestBase(ITestOutputHelper output, QuillSlackFix
 {
     protected MockSlackApi Slack => fixture.Slack;
 
+    protected static readonly TimeSpan SocketRestartDelay = TimeSpan.FromSeconds(3);
+
     internal FakeAgentRouter Router => fixture.Router;
 
     protected override Task<QuillHost> NewHostAsync(
@@ -272,6 +274,8 @@ public abstract class QuillSlackTestBase(ITestOutputHelper output, QuillSlackFix
             {
                 opts.Slack.ApiUrl = fixture.Slack.BaseAddress;
                 opts.Slack.EditDebounce = TimeSpan.FromMilliseconds(50);
+                opts.ChannelApplyChangesInterval = TimeSpan.FromSeconds(1);
+                opts.Slack.SocketRestartDelay = SocketRestartDelay;
                 configure?.Invoke(opts);
             },
             configureServices: services =>
@@ -291,6 +295,13 @@ public abstract class QuillSlackTestBase(ITestOutputHelper output, QuillSlackFix
     }
 
     protected static string NewBotToken() => "xoxb-" + Guid.NewGuid().ToString("N");
+
+    protected string NewAppToken()
+    {
+        var appToken = "xapp-1-A0MOCK-" + Guid.NewGuid().ToString("N");
+        Slack.AddAppToken(appToken);
+        return appToken;
+    }
 
     protected static string NewTeamId() => "T" + Random.Shared.Next(100_000_000, 999_999_999);
 
@@ -335,7 +346,7 @@ public abstract class QuillDiscordTestBase(ITestOutputHelper output, QuillDiscor
             {
                 opts.Discord.ApiUrl = fixture.Discord.BaseAddress;
                 opts.Discord.EditDebounce = TimeSpan.FromMilliseconds(50);
-                opts.Discord.ApplyChangesInterval = TimeSpan.FromSeconds(1);
+                opts.ChannelApplyChangesInterval = TimeSpan.FromSeconds(1);
                 opts.Discord.GatewayBackoffMax = TimeSpan.FromMilliseconds(200);
                 opts.Discord.GatewayHandshakeTimeout = TimeSpan.FromSeconds(2);
                 opts.Discord.GatewayRestartDelay = GatewayRestartDelay;

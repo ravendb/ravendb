@@ -50,7 +50,7 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
         {
             new ProvisionChannelRequest(ChannelType.IFrame, "demo-agent", Array.Empty<string>(), name),
             new ProvisionChannelRequest(ChannelType.Telegram, "demo-agent", null, name, Telegram: new("123:token")),
-            new ProvisionChannelRequest(ChannelType.Slack, "demo-agent", null, name, Slack: new("xoxb-token", "secret")),
+            new ProvisionChannelRequest(ChannelType.Slack, "demo-agent", null, name, Slack: new("xoxb-token", "xapp-token")),
             new ProvisionChannelRequest(ChannelType.Discord, "demo-agent", null, name, Discord: new("token")),
         };
 
@@ -341,6 +341,26 @@ public class ChannelLifecycleEndpointsTests(ITestOutputHelper output) : QuillTes
         // raw: setup/try is a streaming endpoint — no typed happy wrapper to reuse
         var resp = await Host.Client.PostAsJsonAsync(QuillRoutes.SetupTry(app.Slug), new { prompt = "hi" });
         Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task SetupTry_returns_400_for_a_sample_object_that_is_not_json()
+    {
+        await using var app = await NewAppAsync();
+
+        var resp = await Host.Client.PostAsJsonAsync(QuillRoutes.SetupTry(app.Slug),
+            new
+            {
+                prompt = "hi",
+                configuration = new
+                {
+                    name = "Draft", systemPrompt = "p", connectionStringName = "demo-llm",
+                    sampleObject = "not json at all",
+                },
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        Assert.Contains("sampleObject must be a JSON object", await resp.Content.ReadAsStringAsync());
     }
 
     [RavenFact(RavenTestCategory.Quill)]

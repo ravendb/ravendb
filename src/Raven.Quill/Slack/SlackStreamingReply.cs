@@ -9,8 +9,7 @@ internal sealed class SlackStreamingReply(
     string botToken,
     string dmChannel,
     SlackOptions options,
-    QuillLogger<SlackInboundProcessor> logger,
-    CancellationToken ct) : ChannelStreamingReply(options.MessageLimit, options.EditDebounce)
+    QuillLogger<SlackRuntime> logger) : ChannelStreamingReply(options.MessageLimit, options.EditDebounce)
 {
     private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(60);
 
@@ -26,75 +25,48 @@ internal sealed class SlackStreamingReply(
             logger.Debug($"Slack streaming flush failed for channel {dmChannel}: {error.Message}");
     }
 
-    protected override async Task ShowPreviewAsync(string text)
+    protected override async Task ShowPreviewAsync(string text, CancellationToken token)
     {
-        var escaped = SlackMrkdwn.Escape(text);
         if (_currentTs.Length == 0)
-            _currentTs = await slack.PostMessageAsync(botToken, dmChannel, escaped, ct);
+            _currentTs = await slack.PostMessageAsync(botToken, dmChannel, text, token);
         else
-            await slack.UpdateMessageAsync(botToken, dmChannel, _currentTs, escaped, ct);
+            await slack.UpdateMessageAsync(botToken, dmChannel, _currentTs, text, token);
     }
 
-    protected override async Task SendFinalAsync(string text)
-    {
-        var converted = SlackMrkdwn.Convert(text);
-        try
-        {
-            await PostWithRetryAsync(converted);
-        }
-        catch (SlackApiException e) when (e.Error != SlackApiException.RateLimitedError && converted != text)
-        {
-            await PostWithRetryAsync(SlackMrkdwn.Escape(text));
-        }
-    }
+    protected override Task SendFinalAsync(string text, CancellationToken token) => PostWithRetryAsync(text, token);
 
-    protected override async Task EditFinalAsync(string text)
-    {
-        var converted = SlackMrkdwn.Convert(text);
-        if (converted == LastShownText)
-            return;
+    protected override Task EditFinalAsync(string text, CancellationToken token) =>
+        text == LastShownText ? Task.CompletedTask : UpdateWithRetryAsync(_currentTs, text, token);
 
-        try
-        {
-            await UpdateWithRetryAsync(_currentTs, converted);
-        }
-        catch (SlackApiException e) when (e.Error != SlackApiException.RateLimitedError && converted != text)
-        {
-            if (text == LastShownText)
-                return;
-            await UpdateWithRetryAsync(_currentTs, SlackMrkdwn.Escape(text));
-        }
-    }
-
-    private async Task PostWithRetryAsync(string text)
+    private async Task PostWithRetryAsync(string text, CancellationToken token)
     {
         try
         {
-            await slack.PostMessageAsync(botToken, dmChannel, text, ct);
+            await slack.PostMessageAsync(botToken, dmChannel, text, token);
         }
-        catch (SlackApiException e) when (e.Error == SlackApiException.RateLimitedError)
+        catch (Exception e) when (SlackApiErrors.IsRateLimited(e))
         {
-            await DelayForRetryAsync(e);
-            await slack.PostMessageAsync(botToken, dmChannel, text, ct);
+            await DelayForRetryAsync(e, token);
+            await slack.PostMessageAsync(botToken, dmChannel, text, token);
         }
     }
 
-    private async Task UpdateWithRetryAsync(string ts, string text)
+    private async Task UpdateWithRetryAsync(string ts, string text, CancellationToken token)
     {
         try
         {
-            await slack.UpdateMessageAsync(botToken, dmChannel, ts, text, ct);
+            await slack.UpdateMessageAsync(botToken, dmChannel, ts, text, token);
         }
-        catch (SlackApiException e) when (e.Error == SlackApiException.RateLimitedError)
+        catch (Exception e) when (SlackApiErrors.IsRateLimited(e))
         {
-            await DelayForRetryAsync(e);
-            await slack.UpdateMessageAsync(botToken, dmChannel, ts, text, ct);
+            await DelayForRetryAsync(e, token);
+            await slack.UpdateMessageAsync(botToken, dmChannel, ts, text, token);
         }
     }
 
-    private Task DelayForRetryAsync(SlackApiException e)
+    private static Task DelayForRetryAsync(Exception e, CancellationToken token)
     {
-        var delay = e.RetryAfter ?? TimeSpan.FromSeconds(1);
-        return Task.Delay(delay > MaxRetryDelay ? MaxRetryDelay : delay, ct);
+        var delay = SlackApiErrors.RetryAfterOf(e) ?? TimeSpan.FromSeconds(1);
+        return Task.Delay(delay > MaxRetryDelay ? MaxRetryDelay : delay, token);
     }
 }

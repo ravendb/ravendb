@@ -15,7 +15,9 @@ internal static class CdcPerformanceShaper
         .SelectMany(t => t.Stats ?? new List<CdcPerfProcessRaw>())
         .SelectMany(p => p.Performance ?? new List<CdcPerfBatchRaw>());
 
-    public static CdcPerformanceResponse Shape(CdcSinkPerformanceRaw raw, bool disabled, DateTime nowUtc, DateTime? lastActivityAt)
+    public static CdcPerformanceResponse Shape(
+        CdcSinkPerformanceRaw raw, bool disabled, DateTime nowUtc, DateTime? lastActivityAt,
+        CdcSinkErrorsRaw? storedErrors = null)
     {
         var batches = Batches(raw)
             .OrderBy(b => b.Started)
@@ -34,7 +36,6 @@ internal static class CdcPerformanceShaper
 
         long recentReads = batches.Sum(b => (long)b.NumberOfReadMessages);
         long recentWrites = batches.Sum(b => (long)b.NumberOfProcessedMessages);
-        int errorCount = batches.Sum(b => b.ScriptProcessingErrorCount + b.ReadErrorCount);
 
         DateTime? lastSyncAt = null;
         var inProgress = false;
@@ -59,6 +60,9 @@ internal static class CdcPerformanceShaper
         if (lastActivityUtc is { } lau && (effectiveActivity is null || lau > effectiveActivity))
             effectiveActivity = lau;
 
+        var errorsSince = ErrorsCutoff(batches, lastActivityUtc);
+        var errorCount = Math.Max(BatchErrorsSince(batches, errorsSince), ErrorsSince(storedErrors, errorsSince).Count());
+
         int? lagSeconds = effectiveActivity is { } last ? Math.Max(0, (int)(nowUtc - last).TotalSeconds) : null;
 
         var enabled = disabled == false;
@@ -71,12 +75,46 @@ internal static class CdcPerformanceShaper
         return new CdcPerformanceResponse(enabled, status, lastSyncAt, lagSeconds, recentReads, recentWrites, errorCount, points);
     }
 
+    public static bool HasErrorsSince(CdcSinkPerformanceRaw raw, CdcSinkErrorsRaw? storedErrors, DateTime? lastActivityAt)
+    {
+        var batches = Batches(raw).ToArray();
+        var since = ErrorsCutoff(batches, lastActivityAt is { } la ? Utc(la) : null);
+        return BatchErrorsSince(batches, since) > 0 || ErrorsSince(storedErrors, since).Any();
+    }
+
+    private static DateTime? ErrorsCutoff(IEnumerable<CdcPerfBatchRaw> batches, DateTime? lastActivityUtc)
+    {
+        DateTime? lastCleanSyncAt = null;
+        foreach (var b in batches)
+        {
+            if (b.Completed is { } completed && ErrorsOf(b) == 0)
+            {
+                var c = Utc(completed);
+                if (lastCleanSyncAt is null || c > lastCleanSyncAt)
+                    lastCleanSyncAt = c;
+            }
+        }
+
+        return Later(lastCleanSyncAt, lastActivityUtc);
+    }
+
+    private static int BatchErrorsSince(IEnumerable<CdcPerfBatchRaw> batches, DateTime? since) =>
+        batches.Where(b => IsAfter(Utc(b.Started), since)).Sum(ErrorsOf);
+
+    private static int ErrorsOf(CdcPerfBatchRaw batch) => batch.ScriptProcessingErrorCount + batch.ReadErrorCount;
+
+    private static DateTime? Later(DateTime? a, DateTime? b) => a is null || (b is not null && b > a) ? b : a;
+
+    private static bool IsAfter(DateTime at, DateTime? since) => since is null || at > since;
+
+    public static IEnumerable<CdcTaskErrorRaw> ErrorsSince(CdcSinkErrorsRaw? raw, DateTime? since) =>
+        (raw?.Results ?? new List<CdcTaskErrorsRaw>())
+            .SelectMany(t => (t.ProcessErrors ?? new List<CdcTaskErrorRaw>())
+                .Concat(t.ItemErrors ?? new List<CdcTaskErrorRaw>()))
+            .Where(e => IsAfter(Utc(e.CreatedAt), since));
+
     // Default cap on returned error details — mirrors the rolling perf window (~25 entries).
     private const int MaxErrors = 25;
-
-    public static bool HasErrors(CdcSinkErrorsRaw raw) =>
-        (raw.Results ?? new List<CdcTaskErrorsRaw>())
-            .Any(t => t.ProcessErrors?.Count > 0 || t.ItemErrors?.Count > 0);
 
     public static CdcError[] ShapeErrors(CdcSinkErrorsRaw raw) =>
         (raw.Results ?? new List<CdcTaskErrorsRaw>())

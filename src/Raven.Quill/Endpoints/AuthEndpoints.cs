@@ -21,9 +21,10 @@ public static class AuthEndpoints
         group.MapPost("/login", LoginAsync)
             .WithName("auth.login")
             .Accepts<LoginRequest>("application/json")
+            .RequireRateLimiting(LoginRateLimitPolicy)
             .Produces<AuthStatusResponse>()
             .Produces<AuthStatusResponse>(StatusCodes.Status401Unauthorized)
-            .RequireRateLimiting(LoginRateLimitPolicy);
+            .Produces(StatusCodes.Status429TooManyRequests);
 
         group.MapPost("/logout", LogoutAsync)
             .WithName("auth.logout")

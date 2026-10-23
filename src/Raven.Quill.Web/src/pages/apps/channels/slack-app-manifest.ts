@@ -16,9 +16,12 @@ oauth_config:
       - users:read
       - users:read.email
 settings:
+  event_subscriptions:
+    bot_events:
+      - message.im
   interactivity:
     is_enabled: false
   org_deploy_enabled: false
-  socket_mode_enabled: false
+  socket_mode_enabled: true
   token_rotation_enabled: false
 `;
