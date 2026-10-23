@@ -1,3 +1,4 @@
+using Discord;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Hosting;
@@ -7,22 +8,23 @@ using Raven.Quill.Logging;
 namespace Raven.Quill.Discord;
 
 internal sealed record DiscordMessage(
-    string SenderId, string? SenderUsername, string DmChannel, ChannelMessageKind Kind, string? Text) : IChannelMessage;
+    string SenderId, string? SenderUsername, string DmChannel, IMessageChannel Channel, ChannelMessageKind Kind, string? Text)
+    : IChannelMessage;
 
 internal sealed class DiscordTurns(
     DiscordSettings settings,
-    DiscordBotClient bot,
+    DiscordSdk sdk,
     DiscordOptions options,
     QuillLogger<DiscordRuntime> logger) : IPlatformTurns<DiscordMessage>
 {
-    public async Task SendAsync(DiscordMessage replyTo, string text, CancellationToken ct) =>
-        await (await bot.ChannelAsync(replyTo.DmChannel, ct)).CreateMessageAsync(text, suppressEmbeds: false, ct);
+    public Task SendAsync(DiscordMessage replyTo, string text, CancellationToken ct) =>
+        replyTo.Channel.CreateAsync(sdk, text, suppressEmbeds: false, ct);
 
     public async Task TypingAsync(DiscordMessage replyTo, CancellationToken ct)
     {
         try
         {
-            await (await bot.ChannelAsync(replyTo.DmChannel, ct)).TriggerTypingAsync(ct);
+            await replyTo.Channel.TypingAsync(sdk, ct);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
@@ -32,7 +34,7 @@ internal sealed class DiscordTurns(
     }
 
     public ChannelStreamingReply CreateReply(DiscordMessage replyTo) =>
-        new DiscordStreamingReply(bot, replyTo.DmChannel, options, logger);
+        new DiscordStreamingReply(replyTo.Channel, replyTo.DmChannel, sdk, options, logger);
 
     public string? DescribeApiFailure(Exception e) => e is DiscordApiException apiError ? apiError.Message : null;
 

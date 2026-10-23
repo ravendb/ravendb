@@ -34,7 +34,7 @@ internal static class DiscordBotTokenValidation
             var self = client.CurrentUser;
             var (user, error) = self is null
                 ? (null, UnrecognizedUser)
-                : BotUserOf(DiscordBotClient.Snowflake(self.Id), self.Username, self.IsBot);
+                : BotUserOf(DiscordMessages.Snowflake(self.Id), self.Username, self.IsBot);
             if (user is null)
                 return (null, error);
 
@@ -42,7 +42,7 @@ internal static class DiscordBotTokenValidation
             if (application is null)
                 return (null, "discord returned an unrecognized oauth2/applications/@me payload");
 
-            return (new DiscordBotIdentity(DiscordBotClient.Snowflake(application.Id), user.BotUserId, user.BotUsername), null);
+            return (new DiscordBotIdentity(DiscordMessages.Snowflake(application.Id), user.BotUserId, user.BotUsername), null);
         });
     }
 
