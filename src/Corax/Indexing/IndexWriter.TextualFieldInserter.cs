@@ -152,6 +152,13 @@ public unsafe partial class IndexWriter
                             bulkEnd = idx + _fieldTree.BulkUpdateResume(keys[idx..read], postingListIds[idx..read], pageOffsets[idx..read], out _curPage);
                         }
 
+                        if (FieldInserterHelper.CanRemoveInBulk(_jobs.ToSpan()[idx..bulkEnd], pageOffsets[idx..bulkEnd], treeChanged.Changed, out int removals))
+                        {
+                            _fieldTree.BulkUpdateRemoveRange(keys.Slice(idx, removals), _curPage, pageOffsets[idx], ref _offsetAdjustment);
+                            idx += removals - 1; // adjust `for` loop +1 op 
+                            continue;
+                        }
+
                         ProcessCompactTreeOperation(_jobs[idx], ref keys[idx], treeChanged, pageOffsets[idx], sortedTerms[idx]);
                     }
                     
@@ -543,6 +550,23 @@ public unsafe partial class IndexWriter
     {
         public const int OffsetMask = 0x3FF;
         
+        public static bool CanRemoveInBulk(ReadOnlySpan<LookupTreeOperationJob> jobs, ReadOnlySpan<int> pageOffsets, bool treeChanged, out int removals)
+        {
+            removals = 0;
+            if (treeChanged || jobs[0].Operation != AddEntriesToTermResult.RemoveTermId || pageOffsets[0] < 0)
+                return false;
+
+            removals = 1;
+            while (removals < jobs.Length &&
+                   jobs[removals].Operation == AddEntriesToTermResult.RemoveTermId &&
+                   pageOffsets[removals] == pageOffsets[removals - 1] + 1)
+            {
+                removals++;
+            }
+
+            return removals > 1;
+        }
+
         public static void PrefetchPostingListsPagesAndPrepareOrderedPostingListProcessingList(IndexWriter writer, ref ContextBoundNativeList<long> postingListPagesProcessingBuffer, Span<long> postListIds)
         {
             postingListPagesProcessingBuffer.Clear();
