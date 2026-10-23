@@ -142,8 +142,16 @@ public unsafe partial class IndexWriter
                         _jobs[offset] = job;
                     }
 
+                    int bulkEnd = read;
                     for (idx = 0; idx < read; idx++)
                     {
+                        if (treeChanged.Changed || idx == bulkEnd)
+                        {
+                            treeChanged = _fieldTree.CheckTreeStructureChanges();
+                            _offsetAdjustment = 0;
+                            bulkEnd = idx + _fieldTree.BulkUpdateResume(keys[idx..read], postingListIds[idx..read], pageOffsets[idx..read], out _curPage);
+                        }
+
                         ProcessCompactTreeOperation(_jobs[idx], ref keys[idx], treeChanged, pageOffsets[idx], sortedTerms[idx]);
                     }
                     

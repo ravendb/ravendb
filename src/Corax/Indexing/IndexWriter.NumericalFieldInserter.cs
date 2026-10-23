@@ -98,8 +98,16 @@ public partial class IndexWriter
                         entries.Dispose(_writer._entriesAllocator);
                     }
                     
+                    int bulkEnd = read;
                     for (idX = 0; idX < read; idX++)
                     {
+                        if (treeChanged.Changed || idX == bulkEnd)
+                        {
+                            treeChanged = _fieldTree.CheckTreeStructureChanges();
+                            _offsetAdjustment = 0;
+                            bulkEnd = idX + _fieldTree.BulkUpdateResume(keys[idX..read], postingListIds[idX..read], pageOffsets[idX..read], out _curPage);
+                        }
+
                         ProcessLookupOperation(_jobs[idX], ref keys[idX], treeChanged, pageOffsets[idX], sortedTerms[idX]);
                     }
 
