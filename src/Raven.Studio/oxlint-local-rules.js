@@ -4,7 +4,7 @@ const fixableMeta = {
     schema: [],
 };
 
-module.exports = {
+const rules = {
     "mixed-imports": {
         meta: fixableMeta,
         create: function(context) {
@@ -40,4 +40,11 @@ module.exports = {
             };
         },
     },
+};
+
+module.exports = {
+    meta: {
+        name: "local-rules",
+    },
+    rules,
 };

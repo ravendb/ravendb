@@ -138,7 +138,7 @@ export default function CertificatesRegisterSsoServerModal() {
                                     type="url"
                                     placeholder="https://sso.example.com"
                                     value={urlInput}
-                                    onChange={(e) => {
+                                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
                                         setUrlInput(e.target.value);
                                         asyncFetchCert.reset();
                                         setUrlLoaded(null);

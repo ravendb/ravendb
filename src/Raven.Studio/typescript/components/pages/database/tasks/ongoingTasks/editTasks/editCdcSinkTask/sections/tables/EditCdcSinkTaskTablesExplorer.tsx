@@ -2,7 +2,7 @@ import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 import { Icon } from "components/common/Icon";
-import { useMemo, useState } from "react";
+import { ChangeEvent, useMemo, useState } from "react";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import { FieldPath, UseFieldArrayReturn } from "react-hook-form";
 import { useAppDispatch, useAppSelector } from "components/store";
@@ -124,7 +124,7 @@ export default function EditCdcSinkTaskTablesExplorer({ tablesFieldArray }: Edit
                 size="sm"
                 placeholder="Filter tables"
                 value={filter}
-                onChange={(e) => setFilter(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setFilter(e.target.value)}
             />
             <EditCdcSinkTaskTableItems filter={filter} rootFieldIds={rootFieldIds} />
         </div>

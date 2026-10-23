@@ -1596,7 +1596,7 @@ export const nodeEditFormSchema = yup.object({
 
                 return hasExtConfig || hasZeroAddress;
             },
-            then: (schema) =>
+            then: (schema: yup.StringSchema) =>
                 schema
                     .required(
                         "External IP address is required, it tells RavenDB how to identify itself to other nodes and clients"
@@ -1611,7 +1611,7 @@ export const nodeEditFormSchema = yup.object({
                         "Please enter a valid IPv4 address (hostname not allowed, no port)",
                         (value) => !!value && genUtils.regexIPv4.test(value)
                     ),
-            otherwise: (schema) =>
+            otherwise: (schema: yup.StringSchema) =>
                 schema.test(
                     "valid-ipv4-optional",
                     "Please enter a valid IPv4 address (hostname not allowed, no port)",

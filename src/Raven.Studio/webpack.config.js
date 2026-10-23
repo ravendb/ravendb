@@ -8,7 +8,6 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const CopyPlugin = require("copy-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const ZipPlugin = require("zip-webpack-plugin");
-const ForkTsCheckerWebpackPlugin = require("fork-ts-checker-webpack-plugin");
 
 module.exports = (_, args) => {
     const isProductionMode = args && args.mode === "production";
@@ -259,11 +258,6 @@ function getPlugins({ isProductionMode, isWatchMode, ignoreCssOrder }) {
             "window.ko": "knockout",
         }),
         new webpack.ContextReplacementPlugin(/moment[/\\]locale$/, /(en)$/),
-        new ForkTsCheckerWebpackPlugin({
-            typescript: {
-                configFile: path.resolve(__dirname, "tsconfig.json"),
-            },
-        }),
     ];
 
     if (!isWatchMode) {

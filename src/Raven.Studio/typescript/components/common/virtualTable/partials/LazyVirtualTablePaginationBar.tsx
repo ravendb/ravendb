@@ -1,6 +1,6 @@
 import { Icon } from "components/common/Icon";
 import Select, { SelectOption } from "components/common/select/Select";
-import { ChangeEvent, ReactNode, useState } from "react";
+import { ChangeEvent, FocusEvent, ReactNode, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import "./LazyVirtualTablePaginationBar.scss";
@@ -143,7 +143,7 @@ function PageInput({ page, totalPages, onPageChange }: PageInputProps) {
             style={{ width: `calc(${String(totalPages).length}ch + 2.5em)` }}
             value={value}
             onChange={handleChange}
-            onFocus={(event) => event.target.select()}
+            onFocus={(event: FocusEvent<HTMLInputElement>) => event.target.select()}
             onBlur={() => setValue(String(page))}
         />
     );

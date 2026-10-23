@@ -7,13 +7,13 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.AI.Settings;
 
-internal class AzureOpenAiChatCompletionClientSettings : AbstractOpenAiChatCompletionClientSettings
+internal class AzureOpenAiChatCompletionProvider : AbstractOpenAiChatCompletionProvider
 {
     private new readonly AzureOpenAiSettings _settings;
 
     private const string ApiVersion = "2024-10-21";
 
-    public AzureOpenAiChatCompletionClientSettings(AzureOpenAiSettings settings)
+    public AzureOpenAiChatCompletionProvider(AzureOpenAiSettings settings)
         : base(settings)
     {
         _settings = settings;

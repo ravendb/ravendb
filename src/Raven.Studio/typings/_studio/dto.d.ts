@@ -414,7 +414,7 @@ interface recentErrorDto extends Raven.Server.NotificationCenter.Notifications.N
     HttpStatus?: string;
 }
 
-declare module studio.settings {
+declare namespace studio.settings {
     type numberFormatting = "raw" | "formatted";
     type dontShowAgain = "UnsupportedBrowser";
     type saveLocation = "local" | "remote";
@@ -675,7 +675,7 @@ type virtualNotificationType =
     | "CumulativeDeleteByQuery"
     | "CumulativeDeleteByQueryFailures";
 
-declare module Raven.Server.NotificationCenter.Notifications {
+declare namespace Raven.Server.NotificationCenter.Notifications {
     interface Notification {
         // extend server side type to contain local virtual notifications 
         Type: Raven.Server.NotificationCenter.Notifications.NotificationType | virtualNotificationType;
@@ -1174,12 +1174,14 @@ type AiConnectionStringsSettings =
     | Raven.Client.Documents.Operations.AI.GoogleSettings
     | Raven.Client.Documents.Operations.AI.HuggingFaceSettings
     | Raven.Client.Documents.Operations.AI.MistralAiSettings
-    | Raven.Client.Documents.Operations.AI.VertexSettings;
+    | Raven.Client.Documents.Operations.AI.VertexSettings
+    | Raven.Client.Documents.Operations.AI.AnthropicSettings;
 
 interface AiModelsRequestDto {
-    ConnectorType: Extract<Raven.Client.Documents.Operations.AI.AiConnectorType, "Ollama" | "OpenAi" | "AzureOpenAi" | "Google">;
+    ConnectorType: Extract<Raven.Client.Documents.Operations.AI.AiConnectorType, "Ollama" | "OpenAi" | "AzureOpenAi" | "Google" | "Anthropic">;
     AzureOpenAiSettings?: Pick<Raven.Client.Documents.Operations.AI.AzureOpenAiSettings, "Endpoint", "ApiKey">;
     GoogleSettings?: Pick<Raven.Client.Documents.Operations.AI.GoogleSettings, "Endpoint" | "ApiKey" | "AiVersion">;
+    AnthropicSettings?: Pick<Raven.Client.Documents.Operations.AI.AnthropicSettings, "Endpoint" | "ApiKey" | "ApiVersion">;
     OllamaSettings?: Pick<Raven.Client.Documents.Operations.AI.OllamaSettings, "Uri" | "Think">;
     OpenAiSettings?: Pick<Raven.Client.Documents.Operations.AI.OpenAiSettings, "Endpoint" | "ApiKey" | "OrganizationId" | "ProjectId">;
 }

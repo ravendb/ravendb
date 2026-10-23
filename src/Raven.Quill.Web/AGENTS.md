@@ -23,6 +23,7 @@ Frontend for Raven Quill. It is a Vite + React + TypeScript app and is finally b
 - Test booleans by negation or truthiness, not by comparing to a literal: `!isSaving`, not `isSaving !== true`.
 - Use kebab-case filenames, PascalCase React components, `@/*` imports, and `SCREAMING_SNAKE_CASE` module constants.
 - Install new dependencies only when they remove real complexity. Prefer popular, maintained packages and latest versions.
+- Tag a story `test-only` (not `!dev`) when it exists only for its play function. The Storybook sidebar hides it by default but can still show it, and `pnpm test:storybook` still runs it.
 
 ## Glossary
 

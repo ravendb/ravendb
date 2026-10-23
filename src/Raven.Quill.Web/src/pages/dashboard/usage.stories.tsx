@@ -49,7 +49,7 @@ export const Empty: Story = {
 // are indistinguishable. They collapse into one counted group, and expanding identifies each by
 // topology id - the only thing that tells them apart.
 export const SameNamedAppsCollapseIntoOneCountedGroup: Story = {
-    tags: ["!dev"],
+    tags: ["test-only"],
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
 
@@ -75,7 +75,7 @@ export const SameNamedAppsCollapseIntoOneCountedGroup: Story = {
 
 // A uniquely named app has nothing to expand, so it stays the plain row it always was.
 export const UniquelyNamedAppStaysAPlainRow: Story = {
-    tags: ["!dev"],
+    tags: ["test-only"],
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
 
@@ -86,7 +86,7 @@ export const UniquelyNamedAppStaysAPlainRow: Story = {
 
 // The label is a small target in a wide row, so the whole row toggles.
 export const ClickingAnywhereInTheRowToggles: Story = {
-    tags: ["!dev"],
+    tags: ["test-only"],
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
 
@@ -102,7 +102,7 @@ export const ClickingAnywhereInTheRowToggles: Story = {
 // Figures are compared down the column, so their right edges line up whatever their width -
 // header included, and including the indented rows of an expanded group.
 export const UsageFiguresAreEndAligned: Story = {
-    tags: ["!dev"],
+    tags: ["test-only"],
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
 

@@ -31,7 +31,7 @@ public class AiAgentClientApiHandleActionCalls : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama | RavenAiIntegration.Anthropic, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanHandleToolCall(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);

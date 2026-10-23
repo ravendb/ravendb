@@ -179,7 +179,7 @@ function DocumentTab() {
                 <Form.Control
                     type="text"
                     value={idPrefix}
-                    onChange={(e) => setIdPrefix(e.target.value)}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setIdPrefix(e.target.value)}
                     placeholder="Enter document ID prefix"
                     className="rounded-pill ps-3 pe-4"
                 />
