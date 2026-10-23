@@ -118,6 +118,8 @@
     <EmbeddedResource Include="Data\RavenDB_26945\RavenDB_26945.ravendb-snapshot" />
     <None Remove="Data\RavenDB_27533\unmarked-leaves-next-to-branch.zip" />
     <EmbeddedResource Include="Data\RavenDB_27533\unmarked-leaves-next-to-branch.zip" />
+    <None Remove="Data\RavenDB_27700\RavenDB_27700.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_27700\RavenDB_27700.ravendb-snapshot" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values-2.txt" />
