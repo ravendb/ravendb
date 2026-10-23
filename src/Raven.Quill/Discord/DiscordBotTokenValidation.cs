@@ -50,7 +50,7 @@ internal static class DiscordBotTokenValidation
         {
             return (null, $"the Discord API is unavailable (status {(int)e.HttpCode})", false);
         }
-        catch (HttpException e) when (e.HttpCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        catch (HttpException e) when (e.HttpCode is HttpStatusCode.Unauthorized)
         {
             return (null, TokenRejected, true);
         }
