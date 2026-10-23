@@ -156,7 +156,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
         {
             await _bot.LoginAsync(_cts.Token);
         }
-        catch (DiscordApiException e) when (e.Status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        catch (DiscordApiException e) when (e.Status is HttpStatusCode.Unauthorized)
         {
             return e.Message;
         }
@@ -310,7 +310,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
             return fatal;
         }
 
-        if (error is HttpException { HttpCode: HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden })
+        if (error is HttpException { HttpCode: HttpStatusCode.Unauthorized })
         {
             _canRestart = true;
             return "discord rejected the bot token; reset it on the app's Bot page and reconnect the channel";

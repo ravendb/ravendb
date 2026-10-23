@@ -241,6 +241,11 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
             },
             "the recorded send error");
 
+        var rows = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
+            Host.Client, QuillRoutes.DiscordHealth(app.Slug));
+        var sendError = rows.Single(r => r.ChannelId == channel.ChannelId).LastSendError;
+        Assert.Contains("discord refused create message", sendError);
+        Assert.DoesNotContain("rejected the bot token", sendError);
         Assert.Empty(Discord.SentMessages);
     }
 
