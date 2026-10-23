@@ -1716,6 +1716,61 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         return true;
     }
     
+    public void BulkUpdateRemoveRange(Span<TLookupKey> keys, long pageNum, int offset, ref int adjustment)
+    {
+        Debug.Assert(keys.Length > 0);
+        ref var state = ref _internalCursor._stk[_internalCursor._pos];
+        
+        PortableExceptions.ThrowIf<InvalidOperationException>(state.Page.PageNumber != pageNum, "Different page number provided from BulkUpdateRemoveRange");
+        ArgumentOutOfRangeException.ThrowIfNegative(offset);
+        
+
+        state.Page = _llt.ModifyPage(state.Page.PageNumber);
+
+        int pos = offset + adjustment;
+        int count = keys.Length;
+        int numberOfEntries = state.Header->NumberOfEntries;
+        Debug.Assert(pos + count <= numberOfEntries, "pos + count <= numberOfEntries");
+
+        int freedSpace = 0;
+        for (int i = 0; i < count; i++)
+        {
+            var len = GetKeyAndValue(ref state, pos + i, out var k, out _);
+            Debug.Assert(k == keys[i].ToLong(), "k == keys[i].ToLong()");
+            freedSpace += len + sizeof(ushort);
+            keys[i].OnKeyRemoval(this);
+        }
+
+        var entriesOffsets = new Span<ushort>(state.EntriesOffsetsPtr, numberOfEntries);
+        entriesOffsets[(pos + count)..].CopyTo(entriesOffsets[pos..]);
+
+        state.Header->FreeSpace += (ushort)freedSpace;
+        state.Header->Lower -= (ushort)(sizeof(ushort) * count); // the upper will be fixed on defrag
+        Debug.Assert(state.Header->Upper - state.Header->Lower >= 0);
+        Debug.Assert(state.Header->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf);
+
+        if (state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf))
+            _state.NumberOfEntries -= count;
+
+        adjustment -= count;
+
+        state.LastSearchPosition = pos;
+        state.LastMatch = 0;
+        if (_internalCursor._pos > 0 && 
+            state.Header->FreeSpace > Constants.Storage.PageSize / 2)
+        {
+            if (MaybeMergeEntries(ref state))
+            {
+                VerifySizeOfFullCursor();
+                _treeStructureVersion++;
+                InitializeCursorState(); // we change the structure of the tree, so we can't reuse
+                return;
+            }
+        }
+
+        VerifySizeOf(ref state, _internalCursor._pos == 0);
+    }
+
     
     private long? CurrentPageLimit()
     {

@@ -548,7 +548,10 @@ public sealed partial class CompactTree : IPrepareForCommit
         CompactTreeDumper.WriteBulkRemoval(this, ref key, oldValue);
         return result;
     }
-    
+
+    public void BulkUpdateRemoveRange(Span<CompactKeyLookup> keys, long pageNum, int offset, ref int adjustment) =>
+        _inner.BulkUpdateRemoveRange(keys, pageNum, offset, ref adjustment);
+
     public int BulkUpdateStart(Span<CompactKeyLookup> keys, Span<long> values, Span<int> offsets, out long pageNum)
     {
         #if DEBUG
