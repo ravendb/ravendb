@@ -8,6 +8,7 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import abstractAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/abstractAlertDetails");
 import ComplexFieldsWarning = Raven.Server.NotificationCenter.Notifications.Details.ComplexFieldsWarning;
 import genUtils = require("common/generalUtils");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 interface WarningItem {
     indexName: string;
@@ -19,6 +20,7 @@ class complexFieldsAlertDetails extends abstractAlertDetails {
     tableItems: WarningItem[] = [];
     private gridController = ko.observable<virtualGridController<WarningItem>>();
     private columnPreview = new columnPreviewPlugin<WarningItem>();
+    gridToolbar = new detailsGridToolbar(this.gridController, this.alert, "index", "indexes");
 
     constructor(alert: alert, notificationCenter: notificationCenter) {
         super(alert, notificationCenter);

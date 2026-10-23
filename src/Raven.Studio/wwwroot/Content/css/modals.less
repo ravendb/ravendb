@@ -359,3 +359,58 @@
 .overflow-y-inherit {
     overflow-y:inherit !important;
 }
+
+.modal-dialog.modal-grid {
+    @media (min-width: @screen-sm-min) {
+        width: ~"min(1400px, calc(100vw - 64px))";
+    }
+
+    .modal-content {
+        display: flex;
+        flex-direction: column;
+        max-height: ~"calc(100vh - 20px)";
+
+        @media (min-width: @screen-sm-min) {
+            max-height: ~"calc(100vh - 60px)";
+        }
+    }
+
+    .modal-header,
+    .modal-footer {
+        flex: none;
+    }
+
+    .modal-body {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+
+        > * {
+            flex: none;
+        }
+
+        > .modal-grid-container {
+            display: flex;
+            flex-direction: column;
+            flex: 0 1 auto;
+            min-height: 0;
+
+            virtual-grid {
+                position: relative;
+                flex: 0 1 auto;
+                height: var(--virtual-grid-content-height, 300px);
+                min-height: ~"min(var(--virtual-grid-content-height, 300px), 160px)";
+            }
+        }
+    }
+
+    .modal-grid-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: @gutter-xs;
+        margin-bottom: @gutter-xs;
+    }
+}

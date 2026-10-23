@@ -1,4 +1,4 @@
-<div class="modal-dialog modal-lg revisionsDetails" role="document">
+<div class="modal-dialog modal-lg modal-grid revisionsDetails" role="document">
     <div class="modal-content" tabindex="-1">
         <div class="modal-header">
             <div class="flex-horizontal">
@@ -46,8 +46,14 @@
                 </div>
                 <pre class="error-messages"><code data-bind="text: errorMessages().filter(x => x).join('\n')"></code></pre>
             </div>
-            <div class="margin-bottom" style="position: relative; height: 300px" data-bind="visible: allWarnings().length">
-                <virtual-grid style="height: 300px" class="resizable flex-window" params="controller: gridController, emptyTemplate: 'empty-adopt-orphaned-revisions-template'"></virtual-grid>
+            <div class="modal-grid-toolbar" data-bind="visible: allWarnings().length, with: gridToolbar">
+                <span class="text-muted" data-bind="text: summary"></span>
+                <button type="button" class="btn btn-default btn-sm" data-bind="click: exportToCsv, enable: canExport" title="Download all rows as a CSV file">
+                    <i class="icon-csv-export"></i><span>Export to CSV</span>
+                </button>
+            </div>
+            <div class="modal-grid-container margin-bottom" data-bind="visible: allWarnings().length">
+                <virtual-grid class="resizable flex-window" params="controller: gridController, emptyTemplate: 'empty-adopt-orphaned-revisions-template', fitToContent: true"></virtual-grid>
             </div>
         </div>
         <div class="modal-footer" data-bind="compose: $root.footerPartialView">

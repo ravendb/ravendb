@@ -9,6 +9,7 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 class virtualBulkInsertDetails extends dialogViewModelBase {
 
@@ -17,11 +18,13 @@ class virtualBulkInsertDetails extends dialogViewModelBase {
     private bulkInserts: virtualBulkInsert;
     private gridController = ko.observable<virtualGridController<virtualBulkOperationItem>>();
     private columnPreview = new columnPreviewPlugin<virtualBulkOperationItem>();
-    
+    gridToolbar: detailsGridToolbar<virtualBulkOperationItem>;
+
     constructor(bulkInserts: virtualBulkInsert) {
         super();
-        
+
         this.bulkInserts = bulkInserts;
+        this.gridToolbar = new detailsGridToolbar(this.gridController, bulkInserts, "operation", "operations");
     }
 
     compositionComplete() {
@@ -33,7 +36,8 @@ class virtualBulkInsertDetails extends dialogViewModelBase {
         grid.init(() => this.fetcher(), () => {
             return [
                 new textColumn<virtualBulkOperationItem>(grid, x => generalUtils.formatUtcDateAsLocal(x.date), "Date", "25%", {
-                    sortable: x => x.date
+                    sortable: x => x.date,
+                    exportValue: x => x.date
                 }),
                 new textColumn<virtualBulkOperationItem>(grid, x => x.duration, "Duration (ms)", "15%", {
                     sortable: "number",

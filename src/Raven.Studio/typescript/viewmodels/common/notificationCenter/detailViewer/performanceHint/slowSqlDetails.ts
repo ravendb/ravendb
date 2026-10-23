@@ -9,6 +9,7 @@ import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import moment = require("moment");
 import performanceHint = require("common/notifications/models/performanceHint");
 import abstractPerformanceHintDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/abstractPerformanceHintDetails");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 class slowSqlDetails extends abstractPerformanceHintDetails {
 
@@ -19,6 +20,7 @@ class slowSqlDetails extends abstractPerformanceHintDetails {
     tableItems: Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo[] = [];
     private gridController = ko.observable<virtualGridController<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>>();
     private columnPreview = new columnPreviewPlugin<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>();
+    gridToolbar = new detailsGridToolbar(this.gridController, this.hint, "statement", "statements");
 
     constructor(hint: performanceHint, notificationCenter: notificationCenter) {
         super(hint, notificationCenter);
@@ -49,7 +51,8 @@ class slowSqlDetails extends abstractPerformanceHintDetails {
                         sortable: "number"
                     }),
                     new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.Date), "Date", "20%", {
-                        sortable: x => x.Date
+                        sortable: x => x.Date,
+                        exportValue: x => x.Date
                     }),
                     new textColumn<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>(grid, x => x.Statement, "Statement", "50%", {
                         sortable: "string"

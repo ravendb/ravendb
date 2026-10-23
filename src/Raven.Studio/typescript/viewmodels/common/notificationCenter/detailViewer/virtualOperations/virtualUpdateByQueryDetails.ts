@@ -9,6 +9,7 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
 import virtualUpdateByQuery = require("common/notifications/models/virtualUpdateByQuery");
 import moment = require("moment");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 class virtualUpdateByQueryDetails extends dialogViewModelBase {
 
@@ -17,11 +18,13 @@ class virtualUpdateByQueryDetails extends dialogViewModelBase {
     private virtualNotification: virtualUpdateByQuery;
     private gridController = ko.observable<virtualGridController<queryBasedVirtualBulkOperationItem>>();
     private columnPreview = new columnPreviewPlugin<queryBasedVirtualBulkOperationItem>();
+    gridToolbar: detailsGridToolbar<queryBasedVirtualBulkOperationItem>;
     
     constructor(virtualNotification: virtualUpdateByQuery) {
         super();
         
         this.virtualNotification = virtualNotification;
+        this.gridToolbar = new detailsGridToolbar(this.gridController, virtualNotification, "operation", "operations");
     }
 
     compositionComplete() {
@@ -36,7 +39,8 @@ class virtualUpdateByQueryDetails extends dialogViewModelBase {
         grid.init(() => this.fetcher(), () => {
             return [
                 new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => generalUtils.formatUtcDateAsLocal(x.date), dateHeader, "25%", {
-                    sortable: x => x.date
+                    sortable: x => x.date,
+                    exportValue: x => x.date
                 }),
                 new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => x.duration, durationHeader, "15%", {
                     sortable: "number",

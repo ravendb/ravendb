@@ -8,6 +8,7 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
+import detailsGridToolbar = require("viewmodels/common/notificationCenter/detailViewer/detailsGridToolbar");
 
 interface indexingDetailsItemDto extends Raven.Server.NotificationCenter.Notifications.Details.WarnIndexOutputsPerDocument.WarningDetails {
     IndexName: string;
@@ -22,6 +23,7 @@ class indexingDetails extends abstractPerformanceHintDetails {
     
     private gridController = ko.observable<virtualGridController<indexingDetailsItemDto>>();
     private columnPreview = new columnPreviewPlugin<indexingDetailsItemDto>();
+    gridToolbar = new detailsGridToolbar(this.gridController, this.hint, "warning", "warnings");
     
     constructor(hint: performanceHint, notificationCenter: notificationCenter) {
         super(hint, notificationCenter);
@@ -49,17 +51,21 @@ class indexingDetails extends abstractPerformanceHintDetails {
                 }),
                 new textColumn<indexingDetailsItemDto>(grid, x => x.NumberOfExceedingDocuments ? x.NumberOfExceedingDocuments.toLocaleString() : 'n/a', "# of Exceeding Documents", "20%", {
                     sortable: x => x.NumberOfExceedingDocuments,
-                    defaultSortOrder: "desc"
+                    defaultSortOrder: "desc",
+                    exportValue: x => x.NumberOfExceedingDocuments
                 }),
                 new textColumn<indexingDetailsItemDto>(grid, x => x.SampleDocumentId ? x.SampleDocumentId : 'n/a', "Sample Document ID", "20%", {
-                    sortable: "string"
+                    sortable: "string",
+                    exportValue: x => x.SampleDocumentId
                 }),
                 new textColumn<indexingDetailsItemDto>(grid, x => x.MaxNumberOutputsPerDocument ? x.MaxNumberOutputsPerDocument.toLocaleString() : 'n/a', "# of Outputs per Document", "20%", {
                     sortable: x => x.MaxNumberOutputsPerDocument,
-                    defaultSortOrder: "desc"
+                    defaultSortOrder: "desc",
+                    exportValue: x => x.MaxNumberOutputsPerDocument
                 }),
                 new textColumn<indexingDetailsItemDto>(grid, x => generalUtils.formatUtcDateAsLocal(x.LastWarningTime), "Date", "20%", {
-                    sortable: x => x.LastWarningTime
+                    sortable: x => x.LastWarningTime,
+                    exportValue: x => x.LastWarningTime
                 })
             ];
         });
