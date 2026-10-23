@@ -51,7 +51,7 @@ describe("ConnectionStrings", () => {
     });
 
     it.each([
-        { licenseType: "Professional", hasEmbeddingsGeneration: true, availableConnectors: /OpenAI/ },
+        { licenseType: "Professional", hasEmbeddingsGeneration: true, availableConnectors: /Anthropic.*OpenAI/ },
         {
             licenseType: "Enterprise",
             hasEmbeddingsGeneration: false,

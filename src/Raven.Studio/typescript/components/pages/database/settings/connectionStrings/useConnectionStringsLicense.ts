@@ -103,7 +103,7 @@ export default function useConnectionStringsLicense(): ConnectionStringsLicense 
     };
 }
 
-const aiConnectorOptions = aiConnectionStringUtils.getConnectorOptions(null);
+const aiConnectorOptions = aiConnectionStringUtils.allConnectorOptions;
 
 const embeddedConnectorFootnote: FeatureAvailabilityFootnote = {
     title: "Available connectors",
