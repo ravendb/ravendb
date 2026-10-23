@@ -294,6 +294,7 @@ namespace Raven.Analyzers.Shared
                 expression = expression switch
                 {
                     InvocationExpressionSyntax { Expression: MemberAccessExpressionSyntax ma } => ma.Expression,
+                    QueryExpressionSyntax query => query.FromClause.Expression,
                     IdentifierNameSyntax id => TryResolveLocalInitializer(id, model),
                     _ => null,
                 };

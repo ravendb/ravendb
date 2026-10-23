@@ -613,5 +613,151 @@ class Test
 
             Assert.Empty(diagnostics);
         }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task QueryExpression_WithoutRavenLinqUsing_Reports_Diagnostic()
+        {
+            const string source = UsingsWithoutRavenLinq + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var users = (from u in session.Query<User>()
+                     where u.Active
+                     select u).ToList();
+    }
+}
+" + SearchIndex;
+
+            var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryUnboundedResultAnalyzer>(source);
+
+            Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnboundedResult, diagnostics[0].Id);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task QueryExpressionWithLet_WithoutRavenLinqUsing_Reports_Diagnostic()
+        {
+            const string source = UsingsWithoutRavenLinq + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var results = (from o in session.Query<Order>()
+                       let company = Raven.Client.Documents.Queries.RavenQuery.Load<User>(o.Company)
+                       select new { company.Name }).ToList();
+    }
+}
+" + SearchIndex;
+
+            var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryUnboundedResultAnalyzer>(source);
+
+            Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnboundedResult, diagnostics[0].Id);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task QueryExpressionWithContinuation_WithoutRavenLinqUsing_Reports_Diagnostic()
+        {
+            const string source = UsingsWithoutRavenLinq + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var results = (from o in session.Query<Order>()
+                       group o by o.Company into g
+                       select new { g.Key, Count = g.Count() }).ToList();
+    }
+}
+" + SearchIndex;
+
+            var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryUnboundedResultAnalyzer>(source);
+
+            Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnboundedResult, diagnostics[0].Id);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task QueryExpressionOverLocal_WithoutRavenLinqUsing_Reports_Diagnostic()
+        {
+            const string source = UsingsWithoutRavenLinq + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<User>();
+        var users = (from u in q
+                     where u.Active
+                     select u).ToList();
+    }
+}
+" + SearchIndex;
+
+            var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryUnboundedResultAnalyzer>(source);
+
+            Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnboundedResult, diagnostics[0].Id);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task QueryExpressionToListAsync_WithoutRavenLinqUsing_Reports_Diagnostic()
+        {
+            const string source = UsingsWithoutRavenLinq + @"
+class Test
+{
+    async Task Run(IAsyncDocumentSession session)
+    {
+        var users = await (from u in session.Query<User>()
+                           where u.Active
+                           select u).ToListAsync();
+    }
+}
+" + SearchIndex;
+
+            var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryUnboundedResultAnalyzer>(source);
+
+            Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnboundedResult, diagnostics[0].Id);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task QueryExpressionWithTake_No_Diagnostic()
+        {
+            const string source = UsingsWithoutRavenLinq + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var users = (from u in session.Query<User>()
+                     where u.Active
+                     select u).Take(10).ToList();
+    }
+}
+" + SearchIndex;
+
+            var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryUnboundedResultAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task QueryExpressionOverPlainAsQueryable_No_Diagnostic()
+        {
+            const string source = UsingsWithoutRavenLinq + @"
+class Test
+{
+    void Run()
+    {
+        var users = (from u in new List<User>().AsQueryable()
+                     where u.Active
+                     select u).ToList();
+    }
+}
+" + SearchIndex;
+
+            var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryUnboundedResultAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
     }
 }
