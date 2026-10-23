@@ -4,11 +4,13 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Json;
 using Raven.Server.Utils;
 using Sparrow;
@@ -79,7 +81,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         public readonly LuceneDocument Document = new LuceneDocument();
 
         private readonly List<int> _multipleItemsSameFieldCount = new List<int>();
-        
+
+        private bool _hasSpatialCenters;
+
+        private HashSet<string> _spatialCentersFields;
+
+        private HashSet<string> _spatialCentersFieldsToMerge;
+
+        private StringBuilder _spatialCentersBuilder;
+
         public void Clean()
         {
             if (_fieldsCache.Count > 256)
@@ -139,12 +149,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         public IDisposable SetDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext, IWriteOperationBuffer writeBuffer, out bool shouldSkip)
         {
             Document.GetFields().Clear();
+            _hasSpatialCenters = false;
 
             var scope = CurrentIndexingScope.Current;
             if (scope != null)
                 scope.IncrementDynamicFields();
 
             int numberOfFields = GetFields(new DefaultDocumentLuceneWrapper(Document), key, sourceDocumentId, document, indexContext, writeBuffer, scope?.Source);
+
+            if (_hasSpatialCenters)
+                MergeSpatialCenters();
+
             if (_fields.Count > 0)
             {
                 shouldSkip = _indexEmptyEntries == false && numberOfFields <= _numberOfBaseFields; // there is always a key field, but we want to filter-out empty documents, some indexes (e.g. TS indexes contain more than 1 field by default)
@@ -155,6 +170,54 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
             return Scope;
         }
+
+        // merge into a single term per field so the entry can be loaded via the FieldCache
+        private void MergeSpatialCenters()
+        {
+            var fields = Document.GetFields();
+
+            _spatialCentersFields ??= new HashSet<string>(StringComparer.Ordinal);
+            _spatialCentersFields.Clear();
+            _spatialCentersFieldsToMerge?.Clear();
+
+            foreach (var field in fields)
+            {
+                if (IsSpatialCentersField(field.Name) == false)
+                    continue;
+
+                if (_spatialCentersFields.Add(field.Name) == false)
+                {
+                    _spatialCentersFieldsToMerge ??= new HashSet<string>(StringComparer.Ordinal);
+                    _spatialCentersFieldsToMerge.Add(field.Name);
+                }
+            }
+
+            if (_spatialCentersFieldsToMerge == null || _spatialCentersFieldsToMerge.Count == 0)
+                return;
+
+            _spatialCentersBuilder ??= new StringBuilder();
+
+            foreach (var name in _spatialCentersFieldsToMerge)
+            {
+                _spatialCentersBuilder.Clear();
+
+                foreach (var field in fields)
+                {
+                    if (field.Name != name)
+                        continue;
+
+                    if (_spatialCentersBuilder.Length > 0)
+                        _spatialCentersBuilder.Append(SpatialField.LuceneCentersSeparator);
+
+                    _spatialCentersBuilder.Append(field.StringValue(null));
+                }
+
+                Document.RemoveFields(name);
+                Document.Add(SpatialField.CreateLuceneCenterField(name, _spatialCentersBuilder.ToString()));
+            }
+        }
+
+        private static bool IsSpatialCentersField(string name) => name.EndsWith(SpatialField.LuceneCentersFieldSuffix, StringComparison.Ordinal);
 
         protected abstract int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext,
             IWriteOperationBuffer writeBuffer, object sourceDocument) where T : ILuceneDocumentWrapper;
@@ -467,7 +530,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (valueType == ValueType.Lucene)
             {
-                instance.Add((AbstractField)value);
+                var luceneField = (AbstractField)value;
+                if (IsSpatialCentersField(luceneField.Name))
+                    _hasSpatialCenters = true;
+
+                instance.Add(luceneField);
                 newFields++;
 
                 return newFields;
