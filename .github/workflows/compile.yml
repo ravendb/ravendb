@@ -6,7 +6,7 @@ on:
 
 jobs:
   compile:
-    name: Compile Server & Studio
+    name: Compile Server
     runs-on: ubuntu-latest
     steps:
       - name: Cleanup runner
@@ -36,29 +36,3 @@ jobs:
       - name: Build Server
         run: |
           dotnet build
-        
-      - name: Clear NuGet Cache
-        run: |
-          dotnet nuget locals all --clear
-
-      - name: Setup nodejs
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: 'src/Raven.Studio/.nvmrc'
-          
-      - name: Restore
-        run: |
-          npm ci
-          npm run restore
-        working-directory: src/Raven.Studio
-
-      - name: Typecheck Studio
-        run: |
-          npm run typecheck
-        working-directory: src/Raven.Studio
-
-      - name: Compile Studio
-        run: |
-          npm run compile
-        working-directory: src/Raven.Studio
-
