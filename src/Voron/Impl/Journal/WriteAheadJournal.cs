@@ -307,6 +307,7 @@ namespace Voron.Impl.Journal
 
                     addToInitLog?.Invoke(LogMode.Information, $"Validate checksum on {modifiedPages.Count:#,#;;0} pages");
 
+                    var totalSp = Stopwatch.StartNew();
                     var sp = Stopwatch.StartNew();
 
                     for (var i = sortedPages.Length - 1; i >= 0; i--)
@@ -337,8 +338,8 @@ namespace Voron.Impl.Journal
                         }
                     }
 
-                    sp.Stop();
-                    addToInitLog?.Invoke(LogMode.Information, $"Validate of {sortedPages.Length:#,#;;0} pages completed in {sp.Elapsed}");
+                    totalSp.Stop();
+                    addToInitLog?.Invoke(LogMode.Information, $"Validate of {sortedPages.Length:#,#;;0} pages completed in {totalSp.Elapsed}");
                 }
                 else
                 {
