@@ -759,5 +759,104 @@ class Test
 
             Assert.Empty(diagnostics);
         }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task QueryExpressionWithTakeInFromSource_No_Diagnostic()
+        {
+            const string source = UsingsWithoutRavenLinq + @"
+class Test
+{
+    async Task Run(IAsyncDocumentSession session)
+    {
+        var ids = await (from u in session.Query<User>().Take(10)
+                         select u.Id).ToListAsync();
+    }
+}
+" + SearchIndex;
+
+            var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryUnboundedResultAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task QueryExpressionWithTakeInFromSource_MaterializedViaLocal_No_Diagnostic()
+        {
+            const string source = UsingsWithoutRavenLinq + @"
+class Test
+{
+    async Task Run(IAsyncDocumentSession session)
+    {
+        var ids = from u in session.Query<User>().Take(10) select u.Id;
+        await ids.ToListAsync();
+    }
+}
+" + SearchIndex;
+
+            var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryUnboundedResultAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task QueryExpressionOverLocalReassignedWithTake_No_Diagnostic()
+        {
+            const string source = UsingsWithoutRavenLinq + @"
+class Test
+{
+    async Task Run(IAsyncDocumentSession session)
+    {
+        IQueryable<User> q = session.Query<User>();
+        q = q.Skip(20).Take(10);
+        await (from u in q select u.Id).ToListAsync();
+    }
+}
+" + SearchIndex;
+
+            var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryUnboundedResultAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task LocalReassignedWithQueryExpressionOverTake_No_Diagnostic()
+        {
+            const string source = UsingsWithoutRavenLinq + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        IQueryable<User> q = session.Query<User>();
+        q = from u in q.Take(10) select u;
+        q.ToList();
+    }
+}
+" + SearchIndex;
+
+            var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryUnboundedResultAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task QueryExpressionOverLocalReassignedWithTakeAfterMaterialization_Reports_Diagnostic()
+        {
+            const string source = UsingsWithoutRavenLinq + @"
+class Test
+{
+    async Task Run(IAsyncDocumentSession session)
+    {
+        IQueryable<User> q = session.Query<User>();
+        await (from u in q select u.Id).ToListAsync();
+        q = q.Take(10);
+    }
+}
+" + SearchIndex;
+
+            var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryUnboundedResultAnalyzer>(source);
+
+            Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnboundedResult, diagnostics[0].Id);
+        }
     }
 }

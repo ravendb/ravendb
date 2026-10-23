@@ -52,8 +52,11 @@ namespace Raven.Analyzers.Queries
             // erroneous compilations (where the Take symbol may not bind), whereas a symbol-based check
             // would fail to see the Take and turn a legitimately bounded query into a false positive.
             // Do not "upgrade" this to a semantic symbol lookup without that trade-off in mind.
-            foreach (InvocationExpressionSyntax chainCall in SyntaxHelpers.EnumerateInvocationChain(memberAccess.Expression, context.SemanticModel))
+            foreach (ExpressionSyntax node in EnumerateSpine(memberAccess.Expression, context.SemanticModel))
             {
+                if (node is not InvocationExpressionSyntax chainCall)
+                    continue;
+
                 if (SyntaxHelpers.GetMethodName(chainCall) == KnownTypes.QueryMethods.Take)
                     return;
 
@@ -83,8 +86,11 @@ namespace Raven.Analyzers.Queries
             // Only locals on the query's receiver SPINE can carry a Take that bounds THIS materialization.
             // Identifiers buried in predicate/projection lambda arguments (e.g. an unrelated bounded query
             // captured inside a Where) are not on the spine and must not trigger suppression.
-            foreach (ILocalSymbol local in EnumerateSpineLocals(receiver, model))
+            foreach (ExpressionSyntax node in EnumerateSpine(receiver, model))
             {
+                if (node is not IdentifierNameSyntax id || model.GetSymbolInfo(id).Symbol is not ILocalSymbol local)
+                    continue;
+
                 if (!SyntaxHelpers.IsRavenQueryOrQueryable(local.Type))
                     continue;
 
@@ -95,18 +101,22 @@ namespace Raven.Analyzers.Queries
             return false;
         }
 
-        // Walks the receiver invocation-chain spine (outer to inner, through parentheses and following a
-        // local to its declarator initializer) and yields every local it flows through. This exists
-        // separately from SyntaxHelpers.EnumerateInvocationChain because that walker yields the invocations
-        // on the spine, whereas the reassignment check needs the LOCALS the spine passes through (which the
-        // invocation walker does not surface). It never descends into method arguments (lambda predicates,
-        // subqueries), and uses the same self-referential-declaration hop budget as the shared walker.
-        private static IEnumerable<ILocalSymbol> EnumerateSpineLocals(ExpressionSyntax? expression, SemanticModel model)
+        // Walks the receiver spine outer to inner and yields every node on it: through member-access
+        // receivers, parentheses, a query expression's from-clause source, and (with a model) a local's
+        // declarator initializer. This exists separately from SyntaxHelpers.EnumerateInvocationChain
+        // because a Take that bounds a query-syntax materialization lives in the from-clause source
+        // ((from u in q.Take(10) select u).ToList()), which the shared walker does not step into, and
+        // because the reassignment check needs the locals the spine passes through, not just the
+        // invocations. It never descends into method arguments (lambda predicates, subqueries), and uses
+        // the same self-referential-declaration hop budget as the shared walker.
+        private static IEnumerable<ExpressionSyntax> EnumerateSpine(ExpressionSyntax? expression, SemanticModel? model)
         {
             int hops = 0;
             ExpressionSyntax? current = expression;
             while (current != null && hops++ < SyntaxHelpers.MaxInvocationChainHops)
             {
+                yield return current;
+
                 switch (current)
                 {
                     case InvocationExpressionSyntax inv when inv.Expression is MemberAccessExpressionSyntax ma:
@@ -117,8 +127,11 @@ namespace Raven.Analyzers.Queries
                         current = paren.Expression;
                         continue;
 
-                    case IdentifierNameSyntax id when model.GetSymbolInfo(id).Symbol is ILocalSymbol local:
-                        yield return local;
+                    case QueryExpressionSyntax query:
+                        current = query.FromClause.Expression;
+                        continue;
+
+                    case IdentifierNameSyntax id when model != null:
                         current = SyntaxHelpers.TryResolveLocalInitializer(id, model);
                         continue;
 
@@ -224,10 +237,13 @@ namespace Raven.Analyzers.Queries
 
         private static bool ChainContainsTake(ExpressionSyntax expression)
         {
-            foreach (InvocationExpressionSyntax invocation in SyntaxHelpers.EnumerateInvocationChain(expression))
+            foreach (ExpressionSyntax node in EnumerateSpine(expression, model: null))
             {
-                if (SyntaxHelpers.GetMethodName(invocation) == KnownTypes.QueryMethods.Take)
+                if (node is InvocationExpressionSyntax invocation
+                    && SyntaxHelpers.GetMethodName(invocation) == KnownTypes.QueryMethods.Take)
+                {
                     return true;
+                }
             }
 
             return false;
