@@ -53,8 +53,11 @@ namespace Raven.Server.Documents.Replication.Incoming
             AfterItemsReadFromStream = ValidateIncomingReplicationItemsPaths;
         }
 
+        protected override string ConnectionEstablishedLogDetails =>
+            $"{base.ConnectionEstablishedLogDetails}, {nameof(PullReplicationMode)}={IncomingPullReplicationParams.Mode}, {nameof(ChangeVectorWireMode)}={ChangeVectorWireMode}, {nameof(CertificateThumbprint)}={CertificateThumbprint}";
+
         public override string FromToString => base.FromToString +
-                                               $"{(IncomingPullReplicationParams?.Name == null ? null : $"(pull definition: {IncomingPullReplicationParams?.Name})")}";
+                                               $"{(IncomingPullReplicationParams?.Name == null ? null : $", {nameof(ReplicationInitialRequest.PullReplicationDefinitionName)}={IncomingPullReplicationParams.Name}")}";
 
         protected override void DisposeInternal()
         {
@@ -135,6 +138,17 @@ namespace Raven.Server.Documents.Replication.Incoming
             {
                 doc.Data = ctx.ReadObject(doc.Data, doc.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             }
+        }
+
+        public override DynamicJsonValue GetConnectionInfoAsJson()
+        {
+            var json = base.GetConnectionInfoAsJson();
+
+            json[nameof(ChangeVectorWireMode)] = ChangeVectorWireMode;
+            json[nameof(PullReplicationMode)] = IncomingPullReplicationParams.Mode;
+            json[nameof(ReplicationInitialRequest.PullReplicationDefinitionName)] = IncomingPullReplicationParams.Name;
+
+            return json;
         }
     }
 }
