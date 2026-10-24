@@ -107,6 +107,9 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         protected virtual bool ItemsAndReferencesAreUsingSameEtagPool => true;
 
+        // a referenced item that already existed when the index was created is loaded by the map step
+        protected virtual bool ReferencedItemExistedOnIndexCreation(long referencedItemEtag) => _indexStorage.LowerThanLastDatabaseEtagOnIndexCreation(referencedItemEtag);
+
         public (bool MoreWorkFound, Index.CanContinueBatchResult BatchContinuationResult) Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperationBase> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
@@ -231,7 +234,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                     using (referencedItem)
                                     {
-                                        if (ItemsAndReferencesAreUsingSameEtagPool && _index._indexStorage.LowerThanLastDatabaseEtagOnIndexCreation(referencedItem.Etag))
+                                        if (ReferencedItemExistedOnIndexCreation(referencedItem.Etag))
                                         {
                                             // the referenced item will be indexed in the map step
                                             lastEtag = referencedItem.Etag;
