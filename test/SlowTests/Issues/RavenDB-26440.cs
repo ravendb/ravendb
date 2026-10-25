@@ -90,6 +90,27 @@ namespace SlowTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.Indexes)]
+        public void Reduce_Validation_Error_Should_Keep_IndexDefinitionProperty_And_ProblematicText()
+        {
+            // the rethrow of IndexCompilationException in HandleReduce must not swallow the property name and the problematic text
+            // that the generic catch used to add to the validation errors thrown by the reduce rewriters
+            using (var store = GetDocumentStore())
+            {
+                var indexDefinition = new IndexDefinition
+                {
+                    Name = "CountInGroupingIndex",
+                    Maps = { "from i in docs.Items select new { i.Year, i.Number, Count = 0 }" },
+                    Reduce = "from r in results group r by new { r.Year, r.Number } into g select new { Year = g.Key.Year, Number = g.Key.Number, Count = g.Count() }"
+                };
+
+                var ex = Assert.Throws<IndexCompilationException>(() => store.Maintenance.Send(new PutIndexesOperation(indexDefinition)));
+                Assert.Contains("Reduce cannot contain Count() methods in grouping", ex.Message);
+                Assert.Equal(nameof(IndexDefinition.Reduce), ex.IndexDefinitionProperty);
+                Assert.NotNull(ex.ProblematicText);
+            }
+        }
+
         private static string CreateMapWithConcatChain(int concatCalls)
         {
             // the chain depth seen by the index compiler is concatCalls + 1, the closing ToArray() is a call in the same chain
