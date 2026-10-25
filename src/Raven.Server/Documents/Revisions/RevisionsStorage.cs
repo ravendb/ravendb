@@ -1484,6 +1484,8 @@ namespace Raven.Server.Documents.Revisions
             var tree = context.Transaction.InnerTransaction.ReadTree(ConflictRevisionsCountSlice);
             if (tree.Exists(prefixedLowerId) == false)
             {
+                // the walk below reads the table as it stands, so a change the caller already made there is
+                // counted by it; applying delta on top would count that change twice
                 if (revisionAlreadyInTable)
                     delta = 0;
 
