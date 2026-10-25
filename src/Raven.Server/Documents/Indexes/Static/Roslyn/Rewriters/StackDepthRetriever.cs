@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -10,17 +11,13 @@ public sealed class StackDepthRetriever : CSharpSyntaxRewriter
 {
     private int _letCounter;
     private int _selectDepth;
-    private int _maxInvocationChainDepth;
 
     public int LetAndSelectDepth => _letCounter + _selectDepth;
-
-    public int MaxInvocationChainDepth => _maxInvocationChainDepth;
 
     public void Clear()
     {
         _letCounter = 0;
         _selectDepth = 0;
-        _maxInvocationChainDepth = 0;
     }
 
     public void VisitMethodQuery(string cSharpCode)
@@ -48,44 +45,42 @@ public sealed class StackDepthRetriever : CSharpSyntaxRewriter
     }
 
     /// <summary>
-    /// Finds the longest chain of method calls on a single receiver, e.g. 'x.Concat(a).Where(b).Select(c)' has a depth of 3.
-    /// The tree is walked iteratively, so this can run on an arbitrarily deep expression before any recursive rewriter touches it.
+    /// Estimates how much stack the method calls of an index function need in the generated code (RavenDB-26440).
+    /// Every call adds the number of calls it is nested in, whether as their receiver or as an argument and whatever sits in between
+    /// (parentheses, casts, conditionals, ...): 'x.A().B().C()' costs 0 + 1 + 2 = 3 and so does 'A(B(C(x)))', a chain of n calls costs n * (n - 1) / 2.
+    /// This follows the quadratic growth of the stack frame of the generated method, which keeps the intermediate values of every pending call,
+    /// and it adds up the chains of the whole function, since all of them end up in the same frame.
+    /// A lambda is compiled into a method of its own with its own frame, so its body is costed separately and the largest cost of any such scope is returned.
+    /// The tree is walked iteratively, so this can run on an arbitrarily deep expression.
     /// </summary>
-    public void VisitInvocationChains(SyntaxNode expression)
+    public static int GetMaxInvocationNestingCost(SyntaxNode expression)
     {
-        foreach (var invocation in expression.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
+        var scopeCosts = new List<int> { 0 };
+        var pending = new Stack<(SyntaxNode Node, int EnclosingCalls, int Scope)>();
+        pending.Push((expression, 0, 0));
+
+        while (pending.Count > 0)
         {
-            // count each chain once, starting from its outermost call
-            if (IsReceiverOfAnotherCall(invocation))
-                continue;
+            var (node, enclosingCalls, scope) = pending.Pop();
 
-            var depth = CountChainDepth(invocation);
-            if (depth > _maxInvocationChainDepth)
-                _maxInvocationChainDepth = depth;
-        }
-    }
+            switch (node)
+            {
+                case InvocationExpressionSyntax:
+                    scopeCosts[scope] += enclosingCalls;
+                    enclosingCalls++;
+                    break;
 
-    private static bool IsReceiverOfAnotherCall(InvocationExpressionSyntax invocation)
-    {
-        // 'invocation' is the part before the dot in 'invocation.Method(...)'
-        return invocation.Parent is MemberAccessExpressionSyntax { Parent: InvocationExpressionSyntax };
-    }
+                case AnonymousFunctionExpressionSyntax:
+                    scopeCosts.Add(0);
+                    scope = scopeCosts.Count - 1;
+                    enclosingCalls = 0;
+                    break;
+            }
 
-    private static int CountChainDepth(InvocationExpressionSyntax outermostCall)
-    {
-        // a chain like 'x.Concat(a).Where(b)' is parsed from the outside in:
-        //   Invocation( MemberAccess( Invocation( MemberAccess( x, Concat ) ), Where ) )
-        // so we start at the outermost call and walk down through the receiver (the expression before the dot)
-        // for as long as the receiver is itself a method call, counting one level per call
-        var depth = 0;
-        SyntaxNode current = outermostCall;
-
-        while (current is InvocationExpressionSyntax { Expression: MemberAccessExpressionSyntax memberAccess })
-        {
-            depth++;
-            current = memberAccess.Expression;
+            foreach (var child in node.ChildNodes())
+                pending.Push((child, enclosingCalls, scope));
         }
 
-        return depth;
+        return scopeCosts.Max();
     }
 }
