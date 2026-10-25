@@ -9,7 +9,9 @@ using Raven.Client.ServerWide.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
+using Voron;
 using Xunit;
+using static Raven.Server.Documents.Schemas.Attachments;
 
 namespace SlowTests.Issues
 {
@@ -153,6 +155,58 @@ namespace SlowTests.Issues
                         .GetAttachmentsByBucketFrom(ctx, bucket, etag: 0, remoteAttachments: false).ToList();
 
                     Assert.Equal("file.bin", Assert.Single(attachments).Name);
+                }
+            }
+        }
+
+        // AttachmentsFlagAndHash is a global dynamic key index on the attachments schema of every database,
+        // sharded or not, and it supports duplicate keys - so copying its tree verbatim and rebuilding it
+        // leaves the stale ids next to the new ones instead of throwing.
+        [RavenFact(RavenTestCategory.Attachments)]
+        public async Task CompactionLeavesOneEntryPerAttachmentInTheFlagAndHashIndex()
+        {
+            const string id = "users/1";
+
+            using (var store = GetDocumentStore(new Options { RunInMemory = false }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "John" }, id);
+                    session.Advanced.Attachments.Store(id, "file.bin", new MemoryStream([1, 2, 3, 4]), "application/octet-stream");
+
+                    await session.SaveChangesAsync();
+                }
+
+                var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(new CompactSettings
+                {
+                    DatabaseName = store.Database,
+                    Documents = true
+                }));
+
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var tx = ctx.Transaction.InnerTransaction;
+                    var schema = database.DocumentsStorage.AttachmentsStorage.AttachmentsSchema;
+                    var index = schema.DynamicKeyIndexes[AttachmentsFlagAndHashSlice];
+                    var table = tx.OpenTable(schema, AttachmentsMetadataSlice);
+
+                    var indexTree = tx.ReadTree(AttachmentsFlagAndHashSlice, isIndexTree: true);
+                    Assert.NotNull(indexTree);
+
+                    using (var it = indexTree.Iterate(prefetch: false))
+                    {
+                        Assert.True(it.Seek(Slices.BeforeAllKeys), "the flag and hash index is empty after the compaction");
+
+                        do
+                        {
+                            Assert.Equal(1, table.GetCountOfMatchesFor(index, it.CurrentKey));
+                        } while (it.MoveNext());
+                    }
                 }
             }
         }
