@@ -261,8 +261,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             Database = DatabasesLandlord.CreateDocumentDatabase(DatabaseName, configuration, ServerStore, addToInitLog);
 
-            // a snapshot of an older version is upgraded while initializing, which recomputes bucket index keys,
-            // and the record reaches the cluster only after that
             if (Database is ShardedDocumentDatabase sharded)
                 sharded.ShardingConfiguration = RestoreSettings.DatabaseRecord.Sharding;
 

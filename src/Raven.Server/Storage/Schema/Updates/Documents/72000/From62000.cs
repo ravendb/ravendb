@@ -57,8 +57,6 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
             if (isSharded)
             {
-                // rewriting the rows recomputes the bucket index keys, and this runs inside
-                // DocumentsStorage.Initialize, before the database is given its record
                 var database = ShardedDocumentDatabase.CastToShardedDocumentDatabase(step.DocumentsStorage.DocumentDatabase);
                 database.ShardingConfiguration ??= database.ReadDatabaseRecord().Sharding;
             }
