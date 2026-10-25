@@ -16,9 +16,6 @@ public sealed class LruDictionary<TKey, TValue> where TKey : notnull
             throw new ArgumentOutOfRangeException(nameof(maxCapacity), "Max capacity must be greater than zero.");
 
         _maxCapacity = maxCapacity;
-        // maxCapacity is the eviction bound, not the expected size: a retriever creates one of these per query and
-        // most queries load a handful of documents, so pre-sizing to the bound (16K entries, a 548 KB array on the
-        // large object heap) was allocated and discarded on every such query. Let the dictionary grow with its use.
         _cache = new Dictionary<TKey, (LinkedListNode<TKey> Node, TValue Value)>();
         _list = new LinkedList<TKey>();
     }
