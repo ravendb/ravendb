@@ -2154,7 +2154,7 @@ namespace Raven.Server.Documents.Revisions
             var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
             var result = new DeleteOldRevisionsResult() { PreviousCount = revisionsPreviousCount };
             var revisionsToDelete = getRevisions.Invoke(table, result);
-            var deleted = DeleteRevisionsInternal(context, table, lowerId, collectionName, changeVector, lastModifiedTicks, revisionsToDelete,
+            var deleted = DeleteRevisionsInternal(context, table, prefixSlice, collectionName, changeVector, lastModifiedTicks, revisionsToDelete,
                 result, tombstoneFlags);
 
             result.Remaining = revisionsPreviousCount - deleted;
