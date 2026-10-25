@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Revisions
                     using (_storage.GetKeyPrefix(context, doc.LowerId, out Slice prefixSlice))
                     {
                         _storage.DeleteRevisionFromTable(context, collectionTable, new Dictionary<string, Table>(), doc, collectionName, context.GetChangeVector(doc.ChangeVector), _storage._database.Time.GetUtcNow().Ticks, doc.Flags);
-                        _storage.UpdateRevisionCountsByOne(context, doc.Flags, prefixSlice, collectionTable, increment: false);
+                        _storage.UpdateRevisionCountsByOne(context, doc.Flags, prefixSlice, table, increment: false);
                     }
                     
                     tx.Commit();
