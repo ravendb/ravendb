@@ -6,8 +6,6 @@ using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Sharding
 {
-    // The bucket index key generators are static methods, resolved by reflection from the schema, so the only
-    // thing they are handed is the transaction. These options are how the sharding configuration reaches them.
     public interface IShardedStorageEnvironmentOptions
     {
         ShardingConfiguration ShardingConfiguration { get; }
@@ -34,8 +32,6 @@ namespace Raven.Server.Documents.Sharding
             _configuration = configuration;
         }
 
-        // the live database is asked on every call because its record can change under us; compaction has no
-        // live database and carries the configuration read before the unload. Exactly one of them is set.
         public ShardingConfiguration ShardingConfiguration => _database?.ShardingConfiguration ?? _configuration;
     }
 

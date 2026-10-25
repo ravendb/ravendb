@@ -186,16 +186,9 @@ namespace Voron.Impl.Compaction
                             copiedTrees = CopyFixedSizeTreeFromRoot(compactedEnv, progressReport, txr, rootIterator, treeName, copiedTrees, totalTreesCount, context, token);
                             break;
                         case RootObjectType.Table:
-                            try
-                            {
-                                copiedTrees = CopyTableTree(compactedEnv, modifyTableSchema,
-                                    progressReport, txr, treeName, copiedTrees,
-                                    totalTreesCount, context, token);
-                            }
-                            catch (InvalidOperationException e)
-                            {
-                                throw new InvalidOperationException($"Cannot compact table '{treeName}'. {e.Message}", e);
-                            }
+                            copiedTrees = CopyTableTree(compactedEnv, modifyTableSchema,
+                                progressReport, txr, treeName, copiedTrees,
+                                totalTreesCount, context, token);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException("Unknown " + objectType);
@@ -460,170 +453,177 @@ namespace Voron.Impl.Compaction
             Transaction txr, string treeName, long copiedTrees, long totalTreesCount,
             TransactionPersistentContext context, CancellationToken token)
         {
-            TableSchema schema = GetTableSchema(txr, treeName, modifyTableSchema);
-
-            (long numberOfEntries, int numberOfPagesInActiveSection) = GetNumberOfEntries(txr, treeName, schema);
-
-            // The next three variables are used to know what our current
-            // progress is
-            var copiedEntries = 0;
-
-            // It is very important that these slices be allocated in the
-            // dedicated ByteStringContext, as the intermediate write transactions on
-            // the compacted environment will be destroyed between each loop and
-            // the read transaction can be closed after reaching certain scratch buffers size or
-            // 4MB allocations when running on 32-bits
-            using var lastSliceAllocator = new ByteStringContext(SharedMultipleUseFlag.None);
-            var lastSlice = Slices.BeforeAllKeys;
-            long lastFixedIndex = 0L;
-
-            // RavenDB-26217: rows already copied under 'lastSlice'. A non-unique secondary index can hold
-            // many rows per key, so on resume we skip exactly these instead of a constant 1.
-            long committedUnderLastSlice = 0L;
-
-            Report(copiedTrees, totalTreesCount, copiedEntries, numberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{numberOfEntries:#,#;;0} entries.", treeName);
-            using (var txw = compactedEnv.WriteTransaction(context))
+            try
             {
-                schema.Create(txw, treeName, Math.Max((ushort)numberOfPagesInActiveSection, (ushort)((ushort.MaxValue + 1) / Constants.Storage.PageSize)));
-                txw.Commit(); // always create a table, even if it is empty
-            }
+                TableSchema schema = GetTableSchema(txr, treeName, modifyTableSchema);
 
-            var sp = Stopwatch.StartNew();
+                (long numberOfEntries, int numberOfPagesInActiveSection) = GetNumberOfEntries(txr, treeName, schema);
 
-            while (copiedEntries < numberOfEntries)
-            {
-                token.ThrowIfCancellationRequested();
-                using(var innerTxr = txr.LowLevelTransaction.Environment.ReadTransaction())
+                // The next three variables are used to know what our current
+                // progress is
+                var copiedEntries = 0;
+
+                // It is very important that these slices be allocated in the
+                // dedicated ByteStringContext, as the intermediate write transactions on
+                // the compacted environment will be destroyed between each loop and
+                // the read transaction can be closed after reaching certain scratch buffers size or
+                // 4MB allocations when running on 32-bits
+                using var lastSliceAllocator = new ByteStringContext(SharedMultipleUseFlag.None);
+                var lastSlice = Slices.BeforeAllKeys;
+                long lastFixedIndex = 0L;
+
+                // RavenDB-26217: rows already copied under 'lastSlice'. A non-unique secondary index can hold
+                // many rows per key, so on resume we skip exactly these instead of a constant 1.
+                long committedUnderLastSlice = 0L;
+
+                Report(copiedTrees, totalTreesCount, copiedEntries, numberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{numberOfEntries:#,#;;0} entries.", treeName);
                 using (var txw = compactedEnv.WriteTransaction(context))
                 {
-                    long transactionSize = 0L;
+                    schema.Create(txw, treeName, Math.Max((ushort)numberOfPagesInActiveSection, (ushort)((ushort.MaxValue + 1) / Constants.Storage.PageSize)));
+                    txw.Commit(); // always create a table, even if it is empty
+                }
 
-                    Table inputTable = innerTxr.OpenTable(schema, treeName, prefetch: true);
-                    var outputTable = txw.OpenTable(schema, treeName);
+                var sp = Stopwatch.StartNew();
 
-                    if (schema.Key == null || schema.Key.IsGlobal) 
+                while (copiedEntries < numberOfEntries)
+                {
+                    token.ThrowIfCancellationRequested();
+                    using(var innerTxr = txr.LowLevelTransaction.Environment.ReadTransaction())
+                    using (var txw = compactedEnv.WriteTransaction(context))
                     {
-                        // There is no primary key, or there is one that is global to multiple tables
-                        // we require a table to have at least a single local index that we'll use
+                        long transactionSize = 0L;
 
-                        var variableSizeIndex = schema.Indexes.Values.FirstOrDefault(x => x.IsGlobal == false);
+                        Table inputTable = innerTxr.OpenTable(schema, treeName, prefetch: true);
+                        var outputTable = txw.OpenTable(schema, treeName);
 
-                        if (variableSizeIndex != null)
+                        if (schema.Key == null || schema.Key.IsGlobal) 
                         {
-                            // We have a variable size index, use it
+                            // There is no primary key, or there is one that is global to multiple tables
+                            // we require a table to have at least a single local index that we'll use
 
-                            // On resume, skip the rows already copied under 'lastSlice'.
-                            var skip = 0L;
-                            if (lastSlice.Options != Slices.BeforeAllKeys.Options)
-                                skip = committedUnderLastSlice;
+                            var variableSizeIndex = schema.Indexes.Values.FirstOrDefault(x => x.IsGlobal == false);
 
-                            // Track the run of rows sharing the current secondary-index key so we can resume
-                            // exactly if the batch breaks mid-run. The allocator is reset on each key change.
-                            using var currentKeyAllocator = new ByteStringContext(SharedMultipleUseFlag.None);
-                            var currentKey = lastSlice;
-                            var committedUnderCurrentKey = committedUnderLastSlice;
-                            var haveCurrentKey = lastSlice.Options != Slices.BeforeAllKeys.Options;
-
-                            foreach (var tvr in inputTable.SeekForwardFrom(variableSizeIndex, lastSlice, skip))
+                            if (variableSizeIndex != null)
                             {
-                                // The table will take care of reconstructing indexes automatically
-                                outputTable.Insert(ref tvr.Result.Reader);
-                                copiedEntries++;
-                                transactionSize += tvr.Result.Reader.Size;
+                                // We have a variable size index, use it
 
-                                // Count rows under the current key (SliceComparer compares bytes; ByteString '==' is reference equality).
-                                if (haveCurrentKey && SliceComparer.AreEqual(currentKey, tvr.Key))
-                                {
-                                    committedUnderCurrentKey++;
-                                }
-                                else
-                                {
-                                    currentKeyAllocator.Reset();
-                                    currentKey = tvr.Key.Clone(currentKeyAllocator);
-                                    committedUnderCurrentKey = 1;
-                                    haveCurrentKey = true;
-                                }
+                                // On resume, skip the rows already copied under 'lastSlice'.
+                                var skip = 0L;
+                                if (lastSlice.Options != Slices.BeforeAllKeys.Options)
+                                    skip = committedUnderLastSlice;
 
-                                ReportIfNeeded(sp, copiedTrees, totalTreesCount, copiedEntries, numberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{numberOfEntries:#,#;;0} entries.", treeName);
+                                // Track the run of rows sharing the current secondary-index key so we can resume
+                                // exactly if the batch breaks mid-run. The allocator is reset on each key change.
+                                using var currentKeyAllocator = new ByteStringContext(SharedMultipleUseFlag.None);
+                                var currentKey = lastSlice;
+                                var committedUnderCurrentKey = committedUnderLastSlice;
+                                var haveCurrentKey = lastSlice.Options != Slices.BeforeAllKeys.Options;
 
-                                // Transaction surpassed the allowed size before a flush. Breaking mid-run is
-                                // safe: we record how many rows of this key were copied to resume past them.
-                                if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2 || ShouldCloseTxFor32Bit(transactionSize, compactedEnv))
+                                foreach (var tvr in inputTable.SeekForwardFrom(variableSizeIndex, lastSlice, skip))
                                 {
-                                    lastSlice = tvr.Key.Clone(lastSliceAllocator);
-                                    committedUnderLastSlice = committedUnderCurrentKey;
-                                    break;
+                                    // The table will take care of reconstructing indexes automatically
+                                    outputTable.Insert(ref tvr.Result.Reader);
+                                    copiedEntries++;
+                                    transactionSize += tvr.Result.Reader.Size;
+
+                                    // Count rows under the current key (SliceComparer compares bytes; ByteString '==' is reference equality).
+                                    if (haveCurrentKey && SliceComparer.AreEqual(currentKey, tvr.Key))
+                                    {
+                                        committedUnderCurrentKey++;
+                                    }
+                                    else
+                                    {
+                                        currentKeyAllocator.Reset();
+                                        currentKey = tvr.Key.Clone(currentKeyAllocator);
+                                        committedUnderCurrentKey = 1;
+                                        haveCurrentKey = true;
+                                    }
+
+                                    ReportIfNeeded(sp, copiedTrees, totalTreesCount, copiedEntries, numberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{numberOfEntries:#,#;;0} entries.", treeName);
+
+                                    // Transaction surpassed the allowed size before a flush. Breaking mid-run is
+                                    // safe: we record how many rows of this key were copied to resume past them.
+                                    if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2 || ShouldCloseTxFor32Bit(transactionSize, compactedEnv))
+                                    {
+                                        lastSlice = tvr.Key.Clone(lastSliceAllocator);
+                                        committedUnderLastSlice = committedUnderCurrentKey;
+                                        break;
+                                    }
+                                    innerTxr.ForgetAbout(tvr.Result.Reader.Id);
                                 }
-                                innerTxr.ForgetAbout(tvr.Result.Reader.Id);
+                            }
+                            else
+                            {
+                                // Use a fixed size index
+                                var fixedSizeIndex = schema.FixedSizeIndexes.Values.FirstOrDefault(x => x.IsGlobal == false);
+
+                                if (fixedSizeIndex == null)
+                                    throw new InvalidOperationException("It has no local indexes, only global ones");
+
+                                foreach (var entry in inputTable.SeekForwardFrom(fixedSizeIndex, lastFixedIndex, lastFixedIndex > 0 ? 1 : 0))
+                                {
+                                    token.ThrowIfCancellationRequested();
+                                    // The table will take care of reconstructing indexes automatically
+                                    outputTable.Insert(ref entry.Reader);
+                                    copiedEntries++;
+                                    transactionSize += entry.Reader.Size;
+
+                                    ReportIfNeeded(sp, copiedTrees, totalTreesCount, copiedEntries, numberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{numberOfEntries:#,#;;0} entries.", treeName);
+
+                                    // The transaction has surpassed the allowed
+                                    // size before a flush
+                                    if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2 || ShouldCloseTxFor32Bit(transactionSize, compactedEnv))
+                                    {
+                                        lastFixedIndex = fixedSizeIndex.GetValue(ref entry.Reader);
+                                        break;
+                                    }
+                                    innerTxr.ForgetAbout(entry.Reader.Id);
+                                }
                             }
                         }
                         else
                         {
-                            // Use a fixed size index
-                            var fixedSizeIndex = schema.FixedSizeIndexes.Values.FirstOrDefault(x => x.IsGlobal == false);
-
-                            if (fixedSizeIndex == null)
-                                throw new InvalidOperationException("It has no local indexes, only global ones");
-
-                            foreach (var entry in inputTable.SeekForwardFrom(fixedSizeIndex, lastFixedIndex, lastFixedIndex > 0 ? 1 : 0))
+                            // The table has a primary key, inserts in that order are expected to be faster
+                            foreach (var entry in inputTable.SeekByPrimaryKey(lastSlice, 0))
                             {
                                 token.ThrowIfCancellationRequested();
-                                // The table will take care of reconstructing indexes automatically
-                                outputTable.Insert(ref entry.Reader);
-                                copiedEntries++;
-                                transactionSize += entry.Reader.Size;
-
-                                ReportIfNeeded(sp, copiedTrees, totalTreesCount, copiedEntries, numberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{numberOfEntries:#,#;;0} entries.", treeName);
 
                                 // The transaction has surpassed the allowed
                                 // size before a flush
                                 if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2 || ShouldCloseTxFor32Bit(transactionSize, compactedEnv))
                                 {
-                                    lastFixedIndex = fixedSizeIndex.GetValue(ref entry.Reader);
+                                    schema.Key.GetValue(txr.Allocator, ref entry.Reader, out var slice);
+                                    lastSlice = slice.Clone(lastSliceAllocator);
                                     break;
                                 }
+
+                                // The table will take care of reconstructing indexes automatically
+                                outputTable.Insert(ref entry.Reader);
+                                copiedEntries++;
+                                transactionSize += entry.Reader.Size;
+                                ReportIfNeeded(sp, copiedTrees, totalTreesCount, copiedEntries, numberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{numberOfEntries:#,#;;0} entries.", treeName);
                                 innerTxr.ForgetAbout(entry.Reader.Id);
                             }
                         }
+
+                        txw.Commit();
                     }
-                    else
+
+                    if (copiedEntries == numberOfEntries)
                     {
-                        // The table has a primary key, inserts in that order are expected to be faster
-                        foreach (var entry in inputTable.SeekByPrimaryKey(lastSlice, 0))
-                        {
-                            token.ThrowIfCancellationRequested();
-
-                            // The transaction has surpassed the allowed
-                            // size before a flush
-                            if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2 || ShouldCloseTxFor32Bit(transactionSize, compactedEnv))
-                            {
-                                schema.Key.GetValue(txr.Allocator, ref entry.Reader, out var slice);
-                                lastSlice = slice.Clone(lastSliceAllocator);
-                                break;
-                            }
-
-                            // The table will take care of reconstructing indexes automatically
-                            outputTable.Insert(ref entry.Reader);
-                            copiedEntries++;
-                            transactionSize += entry.Reader.Size;
-                            ReportIfNeeded(sp, copiedTrees, totalTreesCount, copiedEntries, numberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{numberOfEntries:#,#;;0} entries.", treeName);
-                            innerTxr.ForgetAbout(entry.Reader.Id);
-                        }
+                        copiedTrees++;
+                        Report(copiedTrees, totalTreesCount, copiedEntries, numberOfEntries, progressReport, $"Finished copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{numberOfEntries:#,#;;0} entries.", treeName);
                     }
 
-                    txw.Commit();
+                    compactedEnv.FlushLogToDataFile();
                 }
 
-                if (copiedEntries == numberOfEntries)
-                {
-                    copiedTrees++;
-                    Report(copiedTrees, totalTreesCount, copiedEntries, numberOfEntries, progressReport, $"Finished copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{numberOfEntries:#,#;;0} entries.", treeName);
-                }
-
-                compactedEnv.FlushLogToDataFile();
+                return copiedTrees;
             }
-
-            return copiedTrees;
+            catch (InvalidOperationException e)
+            {
+                throw new InvalidOperationException($"Cannot compact table '{treeName}'. {e.Message}", e);
+            }
         }
 
         private static (long NumberOfEntries, int ActiveDataSmallSection) GetNumberOfEntries(Transaction txr2, string treeName, TableSchema schema)
