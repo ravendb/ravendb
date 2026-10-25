@@ -15,6 +15,7 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -259,6 +260,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             });
 
             Database = DatabasesLandlord.CreateDocumentDatabase(DatabaseName, configuration, ServerStore, addToInitLog);
+
+            // a snapshot of an older version is upgraded while initializing, which recomputes bucket index keys,
+            // and the record reaches the cluster only after that
+            if (Database is ShardedDocumentDatabase sharded)
+                sharded.ShardingConfiguration = RestoreSettings.DatabaseRecord.Sharding;
+
             Database.Initialize(Options);
         }
 
