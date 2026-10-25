@@ -1482,7 +1482,7 @@ namespace Raven.Server.Documents.Revisions
         private long IncrementCountOfConflictRevisions(DocumentsOperationContext context, Table table, Slice prefixedLowerId, long delta, bool revisionAlreadyInTable = true)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(ConflictRevisionsCountSlice);
-            if (tree.TryRead(prefixedLowerId, out _) == false)
+            if (tree.Exists(prefixedLowerId) == false)
             {
                 if (revisionAlreadyInTable)
                     delta = 0;
