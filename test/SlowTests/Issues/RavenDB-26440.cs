@@ -17,6 +17,8 @@ namespace SlowTests.Issues
         {
         }
 
+        private const string Tag = "a";
+
         [RavenFact(RavenTestCategory.Indexes)]
         public void Map_With_Method_Call_Chain_Above_The_Limit_Should_Fail_Compilation()
         {
@@ -26,7 +28,7 @@ namespace SlowTests.Issues
                 var indexDefinition = new IndexDefinition
                 {
                     Name = "DeepChainIndex",
-                    Maps = { CreateMapWithConcatChain(concatCalls: chainDepth - 1) }
+                    Maps = { CreateMapWithConcatChain(chainDepth) }
                 };
 
                 var ex = Assert.Throws<IndexCompilationException>(() => store.Maintenance.Send(new PutIndexesOperation(indexDefinition)));
@@ -62,14 +64,14 @@ namespace SlowTests.Issues
                 var indexDefinition = new IndexDefinition
                 {
                     Name = "DeepChainIndex",
-                    Maps = { CreateMapWithConcatChain(concatCalls: IndexCompiler.MaxAllowedInvocationChainDepth - 1) }
+                    Maps = { CreateMapWithConcatChain(chainDepth: IndexCompiler.MaxAllowedInvocationChainDepth) }
                 };
 
                 store.Maintenance.Send(new PutIndexesOperation(indexDefinition));
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "John", Tags = new List<string> { "a", "b" } });
+                    session.Store(new User { Name = "John", Tags = new List<string> { Tag, "b" } });
                     session.SaveChanges();
                 }
 
@@ -81,7 +83,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var users = session.Advanced.DocumentQuery<User>(indexDefinition.Name)
-                        .WhereEquals("Values", "a")
+                        .WhereEquals("Values", Tag)
                         .ToList();
 
                     Assert.Equal(1, users.Count);
@@ -111,10 +113,10 @@ namespace SlowTests.Issues
             }
         }
 
-        private static string CreateMapWithConcatChain(int concatCalls)
+        private static string CreateMapWithConcatChain(int chainDepth)
         {
-            // the chain depth seen by the index compiler is concatCalls + 1, the closing ToArray() is a call in the same chain
-            var concatChain = string.Concat(Enumerable.Repeat(".Concat(user.Tags ?? Enumerable.Empty<string>())", concatCalls));
+            // the closing ToArray() is a call in the same chain, so one less Concat() gives a chain of exactly 'chainDepth' calls
+            var concatChain = string.Concat(Enumerable.Repeat(".Concat(user.Tags ?? Enumerable.Empty<string>())", chainDepth - 1));
             return $"from user in docs.Users select new {{ Values = (user.Tags ?? Enumerable.Empty<string>()){concatChain}.ToArray() }}";
         }
 
