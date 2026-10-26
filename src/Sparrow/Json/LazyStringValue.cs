@@ -483,6 +483,8 @@ namespace Sparrow.Json
             if (IsDisposed)
                 ThrowAlreadyDisposed();
 
+            JsonOperationContext.AssertDisposalAllowed(_context, this);
+
             ReturnAllocatedMemory();
 
             IsDisposed = true;

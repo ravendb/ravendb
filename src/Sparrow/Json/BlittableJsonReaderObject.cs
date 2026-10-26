@@ -1011,6 +1011,7 @@ namespace Sparrow.Json
                 return;
 
             AssertContextNotDisposed();
+            JsonOperationContext.AssertDisposalAllowed(_context, this);
 
             if (_allocatedMemory != null)
             {
