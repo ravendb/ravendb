@@ -351,7 +351,7 @@ class CompanyIndex : AbstractIndexCreationTask<Company>
 
 **Triggered by:** a `Where`, `OrderBy`, `OrderByDescending`, `ThenBy`, `ThenByDescending`, or `Search` lambda on a `session.Query<T, TIndexCreator>()` (or the `indexName:` string overload) that references a field not projected by the index's `Map` expression.
 
-RavenDB translates the LINQ chain into a server-side query against a specific index. If a `Where` or `OrderBy` clause references a field that is not in the index's projection, the server cannot match documents against that field and the query silently returns no results or an error at runtime.
+RavenDB translates the LINQ chain into a server-side query against a specific index. If a `Where` or `OrderBy` clause references a field that is not in the index's projection, the server has no index field to match documents against and rejects the query or returns no results for it.
 
 The index may live in a different project from the query. Its shape is read from the metadata its own assembly records (see [How index facts reach the analyzers](#how-index-facts-reach-the-analyzers)); when no metadata is recorded for it, or it could not be read, this rule reports nothing.
 

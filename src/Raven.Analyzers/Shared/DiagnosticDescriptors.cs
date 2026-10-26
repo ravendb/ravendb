@@ -141,7 +141,7 @@ namespace Raven.Analyzers.Shared
         public static readonly DiagnosticDescriptor QueryFieldNotIndexed = Create(
             id: DiagnosticIds.QueryFieldNotIndexed,
             title: "Query field not defined in the index",
-            messageFormat: "Field '{0}' is referenced in {1} but is not indexed by '{2}'. The query will not return results for this field.",
+            messageFormat: "Field '{0}' is referenced in {1} but is not indexed by '{2}'.",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Info,
             description: "When querying a specific index, all fields used in Where, OrderBy, and Search clauses should match the fields projected by the index Map expression. A field not in the projection cannot be searched or sorted efficiently.",
