@@ -339,12 +339,12 @@ namespace Raven.Server.Documents
 
                 UnlikelyUnicode:
                 scope.Dispose();
-                return UnicodeGetLowerIdAndStorageKey(allocator, str, out lowerIdSlice, out idSlice, maxIdSize, maxIdLenSize, escapePositionsSize);
+                return UnicodeGetLowerIdAndStorageKey(allocator, str, out lowerIdSlice, out idSlice, maxIdSize, maxIdLenSize, escapePositionsSize, controlCount);
             }
 
             private static ByteStringContext.InternalScope UnicodeGetLowerIdAndStorageKey(
                 ByteStringContext allocator, ReadOnlySpan<char> str,
-                out Slice lowerIdSlice, out Slice idSlice, int maxStrSize, int maxIdLenSize, int escapePositionsSize)
+                out Slice lowerIdSlice, out Slice idSlice, int maxStrSize, int maxIdLenSize, int escapePositionsSize, int controlCount)
             {
                 // See comment in GetLowerIdSliceAndStorageKey for the format
 
@@ -369,21 +369,19 @@ namespace Raven.Server.Documents
                     if (lowerIdSize > MaxIdSize)
                         ThrowDocumentIdTooBig(str);
 
-                    var originalLowerSize = lowerIdSize;
-                    _jsonParserState.FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(lowerId, ref lowerIdSize, escapePositionsSize);
+                    if (controlCount > 0)
+                        _jsonParserState.FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(lowerId, ref lowerIdSize, escapePositionsSize);
 
                     byte* actualIdPtr = buffer.Ptr + strLength * sizeof(char) + maxStrSize;
                     int actualIdSize = Encoding.GetBytes(pChars, strLength, actualIdPtr + maxIdLenSize, maxStrSize);
+
+                    _jsonParserState.FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(actualIdPtr + maxIdLenSize, ref actualIdSize, escapePositionsSize);
 
                     var actualIdLenSize = JsonParserState.VariableSizeIntSize(actualIdSize);
                     if (actualIdLenSize < maxIdLenSize)
                         actualIdPtr += maxIdLenSize - actualIdLenSize;
 
                     byte* writePos = actualIdPtr;
-
-                    //We already checked if there are control characters to escape
-                    if (originalLowerSize != lowerIdSize)
-                        _jsonParserState.FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(actualIdPtr + maxIdLenSize, ref actualIdSize, escapePositionsSize);
 
                     JsonParserState.WriteVariableSizeInt(ref writePos, actualIdSize);
                     escapePositionsSize = _jsonParserState.WriteEscapePositionsTo(writePos + actualIdSize);
