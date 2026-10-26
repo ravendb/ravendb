@@ -176,7 +176,7 @@ public void SetReduce()
 }
 ```
 
-**Docs:** [Creating and deploying indexes](https://ravendb.net/docs/article-page/latest/csharp/indexes/creating-and-deploying)
+**Docs:** [Creating and deploying indexes](https://docs.ravendb.net/indexes/creating-and-deploying)
 
 
 ---
@@ -223,7 +223,7 @@ var q = session.Query<Order>()
 
 **Explicitly not flagged** (legitimately usable after projection): `Include`, `Highlight`, `Statistics`, `Customize`, `Skip`, `Take`.
 
-**Docs:** [Projecting query results](https://ravendb.net/docs/article-page/latest/csharp/client-api/session/querying/how-to-project-query-results)
+**Docs:** [Projecting query results](https://docs.ravendb.net/client-api/session/querying/how-to-project-query-results)
 
 ---
 
@@ -277,7 +277,7 @@ class OrdersByStatus : AbstractIndexCreationTask<Order>
 
 Note: if the `Map` is assigned in a helper method rather than the constructor body directly, RVN001 fires on the assignment and RVN004 fires on the class. Both rules apply simultaneously because the constructor itself still has no `Map` assignment.
 
-**Docs:** [Creating and deploying indexes](https://ravendb.net/docs/article-page/latest/csharp/indexes/creating-and-deploying)
+**Docs:** [Creating and deploying indexes](https://docs.ravendb.net/indexes/creating-and-deploying)
 
 ---
 
@@ -309,7 +309,7 @@ class MultiIndex : AbstractMultiMapIndexCreationTask<Result>
 
 Note: `AddMap` calls in a helper method that the constructor delegates to are **not** counted: the same logic as RVN001/RVN004. Move `AddMap` calls into the constructor body directly.
 
-**Docs:** [Multi-map indexes](https://ravendb.net/docs/article-page/latest/csharp/indexes/multi-map-indexes)
+**Docs:** [Multi-map indexes](https://docs.ravendb.net/indexes/multi-map-indexes)
 
 ---
 
@@ -343,7 +343,7 @@ class CompanyIndex : AbstractIndexCreationTask<Company>
 }
 ```
 
-**Docs:** [Multi-map indexes](https://ravendb.net/docs/article-page/latest/csharp/indexes/multi-map-indexes)
+**Docs:** [Multi-map indexes](https://docs.ravendb.net/indexes/multi-map-indexes)
 
 ---
 
@@ -389,7 +389,7 @@ This rule has **Info** severity. It bails silently (no diagnostic) when:
 - The `indexName:` string argument is a variable rather than a string literal (string-based overload only)
 - The index overrides `IndexName` with a non-literal expression such as a variable or concatenation (string-based overload only — the generic `Query<T, TIndex>()` form always resolves the class directly and is unaffected)
 
-**Docs:** [Querying an index](https://ravendb.net/docs/article-page/latest/csharp/indexes/querying/query-index)
+**Docs:** [Querying an index](https://docs.ravendb.net/indexes/querying/query-index)
 
 ---
 
@@ -451,7 +451,7 @@ This rule has **Info** severity. It bails silently (no diagnostic) when:
 - The index class is not in the current compilation
 - `Query<T>()` is called without an index reference (auto-index)
 
-**Docs:** [Projecting query results](https://ravendb.net/docs/article-page/latest/csharp/client-api/session/querying/how-to-project-query-results)
+**Docs:** [Projecting query results](https://docs.ravendb.net/client-api/session/querying/how-to-project-query-results)
 
 ---
 
@@ -496,7 +496,7 @@ This rule bails silently (no diagnostic) for:
 - Indexes derived from `AbstractJavaScriptIndexCreationTask` (JS indexes cannot be statically analyzed)
 - Methods whose containing type is defined in a referenced assembly (BCL, Raven.Client, NuGet packages)
 
-**Docs:** [Map indexes](https://ravendb.net/docs/article-page/latest/csharp/indexes/map-indexes)
+**Docs:** [Map indexes](https://docs.ravendb.net/indexes/map-indexes)
 
 ---
 
@@ -533,7 +533,7 @@ var results = session.Query<Order>()
 
 This rule applies **only** to `IRavenQueryable<T>` chains (`session.Query<T>()`). Standard LINQ on in-memory collections is not affected.
 
-**Docs:** [Querying in RavenDB](https://ravendb.net/docs/article-page/latest/csharp/querying/overview)
+**Docs:** [Querying in RavenDB](https://docs.ravendb.net/querying/overview)
 
 ---
 
@@ -597,7 +597,7 @@ public void Subscribe(SubscriptionWorker<Order> worker)
 
 **Note:** This rule applies to lambda expressions passed directly to `Run()`. Named method-group references are not detected (e.g., `worker.Run(ProcessBatch)` where `ProcessBatch` is a separate method).
 
-**Docs:** [Subscriptions](https://ravendb.net/docs/article-page/latest/csharp/client-api/data-subscriptions/what-are-data-subscriptions)
+**Docs:** [Subscriptions](https://docs.ravendb.net/client-api/data-subscriptions/what-are-data-subscriptions)
 
 ---
 
@@ -669,7 +669,7 @@ async Task GetDataAsync(IAsyncDocumentSession session, string userId, string ord
 
 **Note:** Loads whose ID argument is derived from a prior session result are not flagged — they genuinely depend on the earlier call and cannot be batched with it. Only single-method analysis is performed; cross-method patterns are not detected.
 
-**Docs:** [Lazy requests - batching requests](https://ravendb.net/docs/article-page/latest/csharp/client-api/session/how-to/defer-operations)
+**Docs:** [Perform requests lazily](https://docs.ravendb.net/client-api/session/how-to/perform-operations-lazily)
 
 ---
 
@@ -728,7 +728,7 @@ var users = session.Advanced.DocumentQuery<User>().WhereEquals(u => u.Active, tr
 var orders = session.Advanced.RawQuery<Order>("from Orders limit 10").ToList();
 ```
 
-**Docs:** [Querying: Paging](https://ravendb.net/docs/article-page/latest/csharp/indexes/querying/paging)
+**Docs:** [Querying: Paging](https://docs.ravendb.net/indexes/querying/paging)
 
 ---
 
@@ -797,7 +797,7 @@ class DocumentIndex : AbstractIndexCreationTask<Document>
 
 **Note:** Block-body lambdas are not analyzed. RavenDB index Maps almost always use expression-body lambdas.
 
-**Docs:** [Indexes: Map-reduce fan-out](https://ravendb.net/docs/article-page/latest/csharp/indexes/map-reduce-indexes)
+**Docs:** [Indexes: Map-reduce fan-out](https://docs.ravendb.net/indexes/map-reduce-indexes)
 
 ---
 
@@ -848,4 +848,4 @@ var projects = from p in session.Query<Project>()
 
 **Note:** Only LINQ queries via `session.Query<T>()` are detected. The low-level `session.Advanced.DocumentQuery<T>()` API is not covered.
 
-**Docs:** [Indexes: Indexing nested data](https://ravendb.net/docs/article-page/latest/csharp/indexes/indexing-nested-data)
+**Docs:** [Indexes: Indexing nested data](https://docs.ravendb.net/indexes/indexing-nested-data)
