@@ -32,10 +32,6 @@ public sealed class BatchQueueSinkScriptCommand : DocumentMergedTransactionComma
 
     protected override long ExecuteCmd(DocumentsOperationContext context)
     {
-        // the transaction merger may execute the same command instance more than once
-        // (e.g. when a merged transaction fails and the commands are re-executed independently),
-        // so the results of a previous execution must be discarded here.
-        // for the same reason the messages must not be disposed here, they are owned by the caller
         ProcessedSuccessfully = 0;
         _scriptErrors.Clear();
 

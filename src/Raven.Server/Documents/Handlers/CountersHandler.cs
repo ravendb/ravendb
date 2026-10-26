@@ -380,9 +380,6 @@ namespace Raven.Server.Documents.Handlers
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                // the transaction merger may execute the same command instance more than once
-                // (e.g. when a merged transaction fails and the commands are re-executed independently),
-                // so any state that was built during a previous execution must be reset here
                 _counterUpdates.Clear();
                 _errors.Clear();
                 ErrorCount = 0;
