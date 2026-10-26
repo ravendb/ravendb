@@ -88,6 +88,10 @@ export default class MockManageServerService extends AutoMockService<ManageServe
         );
     }
 
+    withGetStorageIo(dto?: MockedValue<Raven.Server.Storage.StorageIoReport>) {
+        return this.mockResolvedValue(this.mocks.getStorageIo, dto, ManageServerStubs.storageIo());
+    }
+
     withGetClusterLogEntry() {
         return this.mockResolvedValue(this.mocks.getClusterLogEntry, null, ManageServerStubs.getClusterLogEntry());
     }

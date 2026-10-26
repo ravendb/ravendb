@@ -1,0 +1,83 @@
+@use "Content/scss/sizes";
+
+.storage-io {
+    .storage-io-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+        gap: sizes.$gutter-sm;
+    }
+
+    .storage-io-metric-value {
+        font-size: 1.15rem;
+        font-weight: 600;
+    }
+
+    .storage-io-history-chart {
+        width: 100%;
+        height: 64px;
+        display: block;
+
+        .drain {
+            fill: var(--bs-warning);
+            opacity: 0.25;
+        }
+
+        .latency {
+            fill: none;
+            stroke: var(--bs-info);
+            stroke-width: 1.5;
+            vector-effect: non-scaling-stroke;
+        }
+
+        .threshold {
+            stroke: var(--bs-danger);
+            stroke-dasharray: 4 4;
+            vector-effect: non-scaling-stroke;
+        }
+    }
+
+    .storage-io-legend-drain,
+    .storage-io-legend-latency,
+    .storage-io-legend-threshold {
+        display: inline-block;
+        width: 12px;
+        height: 8px;
+        margin-left: 6px;
+        vertical-align: middle;
+    }
+
+    .storage-io-legend-drain {
+        background: var(--bs-warning);
+        opacity: 0.5;
+    }
+
+    .storage-io-legend-latency {
+        border-top: 2px solid var(--bs-info);
+    }
+
+    .storage-io-legend-threshold {
+        border-top: 2px dashed var(--bs-danger);
+    }
+
+    .storage-io-filter {
+        max-width: 320px;
+    }
+
+    .storage-io-database-row th {
+        background: rgba(127, 127, 127, 0.12);
+        color: inherit;
+        font-weight: 600;
+    }
+
+    .storage-io-bar {
+        height: 4px;
+        width: 80px;
+        background: var(--bs-secondary-bg);
+        border-radius: 2px;
+        overflow: hidden;
+
+        > div {
+            height: 100%;
+        }
+    }
+}

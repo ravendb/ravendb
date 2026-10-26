@@ -370,6 +370,20 @@ function getManageServerMenuItem() {
             }
         }),
         new leafMenuItem({
+            route: 'admin/settings/debug/advanced/storageIo',
+            moduleId: require('viewmodels/manage/debugAdvancedParent'),
+            title: "Advanced",
+            nav: false,
+            css: 'icon-debug-advanced',
+            dynamicHash: appUrl.forDebugAdvancedStorageIo,
+            itemRouteToHighlight: 'admin/settings/debug/advanced*details',
+            requiredAccess: "Operator",
+            search: {
+                overrideTitle: 'Storage I/O',
+                innerActions: [{ name: "Disk congestion" }, { name: "Drain mode" }, { name: "Shared index journals" }],
+            }
+        }),
+        new leafMenuItem({
             route: 'admin/settings/debug/advanced/observerLog',
             moduleId: require('viewmodels/manage/debugAdvancedObserverLog'),
             title: 'Advanced',

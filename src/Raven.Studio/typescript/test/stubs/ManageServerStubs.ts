@@ -849,4 +849,155 @@ export class ManageServerStubs {
 
         return { Tasks: [replicationTask, backupTask] };
     }
+
+    // node B of RavenDB-27821: an EBS volume at its bandwidth baseline, tiny journal writes, syncs over a second
+    static storageIo(): Raven.Server.Storage.StorageIoReport {
+        const now = new Date("2026-10-26T06:30:00Z").getTime();
+        const history: Raven.Server.Storage.StorageDeviceSample[] = [];
+        for (let i = 359; i >= 0; i--) {
+            const draining = i % 40 < 37;
+            history.push({
+                At: new Date(now - i * 10_000).toISOString(),
+                Draining: draining,
+                JournalWriteLatencyInMs: i % 25 === 0 ? null : draining ? 80 + (i % 7) * 5 : 4,
+                QueueDepth: draining ? 12 + (i % 5) : 2,
+            });
+        }
+
+        const environment = (
+            database: string,
+            type: Voron.StorageEnvironmentWithType.StorageEnvironmentType,
+            name: string,
+            sync: Partial<Raven.Server.Storage.StorageEnvironmentSyncInfo> = {}
+        ): Raven.Server.Storage.StorageEnvironmentIoInfo => ({
+            Database: database,
+            Type: type,
+            Name: name,
+            DeviceId: "2049",
+            Compression: { Configured: "Auto", Resolved: "Lz4", CompressAboveInBytes: 32 * 1024 },
+            Pipelining: {
+                Enabled: true,
+                Active: type !== "Documents",
+                QueueEmptyShare: 0.95,
+                BatchOperations: 2.4,
+                JournalWriteLatencyInMs: 96.7,
+                JournalWriteSizeInBytes: 7 * 1024,
+                PipelineAboveLatencyInMs: 2,
+            },
+            ConsolidatingBatches: type === "Documents",
+            FlusherYields: type === "Documents" ? 1840 : 12,
+            Sync: {
+                PacedWritebackEnabled: true,
+                WrittenButUnsyncedInBytes: 120 * 1024 * 1024,
+                SoftLimitInBytes: 256 * 1024 * 1024,
+                MandatoryLimitInBytes: 768 * 1024 * 1024,
+                LastReason: "SoftThreshold",
+                LastSizeInBytes: 300 * 1024 * 1024,
+                LastTotalInMs: 1164,
+                LastWritebackInMs: 1020,
+                LastDrain: true,
+                LastAt: new Date(now - 42_000).toISOString(),
+                ...sync,
+            },
+        });
+
+        return {
+            Devices: [
+                {
+                    DeviceId: "2049",
+                    PathOnDevice: "/ravendb/data/Databases/CarDealership/Raven.voron",
+                    MountPoint: "/",
+                    Status: "Saturated",
+                    StatusReason:
+                        "Saturated since 2026-10-24 03:12:40Z: writes were paced because the disk was congested 93% of the last hour.",
+                    Class: "Unknown",
+                    ClassReason: "WritesTooSmall",
+                    ClassDescription:
+                        "journal writes average 7 KB, below 256 KB, too small to tell a slow disk from a fast one (96.7 ms)",
+                    JournalWriteLatencyInMs: 96.7,
+                    JournalWriteSizeInBytes: 7 * 1024,
+                    SecondsSinceLastJournalWrite: 0.2,
+                    QueueDepth: 13.1,
+                    QueueDepthAgeInSec: 0.6,
+                    SyncCostInMs: 1164,
+                    Draining: true,
+                    LastModeSwitch: "2026-10-24T03:02:10Z",
+                    DrainShareOfLastHour: 0.93,
+                    SaturatedSince: "2026-10-24T03:12:40Z",
+                    Thresholds: {
+                        ClassifyAboveLatencyInMs: 2,
+                        SmallWriteInBytes: 256 * 1024,
+                        SyncCostDrainInMs: 100,
+                        QueueDepthEnterDrain: 5,
+                        QueueDepthExitDrain: 3,
+                        CongestionDrainShare: 0.5,
+                        CongestionJournalWriteLatencyInMs: 50,
+                        CongestionSustainedInMin: 10,
+                    },
+                    History: history,
+                    SlowWrites: [
+                        {
+                            Key: "DataSync//ravendb/data/Databases/CarDealership/Raven.voron",
+                            Type: "DataSync",
+                            Path: "/ravendb/data/Databases/CarDealership/Raven.voron",
+                            DataWrittenInMb: 812,
+                            DurationInSec: 322,
+                            SpeedInMbPerSec: 2.5,
+                            Date: new Date(now - 1_200_000).toISOString(),
+                        },
+                        {
+                            Key: "JournalWrite//ravendb/data/Databases/CarDealership/Journals/0000000000000000014.journal",
+                            Type: "JournalWrite",
+                            Path: "/ravendb/data/Databases/CarDealership/Journals/0000000000000000014.journal",
+                            DataWrittenInMb: 0.004,
+                            DurationInSec: 2.0,
+                            SpeedInMbPerSec: 0.002,
+                            Date: new Date(now - 300_000).toISOString(),
+                        },
+                    ],
+                },
+            ],
+            Environments: [
+                environment(null, "System", "<System>", {
+                    LastReason: "Idle",
+                    LastSizeInBytes: 64 * 1024,
+                    LastTotalInMs: 35,
+                    LastWritebackInMs: 0,
+                    LastDrain: false,
+                }),
+                environment("CarDealership", "Documents", "CarDealership", {
+                    LastReason: "Mandatory",
+                    LastSizeInBytes: 790 * 1024 * 1024,
+                    LastTotalInMs: 41_200,
+                    LastWritebackInMs: 38_900,
+                }),
+                environment("CarDealership", "Configuration", "Configuration", {
+                    LastReason: "Idle",
+                    LastSizeInBytes: 8 * 1024,
+                    LastTotalInMs: 120,
+                    LastWritebackInMs: 0,
+                }),
+                environment("CarDealership", "SharedJournals", "@SharedJournals"),
+                environment("CarDealership", "Index", "Cars/ByMake"),
+                environment("CarDealership", "Index", "Orders/Totals", { LastReason: "JournalCount" }),
+            ],
+            SharedJournals: [
+                {
+                    Database: "CarDealership",
+                    Files: [
+                        { Number: 12, SizeInBytes: 64 * 1024 * 1024, PendingDeletion: true },
+                        { Number: 13, SizeInBytes: 128 * 1024 * 1024, PendingDeletion: false },
+                    ],
+                    IndexesSharing: 22,
+                    IndexesNotSharing: [
+                        { Index: "Orders/Totals", Reason: "HardLinkLimit", Since: "2026-10-25T11:04:00Z" },
+                    ],
+                    MergedCommitsQueue: 3,
+                    CommitToDurableInMs: 210,
+                    RetainedBy: { Index: "Cars/ByMake", JournalNumber: 11, AlreadyReleasedBySharedJournal: true },
+                    LinksOfUnknownSource: 0,
+                },
+            ],
+        };
+    }
 }

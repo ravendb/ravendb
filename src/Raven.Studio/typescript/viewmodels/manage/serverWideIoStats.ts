@@ -16,7 +16,11 @@ class serverWideIoStats extends viewModelBase {
             () => "Server",
             ["System"],
             false,
-            (onUpdate, cutOff) => new serverWideLiveIOStatsWebSocketClient(onUpdate, cutOff));
+            (onUpdate, cutOff) => new serverWideLiveIOStatsWebSocketClient(onUpdate, cutOff),
+            {
+                environmentFilter: env => env.Type === "System",
+                nodeTag: null
+            });
     }
 
     compositionComplete() {
