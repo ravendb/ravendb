@@ -1,0 +1,80 @@
+name: studio/checks
+
+on:
+  push:
+    branches:
+        - feature/*
+        - release/**
+        - 'v[4-9]+.[0-9]+'
+
+  pull_request:
+    branches:
+        - feature/*
+        - release/**
+        - 'v[4-9]+.[0-9]+'
+
+jobs:
+  studio:
+    name: Studio Conventions and Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./src/Raven.Studio
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      with:
+        global-json-file: global.json
+
+    - name: Setup nodejs
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version-file: 'src/Raven.Studio/.nvmrc'
+
+    # Built in its own step so .NET build errors are easy to find in the logs.
+    # "npm run restore" builds it too (dotnet run), but then it is already up to date.
+    # Configuration must match scripts/typings.js, otherwise the server is built twice.
+    - name: Build TypingsGenerator
+      run: dotnet build -c Release
+      working-directory: ./tools/TypingsGenerator
+
+    - name: Install npm dependencies
+      run: npm ci
+
+    - name: Restore Studio
+      id: restore
+      run: npm run restore
+
+    - name: Lint Studio
+      if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
+      run: npm run lint
+
+    - name: Prettier Studio
+      if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
+      run: npm run prettier
+
+    - name: Typecheck Studio
+      if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
+      run: npm run typecheck
+
+    - name: Compile Studio
+      if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
+      run: npm run compile
+
+    - name: Test Studio (jest)
+      if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
+      run: npm run test
+
+    - name: Build Storybook
+      id: build-storybook
+      if: ${{ !cancelled() && steps.restore.outcome == 'success' }}
+      run: npm run build-storybook --quiet
+
+    - name: Test Studio (storybook)
+      if: ${{ !cancelled() && steps.build-storybook.outcome == 'success' }}
+      run: |
+        npx concurrently -k -s first -n "SB,TEST" -c "magenta,blue" \
+          "npx http-server storybook-static --port 6006 --silent" \
+          "npx wait-on tcp:127.0.0.1:6006 && npm run test-storybook"
