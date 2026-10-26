@@ -537,7 +537,9 @@ namespace Raven.Server.Documents.Revisions
                     return;
                 }
 
-                using var reverted = RevertSnapshotFlags(context, document.CloneOnTheSameContext(), id);
+                // the clone is only needed for the duration of this transaction, so it is allocated from (and disposed with) the transaction context
+                // rather than from the context of the replicated document, which belongs to the replication batch (see also RavenDB-22027)
+                using var reverted = RevertSnapshotFlags(context, document.Clone(context), id);
                 _documentsStorage.Put(context, id, null, reverted, lastModifiedTicks, changeVector,
                     null, flags, nonPersistentFlags);
             }
