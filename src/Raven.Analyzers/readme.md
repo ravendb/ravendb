@@ -533,7 +533,7 @@ var results = session.Query<Order>()
 
 This rule applies **only** to `IRavenQueryable<T>` chains (`session.Query<T>()`). Standard LINQ on in-memory collections is not affected.
 
-**Docs:** [Querying in RavenDB](https://ravendb.net/docs/article-page/latest/csharp/client-api/session/querying/how-to-query)
+**Docs:** [Querying in RavenDB](https://ravendb.net/docs/article-page/latest/csharp/querying/overview)
 
 ---
 
@@ -546,7 +546,7 @@ Inside a subscription worker's `Run` delegate, sessions should be opened via the
 ```csharp
 // ❌ Bad: using store.OpenSession() in the Run delegate
 var subscription = store.Subscriptions.Create<Order>(new SubscriptionCreationOptions<Order>());
-var worker = store.Subscriptions.GetWorker<Order>(subscription);
+var worker = store.Subscriptions.GetSubscriptionWorker<Order>(subscription);
 
 worker.Run(batch =>
 {
@@ -568,14 +568,14 @@ This also applies to the async variant:
 // ❌ Bad: using store.OpenAsyncSession()
 worker.Run(async batch =>
 {
-    using var session = await store.OpenAsyncSession();   // RVN011
+    using var session = store.OpenAsyncSession();   // RVN011
     // ...
 });
 
 // ✅ Good
 worker.Run(async batch =>
 {
-    using var session = await batch.OpenAsyncSession();
+    using var session = batch.OpenAsyncSession();
     // ...
 });
 ```
@@ -597,7 +597,7 @@ public void Subscribe(SubscriptionWorker<Order> worker)
 
 **Note:** This rule applies to lambda expressions passed directly to `Run()`. Named method-group references are not detected (e.g., `worker.Run(ProcessBatch)` where `ProcessBatch` is a separate method).
 
-**Docs:** [Subscriptions](https://ravendb.net/docs/article-page/latest/csharp/client-api/session/subscriptions/what-are-subscriptions)
+**Docs:** [Subscriptions](https://ravendb.net/docs/article-page/latest/csharp/client-api/data-subscriptions/what-are-data-subscriptions)
 
 ---
 
@@ -728,7 +728,7 @@ var users = session.Advanced.DocumentQuery<User>().WhereEquals(u => u.Active, tr
 var orders = session.Advanced.RawQuery<Order>("from Orders limit 10").ToList();
 ```
 
-**Docs:** [Querying: Paging](https://ravendb.net/docs/article-page/latest/csharp/client-api/session/querying/paging)
+**Docs:** [Querying: Paging](https://ravendb.net/docs/article-page/latest/csharp/indexes/querying/paging)
 
 ---
 
