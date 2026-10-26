@@ -701,5 +701,127 @@ class Product { public string Name { get; set; } }
             Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id);
             Assert.Contains("Normalize", d.GetMessage());
         }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task UserMethod_In_Generic_Index_Map_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyHelpers
+{
+    public static string Normalize(string s) => s.ToLower();
+}
+
+class NamedIndex<T> : AbstractIndexCreationTask<T> where T : Named
+{
+    public NamedIndex()
+    {
+        Map = docs => from d in docs
+                      select new { Name = MyHelpers.Normalize(d.Name) };
+    }
+}
+
+class Named { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id);
+            Assert.Contains("Normalize", d.GetMessage());
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task UserMethod_In_Generic_Index_Map_With_AdditionalSources_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyHelpers
+{
+    public static string Normalize(string s) => s.ToLower();
+}
+
+class NamedIndex<T> : AbstractIndexCreationTask<T> where T : Named
+{
+    public NamedIndex()
+    {
+        Map = docs => from d in docs
+                      select new { Name = MyHelpers.Normalize(d.Name) };
+        AdditionalSources = new Dictionary<string, string>
+        {
+            { ""MyHelpers"", ""public static class MyHelpers { public static string Normalize(string s) => s; }"" }
+        };
+    }
+}
+
+class Named { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task UserMethod_In_PrivateNested_Index_Map_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyHelpers
+{
+    public static string Normalize(string s) => s.ToLower();
+}
+
+class Outer
+{
+    private class ProductIndex : AbstractIndexCreationTask<Product>
+    {
+        public ProductIndex()
+        {
+            Map = products => from p in products
+                              select new { Name = MyHelpers.Normalize(p.Name) };
+        }
+    }
+}
+
+class Product { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id);
+            Assert.Contains("Normalize", d.GetMessage());
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task UserMethod_In_PrivateNested_Index_Map_With_AdditionalSources_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyHelpers
+{
+    public static string Normalize(string s) => s.ToLower();
+}
+
+class Outer
+{
+    private class ProductIndex : AbstractIndexCreationTask<Product>
+    {
+        public ProductIndex()
+        {
+            Map = products => from p in products
+                              select new { Name = MyHelpers.Normalize(p.Name) };
+            AdditionalSources = new Dictionary<string, string>
+            {
+                { ""MyHelpers"", ""public static class MyHelpers { public static string Normalize(string s) => s; }"" }
+            };
+        }
+    }
+}
+
+class Product { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
     }
 }

@@ -92,9 +92,15 @@ scan, RVN014) work on local syntax as usual.
 
 `Analyzable = false` means the generator looked and could not read the index: a JavaScript index,
 dynamic fields via `CreateField`, a block-bodied `Map`, or a base class whose own metadata is
-missing. Consumers treat that as *unknown*, never as *no fields*, and report nothing. Generic and
-private index classes cannot be named by an assembly-level `typeof()` and so get no entry at all,
-with the same effect.
+missing. Consumers treat that as *unknown*, never as *no fields*, and report nothing. A generic
+index is recorded by its open definition (`typeof(Foo<>)`). A private or protected nested index
+cannot be named by an assembly-level `typeof()` and so gets no entry at all, with the same effect.
+
+RVN009 is the one exception to "report nothing": its call scan works on the index in front of it,
+and `UsesAdditionalCode` only suppresses. When the metadata is unknown it reads the
+`AdditionalSources` / `AdditionalAssemblies` writes out of the part of the chain declared in the
+current compilation instead, so a helper call in an unreadable index is still reported unless that
+index visibly ships its own code.
 
 Which rule uses which recorded fact:
 

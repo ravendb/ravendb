@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -53,7 +54,7 @@ namespace Raven.Analyzers.Indexes
             // helper methods the server compiles and translates, so a source-defined method reference is no
             // longer a reliable "cannot be translated" signal. Suppress RVN009 for the whole class rather
             // than emit a false positive on a working index.
-            if (ShipsServerSideCode(classSymbol, metadataRegistry))
+            if (ShipsServerSideCode(classSymbol, context.Compilation, metadataRegistry))
                 return;
 
             foreach (ConstructorDeclarationSyntax ctor in classDecl.Members.OfType<ConstructorDeclarationSyntax>())
@@ -95,25 +96,15 @@ namespace Raven.Analyzers.Indexes
             }
         }
 
-        // True when the index WRITES to AdditionalSources or AdditionalAssemblies. A write is an assignment
-        // (AdditionalSources = … / this.AdditionalSources = …), an indexer populate
-        // (AdditionalSources["Key"] = source), or an .Add(…) call (AdditionalSources.Add(…)). These are
-        // AbstractCommonApiForIndexes properties; the symbol is resolved and confirmed to be a Raven.Client
-        // member, so a bare read/null-check, a read such as AdditionalSources.Count, or an unrelated local
-        // of the same name does NOT suppress. A write means the user ships C# the server compiles, so a
-        // helper call in the Map/Reduce may be translatable and RVN009 must not fire.
-        //
-        // The write may live in a shared BASE index class while the Map that calls the helper lives in the
-        // derived class, so walk the whole user-defined base chain the same way IndexFieldExtractor /
-        // IndexStoredFieldExtractor do. The chain walk (and its Compilation.GetSemanticModel calls) lives in
-        // IndexInheritanceInspector so the analyzer itself does not trip RS1030. When a base is metadata-only
-        // the chain is only partly inspectable; the inspectable prefix is enough because a metadata base
-        // cannot contain a source AdditionalSources write we could read anyway.
-        // Read from the index's recorded metadata rather than re-derived here: the AdditionalSources
-        // write may sit in a base class in another assembly, whose constructor and member syntax this
-        // compilation cannot read at all. The generator extracted it where the source was available.
-        private static bool ShipsServerSideCode(INamedTypeSymbol classSymbol, IndexMetadataRegistry metadataRegistry) =>
-            metadataRegistry.Read(classSymbol).UsesAdditionalCode;
+        private static bool ShipsServerSideCode(INamedTypeSymbol classSymbol, Compilation compilation, IndexMetadataRegistry metadataRegistry)
+        {
+            IndexMetadata metadata = metadataRegistry.Read(classSymbol);
+            if (metadata.Analyzable)
+                return metadata.UsesAdditionalCode;
+
+            IndexInheritanceInspector.TryCollectChainDeclarations(classSymbol, compilation, out List<ClassDeclarationSyntax> declarations);
+            return IndexAdditionalCodeExtractor.ShipsServerSideCode(declarations, compilation);
+        }
 
         private static string GetExpressionKind(SyntaxNode node)
         {

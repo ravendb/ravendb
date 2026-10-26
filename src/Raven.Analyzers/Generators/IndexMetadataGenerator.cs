@@ -186,23 +186,31 @@ namespace Raven.Analyzers.Generators
         {
             expression = string.Empty;
 
-            // A type parameter cannot appear in an assembly-level typeof(), a query cannot target an
-            // unbound generic index concretely anyway, and an assembly-level attribute can only name a
-            // type that is at least internal at every nesting level.
+            // An assembly-level attribute can only name a type that is at least internal at every
+            // nesting level. A generic index is named by its open definition (typeof(Foo<>)), which is
+            // what the registry looks up.
+            List<string> parts = [];
             for (INamedTypeSymbol? current = type; current != null; current = current.ContainingType)
             {
-                if (current.IsGenericType)
-                    return false;
-
                 if (current.DeclaredAccessibility is Accessibility.Private
                     or Accessibility.Protected
                     or Accessibility.ProtectedAndInternal)
                 {
                     return false;
                 }
+
+                parts.Add(current.Arity == 0
+                    ? current.Name
+                    : current.Name + "<" + new string(',', current.Arity - 1) + ">");
             }
 
-            expression = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            parts.Reverse();
+
+            var builder = new StringBuilder("global::");
+            if (!type.ContainingNamespace.IsGlobalNamespace)
+                builder.Append(type.ContainingNamespace.ToDisplayString()).Append('.');
+
+            expression = builder.Append(string.Join(".", parts)).ToString();
             return true;
         }
     }
