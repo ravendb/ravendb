@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Revisions
                     using (_storage.GetKeyPrefix(context, doc.LowerId, out Slice prefixSlice))
                     {
                         _storage.DeleteRevisionFromTable(context, collectionTable, new Dictionary<string, Table>(), doc, collectionName, context.GetChangeVector(doc.ChangeVector), _storage._database.Time.GetUtcNow().Ticks, doc.Flags);
-                        _storage.UpdateRevisionCountsByOne(context, doc.Flags, prefixSlice, table, increment: false);
+                        _storage.UpdateRevisionCountsByOne(context, doc.Flags, prefixSlice, doc.Etag, increment: false);
                     }
                     
                     tx.Commit();
@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Revisions
                     var holder = table.SeekOneBackwardFrom(_parent.RevisionsSchema.Indexes[Schemas.Revisions.IdAndEtagSlice], lowerIdPrefix, compoundPrefix);
                     var lastRevision = TableValueToRevision(context, ref holder.Reader, DocumentFields.ChangeVector | DocumentFields.LowerId);
                     _parent.DeleteRevisionFromTable(context, table, new Dictionary<string, Table>(), lastRevision, collectionName, context.GetChangeVector(lastRevision.ChangeVector), _parent._database.Time.GetUtcNow().Ticks, lastRevision.Flags);
-                    _parent.UpdateRevisionCountsByOne(context, lastRevision.Flags, lowerIdPrefix, table, increment: false);
+                    _parent.UpdateRevisionCountsByOne(context, lastRevision.Flags, lowerIdPrefix, lastRevision.Etag, increment: false);
                 }
             }
         }

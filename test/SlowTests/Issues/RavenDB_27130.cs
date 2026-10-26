@@ -18,7 +18,7 @@ namespace SlowTests.Issues
 {
     // RavenDB-27130
     // Verifies the per-document counters that back the revisions counts, read directly from the Voron trees:
-    //   * Schemas.Revisions.ConflictRevisionsCountSlice -> number of Conflicted/Resolved revisions of a doc
+    //   * Schemas.Revisions.ConflictRevisionsSlice -> the etags of a doc's Conflicted/Resolved revisions
     //   * Schemas.Revisions.RevisionsCountSlice         -> number of (all) revisions of a doc
     // In both tests the expected numbers are derived from the actual stored revisions' @flags, so the trees
     // are checked against reality (not against hard-coded values).
@@ -217,8 +217,8 @@ namespace SlowTests.Issues
             using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
             using (revisionsStorage.GetKeyPrefix(context, lowerId, out Slice prefix))
             {
-                var conflictTree = context.Transaction.InnerTransaction.ReadTree(SchemaRevisions.ConflictRevisionsCountSlice);
-                var conflict = conflictTree != null && conflictTree.TryRead(prefix, out var conflictValue) ? conflictValue.ReadLittleEndianInt64() : 0;
+                var conflictTree = context.Transaction.InnerTransaction.ReadTree(SchemaRevisions.ConflictRevisionsSlice);
+                var conflict = conflictTree?.MultiCount(prefix) ?? 0;
 
                 var revisionsTree = context.Transaction.InnerTransaction.ReadTree(SchemaRevisions.RevisionsCountSlice);
                 var revisions = revisionsTree != null && revisionsTree.TryRead(prefix, out var revisionsValue) ? revisionsValue.ReadLittleEndianInt64() : 0;

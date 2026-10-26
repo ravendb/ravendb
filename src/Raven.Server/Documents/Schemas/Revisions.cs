@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Schemas
         internal static readonly Slice AllRevisionsEtagsSlice;
         internal static readonly Slice CollectionRevisionsEtagsSlice;
         internal static readonly Slice RevisionsCountSlice;
-        internal static readonly Slice ConflictRevisionsCountSlice;
+        internal static readonly Slice ConflictRevisionsSlice;
         internal static readonly Slice RevisionsTombstonesSlice;
         internal static readonly Slice RevisionsPrefix;
         internal static Slice ResolvedFlagByEtagSlice;
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, "AllRevisionsEtags", ByteStringType.Immutable, out AllRevisionsEtagsSlice);
                 Slice.From(ctx, "CollectionRevisionsEtags", ByteStringType.Immutable, out CollectionRevisionsEtagsSlice);
                 Slice.From(ctx, "RevisionsCount", ByteStringType.Immutable, out RevisionsCountSlice);
-                Slice.From(ctx, "ConflictRevisionsCount", ByteStringType.Immutable, out ConflictRevisionsCountSlice);
+                Slice.From(ctx, "ConflictRevisions", ByteStringType.Immutable, out ConflictRevisionsSlice);
                 Slice.From(ctx, "RevisionsBucketAndEtag", ByteStringType.Immutable, out RevisionsBucketAndEtagSlice);
                 Slice.From(ctx, nameof(ResolvedFlagByEtagSlice), ByteStringType.Immutable, out ResolvedFlagByEtagSlice);
                 Slice.From(ctx, RevisionsTombstones, ByteStringType.Immutable, out RevisionsTombstonesSlice);
