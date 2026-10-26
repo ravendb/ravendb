@@ -276,16 +276,21 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                         {
                             try
                             {
-                                var command = new BatchQueueSinkScriptCommand(Script.Script, messages, scriptProcessingScope, Statistics, Logger);
+                                var command = new BatchQueueSinkScriptCommand(Script.Script, messages, Logger);
 
                                 Database.TxMerger.EnqueueSync(command);
 
-                                foreach (var message in messages)
-                                {
-                                    message.Dispose();
-                                }
-
+                                // the stats are recorded here (and not by the command) since the transaction merger
+                                // may execute the command more than once, which must not be reflected in the stats.
+                                // the messages are owned by the batch context and will be released with it
                                 processedSuccessfully = command.ProcessedSuccessfully;
+                                scriptProcessingScope.RecordProcessedMessages(processedSuccessfully);
+
+                                foreach (var scriptError in command.ScriptErrors)
+                                {
+                                    scriptProcessingScope.RecordScriptProcessingError();
+                                    Statistics.RecordScriptExecutionError(scriptError);
+                                }
 
                                 _consumer.Commit();
                             }
