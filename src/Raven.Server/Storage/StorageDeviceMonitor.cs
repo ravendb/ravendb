@@ -1,14 +1,22 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Logging;
+using Raven.Server.NotificationCenter;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
-using Sparrow.Server.Utils;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Binary;
+using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server;
 using Sparrow.Server.Logging;
+using Sparrow.Server.Utils;
 using Voron;
 using Voron.Impl.Journal;
 
@@ -51,16 +59,32 @@ namespace Raven.Server.Storage
 
             try
             {
-                DateTime now = ForTestingPurposes?.UtcNow?.Invoke() ?? DateTime.UtcNow;
+                DateTime now = UtcNow;
                 CongestionThresholds thresholds = Thresholds;
+                _startedAt ??= now;
+                RestorePersistedHintsOnce();
 
                 foreach (DeviceWriteBudget device in GetDevices())
                 {
                     DeviceTracker tracker = _trackers.GetOrAdd(device, d => new DeviceTracker(d));
+                    if (tracker.HintRaised == false && _persistedHints.TryRemove(tracker.MountPoint, out PersistedHint persisted))
+                        tracker.RestoreSaturation(persisted.Since, persisted.Cause);
+
                     DeviceTracker.Sample sample = ForTestingPurposes?.SampleOverride?.Invoke(device) ?? DeviceTracker.Sample.From(device, now, SampleInterval);
                     tracker.Add(sample with { At = now }, thresholds);
 
                     LogClassChange(tracker);
+                    UpdateHint(tracker, now);
+                }
+
+                // a hint from before the restart for a disk no database writes to anymore: give it the same hour, then let it go
+                if (now - _startedAt.Value >= CongestionThresholds.Window)
+                {
+                    foreach (string mountPoint in _persistedHints.Keys)
+                    {
+                        if (_persistedHints.TryRemove(mountPoint, out _))
+                            _serverStore.NotificationCenter.Dismiss(PerformanceHint.GetKey(PerformanceHintReason.StorageCongestion, mountPoint), sendNotificationEvenIfDoesntExist: false);
+                    }
                 }
             }
             catch (Exception e)
@@ -71,6 +95,128 @@ namespace Raven.Server.Storage
             finally
             {
                 Monitor.Exit(_sampleLock);
+            }
+        }
+
+        private DateTime UtcNow => ForTestingPurposes?.UtcNow?.Invoke() ?? DateTime.UtcNow;
+
+        private static readonly TimeSpan HintRefreshInterval = TimeSpan.FromMinutes(10);
+        private static readonly TimeSpan HintEvidenceRefreshInterval = TimeSpan.FromMinutes(1);
+
+        private void UpdateHint(DeviceTracker tracker, DateTime now)
+        {
+            string id = PerformanceHint.GetKey(PerformanceHintReason.StorageCongestion, tracker.MountPoint);
+
+            if (tracker.SaturatedSince == null)
+            {
+                if (tracker.HintRaised == false)
+                    return;
+
+                tracker.HintRaised = false;
+                tracker.HintStored = false;
+                _serverStore.NotificationCenter.Dismiss(id, sendNotificationEvenIfDoesntExist: false);
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"The disk {tracker.MountPoint} is back to normal for an hour, the storage congestion hint was cleared.");
+                return;
+            }
+
+            bool first = tracker.HintRaised == false;
+            bool due = first ||
+                       now - tracker.LastHintUpdate >= HintRefreshInterval ||
+                       (tracker.HasNewEvidence && now - tracker.LastHintUpdate >= HintEvidenceRefreshInterval);
+            if (due == false || _serverStore.NotificationCenter.IsInitialized == false)
+                return;
+
+            PerformanceHint hint = CreateHint(tracker);
+            tracker.HintStored = _serverStore.Configuration.Notifications.ShouldFilterOut(hint) == false;
+            _serverStore.NotificationCenter.Add(hint);
+            tracker.HintRaised = true;
+            tracker.LastHintUpdate = now;
+
+            if (first && _logger.IsInfoEnabled)
+                _logger.Info($"{hint.Title}: {hint.Message}");
+        }
+
+        private PerformanceHint CreateHint(DeviceTracker tracker)
+        {
+            DeviceWriteBudget device = tracker.Device;
+            string nodeTag = _serverStore.NodeTag;
+            string node = string.IsNullOrEmpty(nodeTag) || nodeTag == "?" ? "this node" : $"node {nodeTag}";
+            double drainShare = tracker.DrainShareOfLastHour;
+            double latency = device.JournalWriteLatency.TotalMilliseconds;
+
+            StorageCongestionDetails details = tracker.GetEvidence();
+            details.NodeTag = nodeTag;
+            details.MountPoint = tracker.MountPoint;
+            details.PathOnDevice = device.PathOnDevice;
+            details.Cause = tracker.SaturationCause;
+            details.SaturatedSince = tracker.SaturatedSince ?? UtcNow;
+            details.DrainShareOfLastHour = drainShare;
+            details.JournalWriteLatencyInMs = latency;
+            details.SyncCostInMs = device.SyncCost.TotalMilliseconds;
+            details.SlowWritesMeasured = _serverStore.Configuration.Storage.EnableIoMetrics;
+
+            string message = $"Storage on {node} is saturated: the disk {tracker.MountPoint} was congested {drainShare:P0} of the last hour " +
+                             $"and journal writes average {latency:#,#0} ms (a healthy disk answers in a few ms). " +
+                             "Writes and indexing are slowed down. Consider a volume with more IOPS / throughput, an instance with higher storage bandwidth, " +
+                             "or more RAM to reduce disk reads.";
+
+            return PerformanceHint.Create(null, $"Storage is saturated on {node}", message, PerformanceHintReason.StorageCongestion, NotificationSeverity.Info,
+                tracker.MountPoint, details);
+        }
+
+        /// <summary>
+        /// Called for every slow write a database detects. The write always becomes evidence for its disk; returns true when the
+        /// congestion hint of that disk is shown, so the database does not raise its own Slow IO hint for the same problem.
+        /// </summary>
+        public bool RecordSlowWrite(DeviceWriteBudget device, IoChange ioChange)
+        {
+            DeviceTracker tracker = GetTracker(device);
+            if (tracker == null)
+                return false;
+
+            tracker.RecordSlowWrite(ioChange, UtcNow);
+            return tracker.HintStored;
+        }
+
+        private readonly record struct PersistedHint(DateTime Since, string Cause);
+
+        private readonly ConcurrentDictionary<string, PersistedHint> _persistedHints = new();
+        private bool _persistedHintsRestored;
+        private DateTime? _startedAt;
+
+        // a saturation reported before a restart stays until the disk proves an hour of normal, like any other
+        private void RestorePersistedHintsOnce()
+        {
+            if (_persistedHintsRestored || _serverStore.NotificationCenter.IsInitialized == false)
+                return;
+
+            _persistedHintsRestored = true;
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                foreach (NotificationTableValue hint in _serverStore.NotificationCenter.Storage.ReadActionsOfType(context, NotificationType.PerformanceHint))
+                {
+                    using (hint)
+                    {
+                        if ((PerformanceHintReason)Bits.SwapBytes(hint.Reason) != PerformanceHintReason.StorageCongestion)
+                            continue;
+
+                        if (hint.Json.TryGet(nameof(PerformanceHint.Source), out string mountPoint) == false || mountPoint == null)
+                            continue;
+
+                        DateTime since = hint.CreatedAt;
+                        string cause = null;
+                        if (hint.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject details) && details != null)
+                        {
+                            details.TryGet(nameof(StorageCongestionDetails.SaturatedSince), out since);
+                            details.TryGet(nameof(StorageCongestionDetails.Cause), out cause);
+                        }
+
+                        _persistedHints[mountPoint] = new PersistedHint(since, cause ?? "reported before the server restarted");
+                    }
+                }
             }
         }
 
@@ -244,13 +390,81 @@ namespace Raven.Server.Storage
         }
 
         // used after a restart: a saturation reported before it stays until the device proves an hour of normal
-        public void MarkSaturated(DateTime since, string cause)
+        public void RestoreSaturation(DateTime since, string cause)
         {
             lock (_lock)
             {
                 SaturatedSince ??= since;
                 SaturationCause ??= cause;
-                _lastBusyAt ??= since;
+                _lastBusyAt ??= DateTime.UtcNow;
+                HintRaised = true;
+                HintStored = true;
+            }
+        }
+
+        // state of the congestion hint of this disk, owned by the sampler
+        internal bool HintRaised { get; set; }
+
+        internal bool HintStored { get; set; }
+
+        internal DateTime LastHintUpdate { get; set; }
+
+        private const int MaxSlowWrites = 50;
+        private readonly Dictionary<string, SlowIoDetails.SlowWriteInfo> _slowWrites = new();
+        private bool _newEvidence;
+
+        internal bool HasNewEvidence
+        {
+            get
+            {
+                lock (_lock)
+                    return _newEvidence;
+            }
+        }
+
+        // the worst slow write per file within the last hour
+        public void RecordSlowWrite(IoChange ioChange, DateTime now)
+        {
+            lock (_lock)
+            {
+                PruneSlowWrites(now);
+
+                var info = new SlowIoDetails.SlowWriteInfo(ioChange, ioChange.MeterItem.End);
+                if (_slowWrites.TryGetValue(info.Key, out SlowIoDetails.SlowWriteInfo existing) && existing.DurationInSec >= info.DurationInSec)
+                    return;
+
+                _slowWrites[info.Key] = info;
+                _newEvidence = true;
+
+                if (_slowWrites.Count > MaxSlowWrites)
+                    _slowWrites.Remove(_slowWrites.MinBy(x => x.Value.DurationInSec).Key);
+            }
+        }
+
+        public StorageCongestionDetails GetEvidence()
+        {
+            lock (_lock)
+            {
+                _newEvidence = false;
+                return new StorageCongestionDetails { Writes = new Dictionary<string, SlowIoDetails.SlowWriteInfo>(_slowWrites) };
+            }
+        }
+
+        public List<SlowIoDetails.SlowWriteInfo> GetSlowWrites(DateTime now)
+        {
+            lock (_lock)
+            {
+                PruneSlowWrites(now);
+                return _slowWrites.Values.OrderByDescending(x => x.DurationInSec).ToList();
+            }
+        }
+
+        private void PruneSlowWrites(DateTime now)
+        {
+            foreach (var kvp in _slowWrites)
+            {
+                if (now - kvp.Value.Date > CongestionThresholds.Window)
+                    _slowWrites.Remove(kvp.Key);
             }
         }
 

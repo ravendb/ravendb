@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Server.Meters;
 using Voron;
 using Voron.Impl.Journal;
@@ -96,6 +97,9 @@ namespace Raven.Server.Storage
 
         public List<StorageDeviceSample> History { get; set; }
 
+        // the worst slow write per file on this disk within the last hour, worst first
+        public List<SlowIoDetails.SlowWriteInfo> SlowWrites { get; set; }
+
         public static StorageDeviceIoInfo Create(DeviceWriteBudget device, DeviceTracker tracker, CongestionThresholds thresholds)
         {
             DeviceWriteBudget.DeviceClass deviceClass = device.Classify(out DeviceWriteBudget.ClassReason classReason);
@@ -139,7 +143,8 @@ namespace Raven.Server.Storage
                     Draining = s.Draining,
                     JournalWriteLatencyInMs = s.JournalWriteLatencyInMs,
                     QueueDepth = s.QueueDepth
-                }).ToList() ?? new List<StorageDeviceSample>()
+                }).ToList() ?? new List<StorageDeviceSample>(),
+                SlowWrites = tracker?.GetSlowWrites(DateTime.UtcNow) ?? new List<SlowIoDetails.SlowWriteInfo>()
             };
         }
 

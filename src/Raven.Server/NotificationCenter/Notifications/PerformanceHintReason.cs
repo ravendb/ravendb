@@ -1,4 +1,4 @@
-﻿namespace Raven.Server.NotificationCenter.Notifications
+namespace Raven.Server.NotificationCenter.Notifications
 {
     public enum PerformanceHintReason
     {
@@ -11,6 +11,7 @@
         SlowIO = 6,
         SqlEtl_SlowSql = 7,
         HugeDocuments = 8,
-        Indexing_References = 9
+        Indexing_References = 9,
+        StorageCongestion = 10
     }
 }
