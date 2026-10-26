@@ -42,19 +42,19 @@ export default function StudioSearch(props: { menuItems?: menuItem[] }) {
                         className="flex-grow-1 studio-search__input align-self-stretch pe-2"
                         autoComplete="off"
                     />
-                    {isAskAiVisible && (
-                        <Button
-                            onClick={handleAskAi}
-                            className="studio-search__ask-ai-button"
-                            id="ask-ai"
-                            title={"Ask AI about " + searchQuery}
-                            variant="secondary"
-                        >
-                            <Icon icon="ask-ai" className="ai-gradient" />
-                            Ask AI
-                        </Button>
-                    )}
                 </Dropdown.Toggle>
+                {isAskAiVisible && (
+                    <Button
+                        onClick={handleAskAi}
+                        className="studio-search__ask-ai-button"
+                        id="ask-ai"
+                        title={"Ask AI about " + searchQuery}
+                        variant="secondary"
+                    >
+                        <Icon icon="ask-ai" className="ai-gradient" />
+                        Ask AI
+                    </Button>
+                )}
                 <Dropdown.Menu className="studio-search__results">
                     <Row className="m-0">
                         <div
