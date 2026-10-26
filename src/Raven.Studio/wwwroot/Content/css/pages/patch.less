@@ -52,7 +52,7 @@
     .loadpatch-dropdown {
         width: 100%;
         height: 500px;
-        max-width: calc(100vw ~"-" @grid-gutter-width/3*4);
+        max-width: calc(100vw ~"-" var(--menu-width) ~"-" @grid-gutter-width/3*4);
         height: 40vh;
         overflow-x: hidden;
         overflow-y: auto;
@@ -62,7 +62,7 @@
         }
 
         @media (min-width:@screen-md) {
-            max-width: calc(100vw ~"-" @grid-gutter-width/3*7);
+            max-width: calc(100vw ~"-" var(--menu-width) ~"-" @grid-gutter-width/3*7);
         }
 
         .loadpatch-container {

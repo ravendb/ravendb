@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { ChangeEvent, useMemo } from "react";
 import { Icon } from "components/common/Icon";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
@@ -109,7 +109,7 @@ export function TasksFilters({
                         title="Filter ongoing tasks"
                         className="filtering-input"
                         value={filters.searchText}
-                        onChange={(e) => updateFilters({ searchText: e.target.value })}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => updateFilters({ searchText: e.target.value })}
                     />
                     {filters.searchText && (
                         <div className="clear-button">

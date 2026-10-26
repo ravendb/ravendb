@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -337,6 +337,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
             initialRequest[nameof(ReplicationLatestEtagRequest.SourceDatabaseId)] = _database.DbId.ToString();
             return initialRequest;
         }
+
+        internal virtual DynamicJsonValue GetConnectionInfoAsJson() => Destination.ToJson();
 
         protected override void AddAlertOnFailureToReachOtherSide(string msg, Exception e)
         {

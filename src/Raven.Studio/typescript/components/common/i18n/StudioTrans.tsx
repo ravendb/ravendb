@@ -27,7 +27,6 @@ export function StudioTrans<Ns extends TranslationNamespace>({
     return (
         <Trans
             t={t}
-            ns={ns}
             i18nKey={i18nKey}
             components={components}
             context={context as string}

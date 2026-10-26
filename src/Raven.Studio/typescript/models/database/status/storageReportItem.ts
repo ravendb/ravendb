@@ -26,6 +26,10 @@ class storageReportItem {
     recyclableJournal = false;
     physicalSizeHint?: string;
 
+    link: string = null;
+    dataSize: number = null;
+    tempBuffersSize: number = null;
+
     constructor(name: string, type: string, showType: boolean, size: number, internalChildren: storageReportItem[] = null, isGrouped = false) {
         this.name = name;
         this.type = type;
@@ -43,18 +47,16 @@ class storageReportItem {
         return (this.size * 100 / parentSize).toFixed(2) + '%';
     }
 
+    formatDataSize() {
+        return this.dataSize == null ? "n/a" : generalUtils.formatBytesToSize(this.dataSize);
+    }
+
+    formatTempBuffersSize() {
+        return this.tempBuffersSize == null ? "n/a" : generalUtils.formatBytesToSize(this.tempBuffersSize);
+    }
+
     hasChildren(): boolean {
         return (this.internalChildren && this.internalChildren.length > 0) || (this.lazyLoadChildren === true);
-    }
-    
-    isStorageEnvironment() {
-        if (!this.internalChildren) {
-            return false;
-        }
-        const childrenTypes = this.internalChildren.map(x => x.type);
-        return _.includes(childrenTypes, "journals") 
-            && _.includes(childrenTypes, "data")
-            && _.includes(childrenTypes, "tempFiles");
     }
 }
 
