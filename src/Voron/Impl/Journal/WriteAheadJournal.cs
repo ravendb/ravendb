@@ -136,8 +136,7 @@ namespace Voron.Impl.Journal
                 {
                     foreach ((string path, long journal) in folders)
                     {
-                        ref long synced = ref CollectionsMarshal.GetValueRefOrAddDefault(_lastSyncedJournals, path, out bool exists);
-                        synced = exists ? Math.Max(synced, journal) : journal;
+                        _lastSyncedJournals[path] = Math.Max(_lastSyncedJournals.GetValueOrDefault(path, -1), journal);
                     }
                 }
             }

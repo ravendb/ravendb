@@ -43,9 +43,7 @@ public class RavenDB_24345(ITestOutputHelper output) : RavenTestBase(output)
         root.Journal.BranchJournalMerger = new SharedJournalTests.MyJournalMerger(mre);
         var branchTask = Task.Run(() =>
         {
-            var branchOptions = CreateOptions(branchPath);
-            branchOptions.RootJournal = root.Journal;
-            using var branch = new StorageEnvironment(branchOptions);
+            using var branch = SharedJournalTests.CreateBranchEnv(branchPath, root);
             using var tx = branch.WriteTransaction();
             tx.CreateTree("items").Add("item", "value");
             tx.Commit();
@@ -82,7 +80,6 @@ public class RavenDB_24345(ITestOutputHelper output) : RavenTestBase(output)
         options.ManualFlushing = true;
         options.ManualSyncing = true;
         options.MaxLogFileSize = 16 * Constants.Storage.PageSize;
-        options.OnRecoveryError += (_, _) => { };
         return options;
     }
 }
