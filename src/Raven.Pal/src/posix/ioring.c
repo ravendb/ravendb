@@ -84,6 +84,8 @@ struct worker g_worker = {.eventfd = -1, .ring = {.ring_fd = -1}};
 
 uint64_t done = 1;
 
+#define FSYNC_STAGE_TAG ((uintptr_t)1) // low bit of user_data, workitems are pointer aligned
+
 void notify_work_completed(struct io_uring *ring, struct workitem *work)
 {
     if (--work->submittion->count > 0)
@@ -118,7 +120,7 @@ void mark_all_cqes_as_errors(struct io_uring *ring, int rc)
     {
         struct workitem *work = io_uring_cqe_get_data(cqe);
         io_uring_cqe_seen(ring, cqe);
-        if (work == NULL || --work->submittion->count > 0)
+        if (work == NULL || ((uintptr_t)work & FSYNC_STAGE_TAG) || --work->submittion->count > 0)
         {
             continue;
         }
@@ -208,9 +210,10 @@ void *do_ring_work(void *arg)
                         must_wait = 2;
                         goto sumbit_and_wait; // will retry
                     }
+                    // a hard link runs the close even when the fsync fails, the tagged fsync CQE only records its error
                     io_uring_prep_fsync(sqe, work->op.folder_sync.folderid, 0);
-                    io_uring_sqe_set_data64(sqe, 0);
-                    sqe->flags |= IOSQE_IO_LINK;
+                    io_uring_sqe_set_data64(sqe, (uintptr_t)work | FSYNC_STAGE_TAG);
+                    sqe->flags |= IOSQE_IO_HARDLINK;
                     io_uring_prep_close(sqe2, work->op.folder_sync.folderid);
                     io_uring_sqe_set_data(sqe2, work);
                     break;
@@ -247,7 +250,18 @@ void *do_ring_work(void *arg)
                 {
                     // can be null if it is:
                     // *  a notification about eventfd write
-                    // *  multi stage process that completed a non final part
+                    // *  a nop we used to wait for free SQEs
+                    continue;
+                }
+
+                if ((uintptr_t)cur & FSYNC_STAGE_TAG)
+                {
+                    cur = (struct workitem *)((uintptr_t)cur & ~(uintptr_t)FSYNC_STAGE_TAG);
+                    if (cqe->res != 0)
+                    {
+                        cur->submittion->error = true;
+                        cur->submittion->result = -cqe->res;
+                    }
                     continue;
                 }
 
