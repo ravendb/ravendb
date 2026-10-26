@@ -144,7 +144,7 @@ namespace Raven.Analyzers.Shared
             messageFormat: "Field '{0}' is referenced in {1} but is not indexed by '{2}'.",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Info,
-            description: "When querying a specific index, all fields used in Where, OrderBy, and Search clauses should match the fields projected by the index Map expression. A field not in the projection cannot be searched or sorted efficiently.",
+            description: "Reports fields used for filtering, sorting, or searching in a static-index query when those fields are not defined as index fields by the map function.",
             helpCode: "148URW");
 
         /// <summary>

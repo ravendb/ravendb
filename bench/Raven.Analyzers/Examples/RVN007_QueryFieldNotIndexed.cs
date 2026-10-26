@@ -1,7 +1,6 @@
 // Expected diagnostic: RVN007 — "Query field not defined in the index"
-// When querying a specific index, Where/OrderBy/Search fields must match the fields
-// projected by the index Map expression. A field not in the projection cannot be
-// searched or sorted efficiently.
+// Reports fields used for filtering, sorting, or searching in a static-index query
+// when those fields are not defined as index fields by the map function.
 //
 // Here the index maps only {Name, Status}, but the query filters on Price — which
 // is not in the index map.
