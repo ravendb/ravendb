@@ -3,10 +3,14 @@ import { OngoingTaskReplicationHubInfo } from "components/models/tasks";
 import { SortDirection } from "components/models/common";
 import { databaseLocationComparator } from "components/utils/common";
 import IconName from "typings/server/icons";
+import {
+    CheckboxListFilterCategory,
+    FilterCategory,
+    isFilterCategoryActive,
+    SingleChoiceFilterCategory,
+} from "components/common/filterMenu/FilterMenu";
 import { getReplicationProgressState, ReplicationProgressState } from "./ExternalReplicationTaskDistribution";
 import OngoingTaskConnectionStatus = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskConnectionStatus;
-
-export type SinkFilterCategory = "databaseName" | "state" | "status" | "hasErrors" | "url" | "node";
 
 export type SinkSortField = "databaseName" | "url" | "status" | "node";
 
@@ -24,21 +28,6 @@ export interface SinkSort {
     direction: SortDirection;
 }
 
-export interface SinkFilterCategoryInfo {
-    category: SinkFilterCategory;
-    label: string;
-    icon: IconName;
-}
-
-export const sinkFilterCategories: SinkFilterCategoryInfo[] = [
-    { category: "databaseName", label: "Sink database name", icon: "database" },
-    { category: "state", label: "Replication state", icon: "changes" },
-    { category: "status", label: "Replication status", icon: "connected" },
-    { category: "hasErrors", label: "Has errors", icon: "warning" },
-    { category: "url", label: "Actual sink URL", icon: "server" },
-    { category: "node", label: "Node processing the sink", icon: "node" },
-];
-
 export interface SinkSortFieldInfo {
     field: SinkSortField;
     label: string;
@@ -52,7 +41,7 @@ export const sinkSortFields: SinkSortFieldInfo[] = [
     { field: "node", label: "Node processing the sink", icon: "node" },
 ];
 
-const defaultSinkSort: SinkSort = { field: "databaseName", direction: "asc" };
+const defaultSinkSort: SinkSort = { field: "status", direction: "asc" };
 
 export const sinkReplicationStateLabels: Record<ReplicationProgressState, string> = {
     UpToDate: "Up to date",
@@ -78,58 +67,85 @@ const emptyFilters: SinkFilters = {
     nodeTags: [],
 };
 
-const filterKeysByCategory: Record<SinkFilterCategory, keyof SinkFilters> = {
-    databaseName: "databaseName",
-    url: "url",
-    state: "states",
-    status: "statuses",
-    hasErrors: "hasErrors",
-    node: "nodeTags",
-};
-
 export function getSinkKey(sink: OngoingTaskReplicationHubInfo): string {
     return `${sink.shared.destinationUrl ?? ""}/${sink.shared.destinationDatabase}`;
 }
 
-function getVisibleNodes(sink: OngoingTaskReplicationHubInfo) {
+export function getVisibleNodes(sink: OngoingTaskReplicationHubInfo) {
     return sink.nodesInfo.filter(
         (nodeInfo) =>
             nodeInfo.details && sink.responsibleLocations.some((l) => databaseLocationComparator(l, nodeInfo.location))
     );
 }
 
-export function isSinkFilterActive(filters: SinkFilters, category: SinkFilterCategory): boolean {
-    switch (category) {
-        case "databaseName":
-            return filters.databaseName.trim() !== "";
-        case "url":
-            return filters.url.trim() !== "";
-        case "state":
-            return filters.states.length > 0;
-        case "status":
-            return filters.statuses.length > 0;
-        case "hasErrors":
-            return filters.hasErrors != null;
-        case "node":
-            return filters.nodeTags.length > 0;
-    }
+function toFilterOptions<T extends string>(labels: Record<T, string>) {
+    return Object.entries<string>(labels).map(([value, label]) => ({ value: value as T, label }));
 }
 
-export function getSinkFilterValueLabel(filters: SinkFilters, category: SinkFilterCategory): string {
-    switch (category) {
-        case "databaseName":
-            return filters.databaseName;
-        case "url":
-            return filters.url;
-        case "state":
-            return filters.states.map((x) => sinkReplicationStateLabels[x]).join(", ");
-        case "status":
-            return filters.statuses.map((x) => sinkConnectionStatusLabels[x]).join(", ");
-        case "hasErrors":
-            return filters.hasErrors ? "Yes" : "No";
-        case "node":
-            return filters.nodeTags.join(", ");
-    }
+function getSinkFilterCategories(
+    filters: SinkFilters,
+    updateFilters: (partialFilters: Partial<SinkFilters>) => void,
+    nodeTags: string[]
+): FilterCategory[] {
+    return [
+        {
+            key: "databaseName",
+            label: "Sink database name",
+            icon: "database",
+            type: "text",
+            value: filters.databaseName,
+            placeholder: "e.g. name",
+            onChange: (databaseName) => updateFilters({ databaseName }),
+        },
+        {
+            key: "state",
+            label: "Replication state",
+            icon: "changes",
+            type: "checkboxList",
+            options: toFilterOptions(sinkReplicationStateLabels),
+            selectedValues: filters.states,
+            onChange: (states) => updateFilters({ states }),
+        } satisfies CheckboxListFilterCategory<ReplicationProgressState>,
+        {
+            key: "status",
+            label: "Replication status",
+            icon: "connected",
+            type: "checkboxList",
+            options: toFilterOptions(sinkConnectionStatusLabels),
+            selectedValues: filters.statuses,
+            onChange: (statuses) => updateFilters({ statuses }),
+        } satisfies CheckboxListFilterCategory<OngoingTaskConnectionStatus>,
+        {
+            key: "hasErrors",
+            label: "Has errors",
+            icon: "warning",
+            type: "singleChoice",
+            options: [
+                { value: true, label: "Yes" },
+                { value: false, label: "No" },
+            ],
+            selectedValue: filters.hasErrors,
+            onChange: (hasErrors) => updateFilters({ hasErrors }),
+        } satisfies SingleChoiceFilterCategory<boolean>,
+        {
+            key: "url",
+            label: "Actual sink URL",
+            icon: "server",
+            type: "text",
+            value: filters.url,
+            placeholder: "e.g. https://",
+            onChange: (url) => updateFilters({ url }),
+        },
+        {
+            key: "node",
+            label: "Node processing the sink",
+            icon: "node",
+            type: "checkboxList",
+            options: nodeTags.map((x) => ({ value: x, label: `Node ${x}` })),
+            selectedValues: filters.nodeTags,
+            onChange: (selectedNodeTags) => updateFilters({ nodeTags: selectedNodeTags }),
+        },
+    ];
 }
 
 function matchesFilters(sink: OngoingTaskReplicationHubInfo, filters: SinkFilters): boolean {
@@ -188,6 +204,20 @@ function getStatusRank(sink: OngoingTaskReplicationHubInfo): number {
     return nodeRanks.length > 0 ? Math.min(...nodeRanks) : connectionStatusRanks.None;
 }
 
+export function getSinkConnectionStatus(sink: OngoingTaskReplicationHubInfo): OngoingTaskConnectionStatus | null {
+    const statuses = getVisibleNodes(sink).map((x) => x.details.taskConnectionStatus);
+
+    if (statuses.length === 0) {
+        return null;
+    }
+
+    return statuses.reduce((worst, x) => (connectionStatusRanks[x] < connectionStatusRanks[worst] ? x : worst));
+}
+
+export function getSinkError(sink: OngoingTaskReplicationHubInfo): string | null {
+    return getVisibleNodes(sink).find((x) => x.details.error)?.details.error ?? null;
+}
+
 function compareText(a: string, b: string): number {
     return (a ?? "").localeCompare(b ?? "", undefined, { numeric: true });
 }
@@ -229,8 +259,18 @@ export function useReplicationHubSinks(connectedSinks: OngoingTaskReplicationHub
         );
     }, [connectedSinks, filters, sort]);
 
-    const activeFilterCategories = sinkFilterCategories.filter((x) => isSinkFilterActive(filters, x.category));
-    const hasActiveFilters = activeFilterCategories.length > 0;
+    const isDefaultSort = sort.field === defaultSinkSort.field && sort.direction === defaultSinkSort.direction;
+
+    const resetSort = () => {
+        setSort(defaultSinkSort);
+    };
+
+    const updateFilters = (partialFilters: Partial<SinkFilters>) => {
+        setFilters((current) => ({ ...current, ...partialFilters }));
+    };
+
+    const filterCategories = getSinkFilterCategories(filters, updateFilters, nodeTags);
+    const hasActiveFilters = filterCategories.some(isFilterCategoryActive);
     const totalSinksCount = connectedSinks.length;
 
     const areAllVisibleSinksExpanded =
@@ -246,30 +286,14 @@ export function useReplicationHubSinks(connectedSinks: OngoingTaskReplicationHub
         );
     };
 
-    const updateFilters = (partialFilters: Partial<SinkFilters>) => {
-        setFilters((current) => ({ ...current, ...partialFilters }));
-    };
-
-    const clearFilters = () => {
-        setFilters(emptyFilters);
-    };
-
-    const clearFilter = (category: SinkFilterCategory) => {
-        const filterKey = filterKeysByCategory[category];
-        setFilters((current) => ({ ...current, [filterKey]: emptyFilters[filterKey] }));
-    };
-
     return {
-        filters,
-        updateFilters,
-        clearFilters,
-        clearFilter,
-        activeFilterCategories,
+        filterCategories,
         hasActiveFilters,
         totalSinksCount,
         sort,
         setSort,
-        nodeTags,
+        isDefaultSort,
+        resetSort,
         visibleSinks,
         expandedSinkKeys,
         toggleSinkExpanded,

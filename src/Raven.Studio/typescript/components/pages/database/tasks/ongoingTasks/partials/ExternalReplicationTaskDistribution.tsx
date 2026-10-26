@@ -273,6 +273,36 @@ export function ExternalReplicationTaskProgress(props: ExternalReplicationTaskPr
     );
 }
 
+interface ReplicationTaskSummaryProgressProps {
+    task: OngoingTaskInfo;
+    nodesInfo: ReplicationNodeInfo[];
+}
+
+export function ReplicationTaskSummaryProgress({ task, nodesInfo }: ReplicationTaskSummaryProgressProps) {
+    const notUpToDateState = nodesInfo.map((x) => getReplicationProgressState(task, x)).find((x) => x !== "UpToDate");
+
+    if (!notUpToDateState) {
+        return (
+            <ProgressCircle state="success" icon="check" inline>
+                {progressCircleLabels.UpToDate}
+            </ProgressCircle>
+        );
+    }
+
+    const allProgress = nodesInfo.flatMap((x) => x.progress ?? []);
+
+    return (
+        <ProgressCircle
+            state="running"
+            icon={notUpToDateState === "Disabled" ? "stop" : null}
+            progress={allProgress.length > 0 ? getTotalProgress(allProgress) : null}
+            inline
+        >
+            {progressCircleLabels[notUpToDateState]}
+        </ProgressCircle>
+    );
+}
+
 const taskNodeInfoKey = (
     task: OngoingTaskInfo,
     nodeInfo: OngoingReplicationProgressAwareTaskNodeInfo<OngoingTaskAbstractReplicationNodeInfoDetails>
