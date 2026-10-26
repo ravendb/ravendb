@@ -773,21 +773,25 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
             taskIdsToRetain.Add(identifier);
 
-            if (_workers.TryGetValue(identifier, out var existing) is false)
+            try
             {
-                _ = _workers.GetOrAdd(identifier, _ => CreateAiWorker(record, configuration)).RunAsync();
-                continue;
-            }
-
-            var newConStr = GetConnectionString(record, configuration);
-
-            if (existing.ModifiedFrom(configuration, newConStr, record.AiConnectionStrings))
-            {
-                if (_workers.TryRemove(identifier, out var toDispose))
+                if (_workers.TryGetValue(identifier, out var existing))
                 {
-                    _ = toDispose.ShutdownAsync();
+                    if (existing.ModifiedFrom(configuration, GetConnectionString(record, configuration), record.AiConnectionStrings) is false)
+                        continue;
+
+                    if (_workers.TryRemove(identifier, out var toDispose))
+                    {
+                        _ = toDispose.ShutdownAsync();
+                    }
                 }
+
                 _ = _workers.GetOrAdd(identifier, _ => CreateAiWorker(record, configuration)).RunAsync();
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                if (_logger.IsWarnEnabled)
+                    _logger.Warn($"Failed to start the embeddings generation worker for task '{configuration.Name}'", e);
             }
         }
 
