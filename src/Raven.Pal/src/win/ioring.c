@@ -142,7 +142,7 @@ void close_ring_with_error(HRESULT hr)
         }
     }
     IoRing.CloseIoRing(IoRing.io_ring);
-    IoRing.io_ring = NULL;
+    InterlockedExchangePointer((PVOID volatile *)&IoRing.io_ring, NULL);
 }
 
 DWORD WINAPI do_ring_work(LPVOID lpThreadParameter)
@@ -241,7 +241,6 @@ error:
     IoRing.error_code = hr ? hresult_to_detailed_error(hr) : ERROR_IO_INCOMPLETE;
     SetEvent(IoRing.has_error);
     close_ring_with_error(hr);
-    IoRing.io_ring = NULL;
     // here we are going to keep answering all future inquires
     // with an immediate error, starting with the work we didn't submit yet
     while (true)
@@ -444,6 +443,6 @@ error:
 
 int io_ring_setup_successful()
 {
-    return IoRing.io_ring != NULL;
+    return InterlockedCompareExchangePointer((PVOID volatile *)&IoRing.io_ring, NULL, NULL) != NULL;
 }
 

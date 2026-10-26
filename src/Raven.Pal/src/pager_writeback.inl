@@ -30,6 +30,7 @@
 #define rvn_atomic_or64(p, v) InterlockedOr64((volatile LONG64 *)(p), (LONG64)(v))
 #define rvn_atomic_load_ptr(p) InterlockedCompareExchangePointer((PVOID volatile *)(p), NULL, NULL)
 #define rvn_atomic_store_ptr(p, v) InterlockedExchangePointer((PVOID volatile *)(p), (v))
+#define rvn_atomic_load64_relaxed(p) ((uint64_t)(*(volatile LONG64 *)(p)))
 static int32_t rvn_ctz64(uint64_t v)
 {
     if(!v) return 64;
@@ -43,6 +44,7 @@ static int32_t rvn_ctz64(uint64_t v)
 #define rvn_atomic_or64(p, v) __atomic_fetch_or((p), (v), __ATOMIC_ACQ_REL)
 #define rvn_atomic_load_ptr(p) __atomic_load_n((p), __ATOMIC_ACQUIRE)
 #define rvn_atomic_store_ptr(p, v) __atomic_store_n((p), (v), __ATOMIC_RELEASE)
+#define rvn_atomic_load64_relaxed(p) __atomic_load_n((p), __ATOMIC_RELAXED)
 #define rvn_ctz64(v) (v ? (int32_t)__builtin_ctzll(v) : 64)
 #define rvn_popcnt64(v) ((int32_t)__builtin_popcountll(v))
 #endif
@@ -90,7 +92,7 @@ _grow_dirty_bitmap(struct handle_global_state *global_state, struct dirty_bitmap
     while (words * 64 <= max_bit)
         words *= 2;
 
-    // no concurrency to worry about, we are called under the lock
+    // no concurrent growers, Voron has a single writer to the data file (not every write path holds the global_state lock)
 
     // added an extra uint64_t to ensure we have enough space for alignments, if dirty_bitmap isn't 64 bits aligned (currently, just on 32 bits, but don't want a footgun for any changes later)
     struct dirty_bitmap *bm = calloc(1, sizeof(struct dirty_bitmap) + (size_t)words * 2 * sizeof(uint64_t) + sizeof(uint64_t)) ;
@@ -294,11 +296,11 @@ rvn_pager_writeback_dirty(void *handle,
     uint64_t *dirty_plane = bm->dirty_bitmap;
     for (int64_t w = 0; w < bm->number_of_words; w++)
     {
-        uint64_t bits = dirty_plane[w]; // checking without atomics here, mostly they are 0, so this is cheap
+        uint64_t bits = rvn_atomic_load64_relaxed(&dirty_plane[w]); // cheap peek, mostly they are 0
         if (bits != 0)
         {
             // if this page was modified twice, we'll defer it one round, so we don't push every intermediate version of a hot page
-            uint64_t hot = hot_plane[w] != 0 ? rvn_atomic_xchg64(&hot_plane[w], 0) : 0;
+            uint64_t hot = rvn_atomic_load64_relaxed(&hot_plane[w]) != 0 ? rvn_atomic_xchg64(&hot_plane[w], 0) : 0;
             // atomically clear the word, then do the I/O, in the meantime writes may set more bits, we'll get them next time
             bits = rvn_atomic_xchg64(&dirty_plane[w], 0);
             uint64_t deferred = initiate_only ? (bits & hot) : 0;
@@ -404,6 +406,7 @@ rvn_pager_reset_dirty_tracking(void *handle, int64_t *reset_pages, int32_t *deta
     for (int64_t w = 0; w < bm->number_of_words; w++)
         pages += rvn_popcnt64(bm->dirty_bitmap[w]);
 
+    // racing writers may lose a bit here, the sync that follows covers their pages
     memset(bm->dirty_bitmap, 0, (size_t)bm->number_of_words * sizeof(uint64_t));
     memset(bm->hot_bitmap, 0, (size_t)bm->number_of_words * sizeof(uint64_t));
 

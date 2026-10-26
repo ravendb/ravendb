@@ -346,7 +346,7 @@ error:
     g_worker.result = rc;
     atomic_store(&g_worker.errored, true);
     close_ring_with_error(ring, rc);
-    g_worker.ring = (struct io_uring){.ring_fd = -1};
+    __atomic_store_n(&g_worker.ring.ring_fd, -1, __ATOMIC_RELEASE);
     // Submitters that raced the error may still queue work and write to the eventfd, so we
     // keep both the eventfd and this thread alive and fail all such work from now on.
     while (true)
@@ -695,7 +695,7 @@ error:
 
 int io_ring_setup_successful()
 {
-    return g_worker.ring.ring_fd != -1;
+    return __atomic_load_n(&g_worker.ring.ring_fd, __ATOMIC_ACQUIRE) != -1;
 }
 
 PRIVATE int32_t
