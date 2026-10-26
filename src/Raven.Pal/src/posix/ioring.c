@@ -429,6 +429,13 @@ rvn_sync_pager(void *handle,
         }
         return SUCCESS;
     }
+    // the eventfd is shared with rvn_sync_directories_ioring, a waiter must not consume the other's completion
+    int lock_rc = pthread_mutex_lock(&handle_ptr->global_state->fsync_dir_arena.lock);
+    if (lock_rc != 0)
+    {
+        *detailed_error_code = lock_rc;
+        return FAIL_MUTEX_LOCK;
+    }
     int eventfd = handle_ptr->global_state->fsync_dir_arena.eventfd;
     struct submittion submittion = {
         .filefd = handle_ptr->file_fd,
@@ -447,6 +454,12 @@ rvn_sync_pager(void *handle,
     if (*detailed_error_code)
     {
         rc = FAIL_SYNC_FILE;
+    }
+    int unlock_rc = pthread_mutex_unlock(&handle_ptr->global_state->fsync_dir_arena.lock);
+    if (unlock_rc && rc == SUCCESS)
+    {
+        *detailed_error_code = unlock_rc;
+        return FAIL_MUTEX_UNLOCK;
     }
     return rc;
 }
