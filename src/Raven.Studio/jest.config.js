@@ -23,6 +23,7 @@ module.exports = {
         "./scripts/setup_jest.js",
     ],
     "setupFilesAfterEnv": [
+        "./scripts/setup_console_guard.ts",
         "./scripts/setup_runtime.ts",
         "jest-extended/all",
     ],
