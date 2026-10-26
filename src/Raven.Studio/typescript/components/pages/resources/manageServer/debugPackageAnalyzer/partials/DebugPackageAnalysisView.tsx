@@ -12,6 +12,7 @@ import DatabasesOverview from "./DatabasesOverview";
 import NodeOverview from "./NodeOverview";
 import PerformanceMetrics from "./PerformanceMetrics";
 import StoragePerDatabase from "./StoragePerDatabase";
+import StorageIoPerNode from "./StorageIoPerNode";
 import IndexingPerNode from "./IndexingPerNode";
 import OngoingTasks from "./OngoingTasks";
 import DatabaseContextView from "./DatabaseContextView";
@@ -293,6 +294,9 @@ function AnalysisBody({ summary }: DebugPackageAnalysisViewProps) {
                         <AnalysisSection id="databases-overview" label="Databases Overview" className="mb-3">
                             <DatabasesOverview summary={summary} />
                         </AnalysisSection>
+                        <AnalysisSection id="storage-io" label="Storage I/O" className="mb-3">
+                            <StorageIoPerNode summary={summary} />
+                        </AnalysisSection>
                         <AnalysisSection id="storage-per-database" label="Storage per Database" className="mb-3">
                             <StoragePerDatabase summary={summary} />
                         </AnalysisSection>
@@ -318,6 +322,9 @@ function AnalysisBody({ summary }: DebugPackageAnalysisViewProps) {
                         </AnalysisSection>
                         <AnalysisSection id="performance-metrics" label="Performance Metrics" className="mb-3">
                             <PerformanceMetrics summary={summary} nodeTag={selectedNode} />
+                        </AnalysisSection>
+                        <AnalysisSection id="storage-io" label="Storage I/O" className="mb-3">
+                            <StorageIoPerNode summary={summary} nodeTag={selectedNode} />
                         </AnalysisSection>
                         <AnalysisSection id="storage-per-database" label="Storage per Database" className="mb-3">
                             <StoragePerDatabase summary={summary} nodeTag={selectedNode} />
