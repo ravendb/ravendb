@@ -108,7 +108,7 @@ namespace Voron
 
             ref var node = ref Unsafe.Add(ref _cache[0], (int)bucket);
 
-            if (node.PageNumber != pageNumber || node.Generation != _generation || node.IsWritable == false )
+            if (node.PageNumber != pageNumber || node.IsWritable == false || node.Generation != _generation)
             {
                 node.PageNumber = pageNumber;
                 node.Page = page;

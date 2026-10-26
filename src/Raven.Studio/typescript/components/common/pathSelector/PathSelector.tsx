@@ -5,7 +5,7 @@ import { LazyLoad } from "components/common/LazyLoad";
 import { LoadError } from "components/common/LoadError";
 import useBoolean from "components/hooks/useBoolean";
 import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
-import React, { useEffect, useImperativeHandle, useState } from "react";
+import React, { ChangeEvent, useEffect, useImperativeHandle, useState } from "react";
 import { AsyncStateStatus } from "react-async-hook";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
@@ -185,7 +185,7 @@ export default function PathSelector<ParamsType extends unknown[] = unknown[]>(p
                             <Form.Control
                                 type="text"
                                 value={pathInput}
-                                onChange={(x) => setPathInput(x.currentTarget.value)}
+                                onChange={(x: ChangeEvent<HTMLInputElement>) => setPathInput(x.currentTarget.value)}
                             />
                         </FormGroup>
                     </Modal.Body>

@@ -2222,6 +2222,16 @@ namespace Raven.Server.Documents.Replication
 
             return c;
         }
+
+        internal DynamicJsonValue GetActiveConnectionsAsJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(IncomingConnections)] = new DynamicJsonArray(IncomingHandlers.Select(i => i.GetConnectionInfoAsJson())),
+                [nameof(OutgoingConnections)] = new DynamicJsonArray(OutgoingHandlers.Select(o => o.GetConnectionInfoAsJson()))
+            };
+        }
+
     }
 
     public sealed class OutgoingReplicationFailureToConnectReporter : IReportOutgoingReplicationPerformance

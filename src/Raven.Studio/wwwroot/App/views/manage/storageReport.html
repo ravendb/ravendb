@@ -18,27 +18,48 @@
     <table class="table table-condensed table-striped on-base-background" data-bind="if: node() && node().internalChildren">
         <thead>
             <tr>
-                <th>Type</th>
-                <th class="column-min-width">Name</th>
-                <th data-bind="visible: showPagesColumn()"># Pages</th>
-                <th data-bind="visible: showEntriesColumn()">Entries</th>
-                <th><span data-bind="visible: showTempFiles()">Total</span> Allocated (&sum; <span data-bind="text: allocatedNodeSize"></span>)</th>
+                <th data-bind="css: sort.cssClassFor('type'), attr: { 'aria-sort': sort.ariaSortFor('type') }">
+                    <button type="button" class="sort-button" data-bind="click: _.partial(sort.sortBy, 'type')">Type<span class="sortable-controls"></span></button>
+                </th>
+                <th class="column-min-width" data-bind="css: sort.cssClassFor('name'), attr: { 'aria-sort': sort.ariaSortFor('name') }">
+                    <button type="button" class="sort-button" data-bind="click: _.partial(sort.sortBy, 'name')">Name<span class="sortable-controls"></span></button>
+                </th>
+                <th data-bind="visible: showPagesColumn(), css: sort.cssClassFor('pageCount'), attr: { 'aria-sort': sort.ariaSortFor('pageCount') }">
+                    <button type="button" class="sort-button" data-bind="click: _.partial(sort.sortBy, 'pageCount')"># Pages<span class="sortable-controls"></span></button>
+                </th>
+                <th data-bind="visible: showEntriesColumn(), css: sort.cssClassFor('numberOfEntries'), attr: { 'aria-sort': sort.ariaSortFor('numberOfEntries') }">
+                    <button type="button" class="sort-button" data-bind="click: _.partial(sort.sortBy, 'numberOfEntries')">Entries<span class="sortable-controls"></span></button>
+                </th>
+                <th data-bind="visible: showTempFiles(), css: sort.cssClassFor('dataSize'), attr: { 'aria-sort': sort.ariaSortFor('dataSize') }">
+                    <button type="button" class="sort-button" data-bind="click: _.partial(sort.sortBy, 'dataSize')">Data + Journals<span class="sortable-controls"></span></button>
+                </th>
+                <th data-bind="visible: showTempFiles(), css: sort.cssClassFor('tempBuffersSize'), attr: { 'aria-sort': sort.ariaSortFor('tempBuffersSize') }">
+                    <button type="button" class="sort-button" data-bind="click: _.partial(sort.sortBy, 'tempBuffersSize')">Temporary Buffers<span class="sortable-controls"></span></button>
+                </th>
+                <th data-bind="css: sort.cssClassFor('size'), attr: { 'aria-sort': sort.ariaSortFor('size') }">
+                    <button type="button" class="sort-button" data-bind="click: _.partial(sort.sortBy, 'size')"><span data-bind="visible: showTempFiles()">Total</span> Allocated (&sum; <span data-bind="text: allocatedNodeSize"></span>)<span class="sortable-controls"></span></button>
+                </th>
                 <th data-bind="visible: showOnDiskColumn">On Disk (&sum; <span data-bind="text: onDiskNodeSize"></span>)</th>
                 <th>% Total</th>
             </tr>
         </thead>
-        <tbody data-bind="foreach: node().internalChildren">
+        <tbody data-bind="foreach: sortedChildren">
             <tr>
                 <td data-bind="text: _.upperFirst(type)"></td>
                 <td class="position-relative">
                     <div class="table-items">
+                        <a class="table-item-name text-elipsis" data-bind="text: name, attr: { href: link, title: name }, visible: link"></a>
                         <a href="#" class="table-item-name text-elipsis" data-bind="text: name, click: _.partial($root.onClick, $data, true), visible: hasChildren(), attr: { title: name }"></a>
-                        <span href="#" class="table-item-name text-elipsis" data-bind="text: name, visible: !hasChildren(), attr: { title: name }"></span>
+                        <span href="#" class="table-item-name text-elipsis" data-bind="visible: !hasChildren() && !link, attr: { title: name }">
+                            <span data-bind="text: name"></span><span class="rounded-pill badge bg-faded-warning margin-left margin-left-xs" data-bind="visible: $data.isDisabled">Disabled</span><span class="rounded-pill badge bg-faded-danger margin-left margin-left-xs" data-bind="visible: $data.loadError, attr: { title: $data.loadError }">Load error</span>
+                        </span>
                         <span data-bind="visible: recyclableJournal"><small data-toggle="tooltip" title="Stored in Journals directory"><i class="icon-info text-info"></i></small></span>
                     </div>
                 </td>
                 <td data-bind="visible: $root.showPagesColumn(), text: pageCount ? pageCount.toLocaleString() : 0"></td>
                 <td data-bind="visible: $root.showEntriesColumn(), text: numberOfEntries ? numberOfEntries.toLocaleString() : 0"></td>
+                <td data-bind="visible: $root.showTempFiles, text: formatDataSize()"></td>
+                <td data-bind="visible: $root.showTempFiles, text: formatTempBuffersSize()"></td>
                 <td data-bind="html: formatSize(false)"></td>
                 <td data-bind="visible: $root.showOnDiskColumn">
                     <span data-bind="text: $root.onDiskSizeFormatted($data)"></span>

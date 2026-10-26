@@ -1,0 +1,148 @@
+{
+    "$schema": "./node_modules/oxlint/configuration_schema.json",
+    "plugins": ["typescript", "react"],
+    "jsPlugins": ["./oxlint-local-rules.js"],
+    "categories": {
+        "correctness": "off"
+    },
+    "env": {
+        "browser": true,
+        "commonjs": true,
+        "es2021": true,
+        "node": true
+    },
+    "ignorePatterns": ["typescript/transitions/**/*.ts", "typescript/widgets/**/*.ts", "typescript/**/*.js"],
+    "rules": {
+        "curly": "warn",
+        "for-direction": "error",
+        "no-array-constructor": "error",
+        "no-async-promise-executor": "error",
+        "no-case-declarations": "error",
+        "no-class-assign": "error",
+        "no-compare-neg-zero": "error",
+        "no-cond-assign": "error",
+        "no-constant-condition": "off",
+        "no-control-regex": "error",
+        "no-debugger": "error",
+        "no-delete-var": "error",
+        "no-dupe-else-if": "error",
+        "no-duplicate-case": "error",
+        "no-empty": "error",
+        "no-empty-character-class": "error",
+        "no-empty-pattern": "error",
+        "no-ex-assign": "error",
+        "no-extra-boolean-cast": "error",
+        "no-fallthrough": "error",
+        "no-global-assign": "error",
+        "no-inner-declarations": "error",
+        "no-invalid-regexp": "error",
+        "no-irregular-whitespace": "error",
+        "no-loss-of-precision": "error",
+        "no-misleading-character-class": "error",
+        "no-nonoctal-decimal-escape": "error",
+        "no-prototype-builtins": "error",
+        "no-regex-spaces": "error",
+        "no-restricted-imports": [
+            "error",
+            {
+                "paths": [
+                    {
+                        "name": "react-bootstrap",
+                        "message": "Please import individual components, e.g.: import Tooltip from 'react-bootstrap/Tooltip'"
+                    },
+                    {
+                        "name": "i18next",
+                        "message": "Use useStudioTranslation, StudioTrans or createTranslator, they type-check keys and options"
+                    },
+                    {
+                        "name": "react-i18next",
+                        "message": "Use useStudioTranslation, StudioTrans or createTranslator, they type-check keys and options"
+                    }
+                ]
+            }
+        ],
+        "no-self-assign": "error",
+        "no-shadow-restricted-names": "error",
+        "no-sparse-arrays": "error",
+        "no-unsafe-finally": "error",
+        "no-unsafe-optional-chaining": "error",
+        "no-unused-labels": "error",
+        "no-unused-vars": [
+            "warn",
+            {
+                "caughtErrors": "none",
+                "argsIgnorePattern": "^_",
+                "varsIgnorePattern": "^_",
+                "caughtErrorsIgnorePattern": "^_"
+            }
+        ],
+        "no-useless-backreference": "error",
+        "no-useless-catch": "error",
+        "no-useless-escape": "error",
+        "no-var": "error",
+        "no-with": "error",
+        "prefer-const": "error",
+        "prefer-rest-params": "error",
+        "prefer-spread": "error",
+        "require-yield": "error",
+        "use-isnan": "error",
+        "valid-typeof": "error",
+
+        "typescript/ban-ts-comment": "error",
+        "typescript/no-duplicate-enum-values": "error",
+        "typescript/no-empty-object-type": ["error", { "allowInterfaces": "always" }],
+        "typescript/no-extra-non-null-assertion": "error",
+        "typescript/no-misused-new": "error",
+        "typescript/no-namespace": "error",
+        "typescript/no-non-null-asserted-optional-chain": "error",
+        "typescript/no-this-alias": "error",
+        "typescript/no-unnecessary-type-constraint": "error",
+        "typescript/no-unsafe-declaration-merging": "error",
+        "typescript/no-unsafe-function-type": "error",
+        "typescript/no-wrapper-object-types": "error",
+        "typescript/prefer-as-const": "error",
+
+        "react/display-name": "error",
+        "react/jsx-curly-brace-presence": ["warn", { "props": "never", "children": "never" }],
+        "react/jsx-no-comment-textnodes": "error",
+        "react/jsx-no-duplicate-props": "error",
+        "react/jsx-no-undef": "error",
+        "react/no-children-prop": "error",
+        "react/no-danger-with-children": "error",
+        "react/no-direct-mutation-state": "error",
+        "react/no-find-dom-node": "error",
+        "react/no-is-mounted": "error",
+        "react/no-render-return-value": "error",
+        "react/no-string-refs": "error",
+        "react/no-unescaped-entities": "error",
+        "react/no-unknown-property": "error",
+        "react/require-render-return": "error",
+        "react/rules-of-hooks": "error",
+
+        "local-rules/mixed-imports": "error"
+    },
+    "overrides": [
+        {
+            "files": [
+                "typescript/common/i18n/**",
+                "typescript/common/extensions.ts",
+                "typescript/components/hooks/useStudioTranslation.ts",
+                "typescript/components/common/i18n/**",
+                "typescript/test/rtlTestUtils.tsx"
+            ],
+            "rules": {
+                "no-restricted-imports": [
+                    "error",
+                    {
+                        "paths": [
+                            {
+                                "name": "react-bootstrap",
+                                "message": "Please import individual components, e.g.: import Tooltip from 'react-bootstrap/Tooltip'"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}
