@@ -209,50 +209,58 @@ namespace SlowTests.Issues
             return (conflict, metadata.Count);
         }
 
+        // a database upgraded from 72_002 has the revisions but no tree, and it is filled on the first touch
+        // of each document rather than during the upgrade, which on a large database would take far too long
         [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
-        public async Task SchemaUpdate_ListsTheConflictRevisionsThatWereAlreadyStored()
+        public async Task ConflictRevisions_AreListedOnFirstTouch_ForADocumentThatPredatesTheTree()
         {
             using var store1 = GetDocumentStore();
-            using var store2 = GetDocumentStore(new Options { RunInMemory = false });
+            using var store2 = GetDocumentStore();
 
             const string id = "users/1";
             await SetupRegularAndConflictRevisionsAsync(store1, store2, id);
 
-            var (expectedConflict, _) = await GetRevisionFlagCountsAsync(store2, id);
-            Assert.True(expectedConflict > 0, "expected some conflict/resolved revisions");
-
             var database = await Databases.GetDocumentDatabaseInstanceFor(store2);
 
-            // put the storage back to what a 72_002 server leaves behind: the revisions are there, the tree is not
+            // leave the storage as a 72_002 server does: the revisions are there, nothing was ever listed
             using (var tx = database.DocumentsStorage.Environment.WriteTransaction())
             {
                 tx.DeleteTree(SchemaRevisions.ConflictRevisionsSlice);
-                tx.ReadTree(global::Voron.Global.Constants.MetadataTreeNameSlice).Add("schema-version", EndianBitConverter.Little.GetBytes(72_002));
+                tx.CreateTree(SchemaRevisions.ConflictRevisionsSlice);
                 tx.Commit();
             }
 
-            using (var tx = database.DocumentsStorage.Environment.ReadTransaction())
+            Assert.Equal(0, ReadConflictRevisionsTreeValues(database, id));
+
+            // one more conflict touches the document, which lists what was already stored and adds the new one
+            using (var session = store1.OpenAsyncSession())
             {
-                Assert.True(tx.ReadTree(global::Voron.Global.Constants.MetadataTreeNameSlice).TryRead("schema-version", out var versionValue), "no schema-version in the metadata tree");
-                Assert.Equal(72_002, versionValue.ReadLittleEndianInt32());
+                await session.StoreAsync(new User { Name = "from-remote-again" }, id);
+                await session.SaveChangesAsync();
             }
 
-            Assert.True(Server.ServerStore.DatabasesLandlord.UnloadDirectly(store2.Database), "the database was not unloaded, so it was never reopened");
+            await EnsureReplicatingAsync(store1, store2);
 
-            // opening it again runs From72002
-            using (var session = store2.OpenAsyncSession())
-                await session.LoadAsync<User>(id);
-
-            database = await Databases.GetDocumentDatabaseInstanceFor(store2);
-
-            using (var tx = database.DocumentsStorage.Environment.ReadTransaction())
-            {
-                tx.ReadTree(global::Voron.Global.Constants.MetadataTreeNameSlice).TryRead("schema-version", out var afterValue);
-                Assert.Equal(72_003, afterValue.ReadLittleEndianInt32());
-            }
+            var (expectedConflict, _) = await GetRevisionFlagCountsAsync(store2, id);
+            Assert.True(expectedConflict > 0, "expected some conflict/resolved revisions");
 
             var (conflictCount, _) = ReadCountsFromTrees(database, id);
+
             Assert.Equal(expectedConflict, conflictCount);
+        }
+
+        // the raw number of values under the document's key, the listed-marker included; 0 means never listed
+        private static long ReadConflictRevisionsTreeValues(DocumentDatabase database, string id)
+        {
+            var revisionsStorage = database.DocumentsStorage.RevisionsStorage;
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
+            using (revisionsStorage.GetKeyPrefix(context, lowerId, out Slice prefix))
+            {
+                var conflictTree = context.Transaction.InnerTransaction.ReadTree(SchemaRevisions.ConflictRevisionsSlice);
+                return conflictTree?.MultiCount(prefix) ?? 0;
+            }
         }
 
         // reads the per-document counters straight from the Voron trees, keyed by the document's lower-id prefix.
@@ -265,7 +273,8 @@ namespace SlowTests.Issues
             using (revisionsStorage.GetKeyPrefix(context, lowerId, out Slice prefix))
             {
                 var conflictTree = context.Transaction.InnerTransaction.ReadTree(SchemaRevisions.ConflictRevisionsSlice);
-                var conflict = conflictTree?.MultiCount(prefix) ?? 0;
+                var values = conflictTree?.MultiCount(prefix) ?? 0;
+                var conflict = values == 0 ? 0 : values - 1; // the listed-marker is not a revision
 
                 var revisionsTree = context.Transaction.InnerTransaction.ReadTree(SchemaRevisions.RevisionsCountSlice);
                 var revisions = revisionsTree != null && revisionsTree.TryRead(prefix, out var revisionsValue) ? revisionsValue.ReadLittleEndianInt64() : 0;
