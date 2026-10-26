@@ -21,13 +21,24 @@ public class RavenDB_24345(ITestOutputHelper output) : RavenTestBase(output)
     public void DataFileSyncMustNotHangAfterTheOnlyBranchWasDeleted()
     {
         string rootPath = NewDataPath();
-        string branchPath = NewDataPath();
+        string deletedBranchPath = NewDataPath();
 
         using var rootOptions = CreateOptions(rootPath);
         using var root = new StorageEnvironment(rootOptions);
         Assert.SkipUnless(PalConfiguration.WriteMode == Pal.RvnWriteMode.IoRing, "directories are synced through io_uring only in IoRing write mode");
         using var _ = root.Journal.SharedJournalsScope();
 
+        WriteToNewBranch(root, deletedBranchPath);
+        IOExtensions.DeleteDirectory(deletedBranchPath);
+        SyncDataFile(root, attempt: 1);
+
+        // a branch folder is synced once per new link, so it takes another branch to reach the directory sync again
+        WriteToNewBranch(root, NewDataPath());
+        SyncDataFile(root, attempt: 2);
+    }
+
+    private static void WriteToNewBranch(StorageEnvironment root, string branchPath)
+    {
         var mre = new ManualResetEventSlim(false);
         root.Journal.BranchJournalMerger = new SharedJournalTests.MyJournalMerger(mre);
         var branchTask = Task.Run(() =>
@@ -41,17 +52,15 @@ public class RavenDB_24345(ITestOutputHelper output) : RavenTestBase(output)
         });
         branchTask.ContinueWith(_ => mre.Set());
         SharedJournalTests.WaitForTaskAndExecuteBranchTransactions(branchTask, mre, root);
+    }
 
-        IOExtensions.DeleteDirectory(branchPath);
+    private static void SyncDataFile(StorageEnvironment root, int attempt)
+    {
+        RollJournals(root, count: 2);
+        root.FlushLogToDataFile();
 
-        for (int i = 0; i < 2; i++)
-        {
-            RollJournals(root, count: 2);
-            root.FlushLogToDataFile();
-
-            using var sync = new WriteAheadJournal.JournalApplicator.SyncOperation(root.Journal.Applicator);
-            Assert.True(Task.Run(sync.SyncDataFile).Wait(TimeSpan.FromMinutes(1)), $"data file sync #{i + 1} hung");
-        }
+        using var sync = new WriteAheadJournal.JournalApplicator.SyncOperation(root.Journal.Applicator);
+        Assert.True(Task.Run(sync.SyncDataFile).Wait(TimeSpan.FromMinutes(1)), $"data file sync #{attempt} hung");
     }
 
     private static void RollJournals(StorageEnvironment env, int count)
