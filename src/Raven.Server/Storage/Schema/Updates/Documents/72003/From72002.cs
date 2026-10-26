@@ -1,8 +1,11 @@
-using Raven.Client.Documents.Operations.Revisions;
+using System;
+using System.Collections.Generic;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Platform;
+using Voron;
+using Voron.Data;
 using Voron.Data.Tables;
 using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Schemas.Revisions;
@@ -19,8 +22,43 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
         public bool Update(UpdateStep step)
         {
-            var schema = step.DocumentsStorage.RevisionsStorage.RevisionsSchema;
-            var startEtag = 0L;
+            step.WriteTx.CreateTree(ConflictRevisionsSlice);
+
+            foreach (var tableName in GetRevisionTableNames(step))
+                ListConflictRevisions(step, tableName);
+
+            return true;
+        }
+
+        private static List<string> GetRevisionTableNames(UpdateStep step)
+        {
+            var names = new List<string>();
+            var prefix = CollectionName.GetTablePrefix(CollectionTableType.Revisions);
+
+            using (var it = step.ReadTx.LowLevelTransaction.RootObjects.Iterate(prefetch: false))
+            {
+                if (it.Seek(Slices.BeforeAllKeys) == false)
+                    return names;
+
+                do
+                {
+                    var name = it.CurrentKey.ToString();
+                    if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) == false)
+                        continue;
+
+                    if (step.ReadTx.GetRootObjectType(it.CurrentKey) != RootObjectType.Table)
+                        continue;
+
+                    names.Add(name);
+                } while (it.MoveNext());
+            }
+
+            return names;
+        }
+
+        private static void ListConflictRevisions(UpdateStep step, string tableName)
+        {
+            var skip = 0L;
             var done = false;
 
             while (done == false)
@@ -29,29 +67,33 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 {
                     context.TransactionMarkerOffset = (short)step.WriteTx.LowLevelTransaction.Id;
 
-                    step.WriteTx.CreateTree(ConflictRevisionsSlice);
-
-                    var table = new Table(schema, step.ReadTx);
+                    var schema = ReadSchema(step, tableName);
+                    var table = step.ReadTx.OpenTable(schema, tableName);
                     var processed = 0;
                     done = true;
 
-                    foreach (var tvr in table.SeekForwardFrom(schema.FixedSizeIndexes[AllRevisionsEtagsSlice], startEtag, skip: 0))
+                    if (table != null)
                     {
-                        var reader = tvr.Reader;
-                        startEtag = TableValueToEtag((int)RevisionsTable.Etag, ref reader) + 1;
-
-                        var flags = TableValueToFlags((int)RevisionsTable.Flags, ref reader);
-                        if (flags.Contain(DocumentFlags.Conflicted) || flags.Contain(DocumentFlags.Resolved))
+                        foreach (var read in table.SeekByPrimaryKey(Slices.BeforeAllKeys, skip))
                         {
-                            using (TableValueToSlice(context, (int)RevisionsTable.LowerId, ref reader, out var lowerId))
-                            using (step.DocumentsStorage.RevisionsStorage.GetKeyPrefix(context, lowerId, out var prefixSlice))
-                                RevisionsStorage.AddConflictRevision(context, step.WriteTx, prefixSlice, startEtag - 1);
-                        }
+                            var reader = read.Reader;
+                            var flags = TableValueToFlags((int)RevisionsTable.Flags, ref reader);
 
-                        if (++processed >= NumberOfRevisionsToScanInSingleTransaction)
-                        {
-                            done = false;
-                            break;
+                            if (flags.Contain(DocumentFlags.Conflicted) || flags.Contain(DocumentFlags.Resolved))
+                            {
+                                var etag = TableValueToEtag((int)RevisionsTable.Etag, ref reader);
+
+                                using (TableValueToSlice(context, (int)RevisionsTable.LowerId, ref reader, out var lowerId))
+                                using (RevisionsStorage.GetKeyPrefix(context.Allocator, lowerId, out var prefixSlice))
+                                    RevisionsStorage.AddConflictRevision(context, step.WriteTx, prefixSlice, etag);
+                            }
+
+                            if (++processed >= NumberOfRevisionsToScanInSingleTransaction)
+                            {
+                                skip += processed;
+                                done = false;
+                                break;
+                            }
                         }
                     }
 
@@ -59,8 +101,15 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     step.RenewTransactions();
                 }
             }
+        }
 
-            return true;
+        private static unsafe TableSchema ReadSchema(UpdateStep step, string tableName)
+        {
+            var tableTree = step.ReadTx.ReadTree(tableName, RootObjectType.Table);
+            var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
+            var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
+
+            return TableSchema.ReadFrom(step.ReadTx.Allocator, schemaPtr, schemaSize);
         }
     }
 }
