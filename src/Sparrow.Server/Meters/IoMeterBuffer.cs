@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -15,6 +15,21 @@ namespace Sparrow.Server.Meters
             public IoMetrics.MeterType Type;
             public int Acceleration;
             public long CompressedSize;
+
+            // Compression
+            public string Algorithm;
+
+            // JournalWrite
+            public bool Pipelined;
+            public int BatchOperations; // 0 when the write did not come from the transaction merger
+
+            // DataSync, Duration covers the paced writeback and the final sync
+            public IoMetrics.SyncReason SyncReason;
+            public bool Drain;
+            public long WritebackSize;
+            public long WritebackRanges;
+            public TimeSpan WritebackDuration;
+
             public TimeSpan Duration => End - Start;
             public double SizeInMb => Size / (double)1024 / 1024;
             public double RateOfWritesInMbPerSec => SizeInMb / Duration.TotalSeconds;
@@ -108,6 +123,10 @@ namespace Sparrow.Server.Meters
             public long FileSize;
             public Action<MeterItem> OnFileChange;
             public DateTime End;
+            public string Algorithm;
+            public bool Pipelined;
+            public int BatchOperations;
+            public IoMetrics.SyncDetails Sync;
 
             public DurationMeasurement(IoMeterBuffer parent, IoMetrics.MeterType type, long size, long fileSize, Action<MeterItem> onFileChange)
             {
@@ -120,6 +139,10 @@ namespace Sparrow.Server.Meters
                 OnFileChange = onFileChange;
                 CompressedSize = 0;
                 Acceleration = 1;
+                Algorithm = null;
+                Pipelined = false;
+                BatchOperations = 0;
+                Sync = default;
             }
 
             public void IncrementSize(long size)
@@ -143,11 +166,25 @@ namespace Sparrow.Server.Meters
                 FileSize = fileSize;
             }
 
-            public void SetCompressionResults(long originalSize, long compressedSize, int acceleration)
+            public void SetCompressionResults(long originalSize, long compressedSize, int acceleration, string algorithm = null)
             {
                 Size = originalSize;
                 CompressedSize = compressedSize;
                 Acceleration = acceleration;
+                Algorithm = algorithm;
+            }
+
+            public void SetJournalWrite(bool pipelined, int batchOperations)
+            {
+                Pipelined = pipelined;
+                BatchOperations = batchOperations;
+            }
+
+            // the sync is measured from before the paced writeback, the same span the drain decision uses
+            public void SetSync(DateTime start, in IoMetrics.SyncDetails sync)
+            {
+                Start = start;
+                Sync = sync;
             }
         }
 
@@ -162,6 +199,14 @@ namespace Sparrow.Server.Meters
                 End = item.End,
                 CompressedSize = item.CompressedSize,
                 Acceleration = item.Acceleration,
+                Algorithm = item.Algorithm,
+                Pipelined = item.Pipelined,
+                BatchOperations = item.BatchOperations,
+                SyncReason = item.Sync.Reason,
+                Drain = item.Sync.Drain,
+                WritebackSize = item.Sync.WritebackSize,
+                WritebackRanges = item.Sync.WritebackRanges,
+                WritebackDuration = item.Sync.WritebackDuration,
             };
 
             item.OnFileChange?.Invoke(meterItem);

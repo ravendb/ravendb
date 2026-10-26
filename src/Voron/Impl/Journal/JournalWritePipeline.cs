@@ -28,6 +28,7 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
         public NativeMemory.ThreadStats BufferAllocatingThread;
         public long BufferGeneration;
         public int NumberOf4Kbs;
+        public int BatchOperations;
         public long Sequence;
         public Exception Error;
 
@@ -41,6 +42,7 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
             BufferAllocatingThread = null;
             BufferGeneration = 0;
             NumberOf4Kbs = 0;
+            BatchOperations = 0;
             Sequence = 0;
             Error = null;
         }
@@ -78,9 +80,10 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
 
     internal bool HasInFlightWrites => Volatile.Read(ref _nextSequence) - Volatile.Read(ref _reapedSequence) > 0;
 
-    public void SubmitPipelined(JournalFile file, long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, List<LowLevelTransaction> transactions)
+    public void SubmitPipelined(JournalFile file, long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, List<LowLevelTransaction> transactions, int batchOperations = 0)
     {
         var write = RentWrite(file, posBy4Kb, (int)totalNumberOf4Kbs, transactions);
+        write.BatchOperations = batchOperations;
 
         _env.WriteFlow.RecordJournalWriteSubmitted();
 
@@ -114,7 +117,7 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
         }
     }
 
-    public void WriteInline(JournalFile file, long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, List<LowLevelTransaction> transactions)
+    public void WriteInline(JournalFile file, long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, List<LowLevelTransaction> transactions, int batchOperations = 0)
     {
         Debug.Assert(_disposed is false, "WriteInline called after the pipeline was disposed");
 
@@ -125,12 +128,12 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
             failure.Throw();
         }
         
-        WriteDirect(file, posBy4Kb, entries, totalNumberOf4Kbs, transactions);
+        WriteDirect(file, posBy4Kb, entries, totalNumberOf4Kbs, transactions, batchOperations);
     }
 
     private SafeJournalWriteContext _inlineContext;
 
-    private void WriteDirect(JournalFile file, long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, List<LowLevelTransaction> transactions)
+    private void WriteDirect(JournalFile file, long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, List<LowLevelTransaction> transactions, int batchOperations)
     {
         _env.WriteFlow.RecordJournalWriteSubmitted();
         RecordSubmitted(transactions);
@@ -140,7 +143,7 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
             _inlineContext ??= SafeJournalWriteContext.Create();
 
             var start = Stopwatch.GetTimestamp();
-            file.Write(posBy4Kb, entries, _inlineContext);
+            file.Write(posBy4Kb, entries, _inlineContext, pipelined: false, batchOperations);
             RecordWriteLatency(Stopwatch.GetElapsedTime(start).Ticks, totalNumberOf4Kbs);
         }
         catch (Exception e)
@@ -231,7 +234,7 @@ internal sealed unsafe class JournalWritePipeline : IDisposable
             {
                 var entry = new Pal.journal_entry { Base = write.Buffer, NumberOf4Kbs = write.NumberOf4Kbs };
                 var start = Stopwatch.GetTimestamp();
-                write.File.Write(write.PosBy4Kb, MemoryMarshal.CreateSpan(ref entry, 1), write.Context);
+                write.File.Write(write.PosBy4Kb, MemoryMarshal.CreateSpan(ref entry, 1), write.Context, pipelined: true, write.BatchOperations);
                 RecordWriteLatency(Stopwatch.GetElapsedTime(start).Ticks, write.NumberOf4Kbs);
             }
             else

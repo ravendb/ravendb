@@ -1,4 +1,4 @@
-﻿using Sparrow;
+using Sparrow;
 using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
@@ -117,7 +117,7 @@ namespace Voron.Impl.Journal
         /// <summary>
         /// Write a buffer of transactions (from lazy, usually) to the file
         /// </summary>
-        public long Write(long posBy4Kb, Span<Pal.journal_entry> entries, SafeJournalWriteContext context)
+        public long Write(long posBy4Kb, Span<Pal.journal_entry> entries, SafeJournalWriteContext context, bool pipelined = false, int batchOperations = 0)
         {
             Debug.Assert(DoneWriting is null || DoneWriting.IsRaised() == false, $"Journal {Number} was written after DoneWriting was raised.");
 
@@ -129,7 +129,7 @@ namespace Voron.Impl.Journal
                 Debug.Assert(readTxHeader->HeaderMarker == Constants.TransactionHeaderMarker);
             }
 
-            JournalWriter.Write(posBy4Kb, entries, totalNumberOf4Kbs, context);
+            JournalWriter.Write(posBy4Kb, entries, totalNumberOf4Kbs, context, pipelined, batchOperations);
             
             return totalNumberOf4Kbs;
         }
