@@ -79,7 +79,7 @@ describe("StudioSearchWithDatabaseSwitcher", function () {
 
 async function searchFor({ screen, user, fillInput }: ReturnType<typeof rtlRender>, query: string) {
     const input = await screen.findByPlaceholderText(searchPlaceholder);
-    await act(() => user.click(input));
+    await user.click(input);
     await fillInput(input, query);
 
     return screen.getAllByRole("button").map((x) => x.textContent);

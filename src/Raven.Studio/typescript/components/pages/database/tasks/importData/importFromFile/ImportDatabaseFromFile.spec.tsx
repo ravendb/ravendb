@@ -115,9 +115,7 @@ const tasksMocks = () => ({
 
 async function selectFile({ screen, user }: Rendered, name = "dump.ravendbdump") {
     const file = new File(["dump"], name);
-    await act(async () => {
-        await user.upload(screen.getByTestId(selectors.fileInput), file);
-    });
+    await user.upload(screen.getByTestId(selectors.fileInput), file);
     return file;
 }
 
