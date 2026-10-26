@@ -823,5 +823,79 @@ class Product { public string Name { get; set; } }
 
             Assert.Empty(diagnostics);
         }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task UserMethod_In_MultiMapTimeSeries_Reduce_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+using Raven.Client.Documents.Indexes.TimeSeries;
+
+class MyHelpers
+{
+    public static double Round(double d) => Math.Round(d);
+}
+
+class HeartRateIndex : AbstractMultiMapTimeSeriesIndexCreationTask<HeartRateIndex.Result>
+{
+    public class Result { public string Owner { get; set; } public double Max { get; set; } }
+
+    public HeartRateIndex()
+    {
+        AddMap<Person>(""HeartRate"", segments => from s in segments
+                                               select new Result { Owner = s.DocumentId, Max = s.Max[0] });
+
+        Reduce = results => from r in results
+                            group r by r.Owner into g
+                            select new Result { Owner = g.Key, Max = MyHelpers.Round(g.Max(x => x.Max)) };
+    }
+}
+
+class Person { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id);
+            Assert.Contains("Round", d.GetMessage());
+            Assert.Contains("Reduce", d.GetMessage());
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task UserMethod_In_MultiMapCounters_Reduce_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+using Raven.Client.Documents.Indexes.Counters;
+
+class MyHelpers
+{
+    public static long Clamp(long v) => v < 0 ? 0 : v;
+}
+
+class LikesIndex : AbstractMultiMapCountersIndexCreationTask<LikesIndex.Result>
+{
+    public class Result { public string Owner { get; set; } public long Total { get; set; } }
+
+    public LikesIndex()
+    {
+        AddMap<Post>(""Likes"", counters => from c in counters
+                                          select new Result { Owner = c.DocumentId, Total = c.Value });
+
+        Reduce = results => from r in results
+                            group r by r.Owner into g
+                            select new Result { Owner = g.Key, Total = MyHelpers.Clamp(g.Sum(x => x.Total)) };
+    }
+}
+
+class Post { public string Title { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id);
+            Assert.Contains("Clamp", d.GetMessage());
+            Assert.Contains("Reduce", d.GetMessage());
+        }
     }
 }

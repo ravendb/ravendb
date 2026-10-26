@@ -434,7 +434,9 @@ namespace Raven.Analyzers.Shared
         internal static bool IsDefinedOnIndexBase(INamedTypeSymbol? containingType) =>
             AnyBaseTypeOrSelf(containingType, t =>
                 t.Name is KnownTypes.AbstractIndexCreationTaskGenericName
-                       or KnownTypes.AbstractGenericIndexCreationTaskName);
+                       or KnownTypes.AbstractGenericIndexCreationTaskName
+                       or KnownTypes.AbstractGenericTimeSeriesIndexCreationTaskName
+                       or KnownTypes.AbstractGenericCountersIndexCreationTaskName);
 
         /// <summary>
         /// Returns true when any base class of <paramref name="symbol"/> starts with
