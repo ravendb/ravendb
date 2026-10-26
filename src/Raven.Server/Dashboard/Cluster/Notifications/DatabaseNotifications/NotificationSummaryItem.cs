@@ -58,6 +58,7 @@ public class NotificationSummaryItem
                 nameof(AlertReason.LowDiskSpace) => "Storage: Low free disk space",
 
                 nameof(AlertReason.MismatchedReferenceLoad) => "Indexing: Loading documents with mismatched collection",
+                nameof(AlertReason.Indexing_SharedJournalsFallback) => "Indexing: Index writes its own journals (file system link limit reached)",
 
                 nameof(AlertReason.Etl_LoadError) => "ETL: Loading transformed data to the destination has failed",
 
