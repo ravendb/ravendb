@@ -345,17 +345,19 @@ void *do_ring_work(void *arg)
 error:
     g_worker.result = rc;
     atomic_store(&g_worker.errored, true);
-    close(g_worker.eventfd);
-    g_worker.eventfd = -1;
     close_ring_with_error(ring, rc);
     g_worker.ring = (struct io_uring){.ring_fd = -1};
+    // Submitters that raced the error may still queue work and write to the eventfd, so we
+    // keep both the eventfd and this thread alive and fail all such work from now on.
     while (true)
     {
-        if (!work) // fill from the global list if needed
-        {
+        if (!work)
             work = atomic_exchange(&g_worker.head, 0);
-            if (!work)
-                break; // nothing remains to be done
+        if (!work)
+        {
+            eventfd_t v;
+            eventfd_read(g_worker.eventfd, &v);
+            continue;
         }
         while (work)
         {
