@@ -111,7 +111,7 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
             {
                 issues.ForDatabase(database.Database).Add(new DetectedIssue(
                     "Most data file syncs are mandatory",
-                    $"{database.MandatorySyncShare:P0} of {database.Syncs:#,#} syncs ran because the unsynced data passed the mandatory limit " +
+                    $"{database.MandatorySyncShare * 100:0}% of {database.Syncs:#,#} syncs ran because the unsynced data passed the mandatory limit " +
                     $"(Storage.MaxUnsyncedSizeBeforeMandatorySyncInMb), average {database.SyncAverageInMs:#,#0} ms, max {database.SyncMaxInMs:#,#0} ms. " +
                     "The disk cannot keep up with the writes between syncs.",
                     IssueSeverity.Info, IssueCategory.Database));
