@@ -39,13 +39,15 @@ namespace Raven.Analyzers.Queries
             if (SyntaxHelpers.GetRavenQueryableReceiver(invocation, context.SemanticModel) == null)
                 return;
 
+            bool isProjection = methodName is KnownTypes.SelectMethodName or KnownTypes.SelectManyMethodName;
+
             foreach (ArgumentSyntax arg in invocation.ArgumentList.Arguments)
             {
                 SyntaxNode? lambdaBody = GetLambdaBody(arg.Expression);
                 if (lambdaBody == null)
                     continue;
 
-                ReportNonTranslatableCalls(context, lambdaBody, arg.Expression);
+                ReportNonTranslatableCalls(context, lambdaBody, arg.Expression, isProjection: isProjection);
             }
         }
 
@@ -79,7 +81,7 @@ namespace Raven.Analyzers.Queries
                                 ReportNonTranslatableCalls(context, ordering.Expression, query, query);
                             break;
                         case LetClauseSyntax let:
-                            ReportNonTranslatableCalls(context, let.Expression, query, query);
+                            ReportNonTranslatableCalls(context, let.Expression, query, query, isProjection: true);
                             break;
                         case JoinClauseSyntax join:
                             ReportNonTranslatableCalls(context, join.LeftExpression, query, query);
@@ -91,7 +93,7 @@ namespace Raven.Analyzers.Queries
                 switch (body.SelectOrGroup)
                 {
                     case SelectClauseSyntax select:
-                        ReportNonTranslatableCalls(context, select.Expression, query, query);
+                        ReportNonTranslatableCalls(context, select.Expression, query, query, isProjection: true);
                         break;
                     case GroupClauseSyntax group:
                         ReportNonTranslatableCalls(context, group.GroupExpression, query, query);
@@ -104,7 +106,10 @@ namespace Raven.Analyzers.Queries
         // Reports every user-defined (non-translatable) method invocation under <paramref name="root"/>.
         // When <paramref name="owningQuery"/> is supplied (the query-expression path), invocations that
         // another callback already owns are skipped so the same call is not reported twice.
-        private static void ReportNonTranslatableCalls(SyntaxNodeAnalysisContext context, SyntaxNode root, SyntaxNode scope, QueryExpressionSyntax? owningQuery = null)
+        // A call that does not touch the query element is evaluated on the client in a filter or
+        // ordering, but a projection is translated to JavaScript, where only an instance call on a
+        // captured object is evaluated locally; any other such call is reported there.
+        private static void ReportNonTranslatableCalls(SyntaxNodeAnalysisContext context, SyntaxNode root, SyntaxNode scope, QueryExpressionSyntax? owningQuery = null, bool isProjection = false)
         {
             foreach (InvocationExpressionSyntax nested in root.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
             {
@@ -117,8 +122,11 @@ namespace Raven.Analyzers.Queries
                 if (!MethodTranslatabilityHelper.IsLikelyNonTranslatable(method))
                     continue;
 
-                if (!ReferencesQueryElement(nested, scope, context.SemanticModel))
+                if (!ReferencesQueryElement(nested, scope, context.SemanticModel)
+                    && (!isProjection || IsCapturedInstanceCall(nested, context.SemanticModel)))
+                {
                     continue;
+                }
 
                 if (IsInsideClientCompiledLambda(nested, root, context.SemanticModel))
                     continue;
@@ -143,6 +151,24 @@ namespace Raven.Analyzers.Queries
             }
 
             return false;
+        }
+
+        private static bool IsCapturedInstanceCall(InvocationExpressionSyntax invocation, SemanticModel model)
+        {
+            if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
+                return false;
+
+            ExpressionSyntax receiver = memberAccess.Expression;
+            while (receiver is MemberAccessExpressionSyntax inner)
+                receiver = inner.Expression;
+
+            if (receiver is ThisExpressionSyntax)
+                return true;
+
+            return model.GetSymbolInfo(receiver).Symbol is ILocalSymbol
+                or IParameterSymbol
+                or IFieldSymbol { IsStatic: false }
+                or IPropertySymbol { IsStatic: false };
         }
 
         private static bool IsDeclaredWithin(ISymbol symbol, SyntaxNode scope)

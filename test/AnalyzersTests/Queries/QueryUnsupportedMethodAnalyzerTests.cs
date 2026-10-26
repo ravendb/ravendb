@@ -828,5 +828,132 @@ class Order { public string Status { get; set; } }
 
             Assert.Empty(diagnostics);
         }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task StaticUserMethod_Not_Referencing_Element_In_Select_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Labels { public static string Default() => ""n/a""; }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order>()
+            .Select(o => new { o.Status, Label = Labels.Default() });
+    }
+}
+
+class Order { public string Status { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id);
+            Assert.Contains("Default", d.GetMessage());
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task StaticUserMethod_Not_Referencing_Element_In_QueryExpression_Select_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Labels { public static string Default() => ""n/a""; }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = from o in session.Query<Order>()
+                select new { o.Status, Label = Labels.Default() };
+    }
+}
+
+class Order { public string Status { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id);
+            Assert.Contains("Default", d.GetMessage());
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task StaticUserMethod_Not_Referencing_Element_In_QueryExpression_Let_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Labels { public static string Default() => ""n/a""; }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = from o in session.Query<Order>()
+                let label = Labels.Default()
+                select new { o.Status, label };
+    }
+}
+
+class Order { public string Status { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id);
+            Assert.Contains("Default", d.GetMessage());
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task CapturedInstanceMethod_Not_Referencing_Element_In_Select_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Formatter { public string Label() => ""n/a""; }
+
+class Test
+{
+    private readonly Formatter _formatter = new Formatter();
+
+    void Run(IDocumentSession session)
+    {
+        var local = new Formatter();
+        var q = session.Query<Order>()
+            .Select(o => new { o.Status, A = local.Label(), B = _formatter.Label(), C = this._formatter.Label() });
+    }
+}
+
+class Order { public string Status { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task StaticRootedInstanceMethod_Not_Referencing_Element_In_Select_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Formatter { public static Formatter Shared = new Formatter(); public string Label() => ""n/a""; }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order>()
+            .Select(o => new { o.Status, Label = Formatter.Shared.Label() });
+    }
+}
+
+class Order { public string Status { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id);
+            Assert.Contains("Label", d.GetMessage());
+        }
     }
 }
