@@ -1408,6 +1408,9 @@ namespace Voron.Impl
 
         internal bool IsAsyncCommit => _asyncCommitNextTransaction != null;
 
+        // number of merged operations this transaction carries, set by the transaction merger (0 = not merged), io-metrics only
+        public int BatchOperations { get; set; }
+
         internal long CommitDurabilityGateTransactionId =>
             WrittenToJournalNumber == -1 ? CurrentStateRecord.TransactionId - 1 : CurrentStateRecord.TransactionId;
 

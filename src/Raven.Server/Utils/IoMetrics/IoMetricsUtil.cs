@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -104,7 +104,15 @@ namespace Raven.Server.Utils.IoMetrics
                 FileSize = recentMetric.FileSize,
                 HumaneFileSize = Sizes.Humane(recentMetric.FileSize),
                 Duration = Math.Round(recentMetric.Duration.TotalMilliseconds, 2),
-                Type = recentMetric.Type
+                Type = recentMetric.Type,
+                Algorithm = recentMetric.Algorithm,
+                Pipelined = recentMetric.Pipelined,
+                BatchOperations = recentMetric.BatchOperations,
+                SyncReason = recentMetric.SyncReason,
+                Drain = recentMetric.Drain,
+                WritebackSize = recentMetric.WritebackSize,
+                WritebackRanges = recentMetric.WritebackRanges,
+                WritebackDuration = Math.Round(recentMetric.WritebackDuration.TotalMilliseconds, 2)
             };
         }
 
@@ -187,6 +195,22 @@ namespace Raven.Server.Utils.IoMetrics
         public double Duration { get; set; }
         public Sparrow.Server.Meters.IoMetrics.MeterType Type { get; set; }
 
+        // Compression: Lz4 / Zstd (missing in files from older versions)
+        public string Algorithm { get; set; }
+
+        // JournalWrite: submitted while an earlier write was still in flight
+        public bool Pipelined { get; set; }
+
+        // JournalWrite: merged operations in the written batch, 0 when not from the transaction merger
+        public int BatchOperations { get; set; }
+
+        // DataSync: why the sync ran, and how much of it was the paced writeback (Duration covers both)
+        public Sparrow.Server.Meters.IoMetrics.SyncReason SyncReason { get; set; }
+        public bool Drain { get; set; }
+        public long WritebackSize { get; set; }
+        public long WritebackRanges { get; set; }
+        public double WritebackDuration { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             switch (Type)
@@ -202,7 +226,37 @@ namespace Raven.Server.Utils.IoMetrics
                         [nameof(Acceleration)] = Acceleration,
                         [nameof(IOMetricsRecentStatsAdditionalTypes.CompressionRatio)] = CompressedSize * 1.0 / Size,
                         [nameof(Duration)] = Duration,
-                        [nameof(Type)] = Type
+                        [nameof(Type)] = Type,
+                        [nameof(Algorithm)] = Algorithm
+                    };
+                case Sparrow.Server.Meters.IoMetrics.MeterType.JournalWrite:
+                    return new DynamicJsonValue
+                    {
+                        [nameof(Start)] = Start,
+                        [nameof(Size)] = Size,
+                        [nameof(HumaneSize)] = HumaneSize,
+                        [nameof(FileSize)] = FileSize,
+                        [nameof(HumaneFileSize)] = HumaneFileSize,
+                        [nameof(Duration)] = Duration,
+                        [nameof(Type)] = Type,
+                        [nameof(Pipelined)] = Pipelined,
+                        [nameof(BatchOperations)] = BatchOperations
+                    };
+                case Sparrow.Server.Meters.IoMetrics.MeterType.DataSync:
+                    return new DynamicJsonValue
+                    {
+                        [nameof(Start)] = Start,
+                        [nameof(Size)] = Size,
+                        [nameof(HumaneSize)] = HumaneSize,
+                        [nameof(FileSize)] = FileSize,
+                        [nameof(HumaneFileSize)] = HumaneFileSize,
+                        [nameof(Duration)] = Duration,
+                        [nameof(Type)] = Type,
+                        [nameof(SyncReason)] = SyncReason,
+                        [nameof(Drain)] = Drain,
+                        [nameof(WritebackSize)] = WritebackSize,
+                        [nameof(WritebackRanges)] = WritebackRanges,
+                        [nameof(WritebackDuration)] = WritebackDuration
                     };
                 default:
                     return new DynamicJsonValue

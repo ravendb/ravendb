@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 
@@ -23,6 +23,8 @@ namespace Sparrow.Server.Meters
             SoftThreshold, // unsynced bytes past Storage.MaxUnsyncedSizeBeforeSyncInMb
             Mandatory      // unsynced bytes past Storage.MaxUnsyncedSizeBeforeMandatorySyncInMb
         }
+
+        public readonly record struct SyncDetails(SyncReason Reason, bool Drain, long WritebackSize, long WritebackRanges, TimeSpan WritebackDuration);
 
         private readonly ConcurrentDictionary<string, FileIoMetrics> _fileMetrics =
             new ConcurrentDictionary<string, FileIoMetrics>();

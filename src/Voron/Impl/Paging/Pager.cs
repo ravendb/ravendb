@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections;
@@ -262,12 +262,13 @@ public unsafe partial class Pager : IDisposable
     }
 
 
-    public void Sync(State state, long totalUnsynced)
+    public void Sync(State state, long totalUnsynced, DateTime? startedAt = null, IoMetrics.SyncDetails syncDetails = default)
     {
         if (state.Disposed || _flags.HasFlag(Pal.OpenFileFlags.Temporary))
             return; // nothing to do here
 
         using var metric = Options.IoMetrics.MeterIoRate(FileName, IoMetrics.MeterType.DataSync, 0);
+        metric.SetSync(startedAt ?? metric.Start, syncDetails);
         metric.IncrementFileSize(state.TotalAllocatedSize);
         var rc = Pal.rvn_sync_pager(state.Handle, out var errorCode);
         if (rc != PalFlags.FailCodes.Success)

@@ -969,6 +969,7 @@ namespace Raven.Server.Documents.TransactionMerger
             } while (true);
 
             shaper.Publish(executedOps.Count, modifiedSize);
+            context.Transaction.InnerTransaction.LowLevelTransaction.BatchOperations = executedOps.Count;
 
             var status = GetPendingOperationsStatus(context, executedOps.Count is 0);
             if (_log.IsDebugEnabled)
