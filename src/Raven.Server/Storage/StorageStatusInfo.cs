@@ -51,7 +51,7 @@ namespace Raven.Server.Storage
                     StorageDeviceStatus.Saturated => $"Disk {worst.MountPoint} is saturated: {worst.SaturationCause}. Writes and indexing are slowed down.",
                     StorageDeviceStatus.Busy => worst.Device.IsDraining
                         ? $"Disk {worst.MountPoint} is busy right now: the server paces its writes so the disk can keep up."
-                        : $"Disk {worst.MountPoint} is busy right now: journal writes take {latency:#,#0} ms.",
+                        : $"Disk {worst.MountPoint} is busy right now: journal writes take {latency:#,#0.##} ms.",
                     _ => disks.Count == 1 ? "The disk keeps up with the writes." : $"All {disks.Count} disks keep up with the writes."
                 }
             };

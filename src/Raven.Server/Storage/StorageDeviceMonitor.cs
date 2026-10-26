@@ -158,7 +158,7 @@ namespace Raven.Server.Storage
             details.SlowWritesMeasured = _serverStore.Configuration.Storage.EnableIoMetrics;
 
             string message = $"Storage on {node} is saturated: on the disk {tracker.MountPoint}, {tracker.SaturationCause}. " +
-                             $"Journal writes take {latency:#,#0} ms on average right now (a healthy disk answers in a few ms). " +
+                             $"Journal writes take {latency:#,#0.##} ms on average right now (a healthy disk answers in a few ms). " +
                              "Writes and indexing are slowed down. Consider a volume with more IOPS / throughput, an instance with higher storage bandwidth, " +
                              "or more RAM to reduce disk reads.";
 
@@ -412,7 +412,7 @@ namespace Raven.Server.Storage
             lock (_lock)
             {
                 SaturatedSince ??= since;
-                SaturationCause ??= cause;
+                SaturationCause ??= $"{cause} (reported before the server restarted, it clears after an hour back to normal)";
                 _lastBusyAt ??= DateTime.UtcNow;
                 HintRaised = true;
                 HintStored = true;
@@ -543,7 +543,7 @@ namespace Raven.Server.Storage
 
             double drainShare = draining / (double)Capacity;
             if (drainShare > thresholds.DrainShare)
-                return $"writes were paced because the disk was congested {drainShare:P0} of the last hour";
+                return $"writes were paced because the disk was congested {drainShare * 100:0}% of the last hour";
 
             // every sample of the sustained period (and it must be fully covered) is slower than the threshold
             DateTime from = now - thresholds.Sustained;
@@ -568,7 +568,7 @@ namespace Raven.Server.Storage
             if (covered == false || count == 0)
                 return null;
 
-            return $"journal writes averaged {sum / count:#,#0} ms for the last {thresholds.Sustained.TotalMinutes:#,#0} minutes " +
+            return $"journal writes averaged {sum / count:#,#0.#} ms for the last {thresholds.Sustained.TotalMinutes:#,#0} minutes " +
                    $"(threshold {thresholds.JournalWriteLatencyInMs:#,#0} ms)";
         }
     }
