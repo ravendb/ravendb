@@ -82,24 +82,6 @@ function BuildTestDriver ( $srcDir ) {
     CheckLastExitCode
 }
 
-function BuildTypingsGenerator ( $srcDir ) {
-    $command = "dotnet" 
-    $commandArgs = @( "build" )
-    $commandArgs += "--no-incremental"
-
-    $commandArgs += @( "--configuration", "Release" )
-
-    if ($env:RAVEN_IS_RUNNING_ON_CI){
-        $commandArgs += '/p:ContinuousIntegrationBuild=true'
-    }
-    
-    $commandArgs += "$srcDir"
-
-    write-host -ForegroundColor Cyan "Building TypingsGenerator: $command $commandArgs"
-    & $command @commandArgs
-    CheckLastExitCode
-}
-
 function BuildSparrow ( $srcDir ) {
     $command = "dotnet" 
     $commandArgs = @( "build" )

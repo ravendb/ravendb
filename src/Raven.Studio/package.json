@@ -22,8 +22,8 @@
         "typecheck": "tsc --noEmit",
         "typecheck-watch": "tsc --noEmit --watch",
         "storybook": "npm run restore && storybook dev -p 6006",
-        "build-storybook": "npm run restore && storybook build",
-        "test-storybook": "npm run restore && test-storybook"
+        "build-storybook": "storybook build",
+        "test-storybook": "test-storybook"
     },
     "private": true,
     "devDependencies": {
