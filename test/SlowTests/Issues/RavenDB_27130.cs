@@ -11,6 +11,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Voron;
+using Voron.Util.Conversion;
 using Xunit;
 using SchemaRevisions = Raven.Server.Documents.Schemas.Revisions;
 
@@ -206,6 +207,52 @@ namespace SlowTests.Issues
             });
 
             return (conflict, metadata.Count);
+        }
+
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
+        public async Task SchemaUpdate_ListsTheConflictRevisionsThatWereAlreadyStored()
+        {
+            using var store1 = GetDocumentStore();
+            using var store2 = GetDocumentStore(new Options { RunInMemory = false });
+
+            const string id = "users/1";
+            await SetupRegularAndConflictRevisionsAsync(store1, store2, id);
+
+            var (expectedConflict, _) = await GetRevisionFlagCountsAsync(store2, id);
+            Assert.True(expectedConflict > 0, "expected some conflict/resolved revisions");
+
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store2);
+
+            // put the storage back to what a 72_002 server leaves behind: the revisions are there, the tree is not
+            using (var tx = database.DocumentsStorage.Environment.WriteTransaction())
+            {
+                tx.DeleteTree(SchemaRevisions.ConflictRevisionsSlice);
+                tx.ReadTree(global::Voron.Global.Constants.MetadataTreeNameSlice).Add("schema-version", EndianBitConverter.Little.GetBytes(72_002));
+                tx.Commit();
+            }
+
+            using (var tx = database.DocumentsStorage.Environment.ReadTransaction())
+            {
+                Assert.True(tx.ReadTree(global::Voron.Global.Constants.MetadataTreeNameSlice).TryRead("schema-version", out var versionValue), "no schema-version in the metadata tree");
+                Assert.Equal(72_002, versionValue.ReadLittleEndianInt32());
+            }
+
+            Assert.True(Server.ServerStore.DatabasesLandlord.UnloadDirectly(store2.Database), "the database was not unloaded, so it was never reopened");
+
+            // opening it again runs From72002
+            using (var session = store2.OpenAsyncSession())
+                await session.LoadAsync<User>(id);
+
+            database = await Databases.GetDocumentDatabaseInstanceFor(store2);
+
+            using (var tx = database.DocumentsStorage.Environment.ReadTransaction())
+            {
+                tx.ReadTree(global::Voron.Global.Constants.MetadataTreeNameSlice).TryRead("schema-version", out var afterValue);
+                Assert.Equal(72_003, afterValue.ReadLittleEndianInt32());
+            }
+
+            var (conflictCount, _) = ReadCountsFromTrees(database, id);
+            Assert.Equal(expectedConflict, conflictCount);
         }
 
         // reads the per-document counters straight from the Voron trees, keyed by the document's lower-id prefix.
