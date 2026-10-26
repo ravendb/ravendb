@@ -287,6 +287,8 @@ namespace Raven.Server.Documents.Handlers
 
             private bool _isDisposed;
 
+            internal bool IsDisposed => _isDisposed;
+
             private readonly List<IDisposable> _toDispose;
 
             private readonly List<AllocatedMemoryData> _toReturn;
@@ -325,8 +327,6 @@ namespace Raven.Server.Documents.Handlers
                             To = item.To
                         };
                         tss.DeleteTimestampRange(context, deletionRangeRequest, remoteChangeVector: null, updateMetadata: false);
-
-                        _toDispose.Add(item);
                     }
 
                     changes += items.Count;
@@ -350,8 +350,6 @@ namespace Raven.Server.Documents.Handlers
 
                         var values = item.Segment.YieldAllValues(context, context.Allocator, item.Baseline);
                         tss.AppendTimestamp(context, docId, item.Collection, item.Name, values, AppendOptionsForSmuggler);
-
-                        _toDispose.Add(item);
                     }
 
                     changes += items.Count;
@@ -420,6 +418,23 @@ namespace Raven.Server.Documents.Handlers
 
                 _isDisposed = true;
 
+                // the items are owned by this command and must not be disposed from ExecuteCmd(),
+                // since the transaction merger may execute the same command instance more than once
+                // (e.g. when a merged transaction fails and the commands are re-executed independently)
+                foreach (var items in _deletedRanges.Values)
+                {
+                    foreach (var item in items)
+                        item.Dispose();
+                }
+                _deletedRanges.Clear();
+
+                foreach (var items in _dictionary.Values)
+                {
+                    foreach (var item in items)
+                        item.Dispose();
+                }
+                _dictionary.Clear();
+
                 foreach (var disposable in _toDispose)
                 {
                     disposable.Dispose();
@@ -436,6 +451,7 @@ namespace Raven.Server.Documents.Handlers
                 _releaseContext?.Dispose();
                 _releaseContext = null;
             }
+
             public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 throw new NotImplementedException();

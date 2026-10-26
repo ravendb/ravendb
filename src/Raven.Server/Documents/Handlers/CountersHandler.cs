@@ -277,7 +277,11 @@ namespace Raven.Server.Documents.Handlers
             private IDisposable _resetContext;
             private bool _isDisposed;
 
+            internal bool IsDisposed => _isDisposed;
+
             private readonly List<IDisposable> _toDispose;
+
+            private readonly List<string> _errors = new();
 
             private SmugglerResult _result;
 
@@ -310,6 +314,7 @@ namespace Raven.Server.Documents.Handlers
                 _database = database;
                 _counterGroups = counterGroups;
                 _legacyDictionary = legacyDictionary;
+                _counterUpdates = new Dictionary<string, Document>();
 
                 _toDispose = new List<IDisposable>();
                 _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
@@ -375,6 +380,13 @@ namespace Raven.Server.Documents.Handlers
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
+                // the transaction merger may execute the same command instance more than once
+                // (e.g. when a merged transaction fails and the commands are re-executed independently),
+                // so any state that was built during a previous execution must be reset here
+                _counterUpdates.Clear();
+                _errors.Clear();
+                ErrorCount = 0;
+
                 if (_legacyDictionary != null)
                 {
                     foreach (var kvp in _legacyDictionary)
@@ -406,12 +418,9 @@ namespace Raven.Server.Documents.Handlers
                         cgd.ChangeVector = lazyCv;
                         PutCounters(context, cgd);
                     }
-
-                    _toDispose.Add(cgd.Values);
                 }
 
                 UpdateDocumentsMetadata(context);
-
 
                 return _counterGroups.Count;
             }
@@ -420,13 +429,12 @@ namespace Raven.Server.Documents.Handlers
             {
                 foreach (var toUpdate in _counterUpdates)
                 {
+                    // the document (and its data) belongs to the transaction context, there is no need to dispose it
                     UpdateDocumentCountersAfterImportBatch(context, toUpdate.Key, toUpdate.Value);
-
-                    _toDispose.Add(toUpdate.Value.Data);
                 }
             }
 
-            private static void CheckForDataCorruption(DocumentsOperationContext context, CounterGroupDetail counterGroup, Document doc)
+            private void CheckForDataCorruption(CounterGroupDetail counterGroup, Document doc)
             {
                 if (counterGroup.Values.TryGet(Values, out BlittableJsonReaderObject counterValues) == false)
                     throw new InvalidDataException($"Counter-group of document '{counterGroup.DocumentId}' is missing '{Values}' property");
@@ -465,10 +473,10 @@ namespace Raven.Server.Documents.Handlers
                     [CounterNames] = originalNames
                 };
 
-                using (var old = counterGroup.Values)
-                {
-                    counterGroup.Values = context.ReadObject(counterGroup.Values, counterGroup.DocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                }
+                // the counter group is owned by this command, so the fixed values must be allocated from the command's context
+                // (and not from the transaction context) since the command may be executed again with a different transaction context.
+                // the previous values are not disposed here, they will be released together with the command's context
+                counterGroup.Values = _context.ReadObject(counterGroup.Values, counterGroup.DocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             }
 
             private static List<string> TryGetCounterNamesFromDocument(Document doc)
@@ -492,14 +500,14 @@ namespace Raven.Server.Documents.Handlers
                 catch (DocumentDoesNotExistException e)
                 {
                     ErrorCount++;
-                    _result.AddError(e.Message);
+                    _errors.Add(e.Message);
                     return;
                 }
 
                 if (doc != null)
                     docCollection = CollectionName.GetCollectionName(doc.Data);
 
-                CheckForDataCorruption(context, counterGroupDetail, doc);
+                CheckForDataCorruption(counterGroupDetail, doc);
 
                 var counterGroupChangeVector = context.GetChangeVector(counterGroupDetail.ChangeVector);
                 _database.DocumentsStorage.CountersStorage.PutCounters(context, counterGroupDetail.DocumentId, docCollection,
@@ -645,6 +653,13 @@ namespace Raven.Server.Documents.Handlers
 
                 _isDisposed = true;
 
+                // the counter groups are owned by this command and must not be disposed from ExecuteCmd(),
+                // since the transaction merger may execute the same command instance more than once
+                // (e.g. when a merged transaction fails and the commands are re-executed independently)
+                foreach (var cgd in _counterGroups)
+                {
+                    cgd.Values?.Dispose();
+                }
                 _counterGroups.Clear();
 
                 _counterUpdates.Clear();
@@ -663,7 +678,15 @@ namespace Raven.Server.Documents.Handlers
                 _resetContext?.Dispose();
                 _resetContext = null;
 
-                _result.Counters.ErroredCount += ErrorCount;
+                if (_result != null)
+                {
+                    foreach (var error in _errors)
+                        _result.AddError(error);
+
+                    _result.Counters.ErroredCount += ErrorCount;
+                }
+
+                _errors.Clear();
             }
 
             public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
