@@ -2,6 +2,7 @@ import appUrl = require("common/appUrl");
 import durandalRouter = require("plugins/router");
 import reactUtils = require("common/reactUtils");
 import ClusterDebug = require("components/pages/resources/manageServer/advanced/clusterDebug/ClusterDebug");
+import StorageIo = require("components/pages/resources/manageServer/advanced/storageIo/StorageIo");
 
 class debugAdvanced {
     
@@ -43,6 +44,16 @@ class debugAdvanced {
                     tabName: "Cluster Observer Log",
                     nav: true,
                     hash: appUrl.forDebugAdvancedObserverLog(),
+                    requiredAccess: "Operator"
+                },
+                {
+                    route: 'admin/settings/debug/advanced/storageIo',
+                    // forcing bootstrap 3 as this is child router
+                    moduleId: reactUtils.bridgeToReact(StorageIo.default, "nonShardedView", false),
+                    title: 'Storage I/O',
+                    tabName: "Storage I/O",
+                    nav: true,
+                    hash: appUrl.forDebugAdvancedStorageIo(),
                     requiredAccess: "Operator"
                 },
                 {

@@ -13,6 +13,7 @@ import saveServerWideCustomSorterCommand = require("commands/serverWide/sorters/
 import saveServerWideCustomAnalyzerCommand from "commands/serverWide/analyzers/saveServerWideCustomAnalyzerCommand";
 import getServerSettingsCommand from "commands/maintenance/getServerSettingsCommand";
 import getClusterLogCommand from "commands/database/cluster/getClusterLogCommand";
+import getStorageIoCommand = require("commands/database/debug/getStorageIoCommand");
 import getClusterLogEntryCommand from "commands/database/cluster/getClusterLogEntryCommand";
 import removeEntryFromLogCommand from "commands/database/cluster/removeEntryFromLogCommand";
 import getAdminLogsConfigurationCommand = require("commands/maintenance/getAdminLogsConfigurationCommand");
@@ -44,6 +45,7 @@ import getDebugPackageDatabaseSettingsCommand = require("commands/maintenance/ge
 import getDebugPackageDatabaseIndexDefinitionsCommand = require("commands/maintenance/getDebugPackageDatabaseIndexDefinitionsCommand");
 import getDebugPackageClusterLogCommand = require("commands/maintenance/getDebugPackageClusterLogCommand");
 import getDebugPackageClusterObserverDecisionsCommand = require("commands/maintenance/getDebugPackageClusterObserverDecisionsCommand");
+import getDebugPackageStorageIoCommand = require("commands/maintenance/getDebugPackageStorageIoCommand");
 import getDebugPackageDatabaseOngoingTasksCommand = require("commands/maintenance/getDebugPackageDatabaseOngoingTasksCommand");
 import getDebugPackageDatabaseIndexErrorsCommand = require("commands/maintenance/getDebugPackageDatabaseIndexErrorsCommand");
 import getDebugPackageNetworkInfoCommand = require("commands/maintenance/getDebugPackageNetworkInfoCommand");
@@ -110,6 +112,10 @@ export default class ManageServerService {
 
     async getClusterLog(nodeTag: string, from: number, pageSize: number) {
         return new getClusterLogCommand(nodeTag, from, pageSize).execute();
+    }
+
+    async getStorageIo() {
+        return new getStorageIoCommand().execute();
     }
 
     async getClusterLogEntry(nodeTag: string, index: number) {
@@ -244,6 +250,10 @@ export default class ManageServerService {
         ...args: ConstructorParameters<typeof getDebugPackageClusterObserverDecisionsCommand>
     ) {
         return new getDebugPackageClusterObserverDecisionsCommand(...args).execute();
+    }
+
+    async getDebugPackageStorageIo(...args: ConstructorParameters<typeof getDebugPackageStorageIoCommand>) {
+        return new getDebugPackageStorageIoCommand(...args).execute();
     }
 
     async getDebugPackageDatabaseOngoingTasks(

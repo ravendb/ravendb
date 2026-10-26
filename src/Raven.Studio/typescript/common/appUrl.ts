@@ -175,6 +175,10 @@ class appUrl {
         return "#admin/settings/debug/advanced/observerLog";
     }
 
+    static forDebugAdvancedStorageIo(): string {
+        return "#admin/settings/debug/advanced/storageIo";
+    }
+
     static forDebugAdvancedClusterDebug(): string {
         return "#admin/settings/debug/advanced/clusterDebug";
     }

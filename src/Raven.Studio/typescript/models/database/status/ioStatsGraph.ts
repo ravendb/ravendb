@@ -11,6 +11,35 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 import moment = require("moment");
 import d3 = require("d3");
 import typeUtils = require("common/typeUtils");
+import accessManager = require("common/shell/accessManager");
+import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import getStorageIoCommand = require("commands/database/debug/getStorageIoCommand");
+import storageIoTerms = require("common/storageIoTerms");
+import appUrl = require("common/appUrl");
+
+type StorageEnvironmentType = Voron.StorageEnvironmentWithType.StorageEnvironmentType;
+
+type storageScope = {
+    // picks the environments of this page from /admin/debug/storage/io
+    environmentFilter: (env: Raven.Server.Storage.StorageEnvironmentIoInfo) => boolean;
+    // node shown by the graph, null for the node Studio is connected to
+    nodeTag: string;
+};
+
+type storageDeviceItem = {
+    name: string;
+    usedBy: string;
+    statusText: string;
+    statusCss: string;
+    statusHelp: string;
+    statusReason: string;
+    draining: boolean;
+    modeText: string;
+    modeHelp: string;
+    drainShareText: string;
+    classText: string;
+    classHelp: string;
+};
 
 type rTreeLeaf = {
     minX: number;
@@ -229,6 +258,10 @@ class ioStatsGraph {
 
     private static readonly indexesString = "Indexes";
 
+    private static readonly noCompressedWrites = "no compressed writes in view";
+    private static readonly drainSampleInterval = 10 * 1000;
+    private static readonly drainSyncMarkerHeight = 4;
+
     private static readonly meterTypes: Array<Sparrow.Server.Meters.IoMetrics.MeterType> = [ "JournalWrite", "DataFlush", "DataSync", "Compression" ];
 
     /* private observables */
@@ -254,6 +287,24 @@ class ioStatsGraph {
     private legends = new Map<Sparrow.Server.Meters.IoMetrics.MeterType, KnockoutObservable<legend>>();
     private itemSizePositions = new Map<Sparrow.Server.Meters.IoMetrics.MeterType, KnockoutObservable<string>>();
     private itemHovered = new Map<Sparrow.Server.Meters.IoMetrics.MeterType, KnockoutObservable<boolean>>();
+
+    private readonly help = storageIoTerms.ioStatsHelp;
+    private readonly termHelp = storageIoTerms.storageTermHelp;
+    private journalCompression = ko.observable<string>(ioStatsGraph.noCompressedWrites);
+    private hasDrainedSyncs = ko.observable<boolean>(false);
+
+    // disk state from /admin/debug/storage/io, Operator only
+    private readonly storageScope: storageScope;
+    private canSeeStorageDevices: KnockoutComputed<boolean>;
+    private storageDevices = ko.observableArray<storageDeviceItem>([]);
+    private storageDevicesNote = ko.observable<string>();
+    private storageDevicesAsOf = ko.observable<string>();
+    private storageDevicesLoading = ko.observable<boolean>(false);
+    private readonly storageIoUrl = appUrl.forDebugAdvancedStorageIo();
+    private drainPeriodsCount = ko.observable<number>(0);
+    private showDrainLegend: KnockoutComputed<boolean>;
+    private drainPeriodsByEnvType = new Map<StorageEnvironmentType, Array<[Date, Date]>>();
+    private allDrainPeriods: Array<[Date, Date]> = [];
 
     /* private */
 
@@ -301,7 +352,9 @@ class ioStatsGraph {
         trackNameFg: undefined as string,
         openedTrackArrow: undefined as string,
         closedTrackArrow: undefined as string,
-        text: undefined as string
+        text: undefined as string,
+        drainPeriod: undefined as string,
+        drainSync: undefined as string
     };
 
     private eventsColors: { [typeName in Sparrow.Server.Meters.IoMetrics.MeterType]: { low: string; high: string } } = {
@@ -323,13 +376,18 @@ class ioStatsGraph {
                 tracksOrder: string[],
                 supportsIndexes: boolean,
         liveClientProvider: (onData: (data: Raven.Server.Utils.IoMetrics.IOMetricsResponse) => void,
-                                     dateCutOff?: Date) => liveIOStatsWebSocketClient) {
-        
+                                     dateCutOff?: Date) => liveIOStatsWebSocketClient,
+                storageScope: storageScope) {
+
         this.statsNameProvider = statsNameProvider;
         this.tracksOrder = tracksOrder;
         this.supportsIndexes = supportsIndexes;
         this.liveViewClientProvider = liveClientProvider;
-        _.bindAll(this, "clearGraphWithConfirm");
+        this.storageScope = storageScope;
+        _.bindAll(this, "clearGraphWithConfirm", "refreshStorageDevices");
+
+        this.canSeeStorageDevices = ko.pureComputed(() => accessManager.default.isOperatorOrAbove());
+        this.showDrainLegend = ko.pureComputed(() => !this.isImport() && this.storageDevices().length > 0);
 
         this.searchText.throttle(700).subscribe(() => this.filterTracks());
 
@@ -388,6 +446,7 @@ class ioStatsGraph {
             () => this.hideTooltip());
 
         this.enableLiveView();
+        this.refreshStorageDevices();
     }
 
     private initLegendImages() {
@@ -406,6 +465,10 @@ class ioStatsGraph {
         // Init max size (for legend scale)
         this.legends.forEach(x => legendsCache.set(x().type, 0));
 
+        let hasCompression = false;
+        let hasDrainedSyncs = false;
+        const latestAlgorithmPerType = new Map<StorageEnvironmentType, { at: number; algorithm: string }>();
+
         this.data.Environments.forEach(env => {
 
             if (env.Type === "Index") {
@@ -413,12 +476,26 @@ class ioStatsGraph {
             }
 
             env.Files.forEach(file => {
-                file.Recent.forEach(recentItem => {
+                file.Recent.forEach((recentItem: IOMetricsRecentStatsWithCache) => {
 
                     // Calc highest batch size for each type
                     const itemValue = ioStatsGraph.extractItemValue(recentItem);
                     const currentLegendMax = legendsCache.get(recentItem.Type);
                     legendsCache.set(recentItem.Type, itemValue > currentLegendMax ? itemValue : currentLegendMax);
+
+                    if (recentItem.Type === "Compression") {
+                        hasCompression = true;
+                        // missing in files from older versions
+                        if (recentItem.Algorithm != null) {
+                            const at = recentItem.StartedAsDate ? recentItem.StartedAsDate.getTime() : 0;
+                            const latest = latestAlgorithmPerType.get(env.Type);
+                            if (!latest || at >= latest.at) {
+                                latestAlgorithmPerType.set(env.Type, { at, algorithm: recentItem.Algorithm });
+                            }
+                        }
+                    } else if (recentItem.Type === "DataSync" && recentItem.Drain) {
+                        hasDrainedSyncs = true;
+                    }
 
                     this.hasAnyData(true);
                 });
@@ -428,6 +505,51 @@ class ioStatsGraph {
         this.legends.forEach(legend => {
             legend().maxSize(Math.max(1, legendsCache.get(legend().type)));
         });
+
+        this.journalCompression(ioStatsGraph.describeJournalCompression(hasCompression, latestAlgorithmPerType));
+        this.hasDrainedSyncs(hasDrainedSyncs);
+    }
+
+    private static describeJournalCompression(hasCompression: boolean,
+                                              latestAlgorithmPerType: Map<StorageEnvironmentType, { at: number; algorithm: string }>): string {
+        if (!hasCompression) {
+            return ioStatsGraph.noCompressedWrites;
+        }
+
+        if (latestAlgorithmPerType.size === 0) {
+            return "not recorded (data from an older version)";
+        }
+
+        const typesPerAlgorithm = new Map<string, string[]>();
+        latestAlgorithmPerType.forEach((latest, type) => {
+            const algorithm = ioStatsGraph.formatCompressionAlgorithm(latest.algorithm);
+            const types = typesPerAlgorithm.get(algorithm) ?? [];
+            types.push(ioStatsGraph.storageTypeName(type));
+            typesPerAlgorithm.set(algorithm, types);
+        });
+
+        if (typesPerAlgorithm.size === 1) {
+            return Array.from(typesPerAlgorithm.keys())[0];
+        }
+
+        return Array.from(typesPerAlgorithm.entries())
+            .map(([algorithm, types]) => `${algorithm} (${types.join(", ")})`)
+            .join(", ");
+    }
+
+    private static formatCompressionAlgorithm(algorithm: string): string {
+        return storageIoTerms.journalCompressionLabel[algorithm as Voron.JournalCompressionAlgorithm] ?? algorithm;
+    }
+
+    private static storageTypeName(type: StorageEnvironmentType): string {
+        switch (type) {
+            case "Index":
+                return "Indexes";
+            case "SharedJournals":
+                return "Shared journals";
+            default:
+                return type;
+        }
     }
 
     private initCanvas() {
@@ -671,6 +793,7 @@ class ioStatsGraph {
 
         const context = this.brushSection.getContext("2d");
 
+        this.drawBrushDrainPeriods(context);
         this.drawBrushGaps(context);
 
         // 2. Draw scale
@@ -721,6 +844,31 @@ class ioStatsGraph {
         });
         
         this.prepareBrush();
+    }
+
+    private showDrainPeriods(): boolean {
+        return !this.isImport() && this.allDrainPeriods.length > 0;
+    }
+
+    private drawBrushDrainPeriods(context: CanvasRenderingContext2D) {
+        if (!this.showDrainPeriods()) {
+            return;
+        }
+
+        context.fillStyle = this.colors.drainPeriod;
+        ioStatsGraph.fillDrainPeriods(context, this.allDrainPeriods, this.xBrushTimeScale, 1, ioStatsGraph.brushSectionHeight - 2);
+    }
+
+    private static fillDrainPeriods(context: CanvasRenderingContext2D, periods: Array<[Date, Date]>,
+                                    xScale: d3.time.Scale<number, number>, yStart: number, height: number) {
+        for (let i = 0; i < periods.length; i++) {
+            const x1 = xScale(periods[i][0]);
+            const x2 = xScale(periods[i][1]);
+            // a period that falls into a gap (no IO events) collapses to nothing
+            if (x2 - x1 >= 0.5) {
+                context.fillRect(x1, yStart, x2 - x1, height);
+            }
+        }
     }
 
     private drawBrushGaps(context: CanvasRenderingContext2D) {
@@ -965,6 +1113,9 @@ class ioStatsGraph {
             // Draw tracks background 
             this.drawTracksBackground(context);
 
+            // Shade the periods the disk was paced (drain), behind the items
+            this.drawDrainPeriods(context, xScale);
+
             // Draw gaps   
             this.drawGaps(context, xScale);
 
@@ -1085,6 +1236,7 @@ class ioStatsGraph {
                     const dx = originalDx < ioStatsGraph.minItemWidth ? ioStatsGraph.minItemWidth : originalDx;
                     context.fillStyle = this.calcItemColor(recentItem.Type, recentItem);
                     context.fillRect(x1, yStartItem, dx, ioStatsGraph.itemHeight);
+                    this.drawDrainSyncMarker(context, recentItem, x1, yStartItem, dx);
 
                     // Register track item for tooltip (but not for the 'closed' indexes track)
                     this.hitTest.registerTrackItem(x1 - 2, yStartItem, dx + 2, ioStatsGraph.itemHeight, recentItem);
@@ -1161,6 +1313,7 @@ class ioStatsGraph {
                 const dx = originalDx < ioStatsGraph.minItemWidth ? ioStatsGraph.minItemWidth : originalDx;
                 context.fillStyle = this.calcItemColor(recentItem.Type);
                 context.fillRect(x1, yStartItem, dx, ioStatsGraph.itemHeight);
+                this.drawDrainSyncMarker(context, recentItem, x1, yStartItem, dx);
 
                 // On the closed index track: 
                 // Register toggle, so that indexes details will open
@@ -1169,6 +1322,17 @@ class ioStatsGraph {
         }
 
         context.restore();
+    }
+
+    private drawDrainSyncMarker(context: CanvasRenderingContext2D, item: Raven.Server.Utils.IoMetrics.IOMetricsRecentStats,
+                                x: number, yStart: number, width: number) {
+        if (item.Type === "DataSync" && item.Drain) {
+            context.fillStyle = this.colors.drainSync;
+            context.fillRect(x, yStart, width, ioStatsGraph.drainSyncMarkerHeight);
+            // separator line, keeps the marker visible on the orange end of the sync colors
+            context.fillStyle = this.colors.trackBackground;
+            context.fillRect(x, yStart + ioStatsGraph.drainSyncMarkerHeight, width, 1);
+        }
     }
 
     /**
@@ -1225,6 +1389,52 @@ class ioStatsGraph {
         if (this.isIndexesExpanded()) {
             context.fillRect(0, this.yScale(ioStatsGraph.indexesString), context.measureText(ioStatsGraph.indexesString).width + 30, ioStatsGraph.closedTrackHeight);
             this.drawTrackName(context, ioStatsGraph.indexesString, this.yScale(ioStatsGraph.indexesString));
+        }
+
+        context.restore();
+    }
+
+    private drawDrainPeriods(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
+        if (!this.showDrainPeriods()) {
+            return;
+        }
+
+        context.save();
+
+        context.beginPath();
+        context.rect(0, ioStatsGraph.axisHeight, this.totalWidth, this.totalHeight - ioStatsGraph.brushSectionHeight);
+        context.clip();
+
+        context.fillStyle = this.colors.drainPeriod;
+
+        const shadeTrack = (type: StorageEnvironmentType, yStart: number) => {
+            // no shading when the device of this track is not known (or its environments sit on several devices)
+            const periods = this.drainPeriodsByEnvType.get(type);
+            if (periods) {
+                ioStatsGraph.fillDrainPeriods(context, periods, xScale, yStart, ioStatsGraph.openedTrackHeight);
+            }
+        };
+
+        let hasVisibleIndexTrack = false;
+
+        this.data.Environments.forEach(env => {
+            if (this.filtered(env)) {
+                return;
+            }
+
+            if (env.Type === "Index") {
+                hasVisibleIndexTrack = true;
+                if (this.isIndexesExpanded()) {
+                    shadeTrack(env.Type, this.yScale(env.Path));
+                }
+            } else {
+                shadeTrack(env.Type, this.yScale(env.Path));
+            }
+        });
+
+        // all index tracks share one position when collapsed, shade it once
+        if (hasVisibleIndexTrack && !this.isIndexesExpanded()) {
+            shadeTrack("Index", this.yScale(ioStatsGraph.indexesString));
         }
 
         context.restore();
@@ -1358,13 +1568,14 @@ class ioStatsGraph {
                         this.resetGraphData();
                     }
                     this.data = importedData;
+                    // set before drawing: the current disk state does not belong to an imported file
+                    this.isImport(true);
                     this.fillCache();
                     this.prepareTimeData();
                     this.initViewData();
                     this.setLegendScales();
                     this.updateClosedIndexesInfo();
                     this.draw(true);
-                    this.isImport(true);
                 }
             }
         } catch (e) {
@@ -1413,6 +1624,149 @@ class ioStatsGraph {
         this.dateCutoff = null;
         this.isImport(false);
         this.clearGraph();
+        this.refreshStorageDevices();
+    }
+
+    refreshStorageDevices() {
+        // device level state is shared by every database on the disk, the endpoint is Operator only
+        if (!this.canSeeStorageDevices()) {
+            return;
+        }
+
+        const localNodeTag = clusterTopologyManager.default.localNodeTag();
+        const nodeTag = this.storageScope.nodeTag;
+        if (nodeTag && nodeTag !== localNodeTag) {
+            const connectedTo = localNodeTag ? ` (node ${localNodeTag})` : "";
+            this.setStorageDevices(null, [], `Disk state: available only for the node this Studio is connected to${connectedTo}.`);
+            return;
+        }
+
+        this.storageDevicesLoading(true);
+
+        new getStorageIoCommand()
+            .execute()
+            .done(report => this.onStorageReport(report))
+            .fail(() => this.setStorageDevices(null, [], "Disk state: failed to load."))
+            .always(() => this.storageDevicesLoading(false));
+    }
+
+    private onStorageReport(report: Raven.Server.Storage.StorageIoReport) {
+        const environments = report.Environments.filter(x => this.storageScope.environmentFilter(x));
+        const deviceIds = new Set(environments.map(x => x.DeviceId).filter(x => x));
+        const devices = report.Devices.filter(x => deviceIds.has(x.DeviceId));
+
+        const periodsByDevice = new Map<string, Array<[Date, Date]>>();
+        devices.forEach(device => periodsByDevice.set(device.DeviceId, ioStatsGraph.toDrainPeriods(device.History)));
+
+        // a track is shaded only when all its environments sit on one device
+        const periodsByEnvType = new Map<StorageEnvironmentType, Array<[Date, Date]>>();
+        new Set(environments.map(x => x.Type)).forEach(type => {
+            const typeDeviceIds = Array.from(new Set(environments.filter(x => x.Type === type).map(x => x.DeviceId)));
+            if (typeDeviceIds.length === 1 && periodsByDevice.has(typeDeviceIds[0])) {
+                periodsByEnvType.set(type, periodsByDevice.get(typeDeviceIds[0]));
+            }
+        });
+
+        const items = devices.map(device => ioStatsGraph.toStorageDeviceItem(device,
+            devices.length > 1 ? environments.filter(x => x.DeviceId === device.DeviceId) : null));
+
+        let note: string = null;
+        if (!environments.length) {
+            note = "Disk state: no open storage on this node (the database may be idle or not hosted here).";
+        } else if (!devices.length) {
+            note = "Disk state: the disk could not be identified.";
+        }
+
+        this.drainPeriodsByEnvType = periodsByEnvType;
+        this.setStorageDevices(moment().format("HH:mm:ss"), items, note,
+            ioStatsGraph.mergePeriods(Array.from(periodsByDevice.values()).flat()));
+    }
+
+    private setStorageDevices(asOf: string, items: storageDeviceItem[], note: string, drainPeriods: Array<[Date, Date]> = []) {
+        if (!items.length) {
+            this.drainPeriodsByEnvType = new Map();
+        }
+
+        this.allDrainPeriods = drainPeriods;
+        this.drainPeriodsCount(drainPeriods.length);
+        this.storageDevices(items);
+        this.storageDevicesNote(note);
+        this.storageDevicesAsOf(asOf);
+
+        this.draw(false);
+    }
+
+    private static toDrainPeriods(history: Raven.Server.Storage.StorageDeviceSample[]): Array<[Date, Date]> {
+        // a sample is the mode at one instant, taken every 10 s: a run of draining samples covers half an interval on both sides
+        const halfInterval = ioStatsGraph.drainSampleInterval / 2;
+        const result: Array<[Date, Date]> = [];
+        let start: number = null;
+        let end: number = null;
+
+        (history ?? []).forEach(sample => {
+            const at = moment.utc(sample.At).valueOf();
+            if (sample.Draining) {
+                start = start ?? at - halfInterval;
+                end = at + halfInterval;
+            } else if (start != null) {
+                result.push([new Date(start), new Date(end)]);
+                start = null;
+            }
+        });
+
+        if (start != null) {
+            result.push([new Date(start), new Date(end)]);
+        }
+
+        return result;
+    }
+
+    private static mergePeriods(periods: Array<[Date, Date]>): Array<[Date, Date]> {
+        const result: Array<[Date, Date]> = [];
+
+        [...periods].sort((a, b) => a[0].getTime() - b[0].getTime()).forEach(period => {
+            const last = result[result.length - 1];
+            if (last && period[0].getTime() <= last[1].getTime()) {
+                if (period[1].getTime() > last[1].getTime()) {
+                    last[1] = period[1];
+                }
+            } else {
+                result.push([period[0], period[1]]);
+            }
+        });
+
+        return result;
+    }
+
+    private static toStorageDeviceItem(device: Raven.Server.Storage.StorageDeviceIoInfo,
+                                       environmentsOnDevice: Raven.Server.Storage.StorageEnvironmentIoInfo[]): storageDeviceItem {
+        const share = device.DrainShareOfLastHour ?? 0;
+
+        return {
+            name: device.MountPoint ?? device.PathOnDevice ?? device.DeviceId,
+            usedBy: environmentsOnDevice ? ioStatsGraph.describeEnvironments(environmentsOnDevice) : "",
+            statusText: storageIoTerms.storageStatusLabel[device.Status] ?? device.Status,
+            statusCss: "label-" + (storageIoTerms.storageStatusColor[device.Status] ?? "default"),
+            statusHelp: Array.from(new Set([device.StatusReason, storageIoTerms.storageStatusHelp[device.Status]].filter(x => x))).join("\n"),
+            statusReason: device.Status !== "Ok" ? device.StatusReason : "",
+            draining: device.Draining,
+            modeText: device.Draining ? "Writes paced (drain)" : "Normal (trickle)",
+            modeHelp: device.Draining ? storageIoTerms.storageTermHelp.drain : storageIoTerms.storageTermHelp.trickle,
+            drainShareText: share > 0 && share < 0.01 ? "< 1%" : Math.round(share * 100) + "%",
+            classText: device.Class,
+            classHelp: [device.ClassDescription, storageIoTerms.deviceClassHelp[device.Class]].filter(x => x).join("\n"),
+        };
+    }
+
+    private static describeEnvironments(environments: Raven.Server.Storage.StorageEnvironmentIoInfo[]): string {
+        const countPerType = new Map<StorageEnvironmentType, number>();
+        environments.forEach(x => countPerType.set(x.Type, (countPerType.get(x.Type) ?? 0) + 1));
+
+        return Array.from(countPerType.entries())
+            .map(([type, count]) => type === "Index"
+                ? `${count} ${count === 1 ? "index" : "indexes"}`
+                : ioStatsGraph.storageTypeName(type))
+            .join(", ");
     }
 
     private resetGraphData() {
@@ -1421,6 +1775,8 @@ class ioStatsGraph {
         this.hasAnyData(false);
         this.allIndexesAreFiltered(false);
         this.bufferUsage("0.0");
+        this.journalCompression(ioStatsGraph.noCompressedWrites);
+        this.hasDrainedSyncs(false);
         this.setZoomAndBrush([0, this.totalWidth], brush => brush.clear());
     }
 
@@ -1559,8 +1915,57 @@ class ioStatsGraph {
                 tooltipHtml += `<div class="tooltip-li">Compression speed: <span class="value">${compressionSpeed}</span></div>`;
             }
 
+            tooltipHtml += ioStatsGraph.adaptiveIoTooltip(element);
+
             this.handleTooltip(element, x, y, tooltipHtml);
         }
+    }
+
+    // adaptive I/O decisions, missing in files from older versions
+    private static adaptiveIoTooltip(element: Raven.Server.Utils.IoMetrics.IOMetricsRecentStats): string {
+        // values can come from an imported file, escape them
+        const escape = (value: unknown) => generalUtils.escapeHtml(String(value));
+        const line = (label: string, value: string) => `<div class="tooltip-li">${label}: <span class="value">${escape(value)}</span></div>`;
+        const yesNo = (value: boolean) => (value ? "yes" : "no");
+        const formatMs = (value: number) => generalUtils.formatMillis(Number(value)).replace(/\s+/g, " ").trim();
+
+        let html = "";
+
+        switch (element.Type) {
+            case "Compression":
+                if (element.Algorithm != null) {
+                    html += line("Algorithm", ioStatsGraph.formatCompressionAlgorithm(element.Algorithm));
+                }
+                break;
+            case "JournalWrite":
+                if (element.Pipelined != null) {
+                    html += line("Pipelined", yesNo(element.Pipelined));
+                }
+                if (element.BatchOperations > 0) {
+                    html += line("Merged operations", Number(element.BatchOperations).toLocaleString());
+                }
+                break;
+            case "DataSync":
+                if (element.SyncReason != null && element.SyncReason !== "None") {
+                    html += line("Reason", storageIoTerms.syncReasonLabel[element.SyncReason] ?? element.SyncReason);
+                    const help = storageIoTerms.syncReasonHelp[element.SyncReason];
+                    if (help) {
+                        html += `<div class="tooltip-li tooltip-help">${escape(help)}</div>`;
+                    }
+                }
+                if (element.Drain != null) {
+                    html += line("Paced writeback (drain)", yesNo(element.Drain));
+                    if (element.Drain && element.WritebackSize != null) {
+                        const ranges = Number(element.WritebackRanges ?? 0);
+                        const size = generalUtils.formatBytesToSize(Number(element.WritebackSize));
+                        html += line("Writeback", `${size} in ${ranges.toLocaleString()} ${ranges === 1 ? "range" : "ranges"}, `
+                            + `${formatMs(element.WritebackDuration)} of ${formatMs(element.Duration)}`);
+                    }
+                }
+                break;
+        }
+
+        return html;
     }
 
     private handleTooltip(element: Raven.Server.Utils.IoMetrics.IOMetricsRecentStats | timeGapInfo, x: number, y: number, tooltipHtml: string) {
