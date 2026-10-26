@@ -135,7 +135,7 @@ namespace Raven.Server.Storage
             tracker.LastHintUpdate = now;
 
             if (first && _logger.IsInfoEnabled)
-                _logger.Info($"{hint.Title}: {hint.Message}");
+                _logger.Info(hint.Message);
         }
 
         private PerformanceHint CreateHint(DeviceTracker tracker)
@@ -221,10 +221,23 @@ namespace Raven.Server.Storage
         }
 
         // the class is a getter evaluated per transaction, watching it here keeps the change detection off the write path
+        private const int StableClassSamples = 3;
+
         private void LogClassChange(DeviceTracker tracker)
         {
             DeviceWriteBudget device = tracker.Device;
             DeviceWriteBudget.DeviceClass current = device.Classify(out DeviceWriteBudget.ClassReason reason);
+
+            // a latency sitting right at a class boundary flips the class back and forth; report it once it held for a few samples
+            if (current != tracker.CandidateClass)
+            {
+                tracker.CandidateClass = current;
+                tracker.CandidateSamples = 0;
+            }
+
+            if (++tracker.CandidateSamples < StableClassSamples)
+                return;
+
             DeviceWriteBudget.DeviceClass? previous = tracker.LastClass;
             tracker.LastClass = current;
 
@@ -374,6 +387,10 @@ namespace Raven.Server.Storage
         public DeviceWriteBudget Device { get; }
 
         internal DeviceWriteBudget.DeviceClass? LastClass { get; set; }
+
+        internal DeviceWriteBudget.DeviceClass? CandidateClass { get; set; }
+
+        internal int CandidateSamples { get; set; }
 
         public DateTime? SaturatedSince { get; private set; }
 
