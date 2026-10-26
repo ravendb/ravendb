@@ -15,7 +15,7 @@ on:
 
 jobs:
   studio:
-    name: Studio conventions and tests
+    name: Studio Conventions and Tests
     runs-on: ubuntu-latest
     defaults:
       run:
