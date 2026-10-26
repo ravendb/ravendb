@@ -4,13 +4,16 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using JetBrains.Annotations;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Indexes.Static.Linq;
 using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public partial class DynamicArray : DynamicObject, IOrderedEnumerable<object>
+    public partial class DynamicArray : DynamicObject, IOrderedEnumerable<object>, DynamicEnumerable.IDynamicSequence
     {
         private readonly IEnumerable<object> _inner;
 
@@ -19,7 +22,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
         }
 
-        public DynamicArray(IEnumerable<object> inner)
+        public DynamicArray([NoEnumeration] IEnumerable<object> inner)
         {
             _inner = inner;
         }
@@ -114,6 +117,9 @@ namespace Raven.Server.Documents.Indexes.Static
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IEnumerator<object> GetEnumerator()
         {
+            if (_inner is BlittableJsonReaderArray array)
+                return new DynamicArrayIterator<BlittableJsonReaderArray.BlittableJsonArrayEnumerator>(array.Items);
+
             var enumerator = _inner.GetEnumerator();
             switch (enumerator)
             {
@@ -126,6 +132,9 @@ namespace Raven.Server.Documents.Indexes.Static
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         IEnumerator IEnumerable.GetEnumerator()
         {
+            if (_inner is BlittableJsonReaderArray array)
+                return new DynamicArrayIterator<BlittableJsonReaderArray.BlittableJsonArrayEnumerator>(array.Items);
+
             var enumerator = _inner.GetEnumerator();
             switch (enumerator)
             {
@@ -233,38 +242,135 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public bool Contains(object item)
         {
-            var itemToWorkOn = InternalConvert(item);
+            return Contains(item, enumerableOrigin: false);
+        }
+
+        internal bool ContainsFromEnumerable(object item)
+        {
+            return Contains(item, enumerableOrigin: true);
+        }
+
+        private bool Contains(object item, bool enumerableOrigin)
+        {
+            if (item is char character && this is not ICollection<object>)
+                return ContainsCharacter(character, item, enumerableOrigin);
+
+            object itemToWorkOn = InternalConvert(item);
+
+            if (_inner is BlittableJsonReaderArray values && GetType() == typeof(DynamicArray))
+            {
+                // Stored nulls are enumerated as DynamicNullObject, so the stored-array loop keeps its sentinel.
+                itemToWorkOn ??= DynamicNullObject.Null;
+                var enumerator = new DynamicArrayIterator<BlittableJsonReaderArray.BlittableJsonArrayEnumerator>(values.Items);
+                try
+                {
+                    while (enumerator.MoveNext())
+                    {
+                        if (EqualityComparer<object>.Default.Equals(enumerator.Current, itemToWorkOn))
+                            return true;
+                    }
+
+                    return false;
+                }
+                finally
+                {
+                    enumerator.Dispose();
+                }
+            }
+
+            // Derived collections still receive CLR null; other sources must not pass a sentinel to element Equals.
+            if (itemToWorkOn == null && this is not ICollection<object>)
+                return ContainsNullValue();
+
+            if (item != null && ReferenceEquals(item, itemToWorkOn) == false && this is not ICollection<object>)
+                return ContainsConvertedValue(item, itemToWorkOn, enumerableOrigin);
 
             return Enumerable.Contains(this, itemToWorkOn);
         }
 
-        public bool Contains(object item, IEqualityComparer comparer)
+        private bool ContainsConvertedValue(object original, object converted, bool enumerableOrigin)
         {
-            if (comparer == null)
-                return Contains(item);
+            var originalType = original.GetType();
+            var convertedType = converted.GetType();
+            foreach (object value in (IEnumerable<object>)this)
+            {
+                var valueType = value?.GetType();
+                object target;
+                if (valueType == convertedType || value is LazyNumberValue)
+                    target = converted;
+                else if (valueType == originalType || enumerableOrigin)
+                    target = original;
+                else
+                    target = converted;
 
-            var itemToWorkOn = InternalConvert(item);
-            return Enumerable.Contains<object>(this, itemToWorkOn, new NonGenericEqualityComparerAdapter(comparer));
+                if (EqualityComparer<object>.Default.Equals(value, target))
+                    return true;
+            }
+
+            return false;
         }
 
-        private sealed class NonGenericEqualityComparerAdapter : IEqualityComparer<object>
+        private bool ContainsNullValue()
         {
-            private readonly IEqualityComparer _comparer;
-
-            public NonGenericEqualityComparerAdapter(IEqualityComparer comparer)
+            foreach (object value in (IEnumerable<object>)this)
             {
-                _comparer = comparer;
+                if (value is null or DynamicNullObject)
+                    return true;
             }
 
-            bool IEqualityComparer<object>.Equals(object x, object y)
+            return false;
+        }
+
+        private bool ContainsCharacter(char character, object original, bool enumerableOrigin)
+        {
+            string value = null;
+            using IEnumerator<object> enumerator = ((IEnumerable<object>)this).GetEnumerator();
+            if (enumerator.MoveNext() == false)
+                return false;
+
+            Span<byte> utf8Character = stackalloc byte[Sparrow.Encodings.Utf8.GetMaxByteCount(1)];
+            int byteCount = -1;
+            do
             {
-                return _comparer.Equals(ConvertComparerValue(x), ConvertComparerValue(y));
+                object item = enumerator.Current;
+                if (item is LazyStringValue { HasStringValue: false, IsDisposed: false } text)
+                {
+                    // Reuse the encoded character while preserving cached-string and disposed-value handling below.
+                    if (byteCount < 0)
+                        byteCount = Sparrow.Encodings.Utf8.GetBytes(MemoryMarshal.CreateReadOnlySpan(ref character, length: 1), utf8Character);
+
+                    if (text.Size == byteCount && utf8Character.Slice(0, byteCount).SequenceEqual(text.AsReadOnlySpan()))
+                        return true;
+                }
+                else if (enumerableOrigin && item is not LazyStringValue && item is not LazyCompressedStringValue)
+                {
+                    if (EqualityComparer<object>.Default.Equals(item, original))
+                        return true;
+                }
+                else if (Equals(item, value ??= character.ToString()) || item is char other && other == character)
+                    return true;
+            } while (enumerator.MoveNext());
+
+            return false;
+        }
+
+        public bool Contains(object item, IEqualityComparer comparer)
+        {
+            if (comparer is null or IEqualityComparer<object>)
+                return DynamicEnumerable.Contains(this, item, (IEqualityComparer<object>)comparer);
+
+            var isCompareCharacters = comparer is IEqualityComparer<char>;
+            object itemToWorkOn = isCompareCharacters && item is char
+                ? item
+                : InternalConvert(item);
+
+            foreach (object value in (IEnumerable<object>)this)
+            {
+                if (comparer.Equals(ConvertComparerValue(value, isCompareCharacters), ConvertComparerValue(itemToWorkOn, isCompareCharacters)))
+                    return true;
             }
 
-            int IEqualityComparer<object>.GetHashCode(object obj)
-            {
-                return _comparer.GetHashCode(ConvertComparerValue(obj));
-            }
+            return false;
         }
 
         public int Sum(Func<dynamic, int> selector)
@@ -667,9 +773,91 @@ namespace Raven.Server.Documents.Indexes.Static
             return new DynamicArray(Enumerable.Reverse(this));
         }
 
+        public bool SequenceEqual(IEnumerable<dynamic> second)
+        {
+            return SequencesEqual(this, second);
+        }
+
         public bool SequenceEqual(IEnumerable second)
         {
-            return Enumerable.SequenceEqual(this, second.Cast<object>());
+            return SequenceEqual(second.Cast<object>());
+        }
+
+        internal static bool SequencesEqual(IEnumerable<object> first, IEnumerable<object> second)
+        {
+            ArgumentNullException.ThrowIfNull(first);
+            ArgumentNullException.ThrowIfNull(second);
+
+            using var firstEnumerator = first.GetEnumerator();
+            using var secondEnumerator = second.GetEnumerator();
+            while (firstEnumerator.MoveNext())
+            {
+                if (secondEnumerator.MoveNext() == false)
+                    return false;
+
+                object firstValue = firstEnumerator.Current;
+                object secondValue = secondEnumerator.Current;
+                if (firstValue != null && secondValue != null && firstValue.Equals(secondValue))
+                    continue;
+
+                if (EqualsTextOrNull(firstValue, secondValue) == false)
+                    return false;
+            }
+
+            return secondEnumerator.MoveNext() == false;
+        }
+
+        internal static bool EqualsBlittableTextOrNull(object first, object second)
+        {
+            if (first is char && second is string || first is string && second is char)
+                return false;
+
+            return EqualsTextOrNull(first, second);
+        }
+
+        private static bool EqualsTextOrNull(object first, object second)
+        {
+            // Preserve ordinary equality, including numeric equality, before adapting JSON text and null values.
+            return (first, second) switch
+            {
+                (first: null or DynamicNullObject, second: null or DynamicNullObject) => true,
+                (string left, LazyStringValue right) => right.Equals(left),
+                // LazyCompressedStringValue.Equals(object) explicitly supports CLR strings.
+                // ReSharper disable once SuspiciousTypeConversion.Global
+                (string left, LazyCompressedStringValue right) => right.Equals(left),
+                (char left, LazyStringValue right) => EqualsCharacter(right, left),
+                // ReSharper disable once SuspiciousTypeConversion.Global
+                (char left, LazyCompressedStringValue right) => right.Equals(left.ToString()),
+                (LazyStringValue left, char right) => EqualsCharacter(left, right),
+                // ReSharper disable once SuspiciousTypeConversion.Global
+                (LazyCompressedStringValue left, char right) => left.Equals(right.ToString()),
+                _ => false
+            };
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool EqualsCharacter(LazyStringValue text, char character)
+        {
+            if (text.IsDisposed)
+                return text.Equals(character.ToString());
+
+            if (text.HasStringValue)
+            {
+                var value = (string)text;
+                return value.Length == 1 && value[0] == character;
+            }
+
+            if (char.IsAscii(character))
+                return text.Size == 1 && text.AsReadOnlySpan()[0] == character;
+
+            return EqualsCharacterUtf8(text, character);
+        }
+
+        private static bool EqualsCharacterUtf8(LazyStringValue text, char character)
+        {
+            Span<byte> utf8Character = stackalloc byte[Sparrow.Encodings.Utf8.GetMaxByteCount(1)];
+            int byteCount = Sparrow.Encodings.Utf8.GetBytes(MemoryMarshal.CreateReadOnlySpan(ref character, 1), utf8Character);
+            return text.Size == byteCount && utf8Character.Slice(0, byteCount).SequenceEqual(text.AsReadOnlySpan());
         }
 
         public IEnumerable<dynamic> AsEnumerable()
@@ -875,7 +1063,11 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             private readonly IEnumerator<object> _inner;
 
-            public DynamicArrayIterator(IEnumerator<object> inner)
+            public DynamicArrayIterator(IEnumerable<object> items) : this(items.GetEnumerator())
+            {
+            }
+
+            internal DynamicArrayIterator(IEnumerator<object> inner)
             {
                 _inner = inner;
                 Current = null;
