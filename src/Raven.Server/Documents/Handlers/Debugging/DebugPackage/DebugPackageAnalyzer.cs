@@ -224,6 +224,9 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
             });
         }
 
+        // a node held back by its disk explains many of the symptoms below (slow pings, elections, log lag), so it goes first
+        StorageIoAnalyzer.DetectClusterWideIssues(reports, clusterWideIssues);
+
         var customElectionTimeoutDetected = false;
         
         var clusterLogQueueSize = new Dictionary<string, long>();
@@ -288,8 +291,6 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                 }
             }
         }
-
-        StorageIoAnalyzer.DetectClusterWideIssues(reports, clusterWideIssues);
 
         return clusterWideIssues;
     }
