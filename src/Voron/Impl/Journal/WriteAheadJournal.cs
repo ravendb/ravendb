@@ -309,6 +309,7 @@ namespace Voron.Impl.Journal
 
                     addToInitLog?.Invoke(LogLevel.Debug, $"Validate checksum on {modifiedPages.Count:#,#;;0} pages");
 
+                    var totalSp = Stopwatch.StartNew();
                     var sp = Stopwatch.StartNew();
 
                     for (var i = sortedPages.Length - 1; i >= 0; i--)
@@ -318,7 +319,7 @@ namespace Voron.Impl.Journal
                         if (sp.Elapsed.TotalSeconds >= 60)
                         {
                             sp.Restart();
-                            addToInitLog?.Invoke(LogLevel.Debug, $"Still calculating checksum... {(sortedPages.Length - i) / sortedPages.Length * 100:0.00}% ({(sortedPages.Length - i):#,#;;0} out of {sortedPages.Length:#,#;;0}");
+                            addToInitLog?.Invoke(LogLevel.Debug, $"Still calculating checksum... {100.0 * (sortedPages.Length - i) / sortedPages.Length:0.00}% ({(sortedPages.Length - i):#,#;;0} out of {sortedPages.Length:#,#;;0})");
                         }
 
                         using (tempTx) // release any resources, we just wanted to validate things
@@ -339,8 +340,8 @@ namespace Voron.Impl.Journal
                         }
                     }
 
-                    sp.Stop();
-                    addToInitLog?.Invoke(LogLevel.Debug, $"Validate of {sortedPages.Length:#,#;;0} pages completed in {sp.Elapsed}");
+                    totalSp.Stop();
+                    addToInitLog?.Invoke(LogLevel.Debug, $"Validate of {sortedPages.Length:#,#;;0} pages completed in {totalSp.Elapsed}");
                 }
                 else
                 {

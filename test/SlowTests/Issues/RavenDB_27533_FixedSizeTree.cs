@@ -50,7 +50,8 @@ public unsafe class RavenDB_27533_FixedSizeTree(ITestOutputHelper output) : Stor
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeName, valSize: 8);
-                fst.DeleteRange(from, to);
+                foreach (long key in model.GetViewBetween(from, to))
+                    fst.Delete(key);
                 tx.Commit();
             }
 
@@ -286,7 +287,19 @@ public unsafe class RavenDB_27533_FixedSizeTree(ITestOutputHelper output) : Stor
             var owingLeaf = fst.GetReadOnlyPage(rootChildren[1]);
             Assert.Equal(1, owingLeaf.CollapsedLevels);
 
-            fst.DeleteRange(Stride, owingLeaf.GetKey(0) - 1);
+            // deleting one key at a time lets the rebalancer move entries of the owing leaf to the left, so delete until the root
+            // collapses. Depth is not a stop condition: a branch collapsing into its parent does not decrement it
+            int depth = fst.Depth;
+            for (long key = Stride; key < next; key += Stride)
+            {
+                fst.Delete(key);
+                if (fst.Depth == depth)
+                    continue;
+
+                depth = fst.Depth;
+                if (fst.GetReadOnlyPage(RootPage(fst)).IsLeaf)
+                    break;
+            }
 
             tx.Commit();
         }
@@ -430,8 +443,11 @@ public unsafe class RavenDB_27533_FixedSizeTree(ITestOutputHelper output) : Stor
                 var branch = fst.GetReadOnlyPage(branchPage);
                 var leaf = fst.GetReadOnlyPage(branch.GetEntry(branch.NumberOfEntries - 1)->PageNumber);
                 long from = leaf.GetKey(0), to = leaf.GetKey(leaf.NumberOfEntries - 1);
-                fst.DeleteRange(from, to);
-                model.GetViewBetween(from, to).Clear();
+                var keys = model.GetViewBetween(from, to);
+                Assert.True(keys.Count > 0, $"the last leaf of branch {branchPage} holds no live key, the loop would never end");
+                foreach (long key in keys)
+                    fst.Delete(key);
+                keys.Clear();
             }
 
             tx.Commit();
