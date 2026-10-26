@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Threading;
+using Sparrow.Server.Meters;
 using Sparrow.Server.Utils;
 using Voron.Global;
 
@@ -335,26 +336,70 @@ public sealed class WriteFlowPolicy
 
     // The sync is a shared device operation, it competes with every other write on the disk.
     // Callers force past this for explicit and required syncs.
-    public bool ShouldSyncNow(StorageEnvironment env)
+    // Returns None when the sync should wait, otherwise why it should run now.
+    public IoMetrics.SyncReason GetSyncReason(StorageEnvironment env)
     {
         var journalsPendingSync = env.Journal.Files.Count + env.Journal.Applicator.JournalsToDeleteCount;
-
-        if (journalsPendingSync > _options.SyncJournalsCountThreshold)
-            return true; // journal reuse is stalling behind the sync
-
         var totalWrittenButUnsyncedBytes = env.Journal.Applicator.TotalWrittenButUnsyncedBytes;
 
+        if (journalsPendingSync > _options.SyncJournalsCountThreshold)
+            return ReasonForRequiredSync(IoMetrics.SyncReason.JournalCount); // journal reuse is stalling behind the sync
+
         if (totalWrittenButUnsyncedBytes <= _options.MaxUnsyncedBytesBeforeSync)
-            return false; // not enough accumulated to be worth a shared device operation
+            return IoMetrics.SyncReason.None; // not enough accumulated to be worth a shared device operation
 
         // past the soft threshold we may still defer, letting the paced writeback trickle to the disk
 
         if (_options.SyncWritebackBlockSizeInMb <= 0 || _options.RunningOn32Bits)
-            return true; // but not if this is disabled, of course
+            return ReasonForRequiredSync(IoMetrics.SyncReason.SoftThreshold); // but not if this is disabled, of course
 
         // too much not sycned, we want to avoid I/O storm, so we force sync (hopefully previous writebacks helped)
-        return totalWrittenButUnsyncedBytes > _options.MaxUnsyncedBytesBeforeMandatorySync;
+        return totalWrittenButUnsyncedBytes > _options.MaxUnsyncedBytesBeforeMandatorySync
+            ? IoMetrics.SyncReason.Mandatory
+            : IoMetrics.SyncReason.None;
+
+        // the decision is made above, this only picks the most telling label: a backlog past the mandatory cap wins
+        IoMetrics.SyncReason ReasonForRequiredSync(IoMetrics.SyncReason reason) =>
+            totalWrittenButUnsyncedBytes > _options.MaxUnsyncedBytesBeforeMandatorySync &&
+            totalWrittenButUnsyncedBytes > _options.MaxUnsyncedBytesBeforeSync
+                ? IoMetrics.SyncReason.Mandatory
+                : reason;
     }
+
+    // ---------------------------------------------------------------------------------------
+    // Read-only view for diagnostics, none of these are used by the write path
+    // ---------------------------------------------------------------------------------------
+
+    public sealed record SyncInfo(IoMetrics.SyncReason Reason, long Bytes, TimeSpan Total, TimeSpan Writeback, bool Drain, DateTime At);
+
+    private SyncInfo _lastSync;
+    private long _flusherYields;
+
+    internal void RecordSync(SyncInfo sync) => Volatile.Write(ref _lastSync, sync);
+
+    // single writer: the global flusher thread
+    internal void RecordFlusherYield() => _flusherYields++;
+
+    public SyncInfo LastSync => Volatile.Read(ref _lastSync);
+
+    public long FlusherYields => Volatile.Read(ref _flusherYields);
+
+    public bool IsPipeliningEnabled => PipeliningEnabled;
+
+    public bool IsPipelining => ShouldPipeline;
+
+    public double QueueEmptyShare => _queueEmptyShare.Current;
+
+    public double BatchOperations => _batchOperations.Current;
+
+    public TimeSpan JournalWriteLatency => TimeSpan.FromTicks(_writeLatencyTicks.Current);
+
+    public long JournalWriteSizeInBytes => _writeSizeBytes.Current;
+
+    // the per-device budget, or this environment's own one when the device could not be identified
+    public DeviceWriteBudget DeviceBudget => Device;
+
+    public bool HasSharedDeviceBudget => _options.DeviceWriteBudget != null;
 
     public bool ShouldPrepareZeroedJournalsInBackground =>
         _forTestingPurposes?.ForceZeroedJournalPreparation ?? Device.ShouldPrepareZeroedJournalsInBackground;

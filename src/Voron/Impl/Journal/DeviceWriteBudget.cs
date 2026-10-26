@@ -48,7 +48,7 @@ namespace Voron.Impl.Journal
             DeviceWriteBudget Unlikely()
             {
                 var reader = DeviceQueueDepthReader.TryCreate(pathOnDevice, deviceId);
-                var candidate = new DeviceWriteBudget(reader, pathOnDevice, syncCostThresholdTicks, queueDepthThreshold, classifyAboveLatencyTicks);
+                var candidate = new DeviceWriteBudget(reader, pathOnDevice, syncCostThresholdTicks, queueDepthThreshold, classifyAboveLatencyTicks, deviceId);
                 var winner = DevicesById.GetOrAdd(deviceId, candidate);
                 if (ReferenceEquals(winner, candidate) == false)
                     reader?.Dispose(); // lost the race - don't leak the device handle
@@ -79,9 +79,12 @@ namespace Voron.Impl.Journal
         private long _lastSampleMs;
         private long _lastBusyMs;
         private bool _draining;
+        private long _lastSwitchUtcTicks;
 
-        internal DeviceWriteBudget(DeviceQueueDepthReader queueReader, string pathOnDevice, long syncCostThresholdTicks, int queueDepthThreshold, long classifyAboveLatencyTicks)
+        internal DeviceWriteBudget(DeviceQueueDepthReader queueReader, string pathOnDevice, long syncCostThresholdTicks, int queueDepthThreshold, long classifyAboveLatencyTicks,
+            ulong deviceId = 0)
         {
+            DeviceId = deviceId;
             _queueReader = queueReader;
             _pathOnDevice = pathOnDevice;
             _syncThresholdTicks = syncCostThresholdTicks;
@@ -120,26 +123,107 @@ namespace Voron.Impl.Journal
         public bool JournalWriteRecentlyActive =>
             Stopwatch.GetTimestamp() - Volatile.Read(ref _lastJournalWriteActivityTimestamp) < RecentWriteActivityWindowTimestampTicks;
 
-        public DeviceClass MeasuredDeviceClass
+        public enum ClassReason
+        {
+            NoWrites,       // no journal write measured yet
+            VeryLowLatency, // below threshold / 8: fast whatever the write size
+            WritesTooSmall, // average write below SmallWriteBytes: a small write can be fast on a slow device
+            LowLatency,     // large writes below threshold / 2
+            HighLatency     // large writes at or above threshold / 2
+        }
+
+        public const long SmallWriteBytes = 256 * Global.Constants.Size.Kilobyte;
+
+        public DeviceClass MeasuredDeviceClass => Classify(out _);
+
+        public DeviceClass Classify(out ClassReason reason)
+        {
+            var ewma = _journalWriteLatencyTicks.Current;
+            var threshold = _classifyAboveLatencyTicks;
+            if (ewma == 0 || threshold == 0)
+            {
+                reason = ClassReason.NoWrites;
+                return DeviceClass.Unknown;
+            }
+
+            // This is really fast, consider it a fast disk regardless of the size threshold
+            if (ewma < threshold / 8)
+            {
+                reason = ClassReason.VeryLowLatency;
+                return DeviceClass.Fast;
+            }
+
+            // small writes can be fast on a slow device, so we can't estimate from small writes only
+            if (_journalWriteSizeBytes.Current < SmallWriteBytes)
+            {
+                reason = ClassReason.WritesTooSmall;
+                return DeviceClass.Unknown;
+            }
+
+            if (ewma < threshold / 2)
+            {
+                reason = ClassReason.LowLatency;
+                return DeviceClass.Fast;
+            }
+
+            reason = ClassReason.HighLatency;
+            return DeviceClass.Budgeted;
+        }
+
+        // read-only view for diagnostics, none of these are used by the write path
+
+        public ulong DeviceId { get; }
+
+        public string PathOnDevice => _pathOnDevice;
+
+        public TimeSpan JournalWriteLatency => TimeSpan.FromTicks(_journalWriteLatencyTicks.Current);
+
+        public long JournalWriteSizeInBytes => _journalWriteSizeBytes.Current;
+
+        public TimeSpan TimeSinceLastJournalWrite
         {
             get
             {
-                var ewma = _journalWriteLatencyTicks.Current;
-                var threshold = _classifyAboveLatencyTicks;
-                if (ewma == 0 || threshold == 0)
-                    return DeviceClass.Unknown;
-
-                // This is really fast, consider it a fast disk regardless of the size threshold
-                if (ewma < threshold / 8)
-                    return DeviceClass.Fast;
-
-                // small writes can be fast on a slow device, so we can't estimate from small writes only
-                if (_journalWriteSizeBytes.Current < 256 * Global.Constants.Size.Kilobyte)
-                    return DeviceClass.Unknown;
-
-                return ewma < threshold / 2 ? DeviceClass.Fast : DeviceClass.Budgeted;
+                long last = Volatile.Read(ref _lastJournalWriteActivityTimestamp);
+                return last == 0 ? TimeSpan.MaxValue : Stopwatch.GetElapsedTime(last);
             }
         }
+
+        public bool HasQueueDepthSignal => _queueReader != null;
+
+        public double QueueDepth => _queueDepth.Current;
+
+        public TimeSpan? QueueDepthAge
+        {
+            get
+            {
+                long last = Volatile.Read(ref _lastSampleMs);
+                return _queueReader == null || last == 0 ? null : TimeSpan.FromMilliseconds(_clock.ElapsedMilliseconds - last);
+            }
+        }
+
+        public TimeSpan SyncCost => TimeSpan.FromTicks(_syncCostTicksEwma.Current);
+
+        // _draining only changes inside ShouldDrain() (flush / sync), so on a device that went quiet the flag is stale.
+        // Mirror the exit rule instead of reporting the stale flag.
+        public bool IsDraining => _draining && _clock.ElapsedMilliseconds - Volatile.Read(ref _lastBusyMs) < ExitQuietMs;
+
+        public DateTime? LastModeSwitch
+        {
+            get
+            {
+                long ticks = Volatile.Read(ref _lastSwitchUtcTicks);
+                return ticks == 0 ? null : new DateTime(ticks, DateTimeKind.Utc);
+            }
+        }
+
+        public TimeSpan SyncCostThreshold => TimeSpan.FromTicks(_syncThresholdTicks);
+
+        public double EnterDrainQueueDepth => _enterQueueDepth;
+
+        public double ExitDrainQueueDepth => _exitQueueDepth;
+
+        public TimeSpan ClassifyAboveLatency => TimeSpan.FromTicks(_classifyAboveLatencyTicks);
 
         public bool IsMeasuredFastDevice => MeasuredDeviceClass == DeviceClass.Fast;
 
@@ -177,6 +261,7 @@ namespace Voron.Impl.Journal
                 {
                     _draining = true;
                     _activeQueueThreshold = _exitQueueDepth;
+                    Volatile.Write(ref _lastSwitchUtcTicks, DateTime.UtcNow.Ticks);
                     if (Log.IsDebugEnabled)
                     {
                         Log.Debug($"The device that holds '{_pathOnDevice}' is congested (queue {queueDepth:0.0}, " +
@@ -197,6 +282,7 @@ namespace Voron.Impl.Journal
 
             _draining = false;
             _activeQueueThreshold = _enterQueueDepth;
+            Volatile.Write(ref _lastSwitchUtcTicks, DateTime.UtcNow.Ticks);
             if (Log.IsDebugEnabled)
             {
                 Log.Debug($"The device that holds '{_pathOnDevice}' is quiet again (queue {queueDepth:0.0}). Every environment " +

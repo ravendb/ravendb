@@ -1484,11 +1484,11 @@ namespace Voron.Impl.Journal
             /// Push data to the drive, in a paced manner, so if we have 1GB to write, we won't push that all at once. 
             /// We send it in blocks, and that avoids saturating the I/O channels, so journal writes aren't "stuck in a traffic jam".
             /// </summary>
-            private void WritebackDirtyRanges()
+            private Pal.WritebackStats WritebackDirtyRanges()
             {
                 var options = _waj._env.Options;
                 if (_writebackNotSupported)
-                    return;
+                    return default;
 
                 var dataPager = _waj._env.DataPager;
                 var dataPagerState = _waj._env.CurrentStateRecord.DataPagerState;
@@ -1501,7 +1501,7 @@ namespace Voron.Impl.Journal
                 if (rc == PalFlags.FailCodes.FailWritebackNotSupported)
                 {
                     _writebackNotSupported = true;
-                    return;
+                    return default;
                 }
 
                 if (rc != PalFlags.FailCodes.Success)
@@ -1515,6 +1515,8 @@ namespace Voron.Impl.Journal
                         $"{stats.BytesSkipped / Constants.Size.Kilobyte:#,#0} kb in sparse runs left to the kernel, " +
                         $"{stats.SetBitsRemaining:#,#0} dirty pages remain) for {dataPager.FileName}");
                 }
+
+                return stats;
             }
 
             /// <summary>
@@ -1639,7 +1641,7 @@ namespace Voron.Impl.Journal
             // 2) Take a snapshot of the current status of this env flushing status
             // 3) Release the lock & sync the file (take a long time)
             // 4) Re-take the lock, update the sync status in the header with the values we snapshotted
-            public sealed class SyncOperation(WriteAheadJournal.JournalApplicator parent) : IDisposable
+            public sealed class SyncOperation(WriteAheadJournal.JournalApplicator parent, IoMetrics.SyncReason reason = IoMetrics.SyncReason.Explicit) : IDisposable
             {
                 bool _fsyncLockTaken;
                 private LastFlushState _lastFlushed;
@@ -1751,8 +1753,10 @@ namespace Voron.Impl.Journal
 
                     // In trickle mode, we already initiated the writeback, so we don't need to do it again here.
                     // In drain mode, we drain first to avoid big I/O hitting all at once, causing congestion.
-                    if (gate?.ShouldDrain() == true)
+                    bool drain = gate?.ShouldDrain() == true;
+                    if (drain)
                         parent.WritebackDirtyRanges();
+                    TimeSpan writeback = drain ? sp.Elapsed : TimeSpan.Zero;
 
                     // The coming sync will cover all the dirty pages, no need for trickling to the disk
                     var resetRc = Pal.rvn_pager_reset_dirty_tracking(dataPagerState.Handle, out var resetPages, out var resetError);
@@ -1761,6 +1765,7 @@ namespace Voron.Impl.Journal
 
                     dataPager.Sync(dataPagerState, Interlocked.Read(ref parent._totalWrittenButUnsyncedBytes));
                     gate?.RecordSyncCost(sp.Elapsed.Ticks);
+                    parent._waj._env.WriteFlow.RecordSync(new WriteFlowPolicy.SyncInfo(reason, _currentTotalWrittenBytes, sp.Elapsed, writeback, drain, DateTime.UtcNow));
                     if (parent._waj._logger.IsDebugEnabled)
                     {
                         var sizeInKb = (dataPagerState.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte;
