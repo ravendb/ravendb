@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using Raven.Server.Config.Categories;
@@ -16,7 +17,6 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
-using Sparrow.Server.Utils;
 using Voron;
 using Voron.Impl.Journal;
 
@@ -64,9 +64,9 @@ namespace Raven.Server.Storage
                 _startedAt ??= now;
                 RestorePersistedHintsOnce();
 
-                foreach (DeviceWriteBudget device in GetDevices())
+                foreach (var (device, mountPoint) in GetDevices())
                 {
-                    DeviceTracker tracker = _trackers.GetOrAdd(device, d => new DeviceTracker(d));
+                    DeviceTracker tracker = _trackers.GetOrAdd(device, d => new DeviceTracker(d, mountPoint));
                     if (tracker.HintRaised == false && _persistedHints.TryRemove(tracker.MountPoint, out PersistedHint persisted))
                         tracker.RestoreSaturation(persisted.Since, persisted.Cause);
 
@@ -157,8 +157,8 @@ namespace Raven.Server.Storage
             details.SyncCostInMs = device.SyncCost.TotalMilliseconds;
             details.SlowWritesMeasured = _serverStore.Configuration.Storage.EnableIoMetrics;
 
-            string message = $"Storage on {node} is saturated: the disk {tracker.MountPoint} was congested {drainShare:P0} of the last hour " +
-                             $"and journal writes average {latency:#,#0} ms (a healthy disk answers in a few ms). " +
+            string message = $"Storage on {node} is saturated: on the disk {tracker.MountPoint}, {tracker.SaturationCause}. " +
+                             $"Journal writes take {latency:#,#0} ms on average right now (a healthy disk answers in a few ms). " +
                              "Writes and indexing are slowed down. Consider a volume with more IOPS / throughput, an instance with higher storage bandwidth, " +
                              "or more RAM to reduce disk reads.";
 
@@ -252,16 +252,32 @@ namespace Raven.Server.Storage
             };
         }
 
+        public ICollection<DeviceTracker> Trackers => _trackers.Values;
+
         public DeviceTracker GetTracker(DeviceWriteBudget device) => device != null && _trackers.TryGetValue(device, out DeviceTracker tracker) ? tracker : null;
 
-        public HashSet<DeviceWriteBudget> GetDevices()
+        // device -> mount point (drive on Windows) of the first environment found on it
+        public Dictionary<DeviceWriteBudget, string> GetDevices()
         {
-            var devices = new HashSet<DeviceWriteBudget>(ReferenceEqualityComparer.Instance);
+            var devices = new Dictionary<DeviceWriteBudget, string>(ReferenceEqualityComparer.Instance);
             foreach (EnvironmentOfDatabase env in GetEnvironments())
             {
-                DeviceWriteBudget device = env.Environment.Environment.Options.DeviceWriteBudget;
-                if (device != null) // the device could not be identified, the environment uses its own budget - nothing to track per device
-                    devices.Add(device);
+                StorageEnvironmentOptions options = env.Environment.Environment.Options;
+                DeviceWriteBudget device = options.DeviceWriteBudget;
+                if (device == null || devices.ContainsKey(device)) // null: the device could not be identified, the environment uses its own budget
+                    continue;
+
+                string mountPoint = null;
+                try
+                {
+                    mountPoint = options.DriveInfoByPath?.Value?.BasePath?.DriveName;
+                }
+                catch
+                {
+                    // best effort, falls back to the path root
+                }
+
+                devices[device] = mountPoint;
             }
 
             return devices;
@@ -349,9 +365,10 @@ namespace Raven.Server.Storage
         private DateTime? _lastBusyAt;
         private string _mountPoint;
 
-        public DeviceTracker(DeviceWriteBudget device)
+        public DeviceTracker(DeviceWriteBudget device, string mountPoint = null)
         {
             Device = device;
+            _mountPoint = string.IsNullOrEmpty(mountPoint) ? null : mountPoint;
         }
 
         public DeviceWriteBudget Device { get; }
@@ -362,7 +379,7 @@ namespace Raven.Server.Storage
 
         public string SaturationCause { get; private set; }
 
-        public string MountPoint => _mountPoint ??= DiskUtils.GetDiskSpaceInfoForFile(Device.PathOnDevice)?.DriveName ?? Device.PathOnDevice;
+        public string MountPoint => _mountPoint ??= Path.GetPathRoot(Device.PathOnDevice) is { Length: > 0 } root ? root : Device.PathOnDevice;
 
         public void Add(Sample sample, CongestionThresholds thresholds)
         {
