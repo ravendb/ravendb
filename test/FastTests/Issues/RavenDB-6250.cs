@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Documents.Operations;
@@ -79,7 +79,8 @@ namespace FastTests.Issues
                PerformanceHintReason.UnusedCapacity,
                PerformanceHintReason.SqlEtl_SlowSql,
                PerformanceHintReason.HugeDocuments,
-               PerformanceHintReason.Indexing_References
+               PerformanceHintReason.Indexing_References,
+               PerformanceHintReason.StorageCongestion
             };
 
             var operationWithoutDetails = new HashSet<PerformanceHintReason>

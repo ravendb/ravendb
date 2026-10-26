@@ -67,6 +67,7 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl.Backup;
+using Voron.Impl.Journal;
 using Constants = Raven.Client.Constants;
 using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
@@ -2261,7 +2262,36 @@ namespace Raven.Server.Documents
             if (ioChange.MeterItem.RateOfWritesInMbPerSec > 1)
                 return;
 
+            // the slow write is evidence for its disk; while that disk has a congestion hint, it says it all - no per-database hint on top
+            if (_serverStore.StorageDeviceMonitor.RecordSlowWrite(FindDeviceOf(ioChange.FileName), ioChange))
+                return;
+
             NotificationCenter.SlowWrites.Add(ioChange);
+        }
+
+        // rare path (slow writes only): the environment whose directory holds the file, the most specific one wins (indexes live under the database)
+        private DeviceWriteBudget FindDeviceOf(string fileName)
+        {
+            StringComparison comparison = PlatformDetails.RunningOnWindows ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            StorageEnvironmentOptions best = null;
+            int bestLength = -1;
+            foreach (StorageEnvironmentWithType env in GetAllStoragesEnvironment())
+            {
+                StorageEnvironmentOptions options = env.Environment?.Options;
+                if (options == null)
+                    continue;
+
+                foreach (string directory in new[] { options.BasePath?.FullPath, options.JournalPath?.FullPath })
+                {
+                    if (directory == null || directory.Length <= bestLength || fileName.StartsWith(directory, comparison) == false)
+                        continue;
+
+                    best = options;
+                    bestLength = directory.Length;
+                }
+            }
+
+            return best?.DeviceWriteBudget;
         }
 
         public long GetEnvironmentsHash()

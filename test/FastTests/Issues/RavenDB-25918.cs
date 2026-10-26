@@ -23,7 +23,7 @@ public class RavenDB_25918 : RavenTestBase
         Assert.Equal(76, Enum.GetNames(typeof(AlertReason)).Length);
         Assert.Equal(AlertReason.Indexing_SharedJournalsFallback, Enum.GetValues(typeof(AlertReason)).Cast<AlertReason>().Last());
         
-        Assert.Equal(10, Enum.GetNames(typeof(PerformanceHintReason)).Length);
-        Assert.Equal(PerformanceHintReason.Indexing_References, Enum.GetValues(typeof(PerformanceHintReason)).Cast<PerformanceHintReason>().Last());
+        Assert.Equal(11, Enum.GetNames(typeof(PerformanceHintReason)).Length);
+        Assert.Equal(PerformanceHintReason.StorageCongestion, Enum.GetValues(typeof(PerformanceHintReason)).Cast<PerformanceHintReason>().Last());
     }
 }
