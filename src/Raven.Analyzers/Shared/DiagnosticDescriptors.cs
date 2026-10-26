@@ -135,7 +135,7 @@ namespace Raven.Analyzers.Shared
 
         /// <summary>
         /// Descriptor for <see cref="DiagnosticIds.QueryFieldNotIndexed"/>.
-        /// Fires when a Where/OrderBy/Search lambda references a field not in the index projection.
+        /// Fires when a Where/OrderBy/Search lambda references a field not defined by the index's map function.
         /// Heuristic advisory; stays at Info severity.
         /// </summary>
         public static readonly DiagnosticDescriptor QueryFieldNotIndexed = Create(
