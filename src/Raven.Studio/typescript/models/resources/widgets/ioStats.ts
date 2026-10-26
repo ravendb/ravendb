@@ -3,9 +3,27 @@ import IoStatsPayload = Raven.Server.Dashboard.Cluster.Notifications.IoStatsPayl
 import historyAwareNodeStats = require("models/resources/widgets/historyAwareNodeStats");
 import IoStatsResult = Raven.Client.ServerWide.Operations.IoStatsResult;
 import genUtils = require("common/generalUtils");
+import storageIoTerms = require("common/storageIoTerms");
 
 class ioStats extends historyAwareNodeStats<IoStatsPayload> {
-    
+
+    // only Operators on servers that send it get the disk status, it stays false otherwise
+    hasStorageStatus = ko.observable<boolean>(false);
+
+    storageStatus = this.dataExtractor(x => x.StorageStatus ?? null);
+
+    storageStatusText = ko.pureComputed(() => {
+        const status = this.storageStatus();
+        return status ? "Disk: " + storageIoTerms.storageStatusLabel[status.Status] : null;
+    });
+
+    storageStatusClass = ko.pureComputed(() => {
+        const status = this.storageStatus();
+        return status ? "label label-" + storageIoTerms.storageStatusColor[status.Status] : "";
+    });
+
+    storageStatusNoData = this.conditionalDataExtractor(x => (x.StorageStatus ? null : "n/a"));
+
     iopsFormatted = this.conditionalDataExtractor(x => {
         const total = ioStats.sumUp(x, i => i.IoReadOperations + i.IoWriteOperations);
         if (typeof total === "undefined") {
@@ -67,6 +85,45 @@ class ioStats extends historyAwareNodeStats<IoStatsPayload> {
     });
 
     diskQueueFormatted = this.conditionalDataExtractorWithNoDataDetection(x => ioStats.sumUp(x, i => i.QueueLength ?? 0));
+
+    onData(data: IoStatsPayload) {
+        if (data.StorageStatus) {
+            this.hasStorageStatus(true);
+        }
+        super.onData(data);
+    }
+
+    storageStatusDetailsHtml(): string {
+        const status = this.storageStatus();
+        if (!status) {
+            return "";
+        }
+
+        const lines: [string, string][] = [
+            ["Writes paced in the last hour", Math.round(status.DrainShareOfLastHour * 100) + "%"],
+            ["Journal writes", ioStats.formatMs(status.JournalWriteLatencyInMs)],
+            ["Data syncs", ioStats.formatMs(status.SyncCostInMs)],
+            ["Mount point", status.MountPoint],
+        ];
+
+        const rows = lines
+            .map(([name, value]) => `<div>${name}: <strong>${genUtils.escapeHtml(value ?? "-")}</strong></div>`)
+            .join("");
+
+        const disksNote =
+            status.Disks > 1
+                ? `<div class="text-muted margin-top-sm">The busiest of the ${status.Disks} disks this node writes to.</div>`
+                : "";
+
+        return `<div class="margin-bottom-sm">${genUtils.escapeHtml(status.Summary)}</div>${rows}${disksNote}`;
+    }
+
+    private static formatMs(value: number): string {
+        if (value == null) {
+            return "-";
+        }
+        return value.toLocaleString(undefined, { maximumFractionDigits: value < 10 ? 1 : 0 }) + " ms";
+    }
     
     private static sumUp(payload: IoStatsPayload, accessor: (item: IoStatsResult) => number): number | undefined {
         if (!payload.Items.length) {
