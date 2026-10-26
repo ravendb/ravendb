@@ -52,33 +52,63 @@ public static class WizardEndpoints
             .Accepts<MapRequest>("application/json")
             .Produces<CdcSinkConfiguration>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
-        group.MapPost("/migration/start", StartMigrationAsync)
-            .WithName("setup.migrationStart")
+        group.MapPost("/migration/proposal/start", ProposalStartAsync)
+            .WithName("setup.migrationProposalStart")
             .WithDescription(
-                "Opens an interactive planning session over the discovered schema. Streams NDJSON " +
-                "frames: the agent's proposal, then one frame per collection as it is registered or " +
-                "rejected, then its reply.")
-            .Accepts<MigrationStartRequest>("application/json")
+                "Begins a migration: the proposal agent groups the discovered schema into areas and collections " +
+                "and sets the naming conventions. Streams NDJSON frames; the done frame, or the error frame of a start " +
+                "that failed after the api created the plan, carries the plan id the api keeps the plan under. " +
+                "409 while a proposal turn or a manual save of the app runs.")
+            .Accepts<MigrationProposalStartRequest>("application/json")
             .Produces<MigrationFrame>(StatusCodes.Status200OK, contentType: "application/x-ndjson");
-        group.MapPost("/migration/ask", AskMigrationAsync)
-            .WithName("setup.migrationAsk")
-            .WithDescription("One more turn in an existing planning session. Streams the same NDJSON frames.")
-            .Accepts<MigrationAskRequest>("application/json")
+        group.MapPost("/migration/proposal/ask", ProposalAskAsync)
+            .WithName("setup.migrationProposalAsk")
+            .WithDescription("One more turn with the proposal agent: a question, a re-proposal, or the conventions before the first area starts. 409 while a proposal turn or a manual save of the app runs.")
+            .Accepts<MigrationProposalAskRequest>("application/json")
             .Produces<MigrationFrame>(StatusCodes.Status200OK, contentType: "application/x-ndjson");
-        group.MapPost("/migration/edit", EditMigrationCollectionAsync)
-            .WithName("setup.migrationEditCollection")
+        group.MapPost("/migration/area/start", AreaStartAsync)
+            .WithName("setup.migrationAreaStart")
             .WithDescription(
-                "The operator's change to one collection of the plan: a null config deletes it (also one the planner only " +
-                "proposed), a config naming another collection renames it, and a collection the plan does not hold is added. " +
-                "Refused with 409 while a planner turn is running. The planner is told on the next turn.")
-            .Accepts<MigrationEditCollectionRequest>("application/json")
-            .Produces<MigrationEditCollectionResponse>()
+                "Opens an area for the first time: the area agent builds every collection the proposal gave it. " +
+                "Once per area; later opens read the cards from plan/get. The turn finishes even if the browser leaves. 409 while the area's turn or a manual save of the app runs.")
+            .Accepts<MigrationAreaStartRequest>("application/json")
+            .Produces<MigrationFrame>(StatusCodes.Status200OK, contentType: "application/x-ndjson");
+        group.MapPost("/migration/area/ask", AreaAskAsync)
+            .WithName("setup.migrationAreaAsk")
+            .WithDescription("One more turn with an area's agent. The message names the collections it is about. 409 while the area's turn or a manual save of the app runs.")
+            .Accepts<MigrationAreaAskRequest>("application/json")
+            .Produces<MigrationFrame>(StatusCodes.Status200OK, contentType: "application/x-ndjson");
+        group.MapPost("/migration/stop", Stop)
+            .WithName("setup.migrationStop")
+            .WithDescription(
+                "Stops the running turn of the proposal or of one area, in the api too; its stream ends with an error " +
+                "frame and the area is free again. Leaving the page does not stop a turn. 204 also when none runs.")
+            .Accepts<MigrationStopRequest>("application/json")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+        group.MapPost("/migration/plan/get", PlanGetAsync)
+            .WithName("setup.migrationPlanGet")
+            .WithDescription("The plan as the api stores it and the proposal it accepted.")
+            .Accepts<MigrationPlanGetRequest>("application/json")
+            .Produces<MigrationPlanGetResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiErrorResponse>(StatusCodes.Status502BadGateway);
+        group.MapPost("/migration/plan/save", PlanSaveAsync)
+            .WithName("setup.migrationPlanSave")
+            .WithDescription(
+                "Saves the unsaved changes of an area view together, or none of them. 409 while a planner turn or " +
+                "another save of the app runs; 422 with the issues the api's mapping validator found, located in the configuration.")
+            .Accepts<MigrationPlanSaveRequest>("application/json")
+            .Produces<MigrationPlanSaveOutcome>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status401Unauthorized)
             .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict)
-            .Produces<ApiErrorResponse>(StatusCodes.Status422UnprocessableEntity);
+            .Produces<MigrationPlanSaveOutcome>(StatusCodes.Status422UnprocessableEntity)
+            .Produces<ApiErrorResponse>(StatusCodes.Status502BadGateway);
         group.MapPost("/migration/apply", ApplyMigrationAsync)
             .WithName("setup.migrationApply")
-            .WithDescription("Assembles the registered plan into a CDC configuration and hands it to the map step.")
+            .WithDescription("Assembles the registered collections of the plan into a CDC configuration and hands it to the map step.")
             .Accepts<MigrationApplyRequest>("application/json")
             .Produces<MigrationApplyResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
@@ -146,7 +176,8 @@ public static class WizardEndpoints
                 state.LastDiscoverAt = null;
                 state.LastMapConfiguration = null;
                 state.LastMapAt = null;
-                state.MigrationPlan = null;
+                state.PlanId = null;
+                state.PlanSelectedTables = null;
             }
 
             state.Provider = factoryName;
@@ -411,38 +442,76 @@ public static class WizardEndpoints
         return Results.Ok(cdcConfig);
     }
 
-    private static Task StartMigrationAsync(
-        MigrationStartRequest body,
-        MigrationService service,
-        HttpContext ctx,
-        CancellationToken ct) =>
-        StreamMigrationAsync(ctx, ct, body, (request, write) => service.StartAsync(request, write, ct));
-
-    private static Task AskMigrationAsync(
-        MigrationAskRequest body,
-        MigrationService service,
-        HttpContext ctx,
-        CancellationToken ct) =>
-        StreamMigrationAsync(ctx, ct, body, (request, write) => service.AskAsync(request, write, ct));
-
-    private static async Task<IResult> EditMigrationCollectionAsync(
-        MigrationEditCollectionRequest body,
-        MigrationService service,
-        CancellationToken ct)
+    private static async Task ProposalStartAsync(MigrationProposalStartRequest body, MigrationService service, HttpContext ctx, CancellationToken ct)
     {
-        var outcome = await service.EditCollectionAsync(body, ct);
-
-        if (outcome.Refusal is not null)
-            return Results.BadRequest(new ApiErrorResponse(outcome.Refusal.Message));
-
-        if (outcome.TurnRunning)
-            return Results.Conflict(new ApiErrorResponse("the planner is working on the plan; save again when it finishes"));
-
-        if (outcome.Errors is { Length: > 0 } errors)
-            return Results.UnprocessableEntity(new ApiErrorResponse(Errors: errors));
-
-        return Results.Ok(new MigrationEditCollectionResponse(outcome.Warnings ?? []));
+        var stream = new MigrationStream(ctx);
+        var refusal = await service.ProposalStartAsync(body, stream, ct);
+        await RefuseAsync(ctx, stream, refusal);
     }
+
+    private static async Task ProposalAskAsync(MigrationProposalAskRequest body, MigrationService service, HttpContext ctx, CancellationToken ct)
+    {
+        var stream = new MigrationStream(ctx);
+        var refusal = await service.ProposalAskAsync(body, stream, ct);
+        await RefuseAsync(ctx, stream, refusal);
+    }
+
+    private static async Task AreaStartAsync(MigrationAreaStartRequest body, MigrationService service, HttpContext ctx, CancellationToken ct)
+    {
+        var stream = new MigrationStream(ctx);
+        var refusal = await service.AreaStartAsync(body, stream, ct);
+        await RefuseAsync(ctx, stream, refusal);
+    }
+
+    private static async Task AreaAskAsync(MigrationAreaAskRequest body, MigrationService service, HttpContext ctx, CancellationToken ct)
+    {
+        var stream = new MigrationStream(ctx);
+        var refusal = await service.AreaAskAsync(body, stream, ct);
+        await RefuseAsync(ctx, stream, refusal);
+    }
+
+    private static IResult Stop(MigrationStopRequest body, MigrationService service) =>
+        service.Stop(body) is { } refusal ? Refused(refusal) : Results.NoContent();
+
+    /// <summary>
+    /// A turn refused before its first frame answers with a status code; once a frame is out the
+    /// stream is the answer, and a refusal can no longer happen.
+    /// </summary>
+    private static async Task RefuseAsync(HttpContext ctx, MigrationStream stream, MigrationService.Refusal? refusal)
+    {
+        if (refusal is null || stream.Started)
+            return;
+
+        await Refused(refusal).ExecuteAsync(ctx);
+    }
+
+    private static async Task<IResult> PlanGetAsync(MigrationPlanGetRequest body, MigrationService service, CancellationToken ct)
+    {
+        var (plan, refusal) = await service.PlanGetAsync(body, ct);
+        return refusal is null ? Results.Ok(plan) : Refused(refusal);
+    }
+
+    private static async Task<IResult> PlanSaveAsync(MigrationPlanSaveRequest body, MigrationService service, CancellationToken ct)
+    {
+        var (outcome, refusal) = await service.PlanSaveAsync(body, ct);
+        if (refusal is not null)
+            return Refused(refusal);
+
+        return Results.Json(outcome, statusCode: outcome!.Issues is { Length: > 0 }
+            ? StatusCodes.Status422UnprocessableEntity
+            : StatusCodes.Status200OK);
+    }
+
+    // A status the AI service reported is the operator's to act on; no status at all means the
+    // request itself was wrong, and a status it never got to report means the service is down.
+    private static IResult Refused(MigrationService.Refusal refusal) =>
+        Results.Json(new ApiErrorResponse(refusal.Message), statusCode: refusal.Status switch
+        {
+            null when refusal.IsConflict => StatusCodes.Status409Conflict,
+            null => StatusCodes.Status400BadRequest,
+            var status when status.Value.ServiceAnswered() => StatusCodes.Status401Unauthorized,
+            _ => StatusCodes.Status502BadGateway
+        });
 
     private static async Task<IResult> ApplyMigrationAsync(
         MigrationApplyRequest body,
@@ -453,7 +522,7 @@ public static class WizardEndpoints
         var (response, refusal) = await service.ApplyAsync(body, ct);
 
         if (refusal is not null)
-            return Results.BadRequest(new ApiErrorResponse(refusal.Message));
+            return Refused(refusal);
 
         if (response!.Errors.Length > 0)
         {
@@ -467,49 +536,6 @@ public static class WizardEndpoints
             logger.Info($"Migration apply: {response.UnmappedTables.Length} discovered table(s) are not covered by the plan");
 
         return Results.Ok(response);
-    }
-
-    /// <summary>
-    /// Streams migration frames as NDJSON. The response headers are only committed once there is a
-    /// frame to write, so a request that is refused before the turn starts can still answer with a
-    /// status code rather than a 200 carrying an error frame.
-    /// </summary>
-    private static async Task StreamMigrationAsync<TRequest>(
-        HttpContext ctx,
-        CancellationToken ct,
-        TRequest body,
-        Func<TRequest, Func<MigrationFrame, Task>, Task<MigrationService.Refusal?>> run)
-        where TRequest : class
-    {
-        var started = false;
-
-        async Task WriteAsync(MigrationFrame frame)
-        {
-            if (started == false)
-            {
-                NdjsonStream.SetHeaders(ctx);
-                started = true;
-            }
-
-            await NdjsonStream.WriteLineAsync(ctx, frame);
-        }
-
-        var refusal = await run(body, WriteAsync);
-
-        if (refusal is null || started)
-            return;
-
-        // A status the AI service reported is the operator's to act on; no status at all means the
-        // request itself was wrong, and a status it never got to report means the service is down.
-        ctx.Response.StatusCode = refusal.Status switch
-        {
-            null when refusal.IsConflict => StatusCodes.Status409Conflict,
-            null => StatusCodes.Status400BadRequest,
-            var status when status.Value.ServiceAnswered() => StatusCodes.Status401Unauthorized,
-            _ => StatusCodes.Status502BadGateway
-        };
-
-        await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse(refusal.Message), ct);
     }
 
     private static async Task<IResult> TestMappingAsync(
@@ -671,55 +697,6 @@ public static class WizardEndpoints
         {
             cdcConfig.Name = app.CdcTaskName;
             await store.Maintenance.ForDatabase(slug).SendAsync(new AddCdcSinkOperation(cdcConfig), ct);
-        }
-    }
-
-    internal static void ValidateJoinColumnsAgainstSchema(CdcSinkConfiguration configuration, CdcSinkSourceSchema schema, List<string> errors)
-    {
-        foreach (var table in configuration.Tables)
-            ValidateScope(table.SourceTableSchema, table.SourceTableName, table.CollectionName, table.EmbeddedTables, table.LinkedTables);
-
-        void ValidateScope(
-            string? tableSchema,
-            string tableName,
-            string description,
-            List<CdcSinkEmbeddedTableConfig>? embeddedTables,
-            List<CdcSinkLinkedTableConfig>? linkedTables)
-        {
-            var columns = SourceColumnsOf(tableSchema, tableName);
-
-            foreach (var linked in linkedTables ?? [])
-                CheckJoinColumns(linked.JoinColumns, columns, $"Linked table '{linked.SourceTableName}' under '{description}'");
-
-            foreach (var embedded in embeddedTables ?? [])
-            {
-                ValidateScope(embedded.SourceTableSchema, embedded.SourceTableName,
-                    $"{description}.{embedded.PropertyName}", embedded.EmbeddedTables, embedded.LinkedTables);
-
-                CheckJoinColumns(embedded.JoinColumns, SourceColumnsOf(embedded.SourceTableSchema, embedded.SourceTableName),
-                    $"Embedded table '{embedded.SourceTableName}' under '{description}'");
-            }
-        }
-
-        HashSet<string>? SourceColumnsOf(string? tableSchema, string tableName) => schema.Tables
-            .FirstOrDefault(table =>
-                string.Equals(table.SourceTableName, tableName, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(table.SourceTableSchema ?? string.Empty, tableSchema ?? string.Empty, StringComparison.OrdinalIgnoreCase))
-            ?.Columns.Select(column => column.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        void CheckJoinColumns(List<string>? joinColumns, HashSet<string>? sourceColumns, string description)
-        {
-            if (sourceColumns is null)
-                return;
-
-            foreach (var joinColumn in joinColumns ?? [])
-            {
-                if (string.IsNullOrWhiteSpace(joinColumn) || sourceColumns.Contains(joinColumn))
-                    continue;
-
-                errors.Add($"{description}: join column '{joinColumn}' is not a column of the source table. " +
-                    $"Its columns are: {string.Join(", ", sourceColumns)}.");
-            }
         }
     }
 

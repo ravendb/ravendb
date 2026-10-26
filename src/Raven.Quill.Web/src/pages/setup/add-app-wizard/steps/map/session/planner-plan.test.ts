@@ -47,20 +47,26 @@ const selectedTables = ["Customers", "Orders", "OrderLines", "AuditLog"].map((na
 const proposal = resolveProposalTables(
     {
         areas: [
-            { area: "Sales area", collections: ["Orders"], why: null },
-            { area: "Customers area", collections: ["Customers"], why: null },
-        ],
-        collections: [
-            proposedCollection("Customers", "dbo.Customers", [], "One per customer."),
-            proposedCollection(
-                "Orders",
-                "dbo.Orders",
-                [
-                    { table: "dbo.OrderLines", how: "Embed" },
-                    { table: "dbo.Customers", how: "Link" },
+            {
+                area: "Sales area",
+                why: null,
+                collections: [
+                    proposedCollection(
+                        "Orders",
+                        "dbo.Orders",
+                        [
+                            { table: "dbo.OrderLines", how: "Embed" },
+                            { table: "dbo.Customers", how: "Link" },
+                        ],
+                        "An order with its lines.",
+                    ),
                 ],
-                "An order with its lines.",
-            ),
+            },
+            {
+                area: "Customers area",
+                why: null,
+                collections: [proposedCollection("Customers", "dbo.Customers", [], "One per customer.")],
+            },
         ],
         dropped: [droppedTable("dbo.AuditLog", "Nothing in the app reads it.")],
         enables: [],
@@ -108,14 +114,14 @@ describe("buildPlanCollections", () => {
         );
 
         expect(collections.map(({ name, state, area }) => ({ name, state, area }))).toEqual([
-            { name: "Customers", state: "failed", area: "Customers area" },
             { name: "Orders", state: "updated", area: "Sales area" },
+            { name: "Customers", state: "failed", area: "Customers area" },
             { name: "Products", state: "built", area: null },
         ]);
     });
 
     it("explains a suggestion with the proposal and a built collection with what the planner registered", () => {
-        const [customers, orders] = buildPlanCollections(source({ Orders: registered("Orders", 1) }), index);
+        const [orders, customers] = buildPlanCollections(source({ Orders: registered("Orders", 1) }), index);
 
         expect(customers).toMatchObject({ state: "suggested", why: "One per customer." });
         expect(orders).toMatchObject({ state: "built", why: "Orders as registered." });
@@ -128,7 +134,7 @@ describe("buildPlanCollections", () => {
     });
 
     it("keeps a built collection built when only a change to it was rejected", () => {
-        const [, orders] = buildPlanCollections(
+        const [orders] = buildPlanCollections(
             source({ Orders: { ...registered("Orders", 1), rejectionErrors: ["Total is mapped twice."] } }),
             index,
         );
@@ -163,7 +169,10 @@ describe("groupByArea", () => {
     });
 
     it("places a collection whose area has no name outside any area, rather than nowhere", () => {
-        const unnamed = { ...proposal, areas: [{ area: "", collections: ["Orders", "Customers"], why: null }] };
+        const unnamed = {
+            ...proposal,
+            areas: [{ area: "", why: null, collections: proposal.areas.flatMap((area) => area.collections) }],
+        };
         const collections = buildPlanCollections({ ...source({}), plannerProposal: unnamed }, index);
 
         expect(groupByArea(collections, unnamed)).toEqual([{ name: null, collections }]);

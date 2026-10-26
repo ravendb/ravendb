@@ -86,10 +86,14 @@ export const defaultApiMocks = {
         setupMocks.map(),
         setupMocks.testMapping(),
         setupMocks.provision(),
-        migrationMocks.start(),
-        migrationMocks.ask(),
+        migrationMocks.proposalStart(),
+        migrationMocks.proposalAsk(),
+        migrationMocks.areaStart(),
+        migrationMocks.areaAsk(),
+        migrationMocks.stop(),
+        migrationMocks.planGet(),
+        migrationMocks.planSave(),
         migrationMocks.apply(),
-        migrationMocks.edit(),
     ],
 } satisfies Record<string, AnyHandler[]>;
 

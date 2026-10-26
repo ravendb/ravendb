@@ -1,44 +1,87 @@
 using System.Collections.Concurrent;
+using Raven.Quill.Contracts;
 
 namespace Raven.Quill.AiHelper.Migration;
 
 /// <summary>
-/// One writer at a time per app's plan. A planner turn mirrors its frames into the stored plan from the copy it
-/// loaded when it began, so an edit saved meanwhile would be overwritten without a trace. A turn holds the plan
-/// from before it loads it until its stream ends. A turn or an edit that finds the plan still held after a short grace is refused.
+/// One running turn per conversation of an app: the proposal, or one area. The api runs the turns and writes
+/// the plan; Quill keeps a second turn on the same conversation from crossing it, and a manual save from crossing
+/// any turn of the app, in both directions. A turn is held until its stream ends, whether or not the browser is
+/// still there, unless the operator stops it.
 /// </summary>
 public sealed class MigrationTurns
 {
-    private readonly ConcurrentDictionary<string, SemaphoreSlim> _plans = new(StringComparer.OrdinalIgnoreCase);
+    private const string SaveKey = "Save";
 
-    /// <summary>
-    /// A turn the browser just stopped still holds the plan until the server notices the aborted request; what
-    /// the operator does right after (start over, remove) waits that long rather than being refused.
-    /// </summary>
-    private static readonly TimeSpan ReleaseGrace = TimeSpan.FromSeconds(2);
+    private static readonly MigrationService.Refusal TurnAlreadyRunning = new("a planner turn is already running for this conversation", IsConflict: true);
 
-    /// <summary>Null while another turn or an edit holds the plan.</summary>
-    public Task<IDisposable?> TryBeginTurnAsync(string slug, CancellationToken token) => TryHoldAsync(slug, token);
+    private static readonly MigrationService.Refusal SaveRunning = new("the plan is being saved; try again when the save finishes", IsConflict: true);
 
-    /// <summary>Null while a turn holds the plan.</summary>
-    public Task<IDisposable?> TryBeginEditAsync(string slug, CancellationToken token) => TryHoldAsync(slug, token);
+    private static readonly MigrationService.Refusal TurnsRunning = new("the planner is working on the plan; save again when it finishes", IsConflict: true);
 
-    private async Task<IDisposable?> TryHoldAsync(string slug, CancellationToken token)
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, Turn>> _apps = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Refused while a turn on the same conversation, or a save of the app, runs.</summary>
+    public Turn TryBeginTurn(string slug, PlannerAgent agent, string? area)
     {
-        var gate = Gate(slug);
-        return await gate.WaitAsync(ReleaseGrace, token) ? new Held(gate) : null;
+        var running = Running(slug);
+        var turn = new Turn(running, GetKey(agent, area));
+        if (running.TryAdd(turn.Key, turn) == false)
+            return Refuse(turn, TurnAlreadyRunning);
+
+        if (running.ContainsKey(SaveKey))
+            return Refuse(turn, SaveRunning);
+
+        return turn;
     }
 
-    private SemaphoreSlim Gate(string slug) => _plans.GetOrAdd(slug, _ => new SemaphoreSlim(1, 1));
-
-    private sealed class Held(SemaphoreSlim gate) : IDisposable
+    /// <summary>Refused while any turn, or another save, of the app runs.</summary>
+    public Turn TryBeginSave(string slug)
     {
-        private int _released;
+        var running = Running(slug);
+        var save = new Turn(running, SaveKey);
+        if (running.TryAdd(SaveKey, save) == false)
+            return Refuse(save, SaveRunning);
 
-        public void Dispose()
-        {
-            if (Interlocked.Exchange(ref _released, 1) == 0)
-                gate.Release();
-        }
+        if (running.Count > 1)
+            return Refuse(save, TurnsRunning);
+
+        return save;
+    }
+
+    /// <summary>Cancels the turn on that conversation if one runs; the relay then ends it upstream.</summary>
+    public void Stop(string slug, PlannerAgent agent, string? area)
+    {
+        if (Running(slug).TryGetValue(GetKey(agent, area), out var turn))
+            turn.Stop();
+    }
+
+    private static Turn Refuse(Turn turn, MigrationService.Refusal refusal)
+    {
+        turn.Dispose();
+        turn.Refusal = refusal;
+        return turn;
+    }
+
+    private static string GetKey(PlannerAgent agent, string? area) =>
+        agent == PlannerAgent.Proposal ? nameof(PlannerAgent.Proposal) : $"{nameof(PlannerAgent.Area)}:{area}";
+
+    private ConcurrentDictionary<string, Turn> Running(string slug) =>
+        _apps.GetOrAdd(slug, _ => new ConcurrentDictionary<string, Turn>(StringComparer.OrdinalIgnoreCase));
+
+    public sealed class Turn(ConcurrentDictionary<string, Turn> running, string key) : IDisposable
+    {
+        // not disposed: a stop may reach the turn after it ended, and it holds no timer
+        private readonly CancellationTokenSource _stop = new();
+
+        internal string Key => key;
+
+        public MigrationService.Refusal? Refusal { get; internal set; }
+
+        public CancellationToken Stopped => _stop.Token;
+
+        internal void Stop() => _stop.Cancel();
+
+        public void Dispose() => running.TryRemove(new KeyValuePair<string, Turn>(key, this));
     }
 }

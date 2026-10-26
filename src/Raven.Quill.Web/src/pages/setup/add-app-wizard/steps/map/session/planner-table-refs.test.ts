@@ -11,15 +11,20 @@ const ORDERS = { sourceTableSchema: "public", sourceTableName: "orders" };
 const CUSTOMERS = { sourceTableSchema: "public", sourceTableName: "customers" };
 
 function resolveName(name: string, selectedTables: SelectedTables) {
-    const { collections } = resolveProposalTables(
+    const [{ collections }] = resolveProposalTables(
         {
-            areas: [],
-            collections: [{ collection: "Collection", rootTable: name, absorbs: [], why: null, fields: [] }],
+            areas: [
+                {
+                    area: "Area",
+                    why: null,
+                    collections: [{ collection: "Collection", rootTable: name, absorbs: [], why: null, fields: [] }],
+                },
+            ],
             dropped: [],
             enables: [],
         },
         selectedTables,
-    );
+    ).areas;
 
     return collections[0].rootTableRef;
 }
@@ -28,17 +33,22 @@ describe("resolveProposalTables", () => {
     it("resolves the tables the proposal names among the selected ones, ignoring case", () => {
         const proposal = resolveProposalTables(
             {
-                areas: [],
-                collections: [
+                areas: [
                     {
-                        collection: "Orders",
-                        rootTable: "PUBLIC.Orders",
-                        absorbs: [
-                            { table: "customers", how: "Link", why: null },
-                            { table: "public.audit_log", how: "Embed", why: null },
-                        ],
+                        area: "Sales",
                         why: null,
-                        fields: [],
+                        collections: [
+                            {
+                                collection: "Orders",
+                                rootTable: "PUBLIC.Orders",
+                                absorbs: [
+                                    { table: "customers", how: "Link", why: null },
+                                    { table: "public.audit_log", how: "Embed", why: null },
+                                ],
+                                why: null,
+                                fields: [],
+                            },
+                        ],
                     },
                 ],
                 dropped: [{ table: "no_such_table", why: null }],
@@ -47,7 +57,7 @@ describe("resolveProposalTables", () => {
             [ORDERS, CUSTOMERS],
         );
 
-        const [orders] = proposal.collections;
+        const [orders] = proposal.areas[0].collections;
         expect(orders.rootTableRef).toEqual(ORDERS);
         expect(orders.absorbs.map((absorbed) => absorbed.tableRef)).toEqual([CUSTOMERS, null]);
         expect(proposal.dropped[0].tableRef).toBeNull();

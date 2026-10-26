@@ -53,15 +53,28 @@ describe("applyPlannerFrame", () => {
     it("keeps the proposal and notes which collections it lists", () => {
         const update = applyPlannerFrame(stateWithTurn(), {
             type: "proposal",
-            areas: [{ area: "Sales", collections: ["Orders"], why: null }],
-            collections: [
-                { collection: "Orders", rootTable: "dbo.Orders", absorbs: [], why: "One per order.", fields: [] },
-            ],
-            dropped: [{ table: "dbo.AuditLog", why: "Nothing reads it." }],
-            enables: [],
+            proposal: {
+                areas: [
+                    {
+                        area: "Sales",
+                        why: null,
+                        collections: [
+                            {
+                                collection: "Orders",
+                                rootTable: "dbo.Orders",
+                                absorbs: [],
+                                why: "One per order.",
+                                fields: [],
+                            },
+                        ],
+                    },
+                ],
+                dropped: [{ table: "dbo.AuditLog", why: "Nothing reads it." }],
+                enables: [],
+            },
         });
 
-        expect(update.plannerProposal?.collections).toHaveLength(1);
+        expect(update.plannerProposal?.areas[0].collections).toHaveLength(1);
         expect(lastTurn(update).activity).toEqual([
             { type: "proposal", collections: ["Orders"], areaCount: 1, droppedCount: 1 },
         ]);
@@ -73,10 +86,19 @@ describe("applyPlannerFrame", () => {
 
         const proposed = applyPlannerFrame(state, {
             type: "proposal",
-            areas: [],
-            collections: [{ collection: "Orders", rootTable: "orders", absorbs: [], why: null, fields: [] }],
-            dropped: [{ table: "dbo.AuditLog", why: "Nothing reads it." }],
-            enables: [],
+            proposal: {
+                areas: [
+                    {
+                        area: "Sales",
+                        why: null,
+                        collections: [
+                            { collection: "Orders", rootTable: "orders", absorbs: [], why: null, fields: [] },
+                        ],
+                    },
+                ],
+                dropped: [{ table: "dbo.AuditLog", why: "Nothing reads it." }],
+                enables: [],
+            },
         });
         const registered = applyPlannerFrame(state, {
             type: "collection",
@@ -87,7 +109,7 @@ describe("applyPlannerFrame", () => {
             warnings: [],
         });
 
-        expect(proposed.plannerProposal?.collections[0].rootTableRef).toEqual(orders);
+        expect(proposed.plannerProposal?.areas[0].collections[0].rootTableRef).toEqual(orders);
         expect(proposed.plannerProposal?.dropped[0].tableRef).toBeNull();
         expect(registered.plannerCollections?.Orders).toMatchObject({
             tableRef: { table: orders, embeddedTables: [] },
@@ -248,21 +270,28 @@ describe("applyPlannerFrame", () => {
     it("keeps each proposed collection's field names on the collection", () => {
         const update = applyPlannerFrame(stateWithTurn(), {
             type: "proposal",
-            areas: [],
-            collections: [
-                {
-                    collection: "Orders",
-                    rootTable: "dbo.Orders",
-                    absorbs: [],
-                    why: null,
-                    fields: [{ table: "dbo.Orders", column: "order_id", property: "OrderId" }],
-                },
-            ],
-            dropped: [],
-            enables: [],
+            proposal: {
+                areas: [
+                    {
+                        area: "Sales",
+                        why: null,
+                        collections: [
+                            {
+                                collection: "Orders",
+                                rootTable: "dbo.Orders",
+                                absorbs: [],
+                                why: null,
+                                fields: [{ table: "dbo.Orders", column: "order_id", property: "OrderId" }],
+                            },
+                        ],
+                    },
+                ],
+                dropped: [],
+                enables: [],
+            },
         });
 
-        expect(update.plannerProposal?.collections[0].fields).toEqual([
+        expect(update.plannerProposal?.areas[0].collections[0].fields).toEqual([
             { table: "dbo.Orders", column: "order_id", property: "OrderId" },
         ]);
     });

@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.CdcSink.Schema;
@@ -11,13 +12,13 @@ using Raven.Quill.Endpoints;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Logging;
 using Raven.Quill.Wizard;
-using Sparrow.Json;
 
 namespace Raven.Quill.AiHelper.Migration;
 
 /// <summary>
-/// The Quill half of a planning session: which app it belongs to, which schema it reads, whether
-/// the operator has consented, and what to do with the plan once they are happy with it.
+/// The Quill half of a planning session: which app it belongs to, which schema it reads, whether the operator
+/// has consented, and what to do with the plan once they are happy with it. The api owns the plan; Quill keeps
+/// its id per app and relays every turn, read and save.
 /// </summary>
 public sealed class MigrationService(
     HttpClient httpClient,
@@ -26,10 +27,6 @@ public sealed class MigrationService(
     MigrationTurns turns,
     QuillLogger<MigrationService> logger)
 {
-    public const string StartPath = "/assistant/migration/start";
-
-    public const string AskPath = "/assistant/migration/ask";
-
     private const string DataPrefix = "data: ";
 
     private const string ServiceUnreachable = "The AI service could not be reached.";
@@ -49,222 +46,206 @@ public sealed class MigrationService(
     /// </summary>
     public sealed record Refusal(string Message, AiHelperStatus? Status = null, bool IsConflict = false);
 
-    private static readonly Refusal TurnAlreadyRunning = new("a planner turn is already running for this app", IsConflict: true);
+    private static readonly Refusal NoPlanYet = new("no plan yet; call /api/setup/migration/proposal/start first");
 
-    public async Task<Refusal?> StartAsync(
-        MigrationStartRequest request,
-        Func<MigrationFrame, Task> onFrame,
-        CancellationToken token)
+    private static readonly Refusal UnreadableAnswer = new("the AI service sent an answer that could not be read", AiHelperStatus.InternalError);
+
+    private static readonly JsonSerializerOptions ApiJson = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
+    public async Task<Refusal?> ProposalStartAsync(MigrationProposalStartRequest request, MigrationStream browserStream, CancellationToken token)
     {
         if (string.IsNullOrWhiteSpace(request.Slug))
             return new Refusal("slug is required");
 
-        using var turn = await turns.TryBeginTurnAsync(request.Slug, token);
-        if (turn is null)
-            return TurnAlreadyRunning;
-
-        var (_, schema, refusal) = await LoadWizardAsync(request.Slug, request.SelectedTables, token);
+        var (schema, refusal) = await LoadSchemaAsync(request.Slug, request.SelectedTables, token);
         if (refusal is not null)
             return refusal;
-
-        var consent = await RequireConsentAsync(token);
-        if (consent is not null)
-            return consent;
 
         var prompt = string.IsNullOrWhiteSpace(request.Prompt) ? DefaultStartPrompt : request.Prompt!;
+        var turn = new TurnParameters
+        {
+            Path = "/assistant/migration/proposal/start",
+            Slug = request.Slug,
+            Agent = PlannerAgent.Proposal,
+            Opening = request,
+            PlannerRequest = JsonSerializer.Serialize(new PlannerStartRequest { Slug = request.Slug, SchemaGzip = GzipSchema(schema!), Prompt = prompt }, ApiJson)
+        };
 
-        await RelayAsync(
-            StartPath,
-            new PlannerStartRequest { Slug = request.Slug, SchemaGzip = GzipSchema(schema!), Prompt = prompt },
-            request.Slug,
-            conversationId: null,
-            new MigrationPlan { SelectedTables = request.SelectedTables },
-            onFrame,
-            turn,
-            token);
-
-        return null;
+        return await TurnAsync(turn, browserStream, token);
     }
 
-    public async Task<Refusal?> AskAsync(
-        MigrationAskRequest request,
-        Func<MigrationFrame, Task> onFrame,
-        CancellationToken token)
+    public async Task<Refusal?> ProposalAskAsync(MigrationProposalAskRequest request, MigrationStream browserStream, CancellationToken token)
     {
-        if (string.IsNullOrWhiteSpace(request.ConversationId))
-            return new Refusal("conversationId is required");
-        if (string.IsNullOrWhiteSpace(request.Prompt) && HasSelection(request) == false)
-            return new Refusal("a prompt or a selection is required");
         if (string.IsNullOrWhiteSpace(request.Slug))
             return new Refusal("slug is required");
+        if (string.IsNullOrWhiteSpace(request.Prompt))
+            return new Refusal("prompt is required");
 
-        using var turn = await turns.TryBeginTurnAsync(request.Slug, token);
-        if (turn is null)
-            return TurnAlreadyRunning;
-
-        var (state, _, refusal) = await LoadWizardAsync(request.Slug, selected: null, token);
+        var (planId, refusal) = await LoadPlanIdAsync(request.Slug, token);
         if (refusal is not null)
             return refusal;
 
-        // Every session persists its plan at the end of its opening turn, so nothing found here means
-        // the conversation is not this app's to continue, whether or not it exists at all.
-        var plan = CurrentPlan(state!, request.ConversationId);
-        if (plan is null)
-            return new Refusal("no planning session found for that conversation");
+        var turn = new TurnParameters
+        {
+            Path = "/assistant/migration/proposal/ask",
+            Slug = request.Slug,
+            Agent = PlannerAgent.Proposal,
+            PlannerRequest = JsonSerializer.Serialize(new PlannerAskRequest { PlanId = planId, Prompt = request.Prompt }, ApiJson)
+        };
+
+        return await TurnAsync(turn, browserStream, token);
+    }
+
+    public async Task<Refusal?> AreaStartAsync(MigrationAreaStartRequest request, MigrationStream browserStream, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(request.Slug))
+            return new Refusal("slug is required");
+        if (string.IsNullOrWhiteSpace(request.Area))
+            return new Refusal("area is required");
+
+        var (planId, refusal) = await LoadPlanIdAsync(request.Slug, token);
+        if (refusal is not null)
+            return refusal;
+
+        var turn = new TurnParameters
+        {
+            Path = "/assistant/migration/area/start",
+            Slug = request.Slug,
+            Agent = PlannerAgent.Area,
+            Area = request.Area,
+            PlannerRequest = JsonSerializer.Serialize(new PlannerAskRequest { PlanId = planId, Area = request.Area }, ApiJson)
+        };
+
+        return await TurnAsync(turn, browserStream, token);
+    }
+
+    public async Task<Refusal?> AreaAskAsync(MigrationAreaAskRequest request, MigrationStream browserStream, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(request.Slug))
+            return new Refusal("slug is required");
+        if (string.IsNullOrWhiteSpace(request.Area))
+            return new Refusal("area is required");
+        if (string.IsNullOrWhiteSpace(request.Prompt))
+            return new Refusal("prompt is required");
+
+        var (planId, refusal) = await LoadPlanIdAsync(request.Slug, token);
+        if (refusal is not null)
+            return refusal;
+
+        var turn = new TurnParameters
+        {
+            Path = "/assistant/migration/area/ask",
+            Slug = request.Slug,
+            Agent = PlannerAgent.Area,
+            Area = request.Area,
+            PlannerRequest = JsonSerializer.Serialize(new PlannerAskRequest { PlanId = planId, Area = request.Area, Prompt = request.Prompt }, ApiJson)
+        };
+
+        return await TurnAsync(turn, browserStream, token);
+    }
+
+    private async Task<Refusal?> TurnAsync(TurnParameters turn, MigrationStream browserStream, CancellationToken token)
+    {
+        using var running = turns.TryBeginTurn(turn.Slug, turn.Agent, turn.Area);
+        if (running.Refusal is not null)
+            return running.Refusal;
 
         var consent = await RequireConsentAsync(token);
         if (consent is not null)
             return consent;
 
-        await RelayAsync(
-            AskPath,
-            new PlannerAskRequest
-            {
-                Slug = request.Slug,
-                ConversationId = request.ConversationId,
-                Prompt = request.Prompt,
-                SelectedAreas = request.SelectedAreas,
-                SelectedCollections = request.SelectedCollections,
-                Plan = new PlannerPlan { Conventions = plan.Conventions, Entries = plan.CurrentEntries() },
-                UserEdits = plan.PendingUserEdits.ToList()
-            },
-            request.Slug,
-            request.ConversationId,
-            plan,
-            onFrame,
-            turn,
-            token);
-
+        await RelayAsync(turn, browserStream, running);
         return null;
     }
 
-    /// <summary>
-    /// How an operator's change ended: refused, refused because a turn is running, rejected with the errors
-    /// CDC Sink would raise, or applied with <see cref="Warnings"/>.
-    /// </summary>
-    public sealed record EditOutcome(Refusal? Refusal = null, bool TurnRunning = false, string[]? Errors = null, string[]? Warnings = null);
-
-    /// <summary>
-    /// Applies the operator's change to one collection. The checks are the ones apply runs on the assembled
-    /// configuration - what CDC Sink would refuse, and join columns the source tables lack - so an edit the
-    /// plan accepts cannot fail there later. Whether it fits the planner's own rules is left to the planner.
-    /// </summary>
-    public async Task<EditOutcome> EditCollectionAsync(MigrationEditCollectionRequest request, CancellationToken token)
+    public Refusal? Stop(MigrationStopRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.ConversationId))
-            return new EditOutcome(new Refusal("conversationId is required"));
-        if (string.IsNullOrWhiteSpace(request.Collection))
-            return new EditOutcome(new Refusal("collection is required"));
         if (string.IsNullOrWhiteSpace(request.Slug))
-            return new EditOutcome(new Refusal("slug is required"));
+            return new Refusal("slug is required");
+        if (Enum.IsDefined(request.Agent) == false)
+            return new Refusal("agent must be Proposal or Area");
 
-        using var edit = await turns.TryBeginEditAsync(request.Slug, token);
-        if (edit is null)
-            return new EditOutcome(TurnRunning: true);
+        var hasArea = string.IsNullOrWhiteSpace(request.Area) == false;
+        if (request.Agent == PlannerAgent.Area && hasArea == false)
+            return new Refusal("area is required to stop an area turn");
+        if (request.Agent == PlannerAgent.Proposal && hasArea)
+            return new Refusal("a proposal turn has no area");
 
-        WizardState? state;
-        using (var session = store.OpenAsyncSession())
-            state = await session.LoadAsync<WizardState>(WizardState.DocumentIdFor(request.Slug), token);
-
-        var plan = state is null ? null : CurrentPlan(state, request.ConversationId);
-        if (plan is null)
-            return new EditOutcome(new Refusal("no plan found for that conversation"));
-
-        if (request.Config is not null)
-        {
-            if (string.IsNullOrWhiteSpace(request.Config.CollectionName))
-                request.Config.CollectionName = request.Collection;
-
-            var errors = ValidateEdit(request.Collection, request.Config, state!.LastDiscoveredSchema);
-            if (errors.Length > 0)
-                return new EditOutcome(Errors: errors);
-        }
-
-        var existed = plan.CurrentEntries().Any(entry => string.Equals(entry.Collection, request.Collection, StringComparison.OrdinalIgnoreCase));
-        var refused = plan.ApplyUserEdit(request.Collection, request.Config);
-        if (refused is not null)
-            return new EditOutcome(new Refusal(refused));
-
-        await plan.SaveAsync(store, request.Slug, token);
-
-        return new EditOutcome(Warnings: existed ? DanglingLinks(plan, request.Collection, request.Config) : []);
+        turns.Stop(request.Slug, request.Agent, request.Area);
+        return null;
     }
 
-    private static string[] ValidateEdit(string collection, CdcSinkTableConfig config, CdcSinkSourceSchema? schema)
+    public async Task<(MigrationPlanGetResponse? Response, Refusal? Refusal)> PlanGetAsync(MigrationPlanGetRequest request, CancellationToken token)
     {
-        var entry = new PlanEntry { Collection = collection, Config = config };
-        var configuration = PlanToCdcConfiguration.Build([entry], previousMapping: null);
+        if (string.IsNullOrWhiteSpace(request.Slug))
+            return (null, new Refusal("slug is required"));
 
-        if (configuration.Validate(out var errors, validateName: false, validateConnection: false) == false)
-            return errors.ToArray();
+        var (planId, refusal) = await LoadPlanIdAsync(request.Slug, token);
+        if (refusal is not null)
+            return (null, refusal);
 
-        if (schema is not null)
-            WizardEndpoints.ValidateJoinColumnsAgainstSchema(configuration, schema, errors);
-
-        return errors.ToArray();
+        return await ReadPlanAsync(planId!, token);
     }
 
-    private static string[] DanglingLinks(MigrationPlan plan, string collection, CdcSinkTableConfig? config)
+    public async Task<(MigrationPlanSaveOutcome? Outcome, Refusal? Refusal)> PlanSaveAsync(MigrationPlanSaveRequest request, CancellationToken token)
     {
-        var renamedTo = config is null || string.Equals(config.CollectionName, collection, StringComparison.OrdinalIgnoreCase)
-            ? null
-            : config.CollectionName;
+        if (string.IsNullOrWhiteSpace(request.Slug))
+            return (null, new Refusal("slug is required"));
+        if (request.Changes is not { Length: > 0 })
+            return (null, new Refusal("changes are required"));
 
-        if (config is not null && renamedTo is null)
-            return [];
+        using var save = turns.TryBeginSave(request.Slug);
+        if (save.Refusal is not null)
+            return (null, save.Refusal);
 
-        return plan.LinkingTo(collection)
-            .Select(linking => renamedTo is null
-                ? $"{linking} links to {collection}, which is no longer in the plan. Update or remove that link."
-                : $"{linking} links to {collection}, which is now named {renamedTo}. Update that link.")
-            .ToArray();
+        var (planId, refusal) = await LoadPlanIdAsync(request.Slug, token);
+        if (refusal is not null)
+            return (null, refusal);
+
+        return await ReadAsync<MigrationPlanSaveOutcome>("/assistant/migration/plan/save", new PlannerPlanRequest { PlanId = planId, Changes = request.Changes }, token);
     }
 
     /// <summary>
-    /// Turns the registered plan into the configuration the wizard carries on with. The per-call
-    /// validation the model saw is not enough on its own: only the assembled configuration can be
-    /// checked for names colliding across a table's own mappings, and for join columns that name a
-    /// mapped property instead of a source column.
+    /// Turns the registered collections of the api's plan into the configuration the wizard carries on with.
+    /// The per-call validation the model saw is not enough on its own: only the assembled configuration can be
+    /// checked for names colliding across a table's own mappings, and for join columns that name a mapped
+    /// property instead of a source column.
     /// </summary>
-    public async Task<(MigrationApplyResponse? Response, Refusal? Refusal)> ApplyAsync(
-        MigrationApplyRequest request,
-        CancellationToken token)
+    public async Task<(MigrationApplyResponse? Response, Refusal? Refusal)> ApplyAsync(MigrationApplyRequest request, CancellationToken token)
     {
-        if (string.IsNullOrWhiteSpace(request.ConversationId))
-            return (null, new Refusal("conversationId is required"));
+        if (string.IsNullOrWhiteSpace(request.Slug))
+            return (null, new Refusal("slug is required"));
 
         using var session = store.OpenAsyncSession();
         var state = await session.LoadAsync<WizardState>(WizardState.DocumentIdFor(request.Slug), token);
-
-        var plan = state is null ? null : CurrentPlan(state, request.ConversationId);
-        if (plan is null)
-            return (null, new Refusal("no plan found for that conversation"));
-
-        if (plan.Entries.Count == 0)
-            return (null, new Refusal("the plan has no collections yet"));
-
-        var (selected, unknown) = SelectCollections(plan.Entries, request.Collections);
-
-        if (unknown.Length > 0)
-            return (null, new Refusal($"the plan has no collection named {string.Join(", ", unknown)}"));
-
-        if (selected.Length == 0)
-            return (null, new Refusal("no collections were selected"));
-
-        if (state!.LastDiscoveredSchema is null)
+        if (state?.PlanId is null)
+            return (null, NoPlanYet);
+        if (state.LastDiscoveredSchema is null)
             return (null, new Refusal("no discovered schema found; call /api/setup/discover first"));
 
-        var configuration = PlanToCdcConfiguration.Build(selected, state.LastMapConfiguration);
+        var (plan, refusal) = await ReadPlanAsync(state.PlanId, token);
+        if (refusal is not null)
+            return (null, refusal);
+
+        var registered = plan!.Plan.Entries.Values.Where(entry => entry.Status == PlanEntryStatus.Registered).ToArray();
+        if (registered.Length == 0)
+            return (null, new Refusal("the plan has no collections yet"));
+
+        var configuration = PlanToCdcConfiguration.Build(registered, state.LastMapConfiguration);
 
         if (configuration.Validate(out var errors, validateName: false, validateConnection: false) == false)
             return (new MigrationApplyResponse(null, [], errors.ToArray()), null);
 
-        WizardEndpoints.ValidateJoinColumnsAgainstSchema(configuration, state.LastDiscoveredSchema, errors);
+        PlanToCdcConfiguration.ValidateJoinColumnsAgainstSchema(configuration, state.LastDiscoveredSchema, errors);
         if (errors.Count > 0)
             return (new MigrationApplyResponse(null, [], errors.ToArray()), null);
 
-        var coverageSchema = plan.SelectedTables is { Length: > 0 }
-            ? WizardEndpoints.SelectTables(state.LastDiscoveredSchema, plan.SelectedTables)
+        var coverageSchema = state.PlanSelectedTables is { Length: > 0 }
+            ? WizardEndpoints.SelectTables(state.LastDiscoveredSchema, state.PlanSelectedTables)
             : state.LastDiscoveredSchema;
 
         var defaultSchema = CdcSinkDefaultSchema.Resolve(state.Provider!, state.SourceConnectionString!);
@@ -277,35 +258,33 @@ public sealed class MigrationService(
         return (new MigrationApplyResponse(configuration, unmapped, []), null);
     }
 
-    private static MigrationPlan? CurrentPlan(WizardState state, string conversationId) =>
-        state.MigrationPlan is { } plan && string.Equals(plan.ConversationId, conversationId, StringComparison.Ordinal)
-            ? plan
-            : null;
-
-    private async Task RelayAsync(
-        string path,
-        object request,
-        string slug,
-        string? conversationId,
-        MigrationPlan plan,
-        Func<MigrationFrame, Task> onFrame,
-        IDisposable turn,
-        CancellationToken token)
+    /// <summary>
+    /// Reads the upstream stream to its end on its own, whether or not the browser is still there: a turn the
+    /// api started finishes, unless the operator stops it, which cancels the upstream request and with it the
+    /// api's turn. The lock is released at the done frame. The opening turn stores the plan id from its
+    /// done frame, or from an error frame that names the plan a failed start left, before the browser sees it and
+    /// asks for the plan. The client timeout only covers the headers of a streamed response, so the read keeps
+    /// its own clock, rewound at every line: a turn may take as long as it needs while the api keeps talking, and
+    /// a stalled one is cut after one silent timeout.
+    /// </summary>
+    private async Task RelayAsync(TurnParameters turn, MigrationStream browserStream, MigrationTurns.Turn running)
     {
+        using var silence = CancellationTokenSource.CreateLinkedTokenSource(running.Stopped);
+        silence.CancelAfter(httpClient.Timeout);
         HttpResponseMessage response;
 
         try
         {
-            using var content = new StringContent(SerializeRequest(request), Encoding.UTF8, "application/json");
-            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, path) { Content = content };
-            response = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, token);
+            using var content = new StringContent(turn.PlannerRequest, Encoding.UTF8, "application/json");
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, turn.Path) { Content = content };
+            response = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, silence.Token);
         }
-        catch (Exception e) when (IsTransportFailure(e, token))
+        catch (Exception e) when (IsTransportFailure(e))
         {
-            if (logger.IsWarnEnabled)
-                logger.Warn(e, $"Planner {path} failed (transport).");
+            if (running.Stopped.IsCancellationRequested == false && logger.IsWarnEnabled)
+                logger.Warn(e, $"Planner {turn.Path} failed (transport).");
 
-            await onFrame(new ErrorFrame { Message = ServiceUnreachable });
+            await browserStream.WriteAsync(Interrupted(running));
             return;
         }
 
@@ -313,66 +292,138 @@ public sealed class MigrationService(
         {
             if (response.IsSuccessStatusCode == false)
             {
-                var tooManyRequests = response.StatusCode == HttpStatusCode.TooManyRequests;
-                var failureBody = tooManyRequests ? await ReadFailureBodyAsync(response, token) : string.Empty;
+                var failureBody = await ReadFailureBodyAsync(response, silence.Token);
 
                 if (logger.IsInfoEnabled)
-                    logger.Info(tooManyRequests
-                        ? $"Planner {path} failed: upstream 429. Body: {failureBody}"
-                        : $"Planner {path} failed: upstream {(int)response.StatusCode}.");
+                    logger.Info($"Planner {turn.Path} failed: upstream {(int)response.StatusCode}. Body: {failureBody}");
 
-                await onFrame(new ErrorFrame { Message = DescribeFailure(response.StatusCode, failureBody) });
+                await browserStream.WriteAsync(new ErrorFrame { Message = DescribeFailure(response.StatusCode, failureBody) });
                 return;
             }
 
-            await using var body = await response.Content.ReadAsStreamAsync(token);
-            using var reader = new StreamReader(body, Encoding.UTF8);
+            await using var apiBody = await response.Content.ReadAsStreamAsync(silence.Token);
+            using var apiReader = new StreamReader(apiBody, Encoding.UTF8);
 
             MigrationFrame? frame = null;
 
             try
             {
-                while (await reader.ReadLineAsync(token) is { } line)
+                while (await apiReader.ReadLineAsync(silence.Token) is { } line)
                 {
+                    silence.CancelAfter(httpClient.Timeout);
+
                     if (line.StartsWith(DataPrefix, StringComparison.Ordinal) == false)
                         continue;
 
-                    frame = ReadFrame(path, line[DataPrefix.Length..]);
-                    if (frame is null)
+                    if (ReadFrame(turn.Path, line[DataPrefix.Length..]) is not { } parsed)
                         continue;
 
-                    if (frame is DoneFrame done)
+                    frame = parsed;
+                    var planId = frame switch
                     {
-                        conversationId = done.ConversationId;
-                        plan.PendingUserEdits.Clear();
-                    }
-
-                    if (Mirror(plan, frame) && conversationId is not null)
-                    {
-                        plan.ConversationId = conversationId;
-                        await plan.SaveAsync(store, slug, token);
-                    }
+                        DoneFrame done => done.PlanId,
+                        ErrorFrame error => error.PlanId,
+                        _ => null
+                    };
+                    if (turn.Opening is not null && planId is not null)
+                        await StorePlanAsync(turn.Opening.Slug, planId, turn.Opening.SelectedTables);
 
                     if (frame is DoneFrame)
-                        turn.Dispose();
+                        running.Dispose();
 
-                    await onFrame(frame);
+                    await browserStream.WriteAsync(frame);
                 }
 
-                if (frame is not (DoneFrame or ErrorFrame) && logger.IsWarnEnabled)
-                    logger.Warn($"Planner {path} stream ended without a done or error frame (last frame: {frame?.GetType().Name ?? "none"}).");
-            }
-            catch (Exception e) when (IsTransportFailure(e, token))
-            {
-                if (logger.IsWarnEnabled)
-                    logger.Warn(e, $"Planner {path} stream broke.");
+                if (frame is not (DoneFrame or ErrorFrame))
+                {
+                    if (logger.IsWarnEnabled)
+                        logger.Warn($"Planner {turn.Path} stream ended without a done or error frame (last frame: {frame?.GetType().Name ?? "none"}).");
 
-                await onFrame(new ErrorFrame { Message = ServiceUnreachable });
+                    await browserStream.WriteAsync(new ErrorFrame { Message = "The AI service stopped answering before the turn finished." });
+                }
+            }
+            catch (Exception e) when (IsTransportFailure(e))
+            {
+                if (running.Stopped.IsCancellationRequested == false && logger.IsWarnEnabled)
+                    logger.Warn(e, $"Planner {turn.Path} stream broke.");
+
+                if (frame is not (DoneFrame or ErrorFrame))
+                    await browserStream.WriteAsync(Interrupted(running));
             }
         }
     }
 
-    private static bool IsTransportFailure(Exception e, CancellationToken token) =>
+    private static ErrorFrame Interrupted(MigrationTurns.Turn running) =>
+        new() { Message = running.Stopped.IsCancellationRequested ? "The turn was stopped." : ServiceUnreachable };
+
+    private async Task StorePlanAsync(string slug, string planId, SelectedSourceTable[]? selectedTables)
+    {
+        using var session = store.OpenAsyncSession();
+        var id = WizardState.DocumentIdFor(slug);
+        session.Advanced.Patch<WizardState, string?>(id, state => state.PlanId, planId);
+        session.Advanced.Patch<WizardState, SelectedSourceTable[]?>(id, state => state.PlanSelectedTables, selectedTables);
+        await session.SaveChangesAsync();
+    }
+
+    private async Task<(MigrationPlanGetResponse? Plan, Refusal? Refusal)> ReadPlanAsync(string planId, CancellationToken token)
+    {
+        var (plan, refusal) = await ReadAsync<MigrationPlanGetResponse>("/assistant/migration/plan/get", new PlannerPlanRequest { PlanId = planId }, token);
+        if (refusal is null && plan!.Plan is null)
+            return (null, UnreadableAnswer);
+
+        return (plan, refusal);
+    }
+
+    /// <summary>A 422 is an answer too: it carries what the api refused.</summary>
+    private async Task<(T? Answer, Refusal? Refusal)> ReadAsync<T>(string path, PlannerPlanRequest request, CancellationToken token) where T : class
+    {
+        var (response, refusal) = await PostAsync(path, JsonSerializer.Serialize(request, ApiJson), token);
+        if (refusal is not null)
+            return (null, refusal);
+
+        using (response)
+        {
+            var body = await response!.Content.ReadAsStringAsync(token);
+            if (response.IsSuccessStatusCode == false && response.StatusCode != HttpStatusCode.UnprocessableEntity)
+                return (null, new Refusal(DescribeFailure(response.StatusCode, body), (int)response.StatusCode switch
+                {
+                    401 => AiHelperStatus.ConsentRequired,
+                    >= 500 => AiHelperStatus.InternalError,
+                    _ => null
+                }));
+
+            try
+            {
+                return JsonSerializer.Deserialize<T>(body, ApiJson) is { } answer ? (answer, null) : (null, UnreadableAnswer);
+            }
+            catch (JsonException e)
+            {
+                if (logger.IsWarnEnabled)
+                    logger.Warn(e, $"Planner {path} sent an answer that could not be read.");
+
+                return (null, UnreadableAnswer);
+            }
+        }
+    }
+
+    private async Task<(HttpResponseMessage? Response, Refusal? Refusal)> PostAsync(string path, string json, CancellationToken token)
+    {
+        try
+        {
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+            return (await httpClient.PostAsync(path, content, token), null);
+        }
+        catch (Exception e) when (IsTransportFailure(e, token))
+        {
+            if (logger.IsWarnEnabled)
+                logger.Warn(e, $"Planner {path} failed (transport).");
+
+            return (null, new Refusal(ServiceUnreachable, AiHelperStatus.InternalError));
+        }
+    }
+
+    // Without a token, a cancellation can only be the client's own timeout, so it counts as a failure too.
+    private static bool IsTransportFailure(Exception e, CancellationToken token = default) =>
         e is HttpRequestException or IOException ||
         (e is OperationCanceledException && token.IsCancellationRequested == false);
 
@@ -391,38 +442,12 @@ public sealed class MigrationService(
         }
     }
 
-    private static bool Mirror(MigrationPlan plan, MigrationFrame frame)
-    {
-        switch (frame)
-        {
-            case CollectionFrame collection:
-                plan.Upsert(collection.Collection, collection.Rationale, collection.Config);
-                plan.ForgetUserEdits(collection.Collection, includingRemoval: true);
-                return true;
-
-            case RemovedFrame { Collection: not null } removed:
-                plan.Remove(removed.Collection);
-                plan.ForgetUserEdits(removed.Collection, includingRemoval: false);
-                return true;
-
-            case ConventionsFrame conventions:
-                plan.SetConventions(new NamingConventions(conventions.PropertyCase, conventions.PropertyLanguage, conventions.Notes));
-                return true;
-
-            case DoneFrame:
-                return true;
-
-            default:
-                return false;
-        }
-    }
-
     private static string DescribeFailure(HttpStatusCode statusCode, string body) => statusCode switch
     {
         HttpStatusCode.Unauthorized => "The AI service refused the request: consent is required or the license was not accepted.",
         HttpStatusCode.TooManyRequests when IsOutOfTokens(body) => "The monthly AI token quota is used up.",
         HttpStatusCode.TooManyRequests => "The AI service is busy. Try again in a moment.",
-        HttpStatusCode.NotFound => "No planning session found for that conversation.",
+        HttpStatusCode.NotFound => "No plan found for this app.",
         HttpStatusCode.BadRequest => "The AI service rejected the planning request.",
         HttpStatusCode.RequestEntityTooLarge => "The selected schema is too large for the AI service. Select fewer tables.",
         _ => $"The AI service failed (HTTP {(int)statusCode})."
@@ -434,7 +459,7 @@ public sealed class MigrationService(
         {
             return await response.Content.ReadAsStringAsync(token);
         }
-        catch (Exception e) when (IsTransportFailure(e, token))
+        catch (Exception e) when (IsTransportFailure(e))
         {
             return string.Empty;
         }
@@ -456,15 +481,9 @@ public sealed class MigrationService(
         }
     }
 
-    private string SerializeRequest(object request)
+    private static byte[] GzipSchema(CdcSinkSourceSchema schema)
     {
-        using var ctx = JsonOperationContext.ShortTermSingleUse();
-        return store.Conventions.Serialization.DefaultConverter.ToBlittable(request, ctx).ToString();
-    }
-
-    private byte[] GzipSchema(CdcSinkSourceSchema schema)
-    {
-        var json = Encoding.UTF8.GetBytes(SerializeRequest(schema));
+        var json = JsonSerializer.SerializeToUtf8Bytes(schema, ApiJson);
         using var buffer = new MemoryStream();
         using (var gzip = new GZipStream(buffer, CompressionLevel.Optimal, leaveOpen: true))
             gzip.Write(json);
@@ -472,50 +491,33 @@ public sealed class MigrationService(
     }
 
     /// <summary>
-    /// Narrows the plan to the collections the operator kept. Naming one the plan does not hold is
-    /// a mistake worth reporting rather than quietly ignoring - it usually means the caller is
-    /// working from a stale view of the plan.
+    /// The discovered schema, narrowed to the tables the operator selected. Discovery enumerates whole
+    /// schemas, so handing the AI everything it found would map tables the operator deliberately left out.
     /// </summary>
-    private static (PlanEntry[] Selected, string[] Unknown) SelectCollections(
-        IReadOnlyCollection<PlanEntry> entries,
-        string[]? requested)
+    private async Task<(CdcSinkSourceSchema? Schema, Refusal? Refusal)> LoadSchemaAsync(string slug, SelectedSourceTable[]? selected, CancellationToken token)
     {
-        if (requested is not { Length: > 0 })
-            return (entries.ToArray(), []);
-
-        var wanted = requested.ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        var unknown = wanted
-            .Where(name => entries.Any(e => string.Equals(e.Collection, name, StringComparison.OrdinalIgnoreCase)) == false)
-            .OrderBy(name => name, StringComparer.Ordinal)
-            .ToArray();
-
-        return (entries.Where(e => wanted.Contains(e.Collection)).ToArray(), unknown);
-    }
-
-    private async Task<(WizardState? State, CdcSinkSourceSchema? Schema, Refusal? Refusal)> LoadWizardAsync(
-        string slug,
-        SelectedSourceTable[]? selected,
-        CancellationToken token)
-    {
-        if (string.IsNullOrWhiteSpace(slug))
-            return (null, null, new Refusal("slug is required"));
-
         WizardState? state;
         using (var session = store.OpenAsyncSession())
             state = await session.LoadAsync<WizardState>(WizardState.DocumentIdFor(slug), token);
 
         if (state?.LastDiscoveredSchema is null)
-            return (null, null, new Refusal("no discovered schema found; call /api/setup/discover first"));
+            return (null, new Refusal("no discovered schema found; call /api/setup/discover first"));
 
         if (selected is not { Length: > 0 })
-            return (state, state.LastDiscoveredSchema, null);
+            return (state.LastDiscoveredSchema, null);
 
         var narrowed = WizardEndpoints.SelectTables(state.LastDiscoveredSchema, selected);
 
         return narrowed.Tables.Count == 0
-            ? (null, null, new Refusal("none of the selected tables are part of the discovered schema"))
-            : (state, narrowed, null);
+            ? (null, new Refusal("none of the selected tables are part of the discovered schema"))
+            : (narrowed, null);
+    }
+
+    private async Task<(string? PlanId, Refusal? Refusal)> LoadPlanIdAsync(string slug, CancellationToken token)
+    {
+        using var session = store.OpenAsyncSession();
+        var state = await session.LoadAsync<WizardState>(WizardState.DocumentIdFor(slug), token);
+        return state?.PlanId is null ? (null, NoPlanYet) : (state.PlanId, null);
     }
 
     /// <summary>The same gate the one-shot path runs.</summary>
@@ -534,6 +536,21 @@ public sealed class MigrationService(
         };
     }
 
+    private sealed class TurnParameters
+    {
+        public required string Path { get; init; }
+
+        public required string Slug { get; init; }
+
+        public required PlannerAgent Agent { get; init; }
+
+        public string? Area { get; init; }
+
+        public MigrationProposalStartRequest? Opening { get; init; }
+
+        public required string PlannerRequest { get; init; }
+    }
+
     private sealed class PlannerStartRequest
     {
         public string? Slug { get; init; }
@@ -543,30 +560,19 @@ public sealed class MigrationService(
         public string? Prompt { get; init; }
     }
 
-    private static bool HasSelection(MigrationAskRequest request) =>
-        (request.SelectedAreas ?? []).Concat(request.SelectedCollections ?? []).Any(name => string.IsNullOrWhiteSpace(name) == false);
-
     private sealed class PlannerAskRequest
     {
-        public string? Slug { get; init; }
+        public string? PlanId { get; init; }
 
-        public string? ConversationId { get; init; }
+        public string? Area { get; init; }
 
         public string? Prompt { get; init; }
-
-        public string[]? SelectedAreas { get; init; }
-
-        public string[]? SelectedCollections { get; init; }
-
-        public PlannerPlan? Plan { get; init; }
-
-        public List<UserEdit>? UserEdits { get; init; }
     }
 
-    private sealed class PlannerPlan
+    private sealed class PlannerPlanRequest
     {
-        public NamingConventions? Conventions { get; init; }
+        public string? PlanId { get; init; }
 
-        public List<PlanEntry>? Entries { get; init; }
+        public MigrationPlanChange[]? Changes { get; init; }
     }
 }

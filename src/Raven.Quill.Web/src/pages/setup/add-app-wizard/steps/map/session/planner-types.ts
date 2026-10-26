@@ -2,7 +2,8 @@ import type {
     AbsorbedTable,
     CdcSinkTableConfig,
     DroppedTable,
-    MigrationFrameProposalFrame,
+    MigrationProposal,
+    ProposedArea,
     ProposedCollection as ProposedCollectionFrame,
     ValidationIssue,
 } from "@/api/generated/server-api";
@@ -17,8 +18,10 @@ export type ProposedCollection = Omit<ProposedCollectionFrame, "absorbs"> & {
     absorbs: WithTableRef<AbsorbedTable>[];
 };
 
-export type PlannerProposal = Omit<MigrationFrameProposalFrame, "type" | "collections" | "dropped"> & {
-    collections: ProposedCollection[];
+export type PlannerArea = Omit<ProposedArea, "collections"> & { collections: ProposedCollection[] };
+
+export type PlannerProposal = Omit<MigrationProposal, "areas" | "dropped"> & {
+    areas: PlannerArea[];
     dropped: WithTableRef<DroppedTable>[];
 };
 
