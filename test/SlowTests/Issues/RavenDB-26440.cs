@@ -217,6 +217,7 @@ namespace SlowTests.Issues
                 };
 
                 var ex = Assert.Throws<IndexCompilationException>(() => store.Maintenance.Send(new PutIndexesOperation(indexDefinition)));
+                Assert.Contains("The map function nests its method calls too deeply", ex.Message); // the first gate reports it, not Roslyn's 'insufficient stack'
                 Assert.Equal(nameof(IndexDefinition.Maps), ex.IndexDefinitionProperty);
             }
         }
