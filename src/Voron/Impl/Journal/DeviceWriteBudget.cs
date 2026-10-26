@@ -262,12 +262,11 @@ namespace Voron.Impl.Journal
                     _draining = true;
                     _activeQueueThreshold = _exitQueueDepth;
                     Volatile.Write(ref _lastSwitchUtcTicks, DateTime.UtcNow.Ticks);
-                    if (Log.IsDebugEnabled)
+                    if (Log.IsInfoEnabled && ShouldLogModeSwitch(nowMs, out int suppressed))
                     {
-                        Log.Debug($"The device that holds '{_pathOnDevice}' is congested (queue {queueDepth:0.0}, " +
-                                  $"sync {_syncCostTicksEwma.Current / TimeSpan.TicksPerMillisecond}ms). Every environment on this device " +
-                                  "moves to drain mode: flushes stop the writeback trickle, and each sync pushes its dirty ranges " +
-                                  "in paced blocks before the fdatasync.");
+                        Log.Info($"The device that holds '{_pathOnDevice}' is congested ({DescribeInputs(queueDepth)}). Every environment on this device " +
+                                 "moves to drain mode: flushes stop the writeback trickle, and each sync pushes its dirty ranges " +
+                                 $"in paced blocks before the fdatasync.{DescribeSuppressed(suppressed)}");
                     }
                 }
                 return true;
@@ -283,15 +282,44 @@ namespace Voron.Impl.Journal
             _draining = false;
             _activeQueueThreshold = _enterQueueDepth;
             Volatile.Write(ref _lastSwitchUtcTicks, DateTime.UtcNow.Ticks);
-            if (Log.IsDebugEnabled)
+            if (Log.IsInfoEnabled && ShouldLogModeSwitch(nowMs, out int suppressedSwitches))
             {
-                Log.Debug($"The device that holds '{_pathOnDevice}' is quiet again (queue {queueDepth:0.0}). Every environment " +
-                            "on this device returns to trickle mode: flushes start writeback of their dirty ranges, and syncs " +
-                            "use a plain fdatasync.");
+                Log.Info($"The device that holds '{_pathOnDevice}' is quiet again ({DescribeInputs(queueDepth)}). Every environment " +
+                         "on this device returns to trickle mode: flushes start writeback of their dirty ranges, and syncs " +
+                         $"use a plain fdatasync.{DescribeSuppressed(suppressedSwitches)}");
             }
 
             return false;
         }
+
+        private const long ModeSwitchLogIntervalMs = 60_000;
+        private long _lastModeSwitchLogMs = -ModeSwitchLogIntervalMs;
+        private int _suppressedModeSwitchLogs;
+
+        // a device flapping at the edge of congestion must not flood the log: one line per minute, the rest are counted
+        private bool ShouldLogModeSwitch(long nowMs, out int suppressed)
+        {
+            if (nowMs - Volatile.Read(ref _lastModeSwitchLogMs) < ModeSwitchLogIntervalMs)
+            {
+                Interlocked.Increment(ref _suppressedModeSwitchLogs);
+                suppressed = 0;
+                return false;
+            }
+
+            Volatile.Write(ref _lastModeSwitchLogMs, nowMs);
+            suppressed = Interlocked.Exchange(ref _suppressedModeSwitchLogs, 0);
+            return true;
+        }
+
+        private string DescribeInputs(double queueDepth)
+        {
+            string queue = _queueReader == null ? "no queue depth on this platform" : $"queue depth {queueDepth:0.0}, drain above {_enterQueueDepth:0.#} / leave below {_exitQueueDepth:0.#}";
+            return $"{queue}, sync cost {TimeSpan.FromTicks(_syncCostTicksEwma.Current).TotalMilliseconds:#,#0} ms (drain above {TimeSpan.FromTicks(_syncThresholdTicks).TotalMilliseconds:#,#0} ms), " +
+                   $"journal writes {TimeSpan.FromTicks(_journalWriteLatencyTicks.Current).TotalMilliseconds:#,#0.#} ms for {_journalWriteSizeBytes.Current / Global.Constants.Size.Kilobyte:#,#0} KB on average";
+        }
+
+        private static string DescribeSuppressed(int suppressed) =>
+            suppressed > 0 ? $" {suppressed:#,#} more mode switch(es) in the last minute were not logged." : string.Empty;
 
         private (long NowMs, double QueueDepth) SampleQueue()
         {

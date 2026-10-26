@@ -58,6 +58,8 @@ namespace Raven.Server.Storage
                     DeviceTracker tracker = _trackers.GetOrAdd(device, d => new DeviceTracker(d));
                     DeviceTracker.Sample sample = ForTestingPurposes?.SampleOverride?.Invoke(device) ?? DeviceTracker.Sample.From(device, now, SampleInterval);
                     tracker.Add(sample with { At = now }, thresholds);
+
+                    LogClassChange(tracker);
                 }
             }
             catch (Exception e)
@@ -69,6 +71,38 @@ namespace Raven.Server.Storage
             {
                 Monitor.Exit(_sampleLock);
             }
+        }
+
+        // the class is a getter evaluated per transaction, watching it here keeps the change detection off the write path
+        private void LogClassChange(DeviceTracker tracker)
+        {
+            DeviceWriteBudget device = tracker.Device;
+            DeviceWriteBudget.DeviceClass current = device.Classify(out DeviceWriteBudget.ClassReason reason);
+            DeviceWriteBudget.DeviceClass? previous = tracker.LastClass;
+            tracker.LastClass = current;
+
+            if (previous == current || (previous == null && current == DeviceWriteBudget.DeviceClass.Unknown) || _logger.IsInfoEnabled == false)
+                return;
+
+            JournalCompressionAlgorithm auto = current == DeviceWriteBudget.DeviceClass.Budgeted ? JournalCompressionAlgorithm.Zstd : JournalCompressionAlgorithm.Lz4;
+            _logger.Info($"The device that holds '{device.PathOnDevice}' is now classified as {current} (was {previous?.ToString() ?? "not classified"}): {Describe(reason, device)}. " +
+                         $"Environments on this device with Auto journal compression use {auto}.");
+        }
+
+        public static string Describe(DeviceWriteBudget.ClassReason reason, DeviceWriteBudget device)
+        {
+            string latency = $"{device.JournalWriteLatency.TotalMilliseconds:#,#0.##} ms";
+            string size = $"{device.JournalWriteSizeInBytes / 1024:#,#0} KB";
+            string threshold = $"{device.ClassifyAboveLatency.TotalMilliseconds:#,#0.##} ms";
+            return reason switch
+            {
+                DeviceWriteBudget.ClassReason.NoWrites => "no journal writes measured yet",
+                DeviceWriteBudget.ClassReason.VeryLowLatency => $"journal writes take {latency}, below 1/8 of {threshold}",
+                DeviceWriteBudget.ClassReason.WritesTooSmall => $"journal writes average {size}, below {DeviceWriteBudget.SmallWriteBytes / 1024:#,#0} KB, too small to tell a slow disk from a fast one ({latency})",
+                DeviceWriteBudget.ClassReason.LowLatency => $"journal writes of {size} take {latency}, below half of {threshold}",
+                DeviceWriteBudget.ClassReason.HighLatency => $"journal writes of {size} take {latency}, at or above half of {threshold}",
+                _ => reason.ToString()
+            };
         }
 
         public DeviceTracker GetTracker(DeviceWriteBudget device) => device != null && _trackers.TryGetValue(device, out DeviceTracker tracker) ? tracker : null;
@@ -174,6 +208,8 @@ namespace Raven.Server.Storage
         }
 
         public DeviceWriteBudget Device { get; }
+
+        internal DeviceWriteBudget.DeviceClass? LastClass { get; set; }
 
         public DateTime? SaturatedSince { get; private set; }
 
