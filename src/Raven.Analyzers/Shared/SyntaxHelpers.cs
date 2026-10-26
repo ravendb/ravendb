@@ -75,7 +75,7 @@ namespace Raven.Analyzers.Shared
         /// single initializer, returns that initializer expression; otherwise null. Used to follow a
         /// query/projection chain across a <c>var x = …;</c> assignment.
         /// </summary>
-        internal static ExpressionSyntax? TryResolveLocalInitializer(ExpressionSyntax? expression, SemanticModel model)
+        public static ExpressionSyntax? TryResolveLocalInitializer(ExpressionSyntax? expression, SemanticModel model)
         {
             if (expression is not IdentifierNameSyntax id)
                 return null;
@@ -624,6 +624,27 @@ namespace Raven.Analyzers.Shared
                 IdentifierNameSyntax identifier => identifier.GetLocation(),
                 _ => invocation.GetLocation(),
             };
+
+        /// <summary>
+        /// True when <paramref name="node"/> sits inside a loop statement that is itself inside
+        /// <paramref name="scope"/>.
+        /// </summary>
+        public static bool IsInsideLoop(SyntaxNode node, SyntaxNode scope)
+        {
+            for (SyntaxNode? current = node.Parent; current != null && current != scope; current = current.Parent)
+            {
+                if (current is ForStatementSyntax
+                            or ForEachStatementSyntax
+                            or ForEachVariableStatementSyntax
+                            or WhileStatementSyntax
+                            or DoStatementSyntax)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         /// <summary>
         /// When <paramref name="expression"/> is a string-literal expression, outputs its decoded text and

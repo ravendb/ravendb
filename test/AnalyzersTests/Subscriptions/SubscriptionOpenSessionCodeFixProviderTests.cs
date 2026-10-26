@@ -390,5 +390,132 @@ class Document { public string Id { get; set; } }
             await Assert.ThrowsAsync<System.InvalidOperationException>(
                 () => RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source));
         }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task OpenSession_InsideLoop_FixBails()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(SubscriptionWorker<Document> worker, IDocumentStore store)
+    {
+        worker.Run(batch =>
+        {
+            foreach (var item in batch.Items)
+            {
+                var session = store.OpenSession();
+                session.Store(item.Result);
+            }
+        });
+    }
+}
+
+class Document { public string Id { get; set; } }
+";
+
+            System.InvalidOperationException ex = await Assert.ThrowsAsync<System.InvalidOperationException>(
+                () => RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source));
+
+            Assert.Contains("No code fixes were registered", ex.Message);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task OpenSession_TwiceInSameRunLambda_FixBails()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(SubscriptionWorker<Document> worker, IDocumentStore store)
+    {
+        worker.Run(batch =>
+        {
+            var first = store.OpenSession();
+            var second = store.OpenSession();
+        });
+    }
+}
+
+class Document { public string Id { get; set; } }
+";
+
+            System.InvalidOperationException ex = await Assert.ThrowsAsync<System.InvalidOperationException>(
+                () => RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source));
+
+            Assert.Contains("No code fixes were registered", ex.Message);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task OpenSession_NextToExistingBatchSession_FixBails()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(SubscriptionWorker<Document> worker, IDocumentStore store)
+    {
+        worker.Run(batch =>
+        {
+            var batchSession = batch.OpenSession();
+            var extra = store.OpenSession();
+        });
+    }
+}
+
+class Document { public string Id { get; set; } }
+";
+
+            System.InvalidOperationException ex = await Assert.ThrowsAsync<System.InvalidOperationException>(
+                () => RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source));
+
+            Assert.Contains("No code fixes were registered", ex.Message);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task OpenSessionWithInlineDatabaseOption_FixBails()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(SubscriptionWorker<Document> worker, IDocumentStore store)
+    {
+        worker.Run(batch =>
+        {
+            var session = store.OpenSession(new SessionOptions { Database = ""Other"" });
+        });
+    }
+}
+
+class Document { public string Id { get; set; } }
+";
+
+            System.InvalidOperationException ex = await Assert.ThrowsAsync<System.InvalidOperationException>(
+                () => RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source));
+
+            Assert.Contains("No code fixes were registered", ex.Message);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task OpenSessionWithLocalTransactionModeOption_FixBails()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(SubscriptionWorker<Document> worker, IDocumentStore store)
+    {
+        worker.Run(batch =>
+        {
+            var options = new SessionOptions { TransactionMode = TransactionMode.ClusterWide };
+            var session = store.OpenSession(options);
+        });
+    }
+}
+
+class Document { public string Id { get; set; } }
+";
+
+            System.InvalidOperationException ex = await Assert.ThrowsAsync<System.InvalidOperationException>(
+                () => RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source));
+
+            Assert.Contains("No code fixes were registered", ex.Message);
+        }
     }
 }

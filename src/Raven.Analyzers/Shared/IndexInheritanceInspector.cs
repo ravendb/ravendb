@@ -233,7 +233,7 @@ namespace Raven.Analyzers.Shared
                         continue;
 
                     count++;
-                    if (IsInsideLoop(invocation, body))
+                    if (SyntaxHelpers.IsInsideLoop(invocation, body))
                         anyInLoop = true;
                     if (methodName == KnownTypes.AddMapForAllMethodName)
                         anyForAll = true;
@@ -263,25 +263,5 @@ namespace Raven.Analyzers.Shared
             return false;
         }
 
-        // True when <paramref name="node"/> is nested inside a loop construct within <paramref name="body"/>.
-        private static bool IsInsideLoop(SyntaxNode node, SyntaxNode body)
-        {
-            for (SyntaxNode? current = node.Parent; current != null; current = current.Parent)
-            {
-                if (current is ForStatementSyntax
-                            or ForEachStatementSyntax
-                            or ForEachVariableStatementSyntax
-                            or WhileStatementSyntax
-                            or DoStatementSyntax)
-                {
-                    return true;
-                }
-
-                if (current == body)
-                    break;
-            }
-
-            return false;
-        }
     }
 }

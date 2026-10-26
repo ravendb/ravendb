@@ -53,8 +53,14 @@ namespace Raven.Analyzers.CodeFixes.Subscriptions
             if (memberAccess.Parent is not InvocationExpressionSyntax openSessionInvocation)
                 return;
 
-            string? batchParamName = FindRunLambdaBatchParameterName(openSessionInvocation, model);
-            if (batchParamName == null)
+            string? batchParamName = FindRunLambdaBatchParameterName(openSessionInvocation, model, out SyntaxNode? runLambda);
+            if (batchParamName == null || runLambda == null)
+                return;
+
+            // SubscriptionBatch allows one session per batch: a call in a loop, or a second OpenSession
+            // in the same Run lambda (store or batch), would throw at runtime once rewritten, so the
+            // diagnostic stands and the call is left for the author to restructure.
+            if (SyntaxHelpers.IsInsideLoop(openSessionInvocation, runLambda) || CountSessionOpenings(runLambda) > 1)
                 return;
 
             // SubscriptionBatch only exposes OpenSession() / OpenSession(SessionOptions) (and the async
@@ -97,11 +103,52 @@ namespace Raven.Analyzers.CodeFixes.Subscriptions
                 return false;
 
             ITypeSymbol? argType = model.GetTypeInfo(argument.Expression).Type;
-            return SyntaxHelpers.IsSessionOptionsType(argType);
+            if (!SyntaxHelpers.IsSessionOptionsType(argType))
+                return false;
+
+            return !SetsBatchRejectedOption(argument.Expression, model);
         }
 
-        private static string? FindRunLambdaBatchParameterName(SyntaxNode node, SemanticModel model)
+        // SubscriptionBatch.OpenSession(options) throws when Database, RequestExecutor or TransactionMode
+        // are set by the caller. The options are inspected where they are built: inline, or through the
+        // initializer of the local they are passed as.
+        private static bool SetsBatchRejectedOption(ExpressionSyntax argument, SemanticModel model)
         {
+            ExpressionSyntax? creation = argument is BaseObjectCreationExpressionSyntax
+                ? argument
+                : SyntaxHelpers.TryResolveLocalInitializer(argument, model);
+
+            if (creation is not BaseObjectCreationExpressionSyntax { Initializer: { } initializer })
+                return false;
+
+            foreach (ExpressionSyntax expression in initializer.Expressions)
+            {
+                if (expression is AssignmentExpressionSyntax { Left: IdentifierNameSyntax property }
+                    && KnownTypes.SessionOptionsBatchRejectedProperties.Contains(property.Identifier.Text))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static int CountSessionOpenings(SyntaxNode runLambda)
+        {
+            int count = 0;
+            foreach (InvocationExpressionSyntax invocation in runLambda.DescendantNodes().OfType<InvocationExpressionSyntax>())
+            {
+                string? name = SyntaxHelpers.GetMethodName(invocation);
+                if (name == KnownTypes.OpenSessionMethodName || name == KnownTypes.OpenAsyncSessionMethodName)
+                    count++;
+            }
+
+            return count;
+        }
+
+        private static string? FindRunLambdaBatchParameterName(SyntaxNode node, SemanticModel model, out SyntaxNode? runLambda)
+        {
+            runLambda = null;
             SyntaxNode? current = node.Parent;
 
             while (current != null)
@@ -126,7 +173,10 @@ namespace Raven.Analyzers.CodeFixes.Subscriptions
                                ParenthesizedLambdaExpressionSyntax)
                 {
                     if (IsRunLambda(current, model))
+                    {
+                        runLambda = current;
                         return ExtractFirstParameterName(current);
+                    }
 
                     // The OpenSession call is inside a nested lambda that is NOT a subscription
                     // worker's Run lambda (e.g. an unrelated method also named Run, or any other

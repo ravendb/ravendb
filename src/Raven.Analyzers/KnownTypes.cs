@@ -242,6 +242,13 @@ namespace Raven.Analyzers
         // batch equivalent and would not compile.
         public const string SessionOptionsTypeName = "SessionOptions";
 
+        // SubscriptionBatch.OpenSession sets Database and RequestExecutor itself and throws when the
+        // caller's options already carry them or ask for anything but a single-node transaction.
+        public static readonly HashSet<string> SessionOptionsBatchRejectedProperties =
+        [
+            "Database", "RequestExecutor", "TransactionMode",
+        ];
+
         // ── Session lazy batching ──────────────────────────────────────────────────
         public const string LoadMethodName = "Load";
         public const string LoadAsyncMethodName = "LoadAsync";
