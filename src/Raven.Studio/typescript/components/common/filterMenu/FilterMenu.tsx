@@ -298,7 +298,7 @@ function TextFilter({ category, onEnter }: { category: TextFilterCategory; onEnt
                 type="text"
                 placeholder={category.placeholder}
                 value={category.value}
-                onChange={(e) => category.onChange(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => category.onChange(e.target.value)}
                 onKeyDown={handleEnterKey(onEnter)}
             />
         </div>
