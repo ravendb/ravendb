@@ -1,11 +1,17 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server.Config;
+using Raven.Server.Config.Settings;
+using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
@@ -208,6 +214,72 @@ namespace SlowTests.Issues
                         } while (it.MoveNext());
                     }
                 }
+            }
+        }
+
+        // Creating a database over existing data goes through AdminDatabasesHandler.RecreateDatabase, which opens each
+        // shard before the record reaches the cluster - so before FillPrefixedSharding has given the prefixes their
+        // BucketRangeStart. The zip is shard 0 of a 6.2 database with Prefix = "eu/", holding document eu/1 and an
+        // attachment, so opening it runs From62000, which recomputes the attachments' bucket index keys.
+        [RavenFact(RavenTestCategory.Sharding)]
+        public async Task CanCreateAPrefixedShardedDatabaseOverShardDataFrom62()
+        {
+            const string id = "eu/1";
+
+            var zipPath = new PathSetting("SchemaUpgrade/Issues/DocumentsVersion/RavenDB_22932_PrefixedShard_62.zip");
+            Assert.True(File.Exists(zipPath.FullPath));
+
+            var name = GetDatabaseName();
+            var shardName = ShardHelper.ToShardName(name, 0);
+            var record = new DatabaseRecord(name)
+            {
+                Settings = new Dictionary<string, string>
+                {
+                    [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
+                },
+                Sharding = new ShardingConfiguration
+                {
+                    Shards = new Dictionary<int, DatabaseTopology>
+                    {
+                        { 0, new DatabaseTopology() },
+                        { 1, new DatabaseTopology() },
+                        { 2, new DatabaseTopology() }
+                    },
+                    Orchestrator = new OrchestratorConfiguration
+                    {
+                        Topology = new OrchestratorTopology()
+                    },
+                    Prefixed = [new PrefixedShardingSetting { Prefix = "eu/", Shards = [0] }]
+                }
+            };
+
+            var shardDirectory = DatabasesLandlord.CreateDatabaseConfiguration(Server.ServerStore, shardName, record.Settings).Core.DataDirectory.FullPath;
+            ZipFile.ExtractToDirectory(zipPath.FullPath, shardDirectory);
+
+            using (var store = new DocumentStore { Urls = [Server.WebUrl], Database = name }.Initialize())
+            {
+                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(record));
+
+                var bucket = await Sharding.GetBucketAsync(store, id);
+                Assert.True(bucket >= ShardHelper.NumberOfBuckets, $"'{id}' landed in bucket {bucket}, so the prefix was not applied and the test proves nothing");
+
+                var shard = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(shardName);
+
+                using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var documents = shard.ShardedDocumentsStorage.GetDocumentsByBucketFrom(ctx, bucket, etag: 0).ToList();
+                    Assert.Equal(id, Assert.Single(documents).Id);
+
+                    var attachments = shard.DocumentsStorage.AttachmentsStorage
+                        .GetAttachmentsByBucketFrom(ctx, bucket, etag: 0, remoteAttachments: false).ToList();
+                    Assert.Equal("file.bin", Assert.Single(attachments).Name);
+                }
+
+                // created by hand, so the test infrastructure would delete the files of a database that is still loaded
+                await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(name, hardDelete: true));
+                Assert.True(await WaitForValueAsync(() => Enumerable.Range(0, record.Sharding.Shards.Count)
+                    .All(shardNumber => Server.ServerStore.DatabasesLandlord.IsDatabaseLoaded(ShardHelper.ToShardName(name, shardNumber)) == false), true));
             }
         }
 
