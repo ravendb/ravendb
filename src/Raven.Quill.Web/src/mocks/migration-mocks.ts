@@ -8,7 +8,10 @@ import type {
     DroppedTable,
     MigrationApplyResponse,
     MigrationFrame,
+    MigrationPlanGetResponse,
+    MigrationProposal,
     ProposedCollection,
+    ValidationIssue,
 } from "@/api/generated/server-api";
 import { apiHttp } from "@/mocks/api-http";
 import { discoveredTable } from "@/mocks/discovery-fixtures";
@@ -22,17 +25,27 @@ type StreamOptions = {
 // The planner streams its frames as NDJSON, so the two streaming endpoints use plain msw instead of
 // `apiHttp` - mirroring assistantMocks.chat.
 export const migrationMocks = {
-    start: (frames: MigrationFrame[] = plannerOpeningFrames, options?: StreamOptions) =>
-        streamFrames("/api/setup/migration/start", frames, options),
-    ask: (frames: MigrationFrame[] = plannerBuildFrames, options?: StreamOptions) =>
-        streamFrames("/api/setup/migration/ask", frames, options),
+    proposalStart: (frames: MigrationFrame[] = plannerOpeningFrames, options?: StreamOptions) =>
+        streamFrames("/api/setup/migration/proposal/start", frames, options),
+    proposalAsk: (frames: MigrationFrame[] = plannerOpeningFrames, options?: StreamOptions) =>
+        streamFrames("/api/setup/migration/proposal/ask", frames, options),
+    areaStart: (frames: MigrationFrame[] = plannerBuildFrames, options?: StreamOptions) =>
+        streamFrames("/api/setup/migration/area/start", frames, options),
+    areaAsk: (frames: MigrationFrame[] = plannerRetryFrames, options?: StreamOptions) =>
+        streamFrames("/api/setup/migration/area/ask", frames, options),
+    stop: () => apiHttp.post("/api/setup/migration/stop", ({ response }) => response(204).empty()),
+    planGet: (view: MigrationPlanGetResponse = samplePlanView) =>
+        apiHttp.post("/api/setup/migration/plan/get", ({ response }) => response(200).json(view)),
+    planSave: (warnings: string[] = []) =>
+        apiHttp.post("/api/setup/migration/plan/save", ({ response }) => response(200).json({ issues: [], warnings })),
+    /** The api's mapping validator refused the changes; nothing was saved. */
+    planSaveRejected: (issues: ValidationIssue[], warnings: string[] = []) =>
+        apiHttp.post("/api/setup/migration/plan/save", ({ response }) => response(422).json({ issues, warnings })),
     apply: (response: MigrationApplyResponse = sampleMigrationApply) =>
         apiHttp.post("/api/setup/migration/apply", ({ response: res }) => res(200).json(response)),
     /** The assembled plan does not validate as a whole, which the server answers with 422 and the reasons. */
     applyRejected: (errors: string[]) =>
         apiHttp.post("/api/setup/migration/apply", ({ response }) => response(422).json({ errors })),
-    edit: (warnings: string[] = []) =>
-        apiHttp.post("/api/setup/migration/edit", ({ response }) => response(200).json({ warnings })),
 };
 
 function streamFrames(
@@ -238,6 +251,8 @@ export const loanTablesDiscovery: DiscoverResponse = {
     ].map((name) => discoveredTable("public", name, [["Id", "bigint"]])),
 };
 
+export const PLANNER_PLAN_ID = "planner/11111111-1111-1111-1111-111111111111";
+
 export const PLANNER_CONVERSATION_ID = "planner/demo_shop/1";
 
 const customersConfig = rootTableConfig({
@@ -295,44 +310,59 @@ const productsConfig = rootTableConfig({
 const TOTAL_PRECISION_WARNING =
     "dbo.Orders.Total is decimal(18,2) and is stored as a number, which can lose precision above 2^53.";
 
+const plannerProposal: MigrationProposal = {
+    areas: [
+        {
+            area: "Customers area",
+            why: "Who buys, and where they live.",
+            collections: [
+                proposedCollection(
+                    "Customers",
+                    "dbo.Customers",
+                    [
+                        {
+                            table: "dbo.CustomerAddresses",
+                            how: "Embed",
+                            why: "Addresses only exist for a customer.",
+                        },
+                    ],
+                    "One document per customer, so a profile loads in a single read.",
+                ),
+            ],
+        },
+        {
+            area: "Sales area",
+            why: "What is sold, and to whom.",
+            collections: [
+                proposedCollection(
+                    "Orders",
+                    "dbo.Orders",
+                    [
+                        { table: "dbo.OrderLines", how: "Embed", why: "Lines only exist for an order." },
+                        { table: "dbo.Customers", how: "Link", why: "A customer outlives their orders." },
+                    ],
+                    "An order with its lines is the unit every question about sales starts from.",
+                ),
+                proposedCollection(
+                    "Products",
+                    "dbo.Products",
+                    [],
+                    "Referenced by many order lines, so it stays a collection of its own.",
+                ),
+            ],
+        },
+    ],
+    dropped: [droppedTable("dbo.AuditLog", "Nothing in the app reads it.")],
+    enables: [
+        "An agent that answers questions about a customer's orders from one document per order.",
+        "Looking up a customer's addresses without a second read.",
+        "Reporting on sales by product through order lines that link to it.",
+    ],
+};
+
 /** The planner's first turn: it proposes, explains, and asks before registering anything. */
 export const plannerOpeningFrames: MigrationFrame[] = [
-    {
-        type: "proposal",
-        areas: [
-            { area: "Customers area", collections: ["Customers"], why: "Who buys, and where they live." },
-            { area: "Sales area", collections: ["Orders", "Products"], why: "What is sold, and to whom." },
-        ],
-        collections: [
-            proposedCollection(
-                "Customers",
-                "dbo.Customers",
-                [{ table: "dbo.CustomerAddresses", how: "Embed", why: "Addresses only exist for a customer." }],
-                "One document per customer, so a profile loads in a single read.",
-            ),
-            proposedCollection(
-                "Orders",
-                "dbo.Orders",
-                [
-                    { table: "dbo.OrderLines", how: "Embed", why: "Lines only exist for an order." },
-                    { table: "dbo.Customers", how: "Link", why: "A customer outlives their orders." },
-                ],
-                "An order with its lines is the unit every question about sales starts from.",
-            ),
-            proposedCollection(
-                "Products",
-                "dbo.Products",
-                [],
-                "Referenced by many order lines, so it stays a collection of its own.",
-            ),
-        ],
-        dropped: [droppedTable("dbo.AuditLog", "Nothing in the app reads it.")],
-        enables: [
-            "An agent that answers questions about a customer's orders from one document per order.",
-            "Looking up a customer's addresses without a second read.",
-            "Reporting on sales by product through order lines that link to it.",
-        ],
-    },
+    { type: "proposal", proposal: plannerProposal },
     {
         type: "reply",
         reply:
@@ -357,7 +387,7 @@ export const plannerOpeningFrames: MigrationFrame[] = [
             },
         ],
     },
-    { type: "done", conversationId: PLANNER_CONVERSATION_ID },
+    { type: "done", conversationId: PLANNER_CONVERSATION_ID, planId: PLANNER_PLAN_ID },
 ];
 
 /** The answers to the opening questions, as the operator sent them. */
@@ -369,7 +399,7 @@ export const plannerAnswers = [
 
 /** Building what was proposed: two collections pass, one is rejected. */
 export const plannerBuildFrames: MigrationFrame[] = [
-    { type: "conventions", propertyCase: "CamelCase", propertyLanguage: null, notes: null, mustReEmit: [] },
+    { type: "conventions", propertyCase: "CamelCase", propertyLanguage: null, notes: null },
     {
         type: "collection",
         status: "registered",
@@ -392,8 +422,6 @@ export const plannerBuildFrames: MigrationFrame[] = [
         type: "transientCollectionError",
         collection: "Products",
         errors: [{ message: "Column Price is mapped twice, as price and unitPrice.", path: "columns[2].name" }],
-        rejections: 1,
-        maxRejections: 2,
     },
     {
         type: "rejectedCollection",
@@ -412,7 +440,7 @@ export const plannerBuildFrames: MigrationFrame[] = [
         gaps: [],
         openQuestions: [],
     },
-    { type: "done", conversationId: PLANNER_CONVERSATION_ID },
+    { type: "done", conversationId: PLANNER_CONVERSATION_ID, planId: PLANNER_PLAN_ID },
 ];
 
 export const PLANNER_RETRY_PROMPT = "Retry Products with a single price property.";
@@ -444,8 +472,46 @@ export const plannerRetryFrames: MigrationFrame[] = [
         gaps: [],
         openQuestions: [],
     },
-    { type: "done", conversationId: PLANNER_CONVERSATION_ID },
+    { type: "done", conversationId: PLANNER_CONVERSATION_ID, planId: PLANNER_PLAN_ID },
 ];
+
+/** The plan after the retry: every proposed collection registered, keyed by its name. */
+export const samplePlanView: MigrationPlanGetResponse = {
+    plan: {
+        id: `${PLANNER_PLAN_ID}/plan`,
+        licenseId: null,
+        customerId: null,
+        slug: "demo_shop",
+        conventions: { propertyCase: "CamelCase", propertyLanguage: null, notes: null },
+        entries: {
+            Customers: {
+                area: "Customers area",
+                rationale: "Addresses are embedded as an array, so a customer's profile is one document.",
+                config: customersConfig,
+                version: 1,
+                warnings: [],
+                status: "Registered",
+            },
+            Orders: {
+                area: "Sales area",
+                rationale: "Order lines now link to Products, so a product rename shows up on every order.",
+                config: ordersLinkedToProductsConfig,
+                version: 2,
+                warnings: [TOTAL_PRECISION_WARNING],
+                status: "Registered",
+            },
+            Products: {
+                area: "Sales area",
+                rationale: "One document per product, which order lines link to.",
+                config: productsConfig,
+                version: 1,
+                warnings: [],
+                status: "Registered",
+            },
+        },
+    },
+    proposal: plannerProposal,
+};
 
 /** The configuration as the server assembles it on apply: an embedded table without a schema takes its parent's. */
 function asApplied(config: CdcSinkTableConfig): CdcSinkTableConfig {

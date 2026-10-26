@@ -198,6 +198,8 @@ const FAILURES: Record<string, string[]> = {
 
 const UPDATED = ["Customers", "PurchaseOrders", "Payslips"];
 
+const LARGE_PLAN_ID = "planner/22222222-2222-2222-2222-222222222222";
+
 export const LARGE_PLAN_CONVERSATION_ID = "planner/acme_erp/1";
 
 type GeneratedCollection = {
@@ -292,20 +294,27 @@ function configOf(collection: GeneratedCollection): CdcSinkTableConfig {
 export const largePlanOpeningFrames: MigrationFrame[] = [
     {
         type: "proposal",
-        areas: AREAS.map(([area, , specs]) => ({ area, collections: specs.map(([name]) => name), why: null })),
-        collections: collections.map((collection) =>
-            proposedCollection(
-                collection.name,
-                `${collection.schema}.${collection.name}`,
-                collection.children.map((child) => ({
-                    table: `${collection.schema}.${child.table}`,
-                    how: "Embed" as const,
-                })),
-                `One document per ${collection.singular}.`,
-            ),
-        ),
-        dropped: leftOutTables.map(({ table: label, why }) => droppedTable(label, why)),
-        enables: [],
+        proposal: {
+            areas: AREAS.map(([area]) => ({
+                area,
+                why: null,
+                collections: collections
+                    .filter((collection) => collection.area === area)
+                    .map((collection) =>
+                        proposedCollection(
+                            collection.name,
+                            `${collection.schema}.${collection.name}`,
+                            collection.children.map((child) => ({
+                                table: `${collection.schema}.${child.table}`,
+                                how: "Embed" as const,
+                            })),
+                            `One document per ${collection.singular}.`,
+                        ),
+                    ),
+            })),
+            dropped: leftOutTables.map(({ table: label, why }) => droppedTable(label, why)),
+            enables: [],
+        },
     },
     {
         type: "reply",
@@ -316,7 +325,7 @@ export const largePlanOpeningFrames: MigrationFrame[] = [
         gaps: [],
         openQuestions: [],
     },
-    { type: "done", conversationId: LARGE_PLAN_CONVERSATION_ID },
+    { type: "done", conversationId: LARGE_PLAN_CONVERSATION_ID, planId: LARGE_PLAN_ID },
 ];
 
 export const largePlanBuildFrames: MigrationFrame[] = [
@@ -348,5 +357,5 @@ export const largePlanBuildFrames: MigrationFrame[] = [
         gaps: [],
         openQuestions: [],
     },
-    { type: "done", conversationId: LARGE_PLAN_CONVERSATION_ID },
+    { type: "done", conversationId: LARGE_PLAN_CONVERSATION_ID, planId: LARGE_PLAN_ID },
 ];

@@ -74,12 +74,12 @@ const planCollections = new WeakMap<object, { inputs: unknown[]; collection: Pla
 export function buildPlanCollections(source: PlanSource, index: DiscoverIndex): PlanCollection[] {
     const proposal = source.plannerProposal;
     const proposedByName = new Map(
-        (proposal?.collections ?? []).flatMap((proposed) =>
+        proposedCollections(proposal).flatMap((proposed) =>
             proposed.collection ? [[proposed.collection, proposed] as const] : [],
         ),
     );
     const areaByName = getAreaByName(proposal);
-    const linkTargets = getLinkTargets(proposal?.collections ?? [], index);
+    const linkTargets = getLinkTargets(proposedCollections(proposal), index);
 
     return getPlanCollectionNames(source).map((name) => {
         const proposed = proposedByName.get(name) ?? null;
@@ -258,9 +258,16 @@ export function createNameMatcher(filter: string): (searchKey: string) => boolea
     return (searchKey) => !wanted || searchKey.includes(wanted);
 }
 
+/** Every proposed collection in the proposal's order, across its areas. */
+export function proposedCollections<Collection>(
+    proposal: { areas: { collections: Collection[] }[] } | null,
+): Collection[] {
+    return proposal?.areas.flatMap((area) => area.collections) ?? [];
+}
+
 function getPlanCollectionNames(source: PlanSource): string[] {
     const removedNames = new Set(source.plannerRemovedCollections);
-    const proposedNames = (source.plannerProposal?.collections ?? []).flatMap(({ collection }) =>
+    const proposedNames = proposedCollections(source.plannerProposal).flatMap(({ collection }) =>
         collection && !removedNames.has(collection) ? [collection] : [],
     );
 
@@ -278,8 +285,8 @@ function getAreaByName(proposal: PlannerProposal | null): Map<string, string> {
             continue;
         }
 
-        for (const collection of collections) {
-            if (!areaByName.has(collection)) {
+        for (const { collection } of collections) {
+            if (collection) {
                 areaByName.set(collection, areaName);
             }
         }

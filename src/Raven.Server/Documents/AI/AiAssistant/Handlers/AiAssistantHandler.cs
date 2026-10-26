@@ -17,17 +17,45 @@ public class AiAssistantHandler : ServerRequestHandler
             await processor.ExecuteAsync();
     }
     
-    [RavenAction("/assistant/migration/start", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
-    public async Task MigrationStart()
+    [RavenAction("/assistant/migration/proposal/start", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    public async Task MigrationProposalStart()
     {
-        using (var processor = new AiAssistantMigrationProcessor(this, "/api/v1/ai/quill/cdc-planner/start"))
+        using (var processor = new AiAssistantMigrationProcessor(this, "/api/v1/ai/quill/cdc-planner/proposal/start"))
             await processor.ExecuteAsync();
     }
 
-    [RavenAction("/assistant/migration/ask", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
-    public async Task MigrationAsk()
+    [RavenAction("/assistant/migration/proposal/ask", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    public async Task MigrationProposalAsk()
     {
-        using (var processor = new AiAssistantMigrationProcessor(this, "/api/v1/ai/quill/cdc-planner/ask"))
+        using (var processor = new AiAssistantMigrationProcessor(this, "/api/v1/ai/quill/cdc-planner/proposal/ask"))
+            await processor.ExecuteAsync();
+    }
+
+    [RavenAction("/assistant/migration/area/start", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    public async Task MigrationAreaStart()
+    {
+        using (var processor = new AiAssistantMigrationProcessor(this, "/api/v1/ai/quill/cdc-planner/area/start"))
+            await processor.ExecuteAsync();
+    }
+
+    [RavenAction("/assistant/migration/area/ask", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    public async Task MigrationAreaAsk()
+    {
+        using (var processor = new AiAssistantMigrationProcessor(this, "/api/v1/ai/quill/cdc-planner/area/ask"))
+            await processor.ExecuteAsync();
+    }
+
+    [RavenAction("/assistant/migration/plan/get", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    public async Task MigrationPlanGet()
+    {
+        using (var processor = new AiAssistantMigrationProcessor(this, "/api/v1/ai/quill/cdc-planner/plan/get"))
+            await processor.ExecuteAsync();
+    }
+
+    [RavenAction("/assistant/migration/plan/save", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    public async Task MigrationPlanSave()
+    {
+        using (var processor = new AiAssistantMigrationProcessor(this, "/api/v1/ai/quill/cdc-planner/plan/save"))
             await processor.ExecuteAsync();
     }
 

@@ -32,27 +32,32 @@ const discovery: DiscoverResponse = {
 
 const index = indexDiscovery(discovery);
 
-const { collections: proposed } = resolveProposalTables(
+const [{ collections: proposed }] = resolveProposalTables(
     {
-        areas: [],
-        collections: [
-            proposedCollection(
-                "Orders",
-                "dbo.Orders",
-                [
-                    { table: "dbo.LineNotes", how: "Embed" },
-                    { table: "dbo.OrderLines", how: "Embed" },
-                    { table: "dbo.Customers", how: "Link" },
+        areas: [
+            {
+                area: "Sales",
+                why: null,
+                collections: [
+                    proposedCollection(
+                        "Orders",
+                        "dbo.Orders",
+                        [
+                            { table: "dbo.LineNotes", how: "Embed" },
+                            { table: "dbo.OrderLines", how: "Embed" },
+                            { table: "dbo.Customers", how: "Link" },
+                        ],
+                        "",
+                    ),
+                    proposedCollection("Customers", "dbo.Customers", [], ""),
                 ],
-                "",
-            ),
-            proposedCollection("Customers", "dbo.Customers", [], ""),
+            },
         ],
         dropped: [],
         enables: [],
     },
     discovery.tables,
-);
+).areas;
 
 const [orders] = proposed;
 

@@ -13,8 +13,10 @@ namespace QuillTests;
 
 public class MigrationPlanAssemblyTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
+    private static readonly CdcSinkConfiguration Mapping = new() { Name = "shop-cdc", ConnectionStringName = "cs" };
+
     private static PlanEntry[] Entries(params CdcSinkTableConfig[] configs) =>
-        configs.Select((c, i) => new PlanEntry { Collection = c.CollectionName, Version = i + 1, Config = c }).ToArray();
+        configs.Select((c, i) => new PlanEntry { Version = i + 1, Config = c }).ToArray();
 
     private static CdcSinkSourceSchema Discovered(params string[] tables) => new()
     {
@@ -29,11 +31,10 @@ public class MigrationPlanAssemblyTests(ITestOutputHelper output) : NoDisposalNe
     [RavenFact(RavenTestCategory.Quill)]
     public void Build_carries_every_registered_configuration()
     {
-        var config = PlanToCdcConfiguration.Build(
-            Entries(MigrationSamples.ValidOrders()), "shop-cdc", "quill-cdc-connection");
+        var config = PlanToCdcConfiguration.Build(Entries(MigrationSamples.ValidOrders()), Mapping);
 
         Assert.Equal("shop-cdc", config.Name);
-        Assert.Equal("quill-cdc-connection", config.ConnectionStringName);
+        Assert.Equal("cs", config.ConnectionStringName);
         Assert.Equal("Orders", Assert.Single(config.Tables).CollectionName);
     }
 
@@ -117,7 +118,7 @@ public class MigrationPlanAssemblyTests(ITestOutputHelper output) : NoDisposalNe
         orders.EmbeddedTables = [lines];
         var entry = Assert.Single(Entries(orders));
 
-        var config = PlanToCdcConfiguration.Build([entry], "shop-cdc", "cs");
+        var config = PlanToCdcConfiguration.Build([entry], Mapping);
 
         var built = Assert.Single(Assert.Single(config.Tables).EmbeddedTables);
         Assert.Equal("sales", built.SourceTableSchema);
@@ -144,7 +145,7 @@ public class MigrationPlanAssemblyTests(ITestOutputHelper output) : NoDisposalNe
         orders.LinkedTables = [MigrationSamples.ValidCustomer()];
         var entry = Assert.Single(Entries(orders));
 
-        var config = PlanToCdcConfiguration.Build([entry], "shop-cdc", "cs");
+        var config = PlanToCdcConfiguration.Build([entry], Mapping);
 
         Assert.Equal(Json(entry.Config!), Json(Assert.Single(config.Tables)));
     }
@@ -162,7 +163,7 @@ public class MigrationPlanAssemblyTests(ITestOutputHelper output) : NoDisposalNe
         orders.EmbeddedTables = [MigrationSamples.ValidLines()];
         orders.LinkedTables = [MigrationSamples.ValidCustomer()];
 
-        var config = PlanToCdcConfiguration.Build(Entries(orders), "shop-cdc", "cs");
+        var config = PlanToCdcConfiguration.Build(Entries(orders), Mapping);
         var unmapped = PlanToCdcConfiguration.UnmappedTables(
             config, Discovered("orders", "order_lines", "customers"), "public");
 
@@ -177,7 +178,7 @@ public class MigrationPlanAssemblyTests(ITestOutputHelper output) : NoDisposalNe
         var orders = MigrationSamples.ValidOrders();
         orders.Disabled = true;
 
-        var config = PlanToCdcConfiguration.Build(Entries(orders), "shop-cdc", "cs");
+        var config = PlanToCdcConfiguration.Build(Entries(orders), Mapping);
 
         Assert.Equal(["public.orders"], PlanToCdcConfiguration.UnmappedTables(config, Discovered("orders"), "public"));
     }
@@ -190,7 +191,7 @@ public class MigrationPlanAssemblyTests(ITestOutputHelper output) : NoDisposalNe
         lines.SourceTableSchema = null;
         orders.EmbeddedTables = [lines];
 
-        var config = PlanToCdcConfiguration.Build(Entries(orders), "shop-cdc", "cs");
+        var config = PlanToCdcConfiguration.Build(Entries(orders), Mapping);
 
         Assert.Empty(PlanToCdcConfiguration.UnmappedTables(config, Discovered("orders", "order_lines"), "public"));
     }
@@ -210,7 +211,7 @@ public class MigrationPlanAssemblyTests(ITestOutputHelper output) : NoDisposalNe
         var orders = MigrationSamples.ValidOrders();
         orders.SourceTableSchema = null;
 
-        var config = PlanToCdcConfiguration.Build(Entries(orders), "shop-cdc", "cs");
+        var config = PlanToCdcConfiguration.Build(Entries(orders), Mapping);
 
         Assert.Equal(["sales.orders", "sales.order_lines"], PlanToCdcConfiguration.UnmappedTables(config, discovered, "public"));
     }
@@ -221,7 +222,7 @@ public class MigrationPlanAssemblyTests(ITestOutputHelper output) : NoDisposalNe
         var orders = MigrationSamples.ValidOrders();
         orders.EmbeddedTables = [MigrationSamples.ValidLines()];
 
-        var config = PlanToCdcConfiguration.Build(Entries(orders), "shop-cdc", "cs");
+        var config = PlanToCdcConfiguration.Build(Entries(orders), Mapping);
 
         Assert.Empty(PlanToCdcConfiguration.UnmappedTables(config, Discovered("orders", "order_lines"), "public"));
     }

@@ -896,7 +896,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/setup/migration/start": {
+    "/api/setup/migration/proposal/start": {
         parameters: {
             query?: never;
             header?: never;
@@ -905,15 +905,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Opens an interactive planning session over the discovered schema. Streams NDJSON frames: the agent's proposal, then one frame per collection as it is registered or rejected, then its reply. */
-        post: operations["setup.migrationStart"];
+        /** @description Begins a migration: the proposal agent groups the discovered schema into areas and collections and sets the naming conventions. Streams NDJSON frames; the done frame, or the error frame of a start that failed after the api created the plan, carries the plan id the api keeps the plan under. 409 while a proposal turn or a manual save of the app runs. */
+        post: operations["setup.migrationProposalStart"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/setup/migration/ask": {
+    "/api/setup/migration/proposal/ask": {
         parameters: {
             query?: never;
             header?: never;
@@ -922,15 +922,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description One more turn in an existing planning session. Streams the same NDJSON frames. */
-        post: operations["setup.migrationAsk"];
+        /** @description One more turn with the proposal agent: a question, a re-proposal, or the conventions before the first area starts. 409 while a proposal turn or a manual save of the app runs. */
+        post: operations["setup.migrationProposalAsk"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/setup/migration/edit": {
+    "/api/setup/migration/area/start": {
         parameters: {
             query?: never;
             header?: never;
@@ -939,8 +939,76 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description The operator's change to one collection of the plan: a null config deletes it (also one the planner only proposed), a config naming another collection renames it, and a collection the plan does not hold is added. Refused with 409 while a planner turn is running. The planner is told on the next turn. */
-        post: operations["setup.migrationEditCollection"];
+        /** @description Opens an area for the first time: the area agent builds every collection the proposal gave it. Once per area; later opens read the cards from plan/get. The turn finishes even if the browser leaves. 409 while the area's turn or a manual save of the app runs. */
+        post: operations["setup.migrationAreaStart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/migration/area/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description One more turn with an area's agent. The message names the collections it is about. 409 while the area's turn or a manual save of the app runs. */
+        post: operations["setup.migrationAreaAsk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/migration/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Stops the running turn of the proposal or of one area, in the api too; its stream ends with an error frame and the area is free again. Leaving the page does not stop a turn. 204 also when none runs. */
+        post: operations["setup.migrationStop"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/migration/plan/get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The plan as the api stores it and the proposal it accepted. */
+        post: operations["setup.migrationPlanGet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/migration/plan/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Saves the unsaved changes of an area view together, or none of them. 409 while a planner turn or another save of the app runs; 422 with the issues the api's mapping validator found, located in the configuration. */
+        post: operations["setup.migrationPlanSave"];
         delete?: never;
         options?: never;
         head?: never;
@@ -956,7 +1024,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Assembles the registered plan into a CDC configuration and hands it to the map step. */
+        /** @description Assembles the registered collections of the plan into a CDC configuration and hands it to the map step. */
         post: operations["setup.migrationApply"];
         delete?: never;
         options?: never;
@@ -1711,29 +1779,20 @@ export interface components {
         };
         MigrationApplyRequest: {
             slug: string;
-            conversationId: string;
-            collections?: null | string[];
         };
         MigrationApplyResponse: {
             configuration: null | components["schemas"]["CdcSinkConfiguration"];
             unmappedTables: string[];
             errors: string[];
         };
-        MigrationAskRequest: {
+        MigrationAreaAskRequest: {
             slug: string;
-            conversationId: string;
-            prompt?: null | string;
-            selectedAreas?: null | string[];
-            selectedCollections?: null | string[];
+            area: string;
+            prompt: string;
         };
-        MigrationEditCollectionRequest: {
+        MigrationAreaStartRequest: {
             slug: string;
-            conversationId: string;
-            collection: string;
-            config?: null | components["schemas"]["CdcSinkTableConfig"];
-        };
-        MigrationEditCollectionResponse: {
-            warnings: string[];
+            area: string;
         };
         MigrationFrame: components["schemas"]["MigrationFrameProposalFrame"] | components["schemas"]["MigrationFrameCollectionFrame"] | components["schemas"]["MigrationFrameTransientCollectionErrorFrame"] | components["schemas"]["MigrationFrameRejectedCollectionFrame"] | components["schemas"]["MigrationFrameRemovedFrame"] | components["schemas"]["MigrationFrameConventionsFrame"] | components["schemas"]["MigrationFrameNoteFrame"] | components["schemas"]["MigrationFrameReplyFrame"] | components["schemas"]["MigrationFrameDoneFrame"] | components["schemas"]["MigrationFrameErrorFrame"];
         MigrationFrameCollectionFrame: {
@@ -1753,17 +1812,20 @@ export interface components {
             propertyCase: components["schemas"]["PropertyCase"];
             propertyLanguage?: null | string;
             notes?: null | string;
-            mustReEmit: string[];
         };
         MigrationFrameDoneFrame: {
             /** @enum {string} */
             type: "done";
             conversationId: string;
+            planId: string;
+            /** Format: double */
+            usagePercentage?: null | number;
         };
         MigrationFrameErrorFrame: {
             /** @enum {string} */
             type: "error";
             message: string;
+            planId?: null | string;
         };
         MigrationFrameNoteFrame: {
             /** @enum {string} */
@@ -1773,10 +1835,7 @@ export interface components {
         MigrationFrameProposalFrame: {
             /** @enum {string} */
             type: "proposal";
-            areas: components["schemas"]["ProposedArea"][];
-            collections: components["schemas"]["ProposedCollection"][];
-            dropped: components["schemas"]["DroppedTable"][];
-            enables: string[];
+            proposal: components["schemas"]["MigrationProposal"];
         };
         MigrationFrameRejectedCollectionFrame: {
             /** @enum {string} */
@@ -1801,17 +1860,60 @@ export interface components {
         MigrationFrameTransientCollectionErrorFrame: {
             /** @enum {string} */
             type: "transientCollectionError";
-            /** Format: int32 */
-            rejections: number;
-            /** Format: int32 */
-            maxRejections: number;
             collection: string;
             errors: components["schemas"]["ValidationIssue"][];
         };
-        MigrationStartRequest: {
+        MigrationPlanChange: {
+            kind: components["schemas"]["PlanChangeKind"];
+            area: string;
+            collection: string;
+            config?: null | components["schemas"]["CdcSinkTableConfig"];
+            newName?: null | string;
+            moveToArea?: null | string;
+        };
+        MigrationPlanDocument: {
+            id?: string;
+            licenseId?: null | string;
+            customerId?: null | string;
+            slug?: null | string;
+            conventions?: components["schemas"]["NamingConventions"];
+            entries?: {
+                [key: string]: components["schemas"]["PlanEntry"];
+            };
+        };
+        MigrationPlanGetRequest: {
+            slug: string;
+        };
+        MigrationPlanGetResponse: {
+            plan: components["schemas"]["MigrationPlanDocument"];
+            proposal: null | components["schemas"]["MigrationProposal"];
+        };
+        MigrationPlanSaveOutcome: {
+            issues: components["schemas"]["ValidationIssue"][];
+            warnings: string[];
+        };
+        MigrationPlanSaveRequest: {
+            slug: string;
+            changes: components["schemas"]["MigrationPlanChange"][];
+        };
+        MigrationProposal: {
+            areas: components["schemas"]["ProposedArea"][];
+            dropped: components["schemas"]["DroppedTable"][];
+            enables: string[];
+        };
+        MigrationProposalAskRequest: {
+            slug: string;
+            prompt: string;
+        };
+        MigrationProposalStartRequest: {
             slug: string;
             selectedTables?: null | components["schemas"]["SelectedSourceTable"][];
             prompt?: null | string;
+        };
+        MigrationStopRequest: {
+            slug: string;
+            agent: components["schemas"]["PlannerAgent"];
+            area?: null | string;
         };
         MintEmbedLinkRequest: {
             channelId: string;
@@ -1835,6 +1937,11 @@ export interface components {
             apiKey?: null | string;
             /** Format: int32 */
             embeddingsMaxConcurrentBatches?: null | number;
+        };
+        NamingConventions: {
+            propertyCase?: components["schemas"]["PropertyCase"];
+            propertyLanguage?: null | string;
+            notes?: null | string;
         };
         OllamaSettings: {
             uri?: null | string;
@@ -1868,6 +1975,21 @@ export interface components {
             /** Format: int32 */
             recommended?: null | number;
         };
+        /** @enum {unknown} */
+        PlanChangeKind: "Edit" | "Rename" | "Move" | "Delete";
+        PlanEntry: {
+            area?: null | string;
+            rationale?: null | string;
+            config?: null | components["schemas"]["CdcSinkTableConfig"];
+            /** Format: int32 */
+            version?: number;
+            warnings?: string[];
+            status?: components["schemas"]["PlanEntryStatus"];
+        };
+        /** @enum {unknown} */
+        PlanEntryStatus: "Registered" | "Rejected" | "Removed";
+        /** @enum {unknown} */
+        PlannerAgent: "Proposal" | "Area";
         ProblemDetails: {
             type?: null | string;
             title?: null | string;
@@ -1880,7 +2002,7 @@ export interface components {
         PropertyCase: "Unspecified" | "SnakeCase" | "CamelCase" | "PascalCase";
         ProposedArea: {
             area?: null | string;
-            collections: string[];
+            collections: components["schemas"]["ProposedCollection"][];
             why?: null | string;
         };
         ProposedCollection: {
@@ -1888,7 +2010,7 @@ export interface components {
             rootTable?: null | string;
             absorbs: components["schemas"]["AbsorbedTable"][];
             why?: null | string;
-            fields: components["schemas"]["ProposedField"][];
+            fields?: null | components["schemas"]["ProposedField"][];
         };
         ProposedField: {
             table: string;
@@ -4429,7 +4551,7 @@ export interface operations {
             };
         };
     };
-    "setup.migrationStart": {
+    "setup.migrationProposalStart": {
         parameters: {
             query?: never;
             header?: never;
@@ -4438,7 +4560,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["MigrationStartRequest"];
+                "application/json": components["schemas"]["MigrationProposalStartRequest"];
             };
         };
         responses: {
@@ -4453,7 +4575,7 @@ export interface operations {
             };
         };
     };
-    "setup.migrationAsk": {
+    "setup.migrationProposalAsk": {
         parameters: {
             query?: never;
             header?: never;
@@ -4462,7 +4584,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["MigrationAskRequest"];
+                "application/json": components["schemas"]["MigrationProposalAskRequest"];
             };
         };
         responses: {
@@ -4477,7 +4599,7 @@ export interface operations {
             };
         };
     };
-    "setup.migrationEditCollection": {
+    "setup.migrationAreaStart": {
         parameters: {
             query?: never;
             header?: never;
@@ -4486,7 +4608,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["MigrationEditCollectionRequest"];
+                "application/json": components["schemas"]["MigrationAreaStartRequest"];
             };
         };
         responses: {
@@ -4496,11 +4618,150 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MigrationEditCollectionResponse"];
+                    "application/x-ndjson": components["schemas"]["MigrationFrame"];
+                };
+            };
+        };
+    };
+    "setup.migrationAreaAsk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrationAreaAskRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/x-ndjson": components["schemas"]["MigrationFrame"];
+                };
+            };
+        };
+    };
+    "setup.migrationStop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrationStopRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "setup.migrationPlanGet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrationPlanGetRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationPlanGetResponse"];
                 };
             };
             /** @description Bad Request */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "setup.migrationPlanSave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrationPlanSaveRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationPlanSaveOutcome"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4519,6 +4780,15 @@ export interface operations {
             };
             /** @description Unprocessable Entity */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationPlanSaveOutcome"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4781,9 +5051,8 @@ export type MapRequest = components["schemas"]["MapRequest"];
 export type MetricCard = components["schemas"]["MetricCard"];
 export type MigrationApplyRequest = components["schemas"]["MigrationApplyRequest"];
 export type MigrationApplyResponse = components["schemas"]["MigrationApplyResponse"];
-export type MigrationAskRequest = components["schemas"]["MigrationAskRequest"];
-export type MigrationEditCollectionRequest = components["schemas"]["MigrationEditCollectionRequest"];
-export type MigrationEditCollectionResponse = components["schemas"]["MigrationEditCollectionResponse"];
+export type MigrationAreaAskRequest = components["schemas"]["MigrationAreaAskRequest"];
+export type MigrationAreaStartRequest = components["schemas"]["MigrationAreaStartRequest"];
 export type MigrationFrame = components["schemas"]["MigrationFrame"];
 export type MigrationFrameCollectionFrame = components["schemas"]["MigrationFrameCollectionFrame"];
 export type MigrationFrameConventionsFrame = components["schemas"]["MigrationFrameConventionsFrame"];
@@ -4795,13 +5064,27 @@ export type MigrationFrameRejectedCollectionFrame = components["schemas"]["Migra
 export type MigrationFrameRemovedFrame = components["schemas"]["MigrationFrameRemovedFrame"];
 export type MigrationFrameReplyFrame = components["schemas"]["MigrationFrameReplyFrame"];
 export type MigrationFrameTransientCollectionErrorFrame = components["schemas"]["MigrationFrameTransientCollectionErrorFrame"];
-export type MigrationStartRequest = components["schemas"]["MigrationStartRequest"];
+export type MigrationPlanChange = components["schemas"]["MigrationPlanChange"];
+export type MigrationPlanDocument = components["schemas"]["MigrationPlanDocument"];
+export type MigrationPlanGetRequest = components["schemas"]["MigrationPlanGetRequest"];
+export type MigrationPlanGetResponse = components["schemas"]["MigrationPlanGetResponse"];
+export type MigrationPlanSaveOutcome = components["schemas"]["MigrationPlanSaveOutcome"];
+export type MigrationPlanSaveRequest = components["schemas"]["MigrationPlanSaveRequest"];
+export type MigrationProposal = components["schemas"]["MigrationProposal"];
+export type MigrationProposalAskRequest = components["schemas"]["MigrationProposalAskRequest"];
+export type MigrationProposalStartRequest = components["schemas"]["MigrationProposalStartRequest"];
+export type MigrationStopRequest = components["schemas"]["MigrationStopRequest"];
 export type MintEmbedLinkRequest = components["schemas"]["MintEmbedLinkRequest"];
 export type MintEmbedLinkResponse = components["schemas"]["MintEmbedLinkResponse"];
 export type MistralAiSettings = components["schemas"]["MistralAiSettings"];
+export type NamingConventions = components["schemas"]["NamingConventions"];
 export type OllamaSettings = components["schemas"]["OllamaSettings"];
 export type OpenAiSettings = components["schemas"]["OpenAiSettings"];
 export type OpenQuestion = components["schemas"]["OpenQuestion"];
+export type PlanChangeKind = components["schemas"]["PlanChangeKind"];
+export type PlanEntry = components["schemas"]["PlanEntry"];
+export type PlanEntryStatus = components["schemas"]["PlanEntryStatus"];
+export type PlannerAgent = components["schemas"]["PlannerAgent"];
 export type ProblemDetails = components["schemas"]["ProblemDetails"];
 export type PropertyCase = components["schemas"]["PropertyCase"];
 export type ProposedArea = components["schemas"]["ProposedArea"];
@@ -4942,9 +5225,13 @@ export const API_ENDPOINTS = {
         discover: "/setup/discover",
         map: "/setup/map",
         migrationApply: "/setup/migration/apply",
-        migrationAsk: "/setup/migration/ask",
-        migrationEditCollection: "/setup/migration/edit",
-        migrationStart: "/setup/migration/start",
+        migrationAreaAsk: "/setup/migration/area/ask",
+        migrationAreaStart: "/setup/migration/area/start",
+        migrationPlanGet: "/setup/migration/plan/get",
+        migrationPlanSave: "/setup/migration/plan/save",
+        migrationProposalAsk: "/setup/migration/proposal/ask",
+        migrationProposalStart: "/setup/migration/proposal/start",
+        migrationStop: "/setup/migration/stop",
         provision: "/setup/provision",
         testMapping: "/setup/test-mapping",
         verifyCdc: "/setup/verify-cdc",
@@ -5051,9 +5338,13 @@ export function createServerApi(client: ApiClient) {
             discover: (request: DiscoverRequest) => client.post<DiscoverResponse, ApiErrorResponse>(API_ENDPOINTS.setup.discover, request),
             map: (request: MapRequest) => client.post<CdcSinkConfiguration, ApiErrorResponse>(API_ENDPOINTS.setup.map, request),
             migrationApply: (request: MigrationApplyRequest) => client.post<MigrationApplyResponse, ApiErrorResponse>(API_ENDPOINTS.setup.migrationApply, request),
-            migrationAsk: (request: MigrationAskRequest) => client.post<Response>(API_ENDPOINTS.setup.migrationAsk, request, { responseType: "response" }),
-            migrationEditCollection: (request: MigrationEditCollectionRequest) => client.post<MigrationEditCollectionResponse, ApiErrorResponse>(API_ENDPOINTS.setup.migrationEditCollection, request),
-            migrationStart: (request: MigrationStartRequest) => client.post<Response>(API_ENDPOINTS.setup.migrationStart, request, { responseType: "response" }),
+            migrationAreaAsk: (request: MigrationAreaAskRequest) => client.post<Response>(API_ENDPOINTS.setup.migrationAreaAsk, request, { responseType: "response" }),
+            migrationAreaStart: (request: MigrationAreaStartRequest) => client.post<Response>(API_ENDPOINTS.setup.migrationAreaStart, request, { responseType: "response" }),
+            migrationPlanGet: (request: MigrationPlanGetRequest) => client.post<MigrationPlanGetResponse, ApiErrorResponse>(API_ENDPOINTS.setup.migrationPlanGet, request),
+            migrationPlanSave: (request: MigrationPlanSaveRequest) => client.post<MigrationPlanSaveOutcome, ApiErrorResponse | MigrationPlanSaveOutcome>(API_ENDPOINTS.setup.migrationPlanSave, request),
+            migrationProposalAsk: (request: MigrationProposalAskRequest) => client.post<Response>(API_ENDPOINTS.setup.migrationProposalAsk, request, { responseType: "response" }),
+            migrationProposalStart: (request: MigrationProposalStartRequest) => client.post<Response>(API_ENDPOINTS.setup.migrationProposalStart, request, { responseType: "response" }),
+            migrationStop: (request: MigrationStopRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.setup.migrationStop, request),
             provision: (request: ProvisionRequest) => client.post<ProvisionResponse, ApiErrorResponse>(API_ENDPOINTS.setup.provision, request),
             testMapping: (request: TestMappingRequest) => client.post<TestMappingResponse, ApiErrorResponse>(API_ENDPOINTS.setup.testMapping, request),
             verifyCdc: (request: VerifyCdcRequest) => client.post<VerifyCdcResponse, ApiErrorResponse>(API_ENDPOINTS.setup.verifyCdc, request),

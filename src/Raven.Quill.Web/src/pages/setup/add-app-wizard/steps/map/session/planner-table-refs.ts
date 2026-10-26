@@ -1,8 +1,4 @@
-import type {
-    CdcSinkEmbeddedTableConfig,
-    CdcSinkTableConfig,
-    MigrationFrameProposalFrame,
-} from "@/api/generated/server-api";
+import type { CdcSinkEmbeddedTableConfig, CdcSinkTableConfig, MigrationProposal } from "@/api/generated/server-api";
 import { getTableLabel, type SourceTableRef } from "@/pages/setup/add-app-wizard/discover-utils";
 import type {
     ConfigTableRef,
@@ -14,18 +10,17 @@ import type {
  * The planner writes table names as it likes - "dbo.Orders", "orders" - so each one is resolved to the
  * selected table it means. A name that fits more than one table is left unresolved rather than guessed.
  */
-export function resolveProposalTables(
-    proposal: Omit<MigrationFrameProposalFrame, "type">,
-    selectedTables: SelectedTables,
-): PlannerProposal {
+export function resolveProposalTables(proposal: MigrationProposal, selectedTables: SelectedTables): PlannerProposal {
     const resolve = createTableResolver(selectedTables);
 
     return {
-        areas: proposal.areas,
-        collections: proposal.collections.map((proposed) => ({
-            ...proposed,
-            rootTableRef: resolve(proposed.rootTable),
-            absorbs: proposed.absorbs.map((absorbed) => ({ ...absorbed, tableRef: resolve(absorbed.table) })),
+        areas: proposal.areas.map((area) => ({
+            ...area,
+            collections: area.collections.map((proposed) => ({
+                ...proposed,
+                rootTableRef: resolve(proposed.rootTable),
+                absorbs: proposed.absorbs.map((absorbed) => ({ ...absorbed, tableRef: resolve(absorbed.table) })),
+            })),
         })),
         dropped: proposal.dropped.map((dropped) => ({ ...dropped, tableRef: resolve(dropped.table) })),
         enables: proposal.enables,

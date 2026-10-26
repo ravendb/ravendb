@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.Reflection;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -9,17 +10,31 @@ using Raven.Client.Documents.Operations.CdcSink.Schema;
 using Raven.Quill.AiHelper;
 using Raven.Quill.AiHelper.Migration;
 using Raven.Quill.AiHelper.Migration.Planning;
+using Raven.Quill.Contracts;
 using Raven.Quill.Wizard;
+using Raven.Server.Documents.AI.AiAssistant.Handlers;
+using Raven.Server.Routing;
 
 namespace QuillTests;
 
-/// <summary>Builders for the migration-agent tests: a configuration that validates, and a planner to talk to.</summary>
-public static class MigrationSamples
+/// <summary>Builders for the migration-agent tests: a configuration that validates, a plan as the api answers it, and a planner to talk to.</summary>
+internal static class MigrationSamples
 {
+    public const string PlanId = "planner/11111111-1111-1111-1111-111111111111";
+
+    public static string ServerPath(string handlerMethod) =>
+        typeof(AiAssistantHandler).GetMethod(handlerMethod)!.GetCustomAttribute<RavenActionAttribute>()!.Path;
+
     private static readonly JsonSerializerOptions WireOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Converters = { new JsonStringEnumConverter() },
+        IncludeFields = true,
+    };
+
+    private static readonly JsonSerializerOptions ApiOptions = new()
+    {
         Converters = { new JsonStringEnumConverter() },
         IncludeFields = true,
     };
@@ -61,10 +76,19 @@ public static class MigrationSamples
         JoinColumns = ["customer_id"]
     };
 
+    public static CdcSinkTableConfig ValidCustomers()
+    {
+        var customers = ValidOrders();
+        customers.CollectionName = "Customers";
+        customers.SourceTableName = "customers";
+        return customers;
+    }
+
     public static async Task SeedDiscoveredSchemaAsync(
         IDocumentStore store,
         string slug,
-        MigrationPlan? plan = null,
+        string? planId = null,
+        SelectedSourceTable[]? selectedTables = null,
         CdcSinkConfiguration? mapConfiguration = null,
         CdcSinkSourceTable[]? tables = null)
     {
@@ -72,6 +96,7 @@ public static class MigrationSamples
         await session.StoreAsync(new WizardState
         {
             Provider = "Microsoft.Data.SqlClient",
+            SourceConnectionString = "Server=shop;Database=shop",
             LastDiscoveredSchema = new CdcSinkSourceSchema
             {
                 CatalogName = "shop",
@@ -80,21 +105,39 @@ public static class MigrationSamples
             },
             LastDiscoverAt = DateTime.UtcNow,
             LastMapConfiguration = mapConfiguration,
-            MigrationPlan = plan
+            PlanId = planId,
+            PlanSelectedTables = selectedTables
         }, WizardState.DocumentIdFor(slug));
 
         await session.SaveChangesAsync();
     }
 
-    public static async Task<MigrationPlan?> LoadPlanAsync(IDocumentStore store, string slug)
+    public static async Task<WizardState?> LoadStateAsync(IDocumentStore store, string slug)
     {
         using var session = store.OpenAsyncSession();
-        var state = await session.LoadAsync<WizardState>(WizardState.DocumentIdFor(slug));
-        return state?.MigrationPlan;
+        return await session.LoadAsync<WizardState>(WizardState.DocumentIdFor(slug));
     }
 
-    public static MigrationPlan Plan(string conversationId, params PlanEntry[] entries) =>
-        new() { ConversationId = conversationId, Entries = [.. entries] };
+    public static PlanEntry Entry(CdcSinkTableConfig config, PlanEntryStatus status = PlanEntryStatus.Registered) =>
+        new() { Area = "Sales", Version = 1, Rationale = "because", Config = config, Status = status };
+
+    /// <summary>The plan/get answer as the api writes it: PascalCase, nulls written, enums by name, entries keyed by collection.</summary>
+    public static string PlanGetBody(params PlanEntry[] entries) =>
+        JsonSerializer.Serialize(new
+        {
+            Plan = new
+            {
+                Id = PlanId + "/plan",
+                Slug = "shop",
+                Conventions = new NamingConventions(),
+                Entries = entries.ToDictionary(entry => entry.Config!.CollectionName)
+            },
+            Proposal = new MigrationProposal()
+        }, ApiOptions);
+
+    /// <summary>The plan/save answer as the api writes it, on 200 and 422 alike.</summary>
+    public static string PlanSaveBody(ValidationIssue[] issues, params string[] warnings) =>
+        JsonSerializer.Serialize(new MigrationPlanSaveOutcome(issues, warnings), ApiOptions);
 
     public static string SentSchemaJson(string startRequestBody)
     {
@@ -108,6 +151,9 @@ public static class MigrationSamples
 
     public static string Sse(params MigrationFrame[] frames) =>
         ": keepalive\n\n" + string.Concat(frames.Select(f => $"data: {JsonSerializer.Serialize(f, WireOptions)}\n\n: keepalive\n\n"));
+
+    public static DoneFrame Done(string conversationId = PlanId + "/proposal", string planId = PlanId) =>
+        new() { ConversationId = conversationId, PlanId = planId };
 
     public static CdcSinkSourceTable SourceTable(string name, params string[] foreignKeysTo) => new()
     {
@@ -130,14 +176,14 @@ public static class MigrationSamples
     };
 }
 
-public sealed class StubPlannerHandler(HttpStatusCode status, string body) : HttpMessageHandler
+public sealed class StubPlannerHandler(HttpStatusCode status, string body, string contentType = "application/json") : HttpMessageHandler
 {
     public string? LastPath { get; private set; }
 
     public string LastBody { get; private set; } = string.Empty;
 
     public static StubPlannerHandler Replying(params MigrationFrame[] frames) =>
-        new(HttpStatusCode.OK, MigrationSamples.Sse(frames));
+        new(HttpStatusCode.OK, MigrationSamples.Sse(frames), "text/event-stream");
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
@@ -146,21 +192,33 @@ public sealed class StubPlannerHandler(HttpStatusCode status, string body) : Htt
 
         return new HttpResponseMessage(status)
         {
-            Content = new StringContent(body, Encoding.UTF8, status == HttpStatusCode.OK ? "text/event-stream" : "application/json")
+            Content = new StringContent(body, Encoding.UTF8, contentType)
         };
     }
 }
 
-/// <summary>Holds the planner's answer until the test releases it, so a turn can be observed while it runs.</summary>
+/// <summary>Holds every planner answer until the test releases it, so turns can be observed while they run.</summary>
 public sealed class GatedPlannerHandler(string body) : HttpMessageHandler
 {
-    public TaskCompletionSource Reached { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private int _arrivals;
 
     public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    public async Task WaitForArrivalsAsync(int count)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (Volatile.Read(ref _arrivals) < count)
+        {
+            if (DateTime.UtcNow > deadline)
+                throw new TimeoutException($"Expected {count} planner request(s), saw {_arrivals}.");
+
+            await Task.Delay(25);
+        }
+    }
+
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        Reached.TrySetResult();
+        Interlocked.Increment(ref _arrivals);
         await Release.Task.WaitAsync(cancellationToken);
 
         return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "text/event-stream") };
@@ -201,6 +259,35 @@ public sealed class ThrowingPlannerHandler(Exception failure) : HttpMessageHandl
 {
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
         Task.FromException<HttpResponseMessage>(failure);
+}
+
+/// <summary>Sends <paramref name="before"/>, then never another byte and never closes: a stalled api.</summary>
+public sealed class HangingStreamPlannerHandler(string before) : HttpMessageHandler
+{
+    /// <summary>Set once everything in <c>before</c> was read and the stream hangs.</summary>
+    public TaskCompletionSource Hanging { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+        Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StreamContent(new HangingStream(Encoding.UTF8.GetBytes(before), Hanging))
+        });
+
+    private sealed class HangingStream(byte[] before, TaskCompletionSource hanging) : MemoryStream(before)
+    {
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (Position < Length)
+                return await base.ReadAsync(buffer, cancellationToken);
+
+            hanging.TrySetResult();
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+            return 0;
+        }
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+            ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+    }
 }
 
 public sealed class BreakingStreamPlannerHandler(string before) : HttpMessageHandler

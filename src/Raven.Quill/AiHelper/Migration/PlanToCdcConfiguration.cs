@@ -16,28 +16,24 @@ public static class PlanToCdcConfiguration
     /// Keeps the task and connection string names of the mapping the app already has. A new app has
     /// none yet, so it gets the same defaults the map endpoint gives a mapping saved without them.
     /// </summary>
-    public static CdcSinkConfiguration Build(IEnumerable<PlanEntry> entries, CdcSinkConfiguration? previousMapping) =>
-        Build(
-            entries,
-            string.IsNullOrWhiteSpace(previousMapping?.Name) ? WizardEndpoints.DefaultCdcTaskName : previousMapping.Name,
-            string.IsNullOrWhiteSpace(previousMapping?.ConnectionStringName)
-                ? WizardEndpoints.SourceConnectionStringName
-                : previousMapping.ConnectionStringName);
-
-    public static CdcSinkConfiguration Build(
-        IEnumerable<PlanEntry> entries,
-        string name,
-        string connectionStringName) =>
-        new()
+    public static CdcSinkConfiguration Build(IEnumerable<PlanEntry> entries, CdcSinkConfiguration? previousMapping)
+    {
+        var configuration = new CdcSinkConfiguration
         {
-            Name = name,
-            ConnectionStringName = connectionStringName,
-            Tables = entries
-                .Select(e => e.Config)
-                .Where(c => c is not null)
-                .Select(c => WithInheritedSchemas(c!))
-                .ToList()
+            Name = string.IsNullOrWhiteSpace(previousMapping?.Name) ? WizardEndpoints.DefaultCdcTaskName : previousMapping.Name,
+            ConnectionStringName = string.IsNullOrWhiteSpace(previousMapping?.ConnectionStringName)
+                ? WizardEndpoints.SourceConnectionStringName
+                : previousMapping.ConnectionStringName
         };
+
+        foreach (var entry in entries)
+        {
+            if (entry.Config is not null)
+                configuration.Tables.Add(WithInheritedSchemas(entry.Config));
+        }
+
+        return configuration;
+    }
 
     /// <summary>
     /// The planner leaves an embedded table's schema out when it matches the parent's, and the plan
@@ -80,5 +76,54 @@ public static class PlanToCdcConfiguration
             .Where(name => covered.Contains(name) == false)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    public static void ValidateJoinColumnsAgainstSchema(CdcSinkConfiguration configuration, CdcSinkSourceSchema schema, List<string> errors)
+    {
+        foreach (var table in configuration.Tables)
+            ValidateScope(table.SourceTableSchema, table.SourceTableName, table.CollectionName, table.EmbeddedTables, table.LinkedTables);
+
+        void ValidateScope(
+            string? tableSchema,
+            string tableName,
+            string description,
+            List<CdcSinkEmbeddedTableConfig>? embeddedTables,
+            List<CdcSinkLinkedTableConfig>? linkedTables)
+        {
+            var columns = SourceColumnsOf(tableSchema, tableName);
+
+            foreach (var linked in linkedTables ?? [])
+                CheckJoinColumns(linked.JoinColumns, columns, $"Linked table '{linked.SourceTableName}' under '{description}'");
+
+            foreach (var embedded in embeddedTables ?? [])
+            {
+                ValidateScope(embedded.SourceTableSchema, embedded.SourceTableName,
+                    $"{description}.{embedded.PropertyName}", embedded.EmbeddedTables, embedded.LinkedTables);
+
+                CheckJoinColumns(embedded.JoinColumns, SourceColumnsOf(embedded.SourceTableSchema, embedded.SourceTableName),
+                    $"Embedded table '{embedded.SourceTableName}' under '{description}'");
+            }
+        }
+
+        HashSet<string>? SourceColumnsOf(string? tableSchema, string tableName) => schema.Tables
+            .FirstOrDefault(table =>
+                string.Equals(table.SourceTableName, tableName, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(table.SourceTableSchema ?? string.Empty, tableSchema ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+            ?.Columns.Select(column => column.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        void CheckJoinColumns(List<string>? joinColumns, HashSet<string>? sourceColumns, string description)
+        {
+            if (sourceColumns is null)
+                return;
+
+            foreach (var joinColumn in joinColumns ?? [])
+            {
+                if (string.IsNullOrWhiteSpace(joinColumn) || sourceColumns.Contains(joinColumn))
+                    continue;
+
+                errors.Add($"{description}: join column '{joinColumn}' is not a column of the source table. " +
+                    $"Its columns are: {string.Join(", ", sourceColumns)}.");
+            }
+        }
     }
 }

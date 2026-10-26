@@ -4,6 +4,7 @@ import {
     withoutCollection,
     type PlannerState,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
+import { proposedCollections } from "@/pages/setup/add-app-wizard/steps/map/session/planner-plan";
 import {
     resolveConfigTables,
     resolveProposalTables,
@@ -50,15 +51,15 @@ export function applyPlannerFrame(state: PlannerState, frame: MigrationFrame): P
     switch (frame.type) {
         case "proposal":
             return {
-                plannerProposal: resolveProposalTables(frame, selectedTables),
+                plannerProposal: resolveProposalTables(frame.proposal, selectedTables),
                 plannerRemovedCollections: [],
                 plannerTurns: addActivity(state.plannerTurns, {
                     type: "proposal",
-                    collections: frame.collections.flatMap((proposed) =>
+                    collections: proposedCollections(frame.proposal).flatMap((proposed) =>
                         proposed.collection ? [proposed.collection] : [],
                     ),
-                    areaCount: frame.areas.length,
-                    droppedCount: frame.dropped.length,
+                    areaCount: frame.proposal.areas.length,
+                    droppedCount: frame.proposal.dropped.length,
                 }),
             };
 
