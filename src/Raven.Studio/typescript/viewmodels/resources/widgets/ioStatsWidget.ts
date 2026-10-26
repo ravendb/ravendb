@@ -7,6 +7,7 @@ import app = require("durandal/app");
 import ioStatsWidgetSettings = require("./settings/ioStatsWidgetSettings");
 import d3 = require("d3");
 import lineChart = require("models/resources/clusterDashboard/lineChart");
+import popoverUtils = require("common/popoverUtils");
 
 interface ioStatsWidgetConfig {
     splitIops?: boolean;
@@ -27,7 +28,9 @@ class ioStatsWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashboard
 
     splitIops = ko.observable<boolean>(false);
     splitThroughput = ko.observable<boolean>(false);
-    
+
+    showStorageStatus = ko.pureComputed(() => this.nodeStats().some(x => x.hasStorageStatus()));
+
     constructor(controller: clusterDashboard) {
         super(controller);
 
@@ -35,10 +38,24 @@ class ioStatsWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashboard
             const stats = new ioStats(node.tag());
             this.nodeStats.push(stats);
         }
+
+        this.showStorageStatus.subscribe(() => this.controller.layout(true, "shift"));
     }
-    
+
     getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType {
         return "IoStats";
+    }
+
+    compositionComplete() {
+        super.compositionComplete();
+
+        $(".js-storage-status", this.container).each((_, element) => {
+            const stats = ko.dataFor(element) as ioStats;
+            popoverUtils.longWithHover($(element), {
+                content: () => stats.storageStatusDetailsHtml(),
+                placement: "bottom",
+            });
+        });
     }
 
     openWidgetSettings(): void {
