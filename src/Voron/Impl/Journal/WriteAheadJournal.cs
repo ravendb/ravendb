@@ -1767,6 +1767,15 @@ namespace Voron.Impl.Journal
                         new IoMetrics.SyncDetails(reason, drain, writebackStats.BytesWritten, writebackStats.RangesWritten, writeback));
                     gate?.RecordSyncCost(sp.Elapsed.Ticks);
                     parent._waj._env.WriteFlow.RecordSync(new WriteFlowPolicy.SyncInfo(reason, _currentTotalWrittenBytes, sp.Elapsed, writeback, drain, DateTime.UtcNow));
+
+                    // past the mandatory cap the sync runs whatever the device state; each such line needs that much written since the last sync, so no rate limit
+                    if (_currentTotalWrittenBytes > options.MaxUnsyncedBytesBeforeMandatorySync && parent._waj._logger.IsInfoEnabled)
+                    {
+                        parent._waj._logger.Info(
+                            $"Mandatory sync of {dataPager.FileName}: {new Size(_currentTotalWrittenBytes, SizeUnit.Bytes)} were written but not synced " +
+                            $"(limit {new Size(options.MaxUnsyncedBytesBeforeMandatorySync, SizeUnit.Bytes)}), the sync took {sp.Elapsed.TotalMilliseconds:#,#0} ms" +
+                            (drain ? $" of which {writeback.TotalMilliseconds:#,#0} ms was the paced writeback of {new Size(writebackStats.BytesWritten, SizeUnit.Bytes)} (the device is congested)." : "."));
+                    }
                     if (parent._waj._logger.IsDebugEnabled)
                     {
                         var sizeInKb = (dataPagerState.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte;

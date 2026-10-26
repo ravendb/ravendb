@@ -57,6 +57,8 @@ namespace Raven.Server.Storage
 
         public DeviceWriteBudget.ClassReason ClassReason { get; set; }
 
+        public string ClassDescription { get; set; }
+
         public double JournalWriteLatencyInMs { get; set; }
 
         public long JournalWriteSizeInBytes { get; set; }
@@ -98,6 +100,7 @@ namespace Raven.Server.Storage
                 StatusReason = GetStatusReason(device, tracker, status, thresholds),
                 Class = deviceClass,
                 ClassReason = classReason,
+                ClassDescription = StorageDeviceMonitor.Describe(classReason, device),
                 JournalWriteLatencyInMs = device.JournalWriteLatency.TotalMilliseconds,
                 JournalWriteSizeInBytes = device.JournalWriteSizeInBytes,
                 SecondsSinceLastJournalWrite = sinceLastWrite == TimeSpan.MaxValue ? null : sinceLastWrite.TotalSeconds,
