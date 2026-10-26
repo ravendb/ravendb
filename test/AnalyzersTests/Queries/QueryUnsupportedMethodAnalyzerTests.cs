@@ -955,5 +955,56 @@ class Order { public string Status { get; set; } }
             Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id);
             Assert.Contains("Label", d.GetMessage());
         }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task UserMethod_In_Nested_InMemory_QueryExpression_Inside_Select_Reports_Once()
+        {
+            const string source = CommonUsings + @"
+using System.Collections.Generic;
+class H { public static bool M(Line l) => l.Qty > 0; }
+class Line { public int Qty { get; set; } }
+class Order { public List<Line> Lines { get; set; } }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = from o in session.Query<Order>()
+                select new { Lines = (from l in o.Lines where H.M(l) select l).ToList() };
+    }
+}
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id);
+            Assert.Contains("M", d.GetMessage());
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task UserMethod_In_Nested_Raven_QueryExpression_Inside_Select_Reports_Once()
+        {
+            const string source = CommonUsings + @"
+class H { public static bool M(Item i) => i.On; }
+class Item { public bool On { get; set; } }
+class Order { }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = from o in session.Query<Order>()
+                select (from i in session.Query<Item>() where H.M(i) select i).ToList();
+    }
+}
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id);
+            Assert.Contains("M", d.GetMessage());
+        }
     }
 }

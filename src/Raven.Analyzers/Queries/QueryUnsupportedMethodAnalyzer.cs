@@ -200,7 +200,9 @@ namespace Raven.Analyzers.Queries
 
         // When scanning a query-expression clause, an invocation may also be reported by another
         // callback; skip it here to avoid duplicate diagnostics at the same location:
-        //   - it lies inside a deeper query expression, which gets its own QueryExpression callback;
+        //   - it lies inside a deeper Raven-rooted query expression, which gets its own QueryExpression
+        //     callback; a nested in-memory query (from l in o.Lines ...) is translated with its parent
+        //     and is scanned here;
         //   - it lies inside a lambda argument of a Raven query-chain method (Where/Select/...) on an
         //     IRavenQueryable, which AnalyzeInvocation reports (e.g. a method chain embedded in a
         //     'select'/'let' clause). A lambda passed to a non-Raven method (e.g. Enumerable.Any) is
@@ -208,8 +210,13 @@ namespace Raven.Analyzers.Queries
         private static bool IsOwnedByAnotherCallback(
             SyntaxNodeAnalysisContext context, InvocationExpressionSyntax nested, SyntaxNode scanRoot, QueryExpressionSyntax owningQuery)
         {
-            if (nested.FirstAncestorOrSelf<QueryExpressionSyntax>() != owningQuery)
-                return true;
+            for (QueryExpressionSyntax? inner = nested.FirstAncestorOrSelf<QueryExpressionSyntax>();
+                 inner != null && inner != owningQuery;
+                 inner = inner.Parent?.FirstAncestorOrSelf<QueryExpressionSyntax>())
+            {
+                if (SyntaxHelpers.IsRavenQueryableRooted(inner.FromClause.Expression, context.SemanticModel))
+                    return true;
+            }
 
             for (SyntaxNode current = nested; current != scanRoot && current.Parent != null; current = current.Parent)
             {
