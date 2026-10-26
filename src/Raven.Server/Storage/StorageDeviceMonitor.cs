@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using Raven.Server.Config.Categories;
+using Raven.Server.Documents;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Sparrow.Server.Utils;
@@ -120,7 +121,7 @@ namespace Raven.Server.Storage
             return devices;
         }
 
-        public readonly record struct EnvironmentOfDatabase(string Database, StorageEnvironmentWithType Environment);
+        public readonly record struct EnvironmentOfDatabase(string Database, StorageEnvironmentWithType Environment, DocumentDatabase Instance = null);
 
         // loaded databases only, never wakes up an idle database
         public IEnumerable<EnvironmentOfDatabase> GetEnvironments()
@@ -144,7 +145,7 @@ namespace Raven.Server.Storage
                     if (env.Environment == null || env.Environment.Disposed)
                         continue;
 
-                    yield return new EnvironmentOfDatabase(database.Name, env);
+                    yield return new EnvironmentOfDatabase(database.Name, env, database);
                 }
             }
         }

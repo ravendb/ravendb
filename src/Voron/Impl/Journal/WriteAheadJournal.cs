@@ -2455,6 +2455,7 @@ namespace Voron.Impl.Journal
                 long numberOfUncompressedPages = 0;
                 long numberOf4Kbs = 0;
                 TaskCompletionSource branchCommit = tx.PreparedDurableCommit;
+                long branchSubmittedAt = 0;
                 try
                 {
                     var rootJournal = _env.Options.RootJournal ?? this;
@@ -2474,6 +2475,7 @@ namespace Voron.Impl.Journal
                         if (this != rootJournal)
                         {
                             rootJournal.SharedJournalState.Enqueue(journalStateRecord);
+                            branchSubmittedAt = Stopwatch.GetTimestamp();
                         }
                         
                         _numberOfUsedCompressionBufferPagesSinceZeroing = Math.Max(_numberOfUsedCompressionBufferPagesSinceZeroing, numberOfUsedCompressionBufferPages);
@@ -2494,6 +2496,7 @@ namespace Voron.Impl.Journal
                     {
                         Debug.Assert(tx.ShouldWriteTransactionChangesToJournal, "ShouldWriteTransactionChangesToJournal must be true for branch commit");
                         rootJournal.SubmitBranchJournalEntry(branchCommit?.Task);
+                        rootJournal._branchCommitToDurableTicks.Update(Stopwatch.GetElapsedTime(branchSubmittedAt).Ticks);
                     }
 
                     if (_env.Options.Encryption.IsEnabled && _env.Options.Encryption.HasExternalJournalCompressionBufferHandlerRegistration == false)
@@ -2521,6 +2524,12 @@ namespace Voron.Impl.Journal
         }
 
         public IJournalMerger BranchJournalMerger;
+
+        // root only: from a branch handing its entry to the shared journal until the root made it durable.
+        // Several branches update it concurrently, a lost sample is fine for an average.
+        private SimpleEwma<long> _branchCommitToDurableTicks = new(smoothing: 16);
+
+        public TimeSpan BranchCommitToDurable => TimeSpan.FromTicks(_branchCommitToDurableTicks.Current);
 
         /// <summary>
         /// Called when a branch environment cannot be hard-linked because the file system
@@ -2824,7 +2833,8 @@ namespace Voron.Impl.Journal
                 var journal = new JournalFile(journalWriter, index, FrozenSet<Guid>.Empty)
                 {
                     IsHardLinked = isHardLinked,
-                    Incarnation = journalFile.Incarnation
+                    Incarnation = journalFile.Incarnation,
+                    SourceJournalNumber = journalFile.Number
                 };
                 journal.NewlyCreatedFile = true;
                 journal.DoneWriting = journalFile.DoneWriting;

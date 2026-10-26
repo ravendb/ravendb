@@ -17,23 +17,34 @@ namespace Raven.Server.Storage
 
         public List<StorageEnvironmentIoInfo> Environments { get; set; }
 
+        public List<SharedJournalsIoInfo> SharedJournals { get; set; }
+
         public static StorageIoReport Create(StorageDeviceMonitor monitor)
         {
             CongestionThresholds thresholds = monitor.Thresholds;
             var report = new StorageIoReport
             {
                 Devices = new List<StorageDeviceIoInfo>(),
-                Environments = new List<StorageEnvironmentIoInfo>()
+                Environments = new List<StorageEnvironmentIoInfo>(),
+                SharedJournals = new List<SharedJournalsIoInfo>()
             };
 
             var devices = new HashSet<DeviceWriteBudget>(ReferenceEqualityComparer.Instance);
-            foreach (StorageDeviceMonitor.EnvironmentOfDatabase env in monitor.GetEnvironments())
+            var environments = monitor.GetEnvironments().ToList();
+            foreach (StorageDeviceMonitor.EnvironmentOfDatabase env in environments)
             {
                 report.Environments.Add(StorageEnvironmentIoInfo.Create(env));
 
                 DeviceWriteBudget device = env.Environment.Environment.Options.DeviceWriteBudget;
                 if (device != null && devices.Add(device))
                     report.Devices.Add(StorageDeviceIoInfo.Create(device, monitor.GetTracker(device), thresholds));
+            }
+
+            foreach (var database in environments.Where(e => e.Database != null).GroupBy(e => e.Database))
+            {
+                SharedJournalsIoInfo sharedJournals = SharedJournalsIoInfo.Create(database.Key, database.ToList());
+                if (sharedJournals != null)
+                    report.SharedJournals.Add(sharedJournals);
             }
 
             return report;

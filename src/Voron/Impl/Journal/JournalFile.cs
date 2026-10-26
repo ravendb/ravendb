@@ -30,6 +30,9 @@ namespace Voron.Impl.Journal
 
         public bool IsHardLinked { get; init; }
 
+        // for a branch environment: the root (shared) journal this file is a hard link of; -1 when not a branch link, or recovered from disk
+        public long SourceJournalNumber { get; init; } = -1;
+
         public override string ToString()
         {
             return $"Number: {Number}";
