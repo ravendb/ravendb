@@ -78,10 +78,11 @@ class ProductIndex : AbstractIndexCreationTask<Product>
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
-        public async Task UserOverrideOfToString_In_Map_No_Diagnostic()
+        public async Task UserOverrideOfToString_In_Map_Reports_Diagnostic()
         {
-            // A user override of Object.ToString() is rebound by the server onto DynamicBlittableJson,
-            // so it works at deployment and must not be flagged as unsupported.
+            // The user type does not exist on the server: the map parameter is a DynamicBlittableJson whose
+            // ToString() returns the raw JSON text, so the override is never invoked and the index yields
+            // values the author did not write.
             const string source = CommonUsings + @"
 class Product
 {
@@ -101,14 +102,16 @@ class ProductIndex : AbstractIndexCreationTask<Product>
             ImmutableArray<Diagnostic> diagnostics =
                 await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
 
-            Assert.Empty(diagnostics);
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id);
+            Assert.Contains("ToString", d.GetMessage());
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
-        public async Task UserOverrideOfEqualsAndGetHashCode_In_Map_No_Diagnostic()
+        public async Task UserOverrideOfEqualsAndGetHashCode_In_Map_Reports_Diagnostic()
         {
-            // Overrides of Object.Equals(object) and Object.GetHashCode() are rebound by the server too,
-            // so calling them inside a Map must not be flagged.
+            // Equals(object) and GetHashCode() resolve to DynamicBlittableJson's blittable comparison on
+            // the server, so the user overrides are silently ignored there.
             const string source = CommonUsings + @"
 class Product
 {
@@ -129,14 +132,16 @@ class ProductIndex : AbstractIndexCreationTask<Product>
             ImmutableArray<Diagnostic> diagnostics =
                 await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
 
-            Assert.Empty(diagnostics);
+            Assert.Equal(2, diagnostics.Length);
+            Assert.All(diagnostics, d => Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id));
+            Assert.Contains("Equals", diagnostics[0].GetMessage());
+            Assert.Contains("GetHashCode", diagnostics[1].GetMessage());
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
-        public async Task TransitiveOverrideOfToString_In_Map_No_Diagnostic()
+        public async Task TransitiveOverrideOfToString_In_Map_Reports_Diagnostic()
         {
-            // An override declared through an intermediate user base class still (transitively) overrides
-            // Object.ToString(), so the exemption must walk the OverriddenMethod chain to System.Object.
+            // An override declared through an intermediate user base class is just as absent on the server.
             const string source = CommonUsings + @"
 class BaseDoc
 {
@@ -161,15 +166,15 @@ class ProductIndex : AbstractIndexCreationTask<Product>
             ImmutableArray<Diagnostic> diagnostics =
                 await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
 
-            Assert.Empty(diagnostics);
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id);
+            Assert.Contains("ToString", d.GetMessage());
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UserMethodNamedToString_NotAnObjectOverride_In_Map_Reports_Diagnostic()
         {
-            // A user method named ToString but with a different signature is an overload, not an
-            // override of Object.ToString(), so the Object-override exemption must not apply — it is
-            // real user logic and stays flagged.
+            // A user method named ToString with a different signature is an overload of real user logic.
             const string source = CommonUsings + @"
 class Product
 {

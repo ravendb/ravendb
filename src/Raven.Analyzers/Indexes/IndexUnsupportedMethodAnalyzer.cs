@@ -83,7 +83,7 @@ namespace Raven.Analyzers.Indexes
                     if (SyntaxHelpers.GetMethodSymbol(invocation, context.SemanticModel) is not IMethodSymbol method)
                         continue;
 
-                    if (!MethodTranslatabilityHelper.IsLikelyNonTranslatable(method, exemptObjectMethodOverrides: true))
+                    if (!MethodTranslatabilityHelper.IsLikelyNonTranslatable(method))
                         continue;
 
                     Location location = SyntaxHelpers.GetInvocationNameLocation(invocation);

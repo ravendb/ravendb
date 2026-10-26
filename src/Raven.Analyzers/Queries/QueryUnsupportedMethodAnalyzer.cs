@@ -114,7 +114,7 @@ namespace Raven.Analyzers.Queries
                 if (SyntaxHelpers.GetMethodSymbol(nested, context.SemanticModel) is not IMethodSymbol method)
                     continue;
 
-                if (!MethodTranslatabilityHelper.IsLikelyNonTranslatable(method, exemptObjectMethodOverrides: false))
+                if (!MethodTranslatabilityHelper.IsLikelyNonTranslatable(method))
                     continue;
 
                 if (!ReferencesQueryElement(nested, scope, context.SemanticModel))
