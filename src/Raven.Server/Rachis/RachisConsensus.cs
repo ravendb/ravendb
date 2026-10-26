@@ -1468,10 +1468,18 @@ namespace Raven.Server.Rachis
             if (guid == RaftIdGenerator.DontCareId)
             {
                 var newGuid = $"DontCare/{term}-{lastIndex}";
-                cmd.Modifications = new DynamicJsonValue { [nameof(CommandBase.UniqueRequestId)] = newGuid };
-                using (var old = cmd)
+                // the original command is owned by the caller and will be used again if the transaction merger
+                // re-executes this command (e.g. when a merged transaction fails), so it must not be disposed here.
+                // the copy is only needed for the duration of this transaction, so it is allocated from its context
+                var original = cmd;
+                original.Modifications = new DynamicJsonValue { [nameof(CommandBase.UniqueRequestId)] = newGuid };
+                try
                 {
-                    cmd = context.ReadObject(cmd, newGuid);
+                    cmd = context.ReadObject(original, newGuid);
+                }
+                finally
+                {
+                    original.Modifications = null;
                 }
             }
 
