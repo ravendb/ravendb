@@ -36,7 +36,7 @@ namespace Raven.Analyzers
         public const string MultiMapIndexSingleAddMap = "RVN006";
 
         /// <summary>
-        /// Identifier for the "query field not present in the index projection" diagnostic.
+        /// Identifier for the "query field not defined in the index" diagnostic.
         /// </summary>
         public const string QueryFieldNotIndexed = "RVN007";
 
