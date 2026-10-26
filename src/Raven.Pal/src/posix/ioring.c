@@ -762,15 +762,13 @@ rvn_sync_directories_ioring(void *handle, char **folders, int32_t count, int32_t
             .next = previous};
     }
 
-    if (!submittion.count)
+    if (submittion.count)
     {
-        return SUCCESS;
+        queue_work(&arr[submittion.count - 1], &arr[0]);
+        rc = wait_for_work_completion(handle_ptr, &submittion, detailed_error_code);
+        if (*detailed_error_code)
+            rc = FAIL_IO_RING_WRITE_RESULT;
     }
-    queue_work(&arr[submittion.count - 1], &arr[0]);
-    *detailed_error_code = 0;
-    rc = wait_for_work_completion(handle_ptr, &submittion, detailed_error_code);
-    if (*detailed_error_code)
-        rc = FAIL_IO_RING_WRITE_RESULT;
 
     int unlock_rc = pthread_mutex_unlock(&handle_ptr->global_state->fsync_dir_arena.lock);
     if (unlock_rc && rc == SUCCESS)
