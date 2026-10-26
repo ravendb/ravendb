@@ -1,4 +1,4 @@
-// Expected diagnostic: RVN007 — "Query field not present in the index projection"
+// Expected diagnostic: RVN007 — "Query field not defined in the index"
 // When querying a specific index, Where/OrderBy/Search fields must match the fields
 // projected by the index Map expression. A field not in the projection cannot be
 // searched or sorted efficiently.

@@ -119,7 +119,7 @@ dotnet build bench/Raven.Analyzers -c Release /p:UseRavenAnalyzers=false /t:Rebu
 | `RVN004_IndexMissingMapAssignment.cs` | RVN004 | AbstractIndexCreationTask subclass is missing a Map assignment |
 | `RVN005_MultiMapIndexMissingAddMap.cs` | RVN005 | Multi-map index has no AddMap call in any constructor |
 | `RVN006_MultiMapIndexSingleAddMap.cs` | RVN006 | Multi-map index uses only a single AddMap |
-| `RVN007_QueryFieldNotIndexed.cs` | RVN007 | Query field not present in the index projection |
+| `RVN007_QueryFieldNotIndexed.cs` | RVN007 | Query field not defined in the index |
 | `RVN008_QueryProjectionFieldNotRetrievable.cs` | RVN008 | Projected field not retrievable under the applied ProjectionBehavior |
 | `RVN009_IndexUnsupportedMethodCall.cs` | RVN009 | Unsupported method call inside index Map/Reduce expression |
 | `RVN010_QueryUnsupportedMethodCall.cs` | RVN010 | Unsupported method call inside RavenDB query expression |

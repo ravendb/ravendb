@@ -347,7 +347,7 @@ class CompanyIndex : AbstractIndexCreationTask<Company>
 
 ---
 
-## RVN007: Query field not present in the index projection (Info)
+## RVN007: Query field not defined in the index (Info)
 
 **Triggered by:** a `Where`, `OrderBy`, `OrderByDescending`, `ThenBy`, `ThenByDescending`, or `Search` lambda on a `session.Query<T, TIndexCreator>()` (or the `indexName:` string overload) that references a field not projected by the index's `Map` expression.
 
