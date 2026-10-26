@@ -192,15 +192,15 @@ namespace Raven.Analyzers.Shared
         /// Fires when <c>OpenSession</c> or <c>OpenAsyncSession</c> is called on an
         /// <c>IDocumentStore</c> receiver inside a lambda passed to a subscription worker's
         /// <c>Run</c> method. The batch's own <c>OpenSession</c> / <c>OpenAsyncSession</c>
-        /// must be used instead to participate in the batch's acknowledge transaction.
+        /// targets the subscription's database and node and is preloaded with the batch's documents.
         /// </summary>
         public static readonly DiagnosticDescriptor SubscriptionStoreOpenSession = Create(
             id: DiagnosticIds.SubscriptionStoreOpenSession,
             title: "Use batch.OpenSession inside a subscription Run delegate",
-            messageFormat: "'{0}' is called on an IDocumentStore inside a subscription Run lambda. Use batch.{0}() instead to participate in the batch's acknowledge transaction.",
+            messageFormat: "'{0}' is called on an IDocumentStore inside a subscription Run lambda. Use batch.{0}() instead: it targets the subscription's database and node and is preloaded with the batch's documents.",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Warning,
-            description: "Inside a subscription worker Run delegate, sessions must be opened via the batch object (batch.OpenSession() / batch.OpenAsyncSession()), not via the document store. Using the store bypasses the batch's internal transaction tracking, which means the session will not participate in the batch acknowledgement and documents may be re-processed.",
+            description: "Inside a subscription worker Run delegate, sessions should be opened via the batch object (batch.OpenSession() / batch.OpenAsyncSession()), not via the document store. The batch session targets the subscription's database and node through the worker's request executor, is preloaded with the batch's documents and included data, and can be opened once per batch. A session opened on the store may talk to another node or database and loads every batch document again.",
             helpCode: "P13F9F");
 
         /// <summary>

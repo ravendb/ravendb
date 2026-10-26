@@ -1,8 +1,8 @@
 // Expected diagnostic: RVN011 — "Use batch.OpenSession inside a subscription Run delegate"
-// Inside a subscription worker Run delegate, sessions must be opened via the batch object
-// (batch.OpenSession() / batch.OpenAsyncSession()), not via the document store. Using the
-// store bypasses the batch's internal transaction tracking, which means the session will
-// not participate in the batch acknowledgement and documents may be re-processed.
+// Inside a subscription worker Run delegate, sessions should be opened via the batch object
+// (batch.OpenSession() / batch.OpenAsyncSession()), not via the document store. The batch
+// session targets the subscription's database and node through the worker's request executor
+// and is preloaded with the batch's documents and included data; a store session has none of that.
 //
 // Fix: replace store.OpenSession() with batch.OpenSession().
 // Code fix available: Alt+Enter / Ctrl+. on the squiggle applies the fix automatically.

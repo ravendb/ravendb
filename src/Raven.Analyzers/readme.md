@@ -541,7 +541,7 @@ This rule applies **only** to `IRavenQueryable<T>` chains (`session.Query<T>()`)
 
 **Triggered by:** calling `OpenSession()` or `OpenAsyncSession()` on an `IDocumentStore` receiver inside a lambda passed to `SubscriptionWorker<T>.Run()`.
 
-Inside a subscription worker's `Run` delegate, sessions must be opened via the batch parameter — not via the document store directly. The batch creates a session that participates in the batch's acknowledge transaction. Using the store bypasses that mechanism, which means the session will not participate in batch acknowledgement and documents may be re-processed.
+Inside a subscription worker's `Run` delegate, sessions should be opened via the batch parameter, not via the document store directly. The batch session targets the subscription's database and node through the worker's request executor, is preloaded with the batch's documents and included data, and can be opened once per batch. A session opened on the store may talk to another node or database and loads every batch document again.
 
 ```csharp
 // ❌ Bad: using store.OpenSession() in the Run delegate
@@ -558,8 +558,7 @@ worker.Run(batch =>
 worker.Run(batch =>
 {
     using var session = batch.OpenSession();
-    // ... process orders ...
-    // Session participates in batch acknowledgement
+    // ... process orders: batch.Items are already loaded into the session ...
 });
 ```
 

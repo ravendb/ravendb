@@ -12,10 +12,10 @@ namespace Raven.Analyzers.Subscriptions
     /// <c>IDocumentStore</c> receiver inside a lambda that is passed as the argument to a
     /// subscription worker's <c>Run</c> method.
     ///
-    /// Inside a <c>Run</c> delegate the session must be opened via the batch parameter
-    /// (<c>batch.OpenSession()</c>) rather than via the document store, because the batch
-    /// creates a session that participates in the batch's acknowledge transaction.
-    /// Using the store directly bypasses that mechanism.
+    /// Inside a <c>Run</c> delegate the session is opened via the batch parameter
+    /// (<c>batch.OpenSession()</c>): that session targets the subscription's database and node
+    /// through the worker's request executor, is preloaded with the batch's documents and included
+    /// data, and can be opened once per batch. A session opened on the store has none of that.
     ///
     /// Scope: lambda expressions only (simple and parenthesized). Named method-group
     /// references are not detected.
