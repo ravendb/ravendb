@@ -67,6 +67,7 @@ struct IoRingSetup
     HANDLE thread;
     HANDLE has_error;
     int32_t error_code; // set before has_error is signaled
+    int32_t inflight;   // submitted minus popped, worker thread only
     struct workitem *volatile head;
 };
 
@@ -125,14 +126,20 @@ void queue_work(struct workitem *head, struct workitem *last)
 
 void close_ring_with_error(HRESULT hr)
 {
-    UINT32 events_submitted = 0;
-    // read the number of events submitted
-    IoRing.SubmitIoRing(IoRing.io_ring, 0, 0, &events_submitted);
-    // wait for all the submitted events to complete
-    IoRing.SubmitIoRing(IoRing.io_ring, events_submitted, INFINITE, NULL);
+    UINT32 submitted = 0;
+    if (SUCCEEDED(IoRing.SubmitIoRing(IoRing.io_ring, 0, 0, &submitted)))
+        IoRing.inflight += submitted;
+    // closing the ring with operations in flight would leave their callers waiting forever
     IORING_CQE cqe;
-    while (SUCCEEDED(IoRing.PopIoRingCompletion(IoRing.io_ring, &cqe)))
+    while (IoRing.inflight > 0)
     {
+        if (IoRing.PopIoRingCompletion(IoRing.io_ring, &cqe) != S_OK) // S_FALSE when empty
+        {
+            WaitForSingleObject(IoRing.event, INFINITE);
+            ResetEvent(IoRing.event);
+            continue;
+        }
+        IoRing.inflight--;
         struct workitem *work = (struct workitem *)cqe.UserData;
         work->submittion->result = hresult_to_detailed_error(hr);        
         work->submittion->error = true;
@@ -197,13 +204,16 @@ DWORD WINAPI do_ring_work(LPVOID lpThreadParameter)
 
                 work = work->next;
             }
-            hr = must_wait ? IoRing.SubmitIoRing(ring, 1, INFINITE, NULL) : IoRing.SubmitIoRing(ring, 0, 0, NULL);
+            UINT32 submitted = 0;
+            hr = must_wait ? IoRing.SubmitIoRing(ring, 1, INFINITE, &submitted) : IoRing.SubmitIoRing(ring, 0, 0, &submitted);
             if (FAILED(hr))
                 goto error;
+            IoRing.inflight += submitted;
 
             IORING_CQE cqe;
             while (IoRing.PopIoRingCompletion(ring, &cqe) == S_OK)
             {
+                IoRing.inflight--;
                 has_work = true;
                 struct workitem *cur = (struct workitem *)cqe.UserData;
                 switch (cur->type)
