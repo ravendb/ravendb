@@ -204,6 +204,7 @@ void *do_ring_work(void *arg)
                     if (sqe2 == NULL)
                     {
                         io_uring_prep_nop(sqe);
+                        io_uring_sqe_set_data64(sqe, 0); // the nop must not complete the work item, it is retried below
                         must_wait = 2;
                         goto sumbit_and_wait; // will retry
                     }
