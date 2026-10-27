@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -68,6 +69,43 @@ public class RavenDB_27826 : RavenTestBase
         }
 
         Assert.Equal(StorageDeviceStatus.Ok, tracker.GetStatus(monitor.Thresholds));
+        Assert.False(server.ServerStore.NotificationCenter.Exists(hintId));
+    }
+
+    [RavenFact(RavenTestCategory.Monitoring)]
+    public async Task Hint_of_a_disk_no_database_writes_to_anymore_clears_after_an_hour()
+    {
+        using var server = GetNewServer();
+        using var store = GetDocumentStore(new Options { Server = server, RunInMemory = false, DeleteDatabaseOnDispose = false });
+        var database = await GetDatabase(server, store.Database);
+        var monitor = server.ServerStore.StorageDeviceMonitor;
+
+        DeviceWriteBudget device = database.DocumentsStorage.Environment.Options.DeviceWriteBudget;
+        Assert.NotNull(device);
+
+        var now = DateTime.UtcNow;
+        monitor.ForTestingPurposesOnly().UtcNow = () => now;
+        monitor.ForTestingPurposesOnly().SampleOverride = d => ReferenceEquals(d, device) ? Congested : Healthy;
+
+        for (var i = 0; i <= 61; i++)
+        {
+            now = now.AddSeconds(10);
+            monitor.Sample();
+        }
+
+        var tracker = monitor.GetTracker(device);
+        var hintId = PerformanceHint.GetKey(PerformanceHintReason.StorageCongestion, tracker.MountPoint);
+        Assert.True(server.ServerStore.NotificationCenter.Exists(hintId));
+
+        await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true));
+        Assert.True(await WaitForValueAsync(() => monitor.GetDevices().ContainsKey(device) == false, true));
+
+        for (var i = 0; i < 360; i++)
+        {
+            now = now.AddSeconds(10);
+            monitor.Sample();
+        }
+
         Assert.False(server.ServerStore.NotificationCenter.Exists(hintId));
     }
 

@@ -44,7 +44,7 @@ public class RavenDB_27827 : NoDisposalNeeded
 
         var b = report.ForNode("B").Server.StorageIo;
         Assert.False(b.FromStorageIoEndpoint);
-        Assert.True(b.Worst.LikelyDraining);
+        Assert.True(b.Devices.Single().LikelyDraining);
     }
 
     [RavenFact(RavenTestCategory.Core)]

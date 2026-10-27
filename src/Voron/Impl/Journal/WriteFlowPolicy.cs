@@ -366,10 +366,7 @@ public sealed class WriteFlowPolicy
                 : reason;
     }
 
-    // ---------------------------------------------------------------------------------------
-    // Read-only view for diagnostics, none of these are used by the write path
-    // ---------------------------------------------------------------------------------------
-
+    // read-only view for diagnostics, none of these are used by the write path
     public sealed record SyncInfo(IoMetrics.SyncReason Reason, long Bytes, TimeSpan Total, TimeSpan Writeback, bool Drain, DateTime At);
 
     private SyncInfo _lastSync;
@@ -384,22 +381,11 @@ public sealed class WriteFlowPolicy
 
     public long FlusherYields => Volatile.Read(ref _flusherYields);
 
-    public bool IsPipeliningEnabled => PipeliningEnabled;
-
     public bool IsPipelining => ShouldPipeline;
-
-    public double QueueEmptyShare => _queueEmptyShare.Current;
-
-    public double BatchOperations => _batchOperations.Current;
 
     public TimeSpan JournalWriteLatency => TimeSpan.FromTicks(_writeLatencyTicks.Current);
 
     public long JournalWriteSizeInBytes => _writeSizeBytes.Current;
-
-    // the per-device budget, or this environment's own one when the device could not be identified
-    public DeviceWriteBudget DeviceBudget => Device;
-
-    public bool HasSharedDeviceBudget => _options.DeviceWriteBudget != null;
 
     public bool ShouldPrepareZeroedJournalsInBackground =>
         _forTestingPurposes?.ForceZeroedJournalPreparation ?? Device.ShouldPrepareZeroedJournalsInBackground;

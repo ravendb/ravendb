@@ -44,13 +44,8 @@ namespace Raven.Server.Storage
             var info = new SharedJournalsIoInfo
             {
                 Database = database,
-                Files = rootJournal.Files.Select(f => new SharedJournalFileInfo { Number = f.Number, SizeInBytes = f.JournalSize.GetValue(SizeUnit.Bytes) })
-                    .Concat(rootJournal.Applicator.JournalsToDelete.Select(f => new SharedJournalFileInfo
-                    {
-                        Number = f.Number,
-                        SizeInBytes = f.JournalSize.GetValue(SizeUnit.Bytes),
-                        PendingDeletion = true
-                    }))
+                Files = rootJournal.Files.Concat(rootJournal.Applicator.JournalsToDelete)
+                    .Select(f => new SharedJournalFileInfo { Number = f.Number, SizeInBytes = f.JournalSize.GetValue(SizeUnit.Bytes) })
                     .OrderBy(f => f.Number)
                     .ToList(),
                 IndexesNotSharing = new List<IndexNotSharingInfo>(),
@@ -112,9 +107,6 @@ namespace Raven.Server.Storage
         public long Number { get; set; }
 
         public long SizeInBytes { get; set; }
-
-        // synced, waiting for deletion, still on disk
-        public bool PendingDeletion { get; set; }
     }
 
     public enum IndexNotSharingReason

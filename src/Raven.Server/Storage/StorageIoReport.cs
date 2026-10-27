@@ -26,7 +26,9 @@ namespace Raven.Server.Storage
         public static StorageIoReport Create(StorageDeviceMonitor monitor)
         {
             CongestionThresholds thresholds = monitor.Thresholds;
-            var report = new StorageIoReport
+            List<StorageDeviceMonitor.EnvironmentOfDatabase> environments = monitor.GetEnvironments().ToList();
+
+            return new StorageIoReport
             {
                 WriteMode = new StorageWriteModeInfo
                 {
@@ -35,30 +37,14 @@ namespace Raven.Server.Storage
                     IoRingQueueSize = PalConfiguration.IoRingQueueSize,
                     LowPriorityIo = PalConfiguration.LowPriorityIo
                 },
-                Devices = new List<StorageDeviceIoInfo>(),
-                Environments = new List<StorageEnvironmentIoInfo>(),
-                SharedJournals = new List<SharedJournalsIoInfo>()
+                Devices = monitor.GetDevices().Keys.Select(d => StorageDeviceIoInfo.Create(d, monitor.GetTracker(d), thresholds)).ToList(),
+                Environments = environments.Select(StorageEnvironmentIoInfo.Create).ToList(),
+                SharedJournals = environments.Where(e => e.Database != null)
+                    .GroupBy(e => e.Database)
+                    .Select(g => SharedJournalsIoInfo.Create(g.Key, g.ToList()))
+                    .Where(x => x != null)
+                    .ToList()
             };
-
-            var devices = new HashSet<DeviceWriteBudget>(ReferenceEqualityComparer.Instance);
-            var environments = monitor.GetEnvironments().ToList();
-            foreach (StorageDeviceMonitor.EnvironmentOfDatabase env in environments)
-            {
-                report.Environments.Add(StorageEnvironmentIoInfo.Create(env));
-
-                DeviceWriteBudget device = env.Environment.Environment.Options.DeviceWriteBudget;
-                if (device != null && devices.Add(device))
-                    report.Devices.Add(StorageDeviceIoInfo.Create(device, monitor.GetTracker(device), thresholds));
-            }
-
-            foreach (var database in environments.Where(e => e.Database != null).GroupBy(e => e.Database))
-            {
-                SharedJournalsIoInfo sharedJournals = SharedJournalsIoInfo.Create(database.Key, database.ToList());
-                if (sharedJournals != null)
-                    report.SharedJournals.Add(sharedJournals);
-            }
-
-            return report;
         }
     }
 
@@ -85,12 +71,10 @@ namespace Raven.Server.Storage
 
         public StorageDeviceStatus Status { get; set; }
 
-        // plain words, also used in the customer facing hint
+        // plain words
         public string StatusReason { get; set; }
 
         public DeviceWriteBudget.DeviceClass Class { get; set; }
-
-        public DeviceWriteBudget.ClassReason ClassReason { get; set; }
 
         public string ClassDescription { get; set; }
 
@@ -104,8 +88,6 @@ namespace Raven.Server.Storage
         // null when the platform gives no queue depth signal (Windows, containers without sysfs)
         public double? QueueDepth { get; set; }
 
-        public double? QueueDepthAgeInSec { get; set; }
-
         public double SyncCostInMs { get; set; }
 
         public bool Draining { get; set; }
@@ -113,8 +95,6 @@ namespace Raven.Server.Storage
         public DateTime? LastModeSwitch { get; set; }
 
         public double DrainShareOfLastHour { get; set; }
-
-        public DateTime? SaturatedSince { get; set; }
 
         public StorageDeviceThresholds Thresholds { get; set; }
 
@@ -137,28 +117,22 @@ namespace Raven.Server.Storage
                 Status = status,
                 StatusReason = GetStatusReason(device, tracker, status, thresholds),
                 Class = deviceClass,
-                ClassReason = classReason,
                 ClassDescription = StorageDeviceMonitor.Describe(classReason, device),
                 JournalWriteLatencyInMs = device.JournalWriteLatency.TotalMilliseconds,
                 JournalWriteSizeInBytes = device.JournalWriteSizeInBytes,
                 SecondsSinceLastJournalWrite = sinceLastWrite == TimeSpan.MaxValue ? null : sinceLastWrite.TotalSeconds,
-                QueueDepth = device.HasQueueDepthSignal ? device.QueueDepth : null,
-                QueueDepthAgeInSec = device.QueueDepthAge?.TotalSeconds,
+                QueueDepth = device.QueueDepth,
                 SyncCostInMs = device.SyncCost.TotalMilliseconds,
                 Draining = device.IsDraining,
                 LastModeSwitch = device.LastModeSwitch,
                 DrainShareOfLastHour = tracker?.DrainShareOfLastHour ?? 0,
-                SaturatedSince = tracker?.SaturatedSince,
                 Thresholds = new StorageDeviceThresholds
                 {
-                    ClassifyAboveLatencyInMs = device.ClassifyAboveLatency.TotalMilliseconds,
-                    SmallWriteInBytes = DeviceWriteBudget.SmallWriteBytes,
                     SyncCostDrainInMs = device.SyncCostThreshold.TotalMilliseconds,
                     QueueDepthEnterDrain = device.EnterDrainQueueDepth,
                     QueueDepthExitDrain = device.ExitDrainQueueDepth,
                     CongestionDrainShare = thresholds.DrainShare,
-                    CongestionJournalWriteLatencyInMs = thresholds.JournalWriteLatencyInMs,
-                    CongestionSustainedInMin = thresholds.Sustained.TotalMinutes
+                    CongestionJournalWriteLatencyInMs = thresholds.JournalWriteLatencyInMs
                 },
                 History = tracker?.GetHistory().Select(s => new StorageDeviceSample
                 {
@@ -189,10 +163,6 @@ namespace Raven.Server.Storage
 
     public sealed class StorageDeviceThresholds
     {
-        public double ClassifyAboveLatencyInMs { get; set; }
-
-        public long SmallWriteInBytes { get; set; }
-
         public double SyncCostDrainInMs { get; set; }
 
         public double QueueDepthEnterDrain { get; set; }
@@ -202,8 +172,6 @@ namespace Raven.Server.Storage
         public double CongestionDrainShare { get; set; }
 
         public double CongestionJournalWriteLatencyInMs { get; set; }
-
-        public double CongestionSustainedInMin { get; set; }
     }
 
     public sealed class StorageDeviceSample
@@ -261,19 +229,14 @@ namespace Raven.Server.Storage
                 },
                 Pipelining = new StorageEnvironmentPipeliningInfo
                 {
-                    Enabled = flow.IsPipeliningEnabled,
                     Active = flow.IsPipelining,
-                    QueueEmptyShare = flow.QueueEmptyShare,
-                    BatchOperations = flow.BatchOperations,
                     JournalWriteLatencyInMs = flow.JournalWriteLatency.TotalMilliseconds,
-                    JournalWriteSizeInBytes = flow.JournalWriteSizeInBytes,
-                    PipelineAboveLatencyInMs = TimeSpan.FromTicks(options.PipelineJournalWritesAboveLatencyInTicks).TotalMilliseconds
+                    JournalWriteSizeInBytes = flow.JournalWriteSizeInBytes
                 },
                 ConsolidatingBatches = flow.ConsolidatingBatches,
                 FlusherYields = flow.FlusherYields,
                 Sync = new StorageEnvironmentSyncInfo
                 {
-                    PacedWritebackEnabled = options.SyncWritebackBlockSizeInMb > 0,
                     WrittenButUnsyncedInBytes = environment.Journal.Applicator.TotalWrittenButUnsyncedBytes,
                     SoftLimitInBytes = options.MaxUnsyncedBytesBeforeSync,
                     MandatoryLimitInBytes = options.MaxUnsyncedBytesBeforeMandatorySync,
@@ -299,25 +262,15 @@ namespace Raven.Server.Storage
 
     public sealed class StorageEnvironmentPipeliningInfo
     {
-        public bool Enabled { get; set; }
-
         public bool Active { get; set; }
-
-        public double QueueEmptyShare { get; set; }
-
-        public double BatchOperations { get; set; }
 
         public double JournalWriteLatencyInMs { get; set; }
 
         public long JournalWriteSizeInBytes { get; set; }
-
-        public double PipelineAboveLatencyInMs { get; set; }
     }
 
     public sealed class StorageEnvironmentSyncInfo
     {
-        public bool PacedWritebackEnabled { get; set; }
-
         public long WrittenButUnsyncedInBytes { get; set; }
 
         public long SoftLimitInBytes { get; set; }

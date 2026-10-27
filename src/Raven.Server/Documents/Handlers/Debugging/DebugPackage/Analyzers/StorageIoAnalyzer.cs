@@ -8,6 +8,7 @@ using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results;
 using Raven.Server.Storage;
 using Raven.Server.Web.System;
 using Sparrow.Server.Platform;
+using Sparrow.Server.Utils;
 using Voron.Impl.Journal;
 
 namespace Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers;
@@ -26,9 +27,7 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
     internal const double DefaultClassifyAboveLatencyInMs = 2;
     internal const double DefaultCongestionDrainShare = 0.5;
 
-    private const string RecommendedAction =
-        "Consider a volume with more IOPS / throughput, an instance with higher storage bandwidth, or more RAM to reduce disk reads. " +
-        "Live view: Manage Server > Debug > Advanced > Storage I/O.";
+    private const string RecommendedAction = StorageDeviceMonitor.RecommendedAction + " Live view: Manage Server > Debug > Advanced > Storage I/O.";
 
     public StorageIoAnalysisInfo StorageIo { get; private set; }
 
@@ -40,11 +39,11 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
         foreach (string database in packageContent.DatabaseNames)
         {
             if (packageContent.ForDatabase(database).TryGetValue<IoMetricsHandler, IoMetricsDump>(x => x.Get(), out IoMetricsDump dump) && dump?.Environments != null)
+            {
                 databaseMetrics[database] = dump;
+                StorageIo.Databases.Add(SummarizeDatabase(database, dump));
+            }
         }
-
-        foreach (var (database, dump) in databaseMetrics)
-            StorageIo.Databases.Add(SummarizeDatabase(database, dump));
 
         if (serverEntries.TryGetValue<AdminStorageIoHandler, StorageIoReport>(x => x.StorageIo(), out StorageIoReport report) && report?.Devices != null)
         {
@@ -66,11 +65,6 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
 
             StorageIo.Devices.Add(Derive(all));
         }
-
-        StorageIo.Worst = StorageIo.Devices
-            .OrderByDescending(d => d.IsBottleneck)
-            .ThenByDescending(Latency)
-            .FirstOrDefault();
 
         return true;
     }
@@ -150,22 +144,25 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
     {
         DetectWriteModeMismatch(reports, clusterWideIssues);
 
-        var nodes = reports.Where(r => r.Server?.StorageIo?.Worst != null).ToList();
+        // the worst disk of each node
+        var nodes = reports
+            .Select(r => (r.NodeTag, Worst: r.Server?.StorageIo?.Devices.OrderByDescending(d => d.IsBottleneck).ThenByDescending(Latency).FirstOrDefault()))
+            .Where(x => x.Worst != null)
+            .ToList();
         if (nodes.Count < 2)
             return;
 
-        var healthy = nodes.Where(r => r.Server.StorageIo.Worst.IsBottleneck == false).ToList();
+        var healthy = nodes.Where(x => x.Worst.IsBottleneck == false).ToList();
         if (healthy.Count == 0)
             return;
 
-        foreach (DebugPackageNodeReport slow in nodes.Where(r => r.Server.StorageIo.Worst.IsBottleneck))
+        foreach (var (nodeTag, worst) in nodes.Where(x => x.Worst.IsBottleneck))
         {
-            StorageIoDeviceAnalysis worst = slow.Server.StorageIo.Worst;
-            string peers = string.Join(" and ", healthy.Select(r => $"{StorageDeviceMonitor.FormatMs(Latency(r.Server.StorageIo.Worst))} on {r.NodeTag}"));
+            string peers = string.Join(" and ", healthy.Select(x => $"{StorageDeviceMonitor.FormatMs(Latency(x.Worst))} on {x.NodeTag}"));
 
             clusterWideIssues.Add(new DetectedIssue(
-                $"Node {slow.NodeTag} is held back by its disk",
-                $"Journal writes typically take {StorageDeviceMonitor.FormatMs(Latency(worst))} on {slow.NodeTag} vs {peers}. {Describe(worst, includeLatency: false)}",
+                $"Node {nodeTag} is held back by its disk",
+                $"Journal writes typically take {StorageDeviceMonitor.FormatMs(Latency(worst))} on {nodeTag} vs {peers}. {Describe(worst, includeLatency: false)}",
                 IssueSeverity.Warning, IssueCategory.Cluster)
             {
                 RecommendedAction = RecommendedAction
@@ -253,7 +250,6 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
             JournalWriteLatencyInMs = device.JournalWriteLatencyInMs,
             JournalWriteSizeInBytes = device.JournalWriteSizeInBytes,
             SyncCostInMs = device.SyncCostInMs,
-            QueueDepth = device.QueueDepth,
             TypicalJournalWriteLatencyInMs = typical,
             PeakJournalWriteLatencyInMs = latencies.Count > 0 ? latencies[^1] : null,
             SlowestWrite = device.SlowWrites?.MaxBy(x => x.DurationInSec),
@@ -290,8 +286,6 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
             JournalWriteSizeInBytes = (long)size,
             SyncCostInMs = syncCost,
             LikelyDraining = syncCost > DefaultSyncCostDrainInMs,
-            JournalWrites = writes.Count,
-            Syncs = syncs.Count,
             From = writes.Count > 0 ? writes[0].StartTime : null,
             To = writes.Count > 0 ? writes[^1].StartTime : null
         };
@@ -323,7 +317,6 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
         var syncs = items.Where(x => x.Type == "DataSync").ToList();
         var syncsWithReason = syncs.Where(x => x.SyncReason != null).ToList();
         var writesWithFlag = writes.Where(x => x.Pipelined != null).ToList();
-        double totalSync = syncs.Sum(x => x.Duration);
 
         return new StorageIoDatabaseAnalysis
         {
@@ -336,8 +329,7 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
             SyncAverageInMs = syncs.Count > 0 ? syncs.Average(x => x.Duration) : 0,
             SyncMaxInMs = syncs.Count > 0 ? syncs.Max(x => x.Duration) : 0,
             MandatorySyncShare = syncsWithReason.Count > 0 ? syncsWithReason.Count(x => x.SyncReason == "Mandatory") / (double)syncsWithReason.Count : null,
-            DrainSyncShare = syncsWithReason.Count > 0 ? syncsWithReason.Count(x => x.Drain == true) / (double)syncsWithReason.Count : null,
-            WritebackShareOfSyncTime = syncsWithReason.Count > 0 && totalSync > 0 ? syncs.Sum(x => x.WritebackDuration ?? 0) / totalSync : null
+            DrainSyncShare = syncsWithReason.Count > 0 ? syncsWithReason.Count(x => x.Drain == true) / (double)syncsWithReason.Count : null
         };
     }
 
@@ -346,15 +338,10 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
 
     private static double Ewma(IEnumerable<double> values, int smoothing)
     {
-        double current = 0;
-        bool seeded = false;
+        var ewma = new SimpleEwma<double>(smoothing, SimpleEwma.NeverExpires);
         foreach (double value in values)
-        {
-            current = seeded ? current + (value - current) / smoothing : value;
-            seeded = true;
-        }
-
-        return current;
+            ewma.Update(value);
+        return ewma.Current;
     }
 
     // the shape of /admin/debug/io-metrics and /databases/*/debug/io-metrics, only what this analyzer reads
@@ -365,17 +352,11 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
 
     public class IoMetricsEnvironment
     {
-        public string Path { get; set; }
-
-        public string Type { get; set; }
-
         public List<IoMetricsFile> Files { get; set; }
     }
 
     public class IoMetricsFile
     {
-        public string File { get; set; }
-
         public List<IoMetricsItem> Recent { get; set; }
     }
 
@@ -396,8 +377,6 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
         public string SyncReason { get; set; }
 
         public bool? Drain { get; set; }
-
-        public double? WritebackDuration { get; set; }
 
         public DateTime StartTime => DateTime.TryParse(Start, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out DateTime start)
             ? start

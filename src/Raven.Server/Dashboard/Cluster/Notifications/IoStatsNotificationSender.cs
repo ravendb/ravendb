@@ -25,7 +25,7 @@ namespace Raven.Server.Dashboard.Cluster.Notifications
         protected override AbstractClusterDashboardNotification CreateNotification()
         {
             var drivesUsage = _databasesInfoRetriever.GetDrivesUsage();
-
+            
             return new IoStatsPayload
             {
                 Items = drivesUsage.Items.Select(x => x.IoStatsResult).Where(x => x != null).ToList(),

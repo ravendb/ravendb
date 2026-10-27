@@ -6,11 +6,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 {
     public sealed class StorageCongestionDetails : INotificationDetails
     {
-        public string NodeTag { get; set; }
-
         public string MountPoint { get; set; }
-
-        public string PathOnDevice { get; set; }
 
         // plain words, why the disk is considered saturated
         public string Cause { get; set; }
@@ -43,9 +39,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 
             return new DynamicJsonValue
             {
-                [nameof(NodeTag)] = NodeTag,
                 [nameof(MountPoint)] = MountPoint,
-                [nameof(PathOnDevice)] = PathOnDevice,
                 [nameof(Cause)] = Cause,
                 [nameof(SaturatedSince)] = SaturatedSince,
                 [nameof(DrainShareOfLastHour)] = DrainShareOfLastHour,

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.Memory;
 
