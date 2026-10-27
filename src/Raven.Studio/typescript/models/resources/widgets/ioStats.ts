@@ -14,7 +14,7 @@ class ioStats extends historyAwareNodeStats<IoStatsPayload> {
 
     storageStatusText = ko.pureComputed(() => {
         const status = this.storageStatus();
-        return status ? "Disk: " + storageIoTerms.storageStatusLabel[status.Status] : null;
+        return status ? storageIoTerms.storageStatusLabel[status.Status] : null;
     });
 
     storageStatusClass = ko.pureComputed(() => {
