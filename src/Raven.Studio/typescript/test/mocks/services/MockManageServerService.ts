@@ -180,6 +180,12 @@ export default class MockManageServerService extends AutoMockService<ManageServe
         );
     }
 
+    withDebugPackageStorageIo(empty = false) {
+        return this.mocks.getDebugPackageStorageIo.mockImplementation(async (_packageId: string, nodeTag: string) =>
+            empty ? null : DebugPackageStubs.storageIo(nodeTag)
+        );
+    }
+
     withDebugPackageClusterObserverDecisions(empty = false) {
         return this.mockDebugPackageValue(
             this.mocks.getDebugPackageClusterObserverDecisions,

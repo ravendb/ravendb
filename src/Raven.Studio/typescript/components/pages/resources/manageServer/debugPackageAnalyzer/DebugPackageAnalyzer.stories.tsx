@@ -104,6 +104,7 @@ interface SectionToggles {
     showClusterOverview: boolean;
     showResourceUsage: boolean;
     showDatabasesOverview: boolean;
+    showStorageIo: boolean;
     showStoragePerDatabase: boolean;
     showIndexingPerNode: boolean;
     showOngoingTasks: boolean;
@@ -128,6 +129,7 @@ const defaultSectionArgs: SectionToggles = {
     showClusterOverview: true,
     showResourceUsage: true,
     showDatabasesOverview: true,
+    showStorageIo: true,
     showStoragePerDatabase: true,
     showIndexingPerNode: true,
     showOngoingTasks: true,
@@ -166,6 +168,7 @@ const sectionArgTypes = {
         table: { category: clusterSections },
     },
     showDatabasesOverview: { name: "Databases overview", control: "boolean", table: { category: clusterSections } },
+    showStorageIo: { name: "Storage I/O", control: "boolean", table: { category: clusterSections } },
     showStoragePerDatabase: { name: "Storage per database", control: "boolean", table: { category: clusterSections } },
     showIndexingPerNode: { name: "Indexing per node", control: "boolean", table: { category: clusterSections } },
     showOngoingTasks: { name: "Ongoing tasks (summary)", control: "boolean", table: { category: clusterSections } },
@@ -208,6 +211,7 @@ function renderAnalyzer(nodeTags: string[], args: SectionToggles) {
     const { manageServerService } = mockServices;
     manageServerService.withDebugPackageClusterLog(!args.showRaftDebug);
     manageServerService.withDebugPackageClusterObserverDecisions(!args.showObserverDecisions);
+    manageServerService.withDebugPackageStorageIo(!args.showStorageIo);
     manageServerService.withDebugPackageNetworkInfo(!args.showNetworkInfo);
     manageServerService.withDebugPackageThreadsInfo(!args.showThreadsInfo);
     manageServerService.withDebugPackageDatabaseStats(!args.showDatabaseStats);
