@@ -527,10 +527,10 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
     protected override async Task DoWork()
     {
+        HandleDatabaseRecordChange(_database.ReadDatabaseRecord());
+
         try
         {
-            HandleDatabaseRecordChange(_database.ReadDatabaseRecord());
-
             while (await _work.WaitToReadAsync(CancellationToken))
             {
                 await SubmitAndWaitForWorkAsync(GetBatch());
