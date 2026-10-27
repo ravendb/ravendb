@@ -67,6 +67,7 @@ namespace Sparrow.Server.Platform
                                                                        $"Arch: {RuntimeInformation.OSArchitecture}, OSDesc: {RuntimeInformation.OSDescription}");
             }
 
+            PalConfiguration.RequestedWriteMode = PalConfiguration.WriteMode;
             if (PalConfiguration.WriteMode == RvnWriteMode.Auto)
             {
                 // set the actual write mode

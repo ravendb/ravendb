@@ -10,6 +10,9 @@ public class StorageIoAnalysisInfo
     // true: read from /admin/debug/storage/io; false: an older package, derived from the io-metrics it contains
     public bool FromStorageIoEndpoint { get; set; }
 
+    // null in packages without /admin/debug/storage/io
+    public StorageWriteModeInfo WriteMode { get; set; }
+
     public List<StorageIoDeviceAnalysis> Devices { get; set; } = new();
 
     public List<StorageIoDatabaseAnalysis> Databases { get; set; } = new();

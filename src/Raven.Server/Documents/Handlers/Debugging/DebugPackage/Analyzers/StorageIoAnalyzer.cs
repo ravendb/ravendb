@@ -7,6 +7,7 @@ using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Issues;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results;
 using Raven.Server.Storage;
 using Raven.Server.Web.System;
+using Sparrow.Server.Platform;
 using Voron.Impl.Journal;
 
 namespace Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers;
@@ -48,6 +49,7 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
         if (serverEntries.TryGetValue<AdminStorageIoHandler, StorageIoReport>(x => x.StorageIo(), out StorageIoReport report) && report?.Devices != null)
         {
             StorageIo.FromStorageIoEndpoint = true;
+            StorageIo.WriteMode = report.WriteMode;
             StorageIo.SharedJournals = report.SharedJournals ?? new List<SharedJournalsIoInfo>();
             foreach (StorageDeviceIoInfo device in report.Devices)
                 StorageIo.Devices.Add(FromEndpoint(device));
@@ -146,6 +148,8 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
     // a node whose disk is the bottleneck while its peers are fine is the most useful thing to say about a cluster
     public static void DetectClusterWideIssues(List<DebugPackageNodeReport> reports, List<DetectedIssue> clusterWideIssues)
     {
+        DetectWriteModeMismatch(reports, clusterWideIssues);
+
         var nodes = reports.Where(r => r.Server?.StorageIo?.Worst != null).ToList();
         if (nodes.Count < 2)
             return;
@@ -166,6 +170,37 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
             {
                 RecommendedAction = RecommendedAction
             });
+        }
+    }
+
+    // the write mode is decided per process at startup, so a node that could not set up I/O ring writes its data files differently from its peers
+    private static void DetectWriteModeMismatch(List<DebugPackageNodeReport> reports, List<DetectedIssue> clusterWideIssues)
+    {
+        var nodes = reports.Where(r => r.Server?.StorageIo?.WriteMode != null).ToList();
+        if (nodes.Select(r => r.Server.StorageIo.WriteMode.Effective).Distinct().Count() < 2)
+            return;
+
+        string perMode = string.Join("; ", nodes
+            .GroupBy(r => r.Server.StorageIo.WriteMode.Effective)
+            .Select(g => $"{g.Key} on {string.Join(", ", g.Select(DescribeNode))}"));
+
+        bool fellBack = nodes.Any(r => r.Server.StorageIo.WriteMode is { Configured: Pal.RvnWriteMode.Auto, Effective: not Pal.RvnWriteMode.IoRing });
+
+        clusterWideIssues.Add(new DetectedIssue(
+            "Nodes write data files in different modes",
+            $"Data file write mode: {perMode}." + (fellBack ? " A node configured Auto that is not on IoRing could not set up I/O ring at startup." : string.Empty),
+            IssueSeverity.Info, IssueCategory.Cluster)
+        {
+            RecommendedAction = fellBack
+                ? "Check why I/O ring is not available on that node (on Linux: kernel version, container seccomp profile, kernel.io_uring_disabled). The mode is decided at startup, so restart the node after fixing it."
+                : "Check Storage.WriteMode on each node."
+        });
+
+        static string DescribeNode(DebugPackageNodeReport r)
+        {
+            StorageWriteModeInfo mode = r.Server.StorageIo.WriteMode;
+            bool expected = mode.Configured == mode.Effective || mode is { Configured: Pal.RvnWriteMode.Auto, Effective: Pal.RvnWriteMode.IoRing };
+            return expected ? r.NodeTag : $"{r.NodeTag} (configured {mode.Configured})";
         }
     }
 

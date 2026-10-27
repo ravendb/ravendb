@@ -8,6 +8,7 @@ using FastTests;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Issues;
 using Raven.Server.Storage;
+using Sparrow.Server.Platform;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -85,6 +86,28 @@ public class RavenDB_27827 : NoDisposalNeeded
         Assert.Equal("Storage is saturated (/ravendb)", issue.Title);
         Assert.Contains(b.DetectedIssues.ForDatabase("Orders"), x => x.Title == "Indexes write their own journals" && x.Description.Contains("Orders/Totals"));
     }
+
+    [RavenFact(RavenTestCategory.Core)]
+    public void Analyzer_flags_a_node_that_writes_data_files_in_a_different_mode()
+    {
+        using var package = ClusterPackage(new Dictionary<string, Dictionary<string, object>>
+        {
+            ["A"] = new() { ["server-wide/admin.storage.io.json"] = WithWriteMode(Pal.RvnWriteMode.IoRing) },
+            ["B"] = new() { ["server-wide/admin.storage.io.json"] = WithWriteMode(Pal.RvnWriteMode.VectoredFileIo) }
+        });
+
+        var report = new DebugPackageAnalyzer(package).Analyze();
+
+        var issue = Assert.Single(report.ClusterWideIssues.ClusterIssues, x => x.Title == "Nodes write data files in different modes");
+        Assert.Contains("IoRing on A; VectoredFileIo on B (configured Auto)", issue.Description);
+        Assert.Equal(Pal.RvnWriteMode.VectoredFileIo, report.ForNode("B").Server.StorageIo.WriteMode.Effective);
+    }
+
+    private static StorageIoReport WithWriteMode(Pal.RvnWriteMode effective) => new()
+    {
+        WriteMode = new StorageWriteModeInfo { Effective = effective, Configured = Pal.RvnWriteMode.Auto },
+        Devices = [], Environments = [], SharedJournals = []
+    };
 
     private static object IoMetrics(double journalWriteMs, double syncMs)
     {

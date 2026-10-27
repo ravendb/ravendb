@@ -61,6 +61,25 @@ export const storageTermHelp = {
     sharedJournal: "Index environments of a database write through one shared journal, hard-linked into each index.",
 };
 
+type WriteMode = Sparrow.Server.Platform.Pal.RvnWriteMode;
+
+export const writeModeLabel: Record<WriteMode, string> = {
+    Auto: "Auto",
+    IoRing: "I/O ring",
+    VectoredFileIo: "Vectored file I/O",
+    FileIo: "File I/O",
+};
+
+export const writeModeHelp: Record<WriteMode, string> = {
+    Auto: "Auto: I/O ring when it can be set up at startup, otherwise vectored file I/O on Linux and file I/O on Windows.",
+    IoRing: "I/O ring (io_uring on Linux, IoRing on Windows): data file writes are queued and submitted in batches.",
+    VectoredFileIo: "Vectored file I/O (pwritev): one system call writes several page ranges.",
+    FileIo: "File I/O: one write call per page range.",
+};
+
+export const writeModeTermHelp =
+    "How this server writes its data files when flushing. Decided once at startup for the whole server (Storage.WriteMode). Journal writes are not affected.";
+
 export const journalCompressionLabel: Record<Voron.JournalCompressionAlgorithm, string> = {
     Auto: "Auto",
     Lz4: "LZ4",

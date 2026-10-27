@@ -10,6 +10,7 @@ import useInterval from "hooks/useInterval";
 import StorageIoDevice from "./partials/StorageIoDevice";
 import StorageIoEnvironments, { environmentKey } from "./partials/StorageIoEnvironments";
 import StorageIoSharedJournals from "./partials/StorageIoSharedJournals";
+import { writeModeHelp, writeModeLabel, writeModeTermHelp } from "common/storageIoTerms";
 import "./StorageIo.scss";
 
 const refreshIntervalInMs = 3000;
@@ -105,6 +106,7 @@ export default function StorageIo() {
                     <EmptySet>Loading...</EmptySet>
                 ) : (
                     <>
+                        <WriteModeLine writeMode={report.WriteMode} />
                         <h3>Disks</h3>
                         {devices.length === 0 ? (
                             <EmptySet compact>
@@ -126,6 +128,30 @@ export default function StorageIo() {
                     </>
                 )}
             </div>
+        </div>
+    );
+}
+
+function WriteModeLine({ writeMode }: { writeMode: Raven.Server.Storage.StorageWriteModeInfo }) {
+    if (!writeMode) {
+        return null;
+    }
+
+    const { Effective, Configured } = writeMode;
+    const fellBack = Configured === "Auto" && Effective !== "IoRing";
+
+    return (
+        <div className="mb-3" title={writeModeTermHelp}>
+            Data file writes: <strong title={writeModeHelp[Effective]}>{writeModeLabel[Effective]}</strong>
+            {Effective === "IoRing" && <span className="text-muted">, queue size {writeMode.IoRingQueueSize}</span>}
+            {Configured !== Effective && <span className="text-muted"> (configured {writeModeLabel[Configured]})</span>}
+            {writeMode.LowPriorityIo && <span className="text-muted">, low priority flush and sync</span>}
+            {fellBack && (
+                <div className="text-warning small">
+                    I/O ring could not be set up when the server started, so data files are written with{" "}
+                    {writeModeLabel[Effective].toLowerCase()}. The mode is decided at startup.
+                </div>
+            )}
         </div>
     );
 }

@@ -11,10 +11,13 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof StorageIo>;
 
-// disk saturated, writes paced, one index left the shared journal
+// disk saturated, writes paced, one index left the shared journal, I/O ring not available at startup
 export const Saturated: StoryObj<typeof StorageIo> = {
     render: () => {
-        mockServices.manageServerService.withGetStorageIo();
+        const report = ManageServerStubs.storageIo();
+        report.WriteMode.Effective = "VectoredFileIo";
+
+        mockServices.manageServerService.withGetStorageIo(report);
         return <StorageIo />;
     },
 };

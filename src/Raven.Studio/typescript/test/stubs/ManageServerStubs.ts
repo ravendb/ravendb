@@ -902,6 +902,12 @@ export class ManageServerStubs {
         });
 
         return {
+            WriteMode: {
+                Effective: "IoRing",
+                Configured: "Auto",
+                IoRingQueueSize: 1024,
+                LowPriorityIo: false,
+            },
             Devices: [
                 {
                     DeviceId: "2049",
