@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.Reflection;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Json.Serialization.SystemTextJson;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -20,10 +22,12 @@ public class RavenDB_25485 : RavenTestBase
         public decimal Price { get; set; }
     }
 
-    [RavenFact(RavenTestCategory.Ai)]
-    public void AddActionResponseShouldWorkWhenReturningAList()
+    [RavenTheory(RavenTestCategory.Ai)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AddActionResponseShouldWorkWhenReturningAList(bool useSystemTextJson)
     {
-        using var store = GetDocumentStore();
+        using var store = GetStore(useSystemTextJson);
 
         var chat = store.AI.Conversation("agents/test", "chats/123", new AiConversationCreationOptions());
 
@@ -43,10 +47,12 @@ public class RavenDB_25485 : RavenTestBase
         Assert.Equal(19.99m, result[1]["Price"].Value<decimal>());
     }
 
-    [RavenFact(RavenTestCategory.Ai)]
-    public void AddActionResponseShouldWorkWhenReturningAnArray()
+    [RavenTheory(RavenTestCategory.Ai)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AddActionResponseShouldWorkWhenReturningAnArray(bool useSystemTextJson)
     {
-        using var store = GetDocumentStore();
+        using var store = GetStore(useSystemTextJson);
 
         var chat = store.AI.Conversation("agents/test", "chats/123", new AiConversationCreationOptions());
 
@@ -66,10 +72,12 @@ public class RavenDB_25485 : RavenTestBase
         Assert.Equal(19.99m, result[1]["Price"].Value<decimal>());
     }
 
-    [RavenFact(RavenTestCategory.Ai)]
-    public void AddActionResponseShouldWorkWhenReturningAnEmptyList()
+    [RavenTheory(RavenTestCategory.Ai)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AddActionResponseShouldWorkWhenReturningAnEmptyList(bool useSystemTextJson)
     {
-        using var store = GetDocumentStore();
+        using var store = GetStore(useSystemTextJson);
 
         var chat = store.AI.Conversation("agents/test", "chats/123", new AiConversationCreationOptions());
 
@@ -77,6 +85,18 @@ public class RavenDB_25485 : RavenTestBase
 
         var result = JArray.Parse(GetActionResponseContent(chat, "tool-1"));
         Assert.Equal(0, result.Count);
+    }
+
+    private IDocumentStore GetStore(bool useSystemTextJson)
+    {
+        return GetDocumentStore(new Options
+        {
+            ModifyDocumentStore = s =>
+            {
+                if (useSystemTextJson)
+                    s.Conventions.Serialization = new SystemTextJsonSerializationConventions();
+            }
+        });
     }
 
     private static string GetActionResponseContent(IAiConversationOperations chat, string toolId)
