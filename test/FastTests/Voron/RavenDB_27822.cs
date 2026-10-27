@@ -57,7 +57,10 @@ namespace FastTests.Voron
 
             tracker.Add(new DeviceTracker.Sample(at = at.AddSeconds(10), Draining: true, JournalWriteLatencyInMs: 5, QueueDepth: 13), Thresholds);
             Assert.Equal(StorageDeviceStatus.Saturated, tracker.GetStatus(Thresholds));
-            Assert.Contains("congested", tracker.SaturationCause);
+            // the cause stays while the disk is saturated, so it must not quote a share that goes stale
+            for (var i = 0; i < 60; i++)
+                tracker.Add(new DeviceTracker.Sample(at = at.AddSeconds(10), Draining: true, JournalWriteLatencyInMs: 5, QueueDepth: 13), Thresholds);
+            Assert.Equal("writes were paced more than 50% of an hour because the disk was congested", tracker.SaturationCause);
             var lastBusy = at;
 
             // normal, but not yet for a full hour
@@ -88,7 +91,7 @@ namespace FastTests.Voron
             for (var i = 0; i < 61; i++)
                 tracker.Add(new DeviceTracker.Sample(at = at.AddSeconds(10), Draining: false, JournalWriteLatencyInMs: 97, QueueDepth: null), Thresholds);
             Assert.Equal(StorageDeviceStatus.Saturated, tracker.GetStatus(Thresholds));
-            Assert.Contains("journal writes averaged 97 ms", tracker.SaturationCause);
+            Assert.Equal("journal writes stayed above 50 ms for 10 minutes", tracker.SaturationCause);
         }
     }
 }

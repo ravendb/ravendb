@@ -558,14 +558,15 @@ namespace Raven.Server.Storage
                     draining++;
             }
 
+            // the cause is kept for as long as the disk stays saturated, so it names the threshold that was crossed, not a measurement
+            // that goes stale; the current numbers are reported next to it
             double drainShare = draining / (double)Capacity;
             if (drainShare > thresholds.DrainShare)
-                return $"writes were paced because the disk was congested {drainShare * 100:0}% of the last hour";
+                return $"writes were paced more than {thresholds.DrainShare * 100:0}% of an hour because the disk was congested";
 
             // every sample of the sustained period (and it must be fully covered) is slower than the threshold
             DateTime from = now - thresholds.Sustained;
             bool covered = false;
-            double sum = 0;
             int count = 0;
             foreach (Sample s in _samples)
             {
@@ -578,15 +579,13 @@ namespace Raven.Server.Storage
                 if (s.JournalWriteLatencyInMs is not { } latency || latency <= thresholds.JournalWriteLatencyInMs)
                     return null;
 
-                sum += latency;
                 count++;
             }
 
             if (covered == false || count == 0)
                 return null;
 
-            return $"journal writes averaged {sum / count:#,#0.#} ms for the last {thresholds.Sustained.TotalMinutes:#,#0} minutes " +
-                   $"(threshold {thresholds.JournalWriteLatencyInMs:#,#0} ms)";
+            return $"journal writes stayed above {thresholds.JournalWriteLatencyInMs:#,#0} ms for {thresholds.Sustained.TotalMinutes:#,#0} minutes";
         }
     }
 }

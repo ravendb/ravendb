@@ -915,7 +915,7 @@ export class ManageServerStubs {
                     MountPoint: "/",
                     Status: "Saturated",
                     StatusReason:
-                        "Saturated since 2026-10-24 03:12:40Z: writes were paced because the disk was congested 93% of the last hour.",
+                        "Saturated since 2026-10-24 03:12:40Z: writes were paced more than 50% of an hour because the disk was congested.",
                     Class: "Unknown",
                     ClassReason: "WritesTooSmall",
                     ClassDescription:

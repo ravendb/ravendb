@@ -112,7 +112,7 @@ class storageCongestionDetails extends abstractPerformanceHintDetails {
         items.push(
             { name: "Writes paced in the last hour", value: Math.round(details.DrainShareOfLastHour * 100) + "%" },
             { name: "Journal writes", value: storageCongestionDetails.formatMs(details.JournalWriteLatencyInMs) },
-            { name: "Data syncs", value: storageCongestionDetails.formatMs(details.SyncCostInMs) },
+            { name: "Data syncs", value: storageIoTerms.formatSyncCost(details.SyncCostInMs, storageCongestionDetails.formatMs) },
             { name: "Mount point", value: details.MountPoint ?? "-" }
         );
 
