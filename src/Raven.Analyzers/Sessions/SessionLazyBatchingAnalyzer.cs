@@ -290,7 +290,7 @@ namespace Raven.Analyzers.Sessions
                 foreach (IdentifierNameSyntax id in invocation.DescendantNodes().OfType<IdentifierNameSyntax>())
                 {
                     ISymbol? symbol = _model.GetSymbolInfo(id).Symbol;
-                    if (symbol is ILocalSymbol or IFieldSymbol or IPropertySymbol
+                    if (symbol is ILocalSymbol or IParameterSymbol or IFieldSymbol or IPropertySymbol
                         && _materializationDerivedSet.Contains(symbol))
                     {
                         return true;
@@ -314,14 +314,11 @@ namespace Raven.Analyzers.Sessions
                     SymbolInfo symbolInfo = _model.GetSymbolInfo(id);
                     ISymbol? symbol = symbolInfo.Symbol;
 
-                    // Parameters are context-provided
-                    if (symbol is IParameterSymbol)
-                        return true;
-
-                    // Fields and properties are context-provided — unless a prior materialized result
-                    // flowed into them (this._customerId = order.CustomerId), in which case a Load reading
-                    // the field genuinely depends on the earlier server call and must not be batched.
-                    if (symbol is IFieldSymbol or IPropertySymbol)
+                    // Parameters, fields and properties are context-provided — unless a prior materialized
+                    // result flowed into them (id = order.CustomerId, this._customerId = order.CustomerId),
+                    // in which case a Load reading them genuinely depends on the earlier server call and
+                    // must not be batched.
+                    if (symbol is IParameterSymbol or IFieldSymbol or IPropertySymbol)
                         return !_materializationDerivedSet.Contains(symbol);
 
                     // Local variables: check if directly materialization-derived
@@ -357,12 +354,9 @@ namespace Raven.Analyzers.Sessions
                     SymbolInfo symbolInfo = _model.GetSymbolInfo(id);
                     ISymbol? symbol = symbolInfo.Symbol;
 
-                    if (symbol is IParameterSymbol)
-                        return true;
-
-                    // A field/property/local is context-provided only when it was not fed by a prior
-                    // materialized result (see the derived-set tracking in Pass1).
-                    if (symbol is IFieldSymbol or IPropertySymbol or ILocalSymbol)
+                    // A parameter/field/property/local is context-provided only when it was not fed by a
+                    // prior materialized result (see the derived-set tracking in Pass1).
+                    if (symbol is IParameterSymbol or IFieldSymbol or IPropertySymbol or ILocalSymbol)
                         return !_materializationDerivedSet.Contains(symbol);
 
                     return false;
@@ -403,8 +397,8 @@ namespace Raven.Analyzers.Sessions
                 base.VisitLocalDeclarationStatement(node);
             }
 
-            // A field, property, or local (re)assigned from a materialized server call — or from an
-            // expression that reads an already-derived symbol — becomes derived itself, so a later Load id
+            // A parameter, field, property, or local (re)assigned from a materialized server call — or from
+            // an expression that reads an already-derived symbol — becomes derived itself, so a later Load id
             // or query predicate that reads it genuinely depends on the earlier round-trip and must not be
             // batched. Handling plain assignments (not just declarations) closes the field-mediated
             // dependency path: var o = session.Load<Order>(id); this._customerId = o.CustomerId;
@@ -413,7 +407,7 @@ namespace Raven.Analyzers.Sessions
             {
                 ISymbol? target = model.GetSymbolInfo(node.Left).Symbol;
                 if (node.IsKind(SyntaxKind.SimpleAssignmentExpression)
-                    && target is ILocalSymbol or IFieldSymbol or IPropertySymbol
+                    && target is ILocalSymbol or IParameterSymbol or IFieldSymbol or IPropertySymbol
                     && IsDerivedInitializer(node.Right))
                 {
                     derivedSet.Add(target);

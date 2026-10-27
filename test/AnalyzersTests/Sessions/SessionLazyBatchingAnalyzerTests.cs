@@ -306,6 +306,29 @@ class User { public string Id { get; set; } public string ManagerId { get; set; 
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task DependentLoad_ParameterReassignedFromLoadResult_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string id)
+    {
+        var order = session.Load<Order>(id);
+        id = order.CustomerId;
+        var customer = session.Load<Customer>(id);
+    }
+}
+
+class Order { public string Id { get; set; } public string CustomerId { get; set; } }
+class Customer { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<SessionLazyBatchingAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ChainedLoads_Second_Depends_On_First_No_Diagnostic()
         {
             const string source = CommonUsings + @"
@@ -615,6 +638,7 @@ class Order { public string Id { get; set; } }
         [RavenTheory(RavenTestCategory.ClientApi)]
         [InlineData(@"var a = session.Load<User>(a1); var b = session.Load<User>(a1); var c = session.Load<User>(b1);", 2)]
         [InlineData(@"var id = a1; var a = session.Load<User>(id); id = b1; var b = session.Load<User>(id);", 2)]
+        [InlineData(@"var a = session.Load<User>(a1); a1 = b1; var b = session.Load<User>(a1);", 2)]
         [InlineData(@"var a = session.Load<User>(""users/1""); var b = session.Load<Order>(""users/1"");", 2)]
         public async Task DistinctLoads_Report_One_Diagnostic_Per_Operation(string body, int expected)
         {
