@@ -86,22 +86,35 @@
         .footnote-mark {
             position: absolute;
             left: 100%;
-            top: -9px;
-            padding: 2px 4px 2px 1px;
+            top: -3px;
+            padding: 3px 2px 2px;
             cursor: default;
 
             sup {
+                display: block;
                 top: 0;
             }
         }
         .overwritten-value {
+            $overwritten-icon-size: 16px;
             position: relative;
+
+            & + .footnote-mark {
+                margin-left: $overwritten-icon-size;
+                margin-top: -1px;
+            }
+
+            .overwritten-mark {
+                position: absolute;
+                width: $overwritten-icon-size;
+                height: $overwritten-icon-size;
+                top: -4px;
+            }
+
             [id^="overwritten-availability-value-"] {
                 position: absolute;
                 font-size: 0.75rem;
-                width: 16px;
-                height: 16px;
-                top: -4px;
+                inset: 0;
                 &:before {
                     position: absolute;
                     top: 0;
