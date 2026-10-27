@@ -948,7 +948,7 @@ public static class ChannelsEndpoints
         await session.SaveChangesAsync(ct);
 
         if (logger.IsInfoEnabled)
-            logger.Info($"Deleted embedded chat channel slug={slug} channelId={channelId}");
+            logger.Info($"Deleted embedded chat channel slug={slug} channelId={channelId} revokedLinks={revoked}");
         if (logger.AuditEnabled)
             logger.Audit("DELETE", $"Channel '{channelId}' in App '{slug}'", ctx);
 

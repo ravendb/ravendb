@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -400,13 +401,16 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
     {
         var headers = response.Headers;
 
-        // The Retry-After headers only make the error retryable; their value is not read.
         if (headers.Contains(ChatCompletionClient.Constants.Headers.RetryAfterMs) == false &&
             headers.Contains(ChatCompletionClient.Constants.Headers.RetryAfter) == false &&
             error.RetryAfter == null)
             return null;
 
-        var retryAfter = error.RetryAfter ?? TimeSpan.Zero;
+        var retryAfter = TimeSpan.Zero;
+        if (error.RetryAfter != null)
+            retryAfter = error.RetryAfter.Value;
+        else if (TryGetRetryAfter(response, out var retryAfterFromHeaders))
+            retryAfter = retryAfterFromHeaders;
 
         if (headers.TryGetValues(ChatCompletionClient.Constants.Headers.XRateLimitResetTokens, out var resetTokensValues))
         {
@@ -429,6 +433,36 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
         }
 
         return retryAfter;
+    }
+
+    private static bool TryGetRetryAfter(HttpResponseMessage response, out TimeSpan retryAfter)
+    {
+        retryAfter = TimeSpan.Zero;
+
+        if (response.Headers.TryGetValues(ChatCompletionClient.Constants.Headers.RetryAfterMs, out var milliseconds) &&
+            double.TryParse(milliseconds.FirstOrDefault(), NumberStyles.Float, CultureInfo.InvariantCulture, out var ms) &&
+            ms > 0)
+        {
+            retryAfter = TimeSpan.FromMilliseconds(ms);
+            return true;
+        }
+
+        if (response.Headers.RetryAfter is not { } header)
+            return false;
+
+        if (header.Delta is { } delta && delta > TimeSpan.Zero)
+        {
+            retryAfter = delta;
+            return true;
+        }
+
+        if (header.Date is { } date && date - DateTimeOffset.UtcNow is { Ticks: > 0 } until)
+        {
+            retryAfter = until;
+            return true;
+        }
+
+        return false;
     }
 
     public override string GetRequestId(HttpResponseHeaders headers)
