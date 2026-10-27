@@ -29,7 +29,7 @@ namespace FastTests.Voron
             Assert.Null(device.LastModeSwitch);
             Assert.False(device.IsDraining);
 
-            // node B in RavenDB-27821: tiny journal writes, ~97ms each
+            // tiny journal writes, ~97ms each
             for (var i = 0; i < 16; i++)
                 device.RecordJournalWrite(TimeSpan.FromMilliseconds(97).Ticks, 7 * 1024, Stopwatch.GetTimestamp());
             Assert.Equal(DeviceWriteBudget.DeviceClass.Unknown, device.Classify(out reason));

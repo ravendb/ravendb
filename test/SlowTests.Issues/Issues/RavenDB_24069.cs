@@ -87,7 +87,7 @@ public class RavenDB_24069 : RavenTestBase
                 }
             }
 
-            // RavenDB-27825: the fallback is an alert for the users of the database, and shows in the storage I/O report
+            // the fallback is an alert for the users of the database, and shows in the storage I/O report
             foreach (var fellBack in new[] { "Users/ByName_0", "Users/ByName_1" })
                 Assert.True(await WaitForValueAsync(() => database.NotificationCenter.Exists(AlertRaised.GetKey(AlertReason.Indexing_SharedJournalsFallback, fellBack)), true));
 

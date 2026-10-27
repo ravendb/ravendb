@@ -240,7 +240,7 @@ function DeviceRow({ nodeTag, device }: { nodeTag: string; device: StorageIoDevi
 
 function NotInPackage() {
     return (
-        <span className="text-muted small" title="Not in packages from versions before 8.0 RavenDB-27823">
+        <span className="text-muted small" title="Not in packages from older versions">
             n/a
         </span>
     );
