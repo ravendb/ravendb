@@ -105,6 +105,35 @@ class User { public string Id { get; set; } public bool Active { get; set; } }
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task QueryChain_Without_RavenLinqUsing_Transforms_To_Lazy()
+        {
+            const string source = @"
+using System;
+using System.Linq;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
+
+class Test
+{
+    void Run(IDocumentSession session, string managerId)
+    {
+        var employees = session.Query<Employee>().Where(e => e.Active).ToList();
+        var manager = session.Load<User>(managerId);
+    }
+}
+
+class Employee { public string Id { get; set; } public bool Active { get; set; } }
+class User { public string Id { get; set; } }
+";
+
+            string fixedCode = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
+
+            Assert.Contains("session.Query<Employee>().Where(e => e.Active).Lazily()", fixedCode);
+            Assert.Contains("session.Advanced.Lazily.Load<User>(managerId)", fixedCode);
+            Assert.Contains("var employees = lazyEmployees.Value.ToList();", fixedCode);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryRewrite_Does_Not_Duplicate_Existing_Using()
         {
             // When Raven.Client.Documents is already imported (via CommonUsings), the query rewrite must

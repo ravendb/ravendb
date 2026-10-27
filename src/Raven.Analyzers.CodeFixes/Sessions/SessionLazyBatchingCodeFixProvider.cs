@@ -716,14 +716,14 @@ namespace Raven.Analyzers.CodeFixes.Sessions
 
                 ITypeSymbol? receiverType = _model.GetTypeInfo(memberAccess.Expression).Type;
 
-                // Check for query materializations on IRavenQueryable only.
-                // The lazy rewrite replaces the materializer (ToList/ToListAsync/...) with a
-                // bare Lazily()/LazilyAsync() and cannot carry the materializer's arguments
-                // (e.g. a CancellationToken passed to ToListAsync). Skip any materializer that
-                // has arguments rather than silently dropping them.
+                // Check for query materializations on chains rooted in IRavenQueryable only (the rooted
+                // walk sees through System.Linq operators, matching the analyzer). The lazy rewrite
+                // replaces the materializer (ToList/ToListAsync/...) with a bare Lazily()/LazilyAsync()
+                // and cannot carry the materializer's arguments (e.g. a CancellationToken passed to
+                // ToListAsync). Skip any materializer that has arguments rather than silently dropping them.
                 if (QueryMaterializingMethods.Contains(methodName)
                     && invocation.ArgumentList.Arguments.Count == 0
-                    && SyntaxHelpers.IsRavenQueryable(receiverType)
+                    && SyntaxHelpers.IsRavenQueryableRooted(memberAccess.Expression, _model)
                     && !SyntaxHelpers.IsUserDefinedInSource(_model.GetSymbolInfo(invocation).Symbol))
                 {
                     // Only the genuine framework materializer (Enumerable.ToList, Raven async query

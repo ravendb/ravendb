@@ -306,6 +306,34 @@ class User { public string Id { get; set; } public string ManagerId { get; set; 
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task QueryChain_Without_RavenLinqUsing_Reports_Diagnostics()
+        {
+            const string source = @"
+using System;
+using System.Linq;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
+
+class Test
+{
+    void Run(IDocumentSession session, string managerId)
+    {
+        var employees = session.Query<Employee>().Where(e => e.Active).ToList();
+        var manager = session.Load<User>(managerId);
+    }
+}
+
+class Employee { public string Id { get; set; } public bool Active { get; set; } }
+class User { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<SessionLazyBatchingAnalyzer>(source);
+
+            Assert.Equal(2, diagnostics.Length);
+            Assert.All(diagnostics, d => Assert.Equal(DiagnosticIds.SessionLazyBatching, d.Id));
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task DependentLoad_ParameterReassignedFromLoadResult_No_Diagnostic()
         {
             const string source = CommonUsings + @"

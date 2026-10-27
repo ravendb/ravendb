@@ -223,12 +223,15 @@ namespace Raven.Analyzers.Sessions
 
                 ITypeSymbol? receiverType = _model.GetTypeInfo(memberAccess.Expression).Type;
 
-                // Check for query materializations on IRavenQueryable only (avoids false positives on EF etc.).
-                // A materializer carrying arguments (e.g. ToListAsync(token)) is excluded so the analyzer
-                // stays in lockstep with the code fix, which cannot batch it without dropping the argument.
+                // Check for query materializations on chains rooted in IRavenQueryable only (avoids false
+                // positives on EF etc.). The rooted walk sees through System.Linq operators, so a chain
+                // written without 'using Raven.Client.Documents.Linq' (whose Where returns IQueryable<T>)
+                // still counts. A materializer carrying arguments (e.g. ToListAsync(token)) is excluded so
+                // the analyzer stays in lockstep with the code fix, which cannot batch it without dropping
+                // the argument.
                 if (QueryMaterializingMethods.Contains(methodName)
                     && invocation.ArgumentList.Arguments.Count == 0
-                    && SyntaxHelpers.IsRavenQueryable(receiverType)
+                    && SyntaxHelpers.IsRavenQueryableRooted(memberAccess.Expression, _model)
                     && !SyntaxHelpers.IsUserDefinedInSource(_model.GetSymbolInfo(invocation).Symbol)
                     && !DependsOnMaterializedLocal(invocation))
                 {
@@ -436,7 +439,7 @@ namespace Raven.Analyzers.Sessions
 
                 ITypeSymbol? receiverType = model.GetTypeInfo(memberAccess.Expression).Type;
 
-                if (QueryMaterializingMethods.Contains(methodName) && SyntaxHelpers.IsRavenQueryable(receiverType))
+                if (QueryMaterializingMethods.Contains(methodName) && SyntaxHelpers.IsRavenQueryableRooted(memberAccess.Expression, model))
                     return true;
 
                 return (methodName == KnownTypes.LoadMethodName || methodName == KnownTypes.LoadAsyncMethodName)
