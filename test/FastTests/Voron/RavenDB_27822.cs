@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Storage;
 using Tests.Infrastructure;
 using Voron.Impl.Journal;
@@ -92,6 +93,30 @@ namespace FastTests.Voron
                 tracker.Add(new DeviceTracker.Sample(at = at.AddSeconds(10), Draining: false, JournalWriteLatencyInMs: 97, QueueDepth: null), Thresholds);
             Assert.Equal(StorageDeviceStatus.Saturated, tracker.GetStatus(Thresholds));
             Assert.Equal("journal writes stayed above 50 ms for 10 minutes", tracker.SaturationCause);
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void Hint_message_reports_the_last_hour_not_the_latency_of_the_moment()
+        {
+            var tracker = new DeviceTracker(NewDevice());
+            var at = new DateTime(2026, 10, 26, 0, 0, 0, DateTimeKind.Utc);
+
+            // congested most of the hour, journal writes typically 16 ms with one burst
+            for (var i = 0; i < 300; i++)
+                tracker.Add(new DeviceTracker.Sample(at = at.AddSeconds(10), Draining: true, JournalWriteLatencyInMs: i == 150 ? 2000 : 16, QueueDepth: 16), Thresholds);
+
+            // between bursts the average is low again
+            tracker.Add(new DeviceTracker.Sample(at = at.AddSeconds(10), Draining: true, JournalWriteLatencyInMs: 3, QueueDepth: 16), Thresholds);
+
+            string message = StorageDeviceMonitor.CreateHintMessage(tracker, new StorageCongestionDetails(), tracker.SummarizeLastHour(), Thresholds);
+
+            Assert.StartsWith("Disk test was congested 84% of the last hour (queue depth 16, pacing starts above 5), so the server paced its data file writes. " +
+                              "In the last hour journal writes typically took 16 ms (peak 2 s). Writes and indexing are slowed down.", message);
+
+            // calm again, but still saturated until an hour without congestion
+            tracker.Add(new DeviceTracker.Sample(at.AddSeconds(10), Draining: false, JournalWriteLatencyInMs: 1, QueueDepth: 0.5), Thresholds);
+            message = StorageDeviceMonitor.CreateHintMessage(tracker, new StorageCongestionDetails(), tracker.SummarizeLastHour(), Thresholds);
+            Assert.Contains("Writes and indexing were slowed down. The disk keeps up again now", message);
         }
     }
 }

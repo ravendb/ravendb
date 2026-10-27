@@ -19,7 +19,13 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 
         public double DrainShareOfLastHour { get; set; }
 
+        // the device average at the time of the hint update
         public double JournalWriteLatencyInMs { get; set; }
+
+        // median and peak of the last hour, null when no journal write was sampled
+        public double? TypicalJournalWriteLatencyInMs { get; set; }
+
+        public double? PeakJournalWriteLatencyInMs { get; set; }
 
         public double SyncCostInMs { get; set; }
 
@@ -44,6 +50,8 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
                 [nameof(SaturatedSince)] = SaturatedSince,
                 [nameof(DrainShareOfLastHour)] = DrainShareOfLastHour,
                 [nameof(JournalWriteLatencyInMs)] = JournalWriteLatencyInMs,
+                [nameof(TypicalJournalWriteLatencyInMs)] = TypicalJournalWriteLatencyInMs,
+                [nameof(PeakJournalWriteLatencyInMs)] = PeakJournalWriteLatencyInMs,
                 [nameof(SyncCostInMs)] = SyncCostInMs,
                 [nameof(SlowWritesMeasured)] = SlowWritesMeasured,
                 [nameof(Writes)] = writes
