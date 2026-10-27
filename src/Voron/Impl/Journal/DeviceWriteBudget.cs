@@ -253,6 +253,15 @@ namespace Voron.Impl.Journal
         public bool ShouldDrain()
         {
             var (nowMs, queueDepth) = SampleQueue();
+            bool wasDraining = _draining;
+            bool draining = UpdateDrainMode(nowMs, queueDepth);
+            if (Log.IsInfoEnabled && (draining != wasDraining || Volatile.Read(ref _suppressedModeSwitchLogs) > 0))
+                LogModeSwitch(nowMs, queueDepth, switched: draining != wasDraining);
+            return draining;
+        }
+
+        private bool UpdateDrainMode(long nowMs, double queueDepth)
+        {
             // either high device queue depth, or high sync cost (too much I/O for the device to keep up)
             if (queueDepth > _activeQueueThreshold || _syncCostTicksEwma.Current > _syncThresholdTicks)
             {
@@ -262,17 +271,11 @@ namespace Voron.Impl.Journal
                     _draining = true;
                     _activeQueueThreshold = _exitQueueDepth;
                     Volatile.Write(ref _lastSwitchUtcTicks, DateTime.UtcNow.Ticks);
-                    if (Log.IsInfoEnabled && ShouldLogModeSwitch(nowMs, out int suppressed))
-                    {
-                        Log.Info($"The device that holds '{_pathOnDevice}' is congested ({DescribeInputs(queueDepth)}). Every environment on this device " +
-                                 "moves to drain mode: flushes stop the writeback trickle, and each sync pushes its dirty ranges " +
-                                 $"in paced blocks before the fdatasync.{DescribeSuppressed(suppressed)}");
-                    }
                 }
                 return true;
             }
-            
-            if (_draining is false) 
+
+            if (_draining is false)
                 return false;
 
             // we require a quiet period before we exit drain mode, to avoid thrashing back and forth
@@ -282,13 +285,6 @@ namespace Voron.Impl.Journal
             _draining = false;
             _activeQueueThreshold = _enterQueueDepth;
             Volatile.Write(ref _lastSwitchUtcTicks, DateTime.UtcNow.Ticks);
-            if (Log.IsInfoEnabled && ShouldLogModeSwitch(nowMs, out int suppressedSwitches))
-            {
-                Log.Info($"The device that holds '{_pathOnDevice}' is quiet again ({DescribeInputs(queueDepth)}). Every environment " +
-                         "on this device returns to trickle mode: flushes start writeback of their dirty ranges, and syncs " +
-                         $"use a plain fdatasync.{DescribeSuppressed(suppressedSwitches)}");
-            }
-
             return false;
         }
 
@@ -296,19 +292,34 @@ namespace Voron.Impl.Journal
         private long _lastModeSwitchLogMs = -ModeSwitchLogIntervalMs;
         private int _suppressedModeSwitchLogs;
 
-        // a device flapping at the edge of congestion must not flood the log: one line per minute, the rest are counted
-        private bool ShouldLogModeSwitch(long nowMs, out int suppressed)
+        // a device flapping at the edge of congestion must not flood the log: one line per minute. Switches in between are counted
+        // and reported by the first call after the minute, so the last line always shows the mode the device is in.
+        private void LogModeSwitch(long nowMs, double queueDepth, bool switched)
         {
             if (nowMs - Volatile.Read(ref _lastModeSwitchLogMs) < ModeSwitchLogIntervalMs)
             {
-                Interlocked.Increment(ref _suppressedModeSwitchLogs);
-                suppressed = 0;
-                return false;
+                if (switched)
+                    Interlocked.Increment(ref _suppressedModeSwitchLogs);
+                return;
             }
 
             Volatile.Write(ref _lastModeSwitchLogMs, nowMs);
-            suppressed = Interlocked.Exchange(ref _suppressedModeSwitchLogs, 0);
-            return true;
+            int suppressed = Interlocked.Exchange(ref _suppressedModeSwitchLogs, 0);
+            string notLogged = suppressed > 0 ? $" {suppressed:#,#} mode switch(es) since the previous line were not logged." : string.Empty;
+            string since = switched ? string.Empty : $" In this mode since {LastModeSwitch:HH:mm:ss} UTC.";
+
+            if (_draining)
+            {
+                Log.Info($"The device that holds '{_pathOnDevice}' is congested ({DescribeInputs(queueDepth)}). Every environment on this device " +
+                         "moves to drain mode: flushes stop the writeback trickle, and each sync pushes its dirty ranges " +
+                         $"in paced blocks before the fdatasync.{notLogged}{since}");
+            }
+            else
+            {
+                Log.Info($"The device that holds '{_pathOnDevice}' is quiet again ({DescribeInputs(queueDepth)}). Every environment " +
+                         "on this device returns to trickle mode: flushes start writeback of their dirty ranges, and syncs " +
+                         $"use a plain fdatasync.{notLogged}{since}");
+            }
         }
 
         private string DescribeInputs(double queueDepth)
@@ -317,9 +328,6 @@ namespace Voron.Impl.Journal
             return $"{queue}, sync cost {TimeSpan.FromTicks(_syncCostTicksEwma.Current).TotalMilliseconds:#,#0} ms (drain above {TimeSpan.FromTicks(_syncThresholdTicks).TotalMilliseconds:#,#0} ms), " +
                    $"journal writes {TimeSpan.FromTicks(_journalWriteLatencyTicks.Current).TotalMilliseconds:#,#0.#} ms for {_journalWriteSizeBytes.Current / Global.Constants.Size.Kilobyte:#,#0} KB on average";
         }
-
-        private static string DescribeSuppressed(int suppressed) =>
-            suppressed > 0 ? $" {suppressed:#,#} more mode switch(es) in the last minute were not logged." : string.Empty;
 
         private (long NowMs, double QueueDepth) SampleQueue()
         {
