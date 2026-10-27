@@ -57,7 +57,7 @@ public class RavenDB_27827 : NoDisposalNeeded
                 {
                     DeviceId = "2049", MountPoint = "/ravendb", PathOnDevice = "/ravendb/data/Databases/Orders/Raven.voron",
                     Status = StorageDeviceStatus.Saturated,
-                    StatusReason = "Saturated since 2026-10-26 06:00:00Z: writes were paced because the disk was congested 93% of the last hour.",
+                    StatusReason = "Saturated since 2026-10-26 06:00:00Z: writes were paced more than 50% of an hour because the disk was congested.",
                     DrainShareOfLastHour = 0.93, JournalWriteLatencyInMs = 97, JournalWriteSizeInBytes = 7 * 1024, SyncCostInMs = 1200
                 }
             ],

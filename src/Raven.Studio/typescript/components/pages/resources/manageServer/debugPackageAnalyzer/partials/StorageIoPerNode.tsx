@@ -7,6 +7,7 @@ import { useServices } from "hooks/useServices";
 import { EmptySet } from "components/common/EmptySet";
 import {
     deviceClassHelp,
+    formatSyncCost,
     storageStatusColor,
     storageStatusHelp,
     storageStatusLabel,
@@ -244,7 +245,7 @@ function DeviceRow({ nodeTag, device }: { nodeTag: string; device: StorageIoDevi
                 {formatMs(device.JournalWriteLatencyInMs)}{" "}
                 <span className="text-muted small">{formatBytes(device.JournalWriteSizeInBytes)}</span>
             </td>
-            <td>{formatMs(device.SyncCostInMs)}</td>
+            <td>{formatSyncCost(device.SyncCostInMs, formatMs)}</td>
             <td title={device.ClassDescription ?? deviceClassHelp[device.Class]}>{device.Class}</td>
         </tr>
     );

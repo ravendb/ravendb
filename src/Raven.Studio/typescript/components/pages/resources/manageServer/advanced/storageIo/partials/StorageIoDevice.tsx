@@ -5,6 +5,7 @@ import Table from "react-bootstrap/Table";
 import { Icon } from "components/common/Icon";
 import {
     deviceClassHelp,
+    formatSyncCost,
     storageStatusColor,
     storageStatusHelp,
     storageStatusLabel,
@@ -54,7 +55,7 @@ export default function StorageIoDevice({ device }: StorageIoDeviceProps) {
                         </Sub>
                     </Metric>
                     <Metric label="Data file syncs" help={storageTermHelp.syncCost}>
-                        {formatMs(device.SyncCostInMs)}
+                        {formatSyncCost(device.SyncCostInMs, formatMs)}
                         <Sub>writes get paced above {formatMs(thresholds.SyncCostDrainInMs)}</Sub>
                     </Metric>
                     <Metric label="Queue depth" help={storageTermHelp.queueDepth}>
