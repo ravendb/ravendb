@@ -109,9 +109,20 @@ class storageCongestionDetails extends abstractPerformanceHintDetails {
             items.push({ name: "Saturated since", value: `${since} (${ago})` });
         }
 
+        items.push({
+            name: "Writes paced in the last hour",
+            value: Math.round(details.DrainShareOfLastHour * 100) + "%",
+        });
+
+        if (details.TypicalJournalWriteLatencyInMs != null) {
+            items.push({
+                name: "Journal writes in the last hour",
+                value: `typically ${storageCongestionDetails.formatMs(details.TypicalJournalWriteLatencyInMs)}, peak ${storageCongestionDetails.formatMs(details.PeakJournalWriteLatencyInMs)}`,
+            });
+        }
+
         items.push(
-            { name: "Writes paced in the last hour", value: Math.round(details.DrainShareOfLastHour * 100) + "%" },
-            { name: "Journal writes", value: storageCongestionDetails.formatMs(details.JournalWriteLatencyInMs) },
+            { name: "Journal writes now", value: storageCongestionDetails.formatMs(details.JournalWriteLatencyInMs) },
             { name: "Data syncs", value: storageIoTerms.formatSyncCost(details.SyncCostInMs, storageCongestionDetails.formatMs) },
             { name: "Mount point", value: details.MountPoint ?? "-" }
         );
@@ -122,6 +133,9 @@ class storageCongestionDetails extends abstractPerformanceHintDetails {
     private static formatMs(value: number): string {
         if (value == null) {
             return "-";
+        }
+        if (value >= 1000) {
+            return storageCongestionDetails.formatNumber(value / 1000, 1) + " s";
         }
         return storageCongestionDetails.formatNumber(value, value < 10 ? 1 : 0) + " ms";
     }

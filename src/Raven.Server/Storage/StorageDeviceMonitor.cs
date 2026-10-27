@@ -17,6 +17,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
+using Sparrow.Server.Meters;
 using Voron;
 using Voron.Impl.Journal;
 
@@ -135,35 +136,78 @@ namespace Raven.Server.Storage
             tracker.LastHintUpdate = now;
 
             if (first && _logger.IsInfoEnabled)
-                _logger.Info(hint.Message);
+                _logger.Info($"{hint.Title}: {hint.Message}");
         }
 
         private PerformanceHint CreateHint(DeviceTracker tracker)
         {
             DeviceWriteBudget device = tracker.Device;
-            string nodeTag = _serverStore.NodeTag;
-            string node = string.IsNullOrEmpty(nodeTag) || nodeTag == "?" ? "this node" : $"node {nodeTag}";
-            double drainShare = tracker.DrainShareOfLastHour;
-            double latency = device.JournalWriteLatency.TotalMilliseconds;
+            DeviceTracker.LastHour lastHour = tracker.SummarizeLastHour();
 
             StorageCongestionDetails details = tracker.GetEvidence();
-            details.NodeTag = nodeTag;
+            details.NodeTag = _serverStore.NodeTag;
             details.MountPoint = tracker.MountPoint;
             details.PathOnDevice = device.PathOnDevice;
             details.Cause = tracker.SaturationCause;
             details.SaturatedSince = tracker.SaturatedSince ?? UtcNow;
-            details.DrainShareOfLastHour = drainShare;
-            details.JournalWriteLatencyInMs = latency;
+            details.DrainShareOfLastHour = tracker.DrainShareOfLastHour;
+            details.JournalWriteLatencyInMs = device.JournalWriteLatency.TotalMilliseconds;
+            details.TypicalJournalWriteLatencyInMs = lastHour.TypicalJournalWriteLatencyInMs;
+            details.PeakJournalWriteLatencyInMs = lastHour.PeakJournalWriteLatencyInMs;
             details.SyncCostInMs = device.SyncCost.TotalMilliseconds;
             details.SlowWritesMeasured = _serverStore.Configuration.Storage.EnableIoMetrics;
 
-            string message = $"Storage on {node} is saturated: on the disk {tracker.MountPoint}, {tracker.SaturationCause}. " +
-                             $"Journal writes take {latency:#,#0.##} ms on average right now (a healthy disk answers in a few ms). " +
-                             "Writes and indexing are slowed down. Consider a volume with more IOPS / throughput, an instance with higher storage bandwidth, " +
-                             "or more RAM to reduce disk reads.";
+            return PerformanceHint.Create(null, "Storage is saturated", CreateHintMessage(tracker, details, lastHour, Thresholds), PerformanceHintReason.StorageCongestion,
+                NotificationSeverity.Info, tracker.MountPoint, details);
+        }
 
-            return PerformanceHint.Create(null, $"Storage is saturated on {node}", message, PerformanceHintReason.StorageCongestion, NotificationSeverity.Info,
-                tracker.MountPoint, details);
+        // the evidence of the last hour, not the value of the moment: the latency average swings between bursts
+        internal static string CreateHintMessage(DeviceTracker tracker, StorageCongestionDetails details, DeviceTracker.LastHour lastHour, CongestionThresholds thresholds)
+        {
+            var sentences = new List<string>();
+
+            double drainShare = tracker.DrainShareOfLastHour;
+            double enterQueueDepth = tracker.Device.EnterDrainQueueDepth;
+            if (drainShare > thresholds.DrainShare)
+            {
+                string queue = lastHour.TypicalQueueDepth is { } queueDepth && queueDepth > enterQueueDepth
+                    ? $" (queue depth {queueDepth:#,#0.#}, pacing starts above {enterQueueDepth:#,#0.#})"
+                    : string.Empty;
+                sentences.Add($"Disk {tracker.MountPoint} was congested {drainShare * 100:0}% of the last hour{queue}, so the server paced its data file writes.");
+            }
+            else
+            {
+                sentences.Add($"On disk {tracker.MountPoint}, {tracker.SaturationCause}.");
+            }
+
+            if (lastHour.TypicalJournalWriteLatencyInMs is { } typical && lastHour.PeakJournalWriteLatencyInMs is { } peak)
+            {
+                SlowIoDetails.SlowWriteInfo slowest = details.Writes.Values.MaxBy(x => x.DurationInSec);
+                string slowestWrite = slowest == null
+                    ? string.Empty
+                    : $", and the slowest {Describe(slowest.Type)} took {FormatMs(slowest.DurationInSec * 1000)} for {FormatSize(slowest.DataWrittenInMb)}";
+                sentences.Add($"In the last hour journal writes typically took {FormatMs(typical)} (peak {FormatMs(peak)}){slowestWrite}.");
+            }
+
+            // a saturated disk stays saturated for an hour after it calms down
+            sentences.Add(tracker.IsBusyNow(thresholds)
+                ? "Writes and indexing are slowed down."
+                : "Writes and indexing were slowed down. The disk keeps up again now, this clears after an hour without congestion.");
+            sentences.Add("Consider a volume with more IOPS / throughput, an instance with higher storage bandwidth, or more RAM to reduce disk reads.");
+
+            return string.Join(" ", sentences);
+
+            static string FormatMs(double ms) => ms >= 1000 ? $"{ms / 1000:#,#0.#} s" : $"{ms:#,#0.#} ms";
+
+            static string FormatSize(double mb) => mb >= 1 ? $"{mb:#,#0.#} MB" : $"{mb * 1024:#,#0} KB";
+
+            static string Describe(IoMetrics.MeterType type) => type switch
+            {
+                IoMetrics.MeterType.JournalWrite => "journal write",
+                IoMetrics.MeterType.DataFlush => "data flush",
+                IoMetrics.MeterType.DataSync => "data sync",
+                _ => "write"
+            };
         }
 
         /// <summary>
@@ -509,8 +553,14 @@ namespace Raven.Server.Storage
                 if (SaturatedSince != null)
                     return StorageDeviceStatus.Saturated;
 
-                return _samples.Count > 0 && LastSample.IsBusy(thresholds.JournalWriteLatencyInMs) ? StorageDeviceStatus.Busy : StorageDeviceStatus.Ok;
+                return IsBusyNow(thresholds) ? StorageDeviceStatus.Busy : StorageDeviceStatus.Ok;
             }
+        }
+
+        public bool IsBusyNow(CongestionThresholds thresholds)
+        {
+            lock (_lock)
+                return _samples.Count > 0 && LastSample.IsBusy(thresholds.JournalWriteLatencyInMs);
         }
 
         private Sample LastSample
@@ -541,6 +591,36 @@ namespace Raven.Server.Storage
                     return Math.Min(1.0, draining / (double)Capacity);
                 }
             }
+        }
+
+        public readonly record struct LastHour(double? TypicalJournalWriteLatencyInMs, double? PeakJournalWriteLatencyInMs, double? TypicalQueueDepth);
+
+        // typical = median of the 10 s samples; intervals without a journal write have no latency and are skipped
+        public LastHour SummarizeLastHour()
+        {
+            var latencies = new List<double>();
+            var queueDepths = new List<double>();
+            lock (_lock)
+            {
+                foreach (Sample s in _samples)
+                {
+                    if (s.JournalWriteLatencyInMs is { } latency)
+                        latencies.Add(latency);
+                    if (s.QueueDepth is { } queueDepth)
+                        queueDepths.Add(queueDepth);
+                }
+            }
+
+            return new LastHour(Median(latencies), latencies.Count > 0 ? latencies.Max() : null, Median(queueDepths));
+        }
+
+        private static double? Median(List<double> values)
+        {
+            if (values.Count == 0)
+                return null;
+
+            values.Sort();
+            return values[values.Count / 2];
         }
 
         public List<Sample> GetHistory()
