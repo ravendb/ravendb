@@ -866,9 +866,6 @@ export class DebugPackageStubs {
                       },
             JournalWriteSizeInBytes: 7 * 1024,
             SyncCostInMs: profile.sync,
-            QueueDepth: 4.8,
-            JournalWrites: 0,
-            Syncs: 0,
             IsBottleneck: profile.status === "Saturated",
         };
 
@@ -883,7 +880,6 @@ export class DebugPackageStubs {
             SyncMaxInMs: profile.syncMax[i],
             MandatorySyncShare: 0,
             DrainSyncShare: profile.paced2[i],
-            WritebackShareOfSyncTime: 0.4,
         }));
 
         const sharedJournals: SharedJournalsIoInfo[] = [
@@ -908,7 +904,6 @@ export class DebugPackageStubs {
             Devices: [device],
             Databases: databases,
             SharedJournals: sharedJournals,
-            Worst: device,
         };
     }
 }

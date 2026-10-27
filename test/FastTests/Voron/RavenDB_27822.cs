@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Storage;
 using Tests.Infrastructure;
 using Voron.Impl.Journal;
@@ -108,14 +107,14 @@ namespace FastTests.Voron
             // between bursts the average is low again
             tracker.Add(new DeviceTracker.Sample(at = at.AddSeconds(10), Draining: true, JournalWriteLatencyInMs: 3, QueueDepth: 16), Thresholds);
 
-            string message = StorageDeviceMonitor.CreateHintMessage(tracker, new StorageCongestionDetails(), tracker.SummarizeLastHour(), Thresholds);
+            string message = StorageDeviceMonitor.CreateHintMessage(tracker, slowest: null, tracker.SummarizeLastHour(), Thresholds);
 
             Assert.StartsWith("Disk test was congested 84% of the last hour (queue depth 16, pacing starts above 5), so the server paced its data file writes. " +
                               "In the last hour journal writes typically took 16 ms (peak 2 s). Writes and indexing are slowed down.", message);
 
             // calm again, but still saturated until an hour without congestion
             tracker.Add(new DeviceTracker.Sample(at.AddSeconds(10), Draining: false, JournalWriteLatencyInMs: 1, QueueDepth: 0.5), Thresholds);
-            message = StorageDeviceMonitor.CreateHintMessage(tracker, new StorageCongestionDetails(), tracker.SummarizeLastHour(), Thresholds);
+            message = StorageDeviceMonitor.CreateHintMessage(tracker, slowest: null, tracker.SummarizeLastHour(), Thresholds);
             Assert.Contains("Writes and indexing were slowed down. The disk keeps up again now", message);
         }
     }

@@ -876,18 +876,13 @@ export class ManageServerStubs {
             DeviceId: "2049",
             Compression: { Configured: "Auto", Resolved: "Lz4", CompressAboveInBytes: 32 * 1024 },
             Pipelining: {
-                Enabled: true,
                 Active: type !== "Documents",
-                QueueEmptyShare: 0.95,
-                BatchOperations: 2.4,
                 JournalWriteLatencyInMs: 96.7,
                 JournalWriteSizeInBytes: 7 * 1024,
-                PipelineAboveLatencyInMs: 2,
             },
             ConsolidatingBatches: type === "Documents",
             FlusherYields: type === "Documents" ? 1840 : 12,
             Sync: {
-                PacedWritebackEnabled: true,
                 WrittenButUnsyncedInBytes: 120 * 1024 * 1024,
                 SoftLimitInBytes: 256 * 1024 * 1024,
                 MandatoryLimitInBytes: 768 * 1024 * 1024,
@@ -917,28 +912,22 @@ export class ManageServerStubs {
                     StatusReason:
                         "Saturated since 2026-10-24 03:12:40Z: writes were paced more than 50% of an hour because the disk was congested.",
                     Class: "Unknown",
-                    ClassReason: "WritesTooSmall",
                     ClassDescription:
                         "journal writes average 7 KB, below 256 KB, too small to tell a slow disk from a fast one (96.7 ms)",
                     JournalWriteLatencyInMs: 96.7,
                     JournalWriteSizeInBytes: 7 * 1024,
                     SecondsSinceLastJournalWrite: 0.2,
                     QueueDepth: 13.1,
-                    QueueDepthAgeInSec: 0.6,
                     SyncCostInMs: 1164,
                     Draining: true,
                     LastModeSwitch: "2026-10-24T03:02:10Z",
                     DrainShareOfLastHour: 0.93,
-                    SaturatedSince: "2026-10-24T03:12:40Z",
                     Thresholds: {
-                        ClassifyAboveLatencyInMs: 2,
-                        SmallWriteInBytes: 256 * 1024,
                         SyncCostDrainInMs: 100,
                         QueueDepthEnterDrain: 5,
                         QueueDepthExitDrain: 3,
                         CongestionDrainShare: 0.5,
                         CongestionJournalWriteLatencyInMs: 50,
-                        CongestionSustainedInMin: 10,
                     },
                     History: history,
                     SlowWrites: [
@@ -991,8 +980,8 @@ export class ManageServerStubs {
                 {
                     Database: "CarDealership",
                     Files: [
-                        { Number: 12, SizeInBytes: 64 * 1024 * 1024, PendingDeletion: true },
-                        { Number: 13, SizeInBytes: 128 * 1024 * 1024, PendingDeletion: false },
+                        { Number: 12, SizeInBytes: 64 * 1024 * 1024 },
+                        { Number: 13, SizeInBytes: 128 * 1024 * 1024 },
                     ],
                     IndexesSharing: 22,
                     IndexesNotSharing: [

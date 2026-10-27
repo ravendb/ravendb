@@ -33,7 +33,6 @@ export const Healthy: StoryObj<typeof StorageIo> = {
         device.JournalWriteLatencyInMs = 0.9;
         device.SyncCostInMs = 8;
         device.QueueDepth = 0.4;
-        device.SaturatedSince = null;
         device.SlowWrites = [];
         device.History = device.History.map((s) => ({
             ...s,

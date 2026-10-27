@@ -128,13 +128,9 @@ namespace Voron
                 if (env.IsDisposing || env.Disposed)
                     continue;
 
-                IoMetrics.SyncReason reason;
-                if (envSyncReq.Value.IsRequired)
-                    reason = IoMetrics.SyncReason.Explicit;
-                else if (force)
-                    reason = IoMetrics.SyncReason.Idle;
-                else
-                    reason = env.WriteFlow.GetSyncReason(env);
+                IoMetrics.SyncReason reason = envSyncReq.Value.IsRequired ? IoMetrics.SyncReason.Explicit
+                    : force ? IoMetrics.SyncReason.Idle
+                    : env.WriteFlow.GetSyncReason(env);
 
                 if (reason == IoMetrics.SyncReason.None)
                     continue;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -213,63 +213,49 @@ namespace Raven.Server.Utils.IoMetrics
 
         public DynamicJsonValue ToJson()
         {
-            switch (Type)
+            if (Type == Sparrow.Server.Meters.IoMetrics.MeterType.Compression)
             {
-                case Sparrow.Server.Meters.IoMetrics.MeterType.Compression:
-                    return new DynamicJsonValue
-                    {
-                        [nameof(Start)] = Start,
-                        [nameof(IOMetricsRecentStatsAdditionalTypes.OriginalSize)] = Size,
-                        [nameof(IOMetricsRecentStatsAdditionalTypes.HumaneOriginalSize)] = HumaneSize,
-                        [nameof(CompressedSize)] = CompressedSize,
-                        [nameof(HumaneCompressedSize)] = HumaneCompressedSize,
-                        [nameof(Acceleration)] = Acceleration,
-                        [nameof(IOMetricsRecentStatsAdditionalTypes.CompressionRatio)] = CompressedSize * 1.0 / Size,
-                        [nameof(Duration)] = Duration,
-                        [nameof(Type)] = Type,
-                        [nameof(Algorithm)] = Algorithm
-                    };
-                case Sparrow.Server.Meters.IoMetrics.MeterType.JournalWrite:
-                    return new DynamicJsonValue
-                    {
-                        [nameof(Start)] = Start,
-                        [nameof(Size)] = Size,
-                        [nameof(HumaneSize)] = HumaneSize,
-                        [nameof(FileSize)] = FileSize,
-                        [nameof(HumaneFileSize)] = HumaneFileSize,
-                        [nameof(Duration)] = Duration,
-                        [nameof(Type)] = Type,
-                        [nameof(Pipelined)] = Pipelined,
-                        [nameof(BatchOperations)] = BatchOperations
-                    };
-                case Sparrow.Server.Meters.IoMetrics.MeterType.DataSync:
-                    return new DynamicJsonValue
-                    {
-                        [nameof(Start)] = Start,
-                        [nameof(Size)] = Size,
-                        [nameof(HumaneSize)] = HumaneSize,
-                        [nameof(FileSize)] = FileSize,
-                        [nameof(HumaneFileSize)] = HumaneFileSize,
-                        [nameof(Duration)] = Duration,
-                        [nameof(Type)] = Type,
-                        [nameof(SyncReason)] = SyncReason,
-                        [nameof(Drain)] = Drain,
-                        [nameof(WritebackSize)] = WritebackSize,
-                        [nameof(WritebackRanges)] = WritebackRanges,
-                        [nameof(WritebackDuration)] = WritebackDuration
-                    };
-                default:
-                    return new DynamicJsonValue
-                    {
-                        [nameof(Start)] = Start,
-                        [nameof(Size)] = Size,
-                        [nameof(HumaneSize)] = HumaneSize,
-                        [nameof(FileSize)] = FileSize,
-                        [nameof(HumaneFileSize)] = HumaneFileSize,
-                        [nameof(Duration)] = Duration,
-                        [nameof(Type)] = Type
-                    };
+                return new DynamicJsonValue
+                {
+                    [nameof(Start)] = Start,
+                    [nameof(IOMetricsRecentStatsAdditionalTypes.OriginalSize)] = Size,
+                    [nameof(IOMetricsRecentStatsAdditionalTypes.HumaneOriginalSize)] = HumaneSize,
+                    [nameof(CompressedSize)] = CompressedSize,
+                    [nameof(HumaneCompressedSize)] = HumaneCompressedSize,
+                    [nameof(Acceleration)] = Acceleration,
+                    [nameof(IOMetricsRecentStatsAdditionalTypes.CompressionRatio)] = CompressedSize * 1.0 / Size,
+                    [nameof(Duration)] = Duration,
+                    [nameof(Type)] = Type,
+                    [nameof(Algorithm)] = Algorithm
+                };
             }
+
+            var json = new DynamicJsonValue
+            {
+                [nameof(Start)] = Start,
+                [nameof(Size)] = Size,
+                [nameof(HumaneSize)] = HumaneSize,
+                [nameof(FileSize)] = FileSize,
+                [nameof(HumaneFileSize)] = HumaneFileSize,
+                [nameof(Duration)] = Duration,
+                [nameof(Type)] = Type
+            };
+
+            if (Type == Sparrow.Server.Meters.IoMetrics.MeterType.JournalWrite)
+            {
+                json[nameof(Pipelined)] = Pipelined;
+                json[nameof(BatchOperations)] = BatchOperations;
+            }
+            else if (Type == Sparrow.Server.Meters.IoMetrics.MeterType.DataSync)
+            {
+                json[nameof(SyncReason)] = SyncReason;
+                json[nameof(Drain)] = Drain;
+                json[nameof(WritebackSize)] = WritebackSize;
+                json[nameof(WritebackRanges)] = WritebackRanges;
+                json[nameof(WritebackDuration)] = WritebackDuration;
+            }
+
+            return json;
         }
     }
 

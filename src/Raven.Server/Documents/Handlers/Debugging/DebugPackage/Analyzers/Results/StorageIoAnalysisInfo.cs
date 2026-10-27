@@ -19,9 +19,6 @@ public class StorageIoAnalysisInfo
     public List<StorageIoDatabaseAnalysis> Databases { get; set; } = new();
 
     public List<SharedJournalsIoInfo> SharedJournals { get; set; } = new();
-
-    // the worst device, used to compare nodes
-    public StorageIoDeviceAnalysis Worst { get; set; }
 }
 
 public class StorageIoDeviceAnalysis
@@ -59,12 +56,6 @@ public class StorageIoDeviceAnalysis
 
     public double SyncCostInMs { get; set; }
 
-    public double? QueueDepth { get; set; }
-
-    public int JournalWrites { get; set; }
-
-    public int Syncs { get; set; }
-
     public DateTime? From { get; set; }
 
     public DateTime? To { get; set; }
@@ -95,6 +86,4 @@ public class StorageIoDatabaseAnalysis
     public double? MandatorySyncShare { get; set; }
 
     public double? DrainSyncShare { get; set; }
-
-    public double? WritebackShareOfSyncTime { get; set; }
 }

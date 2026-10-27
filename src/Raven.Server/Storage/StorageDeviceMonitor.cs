@@ -43,7 +43,7 @@ namespace Raven.Server.Storage
         private readonly ServerStore _serverStore;
         private readonly ConcurrentDictionary<DeviceWriteBudget, DeviceTracker> _trackers = new(ReferenceEqualityComparer.Instance);
         private readonly object _sampleLock = new();
-        private Timer _timer;
+        private readonly Timer _timer;
 
         public StorageDeviceMonitor(ServerStore serverStore)
         {
@@ -65,13 +65,18 @@ namespace Raven.Server.Storage
                 _startedAt ??= now;
                 RestorePersistedHintsOnce();
 
-                foreach (var (device, mountPoint) in GetDevices())
+                Dictionary<DeviceWriteBudget, string> devices = GetDevices();
+                foreach (var (device, mountPoint) in devices)
+                    _trackers.GetOrAdd(device, d => new DeviceTracker(d, mountPoint));
+
+                foreach (var (device, tracker) in _trackers)
                 {
-                    DeviceTracker tracker = _trackers.GetOrAdd(device, d => new DeviceTracker(d, mountPoint));
                     if (tracker.HintRaised == false && _persistedHints.Remove(tracker.MountPoint))
                         tracker.RestorePersistedHint(now);
 
-                    DeviceTracker.Sample sample = ForTestingPurposes?.SampleOverride?.Invoke(device) ?? DeviceTracker.Sample.From(device, now, SampleInterval);
+                    // a disk no loaded database writes to anymore is idle, so its status and hint clear like any other
+                    DeviceTracker.Sample sample = devices.ContainsKey(device) == false ? new DeviceTracker.Sample(now, Draining: false, JournalWriteLatencyInMs: null, QueueDepth: null)
+                        : ForTestingPurposes?.SampleOverride?.Invoke(device) ?? DeviceTracker.Sample.From(device, now, SampleInterval);
                     tracker.Add(sample with { At = now }, thresholds);
 
                     LogClassChange(tracker);
@@ -133,7 +138,7 @@ namespace Raven.Server.Storage
             if (due == false || _serverStore.NotificationCenter.IsInitialized == false)
                 return;
 
-            PerformanceHint hint = CreateHint(tracker);
+            PerformanceHint hint = CreateHint(tracker, now);
             tracker.HintStored = _serverStore.Configuration.Notifications.ShouldFilterOut(hint) == false;
             _serverStore.NotificationCenter.Add(hint);
             tracker.HintRaised = true;
@@ -144,17 +149,15 @@ namespace Raven.Server.Storage
                 _logger.Info($"{hint.Title}: {hint.Message}");
         }
 
-        private PerformanceHint CreateHint(DeviceTracker tracker)
+        private PerformanceHint CreateHint(DeviceTracker tracker, DateTime now)
         {
             DeviceWriteBudget device = tracker.Device;
             DeviceTracker.LastHour lastHour = tracker.SummarizeLastHour();
 
-            StorageCongestionDetails details = tracker.GetEvidence();
-            details.NodeTag = _serverStore.NodeTag;
+            StorageCongestionDetails details = tracker.GetEvidence(now);
             details.MountPoint = tracker.MountPoint;
-            details.PathOnDevice = device.PathOnDevice;
             details.Cause = tracker.SaturationCause;
-            details.SaturatedSince = tracker.SaturatedSince ?? UtcNow;
+            details.SaturatedSince = tracker.SaturatedSince.Value;
             details.DrainShareOfLastHour = tracker.DrainShareOfLastHour;
             details.JournalWriteLatencyInMs = device.JournalWriteLatency.TotalMilliseconds;
             details.TypicalJournalWriteLatencyInMs = lastHour.TypicalJournalWriteLatencyInMs;
@@ -162,12 +165,13 @@ namespace Raven.Server.Storage
             details.SyncCostInMs = device.SyncCost.TotalMilliseconds;
             details.SlowWritesMeasured = _serverStore.Configuration.Storage.EnableIoMetrics;
 
-            return PerformanceHint.Create(null, "Storage is saturated", CreateHintMessage(tracker, details, lastHour, Thresholds), PerformanceHintReason.StorageCongestion,
+            SlowIoDetails.SlowWriteInfo slowest = details.Writes.Values.MaxBy(x => x.DurationInSec);
+            return PerformanceHint.Create(null, "Storage is saturated", CreateHintMessage(tracker, slowest, lastHour, Thresholds), PerformanceHintReason.StorageCongestion,
                 NotificationSeverity.Info, tracker.MountPoint, details);
         }
 
         // the evidence of the last hour, not the value of the moment: the latency average swings between bursts
-        internal static string CreateHintMessage(DeviceTracker tracker, StorageCongestionDetails details, DeviceTracker.LastHour lastHour, CongestionThresholds thresholds)
+        internal static string CreateHintMessage(DeviceTracker tracker, SlowIoDetails.SlowWriteInfo slowest, DeviceTracker.LastHour lastHour, CongestionThresholds thresholds)
         {
             var sentences = new List<string>();
 
@@ -186,16 +190,19 @@ namespace Raven.Server.Storage
             }
 
             if (lastHour.TypicalJournalWriteLatencyInMs is { } typical && lastHour.PeakJournalWriteLatencyInMs is { } peak)
-                sentences.Add(DescribeLastHour(typical, peak, details.Writes.Values.MaxBy(x => x.DurationInSec)));
+                sentences.Add(DescribeLastHour(typical, peak, slowest));
 
             // a saturated disk stays saturated for an hour after it calms down
             sentences.Add(tracker.IsBusyNow(thresholds)
                 ? "Writes and indexing are slowed down."
                 : "Writes and indexing were slowed down. The disk keeps up again now, this clears after an hour without congestion.");
-            sentences.Add("Consider a volume with more IOPS / throughput, an instance with higher storage bandwidth, or more RAM to reduce disk reads.");
+            sentences.Add(RecommendedAction);
 
             return string.Join(" ", sentences);
         }
+
+        internal const string RecommendedAction =
+            "Consider a volume with more IOPS / throughput, an instance with higher storage bandwidth, or more RAM to reduce disk reads.";
 
         // shared by the hint and the debug package analyzer, so both tell the same story
         internal static string DescribeLastHour(double typicalLatencyInMs, double peakLatencyInMs, SlowIoDetails.SlowWriteInfo slowest)
@@ -369,8 +376,7 @@ namespace Raven.Server.Storage
 
         public void Dispose()
         {
-            _timer?.Dispose();
-            _timer = null;
+            _timer.Dispose();
         }
 
         internal TestingStuff ForTestingPurposes;
@@ -408,7 +414,7 @@ namespace Raven.Server.Storage
                 device.IsDraining,
                 // the device latency average never expires, on an idle device it freezes at the last value, so it only counts with recent writes
                 device.TimeSinceLastJournalWrite <= interval ? device.JournalWriteLatency.TotalMilliseconds : null,
-                device.HasQueueDepthSignal ? device.QueueDepth : null);
+                device.QueueDepth);
 
             public bool IsBusy(double latencyThresholdInMs) => Draining || JournalWriteLatencyInMs > latencyThresholdInMs;
         }
@@ -418,12 +424,14 @@ namespace Raven.Server.Storage
         private readonly object _lock = new();
         private readonly Queue<Sample> _samples = new(Capacity + 1);
         private DateTime? _lastBusyAt;
-        private string _mountPoint;
+        private Sample? _lastSample;
 
         public DeviceTracker(DeviceWriteBudget device, string mountPoint = null)
         {
             Device = device;
-            _mountPoint = string.IsNullOrEmpty(mountPoint) ? null : mountPoint;
+            MountPoint = string.IsNullOrEmpty(mountPoint) == false ? mountPoint
+                : Path.GetPathRoot(device.PathOnDevice) is { Length: > 0 } root ? root
+                : device.PathOnDevice;
         }
 
         public DeviceWriteBudget Device { get; }
@@ -438,13 +446,14 @@ namespace Raven.Server.Storage
 
         public string SaturationCause { get; private set; }
 
-        public string MountPoint => _mountPoint ??= Path.GetPathRoot(Device.PathOnDevice) is { Length: > 0 } root ? root : Device.PathOnDevice;
+        public string MountPoint { get; }
 
         public void Add(Sample sample, CongestionThresholds thresholds)
         {
             lock (_lock)
             {
                 _samples.Enqueue(sample);
+                _lastSample = sample;
                 while (_samples.Count > Capacity || _samples.Peek().At <= sample.At - CongestionThresholds.Window)
                     _samples.Dequeue();
 
@@ -457,7 +466,7 @@ namespace Raven.Server.Storage
                     if (SaturationCause != null)
                         SaturatedSince = sample.At;
                 }
-                else if (_lastBusyAt == null || sample.At - _lastBusyAt.Value >= CongestionThresholds.Window)
+                else if (IsQuietForAnHour(sample.At))
                 {
                     SaturatedSince = null;
                     SaturationCause = null;
@@ -497,14 +506,8 @@ namespace Raven.Server.Storage
         private readonly Dictionary<string, SlowIoDetails.SlowWriteInfo> _slowWrites = new();
         private bool _newEvidence;
 
-        internal bool HasNewEvidence
-        {
-            get
-            {
-                lock (_lock)
-                    return _newEvidence;
-            }
-        }
+        // a stale read only delays the next hint refresh by one sample
+        internal bool HasNewEvidence => Volatile.Read(ref _newEvidence);
 
         // the worst slow write per file within the last hour
         public void RecordSlowWrite(IoChange ioChange, DateTime now)
@@ -525,10 +528,11 @@ namespace Raven.Server.Storage
             }
         }
 
-        public StorageCongestionDetails GetEvidence()
+        public StorageCongestionDetails GetEvidence(DateTime now)
         {
             lock (_lock)
             {
+                PruneSlowWrites(now);
                 _newEvidence = false;
                 return new StorageCongestionDetails { Writes = new Dictionary<string, SlowIoDetails.SlowWriteInfo>(_slowWrites) };
             }
@@ -566,18 +570,7 @@ namespace Raven.Server.Storage
         public bool IsBusyNow(CongestionThresholds thresholds)
         {
             lock (_lock)
-                return _samples.Count > 0 && LastSample.IsBusy(thresholds.JournalWriteLatencyInMs);
-        }
-
-        private Sample LastSample
-        {
-            get
-            {
-                Sample last = default;
-                foreach (Sample s in _samples)
-                    last = s;
-                return last;
-            }
+                return _lastSample?.IsBusy(thresholds.JournalWriteLatencyInMs) == true;
         }
 
         // share of the full hour (not of the samples we have), so a fresh start needs the same absolute time in drain
@@ -586,16 +579,7 @@ namespace Raven.Server.Storage
             get
             {
                 lock (_lock)
-                {
-                    int draining = 0;
-                    foreach (Sample s in _samples)
-                    {
-                        if (s.Draining)
-                            draining++;
-                    }
-
-                    return Math.Min(1.0, draining / (double)Capacity);
-                }
+                    return _samples.Count(s => s.Draining) / (double)Capacity;
             }
         }
 
@@ -637,17 +621,9 @@ namespace Raven.Server.Storage
 
         private string GetSaturationCause(DateTime now, CongestionThresholds thresholds)
         {
-            int draining = 0;
-            foreach (Sample s in _samples)
-            {
-                if (s.Draining)
-                    draining++;
-            }
-
             // the cause is kept for as long as the disk stays saturated, so it names the threshold that was crossed, not a measurement
             // that goes stale; the current numbers are reported next to it
-            double drainShare = draining / (double)Capacity;
-            if (drainShare > thresholds.DrainShare)
+            if (DrainShareOfLastHour > thresholds.DrainShare)
                 return $"writes were paced more than {thresholds.DrainShare * 100:0}% of an hour because the disk was congested";
 
             // every sample of the sustained period (and it must be fully covered) is slower than the threshold

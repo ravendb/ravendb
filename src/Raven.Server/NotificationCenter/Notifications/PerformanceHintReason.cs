@@ -1,4 +1,4 @@
-namespace Raven.Server.NotificationCenter.Notifications
+﻿namespace Raven.Server.NotificationCenter.Notifications
 {
     public enum PerformanceHintReason
     {

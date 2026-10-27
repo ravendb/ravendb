@@ -35,14 +35,13 @@ namespace Raven.Server.Storage
                 return null;
 
             var (worst, status) = disks[0];
-            double drainShare = worst.DrainShareOfLastHour;
             double latency = worst.Device.JournalWriteLatency.TotalMilliseconds;
 
             return new StorageStatusInfo
             {
                 Status = status,
                 MountPoint = worst.MountPoint,
-                DrainShareOfLastHour = drainShare,
+                DrainShareOfLastHour = worst.DrainShareOfLastHour,
                 JournalWriteLatencyInMs = latency,
                 SyncCostInMs = worst.Device.SyncCost.TotalMilliseconds,
                 Disks = disks.Count,

@@ -189,18 +189,8 @@ namespace Voron.Impl.Journal
             }
         }
 
-        public bool HasQueueDepthSignal => _queueReader != null;
-
-        public double QueueDepth => _queueDepth.Current;
-
-        public TimeSpan? QueueDepthAge
-        {
-            get
-            {
-                long last = Volatile.Read(ref _lastSampleMs);
-                return _queueReader == null || last == 0 ? null : TimeSpan.FromMilliseconds(_clock.ElapsedMilliseconds - last);
-            }
-        }
+        // null when the platform gives no queue depth signal
+        public double? QueueDepth => _queueReader == null ? null : _queueDepth.Current;
 
         public TimeSpan SyncCost => TimeSpan.FromTicks(_syncCostTicksEwma.Current);
 
