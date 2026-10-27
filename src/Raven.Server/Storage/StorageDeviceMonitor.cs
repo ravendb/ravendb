@@ -68,8 +68,8 @@ namespace Raven.Server.Storage
                 foreach (var (device, mountPoint) in GetDevices())
                 {
                     DeviceTracker tracker = _trackers.GetOrAdd(device, d => new DeviceTracker(d, mountPoint));
-                    if (tracker.HintRaised == false && _persistedHints.TryRemove(tracker.MountPoint, out PersistedHint persisted))
-                        tracker.RestoreSaturation(persisted.Since, persisted.Cause);
+                    if (tracker.HintRaised == false && _persistedHints.Remove(tracker.MountPoint))
+                        tracker.RestorePersistedHint(now);
 
                     DeviceTracker.Sample sample = ForTestingPurposes?.SampleOverride?.Invoke(device) ?? DeviceTracker.Sample.From(device, now, SampleInterval);
                     tracker.Add(sample with { At = now }, thresholds);
@@ -81,11 +81,9 @@ namespace Raven.Server.Storage
                 // a hint from before the restart for a disk no database writes to anymore: give it the same hour, then let it go
                 if (now - _startedAt.Value >= CongestionThresholds.Window)
                 {
-                    foreach (string mountPoint in _persistedHints.Keys)
-                    {
-                        if (_persistedHints.TryRemove(mountPoint, out _))
-                            _serverStore.NotificationCenter.Dismiss(PerformanceHint.GetKey(PerformanceHintReason.StorageCongestion, mountPoint), sendNotificationEvenIfDoesntExist: false);
-                    }
+                    foreach (string mountPoint in _persistedHints)
+                        _serverStore.NotificationCenter.Dismiss(PerformanceHint.GetKey(PerformanceHintReason.StorageCongestion, mountPoint), sendNotificationEvenIfDoesntExist: false);
+                    _persistedHints.Clear();
                 }
             }
             catch (Exception e)
@@ -113,8 +111,13 @@ namespace Raven.Server.Storage
                 if (tracker.HintRaised == false)
                     return;
 
+                // a hint from before the restart is kept as it was until the disk shows an hour without congestion
+                if (tracker.HintRestored && tracker.IsQuietForAnHour(now) == false)
+                    return;
+
                 tracker.HintRaised = false;
                 tracker.HintStored = false;
+                tracker.HintRestored = false;
                 _serverStore.NotificationCenter.Dismiss(id, sendNotificationEvenIfDoesntExist: false);
 
                 if (_logger.IsInfoEnabled)
@@ -122,7 +125,8 @@ namespace Raven.Server.Storage
                 return;
             }
 
-            bool first = tracker.HintRaised == false;
+            // a live saturation replaces a hint from before the restart right away
+            bool first = tracker.HintRaised == false || tracker.HintRestored;
             bool due = first ||
                        now - tracker.LastHintUpdate >= HintRefreshInterval ||
                        (tracker.HasNewEvidence && now - tracker.LastHintUpdate >= HintEvidenceRefreshInterval);
@@ -133,6 +137,7 @@ namespace Raven.Server.Storage
             tracker.HintStored = _serverStore.Configuration.Notifications.ShouldFilterOut(hint) == false;
             _serverStore.NotificationCenter.Add(hint);
             tracker.HintRaised = true;
+            tracker.HintRestored = false;
             tracker.LastHintUpdate = now;
 
             if (first && _logger.IsInfoEnabled)
@@ -224,13 +229,13 @@ namespace Raven.Server.Storage
             return tracker.HintStored;
         }
 
-        private readonly record struct PersistedHint(DateTime Since, string Cause);
-
-        private readonly ConcurrentDictionary<string, PersistedHint> _persistedHints = new();
+        // touched by the sampler only, under _sampleLock
+        private readonly HashSet<string> _persistedHints = new();
         private bool _persistedHintsRestored;
         private DateTime? _startedAt;
 
-        // a saturation reported before a restart stays until the disk proves an hour of normal, like any other
+        // a hint stored before a restart is history: it stays in the notification center until the disk proves an hour of normal,
+        // but the state of the disk (dashboard, Storage I/O, endpoint) only comes from the samples taken since the restart
         private void RestorePersistedHintsOnce()
         {
             if (_persistedHintsRestored || _serverStore.NotificationCenter.IsInitialized == false)
@@ -247,18 +252,8 @@ namespace Raven.Server.Storage
                         if ((PerformanceHintReason)Bits.SwapBytes(hint.Reason) != PerformanceHintReason.StorageCongestion)
                             continue;
 
-                        if (hint.Json.TryGet(nameof(PerformanceHint.Source), out string mountPoint) == false || mountPoint == null)
-                            continue;
-
-                        DateTime since = hint.CreatedAt;
-                        string cause = null;
-                        if (hint.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject details) && details != null)
-                        {
-                            details.TryGet(nameof(StorageCongestionDetails.SaturatedSince), out since);
-                            details.TryGet(nameof(StorageCongestionDetails.Cause), out cause);
-                        }
-
-                        _persistedHints[mountPoint] = new PersistedHint(since, cause ?? "reported before the server restarted");
+                        if (hint.Json.TryGet(nameof(PerformanceHint.Source), out string mountPoint) && mountPoint != null)
+                            _persistedHints.Add(mountPoint);
                     }
                 }
             }
@@ -467,21 +462,29 @@ namespace Raven.Server.Storage
             }
         }
 
-        // used after a restart: a saturation reported before it stays until the device proves an hour of normal
-        public void RestoreSaturation(DateTime since, string cause)
+        // used after a restart: the hint stored before it is kept until an hour without congestion since the restart
+        public void RestorePersistedHint(DateTime restartedAt)
         {
             lock (_lock)
             {
-                SaturatedSince ??= since;
-                SaturationCause ??= $"{cause} (reported before the server restarted, it clears after an hour back to normal)";
-                _lastBusyAt ??= DateTime.UtcNow;
+                _lastBusyAt ??= restartedAt;
                 HintRaised = true;
                 HintStored = true;
+                HintRestored = true;
             }
+        }
+
+        public bool IsQuietForAnHour(DateTime now)
+        {
+            lock (_lock)
+                return _lastBusyAt == null || now - _lastBusyAt.Value >= CongestionThresholds.Window;
         }
 
         // state of the congestion hint of this disk, owned by the sampler
         internal bool HintRaised { get; set; }
+
+        // the hint shown is the one stored before the restart, not one raised from the samples since
+        internal bool HintRestored { get; set; }
 
         internal bool HintStored { get; set; }
 

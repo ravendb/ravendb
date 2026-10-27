@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Storage;
 using Sparrow.Server;
 using Sparrow.Server.Meters;
@@ -101,6 +102,46 @@ public class RavenDB_27826 : RavenTestBase
         database.CheckWriteRateAndNotifyIfNecessary(SlowJournalWrite(database));
         database.NotificationCenter.SlowWrites.UpdateNotificationInStorage(null);
         Assert.True(database.NotificationCenter.Exists(PerformanceHint.GetKey(PerformanceHintReason.SlowIO, "slow-writes")));
+    }
+
+    [RavenFact(RavenTestCategory.Monitoring)]
+    public async Task Hint_from_before_a_restart_stays_as_history_while_the_disk_status_is_live()
+    {
+        using var server = GetNewServer();
+        using var store = GetDocumentStore(new Options { Server = server, RunInMemory = false });
+        var database = await GetDatabase(server, store.Database);
+
+        DeviceWriteBudget device = database.DocumentsStorage.Environment.Options.DeviceWriteBudget;
+        Assert.NotNull(device);
+
+        // the hint stored before the restart
+        server.ServerStore.StorageDeviceMonitor.Sample();
+        string mountPoint = server.ServerStore.StorageDeviceMonitor.GetTracker(device).MountPoint;
+        string hintId = PerformanceHint.GetKey(PerformanceHintReason.StorageCongestion, mountPoint);
+        server.ServerStore.NotificationCenter.Add(PerformanceHint.Create(null, "Storage is saturated", "stored before the restart",
+            PerformanceHintReason.StorageCongestion, NotificationSeverity.Info, mountPoint, new StorageCongestionDetails()));
+
+        // a monitor starting now, as after a restart
+        using var monitor = new StorageDeviceMonitor(server.ServerStore);
+        var now = DateTime.UtcNow;
+        monitor.ForTestingPurposesOnly().UtcNow = () => now;
+        monitor.ForTestingPurposesOnly().SampleOverride = _ => Healthy;
+        monitor.Sample();
+
+        Assert.Equal(StorageDeviceStatus.Ok, monitor.GetTracker(device).GetStatus(monitor.Thresholds));
+        Assert.True(server.ServerStore.NotificationCenter.Exists(hintId));
+
+        for (var i = 0; i < 359; i++)
+        {
+            now = now.AddSeconds(10);
+            monitor.Sample();
+        }
+        Assert.True(server.ServerStore.NotificationCenter.Exists(hintId));
+
+        // an hour without congestion since the restart clears it
+        now = now.AddSeconds(10);
+        monitor.Sample();
+        Assert.False(server.ServerStore.NotificationCenter.Exists(hintId));
     }
 
     private static IoChange SlowJournalWrite(DocumentDatabase database)
