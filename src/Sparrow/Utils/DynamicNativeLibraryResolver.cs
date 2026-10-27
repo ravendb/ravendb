@@ -52,12 +52,19 @@ namespace Sparrow.Utils
                 }
                 else
                 {
-                    suffix = Environment.Is64BitProcess ? ".mac.arm64.dylib" : "mac.arm32.dylib";
+                    suffix = Environment.Is64BitProcess ? ".mac.arm64.dylib" : ".mac.arm32.dylib";
                 }
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                suffix = Environment.Is64BitProcess ? ".win.x64.dll" : ".win.x86.dll";
+                if (RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+                {
+                    suffix = ".win.arm64.dll";
+                }
+                else
+                {
+                    suffix = Environment.Is64BitProcess ? ".win.x64.dll" : ".win.x86.dll";
+                }
             }
             else
             {

@@ -22,5 +22,7 @@ public enum AiConnectorType
     /// <summary>Mistral AI.</summary>
     MistralAi,
     /// <summary>Vertex AI.</summary>
-    Vertex
+    Vertex,
+    /// <summary>Anthropic (native Claude Messages API).</summary>
+    Anthropic
 }

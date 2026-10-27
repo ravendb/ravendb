@@ -1,4 +1,4 @@
-import React, { ComponentProps, ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import React, { ChangeEvent, ComponentProps, ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
 import {
@@ -186,6 +186,7 @@ export function FormRadio<TFieldValues extends FieldValues, TName extends FieldP
         <div className="position-relative">
             <div className="d-flex flex-grow-1">
                 <Radio
+                    name={name}
                     selected={value === props.value}
                     toggleSelection={() => {
                         onChange(props.value);
@@ -636,7 +637,7 @@ function FormInputGeneral<
                             name={name}
                             type={actualInputType}
                             onBlur={onBlur}
-                            onChange={(x) => handleValueChange(x.currentTarget.value)}
+                            onChange={(x: ChangeEvent<HTMLInputElement>) => handleValueChange(x.currentTarget.value)}
                             value={value == null ? "" : value}
                             isInvalid={invalid}
                             className={classNames(
@@ -714,8 +715,8 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
                     isInvalid={invalid}
                     onBlur={onBlur}
                     color="primary"
-                    disabled={formState.isSubmitting}
                     {...rest}
+                    disabled={formState.isSubmitting || rest.disabled}
                 />
             </div>
         </div>
@@ -793,7 +794,7 @@ export function FormPathSelector<
                         ref={inputRef}
                         name={name}
                         type="text"
-                        onChange={(x) => onChange(x.currentTarget.value)}
+                        onChange={(x: ChangeEvent<HTMLInputElement>) => onChange(x.currentTarget.value)}
                         value={formValuePath == null ? "" : formValuePath}
                         isInvalid={invalid}
                         className="position-relative d-flex flex-grow-1"
@@ -976,12 +977,13 @@ export function FormErrorIcon<TFieldValues extends FieldValues>({
     iconClassName,
 }: FormErrorIconProps<TFieldValues>) {
     const { hasErrors, message } = useErrorMessage({ control, paths });
+    const { submitCount } = useFormState({ control });
 
     useEffect(() => {
         if (hasErrors) {
             onError?.();
         }
-    }, [hasErrors]);
+    }, [hasErrors, submitCount]);
 
     if (!hasErrors) {
         return null;

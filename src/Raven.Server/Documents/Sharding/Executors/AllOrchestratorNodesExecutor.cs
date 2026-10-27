@@ -96,6 +96,12 @@ public sealed class AllOrchestratorNodesExecutor : AbstractExecutor
 
     protected override Memory<int> GetAllPositions() => _state.FullRange;
 
+    protected override void ForgetAboutExecutors()
+    {
+        foreach (var executor in _current.Values)
+            executor.ForgetAbout();
+    }
+
     protected override void OnCertificateChange(object sender, EventArgs e)
     {
         UpdateExecutors(_clusterTopology, _record.Sharding.Orchestrator.Topology);

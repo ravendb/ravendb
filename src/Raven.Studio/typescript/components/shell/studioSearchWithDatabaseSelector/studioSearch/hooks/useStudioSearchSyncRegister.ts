@@ -57,7 +57,7 @@ export function useStudioSearchSyncRegister(props: UseStudioSearchSyncRegisterPa
                 window.open(appUrl.forDocumentsByDatabaseName(null, databaseName));
             }
             const db = databasesManager.default.getDatabaseByName(databaseName);
-            databasesManager.default.activate(db);
+            databasesManager.default.switchDatabase(db);
         },
         [resetDropdown, appUrl]
     );

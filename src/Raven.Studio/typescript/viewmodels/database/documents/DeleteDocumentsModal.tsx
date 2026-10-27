@@ -25,10 +25,10 @@ interface DeleteDocumentsModalProps {
     isAllDocuments: boolean;
     excludedIds: string[];
     selectedCount: number;
+    onDeleteStarted: () => void;
     onDeleteCompleted: () => void;
     onCollectionDeletionStarted: (collectionName: string) => void;
     onCollectionDeletionFailed: (collectionName: string) => void;
-    onEntireCollectionDeleted: (collectionName: string) => void;
 }
 
 export default function DeleteDocumentsModal({
@@ -38,10 +38,10 @@ export default function DeleteDocumentsModal({
     isAllDocuments,
     excludedIds,
     selectedCount,
+    onDeleteStarted,
     onDeleteCompleted,
     onCollectionDeletionStarted,
     onCollectionDeletionFailed,
-    onEntireCollectionDeleted,
 }: DeleteDocumentsModalProps) {
     // Note: wrapped in function to avoid type error (JQueryPromise<globalSettings>)
     const asyncGlobalSettings = useAsync(async () => await studioSettings.default.globalSettings(), []);
@@ -59,10 +59,10 @@ export default function DeleteDocumentsModal({
         isAllDocuments,
         excludedIds,
         selectedCount,
+        onDeleteStarted,
         onDeleteCompleted,
         onCollectionDeletionStarted,
         onCollectionDeletionFailed,
-        onEntireCollectionDeleted,
     });
 
     const onConfirm = () => {
@@ -133,10 +133,10 @@ function useDeleteCollection({
     isAllDocuments,
     excludedIds,
     selectedCount: documentCount,
+    onDeleteStarted,
     onDeleteCompleted,
     onCollectionDeletionStarted,
     onCollectionDeletionFailed,
-    onEntireCollectionDeleted,
 }: DeleteDocumentsModalProps) {
     const { databasesService } = useServices();
     const dbName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -153,6 +153,7 @@ function useDeleteCollection({
             .deleteCollection(collectionNameForApi, dbName, excludedIds)
             .done((result) => {
                 const operationId = result.OperationId;
+                onDeleteStarted();
 
                 if (isCollectionRemoval) {
                     onCollectionDeletionStarted(collectionName);
@@ -169,10 +170,6 @@ function useDeleteCollection({
                             messagePublisher.reportSuccess(
                                 `Deleted ${pluralizeHelpers.pluralize(documentCount, "document", "documents")} from ${collectionName}`
                             );
-                        }
-
-                        if (excludedIds.length === 0) {
-                            onEntireCollectionDeleted(collectionName);
                         }
                     })
                     .fail(() => {

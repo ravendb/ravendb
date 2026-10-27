@@ -30,11 +30,6 @@ public enum RavenServiceRequirement
     NpgSql = 1 << 2,
 
     /// <summary>
-    /// Test requires MongoDB database.
-    /// </summary>
-    MongoDB = 1 << 3,
-
-    /// <summary>
     /// Test requires ElasticSearch.
     /// </summary>
     ElasticSearch = 1 << 4,

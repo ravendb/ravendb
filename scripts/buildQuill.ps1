@@ -1,4 +1,4 @@
-$QUILL_PNPM_VERSION = "11.24.0"
+$QUILL_PNPM_VERSION = "12.11.2"
 
 $QUILL_RAVENDB_PROJECTS = @(
     "src/Raven.Server/Raven.Server.csproj",

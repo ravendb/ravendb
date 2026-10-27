@@ -50,7 +50,7 @@
             display: none !important;
         }
 
-        &:has(.studio-search__ask-ai-button) {
+        &:has(+ .studio-search__ask-ai-button) {
             .studio-search__input {
                 // Add extra padding to avoid overlap with Ask AI button
                 padding-right: 96px !important;

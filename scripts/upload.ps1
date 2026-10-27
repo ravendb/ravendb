@@ -4,6 +4,7 @@ $CATEGORIES = @(
 
     @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-windows-x64.Tools', "RavenDB Tools for Windows x64"),
     @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-windows-x86.Tools', "RavenDB Tools for Windows x86"),
+    @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-windows-arm64.Tools', "RavenDB Tools for Windows arm64"),
     @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-macos-x64.Tools', "RavenDB Tools for macOS x64"),
     @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-macos-arm64.Tools', "RavenDB Tools for macOS arm64"),
     @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-raspberry-pi.Tools', "RavenDB Tools for Raspberry Pi"),
@@ -12,6 +13,7 @@ $CATEGORIES = @(
 
     @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-windows-x64', "RavenDB for Windows x64"),
     @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-windows-x86', "RavenDB for Windows x86"),
+    @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-windows-arm64', "RavenDB for Windows arm64"),
     @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-macos-x64', "RavenDB for macOS x64"),
     @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-macos-arm64', "RavenDB for macOS arm64"),
     @('RavenDB-[0-9]\.[0-9]\.[0-9]+(-[a-zA-Z]+-([0-9-]+))?-raspberry-pi', "RavenDB for Raspberry Pi"),

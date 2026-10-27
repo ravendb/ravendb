@@ -103,6 +103,8 @@ class notificationCenter {
     
     includeInDom = ko.observable<boolean>(false); // to avoid RavenDB-10660
 
+    reactModalView = ko.observable<ReactInKnockout<any>>(null);
+
     globalNotifications = ko.observableArray<abstractNotification>();
     databaseNotifications = ko.observableArray<abstractNotification>();
 
@@ -658,7 +660,7 @@ class notificationCenter {
         if (!this.pinNotifications()) {
             return $(e.target).closest(".notification-center-container").length === 0
                 && $(e.target).closest("#notification-toggle").length === 0
-                && $(e.target).closest(".modal.in").length === 0;
+                && $(e.target).closest(".modal.in, .modal.show").length === 0;
         }
     }
 

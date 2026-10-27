@@ -5,42 +5,42 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { useAppSelector } from "components/store";
 import * as yup from "yup";
 
-interface UseDocumentColumnsProviderProps {
+interface CellDocumentValueProps {
     value: unknown;
     databaseName: string;
     hasHyperlinkForIds: boolean;
+    resolvePreviewValue?: () => Promise<unknown>;
 }
 
 export default function CellDocumentValue({
     value,
     databaseName,
     hasHyperlinkForIds,
-}: UseDocumentColumnsProviderProps) {
+    resolvePreviewValue,
+}: CellDocumentValueProps) {
     const { appUrl } = useAppUrls();
     const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
 
     const getLinkToDocument = (cellValue: unknown): string => {
-        if (typeof cellValue !== "string") {
+        if (typeof cellValue !== "string" || !externalIdRegex.test(cellValue)) {
             return null;
         }
 
-        if (cellValue.match(externalIdRegex)) {
-            const extractedCollectionName = cellValue.split("/")[0].toLowerCase();
-            const matchedCollection = allCollectionNames.find((collection) =>
-                extractedCollectionName.startsWith(collection.toLowerCase())
-            );
+        const extractedCollectionName = cellValue.split("/")[0].toLowerCase();
+        const matchedCollection = allCollectionNames.find((collection) =>
+            extractedCollectionName.startsWith(collection.toLowerCase())
+        );
 
-            return appUrl.forEditDoc(cellValue, databaseName, matchedCollection);
-        }
-
-        return null;
+        return matchedCollection ? appUrl.forEditDoc(cellValue, databaseName, matchedCollection) : null;
     };
 
     const documentLink = getLinkToDocument(value);
     if (hasHyperlinkForIds && documentLink) {
         return (
-            <CellWithCopy value={value}>
-                <a href={documentLink}>{String(value)}</a>
+            <CellWithCopy value={value} resolvePreviewValue={resolvePreviewValue}>
+                <a href={documentLink} className="cell-link">
+                    {String(value)}
+                </a>
             </CellWithCopy>
         );
     }
@@ -48,22 +48,28 @@ export default function CellDocumentValue({
     const url = getUrl(value);
     if (url) {
         return (
-            <CellWithCopy value={url}>
-                <a href={url}>{url}</a>
+            <CellWithCopy value={url} resolvePreviewValue={resolvePreviewValue}>
+                <a href={url} className="cell-link">
+                    {url}
+                </a>
             </CellWithCopy>
         );
     }
 
     return (
-        <CellWithCopy value={value}>
+        <CellWithCopy value={value} resolvePreviewValue={resolvePreviewValue}>
             <CellValue value={value} />
         </CellWithCopy>
     );
 }
 
-const externalIdRegex = /^\w+\/\w+/gi;
+const externalIdRegex = /^\w+\/\w+/;
 
 function getUrl(cellValue: unknown): string {
+    if (typeof cellValue !== "string" || !cellValue.includes("//")) {
+        return null;
+    }
+
     try {
         return yup.string().url().validateSync(cellValue);
     } catch (_) {

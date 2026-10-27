@@ -1,4 +1,4 @@
-﻿import shardViewModelBase = require("viewmodels/shardViewModelBase");
+import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import React = require("react");
 import database = require("models/resources/database");
 import reactViewModelUtils = require("common/reactViewModelUtils");
@@ -44,6 +44,7 @@ abstract class shardedReactViewModelBase extends shardViewModelBase {
             props,
             dirtyFlag,
             isPageView: true,
+            databaseName: this.db.name,
         }));
     }
 }

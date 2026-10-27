@@ -23,6 +23,7 @@ import { certificatesSelectors } from "components/pages/resources/manageServer/c
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import useCertificatePermissionsConfirm from "components/pages/resources/manageServer/certificates/utils/useCertificatePermissionsConfirm";
 import Modal from "components/common/Modal";
+import useUniqueId from "components/hooks/useUniqueId";
 
 type SecurityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 
@@ -31,6 +32,9 @@ export default function CertificatesCloneModal() {
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
     const permissionsConfirm = useCertificatePermissionsConfirm();
+    const titleId = useUniqueId("clone-certificate-title");
+
+    const close = () => dispatch(certificatesActions.cloneModalClosed());
 
     const downloadCertFormRef = useRef<HTMLFormElement>(null);
 
@@ -73,6 +77,7 @@ export default function CertificatesCloneModal() {
                 reset(formData);
                 dispatch(certificatesActions.fetchData());
                 dispatch(certificatesActions.cloneModalClosed());
+                dispatch(certificatesActions.isReadyModalOpenToggled());
             } catch {
                 notificationCenter.instance.openDetailsForOperationById(null, operationId);
             }
@@ -80,17 +85,22 @@ export default function CertificatesCloneModal() {
     };
 
     return (
-        <Modal show size="lg" centered contentClassName="modal-border bulge-primary">
+        <Modal
+            show
+            size="lg"
+            centered
+            contentClassName="modal-border bulge-primary"
+            backdrop="static"
+            onHide={close}
+            aria-labelledby={titleId}
+        >
             <FormProvider {...form}>
                 <form onSubmit={handleSubmit(handleClone)}>
-                    <Modal.Header
-                        className="vstack gap-4"
-                        onCloseClick={() => dispatch(certificatesActions.cloneModalClosed())}
-                    >
-                        <div className="text-center">
-                            <Icon icon="copy" className="fs-1" color="primary" margin="m-0" />
-                        </div>
-                        <div className="text-center lead">Clone client certificate</div>
+                    <Modal.Header className="pt-3 pb-0" onCloseClick={close}>
+                        <Icon icon="copy" size="lg" color="primary" margin="me-3" />
+                        <h3 id={titleId} className="mb-0">
+                            Clone client certificate
+                        </h3>
                     </Modal.Header>
                     <Modal.Body>
                         <FormGroup>
@@ -105,14 +115,11 @@ export default function CertificatesCloneModal() {
                         <CertificatesExpireField />
                         <hr />
                         <CertificatesPermissionsField />
+                        <hr />
                         <Certificates2FAField />
                     </Modal.Body>
                     <Modal.Footer>
-                        <Button
-                            variant="link"
-                            onClick={() => dispatch(certificatesActions.cloneModalClosed())}
-                            className="link-muted"
-                        >
+                        <Button variant="link" onClick={close} className="link-muted">
                             Cancel
                         </Button>
                         <ButtonWithSpinner

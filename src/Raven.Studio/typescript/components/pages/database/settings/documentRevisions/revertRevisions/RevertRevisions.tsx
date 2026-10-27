@@ -140,6 +140,7 @@ export default function RevertRevisions() {
                                                 options={timeWindowOptions}
                                                 isSearchable={false}
                                                 className="w-25"
+                                                classNames={{ menu: () => "time-window-select-menu" }}
                                             />
                                         }
                                     />

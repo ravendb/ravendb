@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using Sparrow.Extensions;
 using Sparrow.Server;
+using Voron;
 using Voron.Data.PostingLists;
 
 namespace Corax.Utils;
@@ -35,6 +36,7 @@ public sealed unsafe class Bm25Relevance : IDisposable
     private const int MaxSizeOfStorage = 1024 * 1024; //1MB;
     private const float BFactor = 0.25f;
     private const float K1 = 2f;
+    private const int GallopRatio = 32;
 
     /// <summary>
     /// This is L_c / Avl_c. This is ratio of current term length to whole collection under specific field.
@@ -127,18 +129,75 @@ public sealed unsafe class Bm25Relevance : IDisposable
 
         var innerItems = bm25.Matches;
         var frequencies = bm25.Scores;
+        var denominator = (1 - BFactor) + BFactor * bm25._termRatioToWholeCollection;
 
+        if (innerItems.Length < matches.Length)
+        {
+            var gallop = matches.Length <= GallopRatio * innerItems.Length;
+            var idOfMatch = 0;
+            for (int idX = 0; idX < innerItems.Length; ++idX)
+            {
+                idOfMatch = FindLowerBound(matches, idOfMatch, innerItems[idX], gallop);
+                if (idOfMatch == matches.Length)
+                    return;
+
+                if (matches[idOfMatch] != innerItems[idX])
+                    continue;
+
+                var weight = frequencies[idX] * boostFactor / denominator;
+                scores[idOfMatch] += bm25._idf * weight / (K1 + weight);
+            }
+
+            return;
+        }
+
+        var gallopInInner = innerItems.Length <= GallopRatio * matches.Length;
+        var idOfInner = 0;
         for (int idX = 0; idX < matches.Length; ++idX)
         {
-            var entryId = matches[idX];
-            var idOfInner = innerItems.BinarySearch(entryId);
+            idOfInner = FindLowerBound(innerItems, idOfInner, matches[idX], gallopInInner);
+            if (idOfInner == innerItems.Length)
+                return;
 
-            if (idOfInner < 0)
+            if (innerItems[idOfInner] != matches[idX])
                 continue;
 
-            var weight = frequencies[idOfInner] * boostFactor / ((1 - BFactor) + BFactor * bm25._termRatioToWholeCollection);
-            scores[idX] += bm25._idf * weight  / (K1 + weight);
+            var weight = frequencies[idOfInner] * boostFactor / denominator;
+            scores[idX] += bm25._idf * weight / (K1 + weight);
         }
+    }
+
+    private static int FindLowerBound(Span<long> items, int start, long value, bool gallop)
+    {
+        if (gallop == false)
+        {
+            var found = items[start..].BinarySearch(value);
+            return start + (found >= 0 ? found : ~found);
+        }
+
+        if (start == items.Length || items[start] >= value)
+            return start;
+
+        var low = start;
+        var step = 1;
+        while (low + step < items.Length && items[low + step] < value)
+        {
+            low += step;
+            step <<= 1;
+        }
+
+        var high = Math.Min(low + step, items.Length);
+        low++;
+        while (low < high)
+        {
+            var middle = (low + high) >>> 1;
+            if (items[middle] < value)
+                low = middle + 1;
+            else
+                high = middle;
+        }
+
+        return low;
     }
 
     /// <summary>
@@ -227,7 +286,7 @@ public sealed unsafe class Bm25Relevance : IDisposable
 
         return new Bm25Relevance(indexSearcher, termFrequency, context, numberOfDocuments, termRatioToWholeCollection, &PostingListCalculateScoreDynamically)
         {
-            _setIterator = postingList.Iterate()
+            _setIterator = new PostingList(indexSearcher._transaction.LowLevelTransaction, Slices.Empty, postingList.State).Iterate()
         };
     }
 }

@@ -51,7 +51,26 @@ namespace SlowTests.Issues
                 Assert.NotNull(replicationActiveConnections.OutgoingConnections);
                 Assert.Equal(expectedConnectionsCount, replicationActiveConnections.OutgoingConnections.Count);
 
-                var outgoingConnection = replicationActiveConnections.OutgoingConnections.Single();
+                Assert.All(replicationActiveConnections.IncomingConnections, incoming =>
+                {
+                    Assert.NotNull(incoming.Connection.SourceDatabaseId);
+                    Assert.NotEqual(Guid.Empty, Guid.Parse(incoming.Connection.SourceDatabaseId));
+                    Assert.Null(incoming.ChangeVectorWireMode);
+                    Assert.Null(incoming.PullReplicationMode);
+                    Assert.Null(incoming.PullReplicationDefinitionName);
+                });
+
+                if (options.DatabaseMode == RavenDatabaseMode.Single)
+                {
+                    var sourceDatabase = await Databases.GetDocumentDatabaseInstanceFor(store2);
+                    Assert.Equal(sourceDatabase.DbId.ToString(), Assert.Single(replicationActiveConnections.IncomingConnections).Connection.SourceDatabaseId);
+                }
+
+                var outgoing = replicationActiveConnections.OutgoingConnections.Single();
+                Assert.Null(outgoing.ChangeVectorWireMode);
+                Assert.Null(outgoing.PullReplicationMode);
+                Assert.Null(outgoing.PullReplicationDefinitionName);
+                var outgoingConnection = outgoing.Connection;
 
                 Assert.True(outgoingConnection is ExternalReplication);
                 Assert.Equal(TimeSpan.Zero, ((ExternalReplication)outgoingConnection)!.DelayReplicationFor);

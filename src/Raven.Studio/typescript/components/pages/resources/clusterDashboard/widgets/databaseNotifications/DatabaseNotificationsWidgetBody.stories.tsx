@@ -12,7 +12,7 @@ export default {
 } satisfies Meta;
 
 export const Default = {
-    render: () => {
+    render: function DatabaseNotificationsWidgetBodyExample() {
         const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
         const [flatItems, setFlatItems] = useState(initialFlatItems);
 

@@ -77,7 +77,11 @@
                     </button>
                 </div>
             </div>
-            <pre class="margin-top compact-messages" data-bind="visible: detailsVisible"><code data-bind="foreach: messages"><span data-bind="text: '\n' + $data"></span></code></pre>
+            <div class="d-flex margin-top" data-bind="visible: operationFailed">
+                <div class="flex-grow"></div>
+                <button type="button" class="btn btn-default btn-sm" data-bind="click: copyErrorDetails"><i class="icon-copy-to-clipboard"></i><span>Copy error message</span></button>
+            </div>
+            <pre class="compact-messages" data-bind="visible: detailsVisible, css: { 'margin-top': !operationFailed() }"><code data-bind="foreach: messages"><span data-bind="text: '\n' + $data"></span></code></pre>
             <div class="toggle margin-top margin-top-sm" data-bind="visible: detailsVisible() && !operationFailed()">
                 <input id="smuggler-monitoring" type="checkbox" data-bind="checked: tail, disable: op.isCompleted">
                 <label for="smuggler-monitoring">

@@ -546,6 +546,7 @@ namespace Corax.Querying.Matches
             //We've to gather all data from already seen TermMatches to get proper ranking :)
             for (int idX = 0; idX < _currentFreqIdx; ++idX)
             {
+                _token.ThrowIfCancellationRequested();
                 ref var currentRelevance = ref _frequenciesHolder[idX];
                 currentRelevance.Score(matches, scores, boostFactor);
                 currentRelevance.Dispose();
