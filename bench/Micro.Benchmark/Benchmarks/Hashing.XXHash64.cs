@@ -27,7 +27,7 @@ namespace Micro.Benchmark.Benchmarks
             {
                 AddJob(new Job
                 {
-                    Environment = { Runtime = CoreRuntime.Core10_0, Platform = Platform.X64, Jit = Jit.RyuJit, },
+                    Environment = { Runtime = CoreRuntime.CreateForNewVersion("net11.0", ".NET 11.0"), Platform = Platform.X64, Jit = Jit.RyuJit, },
                 });
 
                 // Exporters for data

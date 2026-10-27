@@ -25,7 +25,7 @@ namespace Micro.Benchmark.Benchmarks
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core10_0,
+                        Runtime = CoreRuntime.CreateForNewVersion("net11.0", ".NET 11.0"),
                         Platform = Platform.X64,
                         Jit = Jit.Default,
                     }
