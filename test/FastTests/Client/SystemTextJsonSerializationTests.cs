@@ -365,6 +365,55 @@ namespace FastTests.Client
             }
         }
 
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task CanLoadDocumentWhoseJsonIsMuchLargerThanItsBlittable()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.Serialization = new SystemTextJsonSerializationConventions();
+                }
+            });
+
+            var shipment = new Shipment
+            {
+                Id = "shipments/1",
+                Items = Enumerable.Range(0, 500)
+                    .Select(i => new ShipmentItem { CustomerReferenceNumber = i, WarehouseLocationCode = i * 2, IsAwaitingBackorder = i % 2 == 0 })
+                    .ToList()
+            };
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(shipment);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var loaded = await session.LoadAsync<Shipment>("shipments/1");
+                Assert.NotNull(loaded);
+                Assert.Equal(500, loaded.Items.Count);
+                Assert.Equal(499, loaded.Items[499].CustomerReferenceNumber);
+                Assert.Equal(998, loaded.Items[499].WarehouseLocationCode);
+                Assert.False(loaded.Items[499].IsAwaitingBackorder);
+            }
+        }
+
+        private class Shipment
+        {
+            public string Id { get; set; }
+            public List<ShipmentItem> Items { get; set; }
+        }
+
+        private class ShipmentItem
+        {
+            public int CustomerReferenceNumber { get; set; }
+            public int WarehouseLocationCode { get; set; }
+            public bool IsAwaitingBackorder { get; set; }
+        }
+
         private class User
         {
             public string Id { get; set; }
