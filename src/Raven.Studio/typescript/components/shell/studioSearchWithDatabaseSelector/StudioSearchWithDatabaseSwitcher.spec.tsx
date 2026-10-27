@@ -6,12 +6,15 @@ import { mockServices } from "test/mocks/services/MockServices";
 import { globalDispatch } from "components/storeCompat";
 import { databaseActions } from "components/common/shell/databaseSliceActions";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import generateMenuItems from "common/shell/menu/generateMenuItems";
 
 const { DefaultStory } = composeStories(stories);
 
 const searchPlaceholder = "Use Ctrl + K to search";
 
 describe("StudioSearchWithDatabaseSwitcher", function () {
+    beforeAll(loadMenuItemModules);
+
     it("can render", async () => {
         const { screen } = rtlRender(<DefaultStory hasMenuItems={false} isDatabaseSelected={false} />);
 
@@ -76,6 +79,10 @@ describe("StudioSearchWithDatabaseSwitcher", function () {
         expect(getStats).toHaveBeenCalledTimes(statsCallsCount);
     });
 });
+
+function loadMenuItemModules() {
+    generateMenuItems({ db: "db", isSharded: true, isWhatsNewVisible: false });
+}
 
 async function searchFor({ screen, user, fillInput }: ReturnType<typeof rtlRender>, query: string) {
     const input = await screen.findByPlaceholderText(searchPlaceholder);
