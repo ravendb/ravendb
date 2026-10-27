@@ -113,6 +113,31 @@ class Test
             Assert.Contains("'Any' over 'x.Members'", diagnostic.GetMessage());
         }
 
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData("session.Query<Project>(collectionName: \"Projects\")", 1)]
+        [InlineData("session.Query<Project>(null, \"Projects\")", 1)]
+        [InlineData("session.Query<Project>(indexName: null, collectionName: \"Projects\")", 1)]
+        [InlineData("session.Query<Project>(\"Projects/ByMember\", \"Projects\")", 0)]
+        [InlineData("session.Query<Project>(indexName: \"Projects/ByMember\")", 0)]
+        public async Task ExplicitCollectionName_Is_Still_Dynamic(string query, int expected)
+        {
+            string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string id)
+    {
+        var projects = " + query + @"
+            .Where(x => x.Members.Any(y => y.UserId == id && y.Role == Role.Contributor))
+            .ToList();
+    }
+}
+" + Model;
+
+            var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryCorrelatedCollectionConditionsAnalyzer>(source);
+
+            Assert.Equal(expected, diagnostics.Length);
+        }
+
         [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ThreeConjunctsWithOneUnrelated_Reports_Diagnostic()
         {

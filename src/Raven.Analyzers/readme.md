@@ -876,7 +876,7 @@ var projects = session.Query<Project>()
 - a single condition on the element: `p.Members.Any(m => m.UserId == userId)`;
 - conditions joined with `||`, which match the same way with or without flattening;
 - separate `Any` calls, which state the uncorrelated matching explicitly: `p.Members.Any(m => m.UserId == userId) && p.Members.Any(m => m.Role == Role.Contributor)`;
-- queries over a static index (`session.Query<T, TIndex>()` or an index name), where RVN014 covers the fan-out on the index side;
+- queries over a static index (`session.Query<T, TIndex>()` or an index name), where RVN014 covers the fan-out on the index side; a query that only names the collection (`session.Query<T>(collectionName: "Orders")`) is still dynamic and is checked;
 - `Any`/`All` over something that is not a collection member of the document.
 
 **Note:** Only LINQ queries via `session.Query<T>()` are detected. The low-level `session.Advanced.DocumentQuery<T>()` API is not covered.

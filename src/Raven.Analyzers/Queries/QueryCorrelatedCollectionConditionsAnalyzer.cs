@@ -84,10 +84,22 @@ namespace Raven.Analyzers.Queries
                 if (!QueryIndexResolver.IsSessionQueryCall(chainCall, model))
                     continue;
 
-                if (SyntaxHelpers.GetMethodSymbol(chainCall, model) is not { TypeArguments.Length: 1 })
+                if (SyntaxHelpers.GetMethodSymbol(chainCall, model) is not { TypeArguments.Length: 1 } method)
                     return false;
 
-                return chainCall.ArgumentList.Arguments.All(a => a.Expression.IsKind(SyntaxKind.NullLiteralExpression));
+                for (int i = 0; i < chainCall.ArgumentList.Arguments.Count; i++)
+                {
+                    ArgumentSyntax argument = chainCall.ArgumentList.Arguments[i];
+                    string? parameterName = argument.NameColon?.Name.Identifier.ValueText
+                                            ?? (i < method.Parameters.Length ? method.Parameters[i].Name : null);
+                    if (parameterName == "collectionName")
+                        continue;
+
+                    if (!argument.Expression.IsKind(SyntaxKind.NullLiteralExpression))
+                        return false;
+                }
+
+                return true;
             }
 
             return false;
