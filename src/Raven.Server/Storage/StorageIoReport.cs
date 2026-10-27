@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Server.Meters;
+using Sparrow.Server.Platform;
 using Voron;
 using Voron.Impl.Journal;
 
@@ -14,6 +15,8 @@ namespace Raven.Server.Storage
     /// </summary>
     public sealed class StorageIoReport
     {
+        public StorageWriteModeInfo WriteMode { get; set; }
+
         public List<StorageDeviceIoInfo> Devices { get; set; }
 
         public List<StorageEnvironmentIoInfo> Environments { get; set; }
@@ -25,6 +28,13 @@ namespace Raven.Server.Storage
             CongestionThresholds thresholds = monitor.Thresholds;
             var report = new StorageIoReport
             {
+                WriteMode = new StorageWriteModeInfo
+                {
+                    Effective = PalConfiguration.WriteMode,
+                    Configured = PalConfiguration.RequestedWriteMode,
+                    IoRingQueueSize = PalConfiguration.IoRingQueueSize,
+                    LowPriorityIo = PalConfiguration.LowPriorityIo
+                },
                 Devices = new List<StorageDeviceIoInfo>(),
                 Environments = new List<StorageEnvironmentIoInfo>(),
                 SharedJournals = new List<SharedJournalsIoInfo>()
@@ -50,6 +60,19 @@ namespace Raven.Server.Storage
 
             return report;
         }
+    }
+
+    // how data files are written, decided once per process when the PAL starts. Auto uses IoRing when it can be set up,
+    // otherwise VectoredFileIo on Linux and FileIo on Windows.
+    public sealed class StorageWriteModeInfo
+    {
+        public Pal.RvnWriteMode Effective { get; set; }
+
+        public Pal.RvnWriteMode Configured { get; set; }
+
+        public int IoRingQueueSize { get; set; }
+
+        public bool LowPriorityIo { get; set; }
     }
 
     public sealed class StorageDeviceIoInfo

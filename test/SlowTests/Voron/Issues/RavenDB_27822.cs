@@ -9,6 +9,7 @@ using Raven.Server.Extensions;
 using Raven.Server.Storage;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server.Meters;
+using Sparrow.Server.Platform;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Impl.Journal;
@@ -51,6 +52,10 @@ public class RavenDB_27822 : RavenTestBase
         Assert.NotNull(documents.Sync.LastAt);
 
         Assert.Contains(report.Environments, x => x.Database == null && x.Type == StorageEnvironmentWithType.StorageEnvironmentType.System);
+
+        // Auto is always resolved by the time the server runs
+        Assert.NotEqual(Pal.RvnWriteMode.Auto, report.WriteMode.Effective);
+        Assert.Equal(PalConfiguration.WriteMode, report.WriteMode.Effective);
 
         if (documents.DeviceId != null) // null when the platform cannot identify the device
             Assert.Contains(report.Devices, x => x.DeviceId == documents.DeviceId);

@@ -11,6 +11,9 @@ import {
     storageStatusHelp,
     storageStatusLabel,
     storageTermHelp,
+    writeModeHelp,
+    writeModeLabel,
+    writeModeTermHelp,
 } from "common/storageIoTerms";
 import {
     formatBytes,
@@ -93,6 +96,15 @@ export default function StorageIoPerNode({ summary, nodeTag }: StorageIoPerNodeP
                     )}
                 </tbody>
             </Table>
+            <div className="small" title={writeModeTermHelp}>
+                Data file writes:{" "}
+                {nodes.map((node, i) => (
+                    <React.Fragment key={node.nodeTag}>
+                        {i > 0 && ", "}
+                        {node.nodeTag} <WriteMode writeMode={node.info.WriteMode} />
+                    </React.Fragment>
+                ))}
+            </div>
             {derived && (
                 <div className="small text-muted">
                     Nodes without the storage I/O state in the package (older versions): status derived from the
@@ -235,6 +247,21 @@ function DeviceRow({ nodeTag, device }: { nodeTag: string; device: StorageIoDevi
             <td>{formatMs(device.SyncCostInMs)}</td>
             <td title={device.ClassDescription ?? deviceClassHelp[device.Class]}>{device.Class}</td>
         </tr>
+    );
+}
+
+function WriteMode({ writeMode }: { writeMode: Raven.Server.Storage.StorageWriteModeInfo }) {
+    if (!writeMode) {
+        return <NotInPackage />;
+    }
+
+    const { Effective, Configured } = writeMode;
+    const expected = Configured === Effective || (Configured === "Auto" && Effective === "IoRing");
+    return (
+        <strong title={writeModeHelp[Effective]}>
+            {writeModeLabel[Effective]}
+            {!expected && <span className="fw-normal text-muted"> (configured {writeModeLabel[Configured]})</span>}
+        </strong>
     );
 }
 

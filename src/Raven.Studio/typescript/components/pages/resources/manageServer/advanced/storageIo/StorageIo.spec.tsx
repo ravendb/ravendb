@@ -21,6 +21,9 @@ describe("StorageIo", function () {
         // the index that left the shared journal
         expect(screen.getByText(/Writing their own journals/)).toBeInTheDocument();
         expect(screen.getByText(/Orders\/Totals \(/)).toBeInTheDocument();
+
+        expect(screen.getByText("Vectored file I/O")).toBeInTheDocument();
+        expect(screen.getByText(/I\/O ring could not be set up when the server started/)).toBeInTheDocument();
     });
 
     it("shows a healthy disk in plain words", async () => {
@@ -29,5 +32,7 @@ describe("StorageIo", function () {
         expect(await screen.findByText("OK")).toBeInTheDocument();
         expect(screen.getByText("Normal (trickle)")).toBeInTheDocument();
         expect(screen.queryByText(/Slow writes in the last hour/)).not.toBeInTheDocument();
+        expect(screen.getByText("I/O ring")).toBeInTheDocument();
+        expect(screen.queryByText(/I\/O ring could not be set up/)).not.toBeInTheDocument();
     });
 });
