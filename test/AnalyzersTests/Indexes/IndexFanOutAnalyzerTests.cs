@@ -101,6 +101,59 @@ class Item { public string Value { get; set; } }
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task TimeSeriesMap_EntriesExpansion_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+using Raven.Client.Documents.Indexes.TimeSeries;
+
+class HeartRates : AbstractMultiMapTimeSeriesIndexCreationTask
+{
+    public HeartRates()
+    {
+        AddMap<Patient>(""HeartRates"", timeSeries =>
+            from ts in timeSeries
+            from entry in ts.Entries
+            select new { entry.Value, ts.DocumentId });
+    }
+}
+
+class Patient { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexFanOutAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task TimeSeriesMap_SecondNestedFrom_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+using Raven.Client.Documents.Indexes.TimeSeries;
+
+class HeartRates : AbstractMultiMapTimeSeriesIndexCreationTask
+{
+    public HeartRates()
+    {
+        AddMap<Patient>(""HeartRates"", timeSeries =>
+            from ts in timeSeries
+            from entry in ts.Entries
+            from value in entry.Values
+            select new { value, ts.DocumentId });
+    }
+}
+
+class Patient { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexFanOutAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal("from", d.Location.SourceTree!.GetText().ToString(d.Location.SourceSpan));
+            Assert.True(d.Location.SourceSpan.Start > source.IndexOf("ts.Entries", System.StringComparison.Ordinal));
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task AddMap_WithSelectMany_Reports_Diagnostic()
         {
             const string source = CommonUsings + @"

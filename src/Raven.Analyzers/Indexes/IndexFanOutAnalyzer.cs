@@ -95,6 +95,9 @@ namespace Raven.Analyzers.Indexes
                         if (clause is not FromClauseSyntax fromClause)
                             continue;
 
+                        if (IsTimeSeriesEntriesExpansion(fromClause.Expression, context.SemanticModel))
+                            continue;
+
                         // Use a stable token ("nested from") rather than the collection expression so the
                         // message reads consistently with the method-chain case ("fans out via 'SelectMany'").
                         context.ReportDiagnostic(Diagnostic.Create(
@@ -104,6 +107,15 @@ namespace Raven.Analyzers.Indexes
                     }
                 }
             }
+        }
+
+        private static bool IsTimeSeriesEntriesExpansion(ExpressionSyntax source, SemanticModel model)
+        {
+            if (source is not MemberAccessExpressionSyntax { Name.Identifier.ValueText: KnownTypes.TimeSeriesSegmentEntriesName } memberAccess)
+                return false;
+
+            ITypeSymbol? receiverType = model.GetTypeInfo(memberAccess.Expression).Type;
+            return receiverType is { Name: KnownTypes.TimeSeriesSegmentName } && SyntaxHelpers.IsInRavenClientNamespace(receiverType);
         }
     }
 }

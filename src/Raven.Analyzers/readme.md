@@ -820,7 +820,7 @@ class DocumentIndex : AbstractIndexCreationTask<Document>
 }
 ```
 
-**Not flagged:** Normal `Select`, `Where`, `OrderBy`, and other LINQ operators that do not iterate over a collection.
+**Not flagged:** Normal `Select`, `Where`, `OrderBy`, and other LINQ operators that do not iterate over a collection. In a time-series index the standard `from entry in segment.Entries` expansion is the unit of work of every such map and is not reported; a further nested `from` over the entry (for example its `Values`) is.
 
 **Note:** Block-body lambdas are not analyzed. RavenDB index Maps almost always use expression-body lambdas.
 

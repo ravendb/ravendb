@@ -130,6 +130,8 @@ namespace Raven.Analyzers
         public const string AbstractGenericIndexCreationTaskName = "AbstractGenericIndexCreationTask";
         public const string AbstractMultiMapIndexCreationTaskName = "AbstractMultiMapIndexCreationTask";
         public const string AbstractMultiMapTimeSeriesIndexCreationTaskName = "AbstractMultiMapTimeSeriesIndexCreationTask";
+        public const string TimeSeriesSegmentName = "TimeSeriesSegment";
+        public const string TimeSeriesSegmentEntriesName = "Entries";
         public const string AbstractMultiMapCountersIndexCreationTaskName = "AbstractMultiMapCountersIndexCreationTask";
         public const string AbstractGenericTimeSeriesIndexCreationTaskName = "AbstractGenericTimeSeriesIndexCreationTask";
         public const string AbstractGenericCountersIndexCreationTaskName = "AbstractGenericCountersIndexCreationTask";
