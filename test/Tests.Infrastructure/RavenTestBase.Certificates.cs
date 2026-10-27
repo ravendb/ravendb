@@ -330,7 +330,17 @@ public partial class RavenTestBase
 
         public X509Certificate2 CreateSsoUserCertificate(SsoTestCertificates ssoCerts, string ssoUserId, SsoProvider provider = SsoProvider.Github, string domain = null)
         {
-            return CreateSsoUserCertificateCore(ssoCerts.SsoServerCert.SubjectName, (RSA)ssoCerts.SsoServerPrivateKey, ssoUserId, provider, domain);
+            return CreateSsoUserCertificateCore(ssoCerts.SsoServerCert.SubjectName, (RSA)ssoCerts.SsoServerPrivateKey, ssoUserId, provider, domain, embeddedSsoServerCert: null);
+        }
+
+        /// <summary>
+        /// Creates an SSO user certificate signed by <paramref name="issuerKey"/> that embeds <paramref name="embeddedSsoServerCert"/>
+        /// in the server certificate extension, the way the SSO server does in production.
+        /// </summary>
+        public X509Certificate2 CreateSsoUserCertificateWithEmbeddedSsoServerCert(X509Certificate2 embeddedSsoServerCert, RSA issuerKey, string ssoUserId,
+            SsoProvider provider = SsoProvider.Github, string domain = null)
+        {
+            return CreateSsoUserCertificateCore(embeddedSsoServerCert.SubjectName, issuerKey, ssoUserId, provider, domain, embeddedSsoServerCert);
         }
 
         /// <summary>
@@ -355,10 +365,11 @@ public partial class RavenTestBase
                 subjectPrivateKey: rogueCaKey,
                 with2Eku: false);
 
-            return CreateSsoUserCertificateCore(rogueCaSubject, rogueCaKey, ssoUserId, provider, domain);
+            return CreateSsoUserCertificateCore(rogueCaSubject, rogueCaKey, ssoUserId, provider, domain, embeddedSsoServerCert: null);
         }
 
-        private X509Certificate2 CreateSsoUserCertificateCore(X500DistinguishedName issuerName, RSA issuerKey, string ssoUserId, SsoProvider provider, string domain)
+        private X509Certificate2 CreateSsoUserCertificateCore(X500DistinguishedName issuerName, RSA issuerKey, string ssoUserId, SsoProvider provider, string domain,
+            X509Certificate2 embeddedSsoServerCert)
         {
             const string ssoUserIdExtensionOid = Raven.Client.Constants.Certificates.SsoUserIdExtensionOid;
 
@@ -379,6 +390,9 @@ public partial class RavenTestBase
             var asnWriter = new AsnWriter(AsnEncodingRules.DER);
             asnWriter.WriteCharacterString(UniversalTagNumber.UTF8String, jsonPayload);
             request.CertificateExtensions.Add(new X509Extension(new Oid(ssoUserIdExtensionOid), asnWriter.Encode(), false));
+
+            if (embeddedSsoServerCert != null)
+                request.CertificateExtensions.Add(new X509Extension(new Oid(Raven.Client.Constants.Certificates.ServerCertExtensionOid), embeddedSsoServerCert.Export(X509ContentType.Cert), false));
 
             byte[] serialNumber = new byte[20];
             using (var rng = RandomNumberGenerator.Create())

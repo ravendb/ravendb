@@ -1,0 +1,24 @@
+{
+    "pickDocument": "Wybierz dokument z konfliktem do rozwiązania",
+    "resolvingConflictFor": "Rozwiązywanie konfliktu dla: {{documentId}}",
+    "showDetails": "Pokaż szczegóły",
+    "hideDetails": "Ukryj szczegóły",
+    "useThis": "Użyj tego",
+    "useThisTitle": "Kliknij, aby rozwiązać konflikt tym dokumentem",
+    "copyDocumentTitle": "Kopiuj dokument",
+    "documentSize": "Rozmiar dokumentu",
+    "documentSizeUnknown": "nie można obliczyć",
+    "changeVector": "Change vector:",
+    "documentRemoved": "Dokument został usunięty.",
+    "resolveAndSave": "Rozwiąż i zapisz",
+    "noConflicts": "Nie znaleziono konfliktów.",
+    "documentCopied": "Dokument został skopiowany do schowka",
+    "conflictMarkersPresent": "Dokument zawiera znaczniki konfliktu",
+    "documentNotFound": "Nie znaleziono dokumentu z konfliktem: {{documentId}}. Być może konflikt został już rozwiązany?",
+    "loadFailed": "Nie udało się wczytać konfliktu!",
+    "columns": {
+        "document": "Dokument",
+        "conflictsPerDocument": "Liczba konfliktów w dokumencie",
+        "lastModified": "Ostatnia modyfikacja"
+    }
+}

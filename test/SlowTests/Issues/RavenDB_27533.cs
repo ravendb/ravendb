@@ -3,6 +3,7 @@ using FastTests.Voron;
 using Tests.Infrastructure;
 using Voron.Data;
 using Voron.Data.Lookups;
+using Voron.Global;
 using Xunit;
 
 namespace SlowTests.Issues;
@@ -346,9 +347,182 @@ public class RavenDB_27533(ITestOutputHelper output) : StorageTest(output)
         }
     }
 
+    [RavenFact(RavenTestCategory.Voron)]
+    public unsafe void BranchesThatOweDifferentLevelsMustNotMerge()
+    {
+        using (var tx = Env.WriteTransaction())
+        {
+            var lookup = tx.LookupFor<Int64LookupKey>("entries");
+            var (b1, b2) = GrowFiveBranchesAndDrainTheThirdOne(lookup);
+            long rootPage = lookup.State.RootPage;
+            int rootChildren = lookup.AllEntriesIn(rootPage).Count;
+
+            // pretend a collapse left the second branch one level shallower than its siblings
+            ((LookupPageHeader*)lookup.Llt.ModifyPage(b1).Pointer)->CollapsedLevels = 1;
+
+            // drain it until it is small enough to merge with the half empty branch to its right
+            while (CouldMerge(lookup, b1, b2) == false)
+            {
+                Assert.True(lookup.AllEntriesIn(b1).Count > 10, "the marked branch never became small enough to merge with its sibling");
+                RemoveLastLeaf(lookup, b1);
+            }
+
+            // and then some more, every removal gives the merge a chance, the different heights must refuse it
+            for (int i = 0; i < 5; i++)
+            {
+                RemoveLastLeaf(lookup, b1);
+
+                var root = lookup.AllEntriesIn(rootPage);
+                Assert.Equal(rootChildren, root.Count);
+                Assert.Equal(b1, root[1].Item2);
+                Assert.Equal(b2, root[2].Item2);
+            }
+
+            Assert.Equal(1, HeaderOf(lookup, b1)->CollapsedLevels);
+            Assert.Equal(0, HeaderOf(lookup, b2)->CollapsedLevels);
+            lookup.VerifyStructure();
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public unsafe void BranchesThatOweTheSameLevelsMergeWhenBothAreHalfEmpty()
+    {
+        // the same shape as above, without it the test above could pass because nothing could ever merge
+        using (var tx = Env.WriteTransaction())
+        {
+            var lookup = tx.LookupFor<Int64LookupKey>("entries");
+            var (b1, b2) = GrowFiveBranchesAndDrainTheThirdOne(lookup);
+            long rootPage = lookup.State.RootPage;
+            int rootChildren = lookup.AllEntriesIn(rootPage).Count;
+
+            ((LookupPageHeader*)lookup.Llt.ModifyPage(b1).Pointer)->CollapsedLevels = 1;
+            ((LookupPageHeader*)lookup.Llt.ModifyPage(b2).Pointer)->CollapsedLevels = 1;
+
+            while (lookup.AllEntriesIn(rootPage).Count == rootChildren)
+            {
+                Assert.True(lookup.AllEntriesIn(b1).Count > 10, "the branches never merged");
+                RemoveLastLeaf(lookup, b1);
+            }
+
+            var root = lookup.AllEntriesIn(rootPage);
+            Assert.Equal(rootChildren - 1, root.Count);
+            Assert.Equal(b1, root[1].Item2);
+            Assert.NotEqual(b2, root[2].Item2);
+            Assert.Equal(1, HeaderOf(lookup, b1)->CollapsedLevels);
+            lookup.VerifyStructure();
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public unsafe void CollapsingABranchThatOwesALevelMustPassItToItsChild()
+    {
+        const long stride = 1L << 40;
+
+        using (var tx = Env.WriteTransaction())
+        {
+            var lookup = tx.LookupFor<Int64LookupKey>("entries");
+
+            long next = stride;
+            while (lookup.State.BranchPages < 3)
+            {
+                lookup.Add(next, next);
+                next += stride;
+            }
+
+            // collapse the newest branch into a leaf, re-adding splits the full leaf and wraps it:
+            // Root = [B1, W], W = [leaf, leaf]
+            next -= stride;
+            Assert.True(lookup.TryRemove(next, out _));
+            lookup.Add(next, next);
+            next += stride;
+
+            long rootPage = lookup.State.RootPage;
+            long wPage = lookup.AllEntriesIn(rootPage)[1].Item2;
+            Assert.Equal(new[] { Leaf, Leaf }, ChildPageFlags(lookup, wPage));
+
+            // pretend W is one level shallower than its sibling B1, then empty its newest leaf: W is down to one
+            // child and collapses into it, which now sits two levels above the leaves under B1
+            ((LookupPageHeader*)lookup.Llt.ModifyPage(wPage).Pointer)->CollapsedLevels = 1;
+            long newestLeaf = lookup.AllEntriesIn(wPage)[1].Item2;
+            foreach (var (key, _) in lookup.AllEntriesIn(newestLeaf))
+                Assert.True(lookup.TryRemove(key.ToLong(), out _));
+
+            Assert.Equal(2, lookup.State.BranchPages);
+            Assert.Equal(new[] { Branch, TwiceCollapsedLeaf }, RootChildPageFlags(lookup));
+            Assert.Equal(wPage, lookup.AllEntriesIn(rootPage)[1].Item2);
+            lookup.VerifyStructure();
+
+            // the leaf is full, so the next add splits it, which wraps it and pays one of the two levels back
+            while (lookup.State.BranchPages < 3)
+            {
+                lookup.Add(next, next);
+                next += stride;
+            }
+
+            Assert.Equal(new[] { Branch, CollapsedBranch }, RootChildPageFlags(lookup));
+            Assert.Equal(wPage, lookup.AllEntriesIn(rootPage)[1].Item2);
+            Assert.Equal(new[] { Leaf, Leaf }, ChildPageFlags(lookup, wPage));
+            Assert.True(lookup.TryGetValue(next - stride, out long value));
+            Assert.Equal(next - stride, value);
+            lookup.VerifyStructure();
+        }
+    }
+
+    /// <summary>
+    /// Grows the tree until its root has five branches B0..B4 (B4 only just created), then removes the leaves of B2
+    /// from the right until it is down to 150 children. B2 is not an edge page, and its right sibling B3 is full,
+    /// so draining B2 never merges it with anything. Returns B1 and B2.
+    /// </summary>
+    private static (long B1, long B2) GrowFiveBranchesAndDrainTheThirdOne(Lookup<Int64LookupKey> lookup)
+    {
+        const long stride = 1L << 40;
+
+        long next = stride;
+        while (lookup.State.BranchPages < 6)
+        {
+            lookup.Add(next, next);
+            next += stride;
+        }
+
+        long rootPage = lookup.State.RootPage;
+        var children = lookup.AllEntriesIn(rootPage);
+        Assert.Equal(5, children.Count);
+        long b1 = children[1].Item2, b2 = children[2].Item2;
+
+        while (lookup.AllEntriesIn(b2).Count > 150)
+            RemoveLastLeaf(lookup, b2);
+
+        Assert.Equal(5, lookup.AllEntriesIn(rootPage).Count);
+        return (b1, b2);
+    }
+
+    private static void RemoveLastLeaf(Lookup<Int64LookupKey> lookup, long branchPage)
+    {
+        long leaf = lookup.AllEntriesIn(branchPage)[^1].Item2;
+        foreach (var (key, _) in lookup.AllEntriesIn(leaf))
+            Assert.True(lookup.TryRemove(key.ToLong(), out _));
+    }
+
+    /// <summary>
+    /// Whether removing from the destination branch attempts to merge the source branch into it: only a branch that
+    /// is less than half full tries, and only when both fit in one page.
+    /// </summary>
+    private static unsafe bool CouldMerge(Lookup<Int64LookupKey> lookup, long destination, long source)
+    {
+        int freeDestination = HeaderOf(lookup, destination)->FreeSpace;
+        int freeSource = HeaderOf(lookup, source)->FreeSpace;
+        return freeDestination > Constants.Storage.PageSize / 2 && freeDestination + freeSource > Constants.Storage.PageSize;
+    }
+
+    private static unsafe LookupPageHeader* HeaderOf(Lookup<Int64LookupKey> lookup, long pageNumber)
+    {
+        return (LookupPageHeader*)lookup.Llt.GetPage(pageNumber).Pointer;
+    }
+
     private const LookupPageFlags Branch = LookupPageFlags.Branch;
     private const LookupPageFlags Leaf = LookupPageFlags.Leaf;
     private static readonly LookupPageFlags CollapsedLeaf = PageCollapsedLevels.Set(LookupPageFlags.Leaf, 1);
+    private static readonly LookupPageFlags TwiceCollapsedLeaf = PageCollapsedLevels.Set(LookupPageFlags.Leaf, 2);
     private static readonly LookupPageFlags CollapsedBranch = PageCollapsedLevels.Set(LookupPageFlags.Branch, 1);
 
     private static LookupPageFlags[] RootChildPageFlags(Lookup<Int64LookupKey> lookup)

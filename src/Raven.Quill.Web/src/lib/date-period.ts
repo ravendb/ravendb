@@ -1,3 +1,4 @@
+import { UTCDate } from "@date-fns/utc";
 import { addDays, addMonths, format, getDaysInMonth, isBefore, max, min, startOfDay, startOfMonth } from "date-fns";
 
 // A hierarchical date period: a whole year, a whole month, or a single day.
@@ -104,6 +105,37 @@ export function datePeriodUnit(period: DatePeriod): "day" | "month" | "year" {
     return "year";
 }
 
+// Usage is bucketed and billed by UTC calendar periods, so bucket timestamps are read
+// as UTC instead of being shifted into the browser's zone. That also keeps date-only
+// labels ("2026-09-01", which JS parses as UTC midnight) on their own day.
+function parseBucketDate(bucketStart: string): UTCDate {
+    return new UTCDate(bucketStart);
+}
+
+// Chart bucket label at the period's granularity: months of a year, days of a month,
+// or hours of a day.
+export function formatBucketLabel(bucketStart: string, period: DatePeriod): string {
+    return format(parseBucketDate(bucketStart), bucketLabelFormat(period));
+}
+
+// A fuller bucket label for chart tooltips, where the terse axis label would be
+// ambiguous (e.g. "8 AM" of which day), so it always carries the date.
+export function formatBucketTooltip(bucketStart: string, period: DatePeriod): string {
+    return format(parseBucketDate(bucketStart), bucketTooltipFormat(period));
+}
+
+function bucketLabelFormat(period: DatePeriod): string {
+    if (period.month === null) return "MMM";
+    if (period.day === null) return "MMM d";
+    return "h a";
+}
+
+function bucketTooltipFormat(period: DatePeriod): string {
+    if (period.month === null) return "MMMM yyyy";
+    if (period.day === null) return "MMM d, yyyy";
+    return "MMM d, h a";
+}
+
 export function formatPeriodLabel(period: DatePeriod): string {
     if (period.month === null) return String(period.year);
     return format(toDate(period), period.day === null ? "MMMM yyyy" : "MMMM d, yyyy");
@@ -120,7 +152,7 @@ export function canDrillInto(period: DatePeriod): boolean {
 // `from` timestamp or `t` label). Returns null when the value cannot be parsed
 // as a date, so callers can ignore the click.
 export function drillInto(period: DatePeriod, bucketDate: string, earliest?: Date): DatePeriod | null {
-    const date = new Date(bucketDate);
+    const date = parseBucketDate(bucketDate);
     if (Number.isNaN(date.getTime())) return null;
     const day = period.month === null ? null : date.getDate();
     return clampPeriod({ year: date.getFullYear(), month: date.getMonth() + 1, day }, earliest);

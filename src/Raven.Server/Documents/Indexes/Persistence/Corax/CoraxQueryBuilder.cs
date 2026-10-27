@@ -556,7 +556,7 @@ public static partial class CoraxQueryBuilder
                 case MethodType.Regex:
                     return HandleRegex(builderParameters, me, ref leftOnlyOptimization);
                 case MethodType.MoreLikeThis:
-                    return builderParameters.AllEntries.Replay();
+                    return builderParameters.IndexSearcher.AllEntries();
                 default:
                     QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, queryParameters);
                     return null; // never hit
@@ -797,9 +797,13 @@ public static partial class CoraxQueryBuilder
         var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(builderParameters.Allocator, fieldName, builderParameters.Index, builderParameters.IndexFieldsMapping,
             builderParameters.FieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, hasBoost: builderParameters.HasBoost);
 
-        return streamingOptimization.TrySetMultiTermMatchAsStreamingField(fieldMetadata, MethodType.Exists)
-            ? builderParameters.IndexSearcher.ExistsQuery(fieldMetadata, forward: streamingOptimization.Forward, streamingEnabled: true)
-            : builderParameters.IndexSearcher.ExistsQuery(fieldMetadata);
+        if (streamingOptimization.TrySetMultiTermMatchAsStreamingField(fieldMetadata, MethodType.Exists) == false)
+            return builderParameters.IndexSearcher.ExistsQuery(fieldMetadata);
+
+        var sortBy = streamingOptimization.SortField;
+        var nullIsSmallest = (sortBy.NullsSortMode ?? builderParameters.Index.Configuration.NullsSortMode) == NullsSortMode.NullsSmallest;
+        var terms = builderParameters.IndexSearcher.BetweenQuery(sortBy.Field, Constants.BeforeAllKeys, Constants.AfterAllKeys, forward: sortBy.Ascending, streamingEnabled: true);
+        return builderParameters.IndexSearcher.IncludeNullMatch(in sortBy.Field, terms, sortBy.Ascending, nullIsSmallest);
     }
 
     private static IQueryMatch HandleStartsWith(Parameters builderParameters, MethodExpression expression, bool exact, ref StreamingOptimization streamingOptimization)
@@ -1273,6 +1277,9 @@ public static partial class CoraxQueryBuilder
         {
             return null;
         }
+
+        if (query.Metadata.HasMoreLikeThis) // MoreLikeThis orders its matches by score itself
+            return null;
 
         var orderByFields = query.Metadata.OrderBy;
 

@@ -20,7 +20,7 @@ import CertificatesManageDropdown from "components/pages/resources/manageServer/
 import CertificatesRegisterSsoServerModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRegisterSsoServerModal";
 import CertificatesRegisterSsoUserModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRegisterSsoUserModal";
 import { EmptySet } from "components/common/EmptySet";
-import CertificatesRenewedModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRenewedModal";
+import CertificatesReadyModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesReadyModal";
 
 export default function CertificatesAuthEnabled() {
     const dispatch = useAppDispatch();
@@ -29,7 +29,7 @@ export default function CertificatesAuthEnabled() {
     const isGenerateModalOpen = useAppSelector(certificatesSelectors.isGenerateModalOpen);
     const isUploadModalOpen = useAppSelector(certificatesSelectors.isUploadModalOpen);
     const isReplaceServerModalOpen = useAppSelector(certificatesSelectors.isReplaceServerModalOpen);
-    const isRenewedModalOpen = useAppSelector(certificatesSelectors.isRenewedModalOpen);
+    const isReadyModalOpen = useAppSelector(certificatesSelectors.isReadyModalOpen);
     const certificateToEdit = useAppSelector(certificatesSelectors.certificateToEdit);
     const certificateToClone = useAppSelector(certificatesSelectors.certificateToClone);
     const isRegisterSsoServerModalOpen = useAppSelector(certificatesSelectors.isRegisterSsoServerModalOpen);
@@ -96,7 +96,7 @@ export default function CertificatesAuthEnabled() {
             {isGenerateModalOpen && <CertificatesGenerateModal />}
             {isUploadModalOpen && <CertificatesUploadModal />}
             {isReplaceServerModalOpen && <CertificatesReplaceServerModal />}
-            {isRenewedModalOpen && <CertificatesRenewedModal />}
+            {isReadyModalOpen && <CertificatesReadyModal />}
             {certificateToClone && <CertificatesCloneModal />}
             {certificateToEdit && <CertificatesEditModal />}
             {isRegisterSsoServerModalOpen && <CertificatesRegisterSsoServerModal />}

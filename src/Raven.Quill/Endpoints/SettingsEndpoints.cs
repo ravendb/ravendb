@@ -27,11 +27,11 @@ public static class SettingsEndpoints
             .WithName("settings.license")
             .Produces<LicenseResponse>();
 
-        group.MapGet("/usage", async (ILicenseStatsProvider provider, int year, int? month, int? day, CancellationToken token) =>
-                Results.Ok(await provider.GetUsageAsync(year, month, day, token)))
+        group.MapGet("/usage", GetUsageAsync)
             .WithName("settings.usage")
             .Produces<QuillUsageResponse>()
-            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status502BadGateway);
 
         group.MapPost("/feedback", SendFeedbackAsync)
             .WithName("settings.feedback")
@@ -97,6 +97,23 @@ public static class SettingsEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound)
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status403Forbidden);
+    }
+
+    private static async Task<IResult> GetUsageAsync(
+        ILicenseStatsProvider provider, int year, int? month, int? day, QuillLogger<SettingsLogger> logger, CancellationToken token)
+    {
+        try
+        {
+            return Results.Ok(await provider.GetUsageAsync(year, month, day, token));
+        }
+        catch (LicenseUsageUnavailableException ex)
+        {
+            if (logger.IsWarnEnabled)
+                logger.Warn(ex, "usage data unavailable from the license server");
+            return Results.Json(
+                new ApiErrorResponse("could not fetch usage data from the license server"),
+                statusCode: StatusCodes.Status502BadGateway);
+        }
     }
 
     private static async Task<IResult> GuardCertificateErrorsAsync(QuillLogger<SettingsLogger> logger, Func<Task<IResult>> action)

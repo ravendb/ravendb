@@ -5,7 +5,7 @@ permissions:
 
 on:
   # Packaging paths only - the code the image bundles is checked by compile.yml,
-  # studioConventions.yml and StudioTests.yml.
+  # studioConventionsAndTests.yml and quillDashboardConventionsAndTests.yml.
   push:
     branches:
       - feature/*
@@ -62,7 +62,7 @@ jobs:
         with:
           package_json_file: src/Raven.Quill.Web/package.json
 
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: pnpm

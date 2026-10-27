@@ -20,6 +20,14 @@ export default class MockIndexesService extends AutoMockService<IndexesService> 
         return this.withGetStats();
     }
 
+    withGetStatsPerLocation(customize: (dto: IndexStats[], location: databaseLocationSpecifier) => void) {
+        return this.mocks.getStats.mockImplementation(async (_, location) => {
+            const dto = IndexesStubs.getSampleStats();
+            customize(dto, location);
+            return dto;
+        });
+    }
+
     withGetProgress(dto?: MockedValue<IndexProgress[]>) {
         return this.mockResolvedValue(this.mocks.getProgress, dto, IndexesStubs.getSampleProgress());
     }

@@ -17,24 +17,109 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 {
     public static class EventPipeDotNetHeapDumper
     {
-        internal static volatile bool eventPipeDataPresent;
-        internal static volatile bool dumpComplete;
+        /// <summary>
+        /// Given a nettrace file from a EventPipe session with the appropriate provider and keywords turned on,
+        /// generate a GCHeapDump using the resulting events.
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="memoryGraph"></param>
+        /// <param name="log"></param>
+        /// <param name="dotNetInfo"></param>
+        /// <returns></returns>
+        public static bool DumpFromEventPipeFile(string path, MemoryGraph memoryGraph, TextWriter log, DotNetHeapInfo dotNetInfo)
+        {
+            DateTime start = DateTime.Now;
+            Func<TimeSpan> getElapsed = () => DateTime.Now - start;
+            DumpState dumpState = new();
+            bool success = false;
+
+            DotNetHeapDumpGraphReader dumper = new(log)
+            {
+                DotNetHeapInfo = dotNetInfo
+            };
+
+            try
+            {
+                TimeSpan lastEventPipeUpdate = getElapsed();
+
+                int gcNum = -1;
+
+                EventPipeEventSource source = new(path);
+
+                source.Clr.GCStart += delegate (GCStartTraceData data)
+                {
+                    dumpState.EventPipeDataPresent = true;
+
+                    if (gcNum < 0 && data.Depth == 2 && data.Type != GCType.BackgroundGC)
+                    {
+                        gcNum = data.Count;
+                        log.WriteLine("{0,5:n1}s: .NET Dump Started...", getElapsed().TotalSeconds);
+                    }
+                };
+
+                source.Clr.GCStop += delegate (GCEndTraceData data)
+                {
+                    if (data.Count == gcNum)
+                    {
+                        log.WriteLine("{0,5:n1}s: .NET GC Complete.", getElapsed().TotalSeconds);
+                        dumpState.DumpComplete = true;
+                    }
+                };
+
+                source.Clr.GCBulkNode += delegate (GCBulkNodeTraceData data)
+                {
+                    dumpState.EventPipeDataPresent = true;
+
+                    if ((getElapsed() - lastEventPipeUpdate).TotalMilliseconds > 500)
+                    {
+                        log.WriteLine("{0,5:n1}s: Making GC Heap Progress...", getElapsed().TotalSeconds);
+                    }
+
+                    lastEventPipeUpdate = getElapsed();
+                };
+
+                if (memoryGraph != null)
+                {
+                    dumper.SetupCallbacks(memoryGraph, source);
+                }
+
+                log.WriteLine("{0,5:n1}s: Starting to process events", getElapsed().TotalSeconds);
+                source.Process();
+                log.WriteLine("{0,5:n1}s: Finished processing events", getElapsed().TotalSeconds);
+
+                if (dumpState.EventPipeDataPresent)
+                {
+                    dumper.ConvertHeapDataToGraph();
+                    success = dumpState.DumpComplete;
+                }
+            }
+            catch (Exception e)
+            {
+                log.WriteLine($"{getElapsed().TotalSeconds,5:n1}s: [Error] Exception processing events: {e}");
+            }
+
+            log.WriteLine("[{0,5:n1}s: Done Dumping .NET heap success={1}]", getElapsed().TotalSeconds, success);
+
+            return success;
+        }
 
         /// <summary>
         /// Given a factory for creating an EventPipe session with the appropriate provider and keywords turned on,
         /// generate a GCHeapDump using the resulting events.  The correct keywords and provider name
         /// are given as input to the Func eventPipeEventSourceFactory.
         /// </summary>
-        /// <param name="processID"></param>
-        /// <param name="eventPipeEventSourceFactory">A delegate for creating and stopping EventPipe sessions</param>
+        /// <param name="processId"></param>
         /// <param name="memoryGraph"></param>
-        /// <param name="log"></param>
+        /// <param name="log">A writer that supports concurrent writes. This method may log from multiple tasks.</param>
+        /// <param name="timeout"></param>
         /// <param name="dotNetInfo"></param>
         /// <returns></returns>
-        public static bool DumpFromEventPipe(CancellationToken ct, int processID, MemoryGraph memoryGraph, TextWriter log, int timeout, DotNetHeapInfo dotNetInfo = null)
+        public static bool DumpFromEventPipe(CancellationToken ct, int processId, MemoryGraph memoryGraph, TextWriter log, int timeout, DotNetHeapInfo dotNetInfo)
         {
             DateTime start = DateTime.Now;
             Func<TimeSpan> getElapsed = () => DateTime.Now - start;
+            DumpState dumpState = new();
+            bool success = false;
 
             DotNetHeapDumpGraphReader dumper = new(log)
             {
@@ -47,8 +132,8 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 bool fDone = false;
                 log.WriteLine("{0,5:n1}s: Creating type table flushing task", getElapsed().TotalSeconds);
 
-                using (EventPipeSessionController typeFlushSession = new(processID, new List<EventPipeProvider> {
-                    new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
+                using (EventPipeSessionController typeFlushSession = new(processId, new List<EventPipeProvider> {
+                    new("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
                 }, false))
                 {
                     log.WriteLine("{0,5:n1}s: Flushing the type table", getElapsed().TotalSeconds);
@@ -72,21 +157,21 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 // Start the providers and trigger the GCs.
                 log.WriteLine("{0,5:n1}s: Requesting a .NET Heap Dump", getElapsed().TotalSeconds);
 
-                using EventPipeSessionController gcDumpSession = new(processID, new List<EventPipeProvider> {
-                    new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, (long)(ClrTraceEventParser.Keywords.GCHeapSnapshot))
-                });
+                using EventPipeSessionController gcDumpSession = new(processId, new List<EventPipeProvider> {
+                    new("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, (long)(ClrTraceEventParser.Keywords.GCHeapSnapshot))
+                }, bufferingMode: EventPipeBufferingMode.Block);
                 log.WriteLine("{0,5:n1}s: gcdump EventPipe Session started", getElapsed().TotalSeconds);
 
                 int gcNum = -1;
 
                 gcDumpSession.Source.Clr.GCStart += delegate (GCStartTraceData data)
                 {
-                    if (data.ProcessID != processID)
+                    if (data.ProcessID != processId)
                     {
                         return;
                     }
 
-                    eventPipeDataPresent = true;
+                    dumpState.EventPipeDataPresent = true;
 
                     if (gcNum < 0 && data.Depth == 2 && data.Type != GCType.BackgroundGC)
                     {
@@ -97,7 +182,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 gcDumpSession.Source.Clr.GCStop += delegate (GCEndTraceData data)
                 {
-                    if (data.ProcessID != processID)
+                    if (data.ProcessID != processId)
                     {
                         return;
                     }
@@ -105,18 +190,18 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     if (data.Count == gcNum)
                     {
                         log.WriteLine("{0,5:n1}s: .NET GC Complete.", getElapsed().TotalSeconds);
-                        dumpComplete = true;
+                        dumpState.DumpComplete = true;
                     }
                 };
 
                 gcDumpSession.Source.Clr.GCBulkNode += delegate (GCBulkNodeTraceData data)
                 {
-                    if (data.ProcessID != processID)
+                    if (data.ProcessID != processId)
                     {
                         return;
                     }
 
-                    eventPipeDataPresent = true;
+                    dumpState.EventPipeDataPresent = true;
 
                     if ((getElapsed() - lastEventPipeUpdate).TotalMilliseconds > 500)
                     {
@@ -128,7 +213,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 if (memoryGraph != null)
                 {
-                    dumper.SetupCallbacks(memoryGraph, gcDumpSession.Source, processID.ToString());
+                    dumper.SetupCallbacks(memoryGraph, gcDumpSession.Source, processId.ToString());
                 }
 
                 // Set up a separate thread that will listen for EventPipe events coming back telling us we succeeded.
@@ -157,7 +242,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                         break;
                     }
 
-                    if (!eventPipeDataPresent && getElapsed().TotalSeconds > 5)      // Assume it started within 5 seconds.
+                    if (!dumpState.EventPipeDataPresent && getElapsed().TotalSeconds > 5)      // Assume it started within 5 seconds.
                     {
                         log.WriteLine("{0,5:n1}s: Assume no .NET Heap", getElapsed().TotalSeconds);
                         break;
@@ -169,7 +254,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                         break;
                     }
 
-                    if (dumpComplete)
+                    if (dumpState.DumpComplete)
                     {
                         break;
                     }
@@ -206,9 +291,10 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     return false;
                 }
 
-                if (eventPipeDataPresent)
+                if (dumpState.EventPipeDataPresent)
                 {
                     dumper.ConvertHeapDataToGraph();        // Finish the conversion.
+                    success = dumpState.DumpComplete;
                 }
             }
             catch (Exception e)
@@ -216,14 +302,23 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 log.WriteLine($"{getElapsed().TotalSeconds,5:n1}s: [Error] Exception during gcdump: {e}");
             }
 
-            log.WriteLine("[{0,5:n1}s: Done Dumping .NET heap success={1}]", getElapsed().TotalSeconds, dumpComplete);
+            log.WriteLine("[{0,5:n1}s: Done Dumping .NET heap success={1}]", getElapsed().TotalSeconds, success);
 
-            return dumpComplete;
+            return success;
+        }
+
+        private sealed class DumpState
+        {
+            public volatile bool EventPipeDataPresent;
+            public volatile bool DumpComplete;
         }
     }
 
     internal sealed class EventPipeSessionController : IDisposable
     {
+        // mirrors EventPipeSession.DefaultRundownKeyword which is internal in Microsoft.Diagnostics.NETCore.Client
+        private const long DefaultRundownKeyword = 0x80020139;
+
         private List<EventPipeProvider> _providers;
         private DiagnosticsClient _client;
         private EventPipeSession _session;
@@ -233,12 +328,28 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         public IReadOnlyList<EventPipeProvider> Providers => _providers.AsReadOnly();
         public EventPipeEventSource Source => _source;
 
-        public EventPipeSessionController(int pid, List<EventPipeProvider> providers, bool requestRundown = true)
+        public EventPipeSessionController(int pid, List<EventPipeProvider> providers, bool requestRundown = true, EventPipeBufferingMode bufferingMode = EventPipeBufferingMode.Drop)
         {
             _pid = pid;
             _providers = providers;
             _client = new DiagnosticsClient(pid);
-            _session = _client.StartEventPipeSession(providers, requestRundown, 1024);
+
+            EventPipeSessionConfiguration sessionConfig = new(providers, 1024, rundownKeyword: requestRundown ? DefaultRundownKeyword : 0, requestStackwalk: true, bufferingMode: bufferingMode);
+            try
+            {
+                _session = _client.StartEventPipeSession(sessionConfig);
+            }
+            catch (UnsupportedCommandException) when (bufferingMode != EventPipeBufferingMode.Drop)
+            {
+                // The runtime doesn't recognize the CollectTracing v6 command used for non-lossy (Block)
+                // buffering (introduced in .NET 11). Fall back to the default lossy buffering so a gcdump can
+                // still be collected. A runtime that understands the command but rejects the payload responds
+                // with BadEncoding (a BadEncodingException, not an UnsupportedCommandException), which is not
+                // caught here and so surfaces normally.
+                Console.Error.WriteLine("Warning: the target runtime does not support non-lossy (Block) buffering, which requires .NET 11+. Falling back to the default lossy buffering; the gcdump may be incomplete on large heaps.");
+                EventPipeSessionConfiguration fallbackConfig = new(providers, 1024, rundownKeyword: requestRundown ? DefaultRundownKeyword : 0, requestStackwalk: true, bufferingMode: EventPipeBufferingMode.Drop);
+                _session = _client.StartEventPipeSession(fallbackConfig);
+            }
             _source = new EventPipeEventSource(_session.EventStream);
         }
 

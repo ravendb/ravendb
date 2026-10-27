@@ -12,6 +12,11 @@ global.ko = knockout;
 global.$ = jquery;
 global.jQuery = jquery;
 
+const toMachineLocaleString = Number.prototype.toLocaleString;
+Number.prototype.toLocaleString = function (locales = "en-US", options) {
+    return toMachineLocaleString.call(this, locales, options);
+};
+
 require("bootstrap/dist/js/bootstrap");
 
 require("../typescript/test/mocks");
@@ -42,6 +47,12 @@ jest.mock("remark-gfm", () => ({
 jest.mock("../typescript/common/eventsCollector", () => ({
     default: new (require("../typescript/test/mocks/hooks/MockEventsCollector").default)()
 }));
+
+jest.mock("../typescript/common/notifications/notificationCenter", () => {
+    const notificationCenter = jest.requireActual("../typescript/common/notifications/notificationCenter");
+    notificationCenter.instance.monitorOperation = jest.fn(() => $.Deferred().promise());
+    return notificationCenter;
+});
 
 jest.mock("../typescript/common/bindingHelpers/aceEditorBindingHandler");
 
@@ -105,6 +116,12 @@ Object.defineProperty(HTMLElement.prototype, "scrollTo", {
 });
 
 window.scrollTo = jest.fn();
+
+// jsdom implements neither of these
+Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+    configurable: true,
+    value: jest.fn(),
+});
 
 if (!window.ResizeObserver) {
   window.ResizeObserver = ROP.ResizeObserver;

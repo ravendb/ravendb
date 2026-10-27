@@ -65,45 +65,44 @@
             color: colors.$border-color-light-var;
         }
     }
+}
 
-    .react-select__menu {
-        border: 1px solid colors.$border-color-light-var;
-        border-radius: bs5variables.$border-radius-md;
-        background-color: colors.$panel-bg-1-var;
-        z-index: bs5variables.$zindex-dropdown;
-        width: fit-content;
+.bs5 .react-select__menu {
+    border: 1px solid colors.$border-color-light-var;
+    border-radius: bs5variables.$border-radius-md;
+    background-color: colors.$panel-bg-1-var;
+    width: fit-content;
 
-        .react-select__menu-list {
-            min-width: 160px;
-            padding: sizes.$gutter-xxs;
+    .react-select__menu-list {
+        min-width: 160px;
+        padding: sizes.$gutter-xxs;
 
-            .react-select__option {
-                padding: bs5variables.$gutter-xxs;
-                background-color: transparent;
-                border-radius: sizes.$border-radius;
-                color: colors.$text-color-var;
-                cursor: pointer;
+        .react-select__option {
+            padding: bs5variables.$gutter-xxs;
+            background-color: transparent;
+            border-radius: sizes.$border-radius;
+            color: colors.$text-color-var;
+            cursor: pointer;
 
-                &:hover {
-                    background-color: colors.$panel-bg-2-var;
-                    color: colors.$text-emphasis-var;
-                }
-            }
-
-            .react-select__option--is-focused {
+            &:hover {
                 background-color: colors.$panel-bg-2-var;
                 color: colors.$text-emphasis-var;
             }
+        }
 
-            .react-select__option--is-disabled {
-                opacity: 0.5;
-                color: colors.$text-muted-var;
-                cursor: not-allowed;
-            }
+        .react-select__option--is-focused {
+            background-color: colors.$panel-bg-2-var;
+            color: colors.$text-emphasis-var;
+        }
 
-            hr {
-                margin: bs5variables.$gutter-xxs;
-            }
+        .react-select__option--is-disabled {
+            opacity: 0.5;
+            color: colors.$text-muted-var;
+            cursor: not-allowed;
+        }
+
+        hr {
+            margin: bs5variables.$gutter-xxs;
         }
     }
 }
@@ -113,4 +112,8 @@
     .react-select__single-value {
         color: colors.$text-color-var;
     }
+}
+
+.react-select__menu-portal {
+    z-index: bs5variables.$zindex-popover !important;
 }

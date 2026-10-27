@@ -10,7 +10,7 @@ import { useServices } from "components/hooks/useServices";
 import { useAsync } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
 import Button from "react-bootstrap/Button";
-import { useState } from "react";
+import { ChangeEvent, useState } from "react";
 import FeatureNotAvailable from "components/common/FeatureNotAvailable";
 import AiAgentCard from "./partials/AiAgentCard";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
@@ -83,7 +83,7 @@ export default function AiAgents() {
                         placeholder="eg. CustomerServiceAgent"
                         title="Filter agents (Alt+/)"
                         value={nameFilter}
-                        onChange={(e) => setNameFilter(e.target.value)}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setNameFilter(e.target.value)}
                         className="filtering-input"
                     />
                     {nameFilter && (

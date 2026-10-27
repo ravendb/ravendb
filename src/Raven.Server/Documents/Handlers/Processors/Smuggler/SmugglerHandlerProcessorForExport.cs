@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
@@ -48,7 +48,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
                 var source = RequestHandler.Database.Smuggler.CreateSource(startDocumentEtag, startRaftIndex, Logger);
                 await using (var outputStream = await GetOutputStreamAsync(RequestHandler.ResponseBodyStream(), options))
                 {
-                    var destination = new StreamDestination(outputStream, context, source, options.CompressionAlgorithm ?? RequestHandler.Database.Configuration.ExportImport.CompressionAlgorithm, options.CompressionLevel ?? RequestHandler.Database.Configuration.ExportImport.CompressionLevel);
+                    var destination = new StreamDestination(outputStream, context, source, options.CompressionAlgorithm ?? RequestHandler.Database.Configuration.ExportImport.CompressionAlgorithm, options.CompressionLevel ?? RequestHandler.Database.Configuration.ExportImport.CompressionLevel,
+                        RequestHandler.Database.Configuration.ExportImport.ZstdCompressionWorkers);
                     var smuggler = RequestHandler.Database.Smuggler.Create(source, destination,
                         jsonOperationContext, options, onProgress: onProgress, token: token.Token);
                     return await smuggler.ExecuteAsync();

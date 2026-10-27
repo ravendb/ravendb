@@ -637,7 +637,8 @@ namespace Raven.Server.Commercial
                         ? localIps.ToArray()
                         : new[] { new IPEndPoint(IPAddress.Parse(localNode.ExternalIpAddress), localNode.ExternalPort) };
 
-                    await RavenDnsRecordHelper.AssertDnsUpdatedSuccessfully(localServerUrl, ips, token);
+                    var registeredDnsUrl = $"https://{setupInfo.LocalNodeTag}.{setupInfo.Domain}.{setupInfo.RootDomain}".ToLowerInvariant();
+                    await RavenDnsRecordHelper.AssertDnsUpdatedSuccessfully(registeredDnsUrl, ips, token);
                 }
 
                 // Here we send the actual ips we will bind to in the local machine.

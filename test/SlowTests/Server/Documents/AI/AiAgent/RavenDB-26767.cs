@@ -13,10 +13,13 @@ using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Settings;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi;
+using Raven.Server.Documents.ETL.Providers.AI.GenAi.Stats;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi.Test;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.ServerWide.Context;
@@ -329,7 +332,7 @@ if ($input.doc) {
 
     private static MockLlm NewAnswerMock(Raven.Server.Documents.DocumentDatabase database, ConcurrentQueue<string> payloads) =>
         new(database.DocumentsStorage.ContextPool,
-            new OpenAiChatCompletionClientSettings(new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o")),
+            new OpenAiChatCompletionProvider(new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o")),
             onRequest: payload =>
             {
                 payloads.Enqueue(payload.ToString());
@@ -396,39 +399,204 @@ if ($input.doc) {
         }
     }
 
-    // === Query-tool binding: scalars bind and override the model; objects are model context only, never bound. ===
+    // === Query-tool binding: scalars bind and override the model; objects are model context only and a query that
+    // references one is refused, since nothing but the model could supply the value. ===
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task GenAi_ContextPropertyThatIsAlsoAnOptionalToolArgument_IsRejected()
+    {
+        // The collision rule now applies to GenAI as well, per Karmel. ValidateConfiguration only catches a name
+        // that the tool schema lists under 'required'; one declared merely as a property used to pass, and the
+        // server would then advertise the context property's own name to the model as something it may fill in.
+        var (error, toolResults) = await RunGenAiQueryToolAsync(
+            contexts: [new DynamicJsonValue { ["brand"] = "TechNova" }],
+            queryRql: "from Products where Brand = $brand",
+            modelToolArgs: "{}",
+            seed: null,
+            parametersSchema: "{\"type\":\"object\",\"properties\":{\"brand\":{\"type\":\"string\"}},\"required\":[]}");
+
+        Assert.NotNull(error);
+        Assert.Contains("Parameter brand is defined on both the agent level and the query level for Q", error.ToString());
+        Assert.Empty(toolResults); // refused while the request was being built, so no query ran
+    }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public async Task GenAi_OmittedObject_NoModelArgument_ThrowsNativeMissingParameter()
+    public async Task GenAi_Collision_IsTheItemsOwnRefusal_NotATransientBatchFailure()
     {
-        // 'brand' is an object -> omitted from RequestBody.Parameters (filtered). The query references $brand and the
-        // model supplies no 'brand', so RavenDB produces its NATIVE missing-parameter error - no custom exception.
-        var (error, _) = await RunGenAiQueryToolAsync(
+        // The same collision as the test above, but outside test mode, where HandleItemError sorts the
+        // exception instead of rethrowing it. A collision is deterministic - same configuration, same result
+        // every pass - so it must land next to UnsupportedAiQueryParameterException and not in the transient
+        // branch, which sets _maxConcurrency = 1 and throws before anything is persisted, so the whole batch
+        // is attempted again forever. RefusedBeforeTheModel is also what keeps ProcessModelResults from counting
+        // a document the model never saw as a model call failure.
+        var (error, _, items, statistics) = await RunGenAiBatchAsync(
+            contexts: [new DynamicJsonValue { ["brand"] = "TechNova" }],
+            queryRql: "from Products where Brand = $brand",
+            modelToolArgs: "{}",
+            seed: null,
+            testMode: false,
+            parametersSchema: "{\"type\":\"object\",\"properties\":{\"brand\":{\"type\":\"string\"}},\"required\":[]}");
+
+        Assert.Null(error); // not a whole-batch failure: nothing escapes SendToModel
+
+        Assert.False(items[0].UpdateHash);
+        Assert.True(items[0].RefusedBeforeTheModel);
+
+        // and the author still gets told, against the document, in words that do not claim the model answered
+        var refusal = statistics.ReadInMemoryItemErrors().Single().Error;
+        Assert.Contains("Parameter brand is defined on both the agent level and the query level for Q", refusal);
+        Assert.Contains("was not sent to the model", refusal);
+        Assert.DoesNotContain("Execution failed", refusal);
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task GenAi_ModelCallThatFails_IsRecordedAsAnExecutionFailure()
+    {
+        // the other side of the branch above: the model was reached and the call failed, so the item is a
+        // transient failure, not a refusal, and the recorded error carries the exception itself
+        var (error, _, items, statistics) = await RunGenAiBatchAsync(
+            contexts: [new DynamicJsonValue { ["brand"] = "TechNova" }],
+            queryRql: "from Products where Brand = $brand",
+            modelToolArgs: "{}",
+            seed: null,
+            testMode: false,
+            modelResponseStatus: HttpStatusCode.InternalServerError);
+
+        Assert.NotNull(error);
+
+        Assert.False(items[0].UpdateHash);
+        Assert.False(items[0].RefusedBeforeTheModel);
+
+        var recorded = statistics.ReadInMemoryItemErrors().Single().Error;
+        Assert.Contains("Execution failed for context in document 'docs/1'", recorded);
+        Assert.Contains("Context was:", recorded);
+        Assert.DoesNotContain("was not sent to the model", recorded);
+    }
+
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task GenAi_OmittedObject_QueryReferencingIt_IsRejectedWithATaskLevelError()
+    {
+        // 'brand' is an object -> omitted from RequestBody.Parameters (filtered), so $brand can never be bound.
+        // The refusal names what the author can act on - the query, the parameter and the type the context property
+        // holds - rather than leaving the agent validator to complain about an agent configuration the author never
+        // wrote. It surfaces as a task-level error only because test mode rethrows; outside test mode it stays this
+        // item's failure, see GenAi_OneRefusedContext_FailsOnItsOwnAndTheRestOfTheBatchIsKept.
+        var (error, toolResults) = await RunGenAiQueryToolAsync(
             contexts: [new DynamicJsonValue { ["brand"] = new DynamicJsonValue { ["Name"] = "TechNova" } }],
             queryRql: "from Products where Brand = $brand",
             modelToolArgs: "{}",
             seed: null);
 
         Assert.NotNull(error);
-        Assert.Contains("was not provided", error.ToString()); // native missing-parameter error, not a custom exception
-        Assert.Contains("brand", error.ToString());
+        Assert.Contains("$brand", error.ToString());
+        Assert.Contains("only takes a scalar value", error.ToString());
+        Assert.Empty(toolResults); // refused before the model was asked to do anything
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public async Task GenAi_OmittedObject_ModelSuppliesScalar_QueryUsesModelValue_AcceptedTradeoff()
+    public async Task GenAi_OneRefusedContext_FailsOnItsOwnAndTheRestOfTheBatchIsKept()
     {
-        // ACCEPTED SEMANTIC TRADEOFF of the minimal filtered design: because the object-valued 'brand' is omitted from
-        // Parameters (this design deliberately does NOT remember omitted names), the normal query-binding path leaves
-        // the MODEL-supplied scalar 'brand' in place and the query completes using it. This is deliberate and is NOT
-        // context-override protection - the object context simply does not participate in query binding.
+        // Outside test mode a refused context must stay that item's failure. Test mode cannot show this: there
+        // HandleItemError rethrows, so a per-item failure and a whole-batch abort look the same.
+        var (error, _, items, statistics) = await RunGenAiBatchAsync(
+            contexts:
+            [
+                new DynamicJsonValue { ["brand"] = "TechNova" },                                // scalar, binds
+                new DynamicJsonValue { ["brand"] = new DynamicJsonValue { ["Name"] = "X" } },   // object, refused
+                new DynamicJsonValue { ["brand"] = "Contoso" }                                  // scalar, after the refusal
+            ],
+            queryRql: "from Products where Brand = $brand",
+            modelToolArgs: "{}",
+            seed: null,
+            testMode: false);
+
+        Assert.Null(error); // the refusal is the item's, so SendToModel returns instead of faulting the batch
+
+        Assert.NotNull(items[0].ModelOutput); // the answer we already paid for is kept
+        Assert.Null(items[1].ModelOutput);
+        Assert.NotNull(items[2].ModelOutput); // and the items behind the refused one are still attempted
+
+        // the refusal is recorded against the document the author has to fix, which is what the task's error
+        // list shows them - and against that one only
+        Assert.Equal([items[1].DocumentId], statistics.ReadInMemoryItemErrors().Select(e => e.DocumentId));
+
+        // nothing is stored for the document, so the recorded error is the only trace of it - it has to say the model
+        // was never called and what brings the document back
+        var refusal = statistics.ReadInMemoryItemErrors().Single().Error;
+        Assert.Contains("was not sent to the model", refusal);
+        Assert.Contains("$brand", refusal);
+        Assert.Contains("reset", refusal);
+        Assert.DoesNotContain("Execution failed", refusal);
+
+        Assert.False(items[1].UpdateHash);
+        Assert.True(items[1].RefusedBeforeTheModel);
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public void GenAi_EditingAQueryIsAConfigurationChange()
+    {
+        // Compare decides whether a running task is restarted, so a query edit has to register as a difference
+        static GenAiConfiguration Config(string rql) => new()
+        {
+            Name = "genai-compare",
+            ConnectionStringName = "genai-cs",
+            Collection = "Docs",
+            Prompt = "Use the query tool to answer.",
+            SampleObject = "{\"Answer\":\"a\"}",
+            GenAiTransformation = new GenAiTransformation { Script = "ai.genContext(this);" },
+            Queries = [new AiAgentToolQuery("Q", "run the query", rql) { ParametersSampleObject = "{}" }]
+        };
+
+        var connectionStrings = new Dictionary<string, AiConnectionString>();
+        var original = Config("from Products where Brand = $brand");
+
+        var unchanged = original.Compare(Config("from Products where Brand = $brand"), connectionStrings);
+        var queryEdited = original.Compare(Config("from Products"), connectionStrings);
+
+        Assert.False(unchanged.HasFlag(EtlConfigurationCompareDifferences.Other));
+        Assert.True(queryEdited.HasFlag(EtlConfigurationCompareDifferences.Other));
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task GenAi_WholeBatchRefused_IsNotRetriedForever()
+    {
+        // When every attempted item is refused, each must still be marked as handled, so that the batch does not
+        // read as AllAttemptedFailedNonDeterministically - the state LoadInternal throws on and retries. What is
+        // pinned here is the input to that decision; LoadInternal itself needs the ETL machinery and is not run.
+        var (error, _, items, statistics) = await RunGenAiBatchAsync(
+            contexts:
+            [
+                new DynamicJsonValue { ["brand"] = new DynamicJsonValue { ["Name"] = "X" } },
+                new DynamicJsonValue { ["brand"] = new DynamicJsonValue { ["Name"] = "Y" } }
+            ],
+            queryRql: "from Products where Brand = $brand",
+            modelToolArgs: "{}",
+            seed: null,
+            testMode: false);
+
+        Assert.Null(error);
+        Assert.All(items, item => Assert.False(item.UpdateHash));
+        Assert.All(items, item => Assert.True(item.RefusedBeforeTheModel));
+        Assert.False(GenAiTask.IsWholeAttemptedBatchFailure(items));
+        Assert.Equal(items.Select(i => i.DocumentId), statistics.ReadInMemoryItemErrors().Select(e => e.DocumentId));
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task GenAi_OmittedObject_ModelSuppliesScalar_IsRejectedAndTheModelValueIsNeverUsed()
+    {
+        // The model offers a 'brand' of its own and a matching product exists. Until RavenDB-27289 the query ran on
+        // that value - recorded here as an accepted tradeoff of the filtered design. It is a data-scope escape: the
+        // model decided which products the task reads. The item is now refused instead, and the model-supplied value
+        // reaches no query.
         var (error, toolResults) = await RunGenAiQueryToolAsync(
             contexts: [new DynamicJsonValue { ["brand"] = new DynamicJsonValue { ["Name"] = "TechNova" } }],
             queryRql: "from Products where Brand = $brand",
             modelToolArgs: "{\"brand\":\"model-brand\"}",
             seed: s => s.Store(new Product { Brand = "model-brand" }));
 
-        Assert.Null(error);                                            // the query completed using the model-supplied scalar
-        Assert.Contains(toolResults, r => r.Contains("model-brand"));  // the model's value matched the seeded product
+        Assert.NotNull(error);
+        Assert.Contains("$brand", error.ToString());
+        Assert.DoesNotContain(toolResults, r => r.Contains("model-brand"));
     }
 
     [RavenFact(RavenTestCategory.Ai)]
@@ -690,6 +858,79 @@ if ($input.doc) {
         }
     }
 
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task GenAi_RefusedBeforeTheModel_IsNeitherSentNorAModelCallFailure()
+    {
+        // The refusal happens while the request is being built, so the provider is never contacted - which is why a
+        // deliberately unreachable endpoint is enough here and no credentials are needed. What is asserted is the
+        // bookkeeping: an item that produced no request is not 'sent to the model', and its failure is not a
+        // 'model call failure'.
+        using var store = GetDocumentStore();
+
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(new AiConnectionString
+        {
+            Name = "fake-connection",
+            Identifier = "fake-connection",
+            ModelType = AiModelType.Chat,
+            OpenAiSettings = new OpenAiSettings("fake-key", "http://localhost:1/", "fake-model")
+        }));
+
+        var configuration = new GenAiConfiguration
+        {
+            Name = "genai-26767-stats",
+            Identifier = "genai-26767-stats",
+            ConnectionStringName = "fake-connection",
+            Collection = "RealProviderProducts",
+            Prompt = "Summarize this product.",
+            SampleObject = JsonConvert.SerializeObject(new { Summary = "..." }),
+            UpdateScript = "this.Processed = true;",
+            MaxConcurrency = 1,
+            GenAiTransformation = new GenAiTransformation { Script = "ai.genContext({ brand: this.Brand });" },
+            Queries = [new AiAgentToolQuery("Q", "run the query", "from RealProviderProducts where Brand = $brand") { ParametersSampleObject = "{}" }]
+        };
+
+        store.Maintenance.Send(new AddGenAiOperation(configuration));
+
+        using (var session = store.OpenSession())
+        {
+            // 'brand' is an object, and the query binds $brand - so the item is refused before any request is built
+            session.Store(new RealProviderProduct
+            {
+                Title = "TechNova Phone X",
+                Brand = new RealProviderBrand { Name = "TechNova", Category = "Consumer Electronics" }
+            }, "products/1");
+            session.SaveChanges();
+        }
+
+        var refused = await WaitForValueAsync(async () =>
+        {
+            var errors = await Etl.GetItemLoadErrorsAsync(store.Database, configuration);
+            return errors.Any();
+        }, true, timeout: 60_000);
+
+        Assert.True(refused);
+
+        var database = await GetDatabase(store.Database);
+        var etlProcess = database.EtlLoader.Processes.FirstOrDefault() as GenAiTask;
+        Assert.NotNull(etlProcess);
+
+        var stats = etlProcess.GetPerformanceStats()
+            .Where(x => x.LastExtractedEtags[EtlItemType.Document] > 0)
+            .ToArray();
+
+        Assert.NotEmpty(stats);
+
+        var loadDetails = stats[0].Details.Operations[^1];
+        Assert.Equal("Load", loadDetails.Name);
+
+        var modelScope = loadDetails.Operations.FirstOrDefault(x => x.Name == GenAiOperations.LoadToModel) as GenAiPerformanceOperation;
+        Assert.NotNull(modelScope);
+
+        Assert.Equal(1, modelScope.NumberOfContextObjects);
+        Assert.Equal(0, modelScope.TotalSentToModel);
+        Assert.Equal(0, modelScope.ModelCallFailures);
+    }
+
     private class PersistedConversation { }
 
     private class RealProviderProduct
@@ -721,7 +962,15 @@ if ($input.doc) {
     // asks the model to call "Q" on the first turn of each conversation (detected by the absence of a tool message),
     // then answers once the query result comes back. Returns any thrown error plus the captured tool-result messages.
     private async Task<(Exception error, List<string> toolResults)> RunGenAiQueryToolAsync(
-        List<DynamicJsonValue> contexts, string queryRql, string modelToolArgs, Action<IDocumentSession> seed)
+        List<DynamicJsonValue> contexts, string queryRql, string modelToolArgs, Action<IDocumentSession> seed, string parametersSchema = null)
+    {
+        var (error, toolResults, _, _) = await RunGenAiBatchAsync(contexts, queryRql, modelToolArgs, seed, testMode: true, parametersSchema);
+        return (error, toolResults);
+    }
+
+    private async Task<(Exception error, List<string> toolResults, List<GenAiResultItem> items, EtlProcessStatistics statistics)> RunGenAiBatchAsync(
+        List<DynamicJsonValue> contexts, string queryRql, string modelToolArgs, Action<IDocumentSession> seed, bool testMode, string parametersSchema = null,
+        HttpStatusCode modelResponseStatus = HttpStatusCode.OK)
     {
         using var store = GetDocumentStore();
         if (seed != null)
@@ -742,20 +991,24 @@ if ($input.doc) {
                 Collection = "Docs",
                 Prompt = "Use the query tool to answer.",
                 SampleObject = "{\"Answer\":\"a\"}",
-                TestMode = true,
+                TestMode = true,               // the constructor would otherwise reach for a real provider client
                 MaxConcurrency = 1,
                 GenAiTransformation = new GenAiTransformation { Script = "ai.genContext(this);" },
-                Queries = [new AiAgentToolQuery("Q", "run the query", queryRql) { ParametersSampleObject = "{}" }]
+                Queries = [new AiAgentToolQuery("Q", "run the query", queryRql) { ParametersSampleObject = "{}", ParametersSchema = parametersSchema }]
             };
 
             using var task = new GenAiTask(config.Transforms[0], config, database, database.ServerStore);
+            config.TestMode = testMode;
 
             var toolResults = new List<string>();
             using var mock = new MockLlm(
                 database.DocumentsStorage.ContextPool,
-                new OpenAiChatCompletionClientSettings(new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o")),
+                new OpenAiChatCompletionProvider(new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o")),
                 onRequest: payload =>
                 {
+                    if (modelResponseStatus != HttpStatusCode.OK)
+                        return new HttpResponseMessage(modelResponseStatus) { Content = new StringContent("the provider is down") };
+
                     var messages = payload["messages"];
                     var toolMessages = messages?.Where(m => m["role"]?.ToString() == "tool").ToList() ?? new List<JToken>();
                     if (toolMessages.Count > 0)
@@ -786,7 +1039,7 @@ if ($input.doc) {
                 error = e;
             }
 
-            return (error, toolResults);
+            return (error, toolResults, input, task.Statistics);
         }
     }
 }

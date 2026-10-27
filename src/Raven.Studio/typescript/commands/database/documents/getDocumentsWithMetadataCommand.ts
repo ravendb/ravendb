@@ -9,8 +9,8 @@ class getDocumentsWithMetadataCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<document[]> {
-        const documentResult = $.Deferred<document[]>();
+    execute(): JQueryPromise<(document | null)[]> {
+        const documentResult = $.Deferred<(document | null)[]>();
 
         const payload = {
             Ids: this.ids
@@ -24,7 +24,11 @@ class getDocumentsWithMetadataCommand extends commandBase {
                 }
             })
             .done((queryResult: queryResultDto<documentDto>) => {
-                documentResult.resolve(queryResult.Results.map(x => new document(x)));
+                try {
+                    documentResult.resolve(queryResult.Results.map(x => x ? new document(x) : null));
+                } catch (error) {
+                    documentResult.reject(error);
+                }
             });
 
         return documentResult;

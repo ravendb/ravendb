@@ -39,8 +39,9 @@ import {
     SLACK_SOURCE_VALUES,
     slackParameterSourceHint,
 } from "@/pages/apps/channels/slack-parameter-sources";
-import { SlackStatusPanel } from "@/pages/apps/channels/slack-connection-card";
-import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
+import { SlackConnectionCard } from "@/pages/apps/channels/slack-connection-card";
+import { SlackWebhookPanel } from "@/pages/apps/channels/slack-webhook-panel";
+import type { FixedAgent } from "@/pages/apps/channels/channel-form-types";
 
 const parameterBindingSchema = z
     .object({

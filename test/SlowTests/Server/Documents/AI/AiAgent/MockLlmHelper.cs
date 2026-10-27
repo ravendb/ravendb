@@ -24,15 +24,22 @@ internal class MockLlmConversationHandler(
     DocumentDatabase database,
     Func<JObject, HttpResponseMessage> onRequest = null,
     Func<JObject, string, HttpResponseMessage> onToolResult = null,
-    AbstractChatCompletionClientSettings clientSettings = null)
+    AbstractChatCompletionProvider clientSettings = null)
     : ConversationHandler(server, database)
 {
     private readonly DocumentDatabase _database = database;
 
+    internal MockLlm LastClient { get; private set; }
+
     protected internal override ChatCompletionClient CreateClient()
     {
-        var settings = clientSettings ?? new OpenAiChatCompletionClientSettings(new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o"));
-        return new MockLlm(_database.DocumentsStorage.ContextPool, settings, onRequest, onToolResult, ChatCompletionClient.ConventionsToUse);
+        var settings = clientSettings ?? new OpenAiChatCompletionProvider(new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o"));
+        LastClient = new MockLlm(_database.DocumentsStorage.ContextPool, settings, onRequest, onToolResult, ChatCompletionClient.ConventionsToUse);
+
+        // Armed here - a test only gets the client through LastClient after the call is over.
+        LastClient.ForTestingPurposesOnly();
+
+        return LastClient;
     }
 }
 
@@ -53,7 +60,7 @@ internal class MockLlm : ChatCompletionClient
 
     internal MockLlm(
         IMemoryContextPool contextPool,
-        AbstractChatCompletionClientSettings settings,
+        AbstractChatCompletionProvider settings,
         Func<JObject, HttpResponseMessage> onRequest = null,
         Func<JObject, string, HttpResponseMessage> onToolResult = null,
         DocumentConventions conventions = null)
@@ -323,7 +330,7 @@ internal class InjectingConversationHandler(
         if (_client != null)
             return _client;
 
-        if (AbstractChatCompletionClientSettings.TryGetParameters(connection, out var settings) == false)
+        if (AbstractChatCompletionProvider.TryGetParameters(connection, out var settings) == false)
             throw new NotSupportedException($"The provider '{connection.GetActiveProvider()}' is not supported.");
 
         return _client = new InjectingClient(_database.DocumentsStorage.ContextPool, settings, injected);
@@ -331,7 +338,7 @@ internal class InjectingConversationHandler(
 
     private sealed class InjectingClient(
         IMemoryContextPool contextPool,
-        AbstractChatCompletionClientSettings settings,
+        AbstractChatCompletionProvider settings,
         InjectedResponse injected)
         : ChatCompletionClient(contextPool, settings, ConventionsToUse)
     {

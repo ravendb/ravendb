@@ -18,7 +18,7 @@ function CreateNugetPackage ( $srcDir, $targetFilename, $versionSuffix ) {
     $commandArgs += "$srcDir"
 
     write-host -ForegroundColor Cyan "Creating NuGet Package from ${srcDir}: $command $commandArgs"
-    Invoke-Expression -Command "$command $commandArgs"
+    & $command @commandArgs
     CheckLastExitCode
 }
 
@@ -118,7 +118,7 @@ function BuildEmbeddedNuget ($projectDir, $outDir, $serverSrcDir, $studioZipPath
         $commandArgs += ".\RavenDB.Embedded.nuspec"
 
         write-host -ForegroundColor Cyan "Creating NuGet Package for Embedded: $command $commandArgs"
-        Invoke-Expression -Command "$command $commandArgs"
+        & $command @commandArgs
         CheckLastExitCode
     } finally {
         Pop-Location

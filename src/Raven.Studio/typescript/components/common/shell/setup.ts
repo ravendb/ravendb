@@ -1,4 +1,4 @@
-﻿import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
+import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 import { globalDispatch } from "components/storeCompat";
 import databasesManager from "common/shell/databasesManager";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
@@ -7,7 +7,6 @@ import * as yup from "yup";
 import { ClusterNode, clusterActions } from "components/common/shell/clusterSlice";
 import licenseModel from "models/auth/licenseModel";
 import { licenseActions } from "./licenseSlice";
-import collectionsTracker from "common/helpers/database/collectionsTracker";
 import { collectionsTrackerActions } from "./collectionsTrackerSlice";
 import changesContext from "common/changesContext";
 import { services } from "hooks/useServices";
@@ -19,6 +18,7 @@ import { accessManagerActions } from "components/common/shell/accessManagerSlice
 import { aiAssistantActions } from "./aiAssistantSlice";
 import { chatbotActions } from "components/shell/chatbot/store/chatbotSlice";
 import router from "plugins/router";
+import { initI18n } from "common/i18n/i18n";
 
 let initialized = false;
 
@@ -46,6 +46,11 @@ function initRedux() {
 
     activeDatabaseTracker.default.database.subscribe((db) => {
         const dbName = db?.name ?? null;
+
+        if (!db) {
+            globalDispatch(collectionsTrackerActions.collectionsLoaded({ databaseName: null, collections: [] }));
+        }
+
         globalDispatch(databaseActions.activeDatabaseChanged(dbName));
         globalDispatch(chatbotActions.attachedContextUnrelatedRemoved());
         globalDispatch(
@@ -57,10 +62,6 @@ function initRedux() {
                 state: "included",
             })
         );
-
-        if (!db) {
-            globalDispatch(collectionsTrackerActions.collectionsLoaded([]));
-        }
     });
 
     clusterTopologyManager.default.localNodeTag.subscribe((tag) => {
@@ -106,10 +107,6 @@ function initRedux() {
     licenseModel.supportCoverage.subscribe((supportCoverage) => {
         globalDispatch(licenseActions.supportLoaded(supportCoverage));
     });
-
-    collectionsTracker.default.collections.subscribe((collections) =>
-        globalDispatch(collectionsTrackerActions.collectionsLoaded(collections.map((x) => x.toCollectionState())))
-    );
 
     changesContext.default.connectServerWideNotificationCenter();
 
@@ -234,6 +231,7 @@ function initYup() {
 }
 
 export function commonInit() {
+    initI18n();
     initRedux();
     initYup();
 }

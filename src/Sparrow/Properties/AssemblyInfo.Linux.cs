@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Raven.Client")]
 [assembly: InternalsVisibleTo("Raven.Server")]
@@ -9,4 +9,5 @@
 [assembly: InternalsVisibleTo("Voron")]
 [assembly: InternalsVisibleTo("Corax")]
 [assembly: InternalsVisibleTo("Micro.Benchmark")]
+[assembly: InternalsVisibleTo("Zstd.Benchmark")]
 [assembly: InternalsVisibleTo("Voron.Recovery")]

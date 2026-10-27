@@ -11,8 +11,7 @@ function BuildServer ( $srcDir, $outDir, $target) {
     $commandArgs = @( "publish" )
 
     $output = [io.path]::combine($outDir, "Server");
-    $quotedOutput = '"' + $output + '"'
-    $commandArgs += @( "--output", $quotedOutput )
+    $commandArgs += @( "--output", $output )
 
     $configuration = if ($global:isPublishConfigurationDebug) { 'Debug' } else { 'Release' }
     $commandArgs += @( "--configuration", $configuration )
@@ -41,7 +40,7 @@ function BuildServer ( $srcDir, $outDir, $target) {
     }
 
     write-host -ForegroundColor Cyan "Publish server: $command $commandArgs"
-    Invoke-Expression -Command "$command $commandArgs"
+    & $command @commandArgs
     CheckLastExitCode
 }
 
@@ -60,7 +59,7 @@ function BuildClient ( $srcDir ) {
     $commandArgs += "$srcDir"
 
     write-host -ForegroundColor Cyan "Building Client: $command $commandArgs"
-    Invoke-Expression -Command "$command $commandArgs"
+    & $command @commandArgs
     CheckLastExitCode
 }
 
@@ -79,25 +78,7 @@ function BuildTestDriver ( $srcDir ) {
     $commandArgs += "$srcDir"
 
     write-host -ForegroundColor Cyan "Building TestDriver: $command $commandArgs"
-    Invoke-Expression -Command "$command $commandArgs"
-    CheckLastExitCode
-}
-
-function BuildTypingsGenerator ( $srcDir ) {
-    $command = "dotnet" 
-    $commandArgs = @( "build" )
-    $commandArgs += "--no-incremental"
-
-    $commandArgs += @( "--configuration", "Release" )
-
-    if ($env:RAVEN_IS_RUNNING_ON_CI){
-        $commandArgs += '/p:ContinuousIntegrationBuild=true'
-    }
-    
-    $commandArgs += "$srcDir"
-
-    write-host -ForegroundColor Cyan "Building TypingsGenerator: $command $commandArgs"
-    Invoke-Expression -Command "$command $commandArgs"
+    & $command @commandArgs
     CheckLastExitCode
 }
 
@@ -116,7 +97,7 @@ function BuildSparrow ( $srcDir ) {
     $commandArgs += "$srcDir"
 
     write-host -ForegroundColor Cyan "Building Sparrow: $command $commandArgs"
-    Invoke-Expression -Command "$command $commandArgs"
+    & $command @commandArgs
     CheckLastExitCode
 }
 
@@ -180,8 +161,7 @@ function BuildTool ( $toolName, $srcDir, $outDir, $target, $trim ) {
     $commandArgs = @( "publish" )
 
     $output = [io.path]::combine($outDir, "${toolName}");
-    $quotedOutput = '"' + $output + '"'
-    $commandArgs += @( "--output", $quotedOutput )
+    $commandArgs += @( "--output", $output )
     $configuration = if ($debug) { 'Debug' } else { 'Release' }
     $commandArgs += @( "--configuration", $configuration )
     $commandArgs += $( "--runtime", "$($target.Runtime)" )
@@ -201,7 +181,7 @@ function BuildTool ( $toolName, $srcDir, $outDir, $target, $trim ) {
     }
 
     write-host -ForegroundColor Cyan "Publish ${toolName}: $command $commandArgs"
-    Invoke-Expression -Command "$command $commandArgs"
+    & $command @commandArgs
     CheckLastExitCode
 }
 
@@ -222,6 +202,6 @@ function BuildEmbedded ( $srcDir, $outDir, $framework) {
     $commandArgs += "$srcDir"
 
     write-host -ForegroundColor Cyan "Building Embedded: $command $commandArgs"
-    Invoke-Expression -Command "$command $commandArgs"
+    & $command @commandArgs
     CheckLastExitCode
 }
