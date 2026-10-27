@@ -875,6 +875,7 @@ var projects = session.Query<Project>()
 
 - a single condition on the element: `p.Members.Any(m => m.UserId == userId)`;
 - conditions joined with `||`, which match the same way with or without flattening;
+- an inclusive range on one member, `m.Value >= 5 && m.Value <= 10`, which the client sends as a single `between` clause that one indexed value must satisfy; an exclusive range (`>` and `<`) is sent as two clauses and is reported;
 - separate `Any` calls, which state the uncorrelated matching explicitly: `p.Members.Any(m => m.UserId == userId) && p.Members.Any(m => m.Role == Role.Contributor)`;
 - queries over a static index (`session.Query<T, TIndex>()` or an index name), where RVN014 covers the fan-out on the index side; a query that only names the collection (`session.Query<T>(collectionName: "Orders")`) is still dynamic and is checked;
 - `Any`/`All` over something that is not a collection member of the document.

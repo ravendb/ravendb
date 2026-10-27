@@ -257,6 +257,12 @@ namespace Raven.Analyzers.Queries
                         pending.Push(paren.Expression);
                         break;
                     case BinaryExpressionSyntax logicalAnd when logicalAnd.IsKind(SyntaxKind.LogicalAndExpression):
+                        if (IsInclusiveRange(logicalAnd))
+                        {
+                            yield return current;
+                            break;
+                        }
+
                         pending.Push(logicalAnd.Right);
                         pending.Push(logicalAnd.Left);
                         break;
@@ -265,6 +271,46 @@ namespace Raven.Analyzers.Queries
                         break;
                 }
             }
+        }
+
+        // Mirrors the client's TryHandleBetween, which folds only this shape into one between clause.
+        private static bool IsInclusiveRange(BinaryExpressionSyntax logicalAnd)
+        {
+            if (Unwrap(logicalAnd.Left) is not BinaryExpressionSyntax left
+                || Unwrap(logicalAnd.Right) is not BinaryExpressionSyntax right)
+            {
+                return false;
+            }
+
+            bool complementary =
+                (left.IsKind(SyntaxKind.GreaterThanOrEqualExpression) && right.IsKind(SyntaxKind.LessThanOrEqualExpression))
+                || (left.IsKind(SyntaxKind.LessThanOrEqualExpression) && right.IsKind(SyntaxKind.GreaterThanOrEqualExpression));
+            if (!complementary)
+                return false;
+
+            ExpressionSyntax? leftMember = RangeMember(left);
+            ExpressionSyntax? rightMember = RangeMember(right);
+            return leftMember != null
+                   && rightMember != null
+                   && leftMember.WithoutTrivia().ToString() == rightMember.WithoutTrivia().ToString();
+        }
+
+        private static ExpressionSyntax? RangeMember(BinaryExpressionSyntax comparison)
+        {
+            bool leftIsMember = Unwrap(comparison.Left) is MemberAccessExpressionSyntax;
+            bool rightIsMember = Unwrap(comparison.Right) is MemberAccessExpressionSyntax;
+            if (leftIsMember == rightIsMember)
+                return null;
+
+            return Unwrap(leftIsMember ? comparison.Left : comparison.Right);
+        }
+
+        private static ExpressionSyntax Unwrap(ExpressionSyntax expression)
+        {
+            while (expression is ParenthesizedExpressionSyntax paren)
+                expression = paren.Expression;
+
+            return expression;
         }
 
         private static bool ReferencesSymbol(ExpressionSyntax expression, ISymbol symbol, SemanticModel model)

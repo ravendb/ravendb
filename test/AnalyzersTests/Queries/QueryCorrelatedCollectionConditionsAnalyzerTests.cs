@@ -22,7 +22,7 @@ using Raven.Client.Documents.Linq;
 
         private const string Model = @"
 enum Role { Viewer, Contributor }
-class Member { public string UserId { get; set; } public Role Role { get; set; } public List<Permission> Permissions { get; set; } }
+class Member { public string UserId { get; set; } public Role Role { get; set; } public int Value { get; set; } public int Other { get; set; } public List<Permission> Permissions { get; set; } }
 class Permission { public string Scope { get; set; } public bool Granted { get; set; } }
 class Project { public string Id { get; set; } public string Owner { get; set; } public List<Member> Members { get; set; } public Member Lead { get; set; } }
 class Projects_ByMember : AbstractIndexCreationTask<Project>
@@ -128,6 +128,33 @@ class Test
     {
         var projects = " + query + @"
             .Where(x => x.Members.Any(y => y.UserId == id && y.Role == Role.Contributor))
+            .ToList();
+    }
+}
+" + Model;
+
+            var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryCorrelatedCollectionConditionsAnalyzer>(source);
+
+            Assert.Equal(expected, diagnostics.Length);
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData("y.Value >= 5 && y.Value <= 10", 0)]
+        [InlineData("y.Value <= 10 && y.Value >= 5", 0)]
+        [InlineData("5 <= y.Value && 10 >= y.Value", 0)]
+        [InlineData("y.Value >= 5 && y.Value <= 10 && y.Role == Role.Contributor", 1)]
+        [InlineData("y.Value > 5 && y.Value < 10", 1)]
+        [InlineData("y.Value >= 5 && y.Value < 10", 1)]
+        [InlineData("y.Value >= 5 && y.Other <= 10", 1)]
+        public async Task InclusiveRange_On_One_Member_Counts_As_One_Condition(string predicate, int expected)
+        {
+            string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var projects = session.Query<Project>()
+            .Where(x => x.Members.Any(y => " + predicate + @"))
             .ToList();
     }
 }
