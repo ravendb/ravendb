@@ -1,6 +1,5 @@
 using System;
 using System.Text.RegularExpressions;
-using Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters;
 
 namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 {
