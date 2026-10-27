@@ -700,7 +700,7 @@ void GetData(IDocumentSession session, string userId, string orderId, bool flag)
 
 ## RVN013: Query result is not bounded by Take()
 
-**Triggered by:** calling `ToList()`, `ToArray()`, `ToListAsync()`, or `ToArrayAsync()` on a chain rooted in a RavenDB query (`session.Query<T>()`, `session.Advanced.DocumentQuery<T>()`, or `session.Advanced.RawQuery<T>()`, including their async forms) that does not have a `.Take(n)` call anywhere in the chain. The chain is followed through standard `System.Linq` operators such as `OfType<T>()`, `As<T>()`, `GroupBy` and `Select`, and through locals typed as `IQueryable<T>`, so the rule still fires when the file lacks `using Raven.Client.Documents.Linq;`.
+**Triggered by:** calling `ToList()`, `ToArray()`, `ToListAsync()`, `ToArrayAsync()`, `Lazily()` or `LazilyAsync()` on a chain rooted in a RavenDB query (`session.Query<T>()`, `session.Advanced.DocumentQuery<T>()`, or `session.Advanced.RawQuery<T>()`, including their async forms) that does not have a `.Take(n)` call anywhere in the chain. The chain is followed through standard `System.Linq` operators such as `OfType<T>()`, `As<T>()`, `GroupBy` and `Select`, and through locals typed as `IQueryable<T>`, so the rule still fires when the file lacks `using Raven.Client.Documents.Linq;`.
 
 An unbounded query returns **every** matching document: the server applies no default limit (`IndexQueryServerSide.PageSize` starts at `int.MaxValue`), and the client only sends a `limit` when you set one. Without an explicit `.Take(n)` the result size is whatever the dataset happens to hold, so a query that was fine against test data can pull the whole collection in production. Add `.Take(n)` to bound it.
 
@@ -737,7 +737,9 @@ var users = await session.Query<User>().ToListAsync();   // RVN013
 var users = await session.Query<User>().Take(10).ToListAsync();
 ```
 
-**Not flagged** (inherently bounded or scalar): `First()`, `FirstOrDefault()`, `Single()`, `SingleOrDefault()`, `Any()`, `Count()`, `LongCount()`.
+A lazy registration fetches the full result set the same way once the batch is dispatched, so `session.Query<User>().Lazily()` (the shape the RVN012 code fix produces) is reported like `ToList()` and needs its own `.Take(n)`.
+
+**Not flagged** (inherently bounded or scalar): `First()`, `FirstOrDefault()`, `Single()`, `SingleOrDefault()`, `Any()`, `Count()`, `LongCount()`. Other ways of reading a query, such as `foreach`, `ToDictionary()` or `AsEnumerable().ToList()`, are not checked.
 
 **Not flagged** (in-memory LINQ, not a database query): any `ToList()` after the query has already been materialized, e.g. `session.Query<User>().Take(5).ToList().Where(...).ToList()` or `session.TimeSeriesFor(...).Get().GroupBy(...).ToList()`.
 

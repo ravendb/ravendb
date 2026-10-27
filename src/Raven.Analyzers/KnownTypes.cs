@@ -122,6 +122,7 @@ namespace Raven.Analyzers
         public static readonly HashSet<string> UnboundedMaterializingMethods =
         [
             "ToList", "ToListAsync", "ToArray", "ToArrayAsync",
+            "Lazily", "LazilyAsync",
         ];
 
         // Index class names (matched by short name against base type chain)

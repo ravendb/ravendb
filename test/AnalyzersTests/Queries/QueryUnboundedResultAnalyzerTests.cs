@@ -42,6 +42,32 @@ class User { public string Id { get; set; } }
             Assert.Equal(DiagnosticSeverity.Info, diagnostics[0].Severity);
         }
 
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData("var lazy = session.Query<User>().Lazily(); var users = lazy.Value.ToList();", 1, "Lazily")]
+        [InlineData("var lazy = session.Query<User>().Where(u => u.Id != null).Lazily(); var users = lazy.Value.ToList();", 1, "Lazily")]
+        [InlineData("var lazy = asyncSession.Query<User>().LazilyAsync(); var users = (await lazy.Value).ToList();", 1, "LazilyAsync")]
+        [InlineData("var lazy = session.Query<User>().Take(10).Lazily(); var users = lazy.Value.ToList();", 0, null)]
+        public async Task QueryLazily_WithoutTake_Reports_Diagnostic(string body, int expected, string reportedMethod)
+        {
+            string source = CommonUsings + @"
+class Test
+{
+    async Task Run(IDocumentSession session, IAsyncDocumentSession asyncSession)
+    {
+        " + body + @"
+    }
+}
+
+class User { public string Id { get; set; } }
+";
+
+            var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryUnboundedResultAnalyzer>(source);
+
+            Assert.Equal(expected, diagnostics.Length);
+            if (expected == 1)
+                Assert.Equal(reportedMethod, diagnostics[0].Location.SourceTree!.GetText().ToString(diagnostics[0].Location.SourceSpan));
+        }
+
         [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryToArray_WithoutTake_Reports_Diagnostic()
         {
