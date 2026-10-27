@@ -182,27 +182,13 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             if (root == null)
                 return document;
 
-            // Extract session receiver from the first Load call, or from query chain root.
-            // RegisterCodeFixesAsync has already verified all calls share the same session
-            // symbol, so any batchable call's receiver yields a correct session expression.
-            ExpressionSyntax? sessionReceiver = null;
-            foreach (var (_, _, receiver, isLoad, _) in batchableCalls)
-            {
-                if (isLoad)
-                {
-                    sessionReceiver = receiver;
-                    break;
-                }
-            }
-
-            // If no Load found, try to extract from query chain
-            if (sessionReceiver == null && batchableCalls.Count > 0)
-            {
-                var (stmt, _, receiver, _, _) = batchableCalls[0];
-                sessionReceiver = ExtractSessionReceiverFromQueryChain(receiver);
-            }
-
-            if (sessionReceiver == null)
+            // Every batchable call carries its resolved session receiver (a Load's receiver, or the
+            // receiver of the Query() call a materializer chain is rooted in). RegisterCodeFixesAsync has
+            // already verified all calls share the same session symbol, which also constrained that
+            // receiver to a stable instance (local/parameter/field), so the first call's receiver is an
+            // identifier or member access the lazy batch can be routed through; anything else bails.
+            ExpressionSyntax sessionReceiver = batchableCalls[0].receiver.WithoutTrivia();
+            if (sessionReceiver is not (IdentifierNameSyntax or MemberAccessExpressionSyntax))
                 return document;
 
             // Collect identifiers already in scope so generated lazy names don't collide.
@@ -538,17 +524,6 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             return null;
         }
 
-        private static ExpressionSyntax? ExtractSessionReceiverFromQueryChain(ExpressionSyntax expression)
-        {
-            // For a query call like session.Query<T>().Where(...).ToList(), the session receiver is the
-            // chain root that precedes the materializer (the receiver of the outermost .Query/.Where/...
-            // call). RegisterCodeFixesAsync has already constrained that root's symbol to a stable
-            // instance (local/parameter/field), so the root node is an identifier or member access;
-            // anything else is not a receiver we can route the lazy batch through.
-            ExpressionSyntax root = SyntaxHelpers.WalkInvocationChainToRoot(expression);
-            return root is IdentifierNameSyntax or MemberAccessExpressionSyntax ? root : null;
-        }
-
         // True when any batched statement's initializer references a local declared by another
         // batched statement. Those locals are materialized only after the batch, so reordering them
         // ahead of their use would not compile (CS0841) — bail instead of emitting broken code.
@@ -729,8 +704,9 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                     // Only the genuine framework materializer (Enumerable.ToList, Raven async query
                     // extensions) can be rewritten to Lazily()/LazilyAsync(); a same-named user-defined
                     // extension would be silently replaced with different semantics, so it is excluded.
-                    ISymbol? sessionSymbol = _model.GetSymbolInfo(SyntaxHelpers.WalkInvocationChainToRoot(memberAccess.Expression)).Symbol;
-                    BatchableCalls.Add((statement, methodName, memberAccess.Expression, false, SyntaxHelpers.AsStableSessionInstance(sessionSymbol)));
+                    ExpressionSyntax sessionReceiver = SyntaxHelpers.ResolveQuerySessionReceiver(memberAccess.Expression, _model);
+                    ISymbol? sessionSymbol = _model.GetSymbolInfo(sessionReceiver).Symbol;
+                    BatchableCalls.Add((statement, methodName, sessionReceiver, false, SyntaxHelpers.AsStableSessionInstance(sessionSymbol)));
                     return;
                 }
 

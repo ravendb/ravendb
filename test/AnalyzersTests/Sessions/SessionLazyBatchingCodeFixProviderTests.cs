@@ -133,6 +133,38 @@ class User { public string Id { get; set; } }
             Assert.Contains("var employees = lazyEmployees.Value.ToList();", fixedCode);
         }
 
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData("var manager = session.Load<User>(managerId);", "session.Advanced.Lazily.Load<User>(managerId)", "var manager = lazyManager.Value;")]
+        [InlineData("var users = session.Query<User>().ToList();", "session.Query<User>().Lazily()", "var users = lazyUsers.Value.ToList();")]
+        [InlineData("var users = q2.ToArray();", "q2.Lazily()", "var users = lazyUsers.Value.ToArray();")]
+        public async Task SplitQuery_Transforms_To_Lazy(string partner, string expectedLazy, string expectedExtraction)
+        {
+            string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string managerId)
+    {
+        var q = session.Query<Employee>().Where(e => e.Active);
+        var q2 = session.Query<User>();
+        var employees = q.ToList();
+        " + partner + @"
+    }
+}
+
+class Employee { public string Id { get; set; } public bool Active { get; set; } }
+class User { public string Id { get; set; } }
+";
+
+            string fixedCode = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
+
+            Assert.Contains("var q = session.Query<Employee>().Where(e => e.Active);", fixedCode);
+            Assert.Contains("var lazyEmployees = q.Lazily();", fixedCode);
+            Assert.Contains("var employees = lazyEmployees.Value.ToList();", fixedCode);
+            Assert.Contains(expectedLazy, fixedCode);
+            Assert.Contains(expectedExtraction, fixedCode);
+            Assert.DoesNotContain("q.Advanced", fixedCode);
+        }
+
         [RavenFact(RavenTestCategory.ClientApi)]
         public async Task QueryRewrite_Does_Not_Duplicate_Existing_Using()
         {

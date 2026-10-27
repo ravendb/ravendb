@@ -117,6 +117,30 @@ namespace Raven.Analyzers.Shared
         }
 
         /// <summary>
+        /// Resolves the session receiver a materializing query executes against. Walks the fluent chain
+        /// (following a <c>var q = session.Query&lt;T&gt;()...;</c> split to the local's initializer via
+        /// the model-aware <see cref="EnumerateInvocationChain(ExpressionSyntax?, SemanticModel)"/>) to the
+        /// originating <c>Query()</c> call and returns that call's receiver expression, so an inline query
+        /// and a split one resolve to the same session. Falls back to the syntactic chain root when the
+        /// chain has no <c>Query()</c> call (e.g. a queryable returned from a helper). Shared by the
+        /// lazy-batching analyzer (grouping) and its code fix (same-session bail, receiver of the emitted
+        /// <c>Advanced.Lazily</c> calls) so the two cannot disagree on which session a query belongs to.
+        /// </summary>
+        public static ExpressionSyntax ResolveQuerySessionReceiver(ExpressionSyntax queryExpression, SemanticModel model)
+        {
+            foreach (InvocationExpressionSyntax inv in EnumerateInvocationChain(queryExpression, model))
+            {
+                if (GetMethodName(inv) == KnownTypes.QueryMethods.Query
+                    && inv.Expression is MemberAccessExpressionSyntax queryAccess)
+                {
+                    return queryAccess.Expression;
+                }
+            }
+
+            return WalkInvocationChainToRoot(queryExpression);
+        }
+
+        /// <summary>
         /// Returns <paramref name="symbol"/> when it denotes a stable instance — a local, parameter, or
         /// field — that two calls can be proven to share, otherwise null. A property getter or method
         /// call (e.g. <c>GetSession()</c> or a <c>Session</c> property) may return a fresh instance per
