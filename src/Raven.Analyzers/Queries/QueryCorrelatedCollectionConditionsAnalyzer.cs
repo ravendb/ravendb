@@ -38,7 +38,8 @@ namespace Raven.Analyzers.Queries
         {
             var invocation = (InvocationExpressionSyntax)context.Node;
 
-            if (SyntaxHelpers.GetMethodName(invocation) != KnownTypes.QueryMethods.Where)
+            if (SyntaxHelpers.GetMethodName(invocation) is not string methodName
+                || !KnownTypes.PredicateQueryMethods.Contains(methodName))
                 return;
 
             if (SyntaxHelpers.GetRavenQueryableReceiver(invocation, context.SemanticModel) is not MemberAccessExpressionSyntax memberAccess)
@@ -157,7 +158,8 @@ namespace Raven.Analyzers.Queries
                     continue;
 
                 if (current.Parent is ArgumentSyntax { Parent: ArgumentListSyntax { Parent: InvocationExpressionSyntax outer } }
-                    && SyntaxHelpers.GetMethodName(outer) == KnownTypes.QueryMethods.Where
+                    && SyntaxHelpers.GetMethodName(outer) is string outerName
+                    && KnownTypes.PredicateQueryMethods.Contains(outerName)
                     && SyntaxHelpers.GetRavenQueryableReceiver(outer, model) != null)
                 {
                     return true;

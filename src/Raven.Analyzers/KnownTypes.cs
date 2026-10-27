@@ -167,6 +167,13 @@ namespace Raven.Analyzers
             public const string Take = "Take";
         }
 
+        public static readonly HashSet<string> PredicateQueryMethods =
+        [
+            QueryMethods.Where,
+            "First", "FirstOrDefault", "Single", "SingleOrDefault", "Any", "Count", "LongCount",
+            "FirstAsync", "FirstOrDefaultAsync", "SingleAsync", "SingleOrDefaultAsync", "AnyAsync", "CountAsync", "LongCountAsync",
+        ];
+
         // RavenDB client types live under this namespace. Short-name matches for the session /
         // store / queryable interfaces are gated on it (see SyntaxHelpers.IsTypeOrImplements) so the
         // analyzers stay decoupled from Raven.Client versioning — no full assembly-qualified name —

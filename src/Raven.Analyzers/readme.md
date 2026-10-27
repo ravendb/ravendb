@@ -828,7 +828,7 @@ class DocumentIndex : AbstractIndexCreationTask<Document>
 
 ## RVN015: Correlated conditions over a nested collection in a dynamic query
 
-**Triggered by:** a dynamic query (`session.Query<T>()` with no index) whose `Where` predicate calls `Any` on a collection member of the document with a lambda that joins two or more conditions on the element with `&&`, or calls `All` on such a member with any predicate.
+**Triggered by:** a dynamic query (`session.Query<T>()` with no index) whose predicate calls `Any` on a collection member of the document with a lambda that joins two or more conditions on the element with `&&`, or calls `All` on such a member with any predicate. The predicate may be passed to `Where` or to a predicate overload of `First`, `FirstOrDefault`, `Single`, `SingleOrDefault`, `Any`, `Count` or `LongCount` (and their async forms), which the client translates into the same where clause.
 
 The auto index that serves a dynamic query flattens the collection into one multi-valued field per member (e.g. `Members[].UserId`, `Members[].Role`). The query becomes `where Members[].UserId = $p0 and Members[].Role = $p1`, so each condition is matched independently: a document matches when *some* member has the user id and *some* member (possibly another one) has the role. The server never creates fan-out auto indexes, so per-element correlation needs a static index whose map emits one entry per element.
 

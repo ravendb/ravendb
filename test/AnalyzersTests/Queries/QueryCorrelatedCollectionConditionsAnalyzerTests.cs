@@ -84,6 +84,35 @@ class Test
             Assert.Contains("NotSupportedException", diagnostic.GetMessage());
         }
 
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData("var p = session.Query<Project>().FirstOrDefault(x => x.Members.Any(y => y.UserId == id && y.Role == Role.Contributor));")]
+        [InlineData("var p = session.Query<Project>().First(x => x.Members.Any(y => y.UserId == id && y.Role == Role.Contributor));")]
+        [InlineData("var p = session.Query<Project>().Single(x => x.Members.Any(y => y.UserId == id && y.Role == Role.Contributor));")]
+        [InlineData("var p = session.Query<Project>().SingleOrDefault(x => x.Members.Any(y => y.UserId == id && y.Role == Role.Contributor));")]
+        [InlineData("var p = session.Query<Project>().Any(x => x.Members.Any(y => y.UserId == id && y.Role == Role.Contributor));")]
+        [InlineData("var p = session.Query<Project>().Count(x => x.Members.Any(y => y.UserId == id && y.Role == Role.Contributor));")]
+        [InlineData("var p = session.Query<Project>().LongCount(x => x.Members.Any(y => y.UserId == id && y.Role == Role.Contributor));")]
+        [InlineData("var p = await asyncSession.Query<Project>().FirstOrDefaultAsync(x => x.Members.Any(y => y.UserId == id && y.Role == Role.Contributor));")]
+        [InlineData("var p = await asyncSession.Query<Project>().AnyAsync(x => x.Members.Any(y => y.UserId == id && y.Role == Role.Contributor));")]
+        public async Task PredicateOverload_Reports_Diagnostic(string statement)
+        {
+            string source = CommonUsings + @"
+using System.Threading.Tasks;
+class Test
+{
+    async Task Run(IDocumentSession session, IAsyncDocumentSession asyncSession, string id)
+    {
+        " + statement + @"
+    }
+}
+" + Model;
+
+            var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryCorrelatedCollectionConditionsAnalyzer>(source);
+
+            var diagnostic = Assert.Single(diagnostics);
+            Assert.Contains("'Any' over 'x.Members'", diagnostic.GetMessage());
+        }
+
         [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ThreeConjunctsWithOneUnrelated_Reports_Diagnostic()
         {
