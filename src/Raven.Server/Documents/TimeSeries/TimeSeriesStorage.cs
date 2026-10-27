@@ -229,7 +229,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private ChangeVector InsertDeletedRange(DocumentsOperationContext context, DeletionRangeRequest deletionRangeRequest, ChangeVector remoteChangeVector = null)
+        private ChangeVector InsertDeletedRange(DocumentsOperationContext context, DeletionRangeRequest deletionRangeRequest, ChangeVector remoteChangeVector = null, bool updateStats = true)
         {
             var collection = deletionRangeRequest.Collection;
             var documentId = deletionRangeRequest.DocumentId;
@@ -295,13 +295,17 @@ namespace Raven.Server.Documents.TimeSeries
                     deleteRangesTable.Set(tvb);
                 }
 
-                var statsMergedChangeVectorToSet = ChangeVector.Merge(statsMergedChangeVector, deletedRangeChangeVector, context);
-                TimeSeriesStats.WriteStatsTableRecord(context, statsTable, sliceHolder,
-                    start: statsCount == 0 ? default : statsStart,
-                    end: statsCount == 0 ? default : statsEnd,
-                    count: statsCount,
-                    name: statsName,
-                    mergedChangeVector: statsMergedChangeVectorToSet);
+                if (updateStats)
+                {
+                    var statsMergedChangeVectorToSet = ChangeVector.Merge(statsMergedChangeVector, deletedRangeChangeVector, context);
+                    TimeSeriesStats.WriteStatsTableRecord(context, statsTable, sliceHolder,
+                        start: statsCount == 0 ? default : statsStart,
+                        end: statsCount == 0 ? default : statsEnd,
+                        count: statsCount,
+                        name: statsName,
+                        mergedChangeVector: statsMergedChangeVectorToSet);
+                }
+
                 return deletedRangeChangeVector;
             }
         }
@@ -633,7 +637,8 @@ namespace Raven.Server.Documents.TimeSeries
                 foreach (var name in seriesNames)
                 {
                     deletionRangeRequest.Name = name;
-                    InsertDeletedRange(context, deletionRangeRequest);
+                    // don't update the stats table while seriesNames (a lazy iterator over this document's stats rows) is still open, the rows are deleted below anyway
+                    InsertDeletedRange(context, deletionRangeRequest, updateStats: false);
                 }
             }
 
