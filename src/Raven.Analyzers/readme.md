@@ -880,6 +880,8 @@ var projects = session.Query<Project>()
 - queries over a static index (`session.Query<T, TIndex>()` or an index name), where RVN014 covers the fan-out on the index side; a query that only names the collection (`session.Query<T>(collectionName: "Orders")`) is still dynamic and is checked;
 - `Any`/`All` over something that is not a collection member of the document.
 
+A dictionary member is a collection of Key/Value pairs and is flagged the same way: `p.Counters.Any(kv => kv.Key == "a" && kv.Value == 1)` matches a document whose dictionary has key `a` in one entry and value `1` in another. The client lets this particular shape run instead of rejecting it, so the warning is the only signal.
+
 **Note:** Only LINQ queries via `session.Query<T>()` are detected. The low-level `session.Advanced.DocumentQuery<T>()` API is not covered.
 
 **Docs:** [Indexes: Indexing nested data](https://docs.ravendb.net/indexes/indexing-nested-data)

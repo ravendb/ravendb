@@ -24,7 +24,7 @@ using Raven.Client.Documents.Linq;
 enum Role { Viewer, Contributor }
 class Member { public string UserId { get; set; } public Role Role { get; set; } public int Value { get; set; } public int Other { get; set; } public List<Permission> Permissions { get; set; } }
 class Permission { public string Scope { get; set; } public bool Granted { get; set; } }
-class Project { public string Id { get; set; } public string Owner { get; set; } public List<Member> Members { get; set; } public Member Lead { get; set; } }
+class Project { public string Id { get; set; } public string Owner { get; set; } public List<Member> Members { get; set; } public Member Lead { get; set; } public Dictionary<string, int> Counters { get; set; } }
 class Projects_ByMember : AbstractIndexCreationTask<Project>
 {
     public Projects_ByMember()
@@ -163,6 +163,27 @@ class Test
             var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryCorrelatedCollectionConditionsAnalyzer>(source);
 
             Assert.Equal(expected, diagnostics.Length);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task DictionaryKeyAndValue_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var projects = session.Query<Project>()
+            .Where(x => x.Counters.Any(kv => kv.Key == ""a"" && kv.Value == 1))
+            .ToList();
+    }
+}
+" + Model;
+
+            var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryCorrelatedCollectionConditionsAnalyzer>(source);
+
+            var diagnostic = Assert.Single(diagnostics);
+            Assert.Contains("'Any' over 'x.Counters'", diagnostic.GetMessage());
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
