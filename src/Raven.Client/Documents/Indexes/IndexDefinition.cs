@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
-using Newtonsoft.Json;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Extensions;
 
@@ -319,25 +319,25 @@ namespace Raven.Client.Documents.Indexes
             return Equals(obj as IndexDefinition);
         }
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         private byte[] _cachedHashCodeAsBytes;
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         private HashSet<string> _maps;
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         private Dictionary<string, IndexFieldOptions> _fields;
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         private Dictionary<string, string> _additionalSources;
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         private HashSet<AdditionalAssembly> _additionalAssemblies;
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         private IndexConfiguration _configuration;
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         private List<string[]> _compoundFields;
 
         /// <summary>
