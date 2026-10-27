@@ -18,7 +18,7 @@
 using System;
 using System.Globalization;
 
-namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
+namespace Raven.Client.Json.Serialization
 {
     /// <summary> Provides support for converting dates to strings and vice-versa.
     /// The strings are structured so that lexicographic sorting orders

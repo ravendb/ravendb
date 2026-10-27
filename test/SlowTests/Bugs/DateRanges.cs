@@ -2,7 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters;
+using Raven.Client.Json.Serialization;
 using Tests.Infrastructure;
 using Xunit;
 
