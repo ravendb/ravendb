@@ -22,8 +22,7 @@ public class Program
             .AddLogger(ConsoleLogger.Default)
             .AddColumnProvider(DefaultColumnProviders.Instance)
             .AddJob(Job.Default
-                // the default in-process timeout is five minutes and covers GlobalSetup, which seeds and indexes the data set
-                .WithToolchain(new InProcessEmitToolchain(TimeSpan.FromHours(2), logOutput: true))
+                .WithToolchain(InProcessEmitToolchain.Default)
                 .WithWarmupCount(3)
                 .WithIterationCount(10)
                 .AsDefault());

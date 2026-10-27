@@ -57,9 +57,12 @@ namespace Voron.Benchmark.Lucene
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.CreateForNewVersion("net11.0", ".NET 11.0"),
                         Platform = BenchmarkDotNet.Environments.Platform.X64,
                         Jit = Jit.RyuJit
+                    },
+                    Infrastructure =
+                    {
+                        Runtime = CoreRuntime.Core11_0,
                     },
                     Run =
                     {

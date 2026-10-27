@@ -26,7 +26,7 @@ namespace Micro.Benchmark.Benchmarks.Json
             {
                 AddJob(new Job
                 {
-                    Environment = { Runtime = CoreRuntime.CreateForNewVersion("net11.0", ".NET 11.0"), Platform = Platform.X64, Jit = Jit.RyuJit, },
+                    Environment = { Platform = Platform.X64, Jit = Jit.RyuJit, }, Infrastructure = { Runtime = CoreRuntime.Core11_0, },
                 });
 
                 AddExporter(GetExporters().ToArray());
