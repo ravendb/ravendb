@@ -52,7 +52,8 @@ export const storageTermHelp = {
     drain: "Drain (paced writeback): the disk is congested, so flushes stop pushing data in the background and each sync writes its data in paced blocks first. Leaves the disk to the journal writes users wait for.",
     trickle: "Trickle: the disk has headroom, every flush starts pushing its data to the disk in the background.",
     drainShare: "Share of the last hour the disk spent in drain mode (paced writeback).",
-    journalWriteLatency: "Average time of a journal write on this disk. Users wait for these writes.",
+    journalWriteLatency:
+        "Moving average of the journal write time of every storage environment whose data file is on this disk: the server, each database, its shared index journal and indexes writing their own journal. Users wait for these writes. Journals moved to another disk (e.g. a symlink) still count for the disk of their data file.",
     syncCost: "Average time of a data file sync on this disk, including the paced writeback. Above the drain threshold, writes get paced.",
     queueDepth: "Average number of requests queued on the device (iostat aqu-sz). Above the drain threshold, writes get paced.",
     pipelining: "Pipelining: a journal write is submitted while the previous one is still in flight. Used for small, latency bound writes.",
