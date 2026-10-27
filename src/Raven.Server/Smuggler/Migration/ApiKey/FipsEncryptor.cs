@@ -279,12 +279,12 @@ namespace Raven.Server.Smuggler.Migration.ApiKey
 
             public byte[] Encrypt(byte[] bytes, bool fOAEP)
             {
-                return algorithm.Encrypt(bytes, fOAEP);
+                return algorithm.Encrypt(bytes, fOAEP ? RSAEncryptionPadding.OaepSHA1 : RSAEncryptionPadding.Pkcs1);
             }
 
             public byte[] Decrypt(byte[] bytes, bool fOAEP)
             {
-                return algorithm.Decrypt(bytes, fOAEP);
+                return algorithm.Decrypt(bytes, fOAEP ? RSAEncryptionPadding.OaepSHA1 : RSAEncryptionPadding.Pkcs1);
             }
 
             public void ImportCspBlob(byte[] keyBlob)
