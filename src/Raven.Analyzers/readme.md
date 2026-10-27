@@ -669,6 +669,31 @@ async Task GetDataAsync(IAsyncDocumentSession session, string userId, string ord
 
 **Note:** Loads whose ID argument is derived from a prior session result are not flagged — they genuinely depend on the earlier call and cannot be batched with it. Only single-method analysis is performed; cross-method patterns are not detected.
 
+Three further rules decide which operations are grouped into one candidate batch:
+
+- **Session barriers.** A call that changes session state ends the batch: `SaveChanges()`, `Store()`, `Delete()`, `Advanced.Evict()`, `Advanced.Clear()`, `Advanced.Refresh()` and any other session or `Advanced` method apart from the read-only ones (`Load`, `Query`, `Include`, `IsLoaded`, `HasChanged`, `GetDocumentId`, `GetMetadataFor`, ...). Passing the session to another method, or calling a lambda or local function that contains such a call, is treated as a barrier too, since the callee may do anything with it. Operations on either side of a barrier are grouped separately, so a pair before `SaveChanges()` and a single load after it produce two diagnostics, not three.
+- **Branch grouping.** Operations are grouped only with others in the same branch of control flow: the same `if`/`else` block, `switch` section, loop body, conditional (`?:`) arm, `??` / `&&` / `||` right-hand side or `?.` continuation. A load in the `if` body and another in the `else` body never execute together, so they are not reported as a batch.
+- **Repeated loads of the same ID.** Two `Load<T>` calls with the same type argument and the same constant ID, or the same parameter or local that is never reassigned, hit the session cache on the second call and count as one operation. `Load<User>(id)` twice is not reported; `Load<User>(id)` and `Load<Order>(id)` are.
+
+```csharp
+void GetData(IDocumentSession session, string userId, string orderId, bool flag)
+{
+    var user  = session.Load<User>(userId);        // RVN012
+    var order = session.Load<Order>(orderId);      // RVN012
+    session.SaveChanges();                         // barrier: a new group starts here
+    var again = session.Load<User>(userId);        // alone in its group: not reported
+
+    if (flag)
+    {
+        var a = session.Load<User>("users/1");     // different branch from b: not reported
+    }
+    else
+    {
+        var b = session.Load<User>("users/2");
+    }
+}
+```
+
 **Docs:** [Perform requests lazily](https://docs.ravendb.net/client-api/session/how-to/perform-operations-lazily)
 
 ---
