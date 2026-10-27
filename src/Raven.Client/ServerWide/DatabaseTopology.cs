@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json;
+using System.Runtime.Serialization;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Http;
@@ -396,10 +396,10 @@ namespace Raven.Client.ServerWide
         public string DatabaseTopologyIdBase64;
         public string ClusterTransactionIdBase64;
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         public int Count => Members.Count + Promotables.Count + Rehabs.Count;
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         public IEnumerable<string> AllNodes
         {
             get

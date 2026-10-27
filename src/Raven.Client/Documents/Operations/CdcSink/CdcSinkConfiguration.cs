@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Newtonsoft.Json;
+using System.Runtime.Serialization;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
@@ -45,7 +45,7 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
     public bool SkipInitialLoad { get; set; }
 
     [JsonDeserializationIgnore]
-    [JsonIgnore]
+    [IgnoreDataMember]
     internal SqlConnectionString Connection { get; set; }
 
     public void Initialize(SqlConnectionString connectionString)

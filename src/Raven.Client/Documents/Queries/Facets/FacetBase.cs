@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
+using System.Runtime.Serialization;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session.Tokens;
 using Sparrow.Json;
@@ -9,7 +9,7 @@ namespace Raven.Client.Documents.Queries.Facets
 {
     public abstract class FacetBase
     {
-        [JsonIgnore]
+        [IgnoreDataMember]
         private string _displayFieldName;
 
         protected FacetBase()
