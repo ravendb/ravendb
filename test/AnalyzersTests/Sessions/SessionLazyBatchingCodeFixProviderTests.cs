@@ -639,6 +639,35 @@ class User { public string Id { get; set; } public string ManagerId { get; set; 
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task DependentLoad_After_Batch_Ends_The_Run()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string orderId, string employeeId)
+    {
+        var order = session.Load<Order>(orderId);
+        var employee = session.Load<Employee>(employeeId);
+        var company = session.Load<Company>(order.Company);
+    }
+}
+
+class Order { public string Id { get; set; } public string Company { get; set; } }
+class Employee { public string Id { get; set; } }
+class Company { public string Id { get; set; } }
+";
+
+            string fixedCode = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
+
+            Assert.Contains("var lazyOrder = session.Advanced.Lazily.Load<Order>(orderId);", fixedCode);
+            Assert.Contains("var lazyEmployee = session.Advanced.Lazily.Load<Employee>(employeeId);", fixedCode);
+            Assert.Contains("var order = lazyOrder.Value;", fixedCode);
+            Assert.Contains("var employee = lazyEmployee.Value;", fixedCode);
+            Assert.Contains("var company = session.Load<Company>(order.Company);", fixedCode);
+            Assert.True(fixedCode.IndexOf("var order = lazyOrder.Value;", System.StringComparison.Ordinal) < fixedCode.IndexOf("var company =", System.StringComparison.Ordinal));
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task DependentQuery_On_Prior_Load_Offers_No_Fix()
         {
             // The query depends on the prior Load's result (user.Id). Batching would materialize

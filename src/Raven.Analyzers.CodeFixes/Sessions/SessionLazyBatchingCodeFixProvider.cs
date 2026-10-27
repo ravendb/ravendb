@@ -45,8 +45,11 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             if (block == null)
                 return;
 
+            SyntaxNode codeBlock = (SyntaxNode?)block.FirstAncestorOrSelf<BaseMethodDeclarationSyntax>() ?? block;
+            var dependencies = new SessionMaterializationDependencies(semanticModel, codeBlock);
+
             // Collect all batchable calls in this block
-            var collector = new BatchableCallCollector(semanticModel);
+            var collector = new BatchableCallCollector(semanticModel, dependencies);
             collector.Visit(block);
 
             if (collector.BatchableCalls.Count < 2)
@@ -657,11 +660,13 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             private static readonly HashSet<string> QueryMaterializingMethods = KnownTypes.LazyBatchableQueryMaterializers;
 
             private readonly SemanticModel _model;
+            private readonly SessionMaterializationDependencies _dependencies;
             public readonly List<(LocalDeclarationStatementSyntax statement, string methodName, ExpressionSyntax receiver, bool isLoad, ISymbol? sessionSymbol)> BatchableCalls;
 
-            public BatchableCallCollector(SemanticModel model)
+            public BatchableCallCollector(SemanticModel model, SessionMaterializationDependencies dependencies)
             {
                 _model = model;
+                _dependencies = dependencies;
                 BatchableCalls = [];
             }
 
@@ -699,7 +704,8 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                 if (QueryMaterializingMethods.Contains(methodName)
                     && invocation.ArgumentList.Arguments.Count == 0
                     && SyntaxHelpers.IsRavenQueryableRooted(memberAccess.Expression, _model)
-                    && !SyntaxHelpers.IsUserDefinedInSource(_model.GetSymbolInfo(invocation).Symbol))
+                    && !SyntaxHelpers.IsUserDefinedInSource(_model.GetSymbolInfo(invocation).Symbol)
+                    && !_dependencies.DependsOnMaterializedResult(invocation))
                 {
                     // Only the genuine framework materializer (Enumerable.ToList, Raven async query
                     // extensions) can be rewritten to Lazily()/LazilyAsync(); a same-named user-defined
@@ -717,7 +723,8 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                 // excluded here in lockstep with the analyzer.
                 if ((methodName == KnownTypes.LoadMethodName || methodName == KnownTypes.LoadAsyncMethodName) &&
                     invocation.ArgumentList.Arguments.Count == 1 &&
-                    SyntaxHelpers.IsSessionType(receiverType))
+                    SyntaxHelpers.IsSessionType(receiverType) &&
+                    _dependencies.IsIndependentLoadArgument(invocation.ArgumentList.Arguments[0]))
                 {
                     ISymbol? sessionSymbol = _model.GetSymbolInfo(memberAccess.Expression).Symbol;
                     BatchableCalls.Add((statement, methodName, memberAccess.Expression, true, SyntaxHelpers.AsStableSessionInstance(sessionSymbol)));

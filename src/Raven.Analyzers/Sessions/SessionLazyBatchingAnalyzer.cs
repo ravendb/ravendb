@@ -39,17 +39,8 @@ namespace Raven.Analyzers.Sessions
                 { MethodKind: MethodKind.Ordinary or MethodKind.LocalFunction or MethodKind.Constructor })
                 return;
 
-            // The derived set is method-wide and flow-insensitive: once a symbol is fed by a materialized
-            // result it stays derived for the whole method. Reassigning that same symbol to an independent
-            // value later does not "un-derive" it, so a Load reading the reassigned symbol is treated as
-            // dependent and not flagged. That is a missed batching hint (the safe direction for this
-            // advisory rule) on an unusual scratch-variable-reuse pattern; proper handling would need
-            // per-position dataflow this two-pass walk does not carry.
-            var derivedSet = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
-            var pass1 = new Pass1CollectMaterializationDerivedLocals(context.SemanticModel, derivedSet);
-            pass1.Visit(context.CodeBlock);
-
-            var collector = new MaterializingCallCollector(context.SemanticModel, derivedSet, context.CodeBlock);
+            var dependencies = new SessionMaterializationDependencies(context.SemanticModel, context.CodeBlock);
+            var collector = new MaterializingCallCollector(context.SemanticModel, dependencies, context.CodeBlock);
             collector.Visit(context.CodeBlock);
 
             if (collector.BatchableCalls.Count < 2)
@@ -149,21 +140,21 @@ namespace Raven.Analyzers.Sessions
             // so RVN012 targets the shapes the fix understands. (A materializer the fix cannot mechanically
             // rewrite in a given position — e.g. a non-awaited async Load — is still reported; the fix then
             // declines it, so the diagnostic stands on its own as advice. See the code fix's await guard.)
-            // Pass1 uses the broad SessionMaterializingMethods set for dependency tracking; the two are
-            // deliberately different.
+            // SessionMaterializationDependencies uses the broad SessionMaterializingMethods set for
+            // dependency tracking; the two are deliberately different.
             private static readonly HashSet<string> QueryMaterializingMethods = KnownTypes.LazyBatchableQueryMaterializers;
 
             private readonly SemanticModel _model;
-            private readonly HashSet<ISymbol> _materializationDerivedSet;
+            private readonly SessionMaterializationDependencies _dependencies;
             private readonly SyntaxNode _codeBlock;
             private readonly Dictionary<ISymbol, int> _sessionSegments = new(SymbolEqualityComparer.Default);
             private int _globalSegment;
             public readonly List<BatchableCall> BatchableCalls = [];
 
-            public MaterializingCallCollector(SemanticModel model, HashSet<ISymbol> derivedSet, SyntaxNode codeBlock)
+            public MaterializingCallCollector(SemanticModel model, SessionMaterializationDependencies dependencies, SyntaxNode codeBlock)
             {
                 _model = model;
-                _materializationDerivedSet = derivedSet;
+                _dependencies = dependencies;
                 _codeBlock = codeBlock;
             }
 
@@ -233,11 +224,11 @@ namespace Raven.Analyzers.Sessions
                     && invocation.ArgumentList.Arguments.Count == 0
                     && SyntaxHelpers.IsRavenQueryableRooted(memberAccess.Expression, _model)
                     && !SyntaxHelpers.IsUserDefinedInSource(_model.GetSymbolInfo(invocation).Symbol)
-                    && !DependsOnMaterializedLocal(invocation))
+                    && !_dependencies.DependsOnMaterializedResult(invocation))
                 {
                     // The matched name is the genuine framework materializer (Enumerable.ToList,
                     // Raven's async query extensions), not a same-named user-defined extension.
-                    // The DependsOnMaterializedLocal gate mirrors the Load path's IsIndependentArg
+                    // The DependsOnMaterializedResult gate mirrors the Load path's IsIndependentLoadArgument
                     // check: a query whose chain (a Where/Select predicate, an id argument, …)
                     // references a local produced by a prior materialized call genuinely depends on
                     // that result and cannot share a multi-get batch, so it must not be flagged.
@@ -254,208 +245,9 @@ namespace Raven.Analyzers.Sessions
                 if ((methodName == KnownTypes.LoadMethodName || methodName == KnownTypes.LoadAsyncMethodName) &&
                     SyntaxHelpers.IsSessionType(receiverType))
                 {
-                    if (invocation.ArgumentList.Arguments.Count == 1 && IsIndependentArg(invocation.ArgumentList.Arguments[0]))
+                    if (invocation.ArgumentList.Arguments.Count == 1 && _dependencies.IsIndependentLoadArgument(invocation.ArgumentList.Arguments[0]))
                         AddBatchableCall(invocation, methodName, _model.GetSymbolInfo(memberAccess.Expression).Symbol);
                 }
-            }
-
-            // True when any part of the query invocation (chain receiver, predicate/projection
-            // lambdas, indexer/id arguments) references a local that a prior materialized session
-            // call produced. Such a query depends on that result and cannot be folded into the same
-            // lazy multi-get, so it must be excluded from the batchable set — the query counterpart
-            // of IsIndependentArg for loads. Symbols are compared (not identifier text) so an
-            // unrelated lambda parameter that merely shares a name does not trigger a false exclusion.
-            private bool DependsOnMaterializedLocal(InvocationExpressionSyntax invocation)
-            {
-                foreach (IdentifierNameSyntax id in invocation.DescendantNodes().OfType<IdentifierNameSyntax>())
-                {
-                    ISymbol? symbol = _model.GetSymbolInfo(id).Symbol;
-                    if (symbol is ILocalSymbol or IParameterSymbol or IFieldSymbol or IPropertySymbol
-                        && _materializationDerivedSet.Contains(symbol))
-                    {
-                        return true;
-                    }
-                }
-
-                return false;
-            }
-
-            private bool IsIndependentArg(ArgumentSyntax arg)
-            {
-                ExpressionSyntax expr = arg.Expression;
-
-                // Literal constants are independent
-                if (expr is LiteralExpressionSyntax)
-                    return true;
-
-                // Simple identifiers: check if they resolve to parameter, field, or independent local
-                if (expr is IdentifierNameSyntax id)
-                {
-                    SymbolInfo symbolInfo = _model.GetSymbolInfo(id);
-                    ISymbol? symbol = symbolInfo.Symbol;
-
-                    // Parameters, fields and properties are context-provided — unless a prior materialized
-                    // result flowed into them (id = order.CustomerId, this._customerId = order.CustomerId),
-                    // in which case a Load reading them genuinely depends on the earlier server call and
-                    // must not be batched.
-                    if (symbol is IParameterSymbol or IFieldSymbol or IPropertySymbol)
-                        return !_materializationDerivedSet.Contains(symbol);
-
-                    // Local variables: check if directly materialization-derived
-                    if (symbol is ILocalSymbol local)
-                    {
-                        if (_materializationDerivedSet.Contains(local))
-                            return false; // Directly derived from materialization
-
-                        // Check the local's initializer for dependency on any materialization-derived symbol
-                        VariableDeclaratorSyntax? declarator = FindDeclarator(local);
-                        if (declarator?.Initializer?.Value is ExpressionSyntax initExpr)
-                            return IsSimpleContextExpr(initExpr);
-
-                        return false; // Can't determine, be conservative
-                    }
-
-                    return false; // Other symbol kinds
-                }
-
-                // Complex expressions: be conservative, assume dependent
-                return false;
-            }
-
-            private bool IsSimpleContextExpr(ExpressionSyntax expr)
-            {
-                // Literals are simple and context-provided
-                if (expr is LiteralExpressionSyntax)
-                    return true;
-
-                // Simple identifiers: check if they resolve to parameter, field, or non-derived local
-                if (expr is IdentifierNameSyntax id)
-                {
-                    SymbolInfo symbolInfo = _model.GetSymbolInfo(id);
-                    ISymbol? symbol = symbolInfo.Symbol;
-
-                    // A parameter/field/property/local is context-provided only when it was not fed by a
-                    // prior materialized result (see the derived-set tracking in Pass1).
-                    if (symbol is IParameterSymbol or IFieldSymbol or IPropertySymbol or ILocalSymbol)
-                        return !_materializationDerivedSet.Contains(symbol);
-
-                    return false;
-                }
-
-                // Complex expressions are assumed dependent
-                return false;
-            }
-
-            private static VariableDeclaratorSyntax? FindDeclarator(ILocalSymbol local)
-            {
-                if (local.DeclaringSyntaxReferences.IsDefaultOrEmpty)
-                    return null;
-
-                return local.DeclaringSyntaxReferences[0].GetSyntax() as VariableDeclaratorSyntax;
-            }
-        }
-
-        private sealed class Pass1CollectMaterializationDerivedLocals(SemanticModel model, HashSet<ISymbol> derivedSet) : CSharpSyntaxWalker
-        {
-            // Dependency tracking uses the BROAD set: any materializer (including First/Single/Count/…)
-            // produces a local that downstream operations may depend on, so all of them must be tracked
-            // even though the detection pass only flags the lazy-batchable subset.
-            private static readonly HashSet<string> QueryMaterializingMethods = KnownTypes.SessionMaterializingMethods;
-
-            public override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
-            {
-                foreach (VariableDeclaratorSyntax declarator in node.Declaration.Variables)
-                {
-                    if (declarator.Initializer?.Value is ExpressionSyntax value
-                        && IsDerivedInitializer(value)
-                        && model.GetDeclaredSymbol(declarator) is ISymbol symbol)
-                    {
-                        derivedSet.Add(symbol);
-                    }
-                }
-
-                base.VisitLocalDeclarationStatement(node);
-            }
-
-            // A parameter, field, property, or local (re)assigned from a materialized server call — or from
-            // an expression that reads an already-derived symbol — becomes derived itself, so a later Load id
-            // or query predicate that reads it genuinely depends on the earlier round-trip and must not be
-            // batched. Handling plain assignments (not just declarations) closes the field-mediated
-            // dependency path: var o = session.Load<Order>(id); this._customerId = o.CustomerId;
-            // session.Load<Customer>(_customerId);
-            public override void VisitAssignmentExpression(AssignmentExpressionSyntax node)
-            {
-                ISymbol? target = model.GetSymbolInfo(node.Left).Symbol;
-                if (node.IsKind(SyntaxKind.SimpleAssignmentExpression)
-                    && target is ILocalSymbol or IParameterSymbol or IFieldSymbol or IPropertySymbol
-                    && IsDerivedInitializer(node.Right))
-                {
-                    derivedSet.Add(target);
-                }
-
-                base.VisitAssignmentExpression(node);
-            }
-
-            private bool IsDerivedInitializer(ExpressionSyntax? value) =>
-                IsMaterializingSessionCall(value) || ReferencesDerivedSymbol(value);
-
-            // True when <paramref name="value"/> is a session Load or a materializing query call
-            // (unwrapping a leading await), on a RavenDB session / queryable.
-            private bool IsMaterializingSessionCall(ExpressionSyntax? value)
-            {
-                ExpressionSyntax? expr = value is AwaitExpressionSyntax awaitExpr ? awaitExpr.Expression : value;
-                if (expr is not InvocationExpressionSyntax invocation
-                    || invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
-                {
-                    return false;
-                }
-
-                string? methodName = SyntaxHelpers.GetMethodName(invocation);
-                if (methodName == null)
-                    return false;
-
-                ITypeSymbol? receiverType = model.GetTypeInfo(memberAccess.Expression).Type;
-
-                if (QueryMaterializingMethods.Contains(methodName) && SyntaxHelpers.IsRavenQueryableRooted(memberAccess.Expression, model))
-                    return true;
-
-                return (methodName == KnownTypes.LoadMethodName || methodName == KnownTypes.LoadAsyncMethodName)
-                       && SyntaxHelpers.IsSessionType(receiverType);
-            }
-
-            private bool ReferencesDerivedSymbol(ExpressionSyntax? value)
-            {
-                if (value == null)
-                    return false;
-
-                foreach (IdentifierNameSyntax id in value.DescendantNodesAndSelf().OfType<IdentifierNameSyntax>())
-                {
-                    ISymbol? symbol = model.GetSymbolInfo(id).Symbol;
-                    if (symbol != null && derivedSet.Contains(symbol))
-                        return true;
-                }
-
-                return false;
-            }
-
-            public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node)
-            {
-                // Skip nested lambdas
-            }
-
-            public override void VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node)
-            {
-                // Skip nested lambdas
-            }
-
-            public override void VisitAnonymousMethodExpression(AnonymousMethodExpressionSyntax node)
-            {
-                // Skip anonymous methods
-            }
-
-            public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node)
-            {
-                // Skip local functions
             }
         }
     }
