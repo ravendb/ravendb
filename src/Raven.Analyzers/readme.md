@@ -743,7 +743,7 @@ A lazy registration fetches the full result set the same way once the batch is d
 
 **Not flagged** (in-memory LINQ, not a database query): any `ToList()` after the query has already been materialized, e.g. `session.Query<User>().Take(5).ToList().Where(...).ToList()` or `session.TimeSeriesFor(...).Get().GroupBy(...).ToList()`.
 
-`DocumentQuery<T>()` is bounded by its own `.Take(n)`. A `RawQuery<T>(rql)` is bounded by a `limit` clause in the RQL text; when the text is not known at compile time (a variable, a method result) the rule stays silent.
+`DocumentQuery<T>()` is bounded by its own `.Take(n)`. A `RawQuery<T>(rql)` is bounded by a `limit` clause in the RQL text; when the text is not known at compile time (a variable, a method result, or an interpolated string with a hole such as `$"from Orders {limitClause}"`) the rule stays silent.
 
 ```csharp
 // ❌ Bad: unbounded, returns every match

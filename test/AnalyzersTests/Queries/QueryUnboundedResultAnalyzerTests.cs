@@ -554,7 +554,7 @@ class Test
             where Company = 'companies/1'
             LIMIT 10"").ToList();
         var constant = session.Advanced.RawQuery<Order>(Prefix + ""limit 10"").ToList();
-        var interpolated = session.Advanced.RawQuery<Order>($""from Orders limit {count}"").ToList();
+        var interpolatedConstant = session.Advanced.RawQuery<Order>($""from Orders limit 10"").ToList();
     }
 }
 " + SearchIndex;
@@ -570,9 +570,11 @@ class Test
             const string source = CommonUsings + @"
 class Test
 {
-    void Run(IDocumentSession session, string rql)
+    void Run(IDocumentSession session, string rql, string limitClause, int count)
     {
-        var orders = session.Advanced.RawQuery<Order>(rql).ToList();
+        var variable = session.Advanced.RawQuery<Order>(rql).ToList();
+        var interpolatedClause = session.Advanced.RawQuery<Order>($""from Orders {limitClause}"").ToList();
+        var interpolatedCount = session.Advanced.RawQuery<Order>($""from Orders limit {count}"").ToList();
     }
 }
 " + SearchIndex;

@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -214,25 +213,11 @@ namespace Raven.Analyzers.Queries
 
         private static readonly Regex RqlLimitClause = new(@"\blimit\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        // An interpolated string with a hole is unknown text: the hole may carry the limit clause.
         private static string? TryGetKnownText(ExpressionSyntax expression, SemanticModel model)
         {
             Optional<object?> constant = model.GetConstantValue(expression);
-            if (constant.HasValue)
-                return constant.Value as string;
-
-            if (expression is not InterpolatedStringExpressionSyntax interpolated)
-                return null;
-
-            var text = new StringBuilder();
-            foreach (InterpolatedStringContentSyntax content in interpolated.Contents)
-            {
-                if (content is InterpolatedStringTextSyntax literal)
-                    text.Append(literal.TextToken.ValueText);
-                else
-                    text.Append(' ');
-            }
-
-            return text.ToString();
+            return constant.HasValue ? constant.Value as string : null;
         }
 
         private static bool ChainContainsTake(ExpressionSyntax expression)
