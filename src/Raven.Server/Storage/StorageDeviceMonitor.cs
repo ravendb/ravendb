@@ -186,13 +186,7 @@ namespace Raven.Server.Storage
             }
 
             if (lastHour.TypicalJournalWriteLatencyInMs is { } typical && lastHour.PeakJournalWriteLatencyInMs is { } peak)
-            {
-                SlowIoDetails.SlowWriteInfo slowest = details.Writes.Values.MaxBy(x => x.DurationInSec);
-                string slowestWrite = slowest == null
-                    ? string.Empty
-                    : $", and the slowest {Describe(slowest.Type)} took {FormatMs(slowest.DurationInSec * 1000)} for {FormatSize(slowest.DataWrittenInMb)}";
-                sentences.Add($"In the last hour journal writes typically took {FormatMs(typical)} (peak {FormatMs(peak)}){slowestWrite}.");
-            }
+                sentences.Add(DescribeLastHour(typical, peak, details.Writes.Values.MaxBy(x => x.DurationInSec)));
 
             // a saturated disk stays saturated for an hour after it calms down
             sentences.Add(tracker.IsBusyNow(thresholds)
@@ -201,8 +195,15 @@ namespace Raven.Server.Storage
             sentences.Add("Consider a volume with more IOPS / throughput, an instance with higher storage bandwidth, or more RAM to reduce disk reads.");
 
             return string.Join(" ", sentences);
+        }
 
-            static string FormatMs(double ms) => ms >= 1000 ? $"{ms / 1000:#,#0.#} s" : $"{ms:#,#0.#} ms";
+        // shared by the hint and the debug package analyzer, so both tell the same story
+        internal static string DescribeLastHour(double typicalLatencyInMs, double peakLatencyInMs, SlowIoDetails.SlowWriteInfo slowest)
+        {
+            string slowestWrite = slowest == null
+                ? string.Empty
+                : $", and the slowest {Describe(slowest.Type)} took {FormatMs(slowest.DurationInSec * 1000)} for {FormatSize(slowest.DataWrittenInMb)}";
+            return $"In the last hour journal writes typically took {FormatMs(typicalLatencyInMs)} (peak {FormatMs(peakLatencyInMs)}){slowestWrite}.";
 
             static string FormatSize(double mb) => mb >= 1 ? $"{mb:#,#0.#} MB" : $"{mb * 1024:#,#0} KB";
 
@@ -214,6 +215,8 @@ namespace Raven.Server.Storage
                 _ => "write"
             };
         }
+
+        internal static string FormatMs(double ms) => ms >= 1000 ? $"{ms / 1000:#,#0.#} s" : $"{ms:#,#0.#} ms";
 
         /// <summary>
         /// Called for every slow write a database detects. The write always becomes evidence for its disk; returns true when the

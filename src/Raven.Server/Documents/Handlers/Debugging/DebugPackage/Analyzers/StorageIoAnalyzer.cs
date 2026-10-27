@@ -69,7 +69,7 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
 
         StorageIo.Worst = StorageIo.Devices
             .OrderByDescending(d => d.IsBottleneck)
-            .ThenByDescending(d => d.JournalWriteLatencyInMs)
+            .ThenByDescending(Latency)
             .FirstOrDefault();
 
         return true;
@@ -93,12 +93,12 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
 
             // a congested disk taking tiny writes is never classified, so Auto compression stays on LZ4 exactly where Zstd would help
             if (device.IsBottleneck && device.Class == DeviceWriteBudget.DeviceClass.Unknown && device.JournalWriteSizeInBytes > 0 &&
-                device.JournalWriteSizeInBytes < DeviceWriteBudget.SmallWriteBytes && device.JournalWriteLatencyInMs >= DefaultClassifyAboveLatencyInMs / 2)
+                device.JournalWriteSizeInBytes < DeviceWriteBudget.SmallWriteBytes && Latency(device) >= DefaultClassifyAboveLatencyInMs)
             {
                 issues.ServerIssues.Add(new DetectedIssue(
                     "Slow disk not detected as bandwidth limited",
                     $"Journal writes average {device.JournalWriteSizeInBytes / 1024.0:#,#0.#} KB, below the {DeviceWriteBudget.SmallWriteBytes / 1024:#,#0} KB needed to classify the disk, " +
-                    $"while taking {device.JournalWriteLatencyInMs:#,#0.#} ms. The adaptive write path keeps its safe defaults: Auto journal compression stays on LZ4 " +
+                    $"while typically taking {StorageDeviceMonitor.FormatMs(Latency(device))}. The adaptive write path keeps its safe defaults: Auto journal compression stays on LZ4 " +
                     "although this disk is the bottleneck.",
                     IssueSeverity.Info, IssueCategory.Server)
                 {
@@ -161,11 +161,11 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
         foreach (DebugPackageNodeReport slow in nodes.Where(r => r.Server.StorageIo.Worst.IsBottleneck))
         {
             StorageIoDeviceAnalysis worst = slow.Server.StorageIo.Worst;
-            string peers = string.Join(" and ", healthy.Select(r => $"{r.Server.StorageIo.Worst.JournalWriteLatencyInMs:#,#0.#} ms on {r.NodeTag}"));
+            string peers = string.Join(" and ", healthy.Select(r => $"{StorageDeviceMonitor.FormatMs(Latency(r.Server.StorageIo.Worst))} on {r.NodeTag}"));
 
             clusterWideIssues.Add(new DetectedIssue(
                 $"Node {slow.NodeTag} is held back by its disk",
-                $"Journal writes take {worst.JournalWriteLatencyInMs:#,#0.#} ms on {slow.NodeTag} vs {peers}. {Describe(worst, includeLatency: false)}",
+                $"Journal writes typically take {StorageDeviceMonitor.FormatMs(Latency(worst))} on {slow.NodeTag} vs {peers}. {Describe(worst, includeLatency: false)}",
                 IssueSeverity.Warning, IssueCategory.Cluster)
             {
                 RecommendedAction = RecommendedAction
@@ -204,12 +204,20 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
         }
     }
 
+    // the typical journal write latency of the last hour when the package has the history, the package-wide average otherwise
+    private static double Latency(StorageIoDeviceAnalysis device) => device.TypicalJournalWriteLatencyInMs ?? device.JournalWriteLatencyInMs;
+
     private static string Describe(StorageIoDeviceAnalysis device, bool includeLatency = true)
     {
-        if (device.StatusReason != null)
-            return device.StatusReason;
-
         var sentences = new List<string>();
+        if (device.StatusReason != null)
+        {
+            sentences.Add(device.StatusReason);
+            if (includeLatency && device.TypicalJournalWriteLatencyInMs is { } typical && device.PeakJournalWriteLatencyInMs is { } peak)
+                sentences.Add(StorageDeviceMonitor.DescribeLastHour(typical, peak, device.SlowestWrite));
+            return string.Join(" ", sentences);
+        }
+
         if (includeLatency)
             sentences.Add($"Journal writes average {device.JournalWriteLatencyInMs:#,#0.#} ms for {device.JournalWriteSizeInBytes / 1024.0:#,#0.#} KB.");
         if (device.LikelyDraining)
@@ -223,6 +231,16 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
     private static StorageIoDeviceAnalysis FromEndpoint(StorageDeviceIoInfo device)
     {
         double latencyThreshold = device.Thresholds?.CongestionJournalWriteLatencyInMs ?? DefaultCongestionLatencyInMs;
+
+        // the 10 s samples of the last hour, not the average of the moment the package was taken
+        List<double> latencies = (device.History ?? new List<StorageDeviceSample>())
+            .Where(s => s.JournalWriteLatencyInMs != null)
+            .Select(s => s.JournalWriteLatencyInMs.Value)
+            .Order()
+            .ToList();
+        double? typical = latencies.Count > 0 ? latencies[latencies.Count / 2] : null;
+        double recentLatency = device.SecondsSinceLastJournalWrite < 60 ? device.JournalWriteLatencyInMs : 0;
+
         return new StorageIoDeviceAnalysis
         {
             Name = device.MountPoint ?? device.PathOnDevice,
@@ -236,9 +254,12 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
             JournalWriteSizeInBytes = device.JournalWriteSizeInBytes,
             SyncCostInMs = device.SyncCostInMs,
             QueueDepth = device.QueueDepth,
+            TypicalJournalWriteLatencyInMs = typical,
+            PeakJournalWriteLatencyInMs = latencies.Count > 0 ? latencies[^1] : null,
+            SlowestWrite = device.SlowWrites?.MaxBy(x => x.DurationInSec),
             IsBottleneck = device.Status == StorageDeviceStatus.Saturated ||
                            device.DrainShareOfLastHour > (device.Thresholds?.CongestionDrainShare ?? DefaultCongestionDrainShare) ||
-                           (device.SecondsSinceLastJournalWrite < 60 && device.JournalWriteLatencyInMs > latencyThreshold)
+                           (typical ?? recentLatency) > latencyThreshold
         };
     }
 
