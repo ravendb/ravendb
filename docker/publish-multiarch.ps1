@@ -29,6 +29,7 @@ function CreateDockerManifests {
         }
 
         Invoke-Expression $command
+        CheckLastExitCode
     }
 }
 
@@ -46,6 +47,7 @@ function PushDockerManifests {
         else {
             Write-Host "Pushing manifest $manifest"
             docker manifest push $manifest
+            CheckLastExitCode
         }
     }
     
