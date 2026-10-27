@@ -763,7 +763,7 @@ var orders = session.Advanced.RawQuery<Order>("from Orders limit 10").ToList();
 
 Fan-out indexes produce multiple index entries per source document by iterating over a nested collection. Each element in the collection yields a separate index entry. This multiplies indexing work and storage proportional to collection cardinality. Large collections can significantly degrade indexing performance.
 
-The RavenDB server fires a runtime warning (`WarnIndexOutputsPerDocument`) when fan-out is detected, but this analyzer catches it at compile time.
+The RavenDB server raises the **High indexing fanout ratio** performance hint at runtime, but only once a single document produces more index entries than `PerformanceHints.Indexing.MaxIndexOutputsPerDocument` (1024 by default). This analyzer reports the fan-out syntax at compile time regardless of collection size.
 
 **Example — method-chain form:**
 

@@ -241,7 +241,7 @@ namespace Raven.Analyzers.Shared
             messageFormat: "Index Map fans out via '{0}'. Each source document yields one index entry per element in the collection; unbounded collections can significantly degrade indexing performance.",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Warning,
-            description: "Fan-out indexes produce multiple index entries per source document by iterating over a nested collection. The RavenDB server fires a runtime warning (WarnIndexOutputsPerDocument) for the same reason. Verify the collection is intentionally fanned out and that its cardinality is acceptable.",
+            description: "Fan-out indexes produce multiple index entries per source document by iterating over a nested collection. The RavenDB server raises the 'High indexing fanout ratio' performance hint once a single document produces more index entries than PerformanceHints.Indexing.MaxIndexOutputsPerDocument (1024 by default); this rule reports the fan-out syntax regardless of collection size. Verify the collection is intentionally fanned out and that its cardinality is acceptable.",
             helpCode: "9S4SVZ");
 
         /// <summary>
