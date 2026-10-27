@@ -822,7 +822,7 @@ class DocumentIndex : AbstractIndexCreationTask<Document>
 
 **Note:** Block-body lambdas are not analyzed. RavenDB index Maps almost always use expression-body lambdas.
 
-**Docs:** [Indexes: Map-reduce fan-out](https://docs.ravendb.net/indexes/map-reduce-indexes)
+**Docs:** [Indexes: Indexing nested data - Fanout index](https://docs.ravendb.net/indexes/indexing-nested-data#fanout-index---multiple-index-entries-per-document)
 
 ---
 
