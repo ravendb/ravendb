@@ -1,4 +1,4 @@
-import { createStoreConfiguration } from "components/store";
+import { createTestStore } from "test/createTestStore";
 import { configureMockServices } from "components/hooks/useServices";
 import { mockServices } from "test/mocks/services/MockServices";
 import { databasesViewSliceInternal } from "components/pages/resources/databases/store/databasesViewSlice";
@@ -22,7 +22,7 @@ function mockPendingDatabasesState() {
 describe("databasesViewSlice", () => {
     it("skips fetching databases state for a node that is still loading", () => {
         const { getDatabasesState } = mockPendingDatabasesState();
-        const store = createStoreConfiguration();
+        const store = createTestStore();
 
         store.dispatch(databasesViewSliceInternal.loadNodeDatabases("A"));
         store.dispatch(databasesViewSliceInternal.loadNodeDatabases("A"));
@@ -32,7 +32,7 @@ describe("databasesViewSlice", () => {
 
     it("refetches databases state once when it was requested while loading", async () => {
         const { getDatabasesState, resolveState } = mockPendingDatabasesState();
-        const store = createStoreConfiguration();
+        const store = createTestStore();
 
         const first = store.dispatch(databasesViewSliceInternal.loadNodeDatabases("A"));
         store.dispatch(databasesViewSliceInternal.loadNodeDatabases("A"));
