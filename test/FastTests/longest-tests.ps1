@@ -18,7 +18,7 @@ if ($SkipRun -eq $false) {
     dotnet build $PSScriptRoot --configuration $Configuration
     if ($LASTEXITCODE -ne 0) { throw "Build failed" }
 
-    $assembly = Join-Path $PSScriptRoot "bin\$Configuration\net10.0\FastTests.dll"
+    $assembly = Join-Path $PSScriptRoot "bin\$Configuration\net11.0\FastTests.dll"
     $parallelism = if ($Parallel) { "collections" } else { "none" }
 
     Get-ChildItem $OutputDir -Filter "run-*.xml" | Remove-Item

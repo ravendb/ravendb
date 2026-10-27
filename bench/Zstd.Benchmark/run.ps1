@@ -17,7 +17,7 @@ $ErrorActionPreference = 'Stop'
 $repo = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 $artifacts = Join-Path $repo ".agents\zstd-bench\$Label"
 $project = Join-Path $PSScriptRoot 'Zstd.Benchmark.csproj'
-$exe = Join-Path $PSScriptRoot 'bin\Release\net10.0\Zstd.Benchmark.exe'
+$exe = Join-Path $PSScriptRoot 'bin\Release\net11.0\Zstd.Benchmark.exe'
 
 dotnet build $project -c Release
 if ($LASTEXITCODE -ne 0) { throw 'build failed' }
