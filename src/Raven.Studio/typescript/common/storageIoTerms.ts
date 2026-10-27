@@ -1,4 +1,4 @@
-// One vocabulary for the storage I/O state (RavenDB-27821), shared by the dashboard, IO Stats, Storage I/O page and analyzer.
+// One vocabulary for the storage I/O state, shared by the dashboard, IO Stats, Storage I/O page and analyzer.
 // Customer facing text uses the plain words; support pages show the technical name next to them.
 
 type StorageDeviceStatus = Raven.Server.Storage.StorageDeviceStatus;

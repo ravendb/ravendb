@@ -11,7 +11,7 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta<typeof StorageIo>;
 
-// node B of RavenDB-27821: disk saturated, writes paced, one index left the shared journal
+// disk saturated, writes paced, one index left the shared journal
 export const Saturated: StoryObj<typeof StorageIo> = {
     render: () => {
         mockServices.manageServerService.withGetStorageIo();

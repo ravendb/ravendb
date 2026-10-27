@@ -850,7 +850,7 @@ export class ManageServerStubs {
         return { Tasks: [replicationTask, backupTask] };
     }
 
-    // node B of RavenDB-27821: an EBS volume at its bandwidth baseline, tiny journal writes, syncs over a second
+    // a volume at its bandwidth baseline: tiny journal writes, syncs over a second
     static storageIo(): Raven.Server.Storage.StorageIoReport {
         const now = new Date("2026-10-26T06:30:00Z").getTime();
         const history: Raven.Server.Storage.StorageDeviceSample[] = [];

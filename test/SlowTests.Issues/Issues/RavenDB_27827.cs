@@ -22,7 +22,7 @@ public class RavenDB_27827 : NoDisposalNeeded
     [RavenFact(RavenTestCategory.Core)]
     public void Analyzer_flags_the_node_whose_disk_holds_it_back_from_io_metrics_of_an_older_package()
     {
-        // the motivating cluster of RavenDB-27821: B's journal writes ~97ms and 1.2s syncs, A and C under 1ms
+        // one slow node (journal writes ~97ms, 1.2s syncs), the others under 1ms
         using var package = ClusterPackage(new Dictionary<string, Dictionary<string, object>>
         {
             ["A"] = new() { ["server-wide/admin.io-metrics.json"] = IoMetrics(journalWriteMs: 0.9, syncMs: 8) },
