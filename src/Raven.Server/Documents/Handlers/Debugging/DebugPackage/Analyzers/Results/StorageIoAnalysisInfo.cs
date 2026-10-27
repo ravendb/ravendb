@@ -26,7 +26,7 @@ public class StorageIoAnalysisInfo
 
 public class StorageIoDeviceAnalysis
 {
-    // mount point, or "all disks" when derived from io-metrics (they do not tell which disk a file is on)
+    // mount point, or "All disks" when derived from io-metrics (they do not tell which disk a file is on)
     public string Name { get; set; }
 
     // null when derived from io-metrics
