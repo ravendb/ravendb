@@ -285,7 +285,7 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
 
         var device = new StorageIoDeviceAnalysis
         {
-            Name = "All disks (from io-metrics)",
+            Name = "All disks",
             JournalWriteLatencyInMs = latency,
             JournalWriteSizeInBytes = (long)size,
             SyncCostInMs = syncCost,

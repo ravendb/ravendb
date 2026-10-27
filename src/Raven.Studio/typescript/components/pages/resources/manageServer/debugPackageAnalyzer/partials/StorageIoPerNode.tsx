@@ -104,13 +104,13 @@ export default function StorageIoPerNode({ summary, nodeTag }: StorageIoPerNodeP
 }
 
 function StorageIoTables({ nodes, width }: { nodes: NodeStorageIo[]; width: number }) {
-    const getSize = useMemo(
-        () =>
-            virtualTableUtils.getCellSizeProvider(
-                virtualTableUtils.getTableBodyWidth(width - analyzerConstants.panelHorizontalPaddingInPx)
-            ),
-        [width]
-    );
+    // a share of the width, but never narrower than the values need: on a narrow screen the table scrolls instead of cutting them
+    const getSize = useMemo(() => {
+        const share = virtualTableUtils.getCellSizeProvider(
+            virtualTableUtils.getTableBodyWidth(width - analyzerConstants.panelHorizontalPaddingInPx)
+        );
+        return (percentage: number, minPx: number) => Math.max(share(percentage), minPx);
+    }, [width]);
 
     const devices = useMemo(
         () => group(nodes.flatMap((n) => n.info.Devices.map((d) => ({ name: d.Name, nodeTag: n.nodeTag, value: d })))),
@@ -220,21 +220,23 @@ function group<V>(entries: { name: string; nodeTag: string; value: V }[]): Group
         });
 }
 
-function getDeviceColumns(getSize: (percentage: number) => number): ColumnDef<GroupedRow<StorageIoDeviceAnalysis>>[] {
+function getDeviceColumns(
+    getSize: (percentage: number, minPx: number) => number
+): ColumnDef<GroupedRow<StorageIoDeviceAnalysis>>[] {
     return [
-        { id: "name", header: "Disk", cell: NameCell, size: getSize(12) },
-        { id: "node", header: "Node", cell: NodeCell, size: getSize(10) },
+        { id: "name", header: "Disk", cell: NameCell, size: getSize(8, 90) },
+        { id: "node", header: "Node", cell: NodeCell, size: getSize(9, 80) },
         {
             id: "status",
             header: "Status",
             cell: ({ row }) => <DeviceStatus devices={row.original.values} />,
-            size: getSize(11),
+            size: getSize(12, 105),
         },
         {
             id: "paced",
             header: () => <span title={storageTermHelp.drainShare}>Paced</span>,
             cell: ({ row }) => <PacedCell devices={row.original.values} />,
-            size: getSize(11),
+            size: getSize(10, 90),
         },
         {
             id: "journal",
@@ -251,7 +253,7 @@ function getDeviceColumns(getSize: (percentage: number) => number): ColumnDef<Gr
                     format={formatMs}
                 />
             ),
-            size: getSize(12),
+            size: getSize(12, 125),
         },
         {
             id: "peak",
@@ -259,13 +261,13 @@ function getDeviceColumns(getSize: (percentage: number) => number): ColumnDef<Gr
             cell: ({ row }) => (
                 <NumberRange values={row.original.values.map((d) => d.PeakJournalWriteLatencyInMs)} format={formatMs} />
             ),
-            size: getSize(10),
+            size: getSize(12, 120),
         },
         {
             id: "slowest",
             header: () => <span title="Slowest single write on the disk in the last hour">Slowest write</span>,
             cell: ({ row }) => <SlowestWrite devices={row.original.values} />,
-            size: getSize(13),
+            size: getSize(13, 135),
         },
         {
             id: "syncs",
@@ -278,7 +280,7 @@ function getDeviceColumns(getSize: (percentage: number) => number): ColumnDef<Gr
                     format={(ms) => (ms > 0 ? formatMs(ms) : "none")}
                 />
             ),
-            size: getSize(11),
+            size: getSize(13, 130),
         },
         {
             id: "class",
@@ -292,17 +294,17 @@ function getDeviceColumns(getSize: (percentage: number) => number): ColumnDef<Gr
                     </span>
                 );
             },
-            size: getSize(10),
+            size: getSize(11, 100),
         },
     ];
 }
 
 function getDatabaseColumns(
-    getSize: (percentage: number) => number
+    getSize: (percentage: number, minPx: number) => number
 ): ColumnDef<GroupedRow<StorageIoDatabaseAnalysis>>[] {
     return [
-        { id: "name", header: "Database", cell: NameCell, size: getSize(22) },
-        { id: "node", header: "Node", cell: NodeCell, size: getSize(10) },
+        { id: "name", header: "Database", cell: NameCell, size: getSize(18, 170) },
+        { id: "node", header: "Node", cell: NodeCell, size: getSize(9, 80) },
         {
             id: "compression",
             header: () => <span title="Journal compression algorithms seen in the package">Compression</span>,
@@ -310,7 +312,7 @@ function getDatabaseColumns(
                 const algorithms = [...new Set(row.original.values.flatMap((d) => d.CompressionAlgorithms))].sort();
                 return algorithms.length > 0 ? <>{algorithms.join(", ")}</> : <NotInPackage />;
             },
-            size: getSize(12),
+            size: getSize(11, 115),
         },
         {
             id: "journal",
@@ -326,7 +328,7 @@ function getDatabaseColumns(
                     )}
                 </>
             ),
-            size: getSize(14),
+            size: getSize(14, 135),
         },
         {
             id: "pipelined",
@@ -334,7 +336,7 @@ function getDatabaseColumns(
             cell: ({ row }) => (
                 <NumberRange values={row.original.values.map((d) => d.PipelinedShare)} format={formatPercent} />
             ),
-            size: getSize(10),
+            size: getSize(10, 95),
         },
         {
             id: "syncs",
@@ -347,7 +349,7 @@ function getDatabaseColumns(
                     )}
                 </>
             ),
-            size: getSize(14),
+            size: getSize(16, 150),
         },
         {
             id: "mandatory",
@@ -357,7 +359,7 @@ function getDatabaseColumns(
             cell: ({ row }) => (
                 <NumberRange values={row.original.values.map((d) => d.MandatorySyncShare)} format={formatPercent} />
             ),
-            size: getSize(9),
+            size: getSize(11, 105),
         },
         {
             id: "paced",
@@ -365,24 +367,24 @@ function getDatabaseColumns(
             cell: ({ row }) => (
                 <NumberRange values={row.original.values.map((d) => d.DrainSyncShare)} format={formatPercent} />
             ),
-            size: getSize(9),
+            size: getSize(11, 90),
         },
     ];
 }
 
 function getSharedJournalColumns(
-    getSize: (percentage: number) => number
+    getSize: (percentage: number, minPx: number) => number
 ): ColumnDef<GroupedRow<SharedJournalsIoInfo>>[] {
     return [
-        { id: "name", header: "Database", cell: NameCell, size: getSize(22) },
-        { id: "node", header: "Node", cell: NodeCell, size: getSize(10) },
+        { id: "name", header: "Database", cell: NameCell, size: getSize(20, 170) },
+        { id: "node", header: "Node", cell: NodeCell, size: getSize(10, 80) },
         {
             id: "sharing",
             header: () => <span title={storageTermHelp.sharedJournal}>Sharing</span>,
             cell: ({ row }) => (
                 <NumberRange values={row.original.values.map((s) => s.IndexesSharing)} format={String} />
             ),
-            size: getSize(15),
+            size: getSize(12, 90),
         },
         {
             id: "own",
@@ -401,7 +403,7 @@ function getSharedJournalColumns(
                 ];
                 return fellBack.length > 0 ? <span className="text-warning">{fellBack.join(", ")}</span> : <>none</>;
             },
-            size: getSize(23),
+            size: getSize(24, 160),
         },
         {
             id: "queue",
@@ -409,7 +411,7 @@ function getSharedJournalColumns(
             cell: ({ row }) => (
                 <NumberRange values={row.original.values.map((s) => s.MergedCommitsQueue)} format={String} />
             ),
-            size: getSize(14),
+            size: getSize(12, 90),
         },
         {
             id: "durable",
@@ -424,7 +426,7 @@ function getSharedJournalColumns(
                     format={(ms) => (ms > 0 ? formatMs(ms) : "idle")}
                 />
             ),
-            size: getSize(16),
+            size: getSize(22, 160),
         },
     ];
 }
@@ -482,7 +484,13 @@ function PacedCell({ devices }: { devices: StorageIoDeviceAnalysis[] }) {
             </>
         );
     }
-    return <>{devices.some((d) => d.LikelyDraining) ? "likely (slow syncs)" : "no"}</>;
+    return devices.some((d) => d.LikelyDraining) ? (
+        <span title="Older package, derived from io-metrics: data file syncs average above the drain threshold">
+            likely
+        </span>
+    ) : (
+        <>no</>
+    );
 }
 
 function SlowestWrite({ devices }: { devices: StorageIoDeviceAnalysis[] }) {
