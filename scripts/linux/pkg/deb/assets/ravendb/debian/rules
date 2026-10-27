@@ -49,10 +49,6 @@ adjust_tarball_ravendb_dir:
 	rm -v *.sh
 
 adjust_tarball_server_dir:
-	cp -v librvnpal.${RAVEN_SO_ARCH_SUFFIX}.so librvnpal.so
-
-	find . -maxdepth 1 -type f -name "librvnpal.*.so" ! -iname "*.${RAVEN_SO_ARCH_SUFFIX}.so" -exec rm -v {} \;
-
 	cp -rv $(ETC_ASSETS_DIR)/ravendb/settings.json settings.default.json
 	mkdir -p libmscordaccore
 

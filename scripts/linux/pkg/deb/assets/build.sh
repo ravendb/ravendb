@@ -78,17 +78,14 @@ case $RAVEN_PLATFORM in
 
     linux-x64)
         export DEB_ARCHITECTURE="amd64"
-        export RAVEN_SO_ARCH_SUFFIX="linux.x64"
         ;;
 
     linux-arm64)
         export DEB_ARCHITECTURE="arm64"
-        export RAVEN_SO_ARCH_SUFFIX="arm.64"
         ;;
 
     raspberry-pi)
         export DEB_ARCHITECTURE="armhf"
-        export RAVEN_SO_ARCH_SUFFIX="arm.32"
         ;;
     
     *)
