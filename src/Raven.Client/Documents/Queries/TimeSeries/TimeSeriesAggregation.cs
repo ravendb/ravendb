@@ -5,7 +5,6 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Util;
@@ -97,7 +96,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             set => _results = value;
         }
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         private TResult[] _results;
 
         private TResult[] MaterializeStream()
@@ -114,13 +113,13 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             return _results;
         }
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         public IEnumerator<TResult> Stream => _timeSeriesStream ?? _results?.AsEnumerable().GetEnumerator();
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         public IAsyncEnumerator<TResult> StreamAsync => _timeSeriesStream;
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         private TimeSeriesStreamEnumerator<TResult> _timeSeriesStream;
         
         void ITimeSeriesQueryStreamResult.SetStream(StreamOperation.TimeSeriesStreamEnumerator stream)
@@ -182,7 +181,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         private T _sum;
         private T _count;
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         public new T Max
         {
             get
@@ -196,7 +195,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
         }
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         public new T Min
         {
             get
@@ -210,7 +209,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
         }
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         public new T Last
         {
             get
@@ -224,7 +223,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
         }
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         public new T First
         {
             get
@@ -238,7 +237,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
         }
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         public new T Average
         {
             get
@@ -252,7 +251,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
         }
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         public new T Sum
         {
             get
@@ -266,7 +265,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
         }
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         public new T Count
         {
             get

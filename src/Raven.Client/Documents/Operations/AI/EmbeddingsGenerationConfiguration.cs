@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.ETL;
 using Sparrow.Json;
@@ -83,10 +83,7 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
     /// Not supported for embeddings ETL; use <see cref="EmbeddingsTransformation"/> or <see cref="EmbeddingsPathConfigurations"/>.
     /// </summary>
     [JsonDeserializationIgnore]
-    [JsonIgnore]
-#if NETCOREAPP3_1_OR_GREATER
-    [System.Text.Json.Serialization.JsonIgnore]
-#endif
+    [IgnoreDataMember]
     [Obsolete($"{nameof(EmbeddingsGenerationConfiguration)} doesn't support multiple transformations. Please use {nameof(EmbeddingsTransformation)} property instead.")]
 #pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
     public override List<Transformation> Transforms
