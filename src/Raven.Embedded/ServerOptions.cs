@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
+using Raven.Client.Util;
 
 namespace Raven.Embedded
 {
@@ -45,9 +46,7 @@ namespace Raven.Embedded
             if (Security != null)
                 throw new InvalidOperationException("The security has already been setup for this ServerOptions object");
 
-#pragma warning disable SYSLIB0057
-            var cert = new X509Certificate2(certificate, certPassword);
-#pragma warning restore SYSLIB0057
+            var cert = CertificateLoaderUtil.CreateCertificateFromAny(certificate, certPassword);
             Security = new SecurityOptions
             {
                 CertificatePath = certificate,
