@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
@@ -52,10 +52,15 @@ public sealed class VertexSettings : AbstractAiSettings
 
     internal string GetProjectId()
     {
-        var credentialJsonType = JObject.Parse(GoogleCredentialsJson);
-        if (credentialJsonType.TryGetValue(ProjectIdPropertyName, StringComparison.OrdinalIgnoreCase, out var projectIdValue))
-            return projectIdValue.Value<string>();
-        
+        using (JsonDocument credentials = JsonDocument.Parse(GoogleCredentialsJson))
+        {
+            foreach (JsonProperty property in credentials.RootElement.EnumerateObject())
+            {
+                if (string.Equals(property.Name, ProjectIdPropertyName, StringComparison.OrdinalIgnoreCase))
+                    return property.Value.GetString();
+            }
+        }
+
         throw new InvalidDataException($"Couldn't find {nameof(ProjectIdPropertyName)} in the provided {nameof(GoogleCredentialsJson)}.");
     }
 
