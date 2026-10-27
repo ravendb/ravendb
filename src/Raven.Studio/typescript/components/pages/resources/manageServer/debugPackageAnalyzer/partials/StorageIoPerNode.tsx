@@ -242,8 +242,21 @@ function DeviceRow({ nodeTag, device }: { nodeTag: string; device: StorageIoDevi
                       : "no"}
             </td>
             <td>
-                {formatMs(device.JournalWriteLatencyInMs)}{" "}
+                {device.TypicalJournalWriteLatencyInMs != null ? (
+                    <span title="Last hour of the package: median and peak of the 10 s samples">
+                        {formatMs(device.TypicalJournalWriteLatencyInMs)}{" "}
+                        <span className="text-muted small">peak {formatMs(device.PeakJournalWriteLatencyInMs)}</span>
+                    </span>
+                ) : (
+                    formatMs(device.JournalWriteLatencyInMs)
+                )}{" "}
                 <span className="text-muted small">{formatBytes(device.JournalWriteSizeInBytes)}</span>
+                {device.SlowestWrite && (
+                    <div className="text-muted small">
+                        slowest {formatMs(device.SlowestWrite.DurationInSec * 1000)} for{" "}
+                        {formatBytes(device.SlowestWrite.DataWrittenInMb * 1024 * 1024)}
+                    </div>
+                )}
             </td>
             <td>{formatSyncCost(device.SyncCostInMs, formatMs)}</td>
             <td title={device.ClassDescription ?? deviceClassHelp[device.Class]}>{device.Class}</td>

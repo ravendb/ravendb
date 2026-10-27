@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Storage;
 using Voron.Impl.Journal;
 
@@ -43,7 +44,16 @@ public class StorageIoDeviceAnalysis
     // derived: the sync cost is above the drain threshold, so writes were very likely paced
     public bool LikelyDraining { get; set; }
 
+    // the average when the package was taken (endpoint), or over the package's io-metrics
     public double JournalWriteLatencyInMs { get; set; }
+
+    // median and peak of the last hour of 10 s samples; null when derived from io-metrics or no journal write was sampled
+    public double? TypicalJournalWriteLatencyInMs { get; set; }
+
+    public double? PeakJournalWriteLatencyInMs { get; set; }
+
+    // null when derived from io-metrics or no slow write in the last hour
+    public SlowIoDetails.SlowWriteInfo SlowestWrite { get; set; }
 
     public long JournalWriteSizeInBytes { get; set; }
 

@@ -7,6 +7,7 @@ using System.Text.Json;
 using FastTests;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Issues;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Storage;
 using Sparrow.Server.Platform;
 using Tests.Infrastructure;
@@ -101,6 +102,60 @@ public class RavenDB_27827 : NoDisposalNeeded
         var issue = Assert.Single(report.ClusterWideIssues.ClusterIssues, x => x.Title == "Nodes write data files in different modes");
         Assert.Contains("IoRing on A; VectoredFileIo on B (configured Auto)", issue.Description);
         Assert.Equal(Pal.RvnWriteMode.VectoredFileIo, report.ForNode("B").Server.StorageIo.WriteMode.Effective);
+    }
+
+    [RavenFact(RavenTestCategory.Core)]
+    public void Analyzer_judges_a_disk_by_the_last_hour_in_the_package_not_by_the_moment_it_was_taken()
+    {
+        // A: typically 16 ms with a burst and a 9 s write, calm at the moment the package was taken
+        var a = Device(StorageDeviceStatus.Saturated, drainShare: 0.9, latencyNow: 3, latencyOfSample: i => i == 150 ? 2000 : 16);
+        a.SlowWrites =
+        [
+            new SlowIoDetails.SlowWriteInfo
+            {
+                Type = Sparrow.Server.Meters.IoMetrics.MeterType.JournalWrite, Path = "/ravendb/Databases/Orders/Journals/0000000000000000001.journal",
+                DataWrittenInMb = 4 / 1024.0, DurationInSec = 9, SpeedInMbPerSec = 4 / 1024.0 / 9, Date = DateTime.UtcNow
+            }
+        ];
+
+        // B: paced, but its journal writes stay fast
+        var b = Device(StorageDeviceStatus.Busy, drainShare: 0.6, latencyNow: 1.9, latencyOfSample: _ => 1.9);
+        var c = Device(StorageDeviceStatus.Ok, drainShare: 0, latencyNow: 1, latencyOfSample: _ => 1);
+
+        using var package = ClusterPackage(new Dictionary<string, Dictionary<string, object>>
+        {
+            ["A"] = new() { ["server-wide/admin.storage.io.json"] = new StorageIoReport { Devices = [a], Environments = [], SharedJournals = [] } },
+            ["B"] = new() { ["server-wide/admin.storage.io.json"] = new StorageIoReport { Devices = [b], Environments = [], SharedJournals = [] } },
+            ["C"] = new() { ["server-wide/admin.storage.io.json"] = new StorageIoReport { Devices = [c], Environments = [], SharedJournals = [] } }
+        });
+
+        var report = new DebugPackageAnalyzer(package).Analyze();
+
+        var saturated = Assert.Single(report.ForNode("A").DetectedIssues.ServerIssues, x => x.Title.StartsWith("Storage is saturated"));
+        Assert.Contains("In the last hour journal writes typically took 16 ms (peak 2 s), and the slowest journal write took 9 s for 4 KB.", saturated.Description);
+
+        var heldBack = Assert.Single(report.ClusterWideIssues.ClusterIssues, x => x.Title == "Node A is held back by its disk");
+        Assert.StartsWith("Journal writes typically take 16 ms on A vs 1 ms on C.", heldBack.Description);
+
+        // the slow disk rule needs journal writes that are slow over the hour, not a busy disk with fast writes
+        Assert.Contains(report.ForNode("A").DetectedIssues.ServerIssues, x => x.Title == "Slow disk not detected as bandwidth limited");
+        Assert.DoesNotContain(report.ForNode("B").DetectedIssues.ServerIssues, x => x.Title == "Slow disk not detected as bandwidth limited");
+    }
+
+    private static StorageDeviceIoInfo Device(StorageDeviceStatus status, double drainShare, double latencyNow, Func<int, double> latencyOfSample)
+    {
+        var at = DateTime.UtcNow.AddHours(-1);
+        var history = new List<StorageDeviceSample>();
+        for (var i = 0; i < 300; i++)
+            history.Add(new StorageDeviceSample { At = at = at.AddSeconds(10), Draining = drainShare > 0, JournalWriteLatencyInMs = latencyOfSample(i), QueueDepth = 16 });
+
+        return new StorageDeviceIoInfo
+        {
+            DeviceId = "2049", MountPoint = "/", PathOnDevice = "/ravendb/System/Raven.voron", Status = status,
+            StatusReason = status == StorageDeviceStatus.Saturated ? "Saturated since 2026-10-27 07:30:54Z: writes were paced more than 50% of an hour because the disk was congested." : null,
+            DrainShareOfLastHour = drainShare, JournalWriteLatencyInMs = latencyNow, JournalWriteSizeInBytes = 7 * 1024, SecondsSinceLastJournalWrite = 1,
+            History = history, SlowWrites = []
+        };
     }
 
     private static StorageIoReport WithWriteMode(Pal.RvnWriteMode effective) => new()
