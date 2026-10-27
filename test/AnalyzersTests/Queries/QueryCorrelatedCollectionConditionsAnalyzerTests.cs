@@ -58,16 +58,18 @@ class Test
             Assert.Contains("fan-out", diagnostic.GetMessage());
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public async Task CorrelatedAll_Reports_Diagnostic()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData("y.UserId == id && y.Role == Role.Contributor")]
+        [InlineData("y.UserId == id")]
+        public async Task All_Reports_Unsupported_Whatever_The_Conditions(string predicate)
         {
-            const string source = CommonUsings + @"
+            string source = CommonUsings + @"
 class Test
 {
     void Run(IDocumentSession session, string id)
     {
         var projects = session.Query<Project>()
-            .Where(x => x.Members.All(y => y.UserId == id && y.Role == Role.Contributor))
+            .Where(x => x.Members.All(y => " + predicate + @"))
             .ToList();
     }
 }
@@ -76,7 +78,10 @@ class Test
             var diagnostics = await RavenAnalyzerTest.AnalyzeAsync<QueryCorrelatedCollectionConditionsAnalyzer>(source);
 
             var diagnostic = Assert.Single(diagnostics);
-            Assert.Contains("'All' over 'x.Members'", diagnostic.GetMessage());
+            Assert.Equal(DiagnosticIds.QueryCorrelatedCollectionConditions, diagnostic.Id);
+            Assert.Equal("All", diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan));
+            Assert.Contains("'All' over 'x.Members' is not supported", diagnostic.GetMessage());
+            Assert.Contains("NotSupportedException", diagnostic.GetMessage());
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]

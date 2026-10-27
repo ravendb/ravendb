@@ -54,6 +54,17 @@ namespace Raven.Analyzers.Shared
             return descriptor;
         }
 
+        private static DiagnosticDescriptor WithMessage(DiagnosticDescriptor rule, string messageFormat) =>
+            new(
+                id: rule.Id,
+                title: rule.Title,
+                messageFormat: messageFormat,
+                category: rule.Category,
+                defaultSeverity: rule.DefaultSeverity,
+                isEnabledByDefault: rule.IsEnabledByDefault,
+                description: rule.Description,
+                helpLinkUri: rule.HelpLinkUri);
+
         /// <summary>
         /// Descriptor for <see cref="DiagnosticIds.QueryFilteringAfterProjection"/>.
         /// Fires when a filtering or ordering method appears after a projection in a RavenDB query chain.
@@ -256,5 +267,9 @@ namespace Raven.Analyzers.Shared
             destinationSeverity: DiagnosticSeverity.Warning,
             description: "A dynamic query over a nested collection is served by an auto index that flattens the collection into one multi-valued field per member (e.g. Members[].UserId, Members[].Role). Two conditions on the same element therefore match independently and the query returns documents where no single element satisfies both. Per-element correlation needs a static index whose map fans out one entry per element.",
             helpCode: "3L1ESH");
+
+        public static readonly DiagnosticDescriptor QueryCorrelatedCollectionConditionsAll = WithMessage(
+            QueryCorrelatedCollectionConditions,
+            "'All' over '{0}' is not supported in a query predicate: the client throws NotSupportedException ('Method not supported: All') when the query runs. Use a static index with a fan-out map (one entry per element) and query the per-element fields instead.");
     }
 }

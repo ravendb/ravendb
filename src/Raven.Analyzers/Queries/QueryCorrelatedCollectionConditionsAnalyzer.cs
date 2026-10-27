@@ -10,9 +10,10 @@ using Raven.Analyzers.Shared;
 namespace Raven.Analyzers.Queries
 {
     /// <summary>
-    /// Reports RVN015 when a dynamic query filters a nested collection with Any/All whose predicate
+    /// Reports RVN015 when a dynamic query filters a nested collection with Any whose predicate
     /// combines two or more conditions on the element. The auto index flattens the collection, so
-    /// each condition can be satisfied by a different element.
+    /// each condition can be satisfied by a different element. All in a predicate is reported
+    /// whatever its conditions, since the client does not translate it at all.
     /// </summary>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public sealed class QueryCorrelatedCollectionConditionsAnalyzer : DiagnosticAnalyzer
@@ -21,7 +22,9 @@ namespace Raven.Analyzers.Queries
         private const string AllMethodName = "All";
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-            ImmutableArray.Create(DiagnosticDescriptors.QueryCorrelatedCollectionConditions);
+            ImmutableArray.Create(
+                DiagnosticDescriptors.QueryCorrelatedCollectionConditions,
+                DiagnosticDescriptors.QueryCorrelatedCollectionConditionsAll);
 
         public override void Initialize(AnalysisContext context)
         {
@@ -111,6 +114,15 @@ namespace Raven.Analyzers.Queries
 
                 if (nested.ArgumentList.Arguments.Count != 1)
                     continue;
+
+                if (methodName == AllMethodName)
+                {
+                    context.ReportDiagnostic(Diagnostic.Create(
+                        DiagnosticDescriptors.QueryCorrelatedCollectionConditionsAll,
+                        SyntaxHelpers.GetInvocationNameLocation(nested),
+                        collection.ToString()));
+                    continue;
+                }
 
                 ExpressionSyntax predicate = nested.ArgumentList.Arguments[0].Expression;
                 if (SyntaxHelpers.TryGetLambdaBody(predicate) is not ExpressionSyntax predicateBody)

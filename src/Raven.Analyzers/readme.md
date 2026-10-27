@@ -828,7 +828,7 @@ class DocumentIndex : AbstractIndexCreationTask<Document>
 
 ## RVN015: Correlated conditions over a nested collection in a dynamic query
 
-**Triggered by:** a dynamic query (`session.Query<T>()` with no index) whose `Where` predicate calls `Any` or `All` on a collection member of the document, with a lambda that joins two or more conditions on the element with `&&`.
+**Triggered by:** a dynamic query (`session.Query<T>()` with no index) whose `Where` predicate calls `Any` on a collection member of the document with a lambda that joins two or more conditions on the element with `&&`, or calls `All` on such a member with any predicate.
 
 The auto index that serves a dynamic query flattens the collection into one multi-valued field per member (e.g. `Members[].UserId`, `Members[].Role`). The query becomes `where Members[].UserId = $p0 and Members[].Role = $p1`, so each condition is matched independently: a document matches when *some* member has the user id and *some* member (possibly another one) has the role. The server never creates fan-out auto indexes, so per-element correlation needs a static index whose map emits one entry per element.
 
@@ -861,6 +861,14 @@ The query-expression form is flagged the same way:
 var projects = from p in session.Query<Project>()
                where p.Members.Any(m => m.UserId == userId && m.Role == Role.Contributor)   // RVN015
                select p;
+```
+
+`All` is reported whatever its conditions, with its own message: the client does not translate `All` inside a query predicate at all and throws `NotSupportedException` (`Method not supported: All`) when the query runs.
+
+```csharp
+var projects = session.Query<Project>()
+    .Where(p => p.Members.All(m => m.Role == Role.Contributor))   // RVN015: All is not supported
+    .ToList();
 ```
 
 **Not flagged:**
