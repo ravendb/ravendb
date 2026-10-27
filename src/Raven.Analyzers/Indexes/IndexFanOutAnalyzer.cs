@@ -69,8 +69,19 @@ namespace Raven.Analyzers.Indexes
 
         private static void AnalyzeLambdaBody(SyntaxNodeAnalysisContext context, SyntaxNode lambdaBody)
         {
-            // Detect SelectMany in method-chain form
-            foreach (InvocationExpressionSyntax chainCall in SyntaxHelpers.EnumerateInvocationChain(lambdaBody as ExpressionSyntax))
+            if (lambdaBody is not ExpressionSyntax bodyExpression)
+                return;
+
+            ReportSelectManyCalls(context, bodyExpression);
+
+            if (SyntaxHelpers.WalkInvocationChainToRoot(bodyExpression) is QueryExpressionSyntax query)
+                AnalyzeQueryExpression(context, query);
+        }
+
+        // Detect SelectMany in method-chain form
+        private static void ReportSelectManyCalls(SyntaxNodeAnalysisContext context, ExpressionSyntax chain)
+        {
+            foreach (InvocationExpressionSyntax chainCall in SyntaxHelpers.EnumerateInvocationChain(chain))
             {
                 if (SyntaxHelpers.GetMethodName(chainCall) != KnownTypes.SelectManyMethodName)
                     continue;
@@ -82,29 +93,33 @@ namespace Raven.Analyzers.Indexes
                 context.ReportDiagnostic(Diagnostic.Create(
                     DiagnosticDescriptors.IndexFanOut, loc, KnownTypes.SelectManyMethodName));
             }
+        }
 
-            // Detect nested from clauses in query-expression form. Walk continuations too, so a
-            // fan-out introduced after a 'group … into g' continuation
-            // (from d in docs group d by d.X into g from item in g.Items select …) is not missed.
-            if (lambdaBody is QueryExpressionSyntax query)
+        // Detect nested from clauses in query-expression form. Walk continuations too, so a
+        // fan-out introduced after a 'group … into g' continuation
+        // (from d in docs group d by d.X into g from item in g.Items select …) is not missed.
+        private static void AnalyzeQueryExpression(SyntaxNodeAnalysisContext context, QueryExpressionSyntax query)
+        {
+            ReportSelectManyCalls(context, query.FromClause.Expression);
+
+            for (QueryBodySyntax? body = query.Body; body != null; body = body.Continuation?.Body)
             {
-                for (QueryBodySyntax? body = query.Body; body != null; body = body.Continuation?.Body)
+                foreach (QueryClauseSyntax clause in body.Clauses)
                 {
-                    foreach (QueryClauseSyntax clause in body.Clauses)
-                    {
-                        if (clause is not FromClauseSyntax fromClause)
-                            continue;
+                    if (clause is not FromClauseSyntax fromClause)
+                        continue;
 
-                        if (IsTimeSeriesEntriesExpansion(fromClause.Expression, context.SemanticModel))
-                            continue;
+                    ReportSelectManyCalls(context, fromClause.Expression);
 
-                        // Use a stable token ("nested from") rather than the collection expression so the
-                        // message reads consistently with the method-chain case ("fans out via 'SelectMany'").
-                        context.ReportDiagnostic(Diagnostic.Create(
-                            DiagnosticDescriptors.IndexFanOut,
-                            fromClause.FromKeyword.GetLocation(),
-                            "nested from"));
-                    }
+                    if (IsTimeSeriesEntriesExpansion(fromClause.Expression, context.SemanticModel))
+                        continue;
+
+                    // Use a stable token ("nested from") rather than the collection expression so the
+                    // message reads consistently with the method-chain case ("fans out via 'SelectMany'").
+                    context.ReportDiagnostic(Diagnostic.Create(
+                        DiagnosticDescriptors.IndexFanOut,
+                        fromClause.FromKeyword.GetLocation(),
+                        "nested from"));
                 }
             }
         }

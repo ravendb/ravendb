@@ -153,6 +153,32 @@ class Patient { public string Id { get; set; } }
             Assert.True(d.Location.SourceSpan.Start > source.IndexOf("ts.Entries", System.StringComparison.Ordinal));
         }
 
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData("from item in docs.SelectMany(d => d.Items) select new { item.Value }", "SelectMany")]
+        [InlineData("(from doc in docs from item in doc.Items select new { item.Value })", "from")]
+        [InlineData("(from doc in docs from item in doc.Items select new { item.Value }).Where(x => x.Value != null)", "from")]
+        [InlineData("((from doc in docs from item in doc.Items select new { item.Value })).Select(x => x)", "from")]
+        public async Task Map_FanOutInFromSource_Or_ParenthesizedQuery_Reports_Diagnostic(string map, string reportedToken)
+        {
+            string source = CommonUsings + @"
+class DocumentIndex : AbstractIndexCreationTask<Document>
+{
+    public DocumentIndex()
+    {
+        Map = docs => " + map + @";
+    }
+}
+
+class Document { public IEnumerable<Item> Items { get; set; } }
+class Item { public string Value { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexFanOutAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(reportedToken, d.Location.SourceTree!.GetText().ToString(d.Location.SourceSpan));
+        }
+
         [RavenFact(RavenTestCategory.ClientApi)]
         public async Task AddMap_WithSelectMany_Reports_Diagnostic()
         {
