@@ -262,10 +262,10 @@ namespace Raven.Analyzers.Shared
         public static readonly DiagnosticDescriptor QueryCorrelatedCollectionConditions = Create(
             id: DiagnosticIds.QueryCorrelatedCollectionConditions,
             title: "Correlated conditions over a nested collection in a dynamic query",
-            messageFormat: "'{0}' over '{1}' combines conditions that the auto index matches against different elements: the auto index flattens the collection, so each condition can be satisfied by a different element. Use a static index with a fan-out map (one entry per element) to correlate the conditions per element.",
+            messageFormat: "'{0}' over '{1}' combines conditions that the auto index cannot correlate per element: it flattens the collection, so each condition can be satisfied by a different element, and when the conditions are on different fields the client rejects the query with InvalidOperationException before it runs. Use a static index with a fan-out map (one entry per element) to correlate the conditions per element.",
             introducedAt: "7.2",
             destinationSeverity: DiagnosticSeverity.Warning,
-            description: "A dynamic query over a nested collection is served by an auto index that flattens the collection into one multi-valued field per member (e.g. Members[].UserId, Members[].Role). Two conditions on the same element therefore match independently and the query returns documents where no single element satisfies both. Per-element correlation needs a static index whose map fans out one entry per element.",
+            description: "A dynamic query over a nested collection is served by an auto index that flattens the collection into one multi-valued field per member (e.g. Members[].UserId, Members[].Role). Two conditions on the same element therefore match independently. The client rejects an Any predicate that combines different fields with InvalidOperationException when the query is built; a predicate the client lets through (the same field twice, or a dictionary Key/Value pair) returns documents where no single element satisfies both. Per-element correlation needs a static index whose map fans out one entry per element.",
             helpCode: "3L1ESH");
 
         public static readonly DiagnosticDescriptor QueryCorrelatedCollectionConditionsAll = WithMessage(

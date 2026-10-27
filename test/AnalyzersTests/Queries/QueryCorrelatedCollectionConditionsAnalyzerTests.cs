@@ -56,6 +56,7 @@ class Test
             Assert.Equal("Any", diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan));
             Assert.Contains("'Any' over 'x.Members'", diagnostic.GetMessage());
             Assert.Contains("fan-out", diagnostic.GetMessage());
+            Assert.Contains("the client rejects the query with InvalidOperationException", diagnostic.GetMessage());
         }
 
         [RavenTheory(RavenTestCategory.ClientApi)]

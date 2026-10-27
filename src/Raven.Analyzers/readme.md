@@ -834,10 +834,10 @@ A `SelectMany` in the source of a `from` clause (`from line in orders.SelectMany
 
 **Triggered by:** a dynamic query (`session.Query<T>()` with no index) whose predicate calls `Any` on a collection member of the document with a lambda that joins two or more conditions on the element with `&&`, or calls `All` on such a member with any predicate. The predicate may be passed to `Where` or to a predicate overload of `First`, `FirstOrDefault`, `Single`, `SingleOrDefault`, `Any`, `Count` or `LongCount` (and their async forms), which the client translates into the same where clause.
 
-The auto index that serves a dynamic query flattens the collection into one multi-valued field per member (e.g. `Members[].UserId`, `Members[].Role`). The query becomes `where Members[].UserId = $p0 and Members[].Role = $p1`, so each condition is matched independently: a document matches when *some* member has the user id and *some* member (possibly another one) has the role. The server never creates fan-out auto indexes, so per-element correlation needs a static index whose map emits one entry per element.
+The auto index that serves a dynamic query flattens the collection into one multi-valued field per member (e.g. `Members[].UserId`, `Members[].Role`). The query would become `where Members[].UserId = $p0 and Members[].Role = $p1`, where each condition is matched independently: a document matches when *some* member has the user id and *some* member (possibly another one) has the role. Because of that, the client rejects an `Any` predicate that combines conditions on different fields in a dynamic query: building the query throws `InvalidOperationException` ("Using multiple fields inside method 'Any' can lead to unexpected query results for auto index"). A predicate the client lets through, such as two conditions on the same field or a dictionary Key/Value pair, runs and returns documents where no single element satisfies both. The server never creates fan-out auto indexes, so per-element correlation needs a static index whose map emits one entry per element.
 
 ```csharp
-// Bad: the two conditions can be satisfied by different members
+// Bad: the client throws InvalidOperationException when the query is built
 var projects = session.Query<Project>()
     .Where(p => p.Members.Any(m => m.UserId == userId && m.Role == Role.Contributor))   // RVN015
     .ToList();
