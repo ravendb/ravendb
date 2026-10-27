@@ -45,7 +45,9 @@ namespace Raven.Embedded
             if (Security != null)
                 throw new InvalidOperationException("The security has already been setup for this ServerOptions object");
 
+#pragma warning disable SYSLIB0057
             var cert = new X509Certificate2(certificate, certPassword);
+#pragma warning restore SYSLIB0057
             Security = new SecurityOptions
             {
                 CertificatePath = certificate,
