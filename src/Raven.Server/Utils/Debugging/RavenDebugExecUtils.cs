@@ -11,8 +11,8 @@ public static class RavenDebugExecUtils
     internal static readonly string[] FileSystemLookupPaths =
     {
         ".",
-        "../../../../../tools/Raven.Debug/bin/Debug/net10.0",
-        "../../../../../tools/Raven.Debug/bin/Release/net10.0"
+        "../../../../../tools/Raven.Debug/bin/Debug/net11.0",
+        "../../../../../tools/Raven.Debug/bin/Release/net11.0"
     };
 
     public static string GetRavenDebugExecPath()

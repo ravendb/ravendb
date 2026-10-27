@@ -76,8 +76,8 @@ function LayoutServerPackage ( $packageDir, $projectDir, $packOpts ) {
     CopyStudioPackageToServerOutputDirectory $packOpts
 
     #if ($target.IsUnix -and $global:isPublishBundlingEnabled) {
-    #    # TODO get 'net10.0' from somewhere
-    #    $buildDir = [io.path]::Combine($projectDir, "src", "Raven.Server", "bin", "Release", "net10.0", $target.Runtime)
+    #    # TODO get 'net11.0' from somewhere
+    #    $buildDir = [io.path]::Combine($projectDir, "src", "Raven.Server", "bin", "Release", "net11.0", $target.Runtime)
     #    CopyNativeBinariesRequiredForDebugging $buildDir "$($packOpts.OutDirs.Server)" $target.NativeBinExtension
     #}
 

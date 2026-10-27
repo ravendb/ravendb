@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-ARG RUNTIME_IMAGE=mcr.microsoft.com/dotnet/aspnet:10.0.13
+ARG RUNTIME_IMAGE=mcr.microsoft.com/dotnet/aspnet:11.0.0-rc.3
 ARG S6_OVERLAY_VERSION=3.2.1.0
 
 FROM ${RUNTIME_IMAGE} AS payload

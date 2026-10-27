@@ -53,7 +53,7 @@ namespace Voron.Benchmark
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core10_0,
+                        Runtime = CoreRuntime.CreateForNewVersion("net11.0", ".NET 11.0"),
                         Platform = BenchmarkDotNet.Environments.Platform.X64,
                         Jit = Jit.RyuJit
                     },
