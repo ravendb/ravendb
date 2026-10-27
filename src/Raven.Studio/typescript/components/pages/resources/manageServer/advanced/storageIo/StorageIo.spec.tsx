@@ -1,5 +1,5 @@
 import React from "react";
-import { rtlRender } from "test/rtlTestUtils";
+import { fireEvent, rtlRender } from "test/rtlTestUtils";
 import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "./StorageIo.stories";
 
@@ -21,6 +21,11 @@ describe("StorageIo", function () {
         // the index that left the shared journal
         expect(screen.getByText(/Writing their own journals/)).toBeInTheDocument();
         expect(screen.getByText(/Orders\/Totals \(/)).toBeInTheDocument();
+
+        // hovering the last hour chart shows the values of the sample under the mouse
+        fireEvent.mouseMove(screen.getByRole("img", { name: "Disk history of the last hour" }).parentElement);
+        expect(screen.getByText(/Journal write latency \(average\):/)).toBeInTheDocument();
+        expect(screen.getByText(/Queue depth:/)).toBeInTheDocument();
 
         expect(screen.getByText("Vectored file I/O")).toBeInTheDocument();
         expect(screen.getByText(/I\/O ring could not be set up when the server started/)).toBeInTheDocument();
