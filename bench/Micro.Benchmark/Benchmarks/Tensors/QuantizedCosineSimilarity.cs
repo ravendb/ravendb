@@ -24,7 +24,11 @@ namespace Micro.Benchmark.Benchmarks.Tensors
         {
             public Config()
             {
-                AddJob(new Job { Environment = { Platform = Platform.X64, Jit = Jit.RyuJit, }, Infrastructure = { Runtime = CoreRuntime.Core11_0, }, });
+                AddJob(new Job
+                {
+                    Environment = { Platform = Platform.X64, Jit = Jit.RyuJit, },
+                    Infrastructure = { Runtime = CoreRuntime.Core11_0, },
+                });
 
                 // Exporters for data
                 AddExporter(GetExporters().ToArray());
