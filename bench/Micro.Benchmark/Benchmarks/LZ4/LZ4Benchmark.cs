@@ -27,9 +27,12 @@ namespace Micro.Benchmark.Benchmarks.LZ4
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.CreateForNewVersion("net11.0", ".NET 11.0"),
                         Platform = Platform.X64,
                         Jit = Jit.RyuJit
+                    },
+                    Infrastructure =
+                    {
+                        Runtime = CoreRuntime.Core11_0,
                     }
                 });
 
