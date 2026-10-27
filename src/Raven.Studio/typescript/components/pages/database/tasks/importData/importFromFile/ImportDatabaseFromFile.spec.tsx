@@ -119,8 +119,10 @@ async function selectFile({ screen, user }: Rendered, name = "dump.ravendbdump")
     return file;
 }
 
-const toggle = ({ screen, fireClick }: Rendered, label: string | RegExp) =>
-    fireClick(screen.getByRole("checkbox", { name: label }));
+const getSwitch = ({ screen }: Rendered, label: string | RegExp) =>
+    (screen.getByText(label, { selector: "label" }) as HTMLLabelElement).control;
+
+const toggle = (rendered: Rendered, label: string | RegExp) => rendered.fireClick(getSwitch(rendered, label));
 
 async function clickImport({ screen, fireClick }: Rendered) {
     const button = screen.getByRole("button", { name: selectors.importButton });
@@ -144,8 +146,6 @@ async function expectImportRejected(rendered: Rendered) {
     expect(validateSmugglerOptions).not.toHaveBeenCalled();
     expect(importDatabaseFromFile).not.toHaveBeenCalled();
 }
-
-const getSwitch = ({ screen }: Rendered, label: string | RegExp) => screen.getByRole("checkbox", { name: label });
 
 function expectLocked(rendered: Rendered, labels: (string | RegExp)[]) {
     labels.forEach((label) => {
@@ -516,8 +516,8 @@ describe("ImportDatabaseFromFile", () => {
                 "Replication Hubs",
                 "RavenDB Connection Strings",
             ]);
-            expect(getSwitch(rendered, "Select all ongoing tasks")).toBeDisabled();
-            expect(getSwitch(rendered, "Select all connection strings")).toBeDisabled();
+            expect(screen.getByRole("checkbox", { name: "Select all ongoing tasks" })).toBeDisabled();
+            expect(screen.getByRole("checkbox", { name: "Select all connection strings" })).toBeDisabled();
             expect(screen.queryAllByTestId("license-restricted-badge")).toHaveLength(0);
         });
     });
@@ -529,7 +529,7 @@ describe("ImportDatabaseFromFile", () => {
 
             await toggle(rendered, "Include Documents");
 
-            expect(rendered.screen.getByRole("checkbox", { name: "Include Attachments" })).not.toBeChecked();
+            expect(getSwitch(rendered, "Include Attachments")).not.toBeChecked();
             const dto = await importAndGetDto(rendered);
             expect(operateOnTypesOf(dto)).toEqual(without(adminDefaultOperateOnTypes, "Documents", "Attachments"));
         });
@@ -557,7 +557,7 @@ describe("ImportDatabaseFromFile", () => {
             await fireClick(screen.getByRole("button", { name: /Customize imported collections/ }));
             await fillInput(screen.getByPlaceholderText("Type a collection name from the imported file"), "Orders");
             await fireClick(screen.getByRole("button", { name: /Add/ }));
-            await waitFor(() => expect(screen.getByRole("checkbox", { name: "Orders" })).toBeChecked());
+            await waitFor(() => expect(getSwitch(rendered, "Orders")).toBeChecked());
 
             const dto = await importAndGetDto(rendered);
             expect(dto.Collections).toEqual(["Orders"]);
@@ -578,14 +578,13 @@ describe("ImportDatabaseFromFile", () => {
 
         it("turns Remove Analyzers into a flag and Indexes off cascades it back", async () => {
             const rendered = rtlRender(<Default hasAllLicenseFeatures />);
-            const { screen } = rendered;
             await selectFile(rendered);
 
             await toggle(rendered, "Remove Analyzers");
-            expect(screen.getByRole("checkbox", { name: "Remove Analyzers" })).toBeChecked();
+            expect(getSwitch(rendered, "Remove Analyzers")).toBeChecked();
 
             await toggle(rendered, "Include Indexes");
-            expect(screen.getByRole("checkbox", { name: "Remove Analyzers" })).not.toBeChecked();
+            expect(getSwitch(rendered, "Remove Analyzers")).not.toBeChecked();
 
             const dto = await importAndGetDto(rendered);
             expect(dto.RemoveAnalyzers).toBe(false);
