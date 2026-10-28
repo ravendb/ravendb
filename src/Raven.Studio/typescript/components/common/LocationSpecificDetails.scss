@@ -44,6 +44,10 @@
         }
     }
 
+    .full-row {
+        grid-column: 1 / -1;
+    }
+
     .details {
         line-height: 1em;
         border-top-right-radius: sizes.$gutter-xs;

@@ -3012,7 +3012,7 @@ namespace Raven.Server.Documents.Indexes
             _indexStorage.Rename(name);
         }
 
-        internal virtual IndexProgress GetProgress(QueryOperationContext queryContext, Stopwatch overallDuration, bool? isStale = null)
+        internal virtual IndexProgress GetProgress(QueryOperationContext queryContext, Stopwatch overallDuration, bool exact)
         {
             using (CurrentlyInUse(out var valid))
             {
@@ -3033,7 +3033,7 @@ namespace Raven.Server.Documents.Indexes
                     if (disposed)
                         return progress;
 
-                    UpdateIndexProgress(queryContext, progress, null, overallDuration);
+                    UpdateIndexProgress(queryContext, progress, null, overallDuration, exact);
                     return progress;
                 }
 
@@ -3048,21 +3048,21 @@ namespace Raven.Server.Documents.Indexes
                         Name = Name,
                         Type = Type,
                         SourceType = SourceType,
-                        IsStale = isStale ?? IsStale(queryContext, context),
+                        IsStale = IsStale(queryContext, context),
                         IndexRunningStatus = Status,
                         Collections = new Dictionary<string, IndexProgress.CollectionStats>(StringComparer.OrdinalIgnoreCase),
                     };
 
                     var stats = _indexStorage.ReadStats(tx);
 
-                    UpdateIndexProgress(queryContext, progress, stats, overallDuration);
+                    UpdateIndexProgress(queryContext, progress, stats, overallDuration, exact);
 
                     return progress;
                 }
             }
         }
 
-        private void UpdateIndexProgress(QueryOperationContext queryContext, IndexProgress progress, IndexStats stats, Stopwatch overallDuration)
+        private void UpdateIndexProgress(QueryOperationContext queryContext, IndexProgress progress, IndexStats stats, Stopwatch overallDuration, bool exact)
         {
             if (DeployedOnAllNodes == false)
             {
@@ -3098,7 +3098,7 @@ namespace Raven.Server.Documents.Indexes
                     };
                 }
 
-                UpdateProgressStats(queryContext, progressStats, collection, overallDuration);
+                UpdateProgressStats(queryContext, progressStats, collection, overallDuration, exact);
             }
 
             var referencedCollections = GetReferencedCollections();
@@ -3128,7 +3128,7 @@ namespace Raven.Server.Documents.Indexes
                                 LastProcessedTombstoneEtag = lastEtags.LastProcessedTombstoneEtag
                             };
 
-                            UpdateProgressStats(queryContext, progressStats, value.Name, overallDuration);
+                            UpdateProgressStats(queryContext, progressStats, value.Name, overallDuration, exact);
                         }
                     }
                 }
@@ -3136,21 +3136,23 @@ namespace Raven.Server.Documents.Indexes
         }
 
         internal virtual void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName,
-            Stopwatch overallDuration)
+            Stopwatch overallDuration, bool exact)
         {
-            progressStats.NumberOfItemsToProcess += collectionName == Constants.Documents.Collections.AllDocumentsCollection
+            var entriesAfter = collectionName == Constants.Documents.Collections.AllDocumentsCollection
                 ? DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(
-                    queryContext.Documents, progressStats.LastProcessedItemEtag, out var totalCount, overallDuration)
+                    queryContext.Documents, progressStats.LastProcessedItemEtag, overallDuration, exact)
                 : DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(
-                    queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out totalCount, overallDuration);
-            progressStats.TotalNumberOfItems += totalCount;
+                    queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, overallDuration, exact);
 
-            progressStats.NumberOfTombstonesToProcess += collectionName == Constants.Documents.Collections.AllDocumentsCollection
+            progressStats.AddItems(entriesAfter);
+
+            entriesAfter = collectionName == Constants.Documents.Collections.AllDocumentsCollection
                 ? DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(
-                    queryContext.Documents, progressStats.LastProcessedTombstoneEtag, out totalCount, overallDuration)
+                    queryContext.Documents, progressStats.LastProcessedTombstoneEtag, overallDuration, exact)
                 : DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(
-                    queryContext.Documents, collectionName, progressStats.LastProcessedTombstoneEtag, out totalCount, overallDuration);
-            progressStats.TotalNumberOfTombstones += totalCount;
+                    queryContext.Documents, collectionName, progressStats.LastProcessedTombstoneEtag, overallDuration, exact);
+
+            progressStats.AddTombstones(entriesAfter);
         }
 
         private IEnumerable<string> GetCollections(QueryOperationContext queryContext, out bool isAllDocs)

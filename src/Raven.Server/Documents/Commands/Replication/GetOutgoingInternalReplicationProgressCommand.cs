@@ -8,8 +8,11 @@ namespace Raven.Server.Documents.Commands.Replication
 {
     internal sealed class GetOutgoingInternalReplicationProgressCommand : RavenCommand<IReplicationTaskProgress[]>
     {
-        public GetOutgoingInternalReplicationProgressCommand(string nodeTag)
+        private readonly bool _exact;
+
+        public GetOutgoingInternalReplicationProgressCommand(string nodeTag, bool exact = false)
         {
+            _exact = exact;
             SelectedNodeTag = nodeTag;
         }
 
@@ -18,6 +21,11 @@ namespace Raven.Server.Documents.Commands.Replication
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/replication/internal/outgoing/progress";
+
+            if (_exact)
+            {
+                url += "?exact=true";
+            }
 
             return new HttpRequestMessage { Method = HttpMethod.Get };
         }
