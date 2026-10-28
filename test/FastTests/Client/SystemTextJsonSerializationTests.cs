@@ -264,6 +264,41 @@ namespace FastTests.Client
             }
         }
 
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void NamedFloatingPointLiteralsAreReadBack()
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+            var literals = new NamedLiterals
+            {
+                NaN = double.NaN,
+                PositiveInfinity = double.PositiveInfinity,
+                NegativeInfinity = float.NegativeInfinity,
+                Text = "NaN \"Infinity\" -Infinity"
+            };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(literals, context))
+            {
+                var read = conventions.Serialization.DefaultConverter.FromBlittable<NamedLiterals>(json);
+
+                Assert.True(double.IsNaN(read.NaN));
+                Assert.Equal(double.PositiveInfinity, read.PositiveInfinity);
+                Assert.Equal(float.NegativeInfinity, read.NegativeInfinity);
+                Assert.Equal(literals.Text, read.Text);
+            }
+        }
+
+        private class NamedLiterals
+        {
+            public double NaN { get; set; }
+
+            public double PositiveInfinity { get; set; }
+
+            public float NegativeInfinity { get; set; }
+
+            public string Text { get; set; }
+        }
+
         private class ModifiedUser
         {
             public string Name { get; set; }
