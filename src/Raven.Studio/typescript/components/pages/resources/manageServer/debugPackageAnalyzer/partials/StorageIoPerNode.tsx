@@ -316,7 +316,11 @@ function getDatabaseColumns(
         },
         {
             id: "journal",
-            header: "Journal writes",
+            header: () => (
+                <span title="Average over the writes the package holds, in parentheses their number. io-metrics keeps only the latest writes of each file, so this is a sample, not a total.">
+                    Journal writes
+                </span>
+            ),
             cell: ({ row }) => (
                 <>
                     <NumberRange values={row.original.values.map((d) => d.JournalWriteAverageInMs)} format={formatMs} />
@@ -363,7 +367,7 @@ function getDatabaseColumns(
         },
         {
             id: "paced",
-            header: () => <span title={storageTermHelp.drain}>Paced</span>,
+            header: () => <span title="Share of the data file syncs in the package that ran paced">Paced</span>,
             cell: ({ row }) => (
                 <NumberRange values={row.original.values.map((d) => d.DrainSyncShare)} format={formatPercent} />
             ),
