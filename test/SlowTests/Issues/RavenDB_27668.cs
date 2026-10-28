@@ -116,7 +116,41 @@ loadToOrders(noPartition(), {
         }
 
         [RavenFact(RavenTestCategory.Etl)]
-        public async Task FailingToSaveTheLastBatchTimeShouldNotRunAgainBeforeTheNextScheduledRun()
+        public async Task SavingTheProgressAfterEveryBatchShouldNotOverwriteANewerLastBatchTime()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var path = NewDataPath(forceCreateDir: true);
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                var (taskId, configuration) = await SetupOlapEtlAndWaitForInitialExport(store, database, path);
+
+                // a missed scheduled run makes the restarted process export the modified order right away
+                await UpdateEtlState(database, lastBatchTime: DateTime.UtcNow.AddDays(-2));
+
+                // the batch has already read the state, store a newer last batch time like another shard would
+                var newerLastBatchTime = DateTime.UtcNow.AddDays(-1);
+                var newerLastBatchTimeStored = 0;
+                database.ForTestingPurposesOnly().OnEtlItemExtracted = (_, _, _) =>
+                {
+                    if (Interlocked.Exchange(ref newerLastBatchTimeStored, 1) == 0)
+                        UpdateEtlState(database, newerLastBatchTime).GetAwaiter().GetResult();
+                };
+
+                // called after the progress of every batch was saved, and before the last batch time is saved
+                var lastBatchTimeAfterSavingTheProgress = new TaskCompletionSource<DateTime?>(TaskCreationOptions.RunContinuationsAsynchronously);
+                database.ForTestingPurposesOnly().BeforeSavingOlapEtlLastBatchTime = () =>
+                    lastBatchTimeAfterSavingTheProgress.TrySetResult(EtlProcess.GetProcessState(database, EtlName, TransformationName).LastBatchTime);
+
+                await ModifyOrder(store);
+                await RestartEtlProcess(store, database, taskId, configuration, RestartBy.TogglingTaskState);
+
+                Assert.True(await lastBatchTimeAfterSavingTheProgress.Task.WaitWithoutExceptionAsync(Timeout));
+                Assert.Equal(newerLastBatchTime, await lastBatchTimeAfterSavingTheProgress.Task);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Etl)]
+        public async Task SavingTheLastBatchTimeShouldBeRetriedOnTimeout()
         {
             using (var store = GetDocumentStore())
             {
@@ -127,23 +161,29 @@ loadToOrders(noPartition(), {
                 var saveAttempts = 0;
                 database.ForTestingPurposesOnly().BeforeSavingOlapEtlLastBatchTime = () =>
                 {
-                    Interlocked.Increment(ref saveAttempts);
-                    throw new TimeoutException("Simulating a failure to save the last batch time");
+                    if (Interlocked.Increment(ref saveAttempts) < 3)
+                        throw new TimeoutException("Simulating a failure to save the last batch time");
                 };
 
                 // a missed scheduled run makes the restarted process export the modified order right away
-                await UpdateEtlState(database, lastBatchTime: DateTime.UtcNow.AddDays(-2));
+                var missedLastBatchTime = DateTime.UtcNow.AddDays(-2);
+                await UpdateEtlState(database, missedLastBatchTime);
                 await ModifyOrder(store);
                 await RestartEtlProcess(store, database, taskId, configuration, RestartBy.TogglingTaskState);
 
-                Assert.True(await WaitForValueAsync(() => Volatile.Read(ref saveAttempts) > 0, true));
-                var filesAfterFailure = CountFiles(path);
+                Assert.True(await WaitForValueAsync(() => EtlProcess.GetProcessState(database, EtlName, TransformationName).LastBatchTime > missedLastBatchTime, true));
+                Assert.Equal(3, Volatile.Read(ref saveAttempts));
+
+                var process = database.EtlLoader.Processes.Single();
+                Assert.Null(database.TaskErrorsStorage.ReadLatestProcessErrorOfTask(process.TaskCategory, process.Name));
+
+                var filesAfterSave = CountFiles(path);
 
                 await ModifyOrder(store);
 
-                // the process used to start the next run right away after the failure
-                Assert.Equal(filesAfterFailure, await WaitForValueAsync(() => CountFiles(path), filesAfterFailure + 1, timeout: 3000));
-                Assert.Equal(1, Volatile.Read(ref saveAttempts));
+                // the saved last batch time schedules the next run
+                Assert.Equal(filesAfterSave, await WaitForValueAsync(() => CountFiles(path), filesAfterSave + 1, timeout: 3000));
+                Assert.Equal(3, Volatile.Read(ref saveAttempts));
             }
         }
 
