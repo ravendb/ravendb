@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import React, { useRef, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
@@ -13,15 +13,12 @@ import Select, {
     SingleValueWithIcon,
 } from "components/common/select/Select";
 import { SortDirection } from "components/models/common";
+import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import { ReplicationHubSinksState, SinkSortField, sinkSortFields } from "./useReplicationHubSinks";
 import "./ReplicationHubSinksHeader.scss";
 
 interface ReplicationHubSinksHeaderProps {
     sinksState: ReplicationHubSinksState;
-}
-
-function formatSinksCount(count: number): string {
-    return `${count} ${count === 1 ? "sink" : "sinks"}`;
 }
 
 const sinksExpandAnimationMs = 500;
@@ -98,15 +95,16 @@ export function ReplicationHubSinksHeader({ sinksState }: ReplicationHubSinksHea
                     </Button>
                 </ButtonGroup>
             </div>
-            {hasActiveFilters && (
-                <FilterChips categories={filterCategories} className="replication-hub-sinks-chips">
-                    <span className="sinks-results-count">
-                        <strong>{visibleSinks.length}</strong> of {formatSinksCount(totalSinksCount)}
-                    </span>
-                </FilterChips>
-            )}
+            <FilterChips categories={filterCategories} className="replication-hub-sinks-chips">
+                <span className="sinks-results-count">
+                    <strong>{visibleSinks.length}</strong> of{" "}
+                    {pluralizeHelpers.pluralize(totalSinksCount, "sink", "sinks")}
+                </span>
+            </FilterChips>
             <div className="visually-hidden" role="status">
-                {hasActiveFilters ? `${visibleSinks.length} of ${formatSinksCount(totalSinksCount)} shown` : ""}
+                {hasActiveFilters
+                    ? `${visibleSinks.length} of ${pluralizeHelpers.pluralize(totalSinksCount, "sink", "sinks")} shown`
+                    : ""}
             </div>
         </>
     );
@@ -162,9 +160,25 @@ function SortDropdown({ sinksState }: { sinksState: ReplicationHubSinksState }) 
     );
 }
 
+function useEscapeClosesOnlyOpenList() {
+    const [isListOpen, setIsListOpen] = useState(false);
+
+    return {
+        onMenuOpen: () => setIsListOpen(true),
+        onMenuClose: () => setIsListOpen(false),
+        onKeyDown: (e: React.KeyboardEvent) => {
+            if (e.key === "Escape" && isListOpen) {
+                e.stopPropagation();
+            }
+        },
+    };
+}
+
 function SortMenu({ sinksState }: { sinksState: ReplicationHubSinksState }) {
     const { sort, setSort, isDefaultSort, resetSort } = sinksState;
     const directionOptions = getSortDirectionOptions(sort.field);
+    const fieldListEscape = useEscapeClosesOnlyOpenList();
+    const directionListEscape = useEscapeClosesOnlyOpenList();
 
     return (
         <>
@@ -179,6 +193,7 @@ function SortMenu({ sinksState }: { sinksState: ReplicationHubSinksState }) {
                     components={{ Option: OptionWithIcon, SingleValue: SingleValueWithIcon }}
                     isSearchable={false}
                     menuPortalTarget={null}
+                    {...fieldListEscape}
                 />
                 <Select<SelectOption<SortDirection>>
                     aria-label="Sort direction"
@@ -188,6 +203,7 @@ function SortMenu({ sinksState }: { sinksState: ReplicationHubSinksState }) {
                     onChange={(x) => setSort({ ...sort, direction: x.value })}
                     isSearchable={false}
                     menuPortalTarget={null}
+                    {...directionListEscape}
                 />
             </div>
         </>
