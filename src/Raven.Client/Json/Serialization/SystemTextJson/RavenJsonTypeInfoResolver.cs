@@ -11,6 +11,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Identity;
 using Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters;
 using Sparrow.Extensions;
 using Sparrow.Json;
@@ -42,6 +43,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         private readonly SystemTextJsonSerializationConventions _conventions;
 
         private readonly TypeNameHandling _typeNameHandling;
+
+        private GenerateEntityIdOnTheClient _identity;
 
         [ThreadStatic]
         internal static object RootEntity;
@@ -138,6 +141,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             ApplyTypeNameHandling(typeInfo);
             ApplyPropertyRenames(typeInfo);
             ApplyPropertyNameConverter(typeInfo);
+            AddMetadataIdentityProperties(typeInfo);
             SetupNonPublicConstructor(typeInfo);
             SetupUnboundParameterizedConstructor(typeInfo);
             PopulateReadOnlyMembers(typeInfo);
@@ -452,6 +456,82 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             }
 
             return false;
+        }
+
+        private void AddMetadataIdentityProperties(JsonTypeInfo typeInfo)
+        {
+            DocumentConventions conventions = _conventions.Conventions;
+            if (conventions == null || conventions.GetIdentityProperty(typeInfo.Type) == null)
+                return;
+
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                string name = typeInfo.Properties[i].Name;
+                if (name == Constants.Documents.Metadata.Key || name == Constants.Documents.Metadata.Id)
+                    return;
+            }
+
+            GenerateEntityIdOnTheClient identity = _identity ??= new GenerateEntityIdOnTheClient(conventions, generateIdAsync: null);
+
+            JsonPropertyInfo metadata = typeInfo.CreateJsonPropertyInfo(typeof(MetadataIdentity), Constants.Documents.Metadata.Key);
+            metadata.CustomConverter = MetadataIdentityConverter.Instance;
+            metadata.Set = (target, value) =>
+            {
+                if (value is MetadataIdentity { Id: not null } metadataIdentity)
+                    identity.TrySetIdentity(target, metadataIdentity.Id, metadataIdentity.IsProjection);
+            };
+            typeInfo.Properties.Add(metadata);
+
+            JsonPropertyInfo topLevelId = typeInfo.CreateJsonPropertyInfo(typeof(string), Constants.Documents.Metadata.Id);
+            topLevelId.Set = (target, value) =>
+            {
+                if (value is string id && (identity.TryGetIdFromInstance(target, out string existing) == false || existing == null))
+                    identity.TrySetIdentity(target, id);
+            };
+            typeInfo.Properties.Add(topLevelId);
+        }
+
+        private sealed class MetadataIdentity
+        {
+            public string Id;
+
+            public bool IsProjection;
+        }
+
+        private sealed class MetadataIdentityConverter : JsonConverter<MetadataIdentity>
+        {
+            public static readonly MetadataIdentityConverter Instance = new();
+
+            public override MetadataIdentity Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                if (reader.TokenType != JsonTokenType.StartObject)
+                {
+                    reader.Skip();
+                    return null;
+                }
+
+                var metadataIdentity = new MetadataIdentity();
+                while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+                {
+                    bool isId = reader.ValueTextEquals(Constants.Documents.Metadata.Id);
+                    bool isProjection = isId == false && reader.ValueTextEquals(Constants.Documents.Metadata.Projection);
+                    reader.Read();
+
+                    if (isId && reader.TokenType == JsonTokenType.String)
+                        metadataIdentity.Id = reader.GetString();
+                    else if (isProjection && reader.TokenType is JsonTokenType.True or JsonTokenType.False)
+                        metadataIdentity.IsProjection = reader.GetBoolean();
+                    else
+                        reader.Skip();
+                }
+
+                return metadataIdentity;
+            }
+
+            public override void Write(Utf8JsonWriter writer, MetadataIdentity value, JsonSerializerOptions options)
+            {
+                throw new NotSupportedException();
+            }
         }
 
         private static void SetupUnboundParameterizedConstructor(JsonTypeInfo typeInfo)
