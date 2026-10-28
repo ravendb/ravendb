@@ -184,6 +184,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     ? ravenResolver.WithSourceGenerationContext(_sourceGenerationContext)
                     : ravenResolver,
                 NumberHandling = JsonNumberHandling.AllowReadingFromString,
+                IncludeFields = true,
                 PropertyNameCaseInsensitive = true,
                 DefaultIgnoreCondition = JsonIgnoreCondition.Never
             };
