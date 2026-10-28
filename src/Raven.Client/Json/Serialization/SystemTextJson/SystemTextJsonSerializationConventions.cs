@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
@@ -19,6 +20,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 {
     public class SystemTextJsonSerializationConventions : ISerializationConventions
     {
+        internal static readonly JsonWriterOptions WriterOptions = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+
+        internal static readonly JsonWriterOptions MetadataWriterOptions = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, SkipValidation = true };
+
         private readonly BlittableJsonConverter _defaultConverter;
         private readonly ConcurrentDictionary<Type, Dictionary<string, JsonPropertyInfo>> _jsonProperties = new();
         private Action<JsonSerializerOptions> _customizeJsonSerializerOptions;
@@ -184,6 +189,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     ? ravenResolver.WithSourceGenerationContext(_sourceGenerationContext)
                     : ravenResolver,
                 NumberHandling = JsonNumberHandling.AllowReadingFromString,
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
                 IncludeFields = true,
                 PropertyNameCaseInsensitive = true,
                 DefaultIgnoreCondition = JsonIgnoreCondition.Never
@@ -236,7 +242,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 if (hasProperties)
                     stream.WriteByte((byte)',');
 
-                using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { SkipValidation = true }))
+                using (var writer = new Utf8JsonWriter(stream, MetadataWriterOptions))
                 {
                     writer.WritePropertyName(Constants.Documents.Metadata.Key);
                     WriteMetadata(writer, metadata);

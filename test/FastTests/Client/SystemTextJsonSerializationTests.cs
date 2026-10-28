@@ -101,6 +101,37 @@ namespace FastTests.Client
             }
         }
 
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task CanStoreAndLoadStringsThatNeedEscapingWithSystemTextJson()
+        {
+            string text = "say \"hi\" \\ path" + (char)1 + " " + (char)0x17C + " <tag> & 'q'";
+
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.Serialization = new SystemTextJsonSerializationConventions();
+                }
+            });
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Id = "users/1", Name = text });
+                await session.SaveChangesAsync();
+            }
+
+            await using (var bulkInsert = store.BulkInsert())
+            {
+                await bulkInsert.StoreAsync(new User { Id = "users/2", Name = text });
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                Assert.Equal(text, (await session.LoadAsync<User>("users/1")).Name);
+                Assert.Equal(text, (await session.LoadAsync<User>("users/2")).Name);
+            }
+        }
+
         private class FieldsEntity
         {
             private readonly string _secret;
