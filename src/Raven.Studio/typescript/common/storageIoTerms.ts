@@ -93,8 +93,6 @@ export const journalCompressionLabel: Record<Voron.JournalCompressionAlgorithm, 
 export const ioStatsHelp = {
     journalCompression:
         "Algorithm of the latest compressed journal write in the data shown. With Auto, Zstd is used on bandwidth / IOPS limited (Budgeted) disks and LZ4 on the others.",
-    drainSync:
-        "Paced sync: the disk was congested, so the sync wrote its data in blocks first, then fsync. The bar covers both. Slower on purpose, so journal writes get through.",
 };
 
 export const meterTypeLabel: Record<Sparrow.Server.Meters.IoMetrics.MeterType, string> = {

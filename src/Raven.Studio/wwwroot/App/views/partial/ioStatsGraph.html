@@ -72,10 +72,6 @@
             <div data-bind="visible: bufferIsFull">
                 <small>Data buffer is full, clear graph data to continue</small>
             </div>
-            <div class="io-stats-drain-legend" data-bind="visible: hasDrainedSyncs, attr: { title: help.drainSync }">
-                <span class="drain-sync-swatch"></span>
-                <small>Paced sync</small>
-            </div>
             <div class="flex-separator"></div>
             <button class="btn btn-default btn-sm margin-right margin-right-sm" data-bind="click: clearBrush, visible: clearSelectionVisible">
                 <span>Clear selection</span>
@@ -107,7 +103,6 @@
             <div class="io-stats-storage-item">
                 <span class="text-muted">Disk <span data-bind="text: name"></span><span data-bind="visible: usedBy, text: usedBy ? ' (' + usedBy + ')' : ''"></span>:</span>
                 <span class="label" data-bind="text: statusText, css: statusCss, attr: { title: statusHelp }"></span>
-                <span class="text-muted" data-bind="visible: statusReason, text: statusReason"></span>
                 <span class="io-stats-storage-value" data-bind="attr: { title: modeHelp }">
                     <span class="text-muted">Mode:</span>
                     <span data-bind="text: modeText, css: { 'text-warning': draining }"></span>

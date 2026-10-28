@@ -32,7 +32,6 @@ type storageDeviceItem = {
     statusText: string;
     statusCss: string;
     statusHelp: string;
-    statusReason: string;
     draining: boolean;
     modeText: string;
     modeHelp: string;
@@ -290,7 +289,6 @@ class ioStatsGraph {
     private readonly help = storageIoTerms.ioStatsHelp;
     private readonly termHelp = storageIoTerms.storageTermHelp;
     private journalCompression = ko.observable<string>(ioStatsGraph.noCompressedWrites);
-    private hasDrainedSyncs = ko.observable<boolean>(false);
 
     // disk state from /admin/debug/storage/io, Operator only
     private readonly storageScope: storageScope;
@@ -459,7 +457,6 @@ class ioStatsGraph {
         this.legends.forEach(x => legendsCache.set(x().type, 0));
 
         let hasCompression = false;
-        let hasDrainedSyncs = false;
         const latestAlgorithmPerType = new Map<StorageEnvironmentType, { at: number; algorithm: string }>();
 
         this.data.Environments.forEach(env => {
@@ -486,8 +483,6 @@ class ioStatsGraph {
                                 latestAlgorithmPerType.set(env.Type, { at, algorithm: recentItem.Algorithm });
                             }
                         }
-                    } else if (recentItem.Type === "DataSync" && recentItem.Drain) {
-                        hasDrainedSyncs = true;
                     }
 
                     this.hasAnyData(true);
@@ -500,7 +495,6 @@ class ioStatsGraph {
         });
 
         this.journalCompression(ioStatsGraph.describeJournalCompression(hasCompression, latestAlgorithmPerType));
-        this.hasDrainedSyncs(hasDrainedSyncs);
     }
 
     private static describeJournalCompression(hasCompression: boolean,
@@ -1594,7 +1588,6 @@ class ioStatsGraph {
             statusText: storageIoTerms.storageStatusLabel[device.Status] ?? device.Status,
             statusCss: "label-" + (storageIoTerms.storageStatusColor[device.Status] ?? "default"),
             statusHelp: Array.from(new Set([device.StatusReason, storageIoTerms.storageStatusHelp[device.Status]].filter(x => x))).join("\n"),
-            statusReason: device.Status !== "Ok" ? device.StatusReason : "",
             draining: device.Draining,
             modeText: device.Draining ? "Paced" : "Normal",
             modeHelp: device.Draining ? storageIoTerms.storageTermHelp.drain : storageIoTerms.storageTermHelp.trickle,
@@ -1622,7 +1615,6 @@ class ioStatsGraph {
         this.allIndexesAreFiltered(false);
         this.bufferUsage("0.0");
         this.journalCompression(ioStatsGraph.noCompressedWrites);
-        this.hasDrainedSyncs(false);
         this.setZoomAndBrush([0, this.totalWidth], brush => brush.clear());
     }
 
