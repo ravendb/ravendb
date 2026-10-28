@@ -115,7 +115,7 @@ internal sealed class VectorConverter : JsonConverterFactory
             if (typeof(T) == typeof(uint))
                 return (T)(object)reader.GetUInt32();
             if (typeof(T) == typeof(ulong))
-                return (T)(object)reader.GetUInt64();
+                return (T)(object)(reader.TryGetUInt64(out ulong unsigned) ? unsigned : unchecked((ulong)reader.GetInt64()));
             if (typeof(T) == typeof(sbyte))
                 return (T)(object)reader.GetSByte();
             if (typeof(T) == typeof(short))
@@ -166,7 +166,7 @@ internal sealed class VectorConverter : JsonConverterFactory
             else if (typeof(T) == typeof(uint))
                 writer.WriteNumberValue((uint)(object)value);
             else if (typeof(T) == typeof(ulong))
-                writer.WriteNumberValue((ulong)(object)value);
+                writer.WriteNumberValue(unchecked((long)(ulong)(object)value));
             else if (typeof(T) == typeof(sbyte))
                 writer.WriteNumberValue((sbyte)(object)value);
             else if (typeof(T) == typeof(short))
