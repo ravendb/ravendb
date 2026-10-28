@@ -54,6 +54,28 @@ namespace Raven.Server.Documents.Indexes.Static
         [ThreadStatic]
         private static bool DisableMatchingAdditionalAssembliesByNameValue;
 
+        /// <summary>
+        /// The longest chain of method calls allowed in a map or reduce function, e.g. 'x.Concat(a).Concat(b).Concat(c)...' (RavenDB-26440).
+        /// The receiver of such a chain is 'dynamic' in the generated index code, so every call is a dynamic call site and the JIT keeps the
+        /// intermediate values of every pending call in the stack frame of the generated method. The frame grows quadratically with the nesting
+        /// of the calls and it is allocated when the method is entered, before any code runs, so a runtime guard such as
+        /// RuntimeHelpers.EnsureSufficientExecutionStack() cannot catch it and the indexing thread dies with a StackOverflowException.
+        /// </summary>
+        internal const int MaxAllowedInvocationChainDepth = 128;
+
+        /// <summary>
+        /// The budget for the nesting of the method calls of a whole map or reduce function: the cost of a single chain of
+        /// <see cref="MaxAllowedInvocationChainDepth"/> calls, as computed by <see cref="StackDepthRetriever.GetMaxInvocationNestingCost"/>.
+        /// All the calls of a function are compiled into the same method, so their costs add up: two chains of 90 calls or four chains of 64 fit, two chains of 128 do not.
+        /// Measured on x64 with the default 1.5 MB stack of the indexing thread (Release build, one document indexed), the cost at which the server dies:
+        /// a plain chain 'x.Concat(a).Concat(b)...' survives 44,850 (300 calls, and 32,220 as 2 x 180) and dies at 62,250 (2 x 250),
+        /// the same chain with a '?? Enumerable.Empty()' argument per call survives 22,649 (150 calls) and dies at 24,567 (3 x 90), since the dynamic
+        /// '!= null' checks that the rewriters generate for '??' cost stack that is not counted, and a chain of '?.' calls, which the rewriters expand by
+        /// copying the chain before every link, survives 16,872 (36 links) and dies at 22,960 (40 links).
+        /// The budget keeps every measured shape at less than half of its crash point. The 512 KB stack of the indexing threads on 32-bit (see PoolOfThreads) was not measured.
+        /// </summary>
+        internal const int MaxAllowedInvocationNestingCost = MaxAllowedInvocationChainDepth * (MaxAllowedInvocationChainDepth - 1) / 2;
+
         static IndexCompiler()
         {
             AssemblyLoadContext.Default.Resolving += (ctx, name) =>
@@ -547,7 +569,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 var map = maps[i];
                 statements.AddRange(HandleMap(definition.SourceType, map, fieldNamesValidator, methodDetector, stackDepthRetriever, ref members));
                 
-                maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.StackSize);
+                maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.LetAndSelectDepth);
                 stackDepthRetriever.Clear();
             }
 
@@ -561,7 +583,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.GroupByFields)).Assign(groupByFieldsArray).AsExpressionStatement());
                 
-                maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.StackSize);
+                maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.LetAndSelectDepth);
             }
 
             var fields = GetIndexedFields(definition, fieldNamesValidator);
@@ -642,14 +664,20 @@ namespace Raven.Server.Documents.Indexes.Static
             try
             {
                 map = NormalizeFunction(map);
-                var expression = SyntaxFactory.ParseExpression(map).NormalizeWhitespace();
+                var parsedExpression = SyntaxFactory.ParseExpression(map);
+
+                // a first gate on the parsed tree, before NormalizeWhitespace() and the rewriters recurse over it: Roslyn guards that recursion,
+                // but an extremely deep chain would then fail with its generic 'insufficient stack' message instead of this one
+                ThrowIfInvocationNestingIsTooDeep(parsedExpression, "map");
+
+                var expression = parsedExpression.NormalizeWhitespace();
 
                 fieldNamesValidator.Validate(map, expression);
                 methodsDetector.Visit(expression);
                 
                 stackDepthRetriever.Visit(expression);
                 stackDepthRetriever.VisitMethodQuery(map);
-                
+
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
                 {
@@ -701,12 +729,34 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
+        private static void ThrowIfInvocationNestingIsTooDeep(SyntaxNode function, string functionName)
+        {
+            var cost = StackDepthRetriever.GetMaxInvocationNestingCost(function);
+            if (cost <= MaxAllowedInvocationNestingCost)
+                return;
+
+            // wrapped by the caller into an IndexCompilationException that points at the map or reduce text
+            throw new InvalidOperationException(
+                $"The {functionName} function nests its method calls too deeply: their combined nesting cost is {cost}, while the maximum is {MaxAllowedInvocationNestingCost}, " +
+                $"the cost of a single chain of {MaxAllowedInvocationChainDepth} calls such as 'x.Concat(a).Concat(b).Concat(c)...'. Every call costs the number of calls it is nested in, " +
+                "as their receiver or as an argument, and the calls of the whole function add up, since they are all compiled into one method. " +
+                "The generated index code invokes these calls dynamically and the stack frame of that method grows quadratically with the nesting of the calls, " +
+                "so this function would overflow the stack of the indexing thread and crash the server with a StackOverflowException. " +
+                "Split the expression into shorter parts, for example collect the values into an array and flatten it: " +
+                "new[] { col1, col2, col3 }.Where(x => x != null).SelectMany(x => x).ToArray()");
+        }
+
         private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, StackDepthRetriever stackDepthRetriever, out CompiledIndexField[] groupByFields)
         {
             try
             {
                 reduce = NormalizeFunction(reduce);
-                var expression = SyntaxFactory.ParseExpression(reduce).NormalizeWhitespace();
+                var parsedExpression = SyntaxFactory.ParseExpression(reduce);
+
+                // a first gate on the parsed tree, see HandleMap()
+                ThrowIfInvocationNestingIsTooDeep(parsedExpression, "reduce");
+
+                var expression = parsedExpression.NormalizeWhitespace();
                 fieldNamesValidator?.Validate(reduce, expression);
                 methodsDetector.Visit(expression);
                 
@@ -900,6 +950,10 @@ namespace Raven.Server.Documents.Indexes.Static
                 // there are certain patterns we aren't optimizing, that is fine
             }
 
+            // the rewritten function is what gets compiled: the rewriters expand '?.' and '??' by copying the expression before them, which can turn
+            // a short chain of '?.' calls into a very deep one, so the parsed tree the first gate in HandleMap() looked at is only a lower bound
+            ThrowIfInvocationNestingIsTooDeep(optimized ?? rewrittenExpression, "map");
+
             var results = new List<StatementSyntax>();
             ExpressionSyntax mapExpression;
 
@@ -938,6 +992,9 @@ namespace Raven.Server.Documents.Indexes.Static
             ExpressionSyntax expression, out CompiledIndexField[] groupByFields)
         {
             var rewrittenExpression = (CSharpSyntaxNode)reduceFunctionProcessor.Visit(expression);
+
+            // the rewritten function is what gets compiled, see HandleSyntaxInMapBase()
+            ThrowIfInvocationNestingIsTooDeep(rewrittenExpression, "reduce");
 
             var reducingFunction =
                 SyntaxFactory.SimpleLambdaExpression(
