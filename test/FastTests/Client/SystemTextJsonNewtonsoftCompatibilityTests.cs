@@ -9,6 +9,8 @@ using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Queries.TimeSeries;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Raven.Client.Json.Serialization.SystemTextJson;
 using Raven.Client.ServerWide;
@@ -680,6 +682,70 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
             Assert.IsType<Marker>(Assert.Single(holder.Covariant));
             Assert.IsType<Marker>(holder.Mixed[0]);
             Assert.IsType<Dog>(holder.Mixed[1]);
+        }
+    }
+
+    private class HiddenBase
+    {
+        public double[] Max;
+
+        public string Label { get; set; }
+    }
+
+    private class HidesWithIgnoredMembers : HiddenBase
+    {
+        [JsonIgnore]
+        public new int Max => base.Max?.Length ?? 0;
+
+        [JsonIgnore]
+        public new string Label => base.Label?.ToUpperInvariant();
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonSerializesBaseMembersHiddenByIgnoredMembersLikeNewtonsoft()
+    {
+        var value = new HidesWithIgnoredMembers();
+        ((HiddenBase)value).Max = [1.5, 2.5];
+        ((HiddenBase)value).Label = "label";
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(value, context))
+        using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(value, context))
+        {
+            JObject expectedJson = JObject.Parse(expected.ToString());
+            JObject actualJson = JObject.Parse(actual.ToString());
+            Assert.True(JToken.DeepEquals(expectedJson, actualJson), $"Expected {expectedJson} but got {actualJson}");
+
+            var read = SystemTextJson.Serialization.DefaultConverter.FromBlittable<HidesWithIgnoredMembers>(expected);
+            Assert.Equal([1.5, 2.5], ((HiddenBase)read).Max);
+            Assert.Equal("label", ((HiddenBase)read).Label);
+        }
+    }
+
+    private class StockPrice
+    {
+        [TimeSeriesValue(0)]
+        public double Open;
+
+        [TimeSeriesValue(1)]
+        public double Close;
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+    public void SystemTextJsonReadsTypedTimeSeriesAggregations()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(
+                   "{\"From\":\"2024-01-01T00:00:00.0000000Z\",\"To\":\"2024-01-02T00:00:00.0000000Z\",\"Max\":[3,4],\"Count\":[2,2]}", "aggregation"))
+        {
+            var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<TimeSeriesRangeAggregation<StockPrice>>(json);
+            var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<TimeSeriesRangeAggregation<StockPrice>>(json);
+
+            Assert.Equal(4, actual.Max.Close);
+            Assert.Equal(expected.Max.Close, actual.Max.Close);
+            Assert.Equal(expected.Count.Open, actual.Count.Open);
+            Assert.Equal(expected.From, actual.From);
+            Assert.Equal(expected.To, actual.To);
         }
     }
 
