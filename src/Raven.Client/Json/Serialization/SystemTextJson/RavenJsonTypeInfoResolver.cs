@@ -4,6 +4,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
+using System.Runtime.Serialization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
@@ -29,6 +31,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         private static readonly ConcurrentDictionary<Type, Action<object, IEnumerable>> _collectionAdders = new();
 
         private static readonly MethodInfo _addToCollectionMethod = typeof(RavenJsonTypeInfoResolver).GetMethod(nameof(AddToCollection), BindingFlags.NonPublic | BindingFlags.Static);
+
+        private static readonly object[] _callbackArguments = { new StreamingContext(StreamingContextStates.All) };
 
         private readonly SystemTextJsonSerializationConventions _conventions;
 
@@ -129,6 +133,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             SetupNonPublicConstructor(typeInfo);
             PopulateReadOnlyMembers(typeInfo);
             SetupIdentityPropertyConditionalSerialization(typeInfo);
+            ApplySerializationCallbacks(typeInfo);
             AssertNoNewtonsoftMemberAttributes(typeInfo);
             AssertNewtonsoftConstructorIsUsed(typeInfo.Type);
         }
@@ -318,6 +323,75 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         private static bool IsIgnoredBySystemTextJson(MemberInfo member)
         {
             return member.GetCustomAttribute<JsonIgnoreAttribute>(inherit: true) is { Condition: JsonIgnoreCondition.Always };
+        }
+
+        private static void ApplySerializationCallbacks(JsonTypeInfo typeInfo)
+        {
+            List<MethodInfo> onSerializing = null;
+            List<MethodInfo> onSerialized = null;
+            List<MethodInfo> onDeserializing = null;
+            List<MethodInfo> onDeserialized = null;
+
+            var hierarchy = new Stack<Type>();
+            for (Type type = typeInfo.Type; type != null && type != typeof(object); type = type.BaseType)
+                hierarchy.Push(type);
+
+            foreach (Type type in hierarchy)
+            {
+                foreach (MethodInfo method in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+                {
+                    if (IsSerializationCallback(method) == false)
+                        continue;
+
+                    AddCallback(ref onSerializing, method, typeof(OnSerializingAttribute));
+                    AddCallback(ref onSerialized, method, typeof(OnSerializedAttribute));
+                    AddCallback(ref onDeserializing, method, typeof(OnDeserializingAttribute));
+                    AddCallback(ref onDeserialized, method, typeof(OnDeserializedAttribute));
+                }
+            }
+
+            typeInfo.OnSerializing = CombineCallbacks(typeInfo.OnSerializing, onSerializing);
+            typeInfo.OnSerialized = CombineCallbacks(typeInfo.OnSerialized, onSerialized);
+            typeInfo.OnDeserializing = CombineCallbacks(typeInfo.OnDeserializing, onDeserializing);
+            typeInfo.OnDeserialized = CombineCallbacks(typeInfo.OnDeserialized, onDeserialized);
+        }
+
+        private static bool IsSerializationCallback(MethodInfo method)
+        {
+            if (method.ContainsGenericParameters || method.ReturnType != typeof(void))
+                return false;
+
+            ParameterInfo[] parameters = method.GetParameters();
+            return parameters.Length == 1 && parameters[0].ParameterType == typeof(StreamingContext);
+        }
+
+        private static void AddCallback(ref List<MethodInfo> callbacks, MethodInfo method, Type attributeType)
+        {
+            if (method.IsDefined(attributeType, inherit: false))
+                (callbacks ??= new List<MethodInfo>()).Add(method);
+        }
+
+        private static Action<object> CombineCallbacks(Action<object> existing, List<MethodInfo> callbacks)
+        {
+            if (callbacks == null)
+                return existing;
+
+            MethodInfo[] methods = callbacks.ToArray();
+            return target =>
+            {
+                existing?.Invoke(target);
+                for (int i = 0; i < methods.Length; i++)
+                {
+                    try
+                    {
+                        methods[i].Invoke(target, _callbackArguments);
+                    }
+                    catch (TargetInvocationException e) when (e.InnerException != null)
+                    {
+                        ExceptionDispatchInfo.Capture(e.InnerException).Throw();
+                    }
+                }
+            };
         }
 
         private static bool IsHiddenBySystemTextJsonIgnoredMember(Type type, Type declaringType, string name)
