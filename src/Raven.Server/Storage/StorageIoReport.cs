@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Sparrow;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Platform;
+using Sparrow.Server.Utils.DiskStatsGetter;
 using Voron;
 using Voron.Impl.Journal;
 
@@ -25,7 +27,6 @@ namespace Raven.Server.Storage
 
         public static StorageIoReport Create(StorageDeviceMonitor monitor)
         {
-            CongestionThresholds thresholds = monitor.Thresholds;
             List<StorageDeviceMonitor.EnvironmentOfDatabase> environments = monitor.GetEnvironments().ToList();
 
             return new StorageIoReport
@@ -37,7 +38,7 @@ namespace Raven.Server.Storage
                     IoRingQueueSize = PalConfiguration.IoRingQueueSize,
                     LowPriorityIo = PalConfiguration.LowPriorityIo
                 },
-                Devices = monitor.GetDevices().Keys.Select(d => StorageDeviceIoInfo.Create(d, monitor.GetTracker(d), thresholds)).ToList(),
+                Devices = monitor.GetDevices().Keys.Select(d => StorageDeviceIoInfo.Create(d, monitor.GetTracker(d), monitor)).ToList(),
                 Environments = environments.Select(StorageEnvironmentIoInfo.Create).ToList(),
                 SharedJournals = environments.Where(e => e.Database != null)
                     .GroupBy(e => e.Database)
@@ -90,6 +91,9 @@ namespace Raven.Server.Storage
 
         public double SyncCostInMs { get; set; }
 
+        // OS disk counters, the same as the dashboard IO Stats widget; null until the first sample or when the OS gives none
+        public StorageDiskStatsInfo DiskStats { get; set; }
+
         public bool Draining { get; set; }
 
         public DateTime? LastModeSwitch { get; set; }
@@ -103,8 +107,10 @@ namespace Raven.Server.Storage
         // the worst slow write per file on this disk within the last hour, worst first
         public List<SlowIoDetails.SlowWriteInfo> SlowWrites { get; set; }
 
-        public static StorageDeviceIoInfo Create(DeviceWriteBudget device, DeviceTracker tracker, CongestionThresholds thresholds)
+        public static StorageDeviceIoInfo Create(DeviceWriteBudget device, DeviceTracker tracker, StorageDeviceMonitor monitor)
         {
+            CongestionThresholds thresholds = monitor.Thresholds;
+            DiskStatsResult diskStats = monitor.GetDiskStats(tracker?.MountPoint);
             DeviceWriteBudget.DeviceClass deviceClass = device.Classify(out DeviceWriteBudget.ClassReason classReason);
             TimeSpan sinceLastWrite = device.TimeSinceLastJournalWrite;
             StorageDeviceStatus status = tracker?.GetStatus(thresholds) ?? StorageDeviceStatus.Ok;
@@ -123,6 +129,13 @@ namespace Raven.Server.Storage
                 SecondsSinceLastJournalWrite = sinceLastWrite == TimeSpan.MaxValue ? null : sinceLastWrite.TotalSeconds,
                 QueueDepth = device.QueueDepth,
                 SyncCostInMs = device.SyncCost.TotalMilliseconds,
+                DiskStats = diskStats == null ? null : new StorageDiskStatsInfo
+                {
+                    ReadsPerSec = diskStats.IoReadOperations,
+                    WritesPerSec = diskStats.IoWriteOperations,
+                    ReadBytesPerSec = diskStats.ReadThroughput.GetValue(SizeUnit.Bytes),
+                    WriteBytesPerSec = diskStats.WriteThroughput.GetValue(SizeUnit.Bytes)
+                },
                 Draining = device.IsDraining,
                 LastModeSwitch = device.LastModeSwitch,
                 DrainShareOfLastHour = tracker?.DrainShareOfLastHour ?? 0,
@@ -159,6 +172,17 @@ namespace Raven.Server.Storage
                     return tracker == null ? "No data yet." : "The disk keeps up with the writes.";
             }
         }
+    }
+
+    public sealed class StorageDiskStatsInfo
+    {
+        public double ReadsPerSec { get; set; }
+
+        public double WritesPerSec { get; set; }
+
+        public long ReadBytesPerSec { get; set; }
+
+        public long WriteBytesPerSec { get; set; }
     }
 
     public sealed class StorageDeviceThresholds

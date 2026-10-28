@@ -13,6 +13,7 @@ describe("StorageIo", function () {
         expect(screen.getByText("Saturated")).toBeInTheDocument();
         expect(screen.getByText("Paced")).toBeInTheDocument();
         expect(screen.getByText("93%")).toBeInTheDocument();
+        expect(screen.getByText(/2,950 writes\/s of 8/)).toBeInTheDocument();
         expect(screen.getByText(/Slow writes in the last hour \(2\)/)).toBeInTheDocument();
 
         // the mandatory sync of the documents environment is called out

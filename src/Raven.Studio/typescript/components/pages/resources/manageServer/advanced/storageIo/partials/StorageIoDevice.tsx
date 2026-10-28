@@ -64,6 +64,23 @@ export default function StorageIoDevice({ device }: StorageIoDeviceProps) {
                             paced above {thresholds.QueueDepthEnterDrain}, normal below {thresholds.QueueDepthExitDrain}
                         </Sub>
                     </Metric>
+                    <Metric label="Disk requests" help={storageTermHelp.diskStats}>
+                        {device.DiskStats == null ? (
+                            <span className="text-muted">no data yet</span>
+                        ) : (
+                            <>
+                                {formatRequests(
+                                    device.DiskStats.WritesPerSec,
+                                    device.DiskStats.WriteBytesPerSec,
+                                    "writes"
+                                )}
+                                <Sub>
+                                    {formatBytes(device.DiskStats.WriteBytesPerSec)}/s written, reads{" "}
+                                    {formatRequests(device.DiskStats.ReadsPerSec, device.DiskStats.ReadBytesPerSec)}
+                                </Sub>
+                            </>
+                        )}
+                    </Metric>
                     <Metric label="Disk class" help={deviceClassHelp[device.Class]}>
                         {device.Class}
                         <Sub>{device.ClassDescription}</Sub>
@@ -118,6 +135,12 @@ function Metric({ label, help, children }: { label: string; help: string; childr
             <div className="storage-io-metric-value">{children}</div>
         </div>
     );
+}
+
+// "2,700 writes/s of 8 KB": the request size tells whether the IOPS or the throughput limit is hit first
+function formatRequests(perSec: number, bytesPerSec: number, what = ""): string {
+    const rate = `${Math.round(perSec).toLocaleString()}${what ? " " + what : ""}/s`;
+    return perSec >= 1 ? `${rate} of ${formatBytes(bytesPerSec / perSec)}` : rate;
 }
 
 function Sub({ children }: { children: ReactNode }) {

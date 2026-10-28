@@ -919,6 +919,12 @@ export class ManageServerStubs {
                     SecondsSinceLastJournalWrite: 0.2,
                     QueueDepth: 13.1,
                     SyncCostInMs: 1164,
+                    DiskStats: {
+                        ReadsPerSec: 240,
+                        WritesPerSec: 2950,
+                        ReadBytesPerSec: 240 * 16 * 1024,
+                        WriteBytesPerSec: 2950 * 8 * 1024,
+                    },
                     Draining: true,
                     LastModeSwitch: "2026-10-24T03:02:10Z",
                     DrainShareOfLastHour: 0.93,
