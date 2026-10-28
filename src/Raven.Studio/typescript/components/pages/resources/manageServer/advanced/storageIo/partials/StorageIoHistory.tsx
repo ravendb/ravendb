@@ -154,6 +154,8 @@ export default function StorageIoHistory({ history, thresholds }: StorageIoHisto
                         {new Date(from + (span * i) / timeTicks).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
+                            // a short span would repeat the same minute on every tick
+                            second: span < 600_000 ? "2-digit" : undefined,
                         })}
                     </span>
                 ))}
