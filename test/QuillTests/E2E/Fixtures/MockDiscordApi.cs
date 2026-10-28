@@ -32,6 +32,8 @@ public sealed class MockDiscordApi : IAsyncDisposable
     private readonly List<string> _identityCalls = [];
     private readonly List<string> _applicationCalls = [];
     private readonly List<string> _typingCalls = [];
+    private readonly List<string> _channelFetches = [];
+    private readonly Dictionary<string, (string Id, string Username)> _dmRecipients = new();
     private readonly List<string> _presenceUpdates = [];
     private readonly Dictionary<string, long> _inboundMessageIds = new();
     private readonly HashSet<string> _sessions = new();
@@ -134,6 +136,11 @@ public sealed class MockDiscordApi : IAsyncDisposable
         get { lock (_lock) return _typingCalls.ToArray(); }
     }
 
+    public IReadOnlyList<string> ChannelFetches
+    {
+        get { lock (_lock) return _channelFetches.ToArray(); }
+    }
+
     public IReadOnlyList<string> PresenceUpdates
     {
         get { lock (_lock) return _presenceUpdates.ToArray(); }
@@ -172,6 +179,8 @@ public sealed class MockDiscordApi : IAsyncDisposable
             _identityCalls.Clear();
             _applicationCalls.Clear();
             _typingCalls.Clear();
+            _channelFetches.Clear();
+            _dmRecipients.Clear();
             _presenceUpdates.Clear();
             session = _session;
             _session = null;
@@ -215,6 +224,9 @@ public sealed class MockDiscordApi : IAsyncDisposable
         var author = new JsonObject { ["id"] = authorId, ["username"] = authorUsername };
         if (fromBot)
             author["bot"] = true;
+
+        lock (_lock)
+            _dmRecipients[channelId] = (authorId, authorUsername);
 
         var message = new JsonObject
         {
@@ -291,6 +303,7 @@ public sealed class MockDiscordApi : IAsyncDisposable
         app.MapGet("/users/@me", (HttpContext ctx) => instance.HandleCurrentUser(ctx));
         app.MapGet("/oauth2/applications/@me", (HttpContext ctx) => instance.HandleCurrentApplication(ctx));
         app.MapGet("/gateway/bot", (HttpContext ctx) => instance.HandleGatewayBot(ctx));
+        app.MapGet("/channels/{channelId}", (string channelId, HttpContext ctx) => instance.HandleGetChannel(ctx, channelId));
         app.MapPost("/channels/{channelId}/typing", (string channelId, HttpContext ctx) => instance.HandleTyping(ctx, channelId));
 
         app.MapPost("/channels/{channelId}/messages", async (string channelId, HttpContext ctx) =>
@@ -659,6 +672,27 @@ public sealed class MockDiscordApi : IAsyncDisposable
         {
             ["url"] = GatewayUrl,
             ["shards"] = 1,
+        });
+    }
+
+    private IResult HandleGetChannel(HttpContext ctx, string channelId)
+    {
+        if (BotFor(BotToken(ctx)) is null)
+            return DiscordError(401, "401: Unauthorized");
+
+        (string Id, string Username) recipient;
+        lock (_lock)
+        {
+            _channelFetches.Add(channelId);
+            if (_dmRecipients.TryGetValue(channelId, out recipient) == false)
+                return DiscordError(404, "404: Unknown Channel");
+        }
+
+        return Results.Json(new JsonObject
+        {
+            ["id"] = channelId,
+            ["type"] = 1,
+            ["recipients"] = new JsonArray(new JsonObject { ["id"] = recipient.Id, ["username"] = recipient.Username }),
         });
     }
 
