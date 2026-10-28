@@ -1,3 +1,4 @@
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 using System.Dynamic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
@@ -17,7 +18,11 @@ namespace FastTests.Issues
         {
             using (var store = GetDocumentStore(new Options()
             {
-                ModifyDocumentStore = a => a.Conventions.AddIdFieldToDynamicObjects = false
+                ModifyDocumentStore = a =>
+                {
+                    a.Conventions.Serialization = new NewtonsoftJsonSerializationConventions();
+                    a.Conventions.AddIdFieldToDynamicObjects = false;
+                }
             }))
             {
                 using (var session = store.OpenSession())
@@ -52,7 +57,10 @@ namespace FastTests.Issues
             const string expandoObjectId = "ExpandoObjects/1-A";
             const string jObjectId = "JObjects/1-A";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = a => a.Conventions.Serialization = new NewtonsoftJsonSerializationConventions()
+            }))
             {
                 using (var session = store.OpenSession())
                 {
