@@ -777,6 +777,56 @@ namespace FastTests.Client
         }
 
         // Entity that only has Name — "ExtraField" and "ExtraNumber" are not on this type
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task SwitchingToSystemTextJsonKeepsNonPublicMembersOfStoredDocuments()
+        {
+            using var store = GetDocumentStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order = new EncapsulatedOrder("Shipped");
+                order.AddLine("line/1");
+                await session.StoreAsync(order, "orders/1");
+                await session.SaveChangesAsync();
+            }
+
+            using (var systemTextJsonStore = new DocumentStore { Urls = store.Urls, Database = store.Database })
+            {
+                systemTextJsonStore.Conventions.Serialization = new SystemTextJsonSerializationConventions();
+                systemTextJsonStore.Initialize();
+
+                using (var session = systemTextJsonStore.OpenAsyncSession())
+                {
+                    var order = await session.LoadAsync<EncapsulatedOrder>("orders/1");
+                    Assert.Equal("Shipped", order.Status);
+                    Assert.Equal(["line/1"], order.Lines);
+                    Assert.False(session.Advanced.HasChanges);
+                }
+            }
+        }
+
+        private class EncapsulatedOrder
+        {
+            private readonly List<string> _lines = [];
+
+            public EncapsulatedOrder(string status)
+            {
+                Status = status;
+            }
+
+            private EncapsulatedOrder()
+            {
+            }
+
+            public string Id { get; private set; }
+
+            public string Status { get; private set; }
+
+            public IReadOnlyList<string> Lines => _lines;
+
+            public void AddLine(string line) => _lines.Add(line);
+        }
+
         private class PartialEntity
         {
             public string Id { get; set; }
