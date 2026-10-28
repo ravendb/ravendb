@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Reflection;
@@ -48,7 +49,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 newInstance = JsonSerializer.Deserialize(reader.GetUtf8Json(), type, options);
             }
 
-            if (newInstance == null)
+            if (newInstance == null || TryPopulateDictionary(entity, newInstance))
                 return;
 
             Dictionary<string, JsonPropertyInfo> properties = Conventions.GetJsonProperties(type);
@@ -59,6 +60,23 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
                 Action<object, object> setter = property.Set ?? GetMemberSetter(property.AttributeProvider);
                 setter?.Invoke(entity, property.Get(newInstance));
+            }
+        }
+
+        private static bool TryPopulateDictionary(object entity, object source)
+        {
+            switch (entity)
+            {
+                case IDictionary<string, object> target when source is IDictionary<string, object> values:
+                    foreach (KeyValuePair<string, object> entry in values)
+                        target[entry.Key] = entry.Value;
+                    return true;
+                case IDictionary target when source is IDictionary values:
+                    foreach (DictionaryEntry entry in values)
+                        target[entry.Key] = entry.Value;
+                    return true;
+                default:
+                    return false;
             }
         }
 
