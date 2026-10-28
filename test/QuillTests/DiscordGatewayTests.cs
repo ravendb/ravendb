@@ -308,6 +308,33 @@ public class DiscordGatewayTests(ITestOutputHelper output, QuillDiscordFixture f
     }
 
     [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_turn_in_flight_across_a_client_replacement_replies_through_the_new_client()
+    {
+        await using var app = await NewAppAsync();
+        await NewChannelAsync(app);
+        await Discord.WaitUntilConnectedAsync();
+
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt == "hold" ? gate.Task : Task.CompletedTask;
+
+        await Discord.DispatchDmAsync("msg-swap-0", DmChannel, Sender, "hold");
+        await Discord.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+        await Discord.DispatchDmAsync("msg-swap-1", DmChannel, Sender, "queued");
+
+        var identifiesBefore = Discord.Identifies.Count;
+        await Discord.CloseCurrentAsync(4007);
+        await Discord.WaitUntilAsync(() => Discord.Identifies.Count > identifiesBefore, "a fresh identify on a new client");
+        await Discord.WaitUntilConnectedAsync();
+
+        gate.SetResult();
+
+        await Discord.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "queued"), "the queued turn after the swap");
+        await Discord.WaitUntilAsync(
+            () => Discord.EditedMessages.Count(e => e.Content == "Hello from the fake agent.") >= 2, "both replies through the new client");
+        Assert.Contains(DmChannel, Discord.ChannelFetches);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
     public async Task Rotating_credentials_cancels_a_running_turn_and_drops_its_queue_silently()
     {
         await using var app = await NewAppAsync();

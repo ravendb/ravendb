@@ -38,7 +38,7 @@ internal static class DiscordMessages
             ? id
             : throw new DiscordApiException($"'{value}' is not a Discord {what}");
 
-    private static async Task<TResult> GuardAsync<TResult>(string what, CancellationToken ct, Task<TResult> call)
+    internal static async Task<TResult> GuardAsync<TResult>(string what, CancellationToken ct, Task<TResult> call)
     {
         try
         {

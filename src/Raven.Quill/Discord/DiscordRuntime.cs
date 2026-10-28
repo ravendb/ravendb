@@ -25,18 +25,20 @@ internal sealed class DiscordRuntime : IChannelRuntime
 
     private volatile bool _canRestart = true;
     private volatile string? _status;
-    private volatile DiscordSocketClient? _client;
+    private readonly DiscordConnection _connection;
     private readonly Lazy<Task> _stop;
     private Task _run = Task.CompletedTask;
     private TimeSpan _backoff = MinBackoff;
     private long _exitedAtTicks;
 
     private DiscordRuntime(
-        string database, Channel channel, string channelFingerprint,
+        string database, Channel channel, string channelFingerprint, DiscordConnection connection,
         DiscordTurns turns, ChannelChatsFactory chats, DiscordSdk sdk,
         DiscordOptions options, QuillLogger<DiscordRuntime> logger, ChannelConnectionHealth? previous)
     {
         var settings = channel.Discord!;
+
+        _connection = connection;
 
         Health = previous is null ? new ChannelConnectionHealth() : ChannelConnectionHealth.Continuing(previous);
         _channel = channel;
@@ -68,12 +70,12 @@ internal sealed class DiscordRuntime : IChannelRuntime
     }
 
     public static DiscordRuntime Start(
-        string database, Channel channel, string channelFingerprint, DiscordTurns turns,
-        ChannelChatsFactory chats, DiscordSdk sdk, DiscordOptions options,
+        string database, Channel channel, string channelFingerprint, DiscordConnection connection,
+        DiscordTurns turns, ChannelChatsFactory chats, DiscordSdk sdk, DiscordOptions options,
         QuillLogger<DiscordRuntime> logger, ChannelConnectionHealth? previous = null)
     {
         var runtime = new DiscordRuntime(
-            database, channel, channelFingerprint, turns, chats, sdk, options, logger, previous);
+            database, channel, channelFingerprint, connection, turns, chats, sdk, options, logger, previous);
 
         runtime._run = Task.Run(runtime.RunAsync);
         return runtime;
@@ -97,7 +99,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
             return;
 
         _status = channel.DisplayName;
-        if (_client is { } client && Health.IsConnected)
+        if (_connection.Client is { } client && Health.IsConnected)
             _ = ShowStatusAsync(client);
     }
 
@@ -150,7 +152,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
         var exit = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var client = _sdk.NewSocketClient();
-        _client = client;
+        _connection.Client = client;
 
         client.Log += message =>
         {
@@ -209,7 +211,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
         }
         finally
         {
-            _client = null;
+            _connection.Client = null;
             await client.StopAsync();
             Health.MarkDisconnected(null);
         }
@@ -258,7 +260,7 @@ internal sealed class DiscordRuntime : IChannelRuntime
             : ChannelMessageKind.Prompt;
 
         Health.MarkReceived();
-        _chats.Enqueue(new DiscordMessage(Snowflake(author.Id), author.Username, Snowflake(dm.Id), dm, kind, content));
+        _chats.Enqueue(new DiscordMessage(Snowflake(author.Id), author.Username, Snowflake(dm.Id), kind, content));
     }
 
     private void Log(LogMessage message)
