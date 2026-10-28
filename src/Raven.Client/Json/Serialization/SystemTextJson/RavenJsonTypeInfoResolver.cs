@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
@@ -89,6 +90,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         public override JsonTypeInfo GetTypeInfo(Type type, JsonSerializerOptions options)
         {
+            if (type == typeof(ExpandoObject))
+                return JsonMetadataServices.CreateValueInfo<ExpandoObject>(options, ExpandoObjectConverter.Instance);
+
             AssertMembersCanBeResolved(type);
             AssertNotNewtonsoftLinqType(type);
             AssertNoNewtonsoftTypeConverter(type);
