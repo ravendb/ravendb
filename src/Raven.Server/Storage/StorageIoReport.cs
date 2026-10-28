@@ -113,7 +113,8 @@ namespace Raven.Server.Storage
             DiskStatsResult diskStats = monitor.GetDiskStats(tracker?.MountPoint);
             DeviceWriteBudget.DeviceClass deviceClass = device.Classify(out DeviceWriteBudget.ClassReason classReason);
             TimeSpan sinceLastWrite = device.TimeSinceLastJournalWrite;
-            StorageDeviceStatus status = tracker?.GetStatus(thresholds) ?? StorageDeviceStatus.Ok;
+            DeviceTracker.Sample? last = null;
+            StorageDeviceStatus status = tracker?.GetStatus(thresholds, out last) ?? StorageDeviceStatus.Ok;
 
             return new StorageDeviceIoInfo
             {
@@ -121,7 +122,7 @@ namespace Raven.Server.Storage
                 PathOnDevice = device.PathOnDevice,
                 MountPoint = tracker?.MountPoint,
                 Status = status,
-                StatusReason = GetStatusReason(device, tracker, status, thresholds),
+                StatusReason = GetStatusReason(tracker, status, last, thresholds),
                 Class = deviceClass,
                 ClassDescription = StorageDeviceMonitor.Describe(classReason, device),
                 JournalWriteLatencyInMs = device.JournalWriteLatency.TotalMilliseconds,
@@ -158,16 +159,16 @@ namespace Raven.Server.Storage
             };
         }
 
-        private static string GetStatusReason(DeviceWriteBudget device, DeviceTracker tracker, StorageDeviceStatus status, CongestionThresholds thresholds)
+        internal static string GetStatusReason(DeviceTracker tracker, StorageDeviceStatus status, DeviceTracker.Sample? last, CongestionThresholds thresholds)
         {
             switch (status)
             {
                 case StorageDeviceStatus.Saturated:
                     return $"Saturated since {tracker.SaturatedSince:u}: {tracker.SaturationCause}.";
                 case StorageDeviceStatus.Busy:
-                    return device.IsDraining
-                        ? "The disk is congested right now, writes are being paced."
-                        : $"Journal writes take {device.JournalWriteLatency.TotalMilliseconds:#,#0.#} ms right now (threshold {thresholds.JournalWriteLatencyInMs:#,#0} ms).";
+                    return last.Value.Draining
+                        ? "Writes were paced in the last 10 seconds: the disk is congested."
+                        : $"Journal writes took {last.Value.JournalWriteLatencyInMs:#,#0.#} ms in the last 10 seconds (threshold {thresholds.JournalWriteLatencyInMs:#,#0} ms).";
                 default:
                     return tracker == null ? "No data yet." : "The disk keeps up with the writes.";
             }

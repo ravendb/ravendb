@@ -26,7 +26,7 @@ namespace Raven.Server.Storage
         {
             CongestionThresholds thresholds = monitor.Thresholds;
             var disks = monitor.Trackers
-                .Select(t => (Tracker: t, Status: t.GetStatus(thresholds)))
+                .Select(t => (Tracker: t, Status: t.GetStatus(thresholds, out DeviceTracker.Sample? last), Last: last))
                 .OrderByDescending(x => x.Status)
                 .ThenByDescending(x => x.Tracker.Device.JournalWriteLatency)
                 .ToList();
@@ -34,7 +34,7 @@ namespace Raven.Server.Storage
             if (disks.Count == 0)
                 return null;
 
-            var (worst, status) = disks[0];
+            var (worst, status, worstLast) = disks[0];
             double latency = worst.Device.JournalWriteLatency.TotalMilliseconds;
 
             return new StorageStatusInfo
@@ -48,9 +48,9 @@ namespace Raven.Server.Storage
                 Summary = status switch
                 {
                     StorageDeviceStatus.Saturated => $"Disk {worst.MountPoint} is saturated: {worst.SaturationCause}. Writes and indexing are slowed down.",
-                    StorageDeviceStatus.Busy => worst.Device.IsDraining
-                        ? $"Disk {worst.MountPoint} is busy right now: the server paces its writes so the disk can keep up."
-                        : $"Disk {worst.MountPoint} is busy right now: journal writes take {latency:#,#0.##} ms.",
+                    StorageDeviceStatus.Busy => worstLast.Value.Draining
+                        ? $"Disk {worst.MountPoint} is busy: in the last 10 seconds the server paced its writes so the disk can keep up."
+                        : $"Disk {worst.MountPoint} is busy: journal writes took {worstLast.Value.JournalWriteLatencyInMs:#,#0.##} ms in the last 10 seconds.",
                     _ => disks.Count == 1 ? "The disk keeps up with the writes." : $"All {disks.Count} disks keep up with the writes."
                 }
             };
