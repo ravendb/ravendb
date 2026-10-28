@@ -494,6 +494,98 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private enum Stage
+    {
+        [EnumMember(Value = "not-started")]
+        NotStarted,
+
+        [EnumMember(Value = "in-progress")]
+        InProgress,
+
+        Done
+    }
+
+    [Flags]
+    private enum Access
+    {
+        None = 0,
+
+        [EnumMember(Value = "read")]
+        Read = 1,
+
+        [EnumMember(Value = "write")]
+        Write = 2
+    }
+
+    private class HoldsStage
+    {
+        public Stage Stage { get; set; }
+
+        public Stage? Optional { get; set; }
+
+        public List<Stage> History { get; set; }
+
+        public Access Access { get; set; }
+
+        public static HoldsStage Create() => new()
+        {
+            Stage = Stage.InProgress,
+            Optional = Stage.NotStarted,
+            History = [Stage.NotStarted, Stage.Done],
+            Access = Access.Read | Access.Write
+        };
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonWritesEnumMemberValuesLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(HoldsStage.Create(), context))
+        using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(HoldsStage.Create(), context))
+        {
+            JObject expectedJson = JObject.Parse(expected.ToString());
+            JObject actualJson = JObject.Parse(actual.ToString());
+
+            Assert.True(JToken.DeepEquals(expectedJson, actualJson), $"Expected {expectedJson} but got {actualJson}");
+            Assert.Equal("in-progress", (string)actualJson["Stage"]);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.ClientApi)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SystemTextJsonReadsEnumMemberValues(bool writtenByNewtonsoft)
+    {
+        DocumentConventions writer = writtenByNewtonsoft ? Newtonsoft : SystemTextJson;
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = writer.Serialization.DefaultConverter.ToBlittable(HoldsStage.Create(), context))
+        {
+            var holder = SystemTextJson.Serialization.DefaultConverter.FromBlittable<HoldsStage>(json);
+
+            Assert.Equal(Stage.InProgress, holder.Stage);
+            Assert.Equal(Stage.NotStarted, holder.Optional);
+            Assert.Equal([Stage.NotStarted, Stage.Done], holder.History);
+            Assert.Equal(Access.Read | Access.Write, holder.Access);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonReadsEnumNamesWhenValuesAreDefined()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Stage\":\"InProgress\",\"Optional\":\"notstarted\",\"History\":[\"Done\"],\"Access\":\"Read, Write\"}", "names"))
+        {
+            var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<HoldsStage>(json);
+            var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<HoldsStage>(json);
+
+            Assert.Equal(expected.Stage, actual.Stage);
+            Assert.Equal(expected.Optional, actual.Optional);
+            Assert.Equal(expected.History, actual.History);
+            Assert.Equal(expected.Access, actual.Access);
+        }
+    }
+
     private static DocumentConventions Newtonsoft { get; } = new() { Serialization = new NewtonsoftJsonSerializationConventions() };
 
     private static DocumentConventions SystemTextJson { get; } = new() { Serialization = new SystemTextJsonSerializationConventions() };
