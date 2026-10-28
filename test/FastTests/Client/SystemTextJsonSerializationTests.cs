@@ -902,6 +902,49 @@ namespace FastTests.Client
             }
         }
 
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
+        public async Task NewtonsoftRenamesAreUsedForStorageAndQueries()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.Serialization = new SystemTextJsonSerializationConventions();
+                }
+            });
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new NewtonsoftRenamed { Id = "items/1", Title = "Oren" });
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var raw = await session.LoadAsync<BlittableJsonReaderObject>("items/1");
+                Assert.True(raw.TryGet("title", out string title));
+                Assert.Equal("Oren", title);
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                List<NewtonsoftRenamed> results = await session.Query<NewtonsoftRenamed>()
+                    .Customize(x => x.WaitForNonStaleResults())
+                    .Where(x => x.Title == "Oren")
+                    .ToListAsync();
+
+                Assert.Equal("Oren", Assert.Single(results).Title);
+            }
+        }
+
+        private class NewtonsoftRenamed
+        {
+            public string Id { get; set; }
+
+            [Newtonsoft.Json.JsonProperty("title")]
+            public string Title { get; set; }
+        }
+
         private class RenamedPayload
         {
             [JsonPropertyName("n")]

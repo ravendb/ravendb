@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
@@ -277,6 +279,78 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
 
             var read = SystemTextJson.Serialization.DefaultConverter.FromBlittable<DatabaseRecord>(actual);
             Assert.Equal(["feature"], (IReadOnlyList<string>)supportedFeatures.GetValue(read));
+        }
+    }
+
+    [DataContract]
+    private class ContractRenames
+    {
+        [DataMember(Name = "contract_name")]
+        public string Name { get; set; }
+
+        [DataMember]
+        public int Count { get; set; }
+    }
+
+    private class Renames
+    {
+        [JsonProperty("json_property")]
+        public string Renamed { get; set; }
+
+        [DataMember(Name = "outside_contract")]
+        public string OutsideContract { get; set; }
+
+        [JsonProperty("private_renamed")]
+        private string PrivateRenamed { get; set; }
+
+        public ContractRenames Contract { get; set; }
+
+        public string GetPrivateRenamed() => PrivateRenamed;
+
+        public static Renames Create() => new()
+        {
+            Renamed = "renamed",
+            OutsideContract = "outside",
+            PrivateRenamed = "private",
+            Contract = new ContractRenames { Name = "contract", Count = 2 }
+        };
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonWritesNewtonsoftRenamesLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(Renames.Create(), context))
+        using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(Renames.Create(), context))
+        {
+            JObject expectedJson = JObject.Parse(expected.ToString());
+            JObject actualJson = JObject.Parse(actual.ToString());
+
+            Assert.True(JToken.DeepEquals(expectedJson, actualJson), $"Expected {expectedJson} but got {actualJson}");
+            Assert.Equal("renamed", (string)actualJson["json_property"]);
+            Assert.Equal("outside", (string)actualJson["OutsideContract"]);
+            Assert.Equal("private", (string)actualJson["private_renamed"]);
+            Assert.Equal("contract", (string)actualJson["Contract"]["contract_name"]);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.ClientApi)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SystemTextJsonReadsNewtonsoftRenames(bool writtenByNewtonsoft)
+    {
+        DocumentConventions writer = writtenByNewtonsoft ? Newtonsoft : SystemTextJson;
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = writer.Serialization.DefaultConverter.ToBlittable(Renames.Create(), context))
+        {
+            var renames = SystemTextJson.Serialization.DefaultConverter.FromBlittable<Renames>(json);
+
+            Assert.Equal("renamed", renames.Renamed);
+            Assert.Equal("outside", renames.OutsideContract);
+            Assert.Equal("private", renames.GetPrivateRenamed());
+            Assert.Equal("contract", renames.Contract.Name);
+            Assert.Equal(2, renames.Contract.Count);
         }
     }
 

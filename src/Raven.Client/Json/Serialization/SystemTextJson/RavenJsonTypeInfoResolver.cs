@@ -112,6 +112,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             AddNonPublicMembers(typeInfo, isRecord);
             ApplyStringDictionaryComparers(typeInfo);
             ApplyTypeNameHandling(typeInfo);
+            ApplyPropertyRenames(typeInfo);
             ApplyPropertyNameConverter(typeInfo);
             SetupNonPublicConstructor(typeInfo);
             PopulateReadOnlyMembers(typeInfo);
@@ -165,9 +166,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private static JsonPropertyInfo CreateJsonProperty(JsonTypeInfo typeInfo, MemberInfo member, Type memberType, Func<object, object> get, Action<object, object> set)
         {
-            string name = member.GetCustomAttribute<JsonPropertyNameAttribute>(inherit: true)?.Name
-                          ?? typeInfo.Options.PropertyNamingPolicy?.ConvertName(member.Name)
-                          ?? member.Name;
+            string name = typeInfo.Options.PropertyNamingPolicy?.ConvertName(member.Name) ?? member.Name;
 
             JsonPropertyInfo property = typeInfo.CreateJsonPropertyInfo(memberType, name);
             property.AttributeProvider = member;
@@ -352,6 +351,20 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return arguments[0] == typeof(string) ? typeof(Dictionary<,>).MakeGenericType(arguments) : null;
         }
 
+        private static void ApplyPropertyRenames(JsonTypeInfo typeInfo)
+        {
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                JsonPropertyInfo property = typeInfo.Properties[i];
+                if (property.AttributeProvider is not MemberInfo member)
+                    continue;
+
+                string name = JsonPropertyNameResolver.GetSystemTextJsonPropertyName(member);
+                if (name != null)
+                    property.Name = name;
+            }
+        }
+
         private void ApplyPropertyNameConverter(JsonTypeInfo typeInfo)
         {
             DocumentConventions conventions = _conventions.Conventions;
@@ -364,7 +377,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 if (property.AttributeProvider is not MemberInfo member)
                     continue;
 
-                if (member.IsDefined(typeof(JsonPropertyNameAttribute), inherit: true))
+                if (JsonPropertyNameResolver.GetSystemTextJsonPropertyName(member) != null)
                     continue;
 
                 property.Name = conventions.GetConvertedPropertyNameFor(member);

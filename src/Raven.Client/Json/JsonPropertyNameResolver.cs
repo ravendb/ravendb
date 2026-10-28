@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.Serialization;
@@ -15,10 +16,16 @@ namespace Raven.Client.Json
 
         public static string GetJsonPropertyName(MemberInfo member, DocumentConventions conventions)
         {
-            string result = conventions?.Serialization is SystemTextJsonSerializationConventions
-                ? _systemTextJsonCache.GetOrAdd(member, ResolveSystemTextJsonName)
-                : _newtonsoftCache.GetOrAdd(member, ResolveNewtonsoftName);
+            if (conventions?.Serialization is SystemTextJsonSerializationConventions)
+                return GetSystemTextJsonPropertyName(member);
 
+            string result = _newtonsoftCache.GetOrAdd(member, ResolveNewtonsoftName);
+            return result.Length == 0 ? null : result;
+        }
+
+        internal static string GetSystemTextJsonPropertyName(MemberInfo member)
+        {
+            string result = _systemTextJsonCache.GetOrAdd(member, ResolveSystemTextJsonName);
             return result.Length == 0 ? null : result;
         }
 
@@ -33,7 +40,21 @@ namespace Raven.Client.Json
 
         private static string ResolveSystemTextJsonName(MemberInfo member)
         {
-            return member.GetCustomAttribute<JsonPropertyNameAttribute>(inherit: true)?.Name ?? string.Empty;
+            return member.GetCustomAttribute<JsonPropertyNameAttribute>(inherit: true)?.Name
+                   ?? member.GetCustomAttribute<JsonPropertyAttribute>(inherit: true)?.PropertyName
+                   ?? GetDataContractMemberName(member)
+                   ?? string.Empty;
+        }
+
+        private static string GetDataContractMemberName(MemberInfo member)
+        {
+            for (Type type = member.DeclaringType; type != null; type = type.BaseType)
+            {
+                if (type.IsDefined(typeof(DataContractAttribute), inherit: false))
+                    return member.GetCustomAttribute<DataMemberAttribute>(inherit: true)?.Name;
+            }
+
+            return null;
         }
     }
 }
