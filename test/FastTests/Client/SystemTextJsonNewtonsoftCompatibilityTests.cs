@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Raven.Client.Json.Serialization.SystemTextJson;
@@ -127,6 +128,28 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
             IDictionary<string, object> expando = untyped.Expando;
             Assert.Equal("Grisha", expando["Name"]);
             Assert.Equal(3L, expando["Age"]);
+        }
+    }
+
+    public class VectorHolder
+    {
+        public RavenVector<ulong> Unsigned { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Vector)]
+    public void UnsignedVectorsRoundTripExactly()
+    {
+        ulong[] values = [4552215358626332700UL, 18004558979925017000UL];
+        var holder = new VectorHolder { Unsigned = new RavenVector<ulong>(values) };
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            using (BlittableJsonReaderObject written = SystemTextJson.Serialization.DefaultConverter.ToBlittable(holder, context))
+            using (BlittableJsonReaderObject parsed = context.Sync.ReadForMemory(written.ToString(), "parsed"))
+                Assert.Equal(values, SystemTextJson.Serialization.DefaultConverter.FromBlittable<VectorHolder>(parsed).Unsigned.Embedding);
+
+            using (BlittableJsonReaderObject written = Newtonsoft.Serialization.DefaultConverter.ToBlittable(holder, context))
+                Assert.Equal(values, SystemTextJson.Serialization.DefaultConverter.FromBlittable<VectorHolder>(written).Unsigned.Embedding);
         }
     }
 
