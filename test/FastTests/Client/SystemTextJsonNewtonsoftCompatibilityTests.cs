@@ -1016,6 +1016,45 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class Texts
+    {
+        public string Integer { get; set; }
+
+        public string Fraction { get; set; }
+
+        public string Integral { get; set; }
+
+        public string Flag { get; set; }
+
+        public string Text { get; set; }
+
+        public Dictionary<string, string> ByKey { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonReadsNumbersAndBooleansIntoStringsLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(
+                   "{\"Integer\":1234,\"Fraction\":1.5,\"Integral\":2.0,\"Flag\":true,\"Text\":\"text\",\"ByKey\":{\"k\":\"v\"}}", "texts"))
+        {
+            var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<Texts>(json);
+            var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<Texts>(json);
+
+            Assert.Equal("1234", actual.Integer);
+            Assert.Equal(expected.Integer, actual.Integer);
+            Assert.Equal(expected.Fraction, actual.Fraction);
+            Assert.Equal(expected.Integral, actual.Integral);
+            Assert.Equal(expected.Flag, actual.Flag);
+            Assert.Equal(expected.Text, actual.Text);
+            Assert.Equal(expected.ByKey, actual.ByKey);
+
+            using (BlittableJsonReaderObject written = SystemTextJson.Serialization.DefaultConverter.ToBlittable(actual, context))
+            using (BlittableJsonReaderObject newtonsoftWritten = Newtonsoft.Serialization.DefaultConverter.ToBlittable(expected, context))
+                Assert.Equal(newtonsoftWritten.ToString(), written.ToString());
+        }
+    }
+
     private class HoldsChars
     {
         public List<char> Chars { get; set; }
