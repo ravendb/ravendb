@@ -635,6 +635,54 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class Marker
+    {
+    }
+
+    private class HoldsObjectArray
+    {
+        public object[] Mixed { get; set; }
+
+        public object[] Covariant { get; set; }
+
+        public object Boxed { get; set; }
+
+        public static HoldsObjectArray Create() => new()
+        {
+            Mixed = [new Marker(), new Dog { Name = "Rex", Barks = true }],
+            Covariant = new[] { new Marker() },
+            Boxed = new[] { new Marker() }
+        };
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonWritesTypeNamesForObjectArrayItemsLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(HoldsObjectArray.Create(), context))
+        using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(HoldsObjectArray.Create(), context))
+        {
+            JObject expectedJson = JObject.Parse(expected.ToString());
+            JObject actualJson = JObject.Parse(actual.ToString());
+
+            Assert.True(JToken.DeepEquals(expectedJson, actualJson), $"Expected {expectedJson} but got {actualJson}");
+        }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonReadsCovariantArrayItemsWrittenByNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = Newtonsoft.Serialization.DefaultConverter.ToBlittable(HoldsObjectArray.Create(), context))
+        {
+            var holder = SystemTextJson.Serialization.DefaultConverter.FromBlittable<HoldsObjectArray>(json);
+
+            Assert.IsType<Marker>(Assert.Single(holder.Covariant));
+            Assert.IsType<Marker>(holder.Mixed[0]);
+            Assert.IsType<Dog>(holder.Mixed[1]);
+        }
+    }
+
     private class HoldsChars
     {
         public List<char> Chars { get; set; }

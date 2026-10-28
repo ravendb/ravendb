@@ -165,6 +165,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             }
 
             Type createdType = GetCreatedType(declaredType);
+            if (createdType.IsArray && runtimeType.IsArray)
+                runtimeType = createdType;
+
             bool writeTypeName = alwaysWriteObjectTypeName || runtimeType != createdType;
 
             if (TryGetDictionaryTypes(runtimeType, out Type keyType, out Type valueType))
