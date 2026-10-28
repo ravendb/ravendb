@@ -259,23 +259,27 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
             for (Type type = typeInfo.Type; type != null && type != typeof(object); type = type.BaseType)
             {
-                foreach (PropertyInfo propertyInfo in type.GetProperties(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+                BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+                if (type != typeInfo.Type)
+                    flags |= BindingFlags.Public;
+
+                foreach (PropertyInfo propertyInfo in type.GetProperties(flags))
                 {
                     if (propertyInfo.GetIndexParameters().Length > 0 || memberNames.Add(propertyInfo.Name) == false)
                         continue;
 
-                    if (ShouldFilterProperty(propertyInfo, isRecord) || IsIgnoredBySystemTextJson(propertyInfo))
+                    if (ShouldFilterProperty(propertyInfo, isRecord) || IsIgnoredBySystemTextJson(propertyInfo) || IsHiddenBySystemTextJsonIgnoredMember(typeInfo.Type, type, propertyInfo.Name))
                         continue;
 
                     typeInfo.Properties.Add(CreateJsonProperty(typeInfo, propertyInfo, propertyInfo.PropertyType, CreateGetter(propertyInfo), CreateSetter(propertyInfo)));
                 }
 
-                foreach (FieldInfo fieldInfo in type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+                foreach (FieldInfo fieldInfo in type.GetFields(flags))
                 {
-                    if (fieldInfo.IsDefined(typeof(ForceJsonSerializationAttribute)) == false || memberNames.Add(fieldInfo.Name) == false)
+                    if ((fieldInfo.IsPublic == false && fieldInfo.IsDefined(typeof(ForceJsonSerializationAttribute)) == false) || memberNames.Add(fieldInfo.Name) == false)
                         continue;
 
-                    if (ShouldFilterField(fieldInfo) || IsIgnoredBySystemTextJson(fieldInfo))
+                    if (ShouldFilterField(fieldInfo) || IsIgnoredBySystemTextJson(fieldInfo) || IsHiddenBySystemTextJsonIgnoredMember(typeInfo.Type, type, fieldInfo.Name))
                         continue;
 
                     Action<object, object> set = fieldInfo.IsInitOnly ? null : fieldInfo.SetValue;
@@ -314,6 +318,21 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         private static bool IsIgnoredBySystemTextJson(MemberInfo member)
         {
             return member.GetCustomAttribute<JsonIgnoreAttribute>(inherit: true) is { Condition: JsonIgnoreCondition.Always };
+        }
+
+        private static bool IsHiddenBySystemTextJsonIgnoredMember(Type type, Type declaringType, string name)
+        {
+            for (Type current = type; current != declaringType; current = current.BaseType)
+            {
+                MemberInfo[] members = current.GetMember(name, MemberTypes.Field | MemberTypes.Property, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+                for (int i = 0; i < members.Length; i++)
+                {
+                    if (IsIgnoredBySystemTextJson(members[i]))
+                        return true;
+                }
+            }
+
+            return false;
         }
 
         private static void PopulateReadOnlyMembers(JsonTypeInfo typeInfo)
