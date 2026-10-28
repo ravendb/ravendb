@@ -1,6 +1,9 @@
 using System.Net;
+using Microsoft.Extensions.DependencyInjection;
 using QuillTests.E2E.Fixtures;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Documents.Session;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
 using Raven.Quill.Slack;
@@ -433,6 +436,54 @@ public class SlackChannelEndpointsTests(ITestOutputHelper output, QuillSlackFixt
         var foreign = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync(created.ChannelId,
             new UpdateChannelRequest(null, null, null, Telegram: new("123:tok"))));
         Assert.Contains("telegram settings apply to Telegram channels only", foreign.Body);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_lost_app_token_confirm_persists_nothing_from_the_rejected_update()
+    {
+        await using var app = await NewAppAsync();
+        var agentId = await SeedAgentAsync(app);
+        var botToken = NewBotToken();
+        Slack.AddBot(botToken, NewTeamId(), "Acme Coffee", NewBotUserId());
+        var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
+            ChannelType.Slack, agentId, null, DisplayName: "Support bot", Slack: new(botToken, NewAppToken())));
+
+        var rotatedAppToken = NewAppToken();
+        var serverStore = Host.Services.GetRequiredService<IDocumentStore>();
+        var fired = 0;
+
+        void Interfere(object? sender, AfterSaveChangesEventArgs e)
+        {
+            if (e.Entity is not Channel { Slack: { } slack } channel ||
+                channel.ShortId != created.ChannelId || slack.AppToken != rotatedAppToken ||
+                Interlocked.Exchange(ref fired, 1) != 0)
+                return;
+
+            using var configSession = serverStore.OpenSession();
+            var reservation = configSession.Load<SlackAppTokenReservation>(SlackAppTokenReservation.IdFor(rotatedAppToken));
+            reservation.ChannelId = Channel.IdPrefix + "intruder";
+            configSession.SaveChanges();
+        }
+
+        serverStore.OnAfterSaveChanges += Interfere;
+        try
+        {
+            var rejected = await Assert.ThrowsAsync<QuillHttpException>(() => app.UpdateChannelAsync(created.ChannelId,
+                new UpdateChannelRequest("Renamed during the race", null, Enabled: false,
+                    Slack: new(AppToken: rotatedAppToken))));
+            Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+            Assert.Equal(1, fired);
+        }
+        finally
+        {
+            serverStore.OnAfterSaveChanges -= Interfere;
+        }
+
+        using var session = app.Store.OpenAsyncSession(app.Slug);
+        var stored = await session.LoadAsync<Channel>(Channel.IdPrefix + created.ChannelId);
+        Assert.NotEqual(rotatedAppToken, stored.Slack!.AppToken);
+        Assert.Equal("Support bot", stored.DisplayName);
+        Assert.True(stored.Enabled);
     }
 
     [RavenFact(RavenTestCategory.Quill)]

@@ -767,14 +767,15 @@ public static class ChannelsEndpoints
             return Results.BadRequest(new ApiErrorResponse(
                 "slack.signingSecret is no longer used; Socket Mode channels take slack.appToken instead"));
 
+        var settings = channel.Slack ??= new SlackSettings();
+        var before = (channel.DisplayName, channel.Enabled, settings.BotToken, settings.TeamName, settings.AppToken, settings.ParameterBindings);
+
         if (body.DisplayName is not null)
         {
             if (TryValidateDisplayName(body.DisplayName, out var nameError) == false)
                 return Results.BadRequest(new ApiErrorResponse(nameError!));
             channel.DisplayName = body.DisplayName;
         }
-
-        var settings = channel.Slack ??= new SlackSettings();
 
         var tokenRotated = false;
         if (string.IsNullOrWhiteSpace(body.Slack?.BotToken) == false)
@@ -859,9 +860,10 @@ public static class ChannelsEndpoints
             if (await ConfirmSlackAppTokenAsync(store, settings.AppToken, app.Database, channel.Id!, appTokenCv, ct) == false)
             {
                 var lost = settings.AppToken;
-                settings.AppToken = previousAppToken;
+                (channel.DisplayName, channel.Enabled, settings.BotToken, settings.TeamName, settings.AppToken, settings.ParameterBindings) = before;
                 await session.SaveChangesAsync(ct);
                 await TryReleaseSlackAppTokenAsync(store, lost, app.Database, channel.Id!);
+                channelManager.Wake();
                 return Results.BadRequest(new ApiErrorResponse(SlackAppTokenAlreadyUsed(null)));
             }
 
