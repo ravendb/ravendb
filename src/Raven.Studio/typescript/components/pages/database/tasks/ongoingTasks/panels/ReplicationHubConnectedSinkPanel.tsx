@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+﻿import React from "react";
 import { OngoingTaskReplicationHubInfo } from "components/models/tasks";
 import {
     RichPanel,
@@ -23,6 +23,7 @@ import {
 import { ErrorModal } from "../partials/ErrorModal";
 import { Icon } from "components/common/Icon";
 import { withPreventDefault } from "components/utils/common";
+import useBoolean from "components/hooks/useBoolean";
 import Button from "react-bootstrap/Button";
 import Collapse from "react-bootstrap/Collapse";
 
@@ -89,9 +90,7 @@ export function ReplicationHubConnectedSinkPanel(props: ReplicationHubConnectedS
 }
 
 function SinkErrorItem({ error }: { error: string }) {
-    const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
-
-    const toggleErrorModal = () => setIsErrorModalOpen((isOpen) => !isOpen);
+    const { value: isErrorModalOpen, toggle: toggleErrorModal } = useBoolean(false);
 
     return (
         <RichPanelDetailItem>

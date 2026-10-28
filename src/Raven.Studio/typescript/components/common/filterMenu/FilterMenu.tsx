@@ -182,18 +182,42 @@ interface FilterChipsProps {
 }
 
 export function FilterChips({ categories, className, children }: FilterChipsProps) {
+    const [openChipKey, setOpenChipKey] = useState<string>(null);
+
+    const visibleCategories = categories.filter(
+        (category) => category.key === openChipKey || isFilterCategoryActive(category)
+    );
+
+    if (visibleCategories.length === 0) {
+        return null;
+    }
+
     return (
         <div className={classNames("filter-chips", className)}>
-            {categories.filter(isFilterCategoryActive).map((category) => (
-                <FilterChip key={category.key} category={category} />
+            {visibleCategories.map((category) => (
+                <FilterChip
+                    key={category.key}
+                    category={category}
+                    isOpen={category.key === openChipKey}
+                    setIsOpen={(isOpen) => setOpenChipKey(isOpen ? category.key : null)}
+                />
             ))}
             {children}
         </div>
     );
 }
 
-function FilterChip({ category }: { category: FilterCategory }) {
-    const [isOpen, setIsOpen] = useState(false);
+interface FilterChipProps {
+    category: FilterCategory;
+    isOpen: boolean;
+    setIsOpen: (isOpen: boolean) => void;
+}
+
+function FilterChip({ category, isOpen, setIsOpen }: FilterChipProps) {
+    const clear = () => {
+        setIsOpen(false);
+        clearFilterCategory(category);
+    };
 
     return (
         <Dropdown show={isOpen} onToggle={setIsOpen} autoClose="outside" className="filter-chip-dropdown">
@@ -212,7 +236,7 @@ function FilterChip({ category }: { category: FilterCategory }) {
                     type="button"
                     className="filter-chip-clear"
                     title={`Clear "${category.label}" filter`}
-                    onClick={() => clearFilterCategory(category)}
+                    onClick={clear}
                 >
                     <Icon icon="close" margin="m-0" />
                 </button>

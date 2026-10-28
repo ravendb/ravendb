@@ -231,6 +231,43 @@ describe("Replication Hub", function () {
         expect(chipDropdown.getByLabelText("Up to date")).toHaveFocus();
     });
 
+    it("keeps a filter chip open while its text is replaced", async () => {
+        const Story = composeStory(stories.ManySinks, stories.default);
+
+        const { screen, fireClick, user } = rtlRender(<Story />);
+        const container = within(await screen.findByTestId(containerTestId));
+
+        await fireClick(await container.findByTitle(/Click for details/));
+
+        const filterToggle = container.getByTitle("Filter sinks");
+        const filterDropdown = within(filterToggle.parentElement);
+        await fireClick(filterToggle);
+        await fireClick(await filterDropdown.findByRole("button", { name: /Sink database name/ }));
+        await user.keyboard("berlin{Enter}");
+
+        const chipToggle = container.getByTitle(/Change "Sink database name" filter/);
+        const chipDropdown = within(chipToggle.parentElement.parentElement);
+        await fireClick(chipToggle);
+        const chipInput = chipDropdown.getByPlaceholderText("e.g. name");
+
+        await user.clear(chipInput);
+
+        expect(chipInput).toBeInTheDocument();
+        expect(chipInput).toHaveFocus();
+        expect(container.getAllByTitle(/^Expand distribution details for /)).toHaveLength(15);
+
+        await user.type(chipInput, "paris");
+
+        expect(chipInput).toHaveValue("paris");
+        expect(container.getByTitle("Expand distribution details for Sink-Paris")).toBeInTheDocument();
+        expect(container.getAllByTitle(/^Expand distribution details for /)).toHaveLength(1);
+
+        await user.clear(chipInput);
+        await user.keyboard("{Enter}");
+
+        expect(container.queryByTitle(/Change "Sink database name" filter/)).not.toBeInTheDocument();
+    });
+
     it("picks an option and closes the filter menu on Enter", async () => {
         const Story = composeStory(stories.ManySinks, stories.default);
 
@@ -331,5 +368,48 @@ describe("Replication Hub", function () {
 
         expect(container.queryByTitle(/Change "Has errors" filter/)).not.toBeInTheDocument();
         expect(container.getAllByTitle(/^Expand distribution details for /)).toHaveLength(15);
+    });
+
+    it("closes only the open sort list on Escape", async () => {
+        const Story = composeStory(stories.ManySinks, stories.default);
+
+        const { screen, fireClick, user } = rtlRender(<Story />);
+        const container = within(await screen.findByTestId(containerTestId));
+
+        await fireClick(await container.findByTitle(/Click for details/));
+
+        const sortToggle = container.getByTitle("Sorted by Replication status, problems first");
+        const sortDropdown = within(sortToggle.parentElement);
+        await fireClick(sortToggle);
+        await user.click(sortDropdown.getByLabelText("Sort by"));
+
+        expect(await sortDropdown.findByRole("option", { name: "Sink database name" })).toBeInTheDocument();
+
+        await user.keyboard("{Escape}");
+
+        expect(sortDropdown.queryByRole("option", { name: "Sink database name" })).not.toBeInTheDocument();
+        expect(sortToggle).toHaveAttribute("aria-expanded", "true");
+        expect(sortDropdown.getByLabelText("Sort by")).toBeInTheDocument();
+
+        await user.keyboard("{Escape}");
+
+        expect(sortToggle).toHaveAttribute("aria-expanded", "false");
+    });
+
+    it("opens and closes the sink error details", async () => {
+        const Story = composeStory(stories.ManySinks, stories.default);
+
+        const { screen, fireClick } = rtlRender(<Story />);
+        const container = within(await screen.findByTestId(containerTestId));
+
+        await fireClick(await container.findByTitle(/Click for details/));
+        await fireClick(container.getAllByTitle("Show error details")[0]);
+
+        const errorDialog = await screen.findByRole("dialog");
+        expect(errorDialog).toHaveTextContent("Unable to connect to the sink");
+
+        await fireClick(within(errorDialog).getByRole("button", { name: "Close" }));
+
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
 });
