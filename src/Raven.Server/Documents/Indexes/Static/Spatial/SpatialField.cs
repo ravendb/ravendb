@@ -111,15 +111,15 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             return center.Y.ToString("R", CultureInfo.InvariantCulture) + " " + center.X.ToString("R", CultureInfo.InvariantCulture);
         }
 
-        internal static void ParseCenters(ReadOnlySpan<char> centers, List<(double Latitude, double Longitude)> points)
+        internal static void ParseCenters(ReadOnlySpan<byte> centers, List<(double Latitude, double Longitude)> points)
         {
             while (centers.IsEmpty == false)
             {
-                var separator = centers.IndexOf(LuceneCentersSeparator);
+                var separator = centers.IndexOf((byte)LuceneCentersSeparator);
                 var point = separator < 0 ? centers : centers[..separator];
-                centers = separator < 0 ? ReadOnlySpan<char>.Empty : centers[(separator + 1)..];
+                centers = separator < 0 ? ReadOnlySpan<byte>.Empty : centers[(separator + 1)..];
 
-                var space = point.IndexOf(' ');
+                var space = point.IndexOf((byte)' ');
                 if (space < 0 ||
                     double.TryParse(point[..space], NumberStyles.Float, CultureInfo.InvariantCulture, out var latitude) == false ||
                     double.TryParse(point[(space + 1)..], NumberStyles.Float, CultureInfo.InvariantCulture, out var longitude) == false)

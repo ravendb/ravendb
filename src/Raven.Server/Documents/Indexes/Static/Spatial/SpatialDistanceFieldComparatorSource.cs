@@ -342,7 +342,9 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                 {
                     offsets[ordinal] = points.Count;
 
-                    SpatialField.ParseCenters(index.lookup[ordinal].ToString(), points);
+                    var centers = index.lookup[ordinal];
+                    if (centers.IsNull == false)
+                        SpatialField.ParseCenters(centers.StringAsBytes, points);
                 }
 
                 offsets[numberOfTerms] = points.Count;
