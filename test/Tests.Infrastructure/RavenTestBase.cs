@@ -20,6 +20,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Json.Serialization.SystemTextJson;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
@@ -282,6 +283,9 @@ namespace FastTests
                             DisposeCertificate = false
                         }
                     };
+
+                    if (RavenTestHelper.EnvironmentVariables.RunTestsWithSystemTextJson)
+                        store.Conventions.Serialization = new SystemTextJsonSerializationConventions();
 
                     options.ModifyDocumentStore?.Invoke(store);
                     if (store.Urls.Length == 0)

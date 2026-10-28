@@ -46,6 +46,7 @@ namespace Tests.Infrastructure
             public const string SkipIntegrationTestsEnvName = "RAVEN_SKIP_INTEGRATION_TESTS";
             public const string SkipAiIntegrationTestsEnvName = "RAVEN_SKIP_AI_INTEGRATION_TESTS";
             public const string RunTestsWithDocsCompressionEnvName = "RAVEN_DOCS_COMPRESSION_TESTS";
+            public const string RunTestsWithSystemTextJsonEnvName = "RAVEN_SYSTEM_TEXT_JSON_TESTS";
             public const string MaxRunningTestsEnvName = "RAVEN_MAX_RUNNING_TESTS";
             public const string WriteRunningTestsToFileEnvName = "RAVEN_WRITE_RUNNING_TESTS_TO_FILE";
             public const string EnableCultureTestsEnvName = "RAVEN_ENABLE_CULTURE_TESTS";
@@ -118,6 +119,7 @@ namespace Tests.Infrastructure
             public static readonly bool SkipIntegrationTests;
             public static readonly bool SkipAiIntegrationTests;
             public static readonly bool RunTestsWithDocsCompression;
+            public static readonly bool RunTestsWithSystemTextJson;
             public static readonly int MaxRunningTests;
             public static readonly bool WriteRunningTestsToFile;
             public static readonly bool EnableCultureTests;
@@ -136,6 +138,7 @@ namespace Tests.Infrastructure
             public static readonly bool HasSkipIntegrationTests;
             public static readonly bool HasSkipAiIntegrationTests;
             public static readonly bool HasRunTestsWithDocsCompression;
+            public static readonly bool HasRunTestsWithSystemTextJson;
             public static readonly bool HasMaxRunningTests;
             public static readonly bool HasWriteRunningTestsToFile;
             public static readonly bool HasEnableCultureTests;
@@ -260,6 +263,7 @@ namespace Tests.Infrastructure
                 (SkipIntegrationTests, HasSkipIntegrationTests) = ParseBool(SkipIntegrationTestsEnvName);
                 (SkipAiIntegrationTests, HasSkipAiIntegrationTests) = ParseBool(SkipAiIntegrationTestsEnvName);
                 (RunTestsWithDocsCompression, HasRunTestsWithDocsCompression) = ParseBool(RunTestsWithDocsCompressionEnvName);
+                (RunTestsWithSystemTextJson, HasRunTestsWithSystemTextJson) = ParseBool(RunTestsWithSystemTextJsonEnvName);
                 (MaxRunningTests, HasMaxRunningTests) = ParseInt(MaxRunningTestsEnvName);
                 (WriteRunningTestsToFile, HasWriteRunningTestsToFile) = ParseBool(WriteRunningTestsToFileEnvName);
                 (EnableCultureTests, HasEnableCultureTests) = ParseBool(EnableCultureTestsEnvName);
