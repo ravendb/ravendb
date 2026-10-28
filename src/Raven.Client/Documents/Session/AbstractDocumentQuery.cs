@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///   A query against a Raven index
     /// </summary>
-    public abstract partial class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IAbstractDocumentQuery<T>
+    public abstract partial class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IAbstractDocumentQuery<T>, IAbstractDocumentQueryAccessor
                                                             where TSelf : AbstractDocumentQuery<T, TSelf>
     {
         private readonly Dictionary<string, string> _aliasToGroupByFieldName = new Dictionary<string, string>();
@@ -972,6 +972,34 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             }
         }
 
+        public void AndAlsoWrappingTopLevelOr()
+        {
+            var tokens = GetCurrentWhereTokens();
+
+            LinkedListNode<QueryToken> first = null;
+            var depth = 0;
+            var hasTopLevelOr = false;
+
+            for (var node = tokens.Last; node != null && node.Value is not IntersectMarkerToken; node = node.Previous)
+            {
+                first = node;
+
+                if (node.Value is CloseSubclauseToken)
+                    depth++;
+                else if (node.Value is OpenSubclauseToken)
+                    depth--;
+                else if (depth == 0 && node.Value == QueryOperatorToken.Or)
+                    hasTopLevelOr = true;
+            }
+
+            if (hasTopLevelOr && tokens.Last.Value is not QueryOperatorToken)
+            {
+                tokens.AddBefore(first, OpenSubclauseToken.Create());
+                tokens.AddLast(CloseSubclauseToken.Create());
+            }
+
+            AndAlso();
+        }
 
 
         /// <summary>
