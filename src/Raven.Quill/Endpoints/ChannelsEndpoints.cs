@@ -861,8 +861,14 @@ public static class ChannelsEndpoints
             {
                 var lost = settings.AppToken;
                 (channel.DisplayName, channel.Enabled, settings.BotToken, settings.TeamName, settings.AppToken, settings.ParameterBindings) = before;
-                await session.SaveChangesAsync(CancellationToken.None);
-                await TryReleaseSlackAppTokenAsync(store, lost, app.Database, channel.Id!);
+                try
+                {
+                    await session.SaveChangesAsync(CancellationToken.None);
+                }
+                finally
+                {
+                    await TryReleaseSlackAppTokenAsync(store, lost, app.Database, channel.Id!);
+                }
                 channelManager.Wake();
                 return Results.BadRequest(new ApiErrorResponse(SlackAppTokenAlreadyUsed(null)));
             }
