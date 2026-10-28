@@ -934,6 +934,21 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonKeepsCharactersOutsideTheBasicMultilingualPlane()
+    {
+        string goblin = char.ConvertFromUtf32(0x1F47A);
+        var person = new Person { Name = goblin + " goblin \"quoted\" \\ " + goblin };
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = SystemTextJson.Serialization.DefaultConverter.ToBlittable(person, context))
+        {
+            Assert.True(json.TryGet(nameof(Person.Name), out string name));
+            Assert.Equal(person.Name, name);
+            Assert.Equal(person.Name, SystemTextJson.Serialization.DefaultConverter.FromBlittable<Person>(json).Name);
+        }
+    }
+
     private class HoldsChars
     {
         public List<char> Chars { get; set; }
