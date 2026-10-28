@@ -10,6 +10,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
         public void Initialize(BlittableJsonReaderObject blittable)
         {
+            if (blittable.Modifications != null)
+                blittable = blittable._context.ReadObject(blittable, "system-text-json/modifications");
+
             _buffer = new ContextMemoryBufferWriter(blittable._context, Math.Max(blittable.Size * 2, 512));
 
             using (var stream = new BufferWriterStream(_buffer))
