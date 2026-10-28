@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -25,10 +25,12 @@ namespace FastTests.Client.Documents
             {
                 ModifyDocumentStore = store =>
                 {
-                    var serializationConventions = (NewtonsoftJsonSerializationConventions)store.Conventions.Serialization;
-                    serializationConventions.CustomizeJsonSerializer = serializer =>
+                    store.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
-                        serializer.Converters.Add(new FhirResourceConverter<Patient>());
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.Converters.Add(new FhirResourceConverter<Patient>());
+                        }
                     };
                 }
             }))
