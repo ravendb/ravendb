@@ -96,7 +96,6 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Lambda2Js.Signed" />
-    <PackageReference Include="Microsoft.AspNetCore.JsonPatch" />
     <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Nito.AsyncEx.Coordination" />

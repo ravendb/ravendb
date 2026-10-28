@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Linq;
-using Microsoft.AspNetCore.JsonPatch;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
-using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -27,16 +25,13 @@ namespace Raven.Client.Documents.Commands.Batches
 
         public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
-            var serializer = conventions.Serialization.CreateSerializer(new CreateSerializerOptions { TypeNameHandling = TypeNameHandling.None });
             var json = new DynamicJsonValue
             {
                 [nameof(Id)] = Id,
                 [nameof(ChangeVector)] = null,
                 [nameof(JsonPatch)] = new DynamicJsonValue
                 {
-                    ["Operations"] =
-                        new DynamicJsonArray(
-                            JsonPatch.Operations.Select(o=> conventions.Serialization.DefaultConverter.ToBlittable(o, context, serializer)))
+                    ["Operations"] = new DynamicJsonArray(JsonPatch.ToBlittable(conventions.Serialization, context))
                 },
                 [nameof(ReturnDocument)] = ReturnDocument,
                 [nameof(Type)] = Type.ToString()
