@@ -9,6 +9,7 @@ using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Raven.Client.Json.Serialization.SystemTextJson;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Tests.Infrastructure;
 using Xunit;
@@ -243,6 +244,31 @@ namespace FastTests.Client
                 var read = conventions.Serialization.DefaultConverter.FromBlittable<WithCustomEnumerable>(json);
                 Assert.Equal(["a", "b"], read.Names);
             }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void DocumentModificationsAreAppliedWhenDeserializing()
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Name\":\"a\",\"Age\":1}", "modified"))
+            {
+                json.Modifications = new DynamicJsonValue(json) { [nameof(ModifiedUser.Age)] = 5 };
+                json.Modifications.Remove(nameof(ModifiedUser.Name));
+
+                var user = conventions.Serialization.DefaultConverter.FromBlittable<ModifiedUser>(json);
+
+                Assert.Null(user.Name);
+                Assert.Equal(5, user.Age);
+            }
+        }
+
+        private class ModifiedUser
+        {
+            public string Name { get; set; }
+
+            public int Age { get; set; }
         }
 
         private class NamesEnumerable : IEnumerable<string>
