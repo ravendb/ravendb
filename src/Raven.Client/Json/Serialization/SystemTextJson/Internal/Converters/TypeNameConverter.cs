@@ -24,7 +24,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
         public static JsonConverter TryCreate(Type declaredType, TypeNameHandling typeNameHandling, JsonSerializerOptions options)
         {
-            if (typeNameHandling == TypeNameHandling.None || IsCandidate(declaredType, options) == false)
+            if (typeNameHandling == TypeNameHandling.None || declaredType == typeof(object) || IsCandidate(declaredType, options) == false)
                 return null;
 
             Type converterType = typeNameHandling == TypeNameHandling.Objects
@@ -87,7 +87,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             if (underlying.IsPrimitive || underlying.IsEnum || underlying == typeof(string) || underlying == typeof(decimal) ||
                 underlying == typeof(DateTime) || underlying == typeof(DateTimeOffset) || underlying == typeof(TimeSpan) ||
                 underlying == typeof(Guid) || underlying == typeof(Uri) || underlying == typeof(byte[]) ||
-                underlying == typeof(JsonElement) || typeof(JsonNode).IsAssignableFrom(underlying) || typeof(JsonDocument).IsAssignableFrom(underlying))
+                underlying == typeof(JsonElement) || typeof(JsonNode).IsAssignableFrom(underlying) || typeof(JsonDocument).IsAssignableFrom(underlying) ||
+                underlying == typeof(JsonDynamicObject) || underlying == typeof(JsonDynamicArray) || underlying == typeof(JsonDynamicValue))
                 return true;
 
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
@@ -148,7 +149,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             return type;
         }
 
-        private static void Write(Utf8JsonWriter writer, object value, Type declaredType, bool alwaysWriteObjectTypeName, JsonSerializerOptions options)
+        internal static void WriteValue(Utf8JsonWriter writer, object value, Type declaredType, bool alwaysWriteObjectTypeName, JsonSerializerOptions options)
         {
             if (value == null)
             {
@@ -194,7 +195,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             foreach (DictionaryEntry entry in dictionary)
             {
                 writer.WritePropertyName((string)entry.Key);
-                Write(writer, entry.Value, valueType, alwaysWriteObjectTypeName, options);
+                WriteValue(writer, entry.Value, valueType, alwaysWriteObjectTypeName, options);
             }
 
             writer.WriteEndObject();
@@ -246,7 +247,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             writer.WriteStartArray();
             foreach (object item in enumerable)
-                Write(writer, item, itemType, alwaysWriteObjectTypeName, options);
+                WriteValue(writer, item, itemType, alwaysWriteObjectTypeName, options);
             writer.WriteEndArray();
 
             if (wrapValues)
@@ -299,15 +300,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             if (reader.TokenType == JsonTokenType.StartObject)
             {
-                Type type = TryPeekTypeName(reader, out string typeName) ? ResolveType(typeName, declaredType) : declaredType;
+                if (TryReadTypedObject(ref reader, declaredType, options, out object typed))
+                    return typed;
 
-                if (TryGetDictionaryTypes(type, out Type keyType, out Type valueType) && keyType == typeof(string))
-                    return ReadDictionary(ref reader, type, valueType, options);
+                if (TryGetDictionaryTypes(declaredType, out Type keyType, out Type valueType) && keyType == typeof(string))
+                    return ReadDictionary(ref reader, declaredType, valueType, options);
 
-                if (typeName != null && type != typeof(string) && typeof(IEnumerable).IsAssignableFrom(type))
-                    return ReadWrappedCollection(ref reader, type, options);
-
-                return JsonSerializer.Deserialize(ref reader, type, options);
+                return JsonSerializer.Deserialize(ref reader, declaredType, options);
             }
 
             if (reader.TokenType == JsonTokenType.StartArray && declaredType != typeof(object))
@@ -316,13 +315,33 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             return JsonSerializer.Deserialize(ref reader, declaredType, options);
         }
 
+        internal static bool TryReadTypedObject(ref Utf8JsonReader reader, Type declaredType, JsonSerializerOptions options, out object value)
+        {
+            if (reader.TokenType != JsonTokenType.StartObject || TryPeekTypeName(reader, out string typeName) == false)
+            {
+                value = null;
+                return false;
+            }
+
+            Type type = ResolveType(typeName, declaredType);
+
+            if (TryGetDictionaryTypes(type, out Type keyType, out Type valueType) && keyType == typeof(string))
+                value = ReadDictionary(ref reader, type, valueType, options);
+            else if (type != typeof(string) && typeof(IEnumerable).IsAssignableFrom(type))
+                value = ReadWrappedCollection(ref reader, type, options);
+            else
+                value = JsonSerializer.Deserialize(ref reader, type, options);
+
+            return true;
+        }
+
         private static object ReadDictionary(ref Utf8JsonReader reader, Type dictionaryType, Type valueType, JsonSerializerOptions options)
         {
             object dictionary = Activator.CreateInstance(dictionaryType.IsInterface || dictionaryType.IsAbstract
                 ? typeof(Dictionary<,>).MakeGenericType(typeof(string), valueType)
                 : dictionaryType);
 
-            MethodInfo add = dictionary is IDictionary ? null : dictionary.GetType().GetMethod("Add", [typeof(string), valueType]);
+            PropertyInfo indexer = dictionary is IDictionary ? null : typeof(IDictionary<,>).MakeGenericType(typeof(string), valueType).GetProperty("Item");
 
             while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
             {
@@ -336,7 +355,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 if (dictionary is IDictionary nonGeneric)
                     nonGeneric[key] = value;
                 else
-                    add.Invoke(dictionary, [key, value]);
+                    indexer.SetValue(dictionary, value, [key]);
             }
 
             return dictionary;
@@ -400,7 +419,11 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 return collection;
             }
 
-            MethodInfo add = collectionType.GetMethod("Add", [itemType]) ?? throw new JsonException($"Cannot populate collection type '{collectionType.FullName}'.");
+            Type collectionInterface = typeof(ICollection<>).MakeGenericType(itemType);
+            if (collectionInterface.IsAssignableFrom(collectionType) == false)
+                throw new JsonException($"Cannot populate collection type '{collectionType.FullName}'.");
+
+            MethodInfo add = collectionInterface.GetMethod("Add");
             foreach (object item in items)
                 add.Invoke(collection, [item]);
 
@@ -426,7 +449,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 (T)TypeNameConverter.Read(ref reader, typeof(T), options);
 
             public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) =>
-                TypeNameConverter.Write(writer, value, typeof(T), alwaysWriteObjectTypeName: false, options);
+                TypeNameConverter.WriteValue(writer, value, typeof(T), alwaysWriteObjectTypeName: false, options);
         }
 
         private sealed class AlwaysConverter<T> : JsonConverter<T>
@@ -435,7 +458,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 (T)TypeNameConverter.Read(ref reader, typeof(T), options);
 
             public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) =>
-                TypeNameConverter.Write(writer, value, typeof(T), alwaysWriteObjectTypeName: true, options);
+                TypeNameConverter.WriteValue(writer, value, typeof(T), alwaysWriteObjectTypeName: true, options);
         }
     }
 }

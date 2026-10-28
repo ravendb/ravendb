@@ -194,7 +194,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 DefaultIgnoreCondition = JsonIgnoreCondition.Never
             };
 
-            InitializeConverters(options);
+            InitializeConverters(options, typeNameHandling);
             CustomizeJsonSerializerOptions(options);
 
             return options;
@@ -318,7 +318,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             }
         }
 
-        private void InitializeConverters(JsonSerializerOptions options)
+        private void InitializeConverters(JsonSerializerOptions options, TypeNameHandling typeNameHandling)
         {
             if (Conventions == null || Conventions.SaveEnumsAsIntegers == false)
                 options.Converters.Add(new JsonStringEnumConverter());
@@ -341,6 +341,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 #endif
             options.Converters.Add(VectorConverter.Instance);
             options.Converters.Add(EnumerableConstructorConverter.Instance);
+            options.Converters.Add(JsonDynamicConverters.Value);
+            options.Converters.Add(new ObjectConverter(typeNameHandling));
         }
     }
 }
