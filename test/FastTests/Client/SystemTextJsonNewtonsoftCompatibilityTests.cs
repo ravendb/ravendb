@@ -635,6 +635,31 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class HoldsChars
+    {
+        public List<char> Chars { get; set; }
+
+        public char Single { get; set; }
+
+        public char? Optional { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonReadsCharsLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Chars\":[0,104,\"i\"],\"Single\":105,\"Optional\":\"x\"}", "chars"))
+        {
+            var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<HoldsChars>(json);
+            var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<HoldsChars>(json);
+
+            Assert.Equal(['\0', 'h', 'i'], expected.Chars);
+            Assert.Equal(expected.Chars, actual.Chars);
+            Assert.Equal(expected.Single, actual.Single);
+            Assert.Equal(expected.Optional, actual.Optional);
+        }
+    }
+
     private static DocumentConventions Newtonsoft { get; } = new() { Serialization = new NewtonsoftJsonSerializationConventions() };
 
     private static DocumentConventions SystemTextJson { get; } = new() { Serialization = new SystemTextJsonSerializationConventions() };
