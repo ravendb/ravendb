@@ -980,6 +980,42 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class Child
+    {
+        public string Id { get; set; }
+
+        public string Name { get; set; }
+    }
+
+    private class Parent
+    {
+        public List<Child> Children { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonSetsNestedIdentitiesFromMetadataLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(
+                   "{\"Children\":[{\"Name\":\"x\",\"@metadata\":{\"@id\":\"children/1\",\"@collection\":\"Children\"}},{\"Name\":\"y\",\"@id\":\"children/2\"}]}", "nested"))
+        {
+            var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<Parent>(json);
+            var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<Parent>(json);
+
+            Assert.Equal("children/1", actual.Children[0].Id);
+            Assert.Equal(expected.Children[0].Id, actual.Children[0].Id);
+            Assert.Equal(expected.Children[1].Id, actual.Children[1].Id);
+            Assert.Equal(expected.Children[1].Name, actual.Children[1].Name);
+        }
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject written = SystemTextJson.Serialization.DefaultConverter.ToBlittable(new Child { Id = "children/1", Name = "x" }, context))
+        {
+            Assert.False(written.TryGet(Raven.Client.Constants.Documents.Metadata.Key, out object _));
+            Assert.False(written.TryGet(Raven.Client.Constants.Documents.Metadata.Id, out object _));
+        }
+    }
+
     private class HoldsChars
     {
         public List<char> Chars { get; set; }
