@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using Corax.Mappings;
 using Corax.Querying.Planning;
@@ -17,9 +16,6 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
 
     private PlanCacheKeyBuilder _builder = new();
     private readonly ValueWriter _writer = new();
-
-    private Vector256<ulong> _sentinelInline;
-    private ulong[] _sentinelOverflow;
 
     private QueryExecution _exec;
     private ushort _sortDropMask;
@@ -164,7 +160,7 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
             ApplyFate(exec, cached, enclosingIsOr);
             if (exec.IsSentinel == false)
             {
-                QueryPlanBuilder.PopulateClauseValues(exec, planParams.SlotBindings, planParams.QueryParameters, _writer, builderParameters, SentinelBits());
+                QueryPlanBuilder.PopulateClauseValues(exec, planParams.SlotBindings, planParams.QueryParameters, _writer, builderParameters);
                 QueryPlanBuilder.PropagateBetweenContradiction(exec, _writer, _indexSearcher.NumberOfEntries); // a contradictory BETWEEN collapses to MatchNothing
                 if (IsEmptyIn(exec))
                     exec.MarkAsResolvedSentinel(ClauseType.MatchNothing, _indexSearcher.NumberOfEntries); // an empty IN matches nothing
@@ -311,8 +307,7 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
 
         // We start with 1, because clause 0 is the baseline for entry scan and always runs
         // A null here means an unsupported clause or a AlwaysFalse clause, a scan is not meaningful.
-        // scanList.Count == 0 means every scan candidate collapsed to AlwaysTrue (e.g. a sentinel-rewritten
-        // BETWEEN *,*) — ResidualScanIlEmitter.EmitDelegate returns null for an empty predicate set, so
+        // scanList.Count == 0 means every scan candidate collapsed to AlwaysTrue — ResidualScanIlEmitter.EmitDelegate returns null for an empty predicate set, so
         // emitting the MaybeEntryScan gate here would call a null CompiledEntryPredicate at runtime.
         bool scanEligible = hasScanList && perClause.AsSpan()[1..].Contains(null) == false && scanList.Count > 0;
 
@@ -393,6 +388,7 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
                     IsSingleValued = singleValued
                 };
             case ClauseType.Exists:
+            case ClauseType.Between when exec.SentinelRewriteType == ClauseType.Exists:
                 return new ScanPredicateInfo
                 {
                     FieldName = clause.FieldName,
@@ -407,9 +403,6 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
             // path already special-cases this via SentinelRewriteType (see ResolveClause / ResolveSentinelRewrittenBetween);
             // mirror that here instead of falling into the generic tail's ScanCompareOp.Between, which would bake
             // the sentinel's NoParamValue indices into the residual and crash at scan time (AnalyzedSlices[0x7FFF]).
-            case ClauseType.Between when exec.SentinelRewriteType == ClauseType.Exists:
-                // *,* imposes no restriction on the field at all — same as if the clause were absent.
-                return new ScanPredicateInfo { CompareOp = ScanCompareOp.AlwaysTrue };
             case ClauseType.Between when exec.SentinelRewriteType == ClauseType.LessThanOrEqual:
                 return new ScanPredicateInfo
                 {
@@ -519,14 +512,6 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
     // ClauseExecution.CompareTo sorts negated clauses LAST, so first being negated means they all are
     private readonly bool CheckAllNegated() => _exec.Executions is [{ IsNegated: true }, ..];
 
-    private Span<ulong> SentinelBits()
-    {
-        int words = (template.ParameterSlots.Length + 63) >> 6;
-        if (words <= Vector256<ulong>.Count)
-            return MemoryMarshal.CreateSpan(ref Unsafe.As<Vector256<ulong>, ulong>(ref _sentinelInline), words);
-        return _sentinelOverflow ??= new ulong[words];
-    }
-
     private Vector256<long> ComputeCacheKeyHash()
     {
         var execs = _exec.Executions;
@@ -556,14 +541,7 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
                     (_exec.DrivingClauseCardinality is >= 0 and <= QueryPrimitives.TieBreakGroupInitialCapacity).ToInt32();
         _builder.Append(flags, 2);
 
-        // A parameter-bound BETWEEN sentinel ("*"/"NULL") have different plans, the sentinel guards against it.
-        _builder.Append((ushort)template.ParameterSlots.Length, 16);
-        Span<ulong> sentinelBits = SentinelBits();
-        _builder.Append(sentinelBits.IsEmpty.ToInt32(), 1);
-        if (sentinelBits.IsEmpty is false)
-            _builder.Append(MemoryMarshal.AsBytes(sentinelBits));
-
-        // Per-parameter discriminators: the BETWEEN-sentinel bitmap and each slot's runtime kind 
+        // Per-parameter discriminators: each slot's runtime kind
         foreach (var slot in template.ParameterSlots)
         {
             var kind = QueryPlanBuilder.ClassifyParamType(planParams.QueryParameters, slot);
@@ -588,6 +566,8 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
         RuntimeHelpers.EnsureSufficientExecutionStack();
 
         _builder.Append((byte)e.ClauseType, 8);
+        // An open BETWEEN emits different ops than a closed one; a second byte, so it never aliases a real <= / >= at another position
+        _builder.Append((byte)(e.SentinelRewriteType ?? e.ClauseType), 8);
 
         bool singleValued = e.Clause.FieldName is { } fieldName && _indexSearcher.HasMultipleTermsInField(fieldName) == false;
         int bits = (e.IsNegated ? 0b0001 : 0b0000)

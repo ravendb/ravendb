@@ -100,6 +100,7 @@ internal static partial class QueryPlanBuilder
             {
                 ClauseType.GreaterThan or ClauseType.GreaterThanOrEqual or ClauseType.LessThan or ClauseType.LessThanOrEqual
                     => packed.RangeQuery(drivingExec.ClauseType, fieldMeta, indexSearcher, queryExec, forward),
+                ClauseType.Between when drivingExec.SentinelRewriteType == ClauseType.Exists => null, // SortedDrivingMatch would add the entries without the field
                 ClauseType.Between when drivingExec.SentinelRewriteType != null =>
                     ResolveSentinelRewrittenBetween(drivingExec, fieldMeta, indexSearcher, queryExec, forward),
                 ClauseType.Between => packed.BetweenQuery(fieldMeta, indexSearcher, queryExec, forward),

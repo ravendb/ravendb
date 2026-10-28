@@ -124,22 +124,12 @@ internal static partial class QueryPlanBuilder
         return exec;
     }
 
-    /// <summary>Set the bit for a parameter-bound BETWEEN sentinel's slot, forcing a distinct plan-cache entry.</summary>
-    private static void MarkSentinel(Span<ulong> sentinelBits, ParameterBinding binding)
-    {
-        int slot = binding.ParameterSlot;
-        if (slot < 0 || sentinelBits.IsEmpty)
-            return;
-        sentinelBits[slot >> 6] |= 1UL << (slot & 63);
-    }
-
-    internal static void PopulateClauseValues(ClauseExecution exec, ParameterBinding[] slotBindings, BlittableJsonReaderObject queryParameters, ValueWriter writer, QueryBuilderParameters builderParameters,
-        Span<ulong> sentinelBits)
+    internal static void PopulateClauseValues(ClauseExecution exec, ParameterBinding[] slotBindings, BlittableJsonReaderObject queryParameters, ValueWriter writer, QueryBuilderParameters builderParameters)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
         foreach (var it in exec.SubExecutions ?? [])
         {   // Always recurse into subclauses first (OrGroup/AndGroup have no binding of their own)
-            PopulateClauseValues(it, slotBindings, queryParameters, writer, builderParameters, sentinelBits);
+            PopulateClauseValues(it, slotBindings, queryParameters, writer, builderParameters);
         }
 
         if (exec.Clause is { HasBoost: true, Bindings.Length: > 0 })
@@ -163,7 +153,7 @@ internal static partial class QueryPlanBuilder
         var bindings = exec.Clause.Bindings;
         switch (exec.Clause.ClauseType)
         {
-            case ClauseType.Between: // BETWEEN: open-range "*"/"NULL" sentinel bounds (literal or parameter-bound) are detected here and rewritten to the equivalent half-open range / match-all leaf.
+            case ClauseType.Between: // BETWEEN: open-range "*"/"NULL" sentinel bounds (literal or parameter-bound) are detected here and rewritten to the equivalent half-open range / exists leaf.
             {
                 var (low, lowType) = ResolveBindingScalar(bindings[BindingIndex.BetweenLow], slotBindings, queryParameters, builderParameters);
                 var (high, highType) = ResolveBindingScalar(bindings[BindingIndex.BetweenHigh], slotBindings, queryParameters, builderParameters);
@@ -175,18 +165,14 @@ internal static partial class QueryPlanBuilder
                 {
                     case (true, true):
                         exec.SentinelRewriteType = ClauseType.Exists;
-                        MarkSentinel(sentinelBits, bindings[BindingIndex.BetweenLow]);
-                        MarkSentinel(sentinelBits, bindings[BindingIndex.BetweenHigh]);
                         return;
                     case (true, false):
                         exec.SentinelRewriteType = ClauseType.LessThanOrEqual;
-                        MarkSentinel(sentinelBits, bindings[BindingIndex.BetweenLow]);
                         exec.TermValueType = highType;
                         exec.PackedParamValue = writer.Add(high, highType);
                         return;
                     case (false, true):
                         exec.SentinelRewriteType = ClauseType.GreaterThanOrEqual;
-                        MarkSentinel(sentinelBits, bindings[BindingIndex.BetweenHigh]);
                         exec.TermValueType = lowType;
                         exec.PackedParamValue = writer.Add(low, lowType);
                         return;
@@ -849,7 +835,7 @@ internal static partial class QueryPlanBuilder
         IndexSearcher indexSearcher, QueryExecution queryExec, bool forward)
     {
         if (exec.SentinelRewriteType == ClauseType.Exists)
-            return indexSearcher.AllEntries();
+            return indexSearcher.ExistsQuery(fieldMeta, forward);
         if (exec.SentinelRewriteType == ClauseType.LessThanOrEqual)
             return exec.PackedParamValue.RangeQuery(ClauseType.LessThanOrEqual, fieldMeta, indexSearcher, queryExec, forward);
 
@@ -953,7 +939,7 @@ internal static partial class QueryPlanBuilder
         if (clause is { HasBoost: false, ClauseType: ClauseType.Equals or ClauseType.NotEquals })
             return MatchDispatch.PostingList;
 
-        if (exec.SentinelRewriteType != null)
+        if (exec.SentinelRewriteType is not (null or ClauseType.Exists))
             return MatchDispatch.QueryMatch;
 
         if (IsTreeScanEligibleClause(clause))
