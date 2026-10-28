@@ -139,6 +139,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             ApplyPropertyRenames(typeInfo);
             ApplyPropertyNameConverter(typeInfo);
             SetupNonPublicConstructor(typeInfo);
+            SetupUnboundParameterizedConstructor(typeInfo);
             PopulateReadOnlyMembers(typeInfo);
             SetupIdentityPropertyConditionalSerialization(typeInfo);
             ApplyNewtonsoftNullValueHandling(typeInfo);
@@ -451,6 +452,63 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             }
 
             return false;
+        }
+
+        private static void SetupUnboundParameterizedConstructor(JsonTypeInfo typeInfo)
+        {
+            if (typeInfo.CreateObject != null || typeInfo.Type.IsAbstract || typeInfo.Type.IsInterface)
+                return;
+
+            ConstructorInfo constructor = GetParameterizedConstructor(typeInfo.Type);
+            if (constructor == null)
+                return;
+
+            ParameterInfo[] parameters = constructor.GetParameters();
+            if (parameters.Length == 0 || AllParametersBind(typeInfo, parameters))
+                return;
+
+            var arguments = new object[parameters.Length];
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                ParameterInfo parameter = parameters[i];
+                arguments[i] = parameter.HasDefaultValue
+                    ? parameter.DefaultValue
+                    : parameter.ParameterType.IsValueType ? Activator.CreateInstance(parameter.ParameterType) : null;
+            }
+
+            typeInfo.CreateObject = () => constructor.Invoke(arguments);
+        }
+
+        private static ConstructorInfo GetParameterizedConstructor(Type type)
+        {
+            foreach (ConstructorInfo constructor in type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                if (constructor.IsDefined(typeof(JsonConstructorAttribute), inherit: false))
+                    return constructor;
+            }
+
+            ConstructorInfo[] publicConstructors = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public);
+            return publicConstructors.Length == 1 ? publicConstructors[0] : null;
+        }
+
+        private static bool AllParametersBind(JsonTypeInfo typeInfo, ParameterInfo[] parameters)
+        {
+            foreach (ParameterInfo parameter in parameters)
+            {
+                bool bound = false;
+                for (int i = 0; i < typeInfo.Properties.Count && bound == false; i++)
+                {
+                    JsonPropertyInfo property = typeInfo.Properties[i];
+                    bound = property.AttributeProvider is MemberInfo member &&
+                            string.Equals(member.Name, parameter.Name, StringComparison.OrdinalIgnoreCase) &&
+                            property.PropertyType == parameter.ParameterType;
+                }
+
+                if (bound == false)
+                    return false;
+            }
+
+            return true;
         }
 
         private static void PopulateReadOnlyMembers(JsonTypeInfo typeInfo)
