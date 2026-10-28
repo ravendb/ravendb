@@ -866,6 +866,34 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    [RavenTheory(RavenTestCategory.ClientApi)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void PopulateEntityRefreshesDictionaryEntities(bool useSystemTextJson)
+    {
+        DocumentConventions conventions = useSystemTextJson ? SystemTextJson : Newtonsoft;
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Name\":\"new\",\"List\":[1,2]}", "populate"))
+        {
+            dynamic expando = new ExpandoObject();
+            expando.Name = "old";
+            expando.Kept = "kept";
+            conventions.Serialization.DefaultConverter.PopulateEntity((ExpandoObject)expando, json);
+
+            var expandoValues = (IDictionary<string, object>)expando;
+            Assert.Equal("new", expandoValues["Name"].ToString());
+            Assert.Equal("kept", expandoValues["Kept"]);
+            Assert.Equal(2, ((IEnumerable<object>)expandoValues["List"]).Count());
+
+            var dictionary = new Dictionary<string, object> { ["Name"] = "old", ["Kept"] = "kept" };
+            conventions.Serialization.DefaultConverter.PopulateEntity(dictionary, json);
+
+            Assert.Equal("new", dictionary["Name"].ToString());
+            Assert.Equal("kept", dictionary["Kept"]);
+        }
+    }
+
     private class HoldsChars
     {
         public List<char> Chars { get; set; }
