@@ -16,6 +16,14 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 {
     internal sealed class RavenJsonTypeInfoResolver : DefaultJsonTypeInfoResolver
     {
+        private const string NewtonsoftJsonConverterAttributeName = "Newtonsoft.Json.JsonConverterAttribute";
+
+        private const string NewtonsoftJsonExtensionDataAttributeName = "Newtonsoft.Json.JsonExtensionDataAttribute";
+
+        private const string NewtonsoftJsonConstructorAttributeName = "Newtonsoft.Json.JsonConstructorAttribute";
+
+        private const string NewtonsoftStringEnumConverterName = "Newtonsoft.Json.Converters.StringEnumConverter";
+
         private static readonly ConcurrentDictionary<Type, Action<object, IEnumerable>> _collectionAdders = new();
 
         private static readonly MethodInfo _addToCollectionMethod = typeof(RavenJsonTypeInfoResolver).GetMethod(nameof(AddToCollection), BindingFlags.NonPublic | BindingFlags.Static);
@@ -76,6 +84,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         public override JsonTypeInfo GetTypeInfo(Type type, JsonSerializerOptions options)
         {
             AssertMembersCanBeResolved(type);
+            AssertNoNewtonsoftTypeConverter(type);
             return base.GetTypeInfo(type, options);
         }
 
@@ -117,6 +126,105 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             SetupNonPublicConstructor(typeInfo);
             PopulateReadOnlyMembers(typeInfo);
             SetupIdentityPropertyConditionalSerialization(typeInfo);
+            AssertNoNewtonsoftMemberAttributes(typeInfo);
+            AssertNewtonsoftConstructorIsUsed(typeInfo.Type);
+        }
+
+        private void AssertNoNewtonsoftTypeConverter(Type type)
+        {
+            if (type.IsDefined(typeof(JsonConverterAttribute), inherit: true))
+                return;
+
+            object converter = GetNewtonsoftAttribute(type, NewtonsoftJsonConverterAttributeName);
+            if (converter == null)
+            {
+                foreach (Type @interface in type.GetInterfaces())
+                {
+                    converter = GetNewtonsoftAttribute(@interface, NewtonsoftJsonConverterAttributeName);
+                    if (converter != null)
+                        break;
+                }
+            }
+
+            if (converter != null && IsTranslatedConverter(converter, type) == false)
+                ThrowNewtonsoftConverterNotSupported($"Type '{type.FullName}'");
+        }
+
+        private void AssertNoNewtonsoftMemberAttributes(JsonTypeInfo typeInfo)
+        {
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                JsonPropertyInfo property = typeInfo.Properties[i];
+                if (property.AttributeProvider is not MemberInfo member)
+                    continue;
+
+                if (member.IsDefined(typeof(JsonConverterAttribute), inherit: true) == false)
+                {
+                    object converter = GetNewtonsoftAttribute(member, NewtonsoftJsonConverterAttributeName);
+                    if (converter != null && IsTranslatedConverter(converter, property.PropertyType) == false)
+                        ThrowNewtonsoftConverterNotSupported($"Member '{member.DeclaringType?.FullName}.{member.Name}'");
+                }
+
+                if (member.IsDefined(typeof(JsonExtensionDataAttribute), inherit: true) == false &&
+                    GetNewtonsoftAttribute(member, NewtonsoftJsonExtensionDataAttributeName) != null)
+                    ThrowNewtonsoftExtensionDataNotSupported(member);
+            }
+        }
+
+        private static void AssertNewtonsoftConstructorIsUsed(Type type)
+        {
+            ConstructorInfo[] constructors = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            ConstructorInfo marked = null;
+            bool hasParameterlessConstructor = false;
+            int publicConstructors = 0;
+
+            foreach (ConstructorInfo constructor in constructors)
+            {
+                if (constructor.IsDefined(typeof(JsonConstructorAttribute), inherit: false))
+                    return;
+
+                if (marked == null && GetNewtonsoftAttribute(constructor, NewtonsoftJsonConstructorAttributeName) != null)
+                    marked = constructor;
+
+                if (constructor.GetParameters().Length == 0)
+                    hasParameterlessConstructor = true;
+
+                if (constructor.IsPublic)
+                    publicConstructors++;
+            }
+
+            if (marked == null || marked.GetParameters().Length == 0)
+                return;
+
+            if (hasParameterlessConstructor == false && publicConstructors == 1 && marked.IsPublic)
+                return;
+
+            ThrowNewtonsoftConstructorNotSupported(type);
+        }
+
+        private bool IsTranslatedConverter(object converterAttribute, Type valueType)
+        {
+            Type enumType = Nullable.GetUnderlyingType(valueType) ?? valueType;
+            if (enumType.IsEnum == false || _conventions.Conventions?.SaveEnumsAsIntegers == true)
+                return false;
+
+            Type attributeType = converterAttribute.GetType();
+            var converterType = (Type)attributeType.GetProperty("ConverterType")?.GetValue(converterAttribute);
+            var converterParameters = (object[])attributeType.GetProperty("ConverterParameters")?.GetValue(converterAttribute);
+
+            return converterType?.FullName == NewtonsoftStringEnumConverterName && (converterParameters == null || converterParameters.Length == 0);
+        }
+
+        private static object GetNewtonsoftAttribute(ICustomAttributeProvider provider, string attributeName)
+        {
+            object[] attributes = provider.GetCustomAttributes(true);
+            for (int i = 0; i < attributes.Length; i++)
+            {
+                if (attributes[i].GetType().FullName == attributeName)
+                    return attributes[i];
+            }
+
+            return null;
         }
 
         private void AddNonPublicMembers(JsonTypeInfo typeInfo, bool isRecord)
@@ -578,5 +686,24 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             throw new NotSupportedException(
                 "Pointer type fields and properties in documents cannot be serialized. " +
                 $"You can set RavenDB to ignore them by setting {nameof(SystemTextJsonSerializationConventions)}.{nameof(SystemTextJsonSerializationConventions.IgnoreUnsafeMembers)} to 'true'.");
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowNewtonsoftConverterNotSupported(string target) =>
+            throw new NotSupportedException(
+                $"{target} is annotated with {NewtonsoftJsonConverterAttributeName}. " +
+                $"{nameof(SystemTextJsonSerializationConventions)} requires System.Text.Json.Serialization.JsonConverterAttribute with a System.Text.Json converter, " +
+                $"or a converter registered through {nameof(SystemTextJsonSerializationConventions)}.{nameof(SystemTextJsonSerializationConventions.CustomizeJsonSerializerOptions)}.");
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowNewtonsoftExtensionDataNotSupported(MemberInfo member) =>
+            throw new NotSupportedException(
+                $"Member '{member.DeclaringType?.FullName}.{member.Name}' is annotated with {NewtonsoftJsonExtensionDataAttributeName}. " +
+                $"{nameof(SystemTextJsonSerializationConventions)} requires System.Text.Json.Serialization.JsonExtensionDataAttribute.");
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowNewtonsoftConstructorNotSupported(Type type) =>
+            throw new NotSupportedException(
+                $"Type '{type.FullName}' selects its constructor with {NewtonsoftJsonConstructorAttributeName}. " +
+                $"{nameof(SystemTextJsonSerializationConventions)} requires System.Text.Json.Serialization.JsonConstructorAttribute on that constructor.");
     }
 }

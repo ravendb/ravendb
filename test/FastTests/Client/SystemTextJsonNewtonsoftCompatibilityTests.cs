@@ -1,9 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
@@ -351,6 +353,144 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
             Assert.Equal("private", renames.GetPrivateRenamed());
             Assert.Equal("contract", renames.Contract.Name);
             Assert.Equal(2, renames.Contract.Count);
+        }
+    }
+
+    private class UpperCaseConverter : JsonConverter
+    {
+        public override bool CanConvert(Type objectType) => objectType == typeof(string);
+
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer) => writer.WriteValue(((string)value)?.ToUpperInvariant());
+
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer) => reader.Value;
+    }
+
+    private class MemberWithNewtonsoftConverter
+    {
+        [JsonConverter(typeof(UpperCaseConverter))]
+        public string Name { get; set; }
+    }
+
+    [JsonConverter(typeof(UpperCaseConverter))]
+    private class TypeWithNewtonsoftConverter
+    {
+        public string Name { get; set; }
+    }
+
+    private class HoldsTypeWithNewtonsoftConverter
+    {
+        public TypeWithNewtonsoftConverter Value { get; set; }
+    }
+
+    private class MemberWithNewtonsoftExtensionData
+    {
+        public string Name { get; set; }
+
+        [JsonExtensionData]
+        public IDictionary<string, JToken> Extra { get; set; }
+    }
+
+    private class NewtonsoftConstructorAmongMany
+    {
+        public NewtonsoftConstructorAmongMany()
+        {
+        }
+
+        [JsonConstructor]
+        public NewtonsoftConstructorAmongMany(string name)
+        {
+            Name = name;
+        }
+
+        public string Name { get; }
+    }
+
+    private class SingleNewtonsoftConstructor
+    {
+        [JsonConstructor]
+        public SingleNewtonsoftConstructor(string name)
+        {
+            Name = name;
+        }
+
+        public string Name { get; }
+    }
+
+    private class BothConstructorAttributes
+    {
+        public BothConstructorAttributes()
+        {
+        }
+
+        [JsonConstructor]
+        [System.Text.Json.Serialization.JsonConstructor]
+        public BothConstructorAttributes(string name)
+        {
+            Name = name;
+        }
+
+        public string Name { get; }
+    }
+
+    [JsonConverter(typeof(StringEnumConverter))]
+    private enum Shade
+    {
+        Light,
+        Dark
+    }
+
+    private class HoldsShade
+    {
+        public Shade Shade { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonRejectsUntranslatableNewtonsoftAttributes()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            AssertRejected(new MemberWithNewtonsoftConverter { Name = "x" }, "Newtonsoft.Json.JsonConverterAttribute");
+            AssertRejected(new HoldsTypeWithNewtonsoftConverter { Value = new TypeWithNewtonsoftConverter { Name = "x" } }, "Newtonsoft.Json.JsonConverterAttribute");
+            AssertRejected(new MemberWithNewtonsoftExtensionData { Name = "x" }, "Newtonsoft.Json.JsonExtensionDataAttribute");
+            AssertRejected(new NewtonsoftConstructorAmongMany("x"), "Newtonsoft.Json.JsonConstructorAttribute");
+
+            void AssertRejected(object entity, string attributeName)
+            {
+                var exception = Assert.Throws<NotSupportedException>(() => SystemTextJson.Serialization.DefaultConverter.ToBlittable(entity, context));
+                Assert.Contains(attributeName, exception.Message);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonAcceptsNewtonsoftAttributesWithTheSameOutcome()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            using (BlittableJsonReaderObject json = Newtonsoft.Serialization.DefaultConverter.ToBlittable(new SingleNewtonsoftConstructor("single"), context))
+                Assert.Equal("single", SystemTextJson.Serialization.DefaultConverter.FromBlittable<SingleNewtonsoftConstructor>(json).Name);
+
+            using (BlittableJsonReaderObject json = Newtonsoft.Serialization.DefaultConverter.ToBlittable(new BothConstructorAttributes("both"), context))
+                Assert.Equal("both", SystemTextJson.Serialization.DefaultConverter.FromBlittable<BothConstructorAttributes>(json).Name);
+
+            using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(new HoldsShade { Shade = Shade.Dark }, context))
+            using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(new HoldsShade { Shade = Shade.Dark }, context))
+            {
+                Assert.Equal(expected.ToString(), actual.ToString());
+                Assert.Equal(Shade.Dark, SystemTextJson.Serialization.DefaultConverter.FromBlittable<HoldsShade>(expected).Shade);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonRejectsNewtonsoftStringEnumConverterWhenEnumsAreSavedAsIntegers()
+    {
+        var conventions = new DocumentConventions { SaveEnumsAsIntegers = true, Serialization = new SystemTextJsonSerializationConventions() };
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            var exception = Assert.Throws<NotSupportedException>(() => conventions.Serialization.DefaultConverter.ToBlittable(new HoldsShade { Shade = Shade.Dark }, context));
+            Assert.Contains("Newtonsoft.Json.JsonConverterAttribute", exception.Message);
         }
     }
 
