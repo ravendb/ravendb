@@ -92,7 +92,7 @@ report() {
                 NOTED=yes
                 say "Note:      On Docker Desktop or WSL, other devices may be unable to reach Quill,"
                 say "           even when they resolve its address. To allow them, set WSL networking"
-                say "           to mirrored mode with hostAddressLoopback enabled. see <LINK_DOCS_PH>"
+                say "           to mirrored mode with hostAddressLoopback enabled. see https://docs.ravendb.net/quill/networking/lan-access-on-windows"
             fi
             ;;
         degraded)
