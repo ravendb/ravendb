@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
+using Raven.Client.Util;
 
 namespace Raven.Embedded
 {
@@ -11,7 +12,7 @@ namespace Raven.Embedded
 
         internal static string AltServerDirectory = Path.Combine(AppContext.BaseDirectory, "bin", "RavenDBServer");
 
-        public string FrameworkVersion { get; set; } = "10.0.13+";
+        public string FrameworkVersion { get; set; } = null;
 
         public string LogsPath { get; set; } = Path.Combine(AppContext.BaseDirectory, "RavenDB", "Logs");
 
@@ -45,7 +46,7 @@ namespace Raven.Embedded
             if (Security != null)
                 throw new InvalidOperationException("The security has already been setup for this ServerOptions object");
 
-            var cert = new X509Certificate2(certificate, certPassword);
+            var cert = CertificateLoaderUtil.CreateCertificateFromAny(certificate, certPassword);
             Security = new SecurityOptions
             {
                 CertificatePath = certificate,

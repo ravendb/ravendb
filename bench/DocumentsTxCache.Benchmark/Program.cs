@@ -29,7 +29,7 @@ public class Program
             .AddLogger(ConsoleLogger.Default)
             .AddColumnProvider(DefaultColumnProviders.Instance)
             .AddJob(Job.Default
-                .WithToolchain(InProcessEmitToolchain.Instance)
+                .WithToolchain(InProcessEmitToolchain.Default)
                 .WithWarmupCount(5)
                 .WithIterationCount(10)
                 .AsDefault());

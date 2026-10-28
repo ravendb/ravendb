@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -503,9 +502,7 @@ select {
             using (var store = GetDocumentStore())
             {
                 using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(jsonString)))
-                using (var zipStream = new GZipStream(ms, CompressionMode.Compress))
                 {
-                    zipStream.Flush();
                     ms.Position = 0;
                     var operation = await store.Smuggler.ForDatabase(store.Database)
                         .ImportAsync(
@@ -639,9 +636,7 @@ select {
             using (var store = GetDocumentStore())
             {
                 using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(jsonString)))
-                using (var zipStream = new GZipStream(ms, CompressionMode.Compress))
                 {
-                    zipStream.Flush();
                     ms.Position = 0;
                     var operation = await store.Smuggler.ForDatabase(store.Database)
                         .ImportAsync(
@@ -736,9 +731,7 @@ select {
             using (var store = GetDocumentStore())
             {
                 using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(jsonString)))
-                using (var zipStream = new GZipStream(ms, CompressionMode.Compress))
                 {
-                    zipStream.Flush();
                     ms.Position = 0;
                     var operation = await store.Smuggler.ForDatabase(store.Database)
                         .ImportAsync(

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <RuntimeFrameworkVersion>10.0.13</RuntimeFrameworkVersion>
+    <TargetFramework>net11.0</TargetFramework>
+    <RuntimeFrameworkVersion>11.0.0-rc.3.26522.148</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Micro.Benchmark</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -19,7 +19,8 @@
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" />
     <PackageReference Include="BenchmarkDotNet" />
-    <PackageReference Include="xunit.v3.mtp-off" />
+    <!-- keep xUnit's build targets (app host and entry point checks) out of the project BenchmarkDotNet generates from this one -->
+    <PackageReference Include="xunit.v3.mtp-off" PrivateAssets="build;buildTransitive;contentfiles;analyzers" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" />
   </ItemGroup>
   <ItemGroup>

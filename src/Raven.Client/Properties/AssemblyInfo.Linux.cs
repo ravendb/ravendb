@@ -5,3 +5,4 @@
 [assembly: InternalsVisibleTo("Raven.Debug")]
 [assembly: InternalsVisibleTo("Raven.Quill")]
 [assembly: InternalsVisibleTo("QuillTests")]
+[assembly: InternalsVisibleTo("Raven.Embedded")]
