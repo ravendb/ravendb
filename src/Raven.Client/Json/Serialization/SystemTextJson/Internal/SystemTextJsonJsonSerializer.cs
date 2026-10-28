@@ -25,7 +25,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (writer is SystemTextJsonBlittableWriter stjWriter)
             {
                 using var bufferWriter = new ContextMemoryBufferWriter(stjWriter.Context);
-                using (var utf8Writer = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter))
+                using (var utf8Writer = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter, SystemTextJsonSerializationConventions.WriterOptions))
                 {
                     JsonSerializer.Serialize(utf8Writer, value, objectType, Options);
                 }
@@ -41,7 +41,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
         internal unsafe BlittableJsonReaderObject SerializeToBlittable(object value, Type objectType, JsonOperationContext context)
         {
             using var bufferWriter = new ContextMemoryBufferWriter(context);
-            using (var utf8Writer = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter))
+            using (var utf8Writer = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter, SystemTextJsonSerializationConventions.WriterOptions))
             {
                 JsonSerializer.Serialize(utf8Writer, value, objectType, Options);
             }
@@ -53,7 +53,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             IMetadataDictionary metadata, JsonOperationContext context)
         {
             using var bufferWriter = new ContextMemoryBufferWriter(context);
-            using (var utf8Writer = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter))
+            using (var utf8Writer = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter, SystemTextJsonSerializationConventions.WriterOptions))
             {
                 JsonSerializer.Serialize(utf8Writer, value, objectType, Options);
             }
@@ -69,7 +69,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 if (hasProperties)
                     bufferWriter.WriteByte((byte)',');
 
-                using (var metadataWriter = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter, new JsonWriterOptions { SkipValidation = true }))
+                using (var metadataWriter = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter, SystemTextJsonSerializationConventions.MetadataWriterOptions))
                 {
                     metadataWriter.WritePropertyName(Constants.Documents.Metadata.Key);
                     SystemTextJsonSerializationConventions.WriteMetadata(metadataWriter, metadata);
