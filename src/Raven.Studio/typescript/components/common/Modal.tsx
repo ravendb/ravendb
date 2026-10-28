@@ -6,11 +6,14 @@ import CloseButton from "react-bootstrap/CloseButton";
 import React from "react";
 import "./Modal.scss";
 
-interface ModalProps extends ReactBootstrapModalProps {
+export type ModalSize = ReactBootstrapModalProps["size"] | "xxl";
+
+interface ModalProps extends Omit<ReactBootstrapModalProps, "size"> {
     isLoading?: boolean;
+    size?: ModalSize;
 }
 
-export function Modal({ children, container, isLoading, className, ...props }: ModalProps) {
+export function Modal({ children, container, isLoading, className, size, ...props }: ModalProps) {
     return (
         <ReactBootstrapModal
             scrollable
@@ -18,6 +21,7 @@ export function Modal({ children, container, isLoading, className, ...props }: M
             contentClassName={classNames("position-relative", className)}
             container={container || document.getElementById("bs5-modal")}
             backdropClassName="bs5-modal-backdrop"
+            size={size as ReactBootstrapModalProps["size"]}
             {...props}
         >
             {isLoading && <LoadingView />}

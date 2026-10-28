@@ -55,6 +55,7 @@ export default function VirtualTableBodyWrapper<T>({
                 isLoading={isLoading}
                 isEmpty={isEmpty ?? table.getRowCount() === 0}
                 emptyMessage={emptyMessage}
+                isCompact={isCompact}
             />
 
             <div className="position-relative">
