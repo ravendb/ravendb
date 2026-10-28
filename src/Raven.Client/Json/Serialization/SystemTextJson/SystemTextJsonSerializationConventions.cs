@@ -31,7 +31,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         private bool _ignoreByRefMembers;
         private bool _ignoreUnsafeMembers;
         private JsonSerializerContext _sourceGenerationContext;
-        private JsonSerializerOptions _options;
+        private readonly JsonSerializerOptions[] _options = new JsonSerializerOptions[3];
 
         public DocumentConventions Conventions { get; private set; }
 
@@ -101,18 +101,17 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             }
         }
 
-        internal JsonSerializerOptions Options
-        {
-            get
-            {
-                JsonSerializerOptions options = _options;
-                if (options != null)
-                    return options;
+        internal JsonSerializerOptions Options => GetOptions(TypeNameHandling.Auto);
 
-                options = CreateJsonSerializerOptions();
-                _options = options;
+        private JsonSerializerOptions GetOptions(TypeNameHandling typeNameHandling)
+        {
+            JsonSerializerOptions options = _options[(int)typeNameHandling];
+            if (options != null)
                 return options;
-            }
+
+            options = CreateJsonSerializerOptions(typeNameHandling);
+            _options[(int)typeNameHandling] = options;
+            return options;
         }
 
         void ISerializationConventions.Initialize(DocumentConventions conventions)
@@ -137,12 +136,12 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         IJsonSerializer ISerializationConventions.CreateDeserializer(CreateDeserializerOptions options)
         {
-            return new SystemTextJsonJsonSerializer(Options);
+            return new SystemTextJsonJsonSerializer(GetOptions(options?.TypeNameHandling ?? TypeNameHandling.Auto));
         }
 
         IJsonSerializer ISerializationConventions.CreateSerializer(CreateSerializerOptions options)
         {
-            return new SystemTextJsonJsonSerializer(Options);
+            return new SystemTextJsonJsonSerializer(GetOptions(options?.TypeNameHandling ?? TypeNameHandling.Auto));
         }
 
         IJsonWriter ISerializationConventions.CreateWriter(JsonOperationContext context)
@@ -179,9 +178,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             });
         }
 
-        private JsonSerializerOptions CreateJsonSerializerOptions()
+        private JsonSerializerOptions CreateJsonSerializerOptions(TypeNameHandling typeNameHandling)
         {
-            var ravenResolver = new RavenJsonTypeInfoResolver(this);
+            var ravenResolver = new RavenJsonTypeInfoResolver(this, typeNameHandling);
 
             var options = new JsonSerializerOptions
             {

@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters;
 using Sparrow.Extensions;
 using Sparrow.Json;
 
@@ -16,15 +17,18 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
     {
         private readonly SystemTextJsonSerializationConventions _conventions;
 
+        private readonly TypeNameHandling _typeNameHandling;
+
         [ThreadStatic]
         internal static object RootEntity;
 
         [ThreadStatic]
         internal static bool RemovedIdentityProperty;
 
-        public RavenJsonTypeInfoResolver(SystemTextJsonSerializationConventions conventions)
+        public RavenJsonTypeInfoResolver(SystemTextJsonSerializationConventions conventions, TypeNameHandling typeNameHandling)
         {
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+            _typeNameHandling = typeNameHandling;
             Modifiers.Add(ModifyTypeInfo);
         }
 
@@ -101,9 +105,24 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
             FilterProperties(typeInfo, isRecord);
             ApplyStringDictionaryComparers(typeInfo);
+            ApplyTypeNameHandling(typeInfo);
             ApplyPropertyNameConverter(typeInfo);
             SetupNonPublicConstructor(typeInfo);
             SetupIdentityPropertyConditionalSerialization(typeInfo);
+        }
+
+        private void ApplyTypeNameHandling(JsonTypeInfo typeInfo)
+        {
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                JsonPropertyInfo property = typeInfo.Properties[i];
+                if (property.CustomConverter != null)
+                    continue;
+
+                JsonConverter converter = TypeNameConverter.TryCreate(property.PropertyType, _typeNameHandling, typeInfo.Options);
+                if (converter != null)
+                    property.CustomConverter = converter;
+            }
         }
 
         private static void ApplyStringDictionaryComparers(JsonTypeInfo typeInfo)
