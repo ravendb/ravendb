@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Json.Serialization.SystemTextJson;
+using Raven.Client.ServerWide;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -51,6 +53,72 @@ namespace FastTests.Client
                 Assert.True(loaded.IsActive);
                 Assert.Equal(now.Date, loaded.CreatedAt.Date);
             }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task CanStoreAndLoadPublicFieldsWithSystemTextJson()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.Serialization = new SystemTextJsonSerializationConventions();
+                }
+            });
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new FieldsEntity("hidden") { Id = "fields/1", Name = "Oren", Count = 3 });
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var raw = await session.LoadAsync<BlittableJsonReaderObject>("fields/1");
+                Assert.True(raw.TryGet(nameof(FieldsEntity.Name), out string name));
+                Assert.Equal("Oren", name);
+                Assert.False(raw.TryGet("_secret", out object _));
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var loaded = await session.LoadAsync<FieldsEntity>("fields/1");
+                Assert.Equal("Oren", loaded.Name);
+                Assert.Equal(3, loaded.Count);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void DatabaseRecordFieldsAreSerializedWithSystemTextJson()
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(new DatabaseRecord("db1"), context))
+            {
+                Assert.True(json.TryGet(nameof(DatabaseRecord.DatabaseName), out string databaseName));
+                Assert.Equal("db1", databaseName);
+            }
+        }
+
+        private class FieldsEntity
+        {
+            private readonly string _secret;
+
+            public FieldsEntity()
+            {
+            }
+
+            public FieldsEntity(string secret)
+            {
+                _secret = secret;
+            }
+
+            public string Id;
+            public string Name;
+            public int Count;
+
+            public string GetSecret() => _secret;
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
