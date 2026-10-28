@@ -54,7 +54,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             Dictionary<string, JsonPropertyInfo> properties = Conventions.GetJsonProperties(type);
             foreach (string propertyName in json.GetPropertyNames())
             {
-                if (properties.TryGetValue(propertyName, out JsonPropertyInfo property) == false || property.Get == null)
+                if (properties.TryGetValue(propertyName, out JsonPropertyInfo property) == false || property.Get == null || property.AttributeProvider is PropertyInfo { SetMethod: null })
                     continue;
 
                 Action<object, object> setter = property.Set ?? GetMemberSetter(property.AttributeProvider);
