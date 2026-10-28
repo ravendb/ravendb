@@ -29,7 +29,6 @@ interface PageDirtyState {
 const SplitViewContext = createContext<{
     sheetComponent: ReactNode;
     setSheetComponent: (sheetComponent: ReactNode) => void;
-    setIsCloseConfirmationRequired: (isConfirmationRequired: boolean) => void;
     confirmBeforeClose: (action: () => void) => void;
     registerSheetClose: (callback: (() => void) | null) => void;
     activeSheetOwnerId: string | null;
@@ -50,14 +49,14 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
     const [activeSheetOwnerId, setActiveSheetOwnerId] = useState<string | null>(null);
     const [sheetPortalNode, setSheetPortalNode] = useState<HTMLDivElement | null>(null);
     const onSheetCloseRef = useRef<(() => void) | null>(null);
-    const isCloseConfirmationRequiredRef = useRef(false);
+    const isSheetDirtyRef = useRef(false);
     const pageDirtyStateRef = useRef<PageDirtyState>({ isDirty: false, customDialog: null });
     const confirm = useConfirm();
     const setIsViewModelDirty = useDirtyFlagContext()?.setIsDirty;
 
     const syncViewModelDirtyFlag = useCallback(() => {
         const { isDirty, customDialog } = pageDirtyStateRef.current;
-        setIsViewModelDirty?.(isDirty || isCloseConfirmationRequiredRef.current, isDirty ? customDialog : null);
+        setIsViewModelDirty?.(isDirty || isSheetDirtyRef.current, isDirty ? customDialog : null);
     }, [setIsViewModelDirty]);
 
     const setIsPageDirty = useCallback(
@@ -68,9 +67,9 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
         [syncViewModelDirtyFlag]
     );
 
-    const setIsCloseConfirmationRequired = useCallback(
-        (isConfirmationRequired: boolean) => {
-            isCloseConfirmationRequiredRef.current = isConfirmationRequired;
+    const setIsSheetDirty = useCallback(
+        (isDirty: boolean) => {
+            isSheetDirtyRef.current = isDirty;
             syncViewModelDirtyFlag();
         },
         [syncViewModelDirtyFlag]
@@ -78,7 +77,7 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
 
     const confirmBeforeClose = useCallback(
         (action: () => void) => {
-            if (!isCloseConfirmationRequiredRef.current) {
+            if (!isSheetDirtyRef.current) {
                 action();
                 return;
             }
@@ -94,14 +93,19 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
         [confirm]
     );
 
-    const setSheetComponent = useCallback((component: ReactNode) => {
-        if (component === null) {
-            onSheetCloseRef.current?.();
-            onSheetCloseRef.current = null;
-            setActiveSheetOwnerId(null);
-        }
-        setSheetComponentState(component);
-    }, []);
+    const setSheetComponent = useCallback(
+        (component: ReactNode) => {
+            if (component === null) {
+                onSheetCloseRef.current?.();
+                onSheetCloseRef.current = null;
+                setActiveSheetOwnerId(null);
+            }
+            // useDirtyFlag does not reset on unmount, so the replaced sheet's flag is cleared here
+            setIsSheetDirty(false);
+            setSheetComponentState(component);
+        },
+        [setIsSheetDirty]
+    );
 
     const registerSheetClose = useCallback((callback: (() => void) | null) => {
         onSheetCloseRef.current = callback;
@@ -115,7 +119,6 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
         () => ({
             sheetComponent,
             setSheetComponent,
-            setIsCloseConfirmationRequired,
             confirmBeforeClose,
             registerSheetClose,
             activeSheetOwnerId,
@@ -123,25 +126,19 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
             sheetPortalNode,
             setSheetPortalNode,
         }),
-        [
-            sheetComponent,
-            setSheetComponent,
-            setIsCloseConfirmationRequired,
-            confirmBeforeClose,
-            registerSheetClose,
-            activeSheetOwnerId,
-            sheetPortalNode,
-        ]
+        [sheetComponent, setSheetComponent, confirmBeforeClose, registerSheetClose, activeSheetOwnerId, sheetPortalNode]
     );
 
     return (
         <SplitViewContext.Provider value={contextValue}>
-            <DirtyFlagProvider setIsDirty={setIsPageDirty}>
-                <div className="split-view">
+            <div className="split-view">
+                <DirtyFlagProvider setIsDirty={setIsPageDirty}>
                     <BodyWrapper>{props.children}</BodyWrapper>
+                </DirtyFlagProvider>
+                <DirtyFlagProvider setIsDirty={setIsSheetDirty}>
                     <SheetWrapper>{sheetComponent}</SheetWrapper>
-                </div>
-            </DirtyFlagProvider>
+                </DirtyFlagProvider>
+            </div>
         </SplitViewContext.Provider>
     );
 }

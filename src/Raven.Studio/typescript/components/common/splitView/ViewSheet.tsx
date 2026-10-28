@@ -2,7 +2,7 @@ import classNames from "classnames";
 import { ClassNameProps } from "components/models/common";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
-import { ComponentProps, PropsWithChildren, ReactNode, useCallback, useEffect } from "react";
+import { ComponentProps, PropsWithChildren, ReactNode, useCallback } from "react";
 import { createPortal } from "react-dom";
 import Button, { ButtonProps } from "react-bootstrap/Button";
 import { useSplitViewContext } from "./SplitView";
@@ -156,15 +156,6 @@ export function useViewSheet() {
         isOpen: !!sheetComponent,
         activeSheetOwnerId,
     };
-}
-
-export function useViewSheetCloseConfirmation(isConfirmationRequired: boolean) {
-    const { setIsCloseConfirmationRequired } = useSplitViewContext();
-
-    useEffect(() => {
-        setIsCloseConfirmationRequired(isConfirmationRequired);
-        return () => setIsCloseConfirmationRequired(false);
-    }, [isConfirmationRequired, setIsCloseConfirmationRequired]);
 }
 
 ViewSheet.Header = SheetHeader;

@@ -1,11 +1,11 @@
 import { rtlRender } from "test/rtlTestUtils";
 import Button from "react-bootstrap/Button";
-import { useViewSheet, useViewSheetCloseConfirmation, ViewSheet } from "./ViewSheet";
+import { useViewSheet, ViewSheet } from "./ViewSheet";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { mockHooks } from "test/mocks/hooks/MockHooks";
 
-function FormSheet({ isConfirmationRequired }: { isConfirmationRequired: boolean }) {
-    useViewSheetCloseConfirmation(isConfirmationRequired);
+function FormSheet({ isDirty }: { isDirty: boolean }) {
+    useDirtyFlag(isDirty);
 
     return (
         <ViewSheet>
@@ -15,30 +15,20 @@ function FormSheet({ isConfirmationRequired }: { isConfirmationRequired: boolean
     );
 }
 
-function SheetOpeners({
-    isConfirmationRequired,
-    isPageDirty = false,
-}: {
-    isConfirmationRequired: boolean;
-    isPageDirty?: boolean;
-}) {
+function SheetOpeners({ isDirty, isPageDirty = false }: { isDirty: boolean; isPageDirty?: boolean }) {
     const { open } = useViewSheet();
     useDirtyFlag(isPageDirty);
 
     return (
         <>
-            <Button onClick={() => open({ component: <FormSheet isConfirmationRequired={isConfirmationRequired} /> })}>
-                Open form sheet
-            </Button>
+            <Button onClick={() => open({ component: <FormSheet isDirty={isDirty} /> })}>Open form sheet</Button>
             <Button onClick={() => open({ component: <span>Other sheet</span> })}>Open other sheet</Button>
         </>
     );
 }
 
-async function renderWithOpenedFormSheet(isConfirmationRequired: boolean, isPageDirty = false) {
-    const rendered = rtlRender(
-        <SheetOpeners isConfirmationRequired={isConfirmationRequired} isPageDirty={isPageDirty} />
-    );
+async function renderWithOpenedFormSheet(isDirty: boolean, isPageDirty = false) {
+    const rendered = rtlRender(<SheetOpeners isDirty={isDirty} isPageDirty={isPageDirty} />);
     await rendered.fireClick(rendered.screen.getByText("Open form sheet"));
     return rendered;
 }
