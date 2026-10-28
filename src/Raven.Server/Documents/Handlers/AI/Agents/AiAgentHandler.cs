@@ -69,4 +69,40 @@ public class AiAgentHandler : DatabaseRequestHandler
             await processor.ExecuteAsync();
         }
     }
+
+    [RavenAction("/databases/*/ai/agent/fork", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
+    public async Task ForkConversation()
+    {
+        using (var processor = new AiAgentProcessorForForkConversation(this))
+        {
+            await processor.ExecuteAsync();
+        }
+    }
+
+    [RavenAction("/databases/*/ai/agent/snapshots", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
+    public async Task CreateConversationSnapshot()
+    {
+        using (var processor = new AiAgentProcessorForCreateConversationSnapshot(this))
+        {
+            await processor.ExecuteAsync();
+        }
+    }
+
+    [RavenAction("/databases/*/ai/agent/snapshots", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    public async Task GetConversationSnapshots()
+    {
+        using (var processor = new AiAgentProcessorForGetConversationSnapshots(this))
+        {
+            await processor.ExecuteAsync();
+        }
+    }
+
+    [RavenAction("/databases/*/ai/agent/snapshots", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
+    public async Task PurgeConversationSnapshots()
+    {
+        using (var processor = new AiAgentProcessorForPurgeConversationSnapshots(this))
+        {
+            await processor.ExecuteAsync();
+        }
+    }
 }

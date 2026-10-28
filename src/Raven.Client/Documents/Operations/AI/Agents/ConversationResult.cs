@@ -36,6 +36,13 @@ public class ConversationResult<TAnswer>
     public List<AiAgentActionRequest> ActionRequests { get; set; }
     internal int ToolsIterations { get; set; }
 
+    /// <summary>
+    /// Opaque snapshot token returned by the server when
+    /// <see cref="AI.AiConversationCreationOptions.SnapshotBeforeRunning"/> is enabled.
+    /// Encodes the revision change vectors captured before this turn was processed.
+    /// </summary>
+    public string SnapshotToken { get; set; }
+
     internal static ConversationResult<TAnswer> Convert(BlittableJsonReaderObject response, DocumentConventions conventions)
     {
         response.TryGet(nameof(TotalUsage), out BlittableJsonReaderObject totalUsage);
@@ -43,6 +50,7 @@ public class ConversationResult<TAnswer>
         response.TryGet(nameof(ChangeVector), out string changeVector);
         response.TryGet(nameof(Usage), out BlittableJsonReaderObject usage);
         response.TryGet(nameof(Elapsed), out TimeSpan elapsedStr);
+        response.TryGet(nameof(SnapshotToken), out string snapshotToken);
 
         List<AiAgentActionRequest> requests = null;
         if (response.TryGet(nameof(ActionRequests), out BlittableJsonReaderArray actionRequests) && actionRequests != null)
@@ -75,7 +83,8 @@ public class ConversationResult<TAnswer>
             TotalUsage = JsonDeserializationClient.AiUsage(totalUsage),
             Response = responseValue,
             Usage = JsonDeserializationClient.AiUsage(usage),
-            Elapsed = elapsedStr
+            Elapsed = elapsedStr,
+            SnapshotToken = snapshotToken
         };
     }
 }
