@@ -8,6 +8,7 @@ using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Raven.Client.Json.Serialization.SystemTextJson;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
+using Sparrow.Json.Sync;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -169,6 +170,61 @@ namespace FastTests.Client
                     Assert.Equal(expectedValue.ToString(), actualValue.ToString());
                 }
             }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void IntegralNumbersCanBeReadFromDecimalJsonNumbers()
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(
+                       "{\"Int\":3.0,\"Long\":4.0,\"Short\":5.0,\"Byte\":6.0,\"SByte\":-7.0,\"UInt\":8.0,\"ULong\":9.0,\"UShort\":10.0,\"NullableInt\":11.0,\"Truncated\":12.9,\"FromString\":\"13\"," +
+                       "\"IntKeys\":{\"1\":2},\"DoubleKeys\":{\"1.5\":3}}", "numbers"))
+            {
+                var numbers = conventions.Serialization.DefaultConverter.FromBlittable<IntegralNumbers>(json);
+
+                Assert.Equal(3, numbers.Int);
+                Assert.Equal(4L, numbers.Long);
+                Assert.Equal((short)5, numbers.Short);
+                Assert.Equal((byte)6, numbers.Byte);
+                Assert.Equal((sbyte)-7, numbers.SByte);
+                Assert.Equal(8u, numbers.UInt);
+                Assert.Equal(9ul, numbers.ULong);
+                Assert.Equal((ushort)10, numbers.UShort);
+                Assert.Equal(11, numbers.NullableInt);
+                Assert.Equal(12, numbers.Truncated);
+                Assert.Equal(13, numbers.FromString);
+                Assert.Equal(2, numbers.IntKeys[1]);
+                Assert.Equal(3, numbers.DoubleKeys[1.5]);
+
+                using (BlittableJsonReaderObject written = conventions.Serialization.DefaultConverter.ToBlittable(numbers, context))
+                {
+                    Assert.True(written.TryGet(nameof(IntegralNumbers.IntKeys), out BlittableJsonReaderObject intKeys));
+                    Assert.True(intKeys.TryGet("1", out long intKeyValue));
+                    Assert.Equal(2, intKeyValue);
+                    Assert.True(written.TryGet(nameof(IntegralNumbers.DoubleKeys), out BlittableJsonReaderObject doubleKeys));
+                    Assert.True(doubleKeys.TryGet("1.5", out long doubleKeyValue));
+                    Assert.Equal(3, doubleKeyValue);
+                }
+            }
+        }
+
+        private class IntegralNumbers
+        {
+            public int Int { get; set; }
+            public long Long { get; set; }
+            public short Short { get; set; }
+            public byte Byte { get; set; }
+            public sbyte SByte { get; set; }
+            public uint UInt { get; set; }
+            public ulong ULong { get; set; }
+            public ushort UShort { get; set; }
+            public int? NullableInt { get; set; }
+            public int Truncated { get; set; }
+            public int FromString { get; set; }
+            public Dictionary<int, int> IntKeys { get; set; }
+            public Dictionary<double, int> DoubleKeys { get; set; }
         }
 
         private class FloatingPointNumbers
