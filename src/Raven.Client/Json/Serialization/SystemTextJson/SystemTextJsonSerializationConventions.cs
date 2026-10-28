@@ -321,7 +321,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         private void InitializeConverters(JsonSerializerOptions options, TypeNameHandling typeNameHandling)
         {
             if (Conventions == null || Conventions.SaveEnumsAsIntegers == false)
-                options.Converters.Add(new JsonStringEnumConverter());
+                options.Converters.Add(EnumMemberStringEnumConverter.Instance);
 
             foreach (JsonConverter converter in IntegralNumberConverters.All)
                 options.Converters.Add(converter);
