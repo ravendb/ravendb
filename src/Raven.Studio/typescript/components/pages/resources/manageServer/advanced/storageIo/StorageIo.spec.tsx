@@ -11,7 +11,7 @@ describe("StorageIo", function () {
 
         expect(await screen.findByText("Disk /")).toBeInTheDocument();
         expect(screen.getByText("Saturated")).toBeInTheDocument();
-        expect(screen.getByText("Writes paced (drain)")).toBeInTheDocument();
+        expect(screen.getByText("Paced")).toBeInTheDocument();
         expect(screen.getByText("93%")).toBeInTheDocument();
         expect(screen.getByText(/Slow writes in the last hour \(2\)/)).toBeInTheDocument();
 
@@ -35,7 +35,7 @@ describe("StorageIo", function () {
         const { screen } = rtlRender(<Healthy />);
 
         expect(await screen.findByText("OK")).toBeInTheDocument();
-        expect(screen.getByText("Normal (trickle)")).toBeInTheDocument();
+        expect(screen.getByText("Normal")).toBeInTheDocument();
         expect(screen.queryByText(/Slow writes in the last hour/)).not.toBeInTheDocument();
         expect(screen.getByText("I/O ring")).toBeInTheDocument();
         expect(screen.queryByText(/I\/O ring could not be set up/)).not.toBeInTheDocument();

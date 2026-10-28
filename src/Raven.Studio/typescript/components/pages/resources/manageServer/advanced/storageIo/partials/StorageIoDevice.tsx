@@ -34,11 +34,7 @@ export default function StorageIoDevice({ device }: StorageIoDeviceProps) {
             <Card.Body>
                 <div className="storage-io-metrics">
                     <Metric label="Mode" help={device.Draining ? storageTermHelp.drain : storageTermHelp.trickle}>
-                        {device.Draining ? (
-                            <span className="text-warning">Writes paced (drain)</span>
-                        ) : (
-                            <span>Normal (trickle)</span>
-                        )}
+                        {device.Draining ? <span className="text-warning">Paced</span> : <span>Normal</span>}
                         <Sub>switched {formatAgo(device.LastModeSwitch)}</Sub>
                     </Metric>
                     <Metric label="Paced in the last hour" help={storageTermHelp.drainShare}>
@@ -65,7 +61,7 @@ export default function StorageIoDevice({ device }: StorageIoDeviceProps) {
                             device.QueueDepth.toLocaleString(undefined, { maximumFractionDigits: 1 })
                         )}
                         <Sub>
-                            drain above {thresholds.QueueDepthEnterDrain}, leave below {thresholds.QueueDepthExitDrain}
+                            paced above {thresholds.QueueDepthEnterDrain}, normal below {thresholds.QueueDepthExitDrain}
                         </Sub>
                     </Metric>
                     <Metric label="Disk class" help={deviceClassHelp[device.Class]}>

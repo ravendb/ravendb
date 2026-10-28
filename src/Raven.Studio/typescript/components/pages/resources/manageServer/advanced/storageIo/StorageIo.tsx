@@ -168,9 +168,9 @@ function StorageIoAboutView() {
                 <p>
                     <strong>Disks</strong>: one card per disk the databases write to. <em>Saturated</em> means the disk
                     was congested long enough to slow down writes and indexing (thresholds:{" "}
-                    <code>PerformanceHints.Storage.*</code>); it clears after an hour back to normal. When a disk is
-                    congested the server paces its writes (<em>drain</em> mode) so the journal writes users wait for go
-                    first.
+                    <code>PerformanceHints.Storage.*</code>); it clears after an hour back to normal. A congested disk
+                    switches to <em>Paced</em> mode (drain in the server log): data file syncs write their data in
+                    blocks, so the journal writes users wait for go first. Otherwise it is <em>Normal</em> (trickle).
                 </p>
                 <p>
                     <strong>Environments</strong>: per database, documents, configuration, every index and the shared
