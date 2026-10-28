@@ -75,6 +75,20 @@ namespace FastTests.Voron
         }
 
         [RavenFact(RavenTestCategory.Voron)]
+        public void Busy_reason_explains_the_sample_the_status_comes_from_not_the_device_now()
+        {
+            DeviceWriteBudget device = NewDevice();
+            var tracker = new DeviceTracker(device);
+            tracker.Add(new DeviceTracker.Sample(DateTime.UtcNow, Draining: true, JournalWriteLatencyInMs: 0.3, QueueDepth: 13), Thresholds);
+
+            StorageDeviceStatus status = tracker.GetStatus(Thresholds, out DeviceTracker.Sample? last);
+
+            Assert.Equal(StorageDeviceStatus.Busy, status);
+            Assert.False(device.IsDraining);
+            Assert.Equal("Writes were paced in the last 10 seconds: the disk is congested.", StorageDeviceIoInfo.GetStatusReason(tracker, status, last, Thresholds));
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
         public void Slow_journal_writes_are_saturated_only_when_sustained_and_idle_breaks_the_streak()
         {
             var tracker = new DeviceTracker(NewDevice());

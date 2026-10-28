@@ -20,7 +20,7 @@ export const storageStatusColor: Record<StorageDeviceStatus, "success" | "warnin
 
 export const storageStatusHelp: Record<StorageDeviceStatus, string> = {
     Ok: "The disk keeps up with the writes.",
-    Busy: "The disk is congested right now, or journal writes are slower than the congestion threshold.",
+    Busy: "Congested in the last 10 seconds: writes were paced, or journal writes were slower than the congestion threshold.",
     Saturated: "The disk was congested for long enough to slow down writes and indexing. Clears after an hour back to normal.",
 };
 

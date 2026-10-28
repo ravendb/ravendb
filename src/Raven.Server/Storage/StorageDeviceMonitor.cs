@@ -559,10 +559,14 @@ namespace Raven.Server.Storage
             }
         }
 
-        public StorageDeviceStatus GetStatus(CongestionThresholds thresholds)
+        public StorageDeviceStatus GetStatus(CongestionThresholds thresholds) => GetStatus(thresholds, out _);
+
+        // a reason built from the returned sample matches the status, the device itself may have moved on since
+        public StorageDeviceStatus GetStatus(CongestionThresholds thresholds, out Sample? last)
         {
             lock (_lock)
             {
+                last = _lastSample;
                 if (SaturatedSince != null)
                     return StorageDeviceStatus.Saturated;
 
