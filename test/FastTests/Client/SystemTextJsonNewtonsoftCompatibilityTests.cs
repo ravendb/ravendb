@@ -807,6 +807,65 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonReadsExpandoObjectsLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(
+                   "{\"I\":1,\"D\":1.5,\"S\":\"x\",\"B\":true,\"N\":null,\"O\":{\"A\":1,\"L\":[2]},\"L\":[1,\"a\",{\"B\":2},[3]]}", "expando"))
+        {
+            var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<ExpandoObject>(json);
+            var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<ExpandoObject>(json);
+
+            AssertSameValue(expected, actual, "$");
+        }
+
+        static void AssertSameValue(object expected, object actual, string path)
+        {
+            Assert.True(expected?.GetType() == actual?.GetType(), $"{path}: expected {expected?.GetType()} but got {actual?.GetType()}");
+
+            switch (expected)
+            {
+                case IDictionary<string, object> expectedDictionary:
+                    var actualDictionary = (IDictionary<string, object>)actual;
+                    Assert.Equal(expectedDictionary.Keys.Order(), actualDictionary.Keys.Order());
+                    foreach (KeyValuePair<string, object> entry in expectedDictionary)
+                        AssertSameValue(entry.Value, actualDictionary[entry.Key], $"{path}.{entry.Key}");
+                    break;
+                case List<object> expectedList:
+                    var actualList = (List<object>)actual;
+                    Assert.Equal(expectedList.Count, actualList.Count);
+                    for (int i = 0; i < expectedList.Count; i++)
+                        AssertSameValue(expectedList[i], actualList[i], $"{path}[{i}]");
+                    break;
+                default:
+                    Assert.True(Equals(expected, actual), $"{path}: expected {expected} but got {actual}");
+                    break;
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonWritesExpandoObjectsLikeNewtonsoft()
+    {
+        dynamic expando = new ExpandoObject();
+        expando.Name = "x";
+        expando.Count = 2;
+        expando.Nested = new ExpandoObject();
+        expando.Nested.City = "Hadera";
+        expando.Holder = new Untyped { Expando = new ExpandoObject(), Data = new ExpandoObject() };
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable((ExpandoObject)expando, context))
+        using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable((ExpandoObject)expando, context))
+        {
+            JObject expectedJson = JObject.Parse(expected.ToString());
+            JObject actualJson = JObject.Parse(actual.ToString());
+
+            Assert.True(JToken.DeepEquals(expectedJson, actualJson), $"Expected {expectedJson} but got {actualJson}");
+        }
+    }
+
     private class HoldsChars
     {
         public List<char> Chars { get; set; }
