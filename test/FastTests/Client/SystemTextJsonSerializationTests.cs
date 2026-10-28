@@ -875,6 +875,33 @@ namespace FastTests.Client
             }
         }
 
+        [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+        public void VectorSearchFieldNamesFollowStoreConventions()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.Serialization = new SystemTextJsonSerializationConventions();
+                    s.Conventions.PropertyNameConverter = member => char.ToLowerInvariant(member.Name[0]) + member.Name.Substring(1);
+                }
+            });
+
+            using (var session = store.OpenSession())
+            {
+                string linq = session.Query<User>()
+                    .VectorSearch(f => f.WithText(x => x.Name), v => v.ByText("x"))
+                    .ToString();
+
+                string documentQuery = session.Advanced.DocumentQuery<User>()
+                    .VectorSearch(f => f.WithText(x => x.Name), v => v.ByText("x"))
+                    .ToString();
+
+                Assert.Contains("embedding.text(name)", linq);
+                Assert.Contains("embedding.text(name)", documentQuery);
+            }
+        }
+
         private class RenamedPayload
         {
             [JsonPropertyName("n")]
