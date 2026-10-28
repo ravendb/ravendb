@@ -2598,16 +2598,16 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             {
                 var o1 = new Order
                 {
-                    Lines = new List<OrderLine> { new OrderLine { PricePerUnit = (decimal)1.0, Quantity = 3 }, new OrderLine { PricePerUnit = (decimal)1.5, Quantity = 3 } }
+                    Lines = new List<OrderLine> { new OrderLine { PricePerUnit = 1.0m, Quantity = 3 }, new OrderLine { PricePerUnit = 1.5m, Quantity = 3 } }
                 };
-                var o2 = new Order { Lines = new List<OrderLine> { new OrderLine { PricePerUnit = (decimal)1.0, Quantity = 5 }, } };
+                var o2 = new Order { Lines = new List<OrderLine> { new OrderLine { PricePerUnit = 1.0m, Quantity = 5 }, } };
                 var o3 = new Order
                 {
                     Lines = new List<OrderLine>
                     {
-                        new OrderLine {PricePerUnit = (decimal)3.0, Quantity = 6, Discount = (decimal)3.5},
-                        new OrderLine {PricePerUnit = (decimal)8.0, Quantity = 3, Discount = (decimal)3.5},
-                        new OrderLine {PricePerUnit = (decimal)1.8, Quantity = 2}
+                        new OrderLine {PricePerUnit = 3.0m, Quantity = 6, Discount = 3.5m},
+                        new OrderLine {PricePerUnit = 8.0m, Quantity = 3, Discount = 3.5m},
+                        new OrderLine {PricePerUnit = 1.8m, Quantity = 2}
                     }
                 };
 
@@ -2704,7 +2704,7 @@ from 'Orders' as o load o.Employee as employee select output(o, employee)", quer
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Order { Lines = new List<OrderLine> { new OrderLine { PricePerUnit = 25, Discount = (decimal)0.1, Quantity = 4 } } });
+                    session.Store(new Order { Lines = new List<OrderLine> { new OrderLine { PricePerUnit = 25, Discount = 0.1m, Quantity = 4 } } });
                     session.SaveChanges();
                 }
 
