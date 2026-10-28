@@ -1,5 +1,9 @@
 @use "Content/scss/bs5variables";
 
+.modal-xxl {
+    --bs-modal-width: min(#{bs5variables.$modal-xxl}, calc(100vw - 2 * var(--bs-modal-margin)));
+}
+
 .modal-dialog-scrollable .modal-content > form {
     display: flex;
     flex-direction: column;
