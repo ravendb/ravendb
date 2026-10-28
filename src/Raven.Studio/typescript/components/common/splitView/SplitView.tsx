@@ -19,11 +19,11 @@ import { ClassNameProps } from "components/models/common";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { splitViewActions, splitViewSelectors } from "components/common/splitView/store/splitViewSlice";
 import useConfirm from "components/common/ConfirmDialog";
-import { DirtyFlagProvider, useDirtyFlagContext } from "components/hooks/useDirtyFlag";
+import { DirtyFlagProvider, useDirtyFlag } from "components/hooks/useDirtyFlag";
 
 interface PageDirtyState {
     isDirty: boolean;
-    customDialog: () => JQueryDeferred<confirmDialogResult>;
+    customDialog?: () => JQueryDeferred<confirmDialogResult>;
 }
 
 const SplitViewContext = createContext<{
@@ -49,35 +49,21 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
     const [activeSheetOwnerId, setActiveSheetOwnerId] = useState<string | null>(null);
     const [sheetPortalNode, setSheetPortalNode] = useState<HTMLDivElement | null>(null);
     const onSheetCloseRef = useRef<(() => void) | null>(null);
-    const isSheetDirtyRef = useRef(false);
-    const pageDirtyStateRef = useRef<PageDirtyState>({ isDirty: false, customDialog: null });
+    const [pageDirtyState, setPageDirtyState] = useState<PageDirtyState>({ isDirty: false });
+    const [isSheetDirty, setIsSheetDirty] = useState(false);
     const confirm = useConfirm();
-    const setIsViewModelDirty = useDirtyFlagContext()?.setIsDirty;
 
-    const syncViewModelDirtyFlag = useCallback(() => {
-        const { isDirty, customDialog } = pageDirtyStateRef.current;
-        setIsViewModelDirty?.(isDirty || isSheetDirtyRef.current, isDirty ? customDialog : null);
-    }, [setIsViewModelDirty]);
+    useDirtyFlag(pageDirtyState.isDirty || isSheetDirty, pageDirtyState.customDialog);
 
     const setIsPageDirty = useCallback(
-        (isDirty: boolean, customDialog?: PageDirtyState["customDialog"]) => {
-            pageDirtyStateRef.current = { isDirty, customDialog };
-            syncViewModelDirtyFlag();
-        },
-        [syncViewModelDirtyFlag]
-    );
-
-    const setIsSheetDirty = useCallback(
-        (isDirty: boolean) => {
-            isSheetDirtyRef.current = isDirty;
-            syncViewModelDirtyFlag();
-        },
-        [syncViewModelDirtyFlag]
+        (isDirty: boolean, customDialog?: PageDirtyState["customDialog"]) =>
+            setPageDirtyState({ isDirty, customDialog }),
+        []
     );
 
     const confirmBeforeClose = useCallback(
         (action: () => void) => {
-            if (!isSheetDirtyRef.current) {
+            if (!isSheetDirty) {
                 action();
                 return;
             }
@@ -90,22 +76,19 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
                 confirmIcon: "trash",
             }).then((isConfirmed) => isConfirmed && action());
         },
-        [confirm]
+        [confirm, isSheetDirty]
     );
 
-    const setSheetComponent = useCallback(
-        (component: ReactNode) => {
-            if (component === null) {
-                onSheetCloseRef.current?.();
-                onSheetCloseRef.current = null;
-                setActiveSheetOwnerId(null);
-            }
-            // useDirtyFlag does not reset on unmount, so the replaced sheet's flag is cleared here
-            setIsSheetDirty(false);
-            setSheetComponentState(component);
-        },
-        [setIsSheetDirty]
-    );
+    const setSheetComponent = useCallback((component: ReactNode) => {
+        if (component === null) {
+            onSheetCloseRef.current?.();
+            onSheetCloseRef.current = null;
+            setActiveSheetOwnerId(null);
+        }
+        // useDirtyFlag does not reset on unmount, so the replaced sheet's flag is cleared here
+        setIsSheetDirty(false);
+        setSheetComponentState(component);
+    }, []);
 
     const registerSheetClose = useCallback((callback: (() => void) | null) => {
         onSheetCloseRef.current = callback;
