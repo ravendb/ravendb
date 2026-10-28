@@ -151,18 +151,36 @@ function StorageIoAboutView() {
     return (
         <AboutViewFloating>
             <AccordionItemWrapper targetId="about" icon="about" color="info">
-                <p>How this server adapts its writes to each disk, live.</p>
-                <p>
-                    <strong>Disks</strong>: one card per disk the databases write to. <em>Saturated</em> means the disk
-                    was congested long enough to slow down writes and indexing (thresholds:{" "}
-                    <code>PerformanceHints.Storage.*</code>); it clears after an hour back to normal. A congested disk
-                    switches to <em>Paced</em> mode (drain in the server log): data file syncs write their data in
-                    blocks, so the journal writes users wait for go first. Otherwise it is <em>Normal</em> (trickle).
+                <p>How this server writes to each of its disks. Updates every 3 seconds.</p>
+                <p className="mb-1">
+                    <strong>Disks</strong>: one card per disk that databases write to.
                 </p>
+                <ul>
+                    <li>
+                        <em>OK</em>: the disk keeps up. <em>Busy</em>: congested in the last 10 seconds.{" "}
+                        <em>Saturated</em>: congested long enough to slow down writes and indexing. It clears after an
+                        hour without congestion.
+                    </li>
+                    <li>
+                        <em>Paced</em> mode: when the disk is congested, data file syncs write their data in blocks, so
+                        the journal writes users wait for go first. Otherwise the mode is <em>Normal</em>. The server
+                        log calls them drain and trickle.
+                    </li>
+                    <li>
+                        Thresholds: <code>PerformanceHints.Storage.*</code>.
+                    </li>
+                </ul>
+                <p className="mb-1">
+                    <strong>Environments</strong>: one row per storage: the server, and each database&apos;s documents,
+                    configuration, indexes and shared index journal.
+                </p>
+                <ul>
+                    <li>Journal codec, journal write latency, unsynced data and the last data file sync.</li>
+                    <li>Rows that need attention come first. Sort by any column.</li>
+                </ul>
                 <p>
-                    <strong>Environments</strong>: per database, documents, configuration, every index and the shared
-                    index journal: journal compression, journal write latency, the unsynced backlog and why the last
-                    data file sync ran. Environments that need attention come first.
+                    <strong>Shared index journals</strong>: the journal files each database&apos;s indexes share, and
+                    which index keeps the oldest one on disk.
                 </p>
                 <p>The same data is in the server-wide debug package (admin.storage.io.json).</p>
             </AccordionItemWrapper>
