@@ -2296,8 +2296,6 @@ namespace Raven.Server.Documents
             
             internal TimeSpan? EtlFallbackTime;
 
-            internal Action BeforeSavingOlapEtlLastBatchTime;
-
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
             {
                 ActionToCallDuringDocumentDatabaseInternalDispose = action;

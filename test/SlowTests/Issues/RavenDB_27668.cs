@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.ServerWide.Commands.ETL;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
@@ -90,7 +91,7 @@ loadToOrders(noPartition(), {
         }
 
         [RavenFact(RavenTestCategory.Etl)]
-        public async Task SavingTheProgressAfterEveryBatchShouldKeepTheStoredLastBatchTime()
+        public async Task RestartedOlapEtlProcessShouldRetryAFailedScheduledRunRightAway()
         {
             using (var store = GetDocumentStore())
             {
@@ -98,17 +99,48 @@ loadToOrders(noPartition(), {
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 var (taskId, configuration) = await SetupOlapEtlAndWaitForInitialExport(store, database, path);
 
-                // a missed scheduled run makes the restarted process export the modified order right away
-                await UpdateEtlState(database, lastBatchTime: DateTime.UtcNow.AddDays(-2));
+                var process = (OlapEtl)database.EtlLoader.Processes.Single();
+                var filesAfterInitialExport = CountFiles(path);
+
+                // the scheduled run fails to export the modified order
+                var missedLastBatchTime = DateTime.UtcNow.AddDays(-2);
+                await UpdateEtlState(database, missedLastBatchTime);
+
+                process.ForTestingPurposesOnly().SimulateLoadFailure = true;
+
+                await ModifyOrder(store);
+                process.ForTestingPurposesOnly().TriggerScheduledRun();
+
+                Assert.True(await WaitForValueAsync(() => process.FallbackTime != null, true));
+
+                // the failed run used to be stored as the last batch time
+                Assert.False(await WaitForValueAsync(() => EtlProcess.GetProcessState(database, EtlName, TransformationName).LastBatchTime != missedLastBatchTime, true, timeout: 3000));
+
+                await RestartEtlProcess(store, database, taskId, configuration, RestartBy.TogglingTaskState);
+
+                Assert.Equal(filesAfterInitialExport + 1, await WaitForValueAsync(() => CountFiles(path), filesAfterInitialExport + 1));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Etl)]
+        public async Task SavingTheProgressAfterEveryBatchShouldKeepTheStoredLastBatchTime()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var path = NewDataPath(forceCreateDir: true);
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                await SetupOlapEtlAndWaitForInitialExport(store, database, path);
+
+                var process = (OlapEtl)database.EtlLoader.Processes.Single();
                 var storedLastBatchTime = EtlProcess.GetProcessState(database, EtlName, TransformationName).LastBatchTime;
 
                 // called after the progress of every batch was saved, and before the last batch time is saved
                 var lastBatchTimeAfterSavingTheProgress = new TaskCompletionSource<DateTime?>(TaskCreationOptions.RunContinuationsAsynchronously);
-                database.ForTestingPurposesOnly().BeforeSavingOlapEtlLastBatchTime = () =>
+                process.ForTestingPurposesOnly().BeforeSavingLastBatchTime = () =>
                     lastBatchTimeAfterSavingTheProgress.TrySetResult(EtlProcess.GetProcessState(database, EtlName, TransformationName).LastBatchTime);
 
                 await ModifyOrder(store);
-                await RestartEtlProcess(store, database, taskId, configuration, RestartBy.TogglingTaskState);
+                process.ForTestingPurposesOnly().TriggerScheduledRun();
 
                 Assert.True(await lastBatchTimeAfterSavingTheProgress.Task.WaitWithoutExceptionAsync(Timeout));
                 Assert.Equal(storedLastBatchTime, await lastBatchTimeAfterSavingTheProgress.Task);
@@ -122,13 +154,12 @@ loadToOrders(noPartition(), {
             {
                 var path = NewDataPath(forceCreateDir: true);
                 var database = await GetDocumentDatabaseInstanceFor(store);
-                var (taskId, configuration) = await SetupOlapEtlAndWaitForInitialExport(store, database, path);
+                await SetupOlapEtlAndWaitForInitialExport(store, database, path);
 
-                // a missed scheduled run makes the restarted process export the modified order right away
-                await UpdateEtlState(database, lastBatchTime: DateTime.UtcNow.AddDays(-2));
+                var process = (OlapEtl)database.EtlLoader.Processes.Single();
 
                 // the batch has already read the state, store a newer last batch time like another shard would
-                var newerLastBatchTime = DateTime.UtcNow.AddDays(-1);
+                var newerLastBatchTime = DateTime.UtcNow;
                 var newerLastBatchTimeStored = 0;
                 database.ForTestingPurposesOnly().OnEtlItemExtracted = (_, _, _) =>
                 {
@@ -138,11 +169,11 @@ loadToOrders(noPartition(), {
 
                 // called after the progress of every batch was saved, and before the last batch time is saved
                 var lastBatchTimeAfterSavingTheProgress = new TaskCompletionSource<DateTime?>(TaskCreationOptions.RunContinuationsAsynchronously);
-                database.ForTestingPurposesOnly().BeforeSavingOlapEtlLastBatchTime = () =>
+                process.ForTestingPurposesOnly().BeforeSavingLastBatchTime = () =>
                     lastBatchTimeAfterSavingTheProgress.TrySetResult(EtlProcess.GetProcessState(database, EtlName, TransformationName).LastBatchTime);
 
                 await ModifyOrder(store);
-                await RestartEtlProcess(store, database, taskId, configuration, RestartBy.TogglingTaskState);
+                process.ForTestingPurposesOnly().TriggerScheduledRun();
 
                 Assert.True(await lastBatchTimeAfterSavingTheProgress.Task.WaitWithoutExceptionAsync(Timeout));
                 Assert.Equal(newerLastBatchTime, await lastBatchTimeAfterSavingTheProgress.Task);
@@ -156,25 +187,24 @@ loadToOrders(noPartition(), {
             {
                 var path = NewDataPath(forceCreateDir: true);
                 var database = await GetDocumentDatabaseInstanceFor(store);
-                var (taskId, configuration) = await SetupOlapEtlAndWaitForInitialExport(store, database, path);
+                await SetupOlapEtlAndWaitForInitialExport(store, database, path);
+
+                var process = (OlapEtl)database.EtlLoader.Processes.Single();
+                var storedLastBatchTime = EtlProcess.GetProcessState(database, EtlName, TransformationName).LastBatchTime;
 
                 var saveAttempts = 0;
-                database.ForTestingPurposesOnly().BeforeSavingOlapEtlLastBatchTime = () =>
+                process.ForTestingPurposesOnly().BeforeSavingLastBatchTime = () =>
                 {
                     if (Interlocked.Increment(ref saveAttempts) < 3)
                         throw new TimeoutException("Simulating a failure to save the last batch time");
                 };
 
-                // a missed scheduled run makes the restarted process export the modified order right away
-                var missedLastBatchTime = DateTime.UtcNow.AddDays(-2);
-                await UpdateEtlState(database, missedLastBatchTime);
                 await ModifyOrder(store);
-                await RestartEtlProcess(store, database, taskId, configuration, RestartBy.TogglingTaskState);
+                process.ForTestingPurposesOnly().TriggerScheduledRun();
 
-                Assert.True(await WaitForValueAsync(() => EtlProcess.GetProcessState(database, EtlName, TransformationName).LastBatchTime > missedLastBatchTime, true));
+                Assert.True(await WaitForValueAsync(() => EtlProcess.GetProcessState(database, EtlName, TransformationName).LastBatchTime > storedLastBatchTime, true));
                 Assert.Equal(3, Volatile.Read(ref saveAttempts));
 
-                var process = database.EtlLoader.Processes.Single();
                 Assert.Null(database.TaskErrorsStorage.ReadLatestProcessErrorOfTask(process.TaskCategory, process.Name));
 
                 var filesAfterSave = CountFiles(path);

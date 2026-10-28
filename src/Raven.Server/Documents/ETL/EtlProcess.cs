@@ -789,20 +789,19 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract TStatsScope CreateScope(EtlRunStats stats);
 
-        protected virtual bool RunImmediatelyOnStart => true;
+        protected virtual void WaitBeforeFirstRun()
+        {
+        }
 
         public void Run()
         {
-            if (RunImmediatelyOnStart == false)
+            try
             {
-                try
-                {
-                    _waitForChanges.Wait(CancellationToken);
-                }
-                catch (Exception e) when (e is OperationCanceledException or ObjectDisposedException)
-                {
-                    return;
-                }
+                WaitBeforeFirstRun();
+            }
+            catch (Exception e) when (e is OperationCanceledException or ObjectDisposedException)
+            {
+                return;
             }
 
             var runStart = Database.Time.GetUtcNow();
