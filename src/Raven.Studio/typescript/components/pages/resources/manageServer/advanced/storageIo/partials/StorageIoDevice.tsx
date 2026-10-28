@@ -5,13 +5,12 @@ import Table from "react-bootstrap/Table";
 import { Icon } from "components/common/Icon";
 import {
     deviceClassHelp,
-    formatSyncCost,
     storageStatusColor,
     storageStatusHelp,
     storageStatusLabel,
     storageTermHelp,
 } from "common/storageIoTerms";
-import { formatAgo, formatBytes, formatMs, formatPercent } from "../storageIoFormat";
+import { formatAgo, formatBytes, formatMs, formatPercent, formatSyncCost } from "common/storageIoFormat";
 import StorageIoHistory from "./StorageIoHistory";
 
 interface StorageIoDeviceProps {
@@ -22,7 +21,7 @@ export default function StorageIoDevice({ device }: StorageIoDeviceProps) {
     const thresholds = device.Thresholds;
 
     return (
-        <Card className="storage-io-device mb-3">
+        <Card className="mb-3">
             <Card.Header className="hstack gap-2 flex-wrap">
                 <Icon icon="drive" margin="m-0" />
                 <strong>Disk {device.MountPoint ?? device.PathOnDevice}</strong>
@@ -51,7 +50,7 @@ export default function StorageIoDevice({ device }: StorageIoDeviceProps) {
                         </Sub>
                     </Metric>
                     <Metric label="Data file syncs" help={storageTermHelp.syncCost}>
-                        {formatSyncCost(device.SyncCostInMs, formatMs)}
+                        {formatSyncCost(device.SyncCostInMs)}
                         <Sub>writes get paced above {formatMs(thresholds.SyncCostDrainInMs)}</Sub>
                     </Metric>
                     <Metric label="Queue depth" help={storageTermHelp.queueDepth}>
@@ -128,7 +127,7 @@ export default function StorageIoDevice({ device }: StorageIoDeviceProps) {
 
 function Metric({ label, help, children }: { label: string; help: string; children: ReactNode }) {
     return (
-        <div className="storage-io-metric">
+        <div>
             <div className="small text-muted" title={help}>
                 {label} <Icon icon="info" margin="m-0" size="xs" />
             </div>

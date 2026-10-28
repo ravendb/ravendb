@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { formatMs } from "../storageIoFormat";
+import { formatMs } from "common/storageIoFormat";
 
 interface StorageIoHistoryProps {
     history: Raven.Server.Storage.StorageDeviceSample[];
@@ -47,21 +47,16 @@ export default function StorageIoHistory({ history, thresholds }: StorageIoHisto
     });
 
     // gaps (no journal write in the interval) break the line instead of pretending the disk was fast
-    const segments: string[] = [];
-    let current = "";
+    let latencyPath = "";
+    let pen = "M";
     history.forEach((s, i) => {
         if (s.JournalWriteLatencyInMs == null) {
-            if (current) {
-                segments.push(current);
-            }
-            current = "";
+            pen = "M";
             return;
         }
-        current += `${current ? "L" : "M"}${xOf(times[i]).toFixed(1)},${y(s.JournalWriteLatencyInMs).toFixed(1)} `;
+        latencyPath += `${pen}${xOf(times[i]).toFixed(1)},${y(s.JournalWriteLatencyInMs).toFixed(1)} `;
+        pen = "L";
     });
-    if (current) {
-        segments.push(current);
-    }
 
     const period = span >= 120_000 ? `${Math.round(span / 60_000)} min` : `${Math.round(span / 1000)} s`;
 
@@ -119,9 +114,7 @@ export default function StorageIoHistory({ history, thresholds }: StorageIoHisto
                             />
                         ))}
                         <line x1={0} x2={width} y1={thresholdY} y2={thresholdY} className="threshold" />
-                        {segments.map((d) => (
-                            <path key={d} d={d} className="latency" />
-                        ))}
+                        {latencyPath && <path d={latencyPath} className="latency" />}
                         {sample && (
                             <line
                                 x1={xOf(times[hovered])}

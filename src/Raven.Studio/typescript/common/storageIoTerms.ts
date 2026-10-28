@@ -65,10 +65,6 @@ export const storageTermHelp = {
 };
 
 // the sync cost average expires after a minute without a data file sync, so 0 means no recent sync, not a fast one
-export function formatSyncCost(ms: number, formatMs: (ms: number) => string): string {
-    return ms > 0 ? formatMs(ms) : "no recent sync";
-}
-
 type WriteMode = Sparrow.Server.Platform.Pal.RvnWriteMode;
 
 export const writeModeLabel: Record<WriteMode, string> = {

@@ -1,15 +1,16 @@
 import React, { useMemo, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Form from "react-bootstrap/Form";
+import ProgressBar from "react-bootstrap/ProgressBar";
 import Table from "react-bootstrap/Table";
 import { syncReasonHelp, syncReasonLabel, storageTermHelp } from "common/storageIoTerms";
-import { formatAgo, formatBytes, formatMs } from "../storageIoFormat";
+import { formatAgo, formatBytes, formatMs } from "common/storageIoFormat";
 
 type EnvironmentIo = Raven.Server.Storage.StorageEnvironmentIoInfo;
 
 interface StorageIoEnvironmentsProps {
     environments: EnvironmentIo[];
-    mountPointByDeviceId: Record<string, string>;
+    devices: Raven.Server.Storage.StorageDeviceIoInfo[];
     // flusher yields per minute, computed by the page from two consecutive polls
     yieldsPerMinute: Record<string, number>;
 }
@@ -34,11 +35,7 @@ function problemScore(env: EnvironmentIo): number {
     return score;
 }
 
-export default function StorageIoEnvironments({
-    environments,
-    mountPointByDeviceId,
-    yieldsPerMinute,
-}: StorageIoEnvironmentsProps) {
+export default function StorageIoEnvironments({ environments, devices, yieldsPerMinute }: StorageIoEnvironmentsProps) {
     const [filter, setFilter] = useState("");
     const [problemsOnly, setProblemsOnly] = useState(false);
 
@@ -87,7 +84,7 @@ export default function StorageIoEnvironments({
             {groups.length === 0 ? (
                 <div className="text-muted small">No environment matches.</div>
             ) : (
-                <Table size="sm" responsive className="storage-io-environments">
+                <Table size="sm" responsive>
                     <thead>
                         <tr>
                             <th>Environment</th>
@@ -110,7 +107,7 @@ export default function StorageIoEnvironments({
                                 <EnvironmentRow
                                     key={environmentKey(env)}
                                     env={env}
-                                    mountPoint={env.DeviceId ? mountPointByDeviceId[env.DeviceId] : null}
+                                    device={devices.find((d) => d.DeviceId === env.DeviceId)}
                                     yieldsPerMinute={yieldsPerMinute[environmentKey(env)]}
                                 />
                             ))}
@@ -124,11 +121,11 @@ export default function StorageIoEnvironments({
 
 function EnvironmentRow({
     env,
-    mountPoint,
+    device,
     yieldsPerMinute,
 }: {
     env: EnvironmentIo;
-    mountPoint: string;
+    device: Raven.Server.Storage.StorageDeviceIoInfo;
     yieldsPerMinute: number;
 }) {
     const sync = env.Sync;
@@ -147,7 +144,9 @@ function EnvironmentRow({
                 {env.Name} <span className="text-muted small">{env.Type}</span>
             </td>
             <td>
-                {mountPoint ?? (
+                {device ? (
+                    (device.MountPoint ?? device.PathOnDevice)
+                ) : (
                     <span
                         className="text-muted small"
                         title="The device could not be identified, the environment uses its own write budget"
@@ -182,9 +181,7 @@ function EnvironmentRow({
                 title={`Soft limit ${formatBytes(sync.SoftLimitInBytes)}, mandatory limit ${formatBytes(sync.MandatoryLimitInBytes)}`}
             >
                 {formatBytes(sync.WrittenButUnsyncedInBytes)}
-                <div className="storage-io-bar">
-                    <div className={`bg-${unsyncedColor}`} style={{ width: `${unsyncedShare * 100}%` }} />
-                </div>
+                <ProgressBar now={unsyncedShare * 100} variant={unsyncedColor} style={{ height: 4, width: 80 }} />
             </td>
             <td>
                 {sync.LastReason == null ? (
@@ -201,8 +198,8 @@ function EnvironmentRow({
                         {formatBytes(sync.LastSizeInBytes)} in {formatMs(sync.LastTotalInMs)}
                         <div className="text-muted small">
                             {sync.LastDrain
-                                ? `${formatMs(sync.LastWritebackInMs)} paced writeback + ${formatMs(sync.LastTotalInMs - sync.LastWritebackInMs)} flush`
-                                : "plain sync"}
+                                ? `paced: ${formatMs(sync.LastWritebackInMs)} in blocks + ${formatMs(sync.LastTotalInMs - sync.LastWritebackInMs)} fsync`
+                                : "not paced"}
                             , {formatAgo(sync.LastAt)}
                         </div>
                     </>

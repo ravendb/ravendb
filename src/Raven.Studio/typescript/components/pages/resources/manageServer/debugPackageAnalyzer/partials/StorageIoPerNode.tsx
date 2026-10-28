@@ -23,11 +23,7 @@ import {
     writeModeLabel,
     writeModeTermHelp,
 } from "common/storageIoTerms";
-import {
-    formatBytes,
-    formatMs,
-    formatPercent,
-} from "components/pages/resources/manageServer/advanced/storageIo/storageIoFormat";
+import { formatBytes, formatMs, formatPercent } from "common/storageIoFormat";
 
 type DebugPackageAnalysisSummary = Raven.Server.Documents.Handlers.Debugging.DebugPackage.DebugPackageAnalysisSummary;
 type StorageIoAnalysisInfo =
@@ -482,18 +478,14 @@ function DeviceStatus({ devices }: { devices: StorageIoDeviceAnalysis[] }) {
 
 function PacedCell({ devices }: { devices: StorageIoDeviceAnalysis[] }) {
     if (devices.some((d) => d.DrainShareOfLastHour != null)) {
-        return (
-            <>
-                <NumberRange values={devices.map((d) => d.DrainShareOfLastHour)} format={formatPercent} />
-            </>
-        );
+        return <NumberRange values={devices.map((d) => d.DrainShareOfLastHour)} format={formatPercent} />;
     }
     return devices.some((d) => d.LikelyDraining) ? (
         <span title="Older package, derived from io-metrics: data file syncs average above the drain threshold">
             likely
         </span>
     ) : (
-        <>no</>
+        "no"
     );
 }
 

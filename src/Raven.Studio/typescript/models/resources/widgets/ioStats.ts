@@ -4,6 +4,7 @@ import historyAwareNodeStats = require("models/resources/widgets/historyAwareNod
 import IoStatsResult = Raven.Client.ServerWide.Operations.IoStatsResult;
 import genUtils = require("common/generalUtils");
 import storageIoTerms = require("common/storageIoTerms");
+import storageIoFormat = require("common/storageIoFormat");
 
 class ioStats extends historyAwareNodeStats<IoStatsPayload> {
 
@@ -100,9 +101,9 @@ class ioStats extends historyAwareNodeStats<IoStatsPayload> {
         }
 
         const lines: [string, string][] = [
-            ["Writes paced in the last hour", Math.round(status.DrainShareOfLastHour * 100) + "%"],
-            ["Journal writes", ioStats.formatMs(status.JournalWriteLatencyInMs)],
-            ["Data syncs", storageIoTerms.formatSyncCost(status.SyncCostInMs, ioStats.formatMs)],
+            ["Writes paced in the last hour", storageIoFormat.formatPercent(status.DrainShareOfLastHour)],
+            ["Journal writes", storageIoFormat.formatMs(status.JournalWriteLatencyInMs)],
+            ["Data syncs", storageIoFormat.formatSyncCost(status.SyncCostInMs)],
             ["Mount point", status.MountPoint],
         ];
 
@@ -118,13 +119,6 @@ class ioStats extends historyAwareNodeStats<IoStatsPayload> {
         return `<div class="margin-bottom-sm">${genUtils.escapeHtml(status.Summary)}</div>${rows}${disksNote}`;
     }
 
-    private static formatMs(value: number): string {
-        if (value == null) {
-            return "-";
-        }
-        return value.toLocaleString(undefined, { maximumFractionDigits: value < 10 ? 1 : 0 }) + " ms";
-    }
-    
     private static sumUp(payload: IoStatsPayload, accessor: (item: IoStatsResult) => number): number | undefined {
         if (!payload.Items.length) {
             return undefined;

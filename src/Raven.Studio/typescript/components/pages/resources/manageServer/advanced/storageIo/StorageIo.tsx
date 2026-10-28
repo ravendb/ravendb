@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Form from "react-bootstrap/Form";
-import { AboutViewHeading } from "components/common/AboutView";
-import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
+import { useAsyncCallback } from "react-async-hook";
+import AboutViewFloating, { AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { FlexGrow } from "components/common/FlexGrow";
 import { EmptySet } from "components/common/EmptySet";
@@ -20,7 +20,6 @@ export default function StorageIo() {
     const [report, setReport] = useState<Raven.Server.Storage.StorageIoReport>(null);
     const [loadedAt, setLoadedAt] = useState<Date>(null);
     const [live, setLive] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
     const [yieldsPerMinute, setYieldsPerMinute] = useState<Record<string, number>>({});
     const previous = useRef<{ at: number; yields: Record<string, number> }>(null);
 
@@ -62,20 +61,7 @@ export default function StorageIo() {
         }
     }, []);
 
-    const mountPointByDeviceId = useMemo(() => {
-        const map: Record<string, string> = {};
-        report?.Devices.forEach((d) => (map[d.DeviceId] = d.MountPoint ?? d.PathOnDevice));
-        return map;
-    }, [report]);
-
-    const handleRefresh = async () => {
-        setRefreshing(true);
-        try {
-            await load();
-        } finally {
-            setRefreshing(false);
-        }
-    };
+    const refresh = useAsyncCallback(load);
 
     const devices = report ? [...report.Devices].sort((a, b) => severity(b.Status) - severity(a.Status)) : [];
 
@@ -88,7 +74,12 @@ export default function StorageIo() {
                     <StorageIoAboutView />
                 </div>
                 <div className="hstack gap-3 flex-wrap mb-3">
-                    <ButtonWithSpinner onClick={handleRefresh} variant="primary" isSpinning={refreshing} icon="refresh">
+                    <ButtonWithSpinner
+                        onClick={refresh.execute}
+                        variant="primary"
+                        isSpinning={refresh.loading}
+                        icon="refresh"
+                    >
                         Refresh
                     </ButtonWithSpinner>
                     <Form.Check
@@ -119,7 +110,7 @@ export default function StorageIo() {
                         <h3 className="mt-4">Environments</h3>
                         <StorageIoEnvironments
                             environments={report.Environments}
-                            mountPointByDeviceId={mountPointByDeviceId}
+                            devices={report.Devices}
                             yieldsPerMinute={yieldsPerMinute}
                         />
 
@@ -133,10 +124,6 @@ export default function StorageIo() {
 }
 
 function WriteModeLine({ writeMode }: { writeMode: Raven.Server.Storage.StorageWriteModeInfo }) {
-    if (!writeMode) {
-        return null;
-    }
-
     const { Effective, Configured } = writeMode;
     const fellBack = Configured === "Auto" && Effective !== "IoRing";
 
