@@ -171,7 +171,12 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     return properties;
 
                 foreach (JsonPropertyInfo property in typeInfo.Properties)
+                {
+                    if (property.AttributeProvider == null && property.Get == null)
+                        continue;
+
                     properties[property.Name] = property;
+                }
 
                 return properties;
             });
