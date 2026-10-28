@@ -24,6 +24,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private const string NewtonsoftStringEnumConverterName = "Newtonsoft.Json.Converters.StringEnumConverter";
 
+        private const string NewtonsoftJTokenName = "Newtonsoft.Json.Linq.JToken";
+
         private static readonly ConcurrentDictionary<Type, Action<object, IEnumerable>> _collectionAdders = new();
 
         private static readonly MethodInfo _addToCollectionMethod = typeof(RavenJsonTypeInfoResolver).GetMethod(nameof(AddToCollection), BindingFlags.NonPublic | BindingFlags.Static);
@@ -84,6 +86,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         public override JsonTypeInfo GetTypeInfo(Type type, JsonSerializerOptions options)
         {
             AssertMembersCanBeResolved(type);
+            AssertNotNewtonsoftLinqType(type);
             AssertNoNewtonsoftTypeConverter(type);
             return base.GetTypeInfo(type, options);
         }
@@ -128,6 +131,15 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             SetupIdentityPropertyConditionalSerialization(typeInfo);
             AssertNoNewtonsoftMemberAttributes(typeInfo);
             AssertNewtonsoftConstructorIsUsed(typeInfo.Type);
+        }
+
+        private static void AssertNotNewtonsoftLinqType(Type type)
+        {
+            for (Type current = type; current != null; current = current.BaseType)
+            {
+                if (current.FullName == NewtonsoftJTokenName)
+                    ThrowNewtonsoftLinqTypeNotSupported(type);
+            }
         }
 
         private void AssertNoNewtonsoftTypeConverter(Type type)
@@ -693,6 +705,12 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 $"{target} is annotated with {NewtonsoftJsonConverterAttributeName}. " +
                 $"{nameof(SystemTextJsonSerializationConventions)} requires System.Text.Json.Serialization.JsonConverterAttribute with a System.Text.Json converter, " +
                 $"or a converter registered through {nameof(SystemTextJsonSerializationConventions)}.{nameof(SystemTextJsonSerializationConventions.CustomizeJsonSerializerOptions)}.");
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowNewtonsoftLinqTypeNotSupported(Type type) =>
+            throw new NotSupportedException(
+                $"Type '{type.FullName}' is a Newtonsoft.Json LINQ type. " +
+                $"{nameof(SystemTextJsonSerializationConventions)} requires object, dynamic, System.Text.Json.JsonElement or System.Text.Json.Nodes.JsonNode for untyped JSON.");
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void ThrowNewtonsoftExtensionDataNotSupported(MemberInfo member) =>
