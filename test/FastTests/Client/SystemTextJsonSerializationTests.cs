@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -225,6 +226,42 @@ namespace FastTests.Client
             public int FromString { get; set; }
             public Dictionary<int, int> IntKeys { get; set; }
             public Dictionary<double, int> DoubleKeys { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void CustomEnumerableWithEnumerableConstructorRoundTrips()
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+            var entity = new WithCustomEnumerable { Names = new NamesEnumerable(["a", "b"]) };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(entity, context))
+            {
+                Assert.True(json.TryGet(nameof(WithCustomEnumerable.Names), out BlittableJsonReaderArray names));
+                Assert.Equal(2, names.Length);
+
+                var read = conventions.Serialization.DefaultConverter.FromBlittable<WithCustomEnumerable>(json);
+                Assert.Equal(["a", "b"], read.Names);
+            }
+        }
+
+        private class NamesEnumerable : IEnumerable<string>
+        {
+            private readonly List<string> _names;
+
+            public NamesEnumerable(IEnumerable<string> names)
+            {
+                _names = names.ToList();
+            }
+
+            public IEnumerator<string> GetEnumerator() => _names.GetEnumerator();
+
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        }
+
+        private class WithCustomEnumerable
+        {
+            public NamesEnumerable Names { get; set; }
         }
 
         private class FloatingPointNumbers
