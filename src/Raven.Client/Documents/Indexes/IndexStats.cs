@@ -172,6 +172,12 @@ namespace Raven.Client.Documents.Indexes
 
         public IndexingPerformanceBasicStats LastBatchStats { get; set; }
 
+        /// <summary>
+        /// Heaviness grade quantifying the expected resource impact of this index.
+        /// Computed from the index definition (static score) and data scale/runtime factors (full score).
+        /// </summary>
+        public IndexHeavinessGrade HeavinessGrade { get; set; }
+
         public sealed class MemoryStats
         {
             public MemoryStats()

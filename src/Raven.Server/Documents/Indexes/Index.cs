@@ -294,6 +294,13 @@ namespace Raven.Server.Documents.Indexes
         
         private HashSet<string> _fieldsReportedAsComplex = new();
         private bool _newComplexFieldsToReport = false;
+        private record CachedStaticHeaviness(IndexHeavinessGrade Grade, IndexDefinitionBaseServerSide Definition);
+        private record CachedFullHeaviness(IndexHeavinessGrade Grade, long TickCount);
+        // Full grade opens a read transaction to scan collection sizes; cache for 60 s to avoid
+        // overhead on frequent Studio polls. A slightly stale score is acceptable for a heuristic.
+        private const long FullHeavinessCacheMs = 60_000;
+        private volatile CachedStaticHeaviness _cachedHeaviness;
+        private volatile CachedFullHeaviness _cachedFullHeaviness;
         public HashSet<IndexField> ComplexFieldsNotIndexedByCorax { get; private set; }
 
         protected Index(IndexType type, IndexSourceType sourceType, IndexDefinitionBaseServerSide definition, AbstractStaticIndexBase compiled)
@@ -3250,6 +3257,9 @@ namespace Raven.Server.Documents.Indexes
                     if (calculateMemoryStats)
                         stats.Memory = GetMemoryStats();
 
+                    if (queryContext != null)
+                        stats.HeavinessGrade = ComputeHeavinessGrade(stats, queryContext);
+
                     return stats;
                 }
             }
@@ -3261,6 +3271,93 @@ namespace Raven.Server.Documents.Indexes
             return GetReferencedCollections()?
                 .SelectMany(p => p.Value?.Select(z => z.Name))
                 .ToHashSet();
+        }
+
+        private IndexHeavinessGrade ComputeHeavinessGrade(IndexStats stats, QueryOperationContext queryContext)
+        {
+            CachedFullHeaviness cachedFull = _cachedFullHeaviness;
+            if (cachedFull != null && Environment.TickCount64 - cachedFull.TickCount < FullHeavinessCacheMs)
+                return cachedFull.Grade;
+
+            try
+            {
+                IndexDefinitionBaseServerSide currentDefinition = Definition;
+                IndexDefinition indexDefinition = currentDefinition.GetOrCreateIndexDefinitionInternal();
+
+                if (indexDefinition == null)
+                    return null;
+
+                IndexHeavinessGrade staticGrade = GetOrComputeStaticHeavinessGrade(indexDefinition, currentDefinition);
+
+                IndexDefinitionHeavinessAnalyzer.CollectionDataProvider collectionDataProvider = null;
+                DocumentsOperationContext docsContext = null;
+                IDisposable contextRelease = null;
+
+                try
+                {
+                    if (queryContext?.Documents?.Transaction != null)
+                    {
+                        docsContext = queryContext.Documents;
+                    }
+                    else if (DocumentDatabase != null)
+                    {
+                        contextRelease = DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out docsContext);
+                        docsContext.OpenReadTransaction();
+                    }
+
+                    if (docsContext != null)
+                    {
+                        DocumentsOperationContext capturedContext = docsContext;
+                        collectionDataProvider = collectionName =>
+                        {
+                            if (string.Equals(collectionName, Constants.Documents.Collections.AllDocumentsCollection, StringComparison.OrdinalIgnoreCase))
+                            {
+                                long totalCountOfDocuments = 0;
+                                long totalDocumentsSizeInBytes = 0;
+
+                                foreach (string name in DocumentDatabase.DocumentsStorage.GetCollectionsNames(capturedContext))
+                                {
+                                    CollectionDetails collectionDetails = DocumentDatabase.DocumentsStorage.GetCollectionDetails(capturedContext, name);
+                                    totalCountOfDocuments += collectionDetails.CountOfDocuments;
+                                    totalDocumentsSizeInBytes += collectionDetails.DocumentsSize.SizeInBytes;
+                                }
+
+                                return (totalCountOfDocuments, totalDocumentsSizeInBytes);
+                            }
+
+                            CollectionDetails details = DocumentDatabase.DocumentsStorage.GetCollectionDetails(capturedContext, collectionName);
+                            return (details.CountOfDocuments, details.DocumentsSize.SizeInBytes);
+                        };
+                    }
+
+                    IndexHeavinessGrade result = IndexDefinitionHeavinessAnalyzer.ComputeFullGrade(staticGrade, currentDefinition.Collections, stats, collectionDataProvider);
+                    _cachedFullHeaviness = new CachedFullHeaviness(result, Environment.TickCount64);
+                    return result;
+                }
+                finally
+                {
+                    contextRelease?.Dispose();
+                }
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Failed to compute heaviness grade for index '{Name}'.", e);
+
+                return null;
+            }
+        }
+
+        private IndexHeavinessGrade GetOrComputeStaticHeavinessGrade(IndexDefinition indexDefinition, IndexDefinitionBaseServerSide serverSideDefinition)
+        {
+            CachedStaticHeaviness cached = _cachedHeaviness;
+
+            if (cached != null && ReferenceEquals(cached.Definition, serverSideDefinition))
+                return cached.Grade;
+
+            IndexHeavinessGrade staticGrade = IndexDefinitionHeavinessAnalyzer.ComputeStaticGrade(indexDefinition, serverSideDefinition.Collections);
+            _cachedHeaviness = new CachedStaticHeaviness(staticGrade, serverSideDefinition);
+            return staticGrade;
         }
 
         private IndexStats.MemoryStats GetMemoryStats()
