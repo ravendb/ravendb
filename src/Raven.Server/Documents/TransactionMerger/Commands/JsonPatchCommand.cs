@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using Microsoft.AspNetCore.JsonPatch.Operations;
 using NCrontab.Advanced.Extensions;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
@@ -10,7 +9,6 @@ using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Operation = Microsoft.AspNetCore.JsonPatch.Operations.Operation;
 
 namespace Raven.Server.Documents.TransactionMerger.Commands
 {
@@ -314,22 +312,22 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
 
             foreach (BlittableJsonReaderObject command in commandsBlittable)
             {
-                if (command.TryGet(nameof(Operation.op), out string op) == false ||
+                if (command.TryGet("op", out string op) == false ||
                     Enum.TryParse(op, ignoreCase: true, out CommandTypes type) == false)
                     throw new ArgumentException($"Unable to understand 'op' {op}");
 
-                if (command.TryGet(nameof(Operation.path), out string path) == false)
+                if (command.TryGet("path", out string path) == false)
                     throw new ArgumentException("Unable to find 'path' property");
 
-                if ((command.TryGet(nameof(Operation.from), out string from) == false || string.IsNullOrWhiteSpace(from)) &&
-                    (op == nameof(OperationType.Move).ToLower() ||
-                     op == nameof(OperationType.Copy).ToLower()))
+                if ((command.TryGet("from", out string from) == false || string.IsNullOrWhiteSpace(from)) &&
+                    (type == CommandTypes.Move ||
+                     type == CommandTypes.Copy))
                     throw new ArgumentException($"Unable to find 'from' property for operation '{op}'");
 
-                if (command.TryGet(nameof(Operation.value), out object value) == false &&
-                    (op == nameof(OperationType.Add).ToLower() ||
-                     op == nameof(OperationType.Replace).ToLower() ||
-                     op == nameof(OperationType.Test).ToLower()))
+                if (command.TryGet("value", out object value) == false &&
+                    (type == CommandTypes.Add ||
+                     type == CommandTypes.Replace ||
+                     type == CommandTypes.Test))
                     throw new ArgumentException($"Unable to find 'value' property for operation '{op}'");
 
                 var paths = path.Split('/');
