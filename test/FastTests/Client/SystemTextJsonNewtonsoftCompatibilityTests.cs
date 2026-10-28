@@ -586,6 +586,55 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class HoldsNewtonsoftLinq
+    {
+        public JObject Data { get; set; }
+    }
+
+    private class HoldsSystemTextJsonNodes
+    {
+        public System.Text.Json.Nodes.JsonNode Node { get; set; }
+
+        public System.Text.Json.JsonElement Element { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonRejectsNewtonsoftLinqTypes()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            AssertRejected(new HoldsNewtonsoftLinq { Data = JObject.Parse("{\"Name\":\"x\"}") });
+            AssertRejected(new Untyped { Data = JObject.Parse("{\"Name\":\"x\"}") });
+            AssertRejected(JObject.Parse("{\"Name\":\"x\"}"));
+
+            void AssertRejected(object entity)
+            {
+                var exception = Assert.Throws<NotSupportedException>(() => SystemTextJson.Serialization.DefaultConverter.ToBlittable(entity, context));
+                Assert.Contains("Newtonsoft.Json.Linq.JObject", exception.Message);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonRoundTripsJsonNodeAndJsonElement()
+    {
+        var holder = new HoldsSystemTextJsonNodes
+        {
+            Node = System.Text.Json.Nodes.JsonNode.Parse("{\"Name\":\"x\",\"Tags\":[\"a\"]}"),
+            Element = System.Text.Json.JsonDocument.Parse("{\"Count\":2}").RootElement
+        };
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = SystemTextJson.Serialization.DefaultConverter.ToBlittable(holder, context))
+        {
+            var read = SystemTextJson.Serialization.DefaultConverter.FromBlittable<HoldsSystemTextJsonNodes>(json);
+
+            Assert.Equal("x", (string)read.Node["Name"]);
+            Assert.Equal("a", (string)read.Node["Tags"][0]);
+            Assert.Equal(2, read.Element.GetProperty("Count").GetInt32());
+        }
+    }
+
     private static DocumentConventions Newtonsoft { get; } = new() { Serialization = new NewtonsoftJsonSerializationConventions() };
 
     private static DocumentConventions SystemTextJson { get; } = new() { Serialization = new SystemTextJsonSerializationConventions() };
