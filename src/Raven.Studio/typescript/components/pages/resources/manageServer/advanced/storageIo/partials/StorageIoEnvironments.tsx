@@ -182,7 +182,7 @@ function getColumns(
             ),
             accessorFn: (env) => env.Sync.WrittenButUnsyncedInBytes,
             cell: UnsyncedCell,
-            size: getSize(11, 115),
+            size: getSize(11, 125),
         },
         {
             id: "lastSync",
@@ -260,7 +260,12 @@ function UnsyncedCell({ row }: CellContext<EnvironmentIo, unknown>) {
             title={`Soft limit ${formatBytes(sync.SoftLimitInBytes)}, mandatory limit ${formatBytes(sync.MandatoryLimitInBytes)}`}
         >
             {formatBytes(sync.WrittenButUnsyncedInBytes)}
-            <ProgressBar now={share * 100} variant={color} style={{ height: 4, width: 50 }} />
+            {/* the default track has the color of every other table row */}
+            <ProgressBar
+                now={share * 100}
+                variant={color}
+                style={{ height: 4, width: 50, flexShrink: 0, backgroundColor: "rgba(127, 127, 127, 0.3)" }}
+            />
         </span>
     );
 }
