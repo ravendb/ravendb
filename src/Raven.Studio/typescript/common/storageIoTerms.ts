@@ -56,6 +56,8 @@ export const storageTermHelp = {
         "Moving average of the journal write time of every storage environment whose data file is on this disk: the server, each database, its shared index journal and indexes writing their own journal. Users wait for these writes. Journals moved to another disk (e.g. a symlink) still count for the disk of their data file.",
     syncCost: "Average time of a data file sync on this disk, including the paced writeback. Above its threshold the disk switches to paced mode.",
     queueDepth: "Average number of requests queued on the device (iostat aqu-sz). Above its threshold the disk switches to paced mode.",
+    diskStats:
+        "Requests the OS sends to this disk per second and their average size (the same counters as the IO Stats dashboard widget). Cloud disks limit both requests per second (IOPS) and bytes per second (throughput), reads and writes together. Small requests hit the IOPS limit first, large ones the throughput limit: compare with the limits of the volume.",
     pipelining: "Pipelining: a journal write is submitted while the previous one is still in flight. Used for small, latency bound writes.",
     consolidation: "Batch consolidation: the transaction merger holds a batch open a bit longer so one larger journal write replaces several small ones.",
     flusherYields: "How often the flusher postponed flushing this environment to leave the disk to journal writes.",
