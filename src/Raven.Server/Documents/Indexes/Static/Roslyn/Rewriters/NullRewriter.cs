@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return base.VisitLiteralExpression(node);
         }
 
-        private static bool ShouldApply(LiteralExpressionSyntax node)
+        internal static bool ShouldApply(LiteralExpressionSyntax node)
         {
             var parent = node.Parent;
             if (parent == null)

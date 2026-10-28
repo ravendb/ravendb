@@ -1,25 +1,12 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Raven.Server.Documents.Indexes.Static.Linq
 {
-    public static class DynamicEnumerable
+    public static partial class DynamicEnumerable
     {
-        public static IEnumerable<dynamic> Distinct(IEnumerable source)
-        {
-            if (source is DynamicArray array)
-                return array.Distinct();
-
-            return new DynamicArray((IEnumerable<object>)source).Distinct();
-        }
-
-        public static IEnumerable<dynamic> Union(object source, object other)
-        {
-            return new DynamicArray(((IEnumerable<object>)source).Union((IEnumerable<object>)other));
-        }
-
         public static dynamic First(IEnumerable source)
         {
             return FirstOrDefault(source);
@@ -117,7 +104,6 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
         public static dynamic ElementAt(IEnumerable source, int index)
         {
             return ElementAtOrDefault(source, index);
-
         }
 
         public static dynamic ElementAtOrDefault(IEnumerable source, int index)
@@ -131,56 +117,17 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
             return result;
         }
 
-
-        private static IEnumerable<dynamic> Yield(IEnumerator enumerator)
+        public static IEnumerable<dynamic> Distinct(IEnumerable source)
         {
-            do
-            {
-                yield return enumerator.Current;
-            } while (enumerator.MoveNext());
+            if (source is DynamicArray array)
+                return array.Distinct();
+
+            return new DynamicArray((IEnumerable<object>)source).Distinct();
         }
 
-        public static dynamic Min(IEnumerable source)
+        public static IEnumerable<dynamic> Union(object source, object other)
         {
-            if (source == null) return DynamicNullObject.Null;
-
-            var enumerator = source.GetEnumerator();
-            if (enumerator.MoveNext() == false)
-                return DynamicNullObject.Null;
-
-            var result = Yield(enumerator).Min();
-            if (ReferenceEquals(result, null))
-                return DynamicNullObject.Null;
-            return result;
-        }
-
-        public static dynamic Min<TSource, TResult>(IEnumerable<TSource> source, Func<TSource, TResult> selector)
-        {
-            return Min(Enumerable.Select(source, selector));
-        }
-
-        public static dynamic Max<TSource>(IEnumerable<TSource> source)
-        {
-            if (source == null) return DynamicNullObject.Null;
-
-            var enumerator = source.GetEnumerator();
-            if (enumerator.MoveNext() == false)
-                return DynamicNullObject.Null;
-
-            var result = Yield(enumerator).Max();
-            if (ReferenceEquals(result, null))
-                return DynamicNullObject.Null;
-            return result;
-        }
-
-        public static dynamic Max<TSource, TResult>(IEnumerable<TSource> source, Func<TSource, TResult> selector)
-        {
-            return Max(Enumerable.Select(source, selector));
-        }
-
-        public static IEnumerable<dynamic> Concat(object source, object other)
-        {
-            return new DynamicArray(((IEnumerable<object>)source).Concat((IEnumerable<object>)other));
+            return new DynamicArray(((IEnumerable<object>)source).Union((IEnumerable<object>)other));
         }
 
         public static IEnumerable<dynamic> Intersect(object source, object other)
@@ -188,24 +135,12 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
             return new DynamicArray(((IEnumerable<object>)source).Intersect((IEnumerable<object>)other));
         }
 
-        public static IOrderedEnumerable<dynamic> OrderBy(IEnumerable source, Func<dynamic, dynamic> keySelector)
+        private static IEnumerable AsEnumerable(object source)
         {
-            return new DynamicArray(Enumerable.OrderBy(source.Cast<dynamic>(), keySelector));
-        }
+            if (source is IEnumerable enumerable)
+                return enumerable;
 
-        public static IOrderedEnumerable<dynamic> OrderBy<TSource, TKey>(IEnumerable<TSource> source, Func<TSource, TKey> keySelector, IComparer<TKey> comparer)
-        {
-            return new DynamicArray(Enumerable.OrderBy(source, keySelector, comparer));
-        }
-        
-        public static IOrderedEnumerable<dynamic> OrderByDescending(IEnumerable source, Func<dynamic, dynamic> keySelector)
-        {
-            return new DynamicArray(Enumerable.OrderByDescending(source.Cast<dynamic>(), keySelector));
-        }
-
-        public static IOrderedEnumerable<dynamic> OrderByDescending<TSource, TKey>(IEnumerable<TSource> source, Func<TSource, TKey> keySelector, IComparer<TKey> comparer)
-        {
-            return new DynamicArray(Enumerable.OrderByDescending(source, keySelector, comparer));
+            throw new ArgumentException("The value must be enumerable.", nameof(source));
         }
     }
 }
