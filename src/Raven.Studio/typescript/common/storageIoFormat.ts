@@ -13,6 +13,10 @@ export function formatMs(ms: number | null | undefined): string {
     return `${ms.toLocaleString(undefined, { maximumFractionDigits: ms < 10 ? 1 : 0 })} ms`;
 }
 
+export function formatSyncCost(ms: number): string {
+    return ms > 0 ? formatMs(ms) : "no recent sync";
+}
+
 export function formatBytes(bytes: number | null | undefined): string {
     return bytes == null ? "-" : genUtils.formatBytesToSize(bytes, 1);
 }
@@ -21,11 +25,11 @@ export function formatPercent(share: number | null | undefined): string {
     return share == null ? "-" : `${Math.round(share * 100)}%`;
 }
 
-export function formatAgo(isoDate: string | null | undefined, now: number = Date.now()): string {
+export function formatAgo(isoDate: string | null | undefined): string {
     if (!isoDate) {
         return "-";
     }
-    const seconds = Math.max(0, (now - new Date(isoDate).getTime()) / 1000);
+    const seconds = Math.max(0, (Date.now() - new Date(isoDate).getTime()) / 1000);
     if (seconds < 60) {
         return `${Math.round(seconds)} s ago`;
     }

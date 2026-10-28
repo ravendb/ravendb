@@ -9,6 +9,7 @@ import performanceHint = require("common/notifications/models/performanceHint");
 import abstractPerformanceHintDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/abstractPerformanceHintDetails");
 import moment = require("moment");
 import storageIoTerms = require("common/storageIoTerms");
+import storageIoFormat = require("common/storageIoFormat");
 import StorageCongestionDetails = Raven.Server.NotificationCenter.Notifications.Details.StorageCongestionDetails;
 import SlowWriteInfo = Raven.Server.NotificationCenter.Notifications.Details.SlowIoDetails.SlowWriteInfo;
 
@@ -111,33 +112,23 @@ class storageCongestionDetails extends abstractPerformanceHintDetails {
 
         items.push({
             name: "Writes paced in the last hour",
-            value: Math.round(details.DrainShareOfLastHour * 100) + "%",
+            value: storageIoFormat.formatPercent(details.DrainShareOfLastHour),
         });
 
         if (details.TypicalJournalWriteLatencyInMs != null) {
             items.push({
                 name: "Journal writes in the last hour",
-                value: `typically ${storageCongestionDetails.formatMs(details.TypicalJournalWriteLatencyInMs)}, peak ${storageCongestionDetails.formatMs(details.PeakJournalWriteLatencyInMs)}`,
+                value: `typically ${storageIoFormat.formatMs(details.TypicalJournalWriteLatencyInMs)}, peak ${storageIoFormat.formatMs(details.PeakJournalWriteLatencyInMs)}`,
             });
         }
 
         items.push(
-            { name: "Journal writes now", value: storageCongestionDetails.formatMs(details.JournalWriteLatencyInMs) },
-            { name: "Data syncs", value: storageIoTerms.formatSyncCost(details.SyncCostInMs, storageCongestionDetails.formatMs) },
+            { name: "Journal writes now", value: storageIoFormat.formatMs(details.JournalWriteLatencyInMs) },
+            { name: "Data syncs", value: storageIoFormat.formatSyncCost(details.SyncCostInMs) },
             { name: "Mount point", value: details.MountPoint ?? "-" }
         );
 
         return items;
-    }
-
-    private static formatMs(value: number): string {
-        if (value == null) {
-            return "-";
-        }
-        if (value >= 1000) {
-            return storageCongestionDetails.formatNumber(value / 1000, 1) + " s";
-        }
-        return storageCongestionDetails.formatNumber(value, value < 10 ? 1 : 0) + " ms";
     }
 
     private static formatNumber(value: number, fractionDigits: number): string {

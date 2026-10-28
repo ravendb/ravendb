@@ -2,7 +2,7 @@ import React from "react";
 import Card from "react-bootstrap/Card";
 import { Icon } from "components/common/Icon";
 import { storageTermHelp } from "common/storageIoTerms";
-import { formatAgo, formatBytes, formatMs } from "../storageIoFormat";
+import { formatAgo, formatBytes, formatMs } from "common/storageIoFormat";
 
 interface StorageIoSharedJournalsProps {
     sharedJournals: Raven.Server.Storage.SharedJournalsIoInfo[];
@@ -14,7 +14,7 @@ export default function StorageIoSharedJournals({ sharedJournals }: StorageIoSha
     }
 
     return (
-        <div className="storage-io-shared">
+        <>
             {sharedJournals.map((shared) => {
                 const fellBack = shared.IndexesNotSharing.filter((x) => x.Reason === "HardLinkLimit");
                 const notLinked = shared.IndexesNotSharing.filter((x) => x.Reason === "NotLinked");
@@ -69,6 +69,6 @@ export default function StorageIoSharedJournals({ sharedJournals }: StorageIoSha
                     </Card>
                 );
             })}
-        </div>
+        </>
     );
 }

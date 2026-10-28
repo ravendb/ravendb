@@ -380,7 +380,7 @@ class ioStatsGraph {
         this.storageScope = storageScope;
         _.bindAll(this, "clearGraphWithConfirm", "refreshStorageDevices");
 
-        this.canSeeStorageDevices = ko.pureComputed(() => accessManager.default.isOperatorOrAbove());
+        this.canSeeStorageDevices = accessManager.default.isOperatorOrAbove;
 
         this.searchText.throttle(700).subscribe(() => this.filterTracks());
 
@@ -513,21 +513,14 @@ class ioStatsGraph {
             return "not recorded (data from an older version)";
         }
 
-        const typesPerAlgorithm = new Map<string, string[]>();
-        latestAlgorithmPerType.forEach((latest, type) => {
-            const algorithm = ioStatsGraph.formatCompressionAlgorithm(latest.algorithm);
-            const types = typesPerAlgorithm.get(algorithm) ?? [];
-            types.push(ioStatsGraph.storageTypeName(type));
-            typesPerAlgorithm.set(algorithm, types);
-        });
+        const typesPerAlgorithm: Record<string, string[]> = {};
+        latestAlgorithmPerType.forEach((latest, type) =>
+            (typesPerAlgorithm[ioStatsGraph.formatCompressionAlgorithm(latest.algorithm)] ??= []).push(ioStatsGraph.storageTypeName(type)));
 
-        if (typesPerAlgorithm.size === 1) {
-            return Array.from(typesPerAlgorithm.keys())[0];
-        }
-
-        return Array.from(typesPerAlgorithm.entries())
-            .map(([algorithm, types]) => `${algorithm} (${types.join(", ")})`)
-            .join(", ");
+        const algorithms = Object.keys(typesPerAlgorithm);
+        return algorithms.length === 1
+            ? algorithms[0]
+            : algorithms.map(a => `${a} (${typesPerAlgorithm[a].join(", ")})`).join(", ");
     }
 
     private static formatCompressionAlgorithm(algorithm: string): string {
@@ -1486,14 +1479,13 @@ class ioStatsGraph {
                         this.resetGraphData();
                     }
                     this.data = importedData;
-                    // set before drawing: the current disk state does not belong to an imported file
-                    this.isImport(true);
                     this.fillCache();
                     this.prepareTimeData();
                     this.initViewData();
                     this.setLegendScales();
                     this.updateClosedIndexesInfo();
                     this.draw(true);
+                    this.isImport(true);
                 }
             }
         } catch (e) {
@@ -1590,8 +1582,6 @@ class ioStatsGraph {
         this.storageDevices(items);
         this.storageDevicesNote(note);
         this.storageDevicesAsOf(asOf);
-
-        this.draw(false);
     }
 
     private static toStorageDeviceItem(device: Raven.Server.Storage.StorageDeviceIoInfo,
@@ -1783,7 +1773,7 @@ class ioStatsGraph {
         const escape = (value: unknown) => generalUtils.escapeHtml(String(value));
         const line = (label: string, value: string) => `<div class="tooltip-li">${label}: <span class="value">${escape(value)}</span></div>`;
         const yesNo = (value: boolean) => (value ? "yes" : "no");
-        const formatMs = (value: number) => generalUtils.formatMillis(Number(value)).replace(/\s+/g, " ").trim();
+        const formatMs = (value: number) => generalUtils.formatMillis(Number(value));
 
         let html = "";
 

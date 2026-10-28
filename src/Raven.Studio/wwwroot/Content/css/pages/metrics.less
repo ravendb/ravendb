@@ -262,7 +262,7 @@ rect.pane {
             }
 
             .drainSync {
-                color: @io-stats-drain-sync-color;
+                color: @brand-warning;
             }
         }
     }
@@ -290,15 +290,12 @@ rect.pane {
             width: 14px;
             height: 12px;
             vertical-align: middle;
-        }
-
-        .drain-sync-swatch {
             background-color: lighten(@color-1-2, 5%);
             background-image: linear-gradient(@panel-bg, @panel-bg);
             background-size: 100% 1px;
             background-repeat: no-repeat;
             background-position: top;
-            border-top: 4px solid @io-stats-drain-sync-color;
+            border-top: 4px solid @brand-warning;
         }
     }
 
@@ -358,7 +355,6 @@ rect.pane {
     }
 }
 
-@io-stats-drain-sync-color: @brand-warning;
 
 @legend-container-width: 200px;
 @legend-arrow-border: 6px;
