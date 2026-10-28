@@ -1,10 +1,12 @@
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Raven.Client.Json.Serialization.SystemTextJson;
 using Sparrow.Json;
+using Sparrow.Json.Sync;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -88,6 +90,44 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         using (var context = JsonOperationContext.ShortTermSingleUse())
         using (BlittableJsonReaderObject json = SystemTextJson.Serialization.DefaultConverter.ToBlittable(CreateZoo(), context))
             AssertZoo(Newtonsoft.Serialization.DefaultConverter.FromBlittable<Zoo>(json));
+    }
+
+    public class Untyped
+    {
+        public object Data { get; set; }
+
+        public ExpandoObject Expando { get; set; }
+    }
+
+    [RavenTheory(RavenTestCategory.ClientApi)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void UntypedValuesBehaveLikeNewtonsoftUnderDynamic(bool useSystemTextJson)
+    {
+        DocumentConventions conventions = useSystemTextJson ? SystemTextJson : Newtonsoft;
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(
+                   "{\"Data\":{\"Name\":\"x\",\"Count\":5,\"Ratio\":1.5,\"Tags\":[\"a\",\"b\"],\"Nested\":{\"A\":null}},\"Expando\":{\"Name\":\"Grisha\",\"Age\":3}}", "untyped"))
+        {
+            var untyped = conventions.Serialization.DefaultConverter.FromBlittable<Untyped>(json);
+
+            dynamic data = untyped.Data;
+            Assert.True(data.Name == "x");
+            Assert.True(data.Count == 5L);
+            Assert.True(data.Ratio == 1.5m);
+            Assert.True(data.Missing == null);
+            Assert.True(data.Tags[0] == "a");
+            Assert.Equal(2, (int)data.Tags.Count);
+            Assert.True(data.Nested.A == null);
+            Assert.Null(data.Nested.A.Value);
+            Assert.Equal("x", (string)data.Name);
+            Assert.Equal("x", (string)data.Name.Value);
+
+            IDictionary<string, object> expando = untyped.Expando;
+            Assert.Equal("Grisha", expando["Name"]);
+            Assert.Equal(3L, expando["Age"]);
+        }
     }
 
     private static DocumentConventions Newtonsoft { get; } = new() { Serialization = new NewtonsoftJsonSerializationConventions() };
