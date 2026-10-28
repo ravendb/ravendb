@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -70,9 +72,57 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             bool isRecord = typeInfo.Type.IsRecord();
 
             FilterProperties(typeInfo, isRecord);
+            ApplyStringDictionaryComparers(typeInfo);
             ApplyPropertyNameConverter(typeInfo);
             SetupNonPublicConstructor(typeInfo);
             SetupIdentityPropertyConditionalSerialization(typeInfo);
+        }
+
+        private static void ApplyStringDictionaryComparers(JsonTypeInfo typeInfo)
+        {
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                JsonPropertyInfo property = typeInfo.Properties[i];
+                if (property.Set == null || property.AttributeProvider is not MemberInfo member)
+                    continue;
+
+                JsonDeserializationStringDictionaryAttribute attribute = member.GetCustomAttribute<JsonDeserializationStringDictionaryAttribute>();
+                if (attribute == null)
+                    continue;
+
+                Type dictionaryType = GetStringDictionaryType(property.PropertyType);
+                if (dictionaryType == null)
+                    continue;
+
+                StringComparer comparer = JsonDeserializationBase.GetStringComparer(attribute.StringComparison);
+                Action<object, object> set = property.Set;
+                property.Set = (target, value) =>
+                {
+                    if (value is IDictionary source)
+                    {
+                        var dictionary = (IDictionary)Activator.CreateInstance(dictionaryType, comparer);
+                        foreach (DictionaryEntry entry in source)
+                            dictionary.Add(entry.Key, entry.Value);
+
+                        value = dictionary;
+                    }
+
+                    set(target, value);
+                };
+            }
+        }
+
+        private static Type GetStringDictionaryType(Type type)
+        {
+            if (type.IsGenericType == false)
+                return null;
+
+            Type definition = type.GetGenericTypeDefinition();
+            if (definition != typeof(Dictionary<,>) && definition != typeof(IDictionary<,>))
+                return null;
+
+            Type[] arguments = type.GetGenericArguments();
+            return arguments[0] == typeof(string) ? typeof(Dictionary<,>).MakeGenericType(arguments) : null;
         }
 
         private void ApplyPropertyNameConverter(JsonTypeInfo typeInfo)
