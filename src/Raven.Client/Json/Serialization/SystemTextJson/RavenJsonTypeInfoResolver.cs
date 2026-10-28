@@ -29,6 +29,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private const string NewtonsoftJTokenName = "Newtonsoft.Json.Linq.JToken";
 
+        private const string NewtonsoftJsonPropertyAttributeName = "Newtonsoft.Json.JsonPropertyAttribute";
+
+        private const int NewtonsoftNullValueHandlingIgnore = 1;
+
         private static readonly ConcurrentDictionary<Type, Action<object, IEnumerable>> _collectionAdders = new();
 
         private static readonly MethodInfo _addToCollectionMethod = typeof(RavenJsonTypeInfoResolver).GetMethod(nameof(AddToCollection), BindingFlags.NonPublic | BindingFlags.Static);
@@ -137,6 +141,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             SetupNonPublicConstructor(typeInfo);
             PopulateReadOnlyMembers(typeInfo);
             SetupIdentityPropertyConditionalSerialization(typeInfo);
+            ApplyNewtonsoftNullValueHandling(typeInfo);
             ApplySerializationCallbacks(typeInfo);
             AssertNoNewtonsoftMemberAttributes(typeInfo);
             AssertNewtonsoftConstructorIsUsed(typeInfo.Type);
@@ -327,6 +332,41 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         private static bool IsIgnoredBySystemTextJson(MemberInfo member)
         {
             return member.GetCustomAttribute<JsonIgnoreAttribute>(inherit: true) is { Condition: JsonIgnoreCondition.Always };
+        }
+
+        private static void ApplyNewtonsoftNullValueHandling(JsonTypeInfo typeInfo)
+        {
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                JsonPropertyInfo property = typeInfo.Properties[i];
+                if (property.AttributeProvider is not MemberInfo member || (property.PropertyType.IsValueType && Nullable.GetUnderlyingType(property.PropertyType) == null))
+                    continue;
+
+                object attribute = GetNewtonsoftAttribute(member, NewtonsoftJsonPropertyAttributeName);
+                if (attribute == null || IsNullValueIgnored(attribute) == false)
+                    continue;
+
+                Func<object, object, bool> shouldSerialize = property.ShouldSerialize;
+                property.ShouldSerialize = shouldSerialize == null
+                    ? static (_, value) => value != null
+                    : (target, value) => value != null && shouldSerialize(target, value);
+
+                Action<object, object> set = property.Set;
+                if (set != null)
+                {
+                    property.Set = (target, value) =>
+                    {
+                        if (value != null)
+                            set(target, value);
+                    };
+                }
+            }
+        }
+
+        private static bool IsNullValueIgnored(object jsonPropertyAttribute)
+        {
+            object value = jsonPropertyAttribute.GetType().GetProperty("NullValueHandling")?.GetValue(jsonPropertyAttribute);
+            return value != null && Convert.ToInt32(value) == NewtonsoftNullValueHandlingIgnore;
         }
 
         private static void ApplySerializationCallbacks(JsonTypeInfo typeInfo)
