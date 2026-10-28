@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Raven.Client.Json.Serialization.SystemTextJson;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
@@ -130,6 +131,62 @@ namespace FastTests.Client
                 Assert.Equal(text, (await session.LoadAsync<User>("users/1")).Name);
                 Assert.Equal(text, (await session.LoadAsync<User>("users/2")).Name);
             }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void FloatingPointNumbersAreWrittenLikeNewtonsoft()
+        {
+            var numbers = new FloatingPointNumbers
+            {
+                Integral = 2,
+                Fraction = -0.5,
+                Huge = 1e300,
+                Max = double.MaxValue,
+                Epsilon = double.Epsilon,
+                NaN = double.NaN,
+                PositiveInfinity = double.PositiveInfinity,
+                NegativeInfinity = double.NegativeInfinity,
+                Single = 0.1f,
+                SingleMax = float.MaxValue,
+                IntegralDecimal = 3m,
+                ScaledDecimal = 2.50m,
+                MaxDecimal = decimal.MaxValue,
+                NullableIntegral = 4
+            };
+
+            var newtonsoft = new DocumentConventions { Serialization = new NewtonsoftJsonSerializationConventions() };
+            var systemTextJson = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject expected = newtonsoft.Serialization.DefaultConverter.ToBlittable(numbers, context))
+            using (BlittableJsonReaderObject actual = systemTextJson.Serialization.DefaultConverter.ToBlittable(numbers, context))
+            {
+                foreach (string property in expected.GetPropertyNames())
+                {
+                    Assert.True(expected.TryGetMember(property, out object expectedValue));
+                    Assert.True(actual.TryGetMember(property, out object actualValue), property);
+                    Assert.IsType<LazyNumberValue>(actualValue);
+                    Assert.Equal(expectedValue.ToString(), actualValue.ToString());
+                }
+            }
+        }
+
+        private class FloatingPointNumbers
+        {
+            public double Integral { get; set; }
+            public double Fraction { get; set; }
+            public double Huge { get; set; }
+            public double Max { get; set; }
+            public double Epsilon { get; set; }
+            public double NaN { get; set; }
+            public double PositiveInfinity { get; set; }
+            public double NegativeInfinity { get; set; }
+            public float Single { get; set; }
+            public float SingleMax { get; set; }
+            public decimal IntegralDecimal { get; set; }
+            public decimal ScaledDecimal { get; set; }
+            public decimal MaxDecimal { get; set; }
+            public double? NullableIntegral { get; set; }
         }
 
         private class FieldsEntity

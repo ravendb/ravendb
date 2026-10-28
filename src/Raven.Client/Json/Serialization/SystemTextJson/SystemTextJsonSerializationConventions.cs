@@ -324,6 +324,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             if (Conventions == null || Conventions.SaveEnumsAsIntegers == false)
                 options.Converters.Add(new JsonStringEnumConverter());
 
+            options.Converters.Add(FloatingPointConverters.Double);
+            options.Converters.Add(FloatingPointConverters.Single);
+            options.Converters.Add(FloatingPointConverters.Decimal);
             options.Converters.Add(DateTimeISO8601Converter.Instance);
             options.Converters.Add(DictionaryDateTimeKeysConverter.Instance);
             options.Converters.Add(ParametersConverter.Instance);
