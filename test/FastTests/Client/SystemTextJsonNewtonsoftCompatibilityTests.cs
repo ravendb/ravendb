@@ -949,6 +949,37 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class Location
+    {
+        public Location(double lat, double lng)
+        {
+            Latitude = lat;
+            Longitude = lng;
+        }
+
+        public double Latitude { get; set; }
+
+        public double Longitude { get; set; }
+
+        public string Label { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonReadsThroughConstructorsWithUnboundParametersLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Latitude\":1.5,\"Longitude\":2.5,\"Label\":\"home\"}", "location"))
+        {
+            var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<Location>(json);
+            var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<Location>(json);
+
+            Assert.Equal(1.5, actual.Latitude);
+            Assert.Equal(expected.Latitude, actual.Latitude);
+            Assert.Equal(expected.Longitude, actual.Longitude);
+            Assert.Equal(expected.Label, actual.Label);
+        }
+    }
+
     private class HoldsChars
     {
         public List<char> Chars { get; set; }
