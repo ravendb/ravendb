@@ -21,11 +21,6 @@ public sealed class ParameterBinding
     public string ParameterName;
     
     /// <summary>
-    /// The index of the parameter slot in the <see cref="PlanTemplate.ParameterSlots"/>
-    /// </summary>
-    public int ParameterSlot = -1;
-
-    /// <summary>
     /// Position of the value (parameter or literal or deferred)
     /// </summary>
     public int ValueOrdinal = -1;

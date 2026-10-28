@@ -158,9 +158,7 @@ internal static partial class QueryPlanBuilder
             {
                 if (binding is not { Source: BindingSource.QueryParameter, ParameterName: not null }) 
                     continue;
-                if (slots.TryGetValue(binding.ParameterName, out int slot) == false)
-                    slots.Add(binding.ParameterName, slot = slots.Count);
-                binding.ParameterSlot = slot;
+                slots.TryAdd(binding.ParameterName, slots.Count);
             }
 
             AssignParameterSlots(clause.SubClauses, slots); 
