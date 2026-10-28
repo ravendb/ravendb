@@ -1,11 +1,13 @@
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
+using System.Reflection;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Raven.Client.Json.Serialization.SystemTextJson;
+using Raven.Client.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Sync;
 using Tests.Infrastructure;
@@ -150,6 +152,131 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
 
             using (BlittableJsonReaderObject written = Newtonsoft.Serialization.DefaultConverter.ToBlittable(holder, context))
                 Assert.Equal(values, SystemTextJson.Serialization.DefaultConverter.FromBlittable<VectorHolder>(written).Unsigned.Embedding);
+        }
+    }
+
+    private interface IHasSecret
+    {
+        string Secret { get; set; }
+    }
+
+    private class EncapsulatedBase
+    {
+        private string BasePrivate { get; set; }
+
+        protected string BaseProtected { get; set; }
+
+        public void SetBase(string basePrivate, string baseProtected)
+        {
+            BasePrivate = basePrivate;
+            BaseProtected = baseProtected;
+        }
+
+        public string GetBasePrivate() => BasePrivate;
+
+        public string GetBaseProtected() => BaseProtected;
+    }
+
+    private class Encapsulated : EncapsulatedBase, IHasSecret
+    {
+        private readonly List<string> _lines = [];
+
+        public string Status { get; private set; }
+
+        public string WriteOnly { private get; set; }
+
+        internal string Note { get; set; }
+
+        private string Hidden { get; set; }
+
+        string IHasSecret.Secret { get; set; }
+
+        public IReadOnlyList<string> Lines => _lines;
+
+        public List<string> Tags { get; } = [];
+
+        public HashSet<string> Labels { get; } = [];
+
+        public Dictionary<string, int> Counts { get; } = new();
+
+        public Person Keeper { get; } = new();
+
+        public string GetWriteOnly() => WriteOnly;
+
+        public string GetHidden() => Hidden;
+
+        public static Encapsulated Create()
+        {
+            var encapsulated = new Encapsulated { Status = "Shipped", WriteOnly = "write-only", Note = "note", Hidden = "hidden" };
+            ((IHasSecret)encapsulated).Secret = "secret";
+            encapsulated.SetBase("base-private", "base-protected");
+            encapsulated._lines.Add("line");
+            encapsulated.Tags.Add("tag");
+            encapsulated.Labels.Add("label");
+            encapsulated.Counts["count"] = 3;
+            encapsulated.Keeper.Name = "Oren";
+            encapsulated.Keeper.Age = 40;
+            return encapsulated;
+        }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonWritesNonPublicMembersLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(Encapsulated.Create(), context))
+        using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(Encapsulated.Create(), context))
+        {
+            JObject expectedJson = JObject.Parse(expected.ToString());
+            JObject actualJson = JObject.Parse(actual.ToString());
+
+            Assert.True(JToken.DeepEquals(expectedJson, actualJson), $"Expected {expectedJson} but got {actualJson}");
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.ClientApi)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SystemTextJsonReadsNonPublicMembers(bool writtenByNewtonsoft)
+    {
+        DocumentConventions writer = writtenByNewtonsoft ? Newtonsoft : SystemTextJson;
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = writer.Serialization.DefaultConverter.ToBlittable(Encapsulated.Create(), context))
+        {
+            var encapsulated = SystemTextJson.Serialization.DefaultConverter.FromBlittable<Encapsulated>(json);
+
+            Assert.Equal("Shipped", encapsulated.Status);
+            Assert.Equal("write-only", encapsulated.GetWriteOnly());
+            Assert.Equal("note", encapsulated.Note);
+            Assert.Equal("hidden", encapsulated.GetHidden());
+            Assert.Equal("secret", ((IHasSecret)encapsulated).Secret);
+            Assert.Equal("base-private", encapsulated.GetBasePrivate());
+            Assert.Equal("base-protected", encapsulated.GetBaseProtected());
+            Assert.Equal(["line"], encapsulated.Lines);
+            Assert.Equal(["tag"], encapsulated.Tags);
+            Assert.Equal(["label"], encapsulated.Labels);
+            Assert.Equal(3, encapsulated.Counts["count"]);
+            Assert.Equal("Oren", encapsulated.Keeper.Name);
+            Assert.Equal(40, encapsulated.Keeper.Age);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonWritesAndReadsForcedNonPublicFields()
+    {
+        FieldInfo supportedFeatures = typeof(DatabaseRecord).GetField("SupportedFeatures", BindingFlags.Instance | BindingFlags.NonPublic);
+        var record = new DatabaseRecord("db1");
+        supportedFeatures.SetValue(record, new List<string> { "feature" });
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(record, context))
+        using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(record, context))
+        {
+            Assert.Equal(expected["SupportedFeatures"].ToString(), actual["SupportedFeatures"].ToString());
+
+            var read = SystemTextJson.Serialization.DefaultConverter.FromBlittable<DatabaseRecord>(actual);
+            Assert.Equal(["feature"], (IReadOnlyList<string>)supportedFeatures.GetValue(read));
         }
     }
 

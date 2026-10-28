@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -15,6 +16,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 {
     internal sealed class RavenJsonTypeInfoResolver : DefaultJsonTypeInfoResolver
     {
+        private static readonly ConcurrentDictionary<Type, Action<object, IEnumerable>> _collectionAdders = new();
+
+        private static readonly MethodInfo _addToCollectionMethod = typeof(RavenJsonTypeInfoResolver).GetMethod(nameof(AddToCollection), BindingFlags.NonPublic | BindingFlags.Static);
+
         private readonly SystemTextJsonSerializationConventions _conventions;
 
         private readonly TypeNameHandling _typeNameHandling;
@@ -104,11 +109,186 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             bool isRecord = typeInfo.Type.IsRecord();
 
             FilterProperties(typeInfo, isRecord);
+            AddNonPublicMembers(typeInfo, isRecord);
             ApplyStringDictionaryComparers(typeInfo);
             ApplyTypeNameHandling(typeInfo);
             ApplyPropertyNameConverter(typeInfo);
             SetupNonPublicConstructor(typeInfo);
+            PopulateReadOnlyMembers(typeInfo);
             SetupIdentityPropertyConditionalSerialization(typeInfo);
+        }
+
+        private void AddNonPublicMembers(JsonTypeInfo typeInfo, bool isRecord)
+        {
+            var memberNames = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                JsonPropertyInfo property = typeInfo.Properties[i];
+                if (property.AttributeProvider is not MemberInfo member)
+                    continue;
+
+                memberNames.Add(member.Name);
+
+                if (member is PropertyInfo propertyInfo)
+                {
+                    property.Get ??= CreateGetter(propertyInfo);
+                    property.Set ??= CreateSetter(propertyInfo);
+                }
+            }
+
+            for (Type type = typeInfo.Type; type != null && type != typeof(object); type = type.BaseType)
+            {
+                foreach (PropertyInfo propertyInfo in type.GetProperties(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+                {
+                    if (propertyInfo.GetIndexParameters().Length > 0 || memberNames.Add(propertyInfo.Name) == false)
+                        continue;
+
+                    if (ShouldFilterProperty(propertyInfo, isRecord) || IsIgnoredBySystemTextJson(propertyInfo))
+                        continue;
+
+                    typeInfo.Properties.Add(CreateJsonProperty(typeInfo, propertyInfo, propertyInfo.PropertyType, CreateGetter(propertyInfo), CreateSetter(propertyInfo)));
+                }
+
+                foreach (FieldInfo fieldInfo in type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+                {
+                    if (fieldInfo.IsDefined(typeof(ForceJsonSerializationAttribute)) == false || memberNames.Add(fieldInfo.Name) == false)
+                        continue;
+
+                    if (ShouldFilterField(fieldInfo) || IsIgnoredBySystemTextJson(fieldInfo))
+                        continue;
+
+                    Action<object, object> set = fieldInfo.IsInitOnly ? null : fieldInfo.SetValue;
+                    typeInfo.Properties.Add(CreateJsonProperty(typeInfo, fieldInfo, fieldInfo.FieldType, fieldInfo.GetValue, set));
+                }
+            }
+        }
+
+        private static JsonPropertyInfo CreateJsonProperty(JsonTypeInfo typeInfo, MemberInfo member, Type memberType, Func<object, object> get, Action<object, object> set)
+        {
+            string name = member.GetCustomAttribute<JsonPropertyNameAttribute>(inherit: true)?.Name
+                          ?? typeInfo.Options.PropertyNamingPolicy?.ConvertName(member.Name)
+                          ?? member.Name;
+
+            JsonPropertyInfo property = typeInfo.CreateJsonPropertyInfo(memberType, name);
+            property.AttributeProvider = member;
+            property.Get = get;
+            property.Set = set;
+            return property;
+        }
+
+        private static Func<object, object> CreateGetter(PropertyInfo propertyInfo)
+        {
+            if (propertyInfo.GetMethod == null)
+                return null;
+
+            return propertyInfo.GetValue;
+        }
+
+        private static Action<object, object> CreateSetter(PropertyInfo propertyInfo)
+        {
+            if (propertyInfo.SetMethod == null)
+                return null;
+
+            return propertyInfo.SetValue;
+        }
+
+        private static bool IsIgnoredBySystemTextJson(MemberInfo member)
+        {
+            return member.GetCustomAttribute<JsonIgnoreAttribute>(inherit: true) is { Condition: JsonIgnoreCondition.Always };
+        }
+
+        private static void PopulateReadOnlyMembers(JsonTypeInfo typeInfo)
+        {
+            JsonSerializerOptions options = typeInfo.Options;
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                JsonPropertyInfo property = typeInfo.Properties[i];
+                if (property.Set != null || property.Get == null || property.PropertyType.IsValueType || property.PropertyType == typeof(string))
+                    continue;
+
+                Func<object, object> get = property.Get;
+                property.Set = (target, value) => PopulateExisting(get(target), value, options);
+            }
+        }
+
+        private static void PopulateExisting(object target, object value, JsonSerializerOptions options)
+        {
+            if (target == null || value == null || ReferenceEquals(target, value) || target is string)
+                return;
+
+            if (target is IEnumerable)
+            {
+                AddItems(target, value);
+                return;
+            }
+
+            Type targetType = target.GetType();
+            Type valueType = value.GetType();
+            Type contractType = targetType.IsAssignableFrom(valueType) ? targetType : valueType.IsAssignableFrom(targetType) ? valueType : null;
+            if (contractType == null)
+                return;
+
+            JsonTypeInfo typeInfo = options.GetTypeInfo(contractType);
+            if (typeInfo.Kind != JsonTypeInfoKind.Object)
+                return;
+
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                JsonPropertyInfo property = typeInfo.Properties[i];
+                if (property.Get != null && property.Set != null)
+                    property.Set(target, property.Get(value));
+            }
+        }
+
+        private static void AddItems(object target, object items)
+        {
+            if (items is not IEnumerable source)
+                return;
+
+            switch (target)
+            {
+                case IDictionary dictionary:
+                    if (dictionary.IsReadOnly || items is not IDictionary sourceDictionary)
+                        return;
+
+                    foreach (DictionaryEntry entry in sourceDictionary)
+                        dictionary[entry.Key] = entry.Value;
+                    return;
+
+                case IList list:
+                    if (list.IsReadOnly || list.IsFixedSize)
+                        return;
+
+                    foreach (object item in source)
+                        list.Add(item);
+                    return;
+            }
+
+            _collectionAdders.GetOrAdd(target.GetType(), CreateCollectionAdder)?.Invoke(target, source);
+        }
+
+        private static Action<object, IEnumerable> CreateCollectionAdder(Type type)
+        {
+            foreach (Type @interface in type.GetInterfaces())
+            {
+                if (@interface.IsGenericType && @interface.GetGenericTypeDefinition() == typeof(ICollection<>))
+                {
+                    MethodInfo method = _addToCollectionMethod.MakeGenericMethod(@interface.GetGenericArguments());
+                    return (Action<object, IEnumerable>)method.CreateDelegate(typeof(Action<object, IEnumerable>));
+                }
+            }
+
+            return null;
+        }
+
+        private static void AddToCollection<T>(object target, IEnumerable items)
+        {
+            var collection = (ICollection<T>)target;
+            if (collection.IsReadOnly)
+                return;
+
+            foreach (object item in items)
+                collection.Add((T)item);
         }
 
         private void ApplyTypeNameHandling(JsonTypeInfo typeInfo)
