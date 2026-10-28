@@ -1,6 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Raven.Client.Json.Serialization.SystemTextJson;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -14,8 +16,10 @@ namespace FastTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Core)]
-        public void CanSwitchDefaultComparerInTheDictionary()
+        [RavenTheory(RavenTestCategory.Core)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void CanSwitchDefaultComparerInTheDictionary(bool useSystemTextJson)
         {
             var deserialize = JsonDeserializationBase.GenerateJsonDeserializationRoutine<MyClass>();
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -53,7 +57,11 @@ namespace FastTests.Issues
                 Assert.Equal(StringComparer.InvariantCultureIgnoreCase, GetComparer(myClass.RegularDictionaryWithAttribute));
                 Assert.Equal(StringComparer.OrdinalIgnoreCase, GetComparer(myClass.InterfaceDictionaryWithAttribute));
 
-                myClass = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<MyClass>(json);
+                var conventions = new DocumentConventions
+                {
+                    Serialization = useSystemTextJson ? new SystemTextJsonSerializationConventions() : new NewtonsoftJsonSerializationConventions()
+                };
+                myClass = conventions.Serialization.DefaultConverter.FromBlittable<MyClass>(json);
 
                 var dictionary = new Dictionary<string, object>();
 
