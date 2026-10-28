@@ -43,19 +43,19 @@ export const syncReasonHelp: Record<SyncReason, string> = {
 };
 
 export const deviceClassHelp: Record<DeviceClass, string> = {
-    Unknown: "Not classified yet: no journal writes, or writes too small to tell a slow disk from a fast one. Safe defaults apply.",
-    Fast: "Fast disk (NVMe-like): limits so high they are not hit. Auto journal compression uses LZ4.",
-    Budgeted: "Bandwidth / IOPS limited disk (e.g. gp3): Auto journal compression uses Zstd to save disk budget.",
+    Unknown: "Not classified: no journal writes yet, or writes too small to tell a slow disk from a fast one (small writes are quick on any disk). Auto journal compression uses LZ4.",
+    Fast: "Fast disk (NVMe-like): limits so high they are not hit. Auto journal compression uses LZ4, only transactions of at least 512 KB are compressed, and new journals are pre-zeroed in the background.",
+    Budgeted: "Bandwidth / IOPS limited disk (e.g. gp3): Auto journal compression uses Zstd, because bytes are what the disk limits.",
 };
 
 export const storageTermHelp = {
-    drain: "Drain (paced writeback): the disk is congested, so flushes stop pushing data in the background and each sync writes its data in paced blocks first. Leaves the disk to the journal writes users wait for.",
-    trickle: "Trickle: the disk has headroom, every flush starts pushing its data to the disk in the background.",
-    drainShare: "Share of the last hour the disk spent in drain mode (paced writeback).",
+    drain: "Paced (drain in the server log): the disk is congested. Flushes stop pushing data to the disk in the background, and each data file sync writes its data in blocks first, then fsyncs. Syncs take longer so that journal writes, which users wait for, get through.",
+    trickle: "Normal (trickle in the server log): the disk keeps up. On Linux each flush pushes its data to the disk in the background, so a sync mostly just fsyncs.",
+    drainShare: "Share of the last hour the disk was in paced mode.",
     journalWriteLatency:
         "Moving average of the journal write time of every storage environment whose data file is on this disk: the server, each database, its shared index journal and indexes writing their own journal. Users wait for these writes. Journals moved to another disk (e.g. a symlink) still count for the disk of their data file.",
-    syncCost: "Average time of a data file sync on this disk, including the paced writeback. Above the drain threshold, writes get paced.",
-    queueDepth: "Average number of requests queued on the device (iostat aqu-sz). Above the drain threshold, writes get paced.",
+    syncCost: "Average time of a data file sync on this disk, including the paced writeback. Above its threshold the disk switches to paced mode.",
+    queueDepth: "Average number of requests queued on the device (iostat aqu-sz). Above its threshold the disk switches to paced mode.",
     pipelining: "Pipelining: a journal write is submitted while the previous one is still in flight. Used for small, latency bound writes.",
     consolidation: "Batch consolidation: the transaction merger holds a batch open a bit longer so one larger journal write replaces several small ones.",
     flusherYields: "How often the flusher postponed flushing this environment to leave the disk to journal writes.",
@@ -95,10 +95,8 @@ export const journalCompressionLabel: Record<Voron.JournalCompressionAlgorithm, 
 export const ioStatsHelp = {
     journalCompression:
         "Algorithm of the latest compressed journal write in the data shown. With Auto, Zstd is used on bandwidth / IOPS limited (Budgeted) disks and LZ4 on the others.",
-    drainPeriods:
-        "Shaded: the disk was in drain mode (paced writeback), sampled every 10 seconds over the last hour. Syncs in these periods write their data in paced blocks before the final fsync, so they take longer.",
     drainSync:
-        "Sync that ran with paced writeback (drain): it wrote its data in paced blocks first, then flushed the file to disk (fsync). Its duration covers both.",
+        "Paced sync: the disk was congested, so the sync wrote its data in blocks first, then fsync. The bar covers both. Slower on purpose, so journal writes get through.",
 };
 
 export const meterTypeLabel: Record<Sparrow.Server.Meters.IoMetrics.MeterType, string> = {

@@ -10,7 +10,6 @@
             <div class="openedTrackArrow"></div>
             <div class="closedTrackArrow"></div>
             <div class="text"></div>
-            <div class="drainPeriod"></div>
             <div class="drainSync"></div>
         </div>
     </div>
@@ -73,13 +72,9 @@
             <div data-bind="visible: bufferIsFull">
                 <small>Data buffer is full, clear graph data to continue</small>
             </div>
-            <div class="io-stats-drain-legend" data-bind="visible: showDrainLegend, attr: { title: help.drainPeriods }">
-                <span class="drain-period-swatch"></span>
-                <small>Shaded: writes paced (drain)<span data-bind="visible: drainPeriodsCount() === 0"> - none in the last hour</span></small>
-            </div>
             <div class="io-stats-drain-legend" data-bind="visible: hasDrainedSyncs, attr: { title: help.drainSync }">
                 <span class="drain-sync-swatch"></span>
-                <small>Sync with paced writeback (drain)</small>
+                <small>Paced sync</small>
             </div>
             <div class="flex-separator"></div>
             <button class="btn btn-default btn-sm margin-right margin-right-sm" data-bind="click: clearBrush, visible: clearSelectionVisible">

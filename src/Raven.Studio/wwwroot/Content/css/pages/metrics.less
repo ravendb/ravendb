@@ -261,10 +261,6 @@ rect.pane {
                 color: @text-emphasis;
             }
 
-            .drainPeriod {
-                color: @io-stats-drain-period-color;
-            }
-
             .drainSync {
                 color: @io-stats-drain-sync-color;
             }
@@ -289,16 +285,11 @@ rect.pane {
     .io-stats-drain-legend {
         margin-left: @grid-gutter-width/2;
 
-        .drain-period-swatch, .drain-sync-swatch {
+        .drain-sync-swatch {
             display: inline-block;
             width: 14px;
             height: 12px;
             vertical-align: middle;
-        }
-
-        .drain-period-swatch {
-            background-color: @io-stats-drain-period-color;
-            border: 1px solid fadeout(@brand-warning, 40%);
         }
 
         .drain-sync-swatch {
@@ -367,7 +358,6 @@ rect.pane {
     }
 }
 
-@io-stats-drain-period-color: fadeout(@brand-warning, 75%);
 @io-stats-drain-sync-color: @brand-warning;
 
 @legend-container-width: 200px;

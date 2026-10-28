@@ -259,7 +259,6 @@ class ioStatsGraph {
     private static readonly indexesString = "Indexes";
 
     private static readonly noCompressedWrites = "no compressed writes in view";
-    private static readonly drainSampleInterval = 10 * 1000;
     private static readonly drainSyncMarkerHeight = 4;
 
     private static readonly meterTypes: Array<Sparrow.Server.Meters.IoMetrics.MeterType> = [ "JournalWrite", "DataFlush", "DataSync", "Compression" ];
@@ -301,10 +300,6 @@ class ioStatsGraph {
     private storageDevicesAsOf = ko.observable<string>();
     private storageDevicesLoading = ko.observable<boolean>(false);
     private readonly storageIoUrl = appUrl.forDebugAdvancedStorageIo();
-    private drainPeriodsCount = ko.observable<number>(0);
-    private showDrainLegend: KnockoutComputed<boolean>;
-    private drainPeriodsByEnvType = new Map<StorageEnvironmentType, Array<[Date, Date]>>();
-    private allDrainPeriods: Array<[Date, Date]> = [];
 
     /* private */
 
@@ -353,7 +348,6 @@ class ioStatsGraph {
         openedTrackArrow: undefined as string,
         closedTrackArrow: undefined as string,
         text: undefined as string,
-        drainPeriod: undefined as string,
         drainSync: undefined as string
     };
 
@@ -387,7 +381,6 @@ class ioStatsGraph {
         _.bindAll(this, "clearGraphWithConfirm", "refreshStorageDevices");
 
         this.canSeeStorageDevices = ko.pureComputed(() => accessManager.default.isOperatorOrAbove());
-        this.showDrainLegend = ko.pureComputed(() => !this.isImport() && this.storageDevices().length > 0);
 
         this.searchText.throttle(700).subscribe(() => this.filterTracks());
 
@@ -793,7 +786,6 @@ class ioStatsGraph {
 
         const context = this.brushSection.getContext("2d");
 
-        this.drawBrushDrainPeriods(context);
         this.drawBrushGaps(context);
 
         // 2. Draw scale
@@ -844,31 +836,6 @@ class ioStatsGraph {
         });
         
         this.prepareBrush();
-    }
-
-    private showDrainPeriods(): boolean {
-        return !this.isImport() && this.allDrainPeriods.length > 0;
-    }
-
-    private drawBrushDrainPeriods(context: CanvasRenderingContext2D) {
-        if (!this.showDrainPeriods()) {
-            return;
-        }
-
-        context.fillStyle = this.colors.drainPeriod;
-        ioStatsGraph.fillDrainPeriods(context, this.allDrainPeriods, this.xBrushTimeScale, 1, ioStatsGraph.brushSectionHeight - 2);
-    }
-
-    private static fillDrainPeriods(context: CanvasRenderingContext2D, periods: Array<[Date, Date]>,
-                                    xScale: d3.time.Scale<number, number>, yStart: number, height: number) {
-        for (let i = 0; i < periods.length; i++) {
-            const x1 = xScale(periods[i][0]);
-            const x2 = xScale(periods[i][1]);
-            // a period that falls into a gap (no IO events) collapses to nothing
-            if (x2 - x1 >= 0.5) {
-                context.fillRect(x1, yStart, x2 - x1, height);
-            }
-        }
     }
 
     private drawBrushGaps(context: CanvasRenderingContext2D) {
@@ -1112,9 +1079,6 @@ class ioStatsGraph {
 
             // Draw tracks background 
             this.drawTracksBackground(context);
-
-            // Shade the periods the disk was paced (drain), behind the items
-            this.drawDrainPeriods(context, xScale);
 
             // Draw gaps   
             this.drawGaps(context, xScale);
@@ -1394,52 +1358,6 @@ class ioStatsGraph {
         context.restore();
     }
 
-    private drawDrainPeriods(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
-        if (!this.showDrainPeriods()) {
-            return;
-        }
-
-        context.save();
-
-        context.beginPath();
-        context.rect(0, ioStatsGraph.axisHeight, this.totalWidth, this.totalHeight - ioStatsGraph.brushSectionHeight);
-        context.clip();
-
-        context.fillStyle = this.colors.drainPeriod;
-
-        const shadeTrack = (type: StorageEnvironmentType, yStart: number) => {
-            // no shading when the device of this track is not known (or its environments sit on several devices)
-            const periods = this.drainPeriodsByEnvType.get(type);
-            if (periods) {
-                ioStatsGraph.fillDrainPeriods(context, periods, xScale, yStart, ioStatsGraph.openedTrackHeight);
-            }
-        };
-
-        let hasVisibleIndexTrack = false;
-
-        this.data.Environments.forEach(env => {
-            if (this.filtered(env)) {
-                return;
-            }
-
-            if (env.Type === "Index") {
-                hasVisibleIndexTrack = true;
-                if (this.isIndexesExpanded()) {
-                    shadeTrack(env.Type, this.yScale(env.Path));
-                }
-            } else {
-                shadeTrack(env.Type, this.yScale(env.Path));
-            }
-        });
-
-        // all index tracks share one position when collapsed, shade it once
-        if (hasVisibleIndexTrack && !this.isIndexesExpanded()) {
-            shadeTrack("Index", this.yScale(ioStatsGraph.indexesString));
-        }
-
-        context.restore();
-    }
-
     private drawTrackName(context: CanvasRenderingContext2D, trackName: string, yStart: number) {
         const yTextShift = 14.5;
         const xTextShift = 0.5;
@@ -1655,18 +1573,6 @@ class ioStatsGraph {
         const deviceIds = new Set(environments.map(x => x.DeviceId).filter(x => x));
         const devices = report.Devices.filter(x => deviceIds.has(x.DeviceId));
 
-        const periodsByDevice = new Map<string, Array<[Date, Date]>>();
-        devices.forEach(device => periodsByDevice.set(device.DeviceId, ioStatsGraph.toDrainPeriods(device.History)));
-
-        // a track is shaded only when all its environments sit on one device
-        const periodsByEnvType = new Map<StorageEnvironmentType, Array<[Date, Date]>>();
-        new Set(environments.map(x => x.Type)).forEach(type => {
-            const typeDeviceIds = Array.from(new Set(environments.filter(x => x.Type === type).map(x => x.DeviceId)));
-            if (typeDeviceIds.length === 1 && periodsByDevice.has(typeDeviceIds[0])) {
-                periodsByEnvType.set(type, periodsByDevice.get(typeDeviceIds[0]));
-            }
-        });
-
         const items = devices.map(device => ioStatsGraph.toStorageDeviceItem(device,
             devices.length > 1 ? environments.filter(x => x.DeviceId === device.DeviceId) : null));
 
@@ -1677,65 +1583,15 @@ class ioStatsGraph {
             note = "Disk state: the disk could not be identified.";
         }
 
-        this.drainPeriodsByEnvType = periodsByEnvType;
-        this.setStorageDevices(moment().format("HH:mm:ss"), items, note,
-            ioStatsGraph.mergePeriods(Array.from(periodsByDevice.values()).flat()));
+        this.setStorageDevices(moment().format("HH:mm:ss"), items, note);
     }
 
-    private setStorageDevices(asOf: string, items: storageDeviceItem[], note: string, drainPeriods: Array<[Date, Date]> = []) {
-        if (!items.length) {
-            this.drainPeriodsByEnvType = new Map();
-        }
-
-        this.allDrainPeriods = drainPeriods;
-        this.drainPeriodsCount(drainPeriods.length);
+    private setStorageDevices(asOf: string, items: storageDeviceItem[], note: string) {
         this.storageDevices(items);
         this.storageDevicesNote(note);
         this.storageDevicesAsOf(asOf);
 
         this.draw(false);
-    }
-
-    private static toDrainPeriods(history: Raven.Server.Storage.StorageDeviceSample[]): Array<[Date, Date]> {
-        // a sample is the mode at one instant, taken every 10 s: a run of draining samples covers half an interval on both sides
-        const halfInterval = ioStatsGraph.drainSampleInterval / 2;
-        const result: Array<[Date, Date]> = [];
-        let start: number = null;
-        let end: number = null;
-
-        (history ?? []).forEach(sample => {
-            const at = moment.utc(sample.At).valueOf();
-            if (sample.Draining) {
-                start = start ?? at - halfInterval;
-                end = at + halfInterval;
-            } else if (start != null) {
-                result.push([new Date(start), new Date(end)]);
-                start = null;
-            }
-        });
-
-        if (start != null) {
-            result.push([new Date(start), new Date(end)]);
-        }
-
-        return result;
-    }
-
-    private static mergePeriods(periods: Array<[Date, Date]>): Array<[Date, Date]> {
-        const result: Array<[Date, Date]> = [];
-
-        [...periods].sort((a, b) => a[0].getTime() - b[0].getTime()).forEach(period => {
-            const last = result[result.length - 1];
-            if (last && period[0].getTime() <= last[1].getTime()) {
-                if (period[1].getTime() > last[1].getTime()) {
-                    last[1] = period[1];
-                }
-            } else {
-                result.push([period[0], period[1]]);
-            }
-        });
-
-        return result;
     }
 
     private static toStorageDeviceItem(device: Raven.Server.Storage.StorageDeviceIoInfo,
@@ -1750,7 +1606,7 @@ class ioStatsGraph {
             statusHelp: Array.from(new Set([device.StatusReason, storageIoTerms.storageStatusHelp[device.Status]].filter(x => x))).join("\n"),
             statusReason: device.Status !== "Ok" ? device.StatusReason : "",
             draining: device.Draining,
-            modeText: device.Draining ? "Writes paced (drain)" : "Normal (trickle)",
+            modeText: device.Draining ? "Paced" : "Normal",
             modeHelp: device.Draining ? storageIoTerms.storageTermHelp.drain : storageIoTerms.storageTermHelp.trickle,
             drainShareText: share > 0 && share < 0.01 ? "< 1%" : Math.round(share * 100) + "%",
             classText: device.Class,
@@ -1954,12 +1810,12 @@ class ioStatsGraph {
                     }
                 }
                 if (element.Drain != null) {
-                    html += line("Paced writeback (drain)", yesNo(element.Drain));
+                    html += line("Paced", yesNo(element.Drain));
                     if (element.Drain && element.WritebackSize != null) {
-                        const ranges = Number(element.WritebackRanges ?? 0);
                         const size = generalUtils.formatBytesToSize(Number(element.WritebackSize));
-                        html += line("Writeback", `${size} in ${ranges.toLocaleString()} ${ranges === 1 ? "range" : "ranges"}, `
-                            + `${formatMs(element.WritebackDuration)} of ${formatMs(element.Duration)}`);
+                        const ranges = Number(element.WritebackRanges ?? 0).toLocaleString();
+                        const fsync = Number(element.Duration) - Number(element.WritebackDuration);
+                        html += line("Time", `${formatMs(element.WritebackDuration)} writing ${size} in blocks (${ranges} ranges), then ${formatMs(fsync)} fsync`);
                     }
                 }
                 break;

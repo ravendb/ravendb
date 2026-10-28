@@ -83,7 +83,7 @@ export default function StorageIoHistory({ history, thresholds }: StorageIoHisto
     return (
         <div className="storage-io-history mt-3">
             <div className="small text-muted mb-1">
-                Last {period}: <span className="storage-io-legend-drain" /> writes paced (drain){" "}
+                Last {period}: <span className="storage-io-legend-drain" /> paced{" "}
                 <span className="storage-io-legend-latency" /> journal write latency (average){" "}
                 <span className="storage-io-legend-threshold" />{" "}
                 {formatMs(thresholds.CongestionJournalWriteLatencyInMs)} congestion threshold
@@ -150,7 +150,7 @@ export default function StorageIoHistory({ history, thresholds }: StorageIoHisto
                                 Queue depth:{" "}
                                 <strong>{sample.QueueDepth == null ? "n/a" : sample.QueueDepth.toFixed(1)}</strong>
                             </div>
-                            <div>{sample.Draining ? "Writes paced (drain)" : "Normal (trickle)"}</div>
+                            <div>{sample.Draining ? "Paced" : "Normal"}</div>
                         </div>
                     )}
                 </div>
