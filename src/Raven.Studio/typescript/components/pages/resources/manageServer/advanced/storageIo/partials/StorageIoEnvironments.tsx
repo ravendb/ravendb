@@ -59,7 +59,7 @@ export default function StorageIoEnvironments({ environments, devices, yieldsPer
                     type="search"
                     placeholder="Filter by database or environment"
                     value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilter(e.target.value)}
                     className="storage-io-filter"
                 />
                 <Form.Check
