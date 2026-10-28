@@ -749,6 +749,64 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class CallbacksBase
+    {
+        [JsonIgnore]
+        public List<string> Calls { get; } = [];
+
+        [OnDeserialized]
+        private void OnBaseDeserialized(StreamingContext context) => Calls.Add("base-deserialized");
+    }
+
+    private class WithCallbacks : CallbacksBase
+    {
+        public string Name { get; set; }
+
+        [OnSerializing]
+        private void OnSerializingMethod(StreamingContext context) => Name = Name?.Trim();
+
+        [OnDeserializing]
+        private void OnDeserializingMethod(StreamingContext context) => Calls.Add("deserializing");
+
+        [OnDeserialized]
+        private void OnDeserializedMethod(StreamingContext context) => Calls.Add("deserialized");
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonRunsSerializationCallbacksLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(new WithCallbacks { Name = "  x  " }, context))
+        using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(new WithCallbacks { Name = "  x  " }, context))
+        {
+            Assert.Equal(expected.ToString(), actual.ToString());
+            Assert.True(actual.TryGet(nameof(WithCallbacks.Name), out string name));
+            Assert.Equal("x", name);
+
+            var newtonsoftRead = Newtonsoft.Serialization.DefaultConverter.FromBlittable<WithCallbacks>(expected);
+            var systemTextJsonRead = SystemTextJson.Serialization.DefaultConverter.FromBlittable<WithCallbacks>(expected);
+            Assert.Equal(["deserializing", "base-deserialized", "deserialized"], newtonsoftRead.Calls);
+            Assert.Equal(newtonsoftRead.Calls, systemTextJsonRead.Calls);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
+    public void SystemTextJsonReadsTypedTimeSeriesEntries()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(
+                   "{\"Timestamp\":\"2024-01-01T00:00:00.0000000Z\",\"Values\":[1,2],\"Tag\":\"t\",\"IsRollup\":false}", "entry"))
+        {
+            var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<TimeSeriesEntry<StockPrice>>(json);
+            var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<TimeSeriesEntry<StockPrice>>(json);
+
+            Assert.Equal(2, actual.Value.Close);
+            Assert.Equal(expected.Value.Open, actual.Value.Open);
+            Assert.Equal(expected.Value.Close, actual.Value.Close);
+            Assert.Equal(expected.Tag, actual.Tag);
+        }
+    }
+
     private class HoldsChars
     {
         public List<char> Chars { get; set; }
