@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
@@ -199,21 +200,16 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         {
             if (Statistics.LastProcessedEtag > 0)
             {
-                try
-                {
-                    Database.ForTestingPurposes?.BeforeSavingOlapEtlLastBatchTime?.Invoke();
+                AsyncHelpers.RunSync(() => BackupHelper.RunWithRetriesAsync(maxRetries: 3, () =>
+                    {
+                        Database.ForTestingPurposes?.BeforeSavingOlapEtlLastBatchTime?.Invoke();
 
-                    UpdateEtlProcessState(LastProcessState, lastBatchTime);
-                }
-                catch (Exception e) when (CancellationToken.IsCancellationRequested == false)
-                {
-                    var msg = $"{Tag} Failed to save the last batch time of ETL process '{Name}'";
-
-                    if (Logger.IsWarnEnabled)
-                        Logger.Warn(msg, e);
-
-                    ReportStopReasonToStats($"{msg} : {e}");
-                }
+                        UpdateEtlProcessState(LastProcessState, lastBatchTime);
+                        return Task.FromResult(0L);
+                    },
+                    infoMessage: "Saving the last batch time in the cluster",
+                    errorMessage: "Failed to save the last batch time in the cluster",
+                    smugglerResult: null, operationCancelToken: _operationCancelToken));
             }
 
             UpdateTimer(lastBatchTime);

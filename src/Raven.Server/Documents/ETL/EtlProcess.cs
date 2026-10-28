@@ -773,7 +773,7 @@ namespace Raven.Server.Documents.ETL
         {
         }
 
-        protected void ReportStopReasonToStats(string msg)
+        private void ReportStopReasonToStats(string msg)
         {
             try
             {
@@ -1052,9 +1052,10 @@ namespace Raven.Server.Documents.ETL
 
         protected void UpdateEtlProcessState(EtlProcessState state, DateTime? lastBatchTime = null)
         {
+            lastBatchTime ??= GetProcessState(Database, Configuration.Name, Transformation.Name).LastBatchTime;
             var command = new UpdateEtlProcessStateCommand(Database.Name, Configuration.Name, Transformation.Name, Statistics.LastProcessedEtag,
                 ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector), _serverStore.NodeTag,
-                _serverStore.LicenseManager.HasHighlyAvailableTasks(), Database.DbBase64Id, RaftIdGenerator.NewId(), state.SkippedTimeSeriesDocs, lastBatchTime ?? state.LastBatchTime);
+                _serverStore.LicenseManager.HasHighlyAvailableTasks(), Database.DbBase64Id, RaftIdGenerator.NewId(), state.SkippedTimeSeriesDocs, lastBatchTime);
 
             var sendToLeaderTask = _serverStore.SendToLeaderAsync(command);
 
