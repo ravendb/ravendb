@@ -2,9 +2,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.JsonPatch;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Raven.Client.Json.Serialization.SystemTextJson;
 using Raven.Client.ServerWide;
@@ -803,6 +807,78 @@ namespace FastTests.Client
                     Assert.False(session.Advanced.HasChanges);
                 }
             }
+        }
+
+        [RavenFact(RavenTestCategory.Patching)]
+        public async Task PatchOperationSerializesValuesWithStoreConventions()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.Serialization = new SystemTextJsonSerializationConventions();
+                }
+            });
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Id = "users/1", Name = "Oren" });
+                await session.SaveChangesAsync();
+            }
+
+            await store.Operations.SendAsync(new PatchOperation("users/1", null, new PatchRequest
+            {
+                Script = "this.Payload = args.payload",
+                Values = { ["payload"] = new RenamedPayload { Name = "x" } }
+            }));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var raw = await session.LoadAsync<BlittableJsonReaderObject>("users/1");
+                Assert.True(raw.TryGet("Payload", out BlittableJsonReaderObject payload));
+                Assert.Equal(["n"], payload.GetPropertyNames());
+                Assert.Equal("x", payload["n"].ToString());
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Patching)]
+        public async Task SessionJsonPatchSerializesValuesWithStoreConventions()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.Serialization = new SystemTextJsonSerializationConventions();
+                }
+            });
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Id = "users/1", Name = "Oren" });
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var patch = new JsonPatchDocument();
+                patch.Add("/Payload", new RenamedPayload { Name = "x" });
+                session.Advanced.Defer(new JsonPatchCommandData("users/1", patch));
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var raw = await session.LoadAsync<BlittableJsonReaderObject>("users/1");
+                Assert.True(raw.TryGet("Payload", out BlittableJsonReaderObject payload));
+                Assert.Equal(["n"], payload.GetPropertyNames());
+                Assert.Equal("x", payload["n"].ToString());
+            }
+        }
+
+        private class RenamedPayload
+        {
+            [JsonPropertyName("n")]
+            public string Name { get; set; }
         }
 
         private class EncapsulatedOrder

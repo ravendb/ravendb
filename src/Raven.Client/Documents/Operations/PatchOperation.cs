@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Net.Http;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
 {
@@ -93,11 +95,11 @@ namespace Raven.Client.Documents.Operations
             private readonly bool _test;
 
             public PatchCommand(DocumentConventions conventions, JsonOperationContext context, string id, string changeVector, PatchRequest patch, PatchRequest patchIfMissing, bool skipPatchIfChangeVectorMismatch, bool returnDebugInformation, bool test)
-            : this(conventions, id, changeVector, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new
+            : this(conventions, id, changeVector, context.ReadObject(new DynamicJsonValue
             {
-                Patch = patch,
-                PatchIfMissing = patchIfMissing
-            }, context), skipPatchIfChangeVectorMismatch, returnDebugInformation, test)
+                [nameof(PatchCommandData.Patch)] = patch?.ToJson(conventions, context),
+                [nameof(PatchCommandData.PatchIfMissing)] = patchIfMissing?.ToJson(conventions, context)
+            }, "patch"), skipPatchIfChangeVectorMismatch, returnDebugInformation, test)
             {
                 if (patch == null)
                     throw new ArgumentNullException(nameof(patch));
