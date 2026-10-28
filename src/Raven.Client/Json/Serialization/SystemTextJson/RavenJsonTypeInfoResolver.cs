@@ -64,6 +64,34 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             }
         }
 
+        public override JsonTypeInfo GetTypeInfo(Type type, JsonSerializerOptions options)
+        {
+            AssertMembersCanBeResolved(type);
+            return base.GetTypeInfo(type, options);
+        }
+
+        private void AssertMembersCanBeResolved(Type type)
+        {
+            foreach (PropertyInfo property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+                AssertMemberTypeCanBeResolved(property.PropertyType);
+
+            foreach (FieldInfo field in type.GetFields(BindingFlags.Public | BindingFlags.Instance))
+                AssertMemberTypeCanBeResolved(field.FieldType);
+        }
+
+        private void AssertMemberTypeCanBeResolved(Type memberType)
+        {
+#if NETSTANDARD2_0
+            if (memberType.IsByRef && _conventions.IgnoreByRefMembers == false)
+#else
+            if ((memberType.IsByRef || memberType.IsByRefLike) && _conventions.IgnoreByRefMembers == false)
+#endif
+                ThrowByRefNotSupported();
+
+            if (memberType.IsPointer && _conventions.IgnoreUnsafeMembers == false)
+                ThrowPointersNotSupported();
+        }
+
         private void ModifyTypeInfo(JsonTypeInfo typeInfo)
         {
             if (typeInfo.Kind != JsonTypeInfoKind.Object)
