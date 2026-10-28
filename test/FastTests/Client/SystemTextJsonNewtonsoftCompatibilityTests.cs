@@ -894,6 +894,46 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class NullHandling
+    {
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public Person Skipped { get; set; }
+
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public string SkippedText { get; set; }
+
+        public Person Kept { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonHonorsNewtonsoftNullValueHandlingLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            AssertSameJson(new NullHandling());
+            AssertSameJson(new NullHandling { Skipped = new Person { Name = "Oren" }, SkippedText = "text" });
+
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"SkippedText\":null,\"Kept\":null}", "nulls"))
+            {
+                var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<NullHandling>(json);
+                var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<NullHandling>(json);
+                Assert.Equal(expected.SkippedText, actual.SkippedText);
+                Assert.Equal(expected.Kept, actual.Kept);
+            }
+
+            void AssertSameJson(NullHandling value)
+            {
+                using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(value, context))
+                using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(value, context))
+                {
+                    JObject expectedJson = JObject.Parse(expected.ToString());
+                    JObject actualJson = JObject.Parse(actual.ToString());
+                    Assert.True(JToken.DeepEquals(expectedJson, actualJson), $"Expected {expectedJson} but got {actualJson}");
+                }
+            }
+        }
+    }
+
     private class HoldsChars
     {
         public List<char> Chars { get; set; }
