@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -62,9 +61,7 @@ namespace SlowTests.Issues
             {
                 var jsonString = JsonRecordFor(version);
                 using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(jsonString)))
-                await using (var zipStream = new GZipStream(ms, CompressionMode.Compress))
                 {
-                    zipStream.Flush();
                     ms.Position = 0;
 
                     var operation = await store.Smuggler.ForDatabase(store.Database)
@@ -104,12 +101,10 @@ namespace SlowTests.Issues
             {
                 // convert the JSON database record into a memory stream
                 using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(OldJsonRecord)))
-                await using (var zipStream = new GZipStream(ms, CompressionMode.Compress))
                 {
-                    zipStream.Flush();
                     ms.Position = 0;
 
-                    // create a backup path and write the compressed stream to a file
+                    // create a backup path and write the stream to a file
                     var backupPath = NewDataPath(suffix: "BackupFolder", forceCreateDir: true);
                     var filePath = Path.Combine(backupPath, "test111.ravendb-full-backup");
                     await using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write))
@@ -141,9 +136,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(NewJsonRecord)))
-                await using (var zipStream = new GZipStream(ms, CompressionMode.Compress))
                 {
-                    zipStream.Flush();
                     ms.Position = 0;
 
                     var backupPath = NewDataPath(suffix: "BackupFolder", forceCreateDir: true);
@@ -266,9 +259,7 @@ namespace SlowTests.Issues
             {
                 var jsonString = OldJsonRecord;
                 using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(jsonString)))
-                await using (var zipStream = new GZipStream(ms, CompressionMode.Compress))
                 {
-                    zipStream.Flush();
                     ms.Position = 0;
 
                     var backupPath = NewDataPath(suffix: "BackupFolder", forceCreateDir: true);
