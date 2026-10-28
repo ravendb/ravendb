@@ -98,6 +98,7 @@ namespace Sparrow.Json
         public JsonOperationContext(int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
         {
             Debug.Assert(lowMemoryFlag != null);
+            RegisterContextAllocation(this);
             _disposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
             {
 #if MEM_GUARD_STACK
@@ -845,6 +846,8 @@ namespace Sparrow.Json
         {
             if (Disposed)
                 ThrowObjectDisposed();
+
+            RegisterContextAllocation(this);
 
             if (_activeAllocatePathCaches == null)
             {

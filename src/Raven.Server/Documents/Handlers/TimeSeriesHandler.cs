@@ -287,6 +287,8 @@ namespace Raven.Server.Documents.Handlers
 
             private bool _isDisposed;
 
+            internal bool IsDisposed => _isDisposed;
+
             private readonly List<IDisposable> _toDispose;
 
             private readonly List<AllocatedMemoryData> _toReturn;
@@ -316,18 +318,15 @@ namespace Raven.Server.Documents.Handlers
                 {
                     foreach (var item in items)
                     {
-                        using (item)
+                        var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
                         {
-                            var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
-                            {
-                                DocumentId = docId,
-                                Collection = item.Collection,
-                                Name = item.Name,
-                                From = item.From,
-                                To = item.To
-                            };
-                            tss.DeleteTimestampRange(context, deletionRangeRequest, remoteChangeVector: null, updateMetadata: false);
-                        }
+                            DocumentId = docId,
+                            Collection = item.Collection,
+                            Name = item.Name,
+                            From = item.From,
+                            To = item.To
+                        };
+                        tss.DeleteTimestampRange(context, deletionRangeRequest, remoteChangeVector: null, updateMetadata: false);
                     }
 
                     changes += items.Count;
@@ -339,21 +338,18 @@ namespace Raven.Server.Documents.Handlers
 
                     foreach (var item in items)
                     {
-                        using (item)
+                        using (var slicer = new TimeSeriesSliceHolder(context, docId, item.Name).WithBaseline(item.Baseline))
                         {
-                            using (var slicer = new TimeSeriesSliceHolder(context, docId, item.Name).WithBaseline(item.Baseline))
+                            if (tss.TryAppendEntireSegmentFromSmuggler(context, slicer.TimeSeriesKeySlice, collectionName, item))
                             {
-                                if (tss.TryAppendEntireSegmentFromSmuggler(context, slicer.TimeSeriesKeySlice, collectionName, item))
-                                {
-                                    // on import we remove all @time-series from the document, so we need to re-add them
-                                    tss.AddTimeSeriesNameToMetadata(context, item.DocId, item.Name, NonPersistentDocumentFlags.FromSmuggler);
-                                    continue;
-                                }
+                                // on import we remove all @time-series from the document, so we need to re-add them
+                                tss.AddTimeSeriesNameToMetadata(context, item.DocId, item.Name, NonPersistentDocumentFlags.FromSmuggler);
+                                continue;
                             }
-
-                            var values = item.Segment.YieldAllValues(context, context.Allocator, item.Baseline);
-                            tss.AppendTimestamp(context, docId, item.Collection, item.Name, values, AppendOptionsForSmuggler);
                         }
+
+                        var values = item.Segment.YieldAllValues(context, context.Allocator, item.Baseline);
+                        tss.AppendTimestamp(context, docId, item.Collection, item.Name, values, AppendOptionsForSmuggler);
                     }
 
                     changes += items.Count;
@@ -422,6 +418,23 @@ namespace Raven.Server.Documents.Handlers
 
                 _isDisposed = true;
 
+                // the items are owned by this command and must not be disposed from ExecuteCmd(),
+                // since the transaction merger may execute the same command instance more than once
+                // (e.g. when a merged transaction fails and the commands are re-executed independently)
+                foreach (var items in _deletedRanges.Values)
+                {
+                    foreach (var item in items)
+                        item.Dispose();
+                }
+                _deletedRanges.Clear();
+
+                foreach (var items in _dictionary.Values)
+                {
+                    foreach (var item in items)
+                        item.Dispose();
+                }
+                _dictionary.Clear();
+
                 foreach (var disposable in _toDispose)
                 {
                     disposable.Dispose();
@@ -438,6 +451,7 @@ namespace Raven.Server.Documents.Handlers
                 _releaseContext?.Dispose();
                 _releaseContext = null;
             }
+
             public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 throw new NotImplementedException();

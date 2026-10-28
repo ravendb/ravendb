@@ -123,7 +123,9 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
                     createIfMissing: null,
                     debugMode: false,
                     isTest: false,
-                    collectResultsNeeded: true,
+                    // only the scalar details of the result are used (see below), there is no need to collect the modified document into the query context
+                    // (which must not be disposed from the transaction merger anyway, since the command may be executed more than once)
+                    collectResultsNeeded: false,
                     returnDocument: false,
                     ignoreMaxStepsForScript: options.IgnoreMaxStepsForScript);
 

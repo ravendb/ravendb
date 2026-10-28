@@ -46,6 +46,11 @@ public class QueueSinkStatsScope : StatsScope<QueueSinkRunStats, QueueSinkStatsS
         _stats.NumberOfProcessedMessages++;
     }
 
+    public void RecordProcessedMessages(int count)
+    {
+        _stats.NumberOfProcessedMessages += count;
+    }
+
     public void RecordReadError()
     {
         _stats.ReadErrorCount++;
