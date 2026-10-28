@@ -121,11 +121,12 @@ internal static partial class QueryPlanBuilder
                     break;
                 case MatchDispatch.TreeScan:
                     matches.Add(null);
-                    bool calibrated = IsCalibratedRangeClause(clauseExec.ClauseType);
+                    ClauseType leafType = clauseExec.SentinelRewriteType ?? clauseExec.ClauseType;
+                    bool calibrated = IsCalibratedRangeClause(leafType);
                     leaves.Add(new LeafResolveInfo
                     {
                         Kind = LeafResolveKind.TreeScan,
-                        ClauseType = clauseExec.ClauseType,
+                        ClauseType = leafType,
                         Packed = clauseExec.PackedParamValue,
                         FieldMeta = ResolveFieldMetadata(clauseExec.Clause, walkerCtx),
                         RangeCalibration = calibrated ? clauseExec.Clause.RangeEstimateCalibration : null,

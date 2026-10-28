@@ -114,7 +114,7 @@ internal static partial class QueryPlanBuilder
                     continue;
 
                 var scExec = new ClauseExecution(clause);
-                PopulateClauseValues(scExec, planParams.SlotBindings, planParams.QueryParameters, writer, builderParameters, Span<ulong>.Empty);
+                PopulateClauseValues(scExec, planParams.SlotBindings, planParams.QueryParameters, writer, builderParameters);
                 execs.Add(scExec);
                 spatialFilters.Add(new SpatialFilterOp { MatchIndex = matchIndex++, Clause = clause, Exec = scExec });
             }
@@ -135,7 +135,7 @@ internal static partial class QueryPlanBuilder
                     continue;
 
                 var vcExec = new ClauseExecution(clause);
-                PopulateClauseValues(vcExec, planParams.SlotBindings, planParams.QueryParameters, writer, builderParameters, Span<ulong>.Empty);
+                PopulateClauseValues(vcExec, planParams.SlotBindings, planParams.QueryParameters, writer, builderParameters);
                 execs.Add(vcExec);
                 vectorSelects.Add(vcExec);
             }
