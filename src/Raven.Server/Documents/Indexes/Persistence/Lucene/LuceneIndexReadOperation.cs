@@ -894,7 +894,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             mlt.SetFieldNames(fieldNames);
             mlt.Analyzer = _analyzer;
 
-            var pageSize = LuceneGetPageSize(_searcher, query.PageSize);
+            if (query.Start > int.MaxValue || query.PageSize > int.MaxValue)
+                ThrowQueryWantToExceedsInt32();
+
+            var start = (int)query.Start;
 
             Query mltQuery;
             if (baseDocId.HasValue)
@@ -907,8 +910,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     mltQuery = mlt.Like(blittableJson);
             }
 
-            var tsdc = TopScoreDocCollector.Create(pageSize, true);
-
             if (moreLikeThisQuery.FilterQuery != null && moreLikeThisQuery.FilterQuery is MatchAllDocsQuery == false)
             {
                 mltQuery = new BooleanQuery
@@ -918,46 +919,81 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 };
             }
 
-            _searcher.Search(mltQuery, tsdc, _state);
-            using var topDocs = tsdc.TopDocs();
-
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            var reader = topDocs.ScoreDocArray.GetReader(0);
-
-            while (reader.Read(out int doc, out float score))
+            if (baseDocId.HasValue)
             {
-                token.ThrowIfCancellationRequested();
+                // by id, not by entry: a fanout index gives the base document several entries
+                var baseDocument = _searcher.Doc(baseDocId.Value, _state);
+                var baseDocumentId = baseDocument.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _state) ?? baseDocument.Get(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, _state);
+                if (baseDocumentId != null)
+                    ids.Add(baseDocumentId);
+            }
 
-                if (doc == baseDocId)
-                    continue;
+            // +1 for the base document entry
+            var entriesToGet = LuceneGetPageSize(_searcher, (long)start + query.PageSize + 1);
+            var position = 0;
+            var skipped = 0;
+            long returned = 0;
 
-                var document = _searcher.Doc(doc, _state);
-                var id = document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _state) ?? document.Get(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, _state);
-                if (id == null)
-                    continue;
+            while (true)
+            {
+                var tsdc = TopScoreDocCollector.Create(entriesToGet, true);
 
-                if (ids.Add(id) == false)
-                    continue;
+                _searcher.Search(mltQuery, tsdc, _state);
 
-                var retrieverInput = new RetrieverInput(document, (doc, score), _state);
-                var result = retriever.Get(ref retrieverInput, token);
-                if (result.Document != null)
+                using (var topDocs = tsdc.TopDocs())
                 {
-                    yield return new QueryResult
+                    var reader = topDocs.ScoreDocArray.GetReader(position);
+
+                    while (returned < query.PageSize && reader.Read(out int doc, out float score))
                     {
-                        Result = result.Document
-                    };
-                }
-                else if (result.List != null)
-                {
-                    foreach (Document item in result.List)
-                    {
-                        yield return new QueryResult
+                        token.ThrowIfCancellationRequested();
+
+                        position++;
+
+                        var document = _searcher.Doc(doc, _state);
+                        var id = document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _state) ?? document.Get(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, _state);
+                        if (id == null)
+                            continue;
+
+                        if (ids.Add(id) == false)
+                            continue;
+
+                        if (skipped < start)
                         {
-                            Result = item
-                        };
+                            skipped++;
+                            continue;
+                        }
+
+                        var retrieverInput = new RetrieverInput(document, (doc, score), _state);
+                        var result = retriever.Get(ref retrieverInput, token);
+                        if (result.Document != null)
+                        {
+                            returned++;
+                            yield return new QueryResult
+                            {
+                                Result = result.Document
+                            };
+                        }
+                        else if (result.List != null)
+                        {
+                            foreach (Document item in result.List)
+                            {
+                                returned++;
+                                yield return new QueryResult
+                                {
+                                    Result = item
+                                };
+                            }
+                        }
                     }
+
+                    if (returned >= query.PageSize || topDocs.TotalHits == topDocs.ScoreDocArray.Length)
+                        yield break;
+
+                    // the collector counts entries and the loop counts documents, so grow by what is missing times the fanout
+                    var missing = (long)(start - skipped) + (query.PageSize - returned);
+                    entriesToGet = (int)Math.Min(topDocs.TotalHits, entriesToGet + missing * Math.Max(1, _maxNumberOfOutputsPerDocument));
                 }
             }
         }
