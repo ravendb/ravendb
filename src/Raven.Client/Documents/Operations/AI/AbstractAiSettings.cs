@@ -15,6 +15,14 @@ public abstract class AbstractAiSettings : IDynamicJson
     /// </summary>
     public abstract void ValidateFields(List<string> errors);
 
+    internal void Validate(List<string> errors)
+    {
+        if (EmbeddingsMaxConcurrentBatches is <= 0)
+            errors.Add($"Value of `{nameof(EmbeddingsMaxConcurrentBatches)}` field must be a positive number.");
+
+        ValidateFields(errors);
+    }
+
     /// <summary>
     /// Compares this settings instance with another of the same provider type and
     /// returns flags indicating the nature of the differences.
