@@ -5,8 +5,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Json;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session;
@@ -198,7 +198,7 @@ namespace Raven.Client.Documents.Linq
                 MaybeProperty = memberExpression.Member as PropertyInfo
             };
 
-            result.Path = HandleMemberExpressionPropertyRenames(memberExpression, result.Path);
+            result.Path = HandleMemberExpressionPropertyRenames(memberExpression, result.Path, _conventions);
 
             return result;
         }
@@ -233,14 +233,14 @@ namespace Raven.Client.Documents.Linq
             };
         }
 
-        private static string HandleMemberExpressionPropertyRenames(MemberExpression memberExpression, string name)
+        private static string HandleMemberExpressionPropertyRenames(MemberExpression memberExpression, string name, DocumentConventions conventions)
         {
             var member = memberExpression.Member;
 
             if (memberExpression.Expression is MemberExpression innerMemberExpression)
             {
                 var innerName = name.Substring(0, name.Length - member.Name.Length - 1);
-                name = HandleMemberExpressionPropertyRenames(innerMemberExpression, innerName);
+                name = HandleMemberExpressionPropertyRenames(innerMemberExpression, innerName, conventions);
 
                 if (member.Name != "Value" ||
                     Nullable.GetUnderlyingType(memberExpression.Expression.Type) == null)
@@ -249,36 +249,20 @@ namespace Raven.Client.Documents.Linq
                 }
             }
 
-            return HandlePropertyRenames(member, name);
+            return HandlePropertyRenames(member, name, conventions);
         }
 
         public static string HandlePropertyRenames(MemberInfo member, string name)
         {
-            var jsonPropAttributes = member.GetCustomAttributes(false)
-                                                     .OfType<JsonPropertyAttribute>()
-                                                     .ToArray();
+            return HandlePropertyRenames(member, name, conventions: null);
+        }
 
-            if (jsonPropAttributes.Length != 0)
-            {
-                string propertyName = jsonPropAttributes[0].PropertyName;
-                if (string.IsNullOrEmpty(propertyName) == false)
-                {
-                    return name.Substring(0, name.Length - member.Name.Length) + propertyName;
-                }
-            }
+        public static string HandlePropertyRenames(MemberInfo member, string name, DocumentConventions conventions)
+        {
+            string propertyName = JsonPropertyNameResolver.GetJsonPropertyName(member, conventions);
+            if (string.IsNullOrEmpty(propertyName) == false)
+                return name.Substring(0, name.Length - member.Name.Length) + propertyName;
 
-            var dataMemberAttributes = member.GetCustomAttributes(false)
-                                                       .OfType<DataMemberAttribute>()
-                                                       .ToArray();
-
-            if (dataMemberAttributes.Length != 0)
-            {
-                string propertyName = ((dynamic)dataMemberAttributes[0]).Name;
-                if (string.IsNullOrEmpty(propertyName) == false)
-                {
-                    return name.Substring(0, name.Length - member.Name.Length) + propertyName;
-                }
-            }
             return name;
         }
 
