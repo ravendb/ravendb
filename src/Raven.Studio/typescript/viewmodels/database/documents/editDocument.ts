@@ -1451,7 +1451,7 @@ class editDocument extends shardViewModelBase {
             .execute()
             .done((remoteAttachmentsConfiguration: RemoteAttachmentsStudioConfiguration) => {
                 if (remoteAttachmentsConfiguration == null || remoteAttachmentsConfiguration.Disabled) {
-                    this.remoteAttachmentDisabledReason("Remote attachments are currently disabled. To enable them, go to Settings ? Remote Attachments and update the configuration accordingly.");
+                    this.remoteAttachmentDisabledReason("Remote attachments are currently disabled. To enable them, go to Settings -> Remote Attachments and update the configuration accordingly.");
                 }
             })
             .fail(() => {

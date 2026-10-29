@@ -90,8 +90,8 @@ function consentHandlers(status: AiHelperStatus) {
 }
 
 // Renders the real wizard jumped to a single step. The body components read the discovery
-// result and map-tables selection from the store, so seed both before they first render
-// (Default's AddAppWizard resets the store on mount, so this never leaks).
+// result and map-tables selection from the store, so seed both before they first render.
+// The preview resets the store before every story, so the seed sets only what differs.
 function AppWizardAtStep({
     initialStep,
     discovery = sampleDiscovery,
@@ -117,10 +117,6 @@ function AppWizardAtStep({
     useState(() =>
         useSetupWizardStore.setState({
             discoverResult: discovery,
-            discoverSchemas: [],
-            editedAppSlug: null,
-            initialSelectedTables: null,
-            connectKey: null,
             appliedMapKey: isMappingApplied
                 ? computeMapKey({
                       sourceKey: computeSourceKey(seed.externalConnection),
@@ -129,9 +125,7 @@ function AppWizardAtStep({
                       selectedTables: seed.verifySchema.tables,
                   })
                 : null,
-            mapTablesKey: null,
             mapActiveTable: { type: "root", path: "mapTables.tables.0" },
-            mapExpandedPaths: {},
         }),
     );
 
@@ -313,6 +307,53 @@ export const VerifySchema: Story = {
     },
 };
 
+const allVerifiedDiscovery: DiscoverResponse = {
+    ...discoveryWithAllStates,
+    warnings: [],
+    tables: discoveryWithAllStates.tables.filter((table) => isTableSupported(discoveryWithAllStates, table)),
+};
+
+export const VerifySchemaAllVerified: Story = {
+    parameters: { msw: { handlers: discoverHandlers(allVerifiedDiscovery) } },
+    render: () => <AppWizardAtStep initialStep="verifySchema" discovery={allVerifiedDiscovery} />,
+    // Without tables that need configuration the tabs are hidden, but the warnings filter still shows.
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await waitFor(() => expect(canvas.getAllByRole("checkbox", { name: "Select row" })).toHaveLength(3));
+        expect(canvas.queryByRole("tablist")).not.toBeInTheDocument();
+        expect(canvas.getByRole("group", { name: "Filter tables by warnings" })).toBeInTheDocument();
+    },
+};
+
+export const VerifySchemaWarningsFilter: Story = {
+    parameters: { msw: { handlers: discoverHandlers(discoveryWithAllStates) } },
+    render: () => <AppWizardAtStep initialStep="verifySchema" discovery={discoveryWithAllStates} />,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const rowCount = () => canvas.getAllByRole("checkbox", { name: "Select row" }).length;
+
+        await waitFor(() => expect(rowCount()).toBe(3));
+
+        await userEvent.click(canvas.getByRole("radio", { name: /^no warnings/i }));
+        await waitFor(() => expect(rowCount()).toBe(2));
+        expect(canvas.queryByText("dbo.Orders")).not.toBeInTheDocument();
+
+        await userEvent.click(canvas.getByRole("radio", { name: /^no warnings/i }));
+        await waitFor(() => expect(rowCount()).toBe(3));
+
+        await userEvent.click(canvas.getByRole("radio", { name: /^warnings/i }));
+        await waitFor(() => expect(rowCount()).toBe(1));
+        expect(canvas.getByText("dbo.Orders")).toBeInTheDocument();
+        expect(canvas.getByText(/3 out of 5 tables selected/)).toBeInTheDocument();
+
+        await userEvent.type(canvas.getByPlaceholderText("Search by table name..."), "orders");
+        expect(canvas.getByRole("radio", { name: /^all\s*1$/i })).toBeInTheDocument();
+        expect(canvas.getByRole("radio", { name: /^no warnings\s*0$/i })).toBeInTheDocument();
+        expect(canvas.getByRole("radio", { name: /^warnings\s*1$/i })).toBeInTheDocument();
+    },
+};
+
 // Discovery failed: only the destructive error banner is shown, no tables.
 export const VerifySchemaDiscoveryFailed: Story = {
     parameters: { msw: { handlers: discoverHandlers(failedDiscovery) } },
@@ -484,15 +525,9 @@ export const MapSchemaWithoutIntentPrompt: Story = {
     render: () => <AppWizardAtStep initialStep="map" seedOverride={withoutIntentPrompt} />,
 };
 
-/*
-   The three stories below drive the intent prompt's transitions. Each one ends up looking like a
-   state already on show above, so they are tagged "!dev" to keep them out of the sidebar - the
-   vitest addon selects on the "test" tag, so they still run.
-*/
-
 // Adding the field swaps the button for a focused textarea.
 export const MapSchemaAddIntentPrompt: Story = {
-    tags: ["!dev"],
+    tags: ["test-only"],
     render: () => <AppWizardAtStep initialStep="map" seedOverride={withoutIntentPrompt} />,
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
@@ -509,7 +544,7 @@ export const MapSchemaAddIntentPrompt: Story = {
 
 // Removing takes the text with it, so nothing keeps steering the suggestion from a hidden field.
 export const MapSchemaRemoveIntentPrompt: Story = {
-    tags: ["!dev"],
+    tags: ["test-only"],
     render: () => <AppWizardAtStep initialStep="map" />,
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
@@ -532,7 +567,7 @@ export const MapSchemaRemoveIntentPrompt: Story = {
 // Reaching for the prompt while "Manual" is selected asks for a mapping the prompt cannot steer,
 // so adding it moves the choice to AI Suggest.
 export const MapSchemaIntentPromptFromManual: Story = {
-    tags: ["!dev"],
+    tags: ["test-only"],
     render: () => (
         <AppWizardAtStep
             initialStep="map"
@@ -595,7 +630,7 @@ export const MapTables: Story = {
 // The raw editor can only be left through a mapping that validates, so an incomplete table (here a
 // just-added empty one) must not be able to open it - that used to be a one-way trip into raw JSON.
 export const MapTablesRawViewBlockedByInvalidTable: Story = {
-    tags: ["!dev"],
+    tags: ["test-only"],
     render: () => (
         <AppWizardAtStep
             initialStep="mapTables"

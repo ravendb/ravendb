@@ -19,9 +19,8 @@ namespace Raven.Client.Documents
         /// </summary>
         Not = 4,
         /// <summary>
-        /// RavenDB will attempt to match up semantics between search statements in the following manner: 
-        /// An AND operator will be used between a non-search statement and the immediate search statement that follows.
-        /// An OR operator will be used between consecutive searches.
+        /// The default. Keeps this search in the group of searches that precede it: the group is emitted as one
+        /// parenthesized statement whose members are joined with Or. A search without this flag ends the group.
         /// </summary>
         Guess = 8
     }

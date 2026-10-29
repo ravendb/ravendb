@@ -496,7 +496,7 @@ namespace Voron.Impl.FreeSpace
                 var index = (int)(pageNumber % NumberOfPagesInSection);
                 sba.Set(index, true);
                 
-                if (_disableSparseRegions == false && sba.SetCount > MinNumberOfFreePagesInSectionForSparseConsideration)
+                if (_disableSparseRegions == false && sba.SetCount >= MinNumberOfFreePagesInSectionForSparseConsideration)
                 {
                     tx.RecordSparseRangeCandidate(section);
                 }

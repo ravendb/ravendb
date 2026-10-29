@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -204,12 +204,12 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 foreach (var (_, tvh) in subscriptionState.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
                 {
-                    var batchId = Bits.SwapBytes(tvh.Reader.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId));
+                    var batchId = Bits.SwapBytes(tvh.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId));
                     if (activeBatches.Contains(batchId))
                         continue;
 
-                    string current = tvh.Reader.ReadStringWithPrefix((int)ClusterStateMachine.SubscriptionStateTable.Key, prefix.Length);
-                    string previous = tvh.Reader.ReadString((int)ClusterStateMachine.SubscriptionStateTable.ChangeVector);
+                    string current = tvh.ReadStringWithPrefix((int)ClusterStateMachine.SubscriptionStateTable.Key, prefix.Length);
+                    string previous = tvh.ReadString((int)ClusterStateMachine.SubscriptionStateTable.ChangeVector);
 
                     yield return new RevisionRecord
                     {

@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
@@ -68,11 +68,11 @@ namespace Raven.Server.Storage.Schema.Updates.Server
             return true;
         }
 
-        private static (string, BlittableJsonReaderObject) GetCurrentItem(Transaction tx, JsonOperationContext context, Table.TableValueHolder result)
+        private static (string, BlittableJsonReaderObject) GetCurrentItem(Transaction tx, JsonOperationContext context, in TableValueReader result)
         {
-            var ptr = result.Reader.Read((int)ClusterStateMachine.CertificatesTable.Data, out int size);
+            var ptr = result.Read((int)ClusterStateMachine.CertificatesTable.Data, out int size);
             var doc = new BlittableJsonReaderObject(ptr, size, context);
-            var key = Encoding.UTF8.GetString(result.Reader.Read((int)ClusterStateMachine.CertificatesTable.Thumbprint, out size), size);
+            var key = Encoding.UTF8.GetString(result.Read((int)ClusterStateMachine.CertificatesTable.Thumbprint, out size), size);
 
             Transaction.DebugDisposeReaderAfterTransaction(tx, doc);
             return (key, doc);

@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Utils
 {
@@ -45,6 +46,18 @@ namespace Raven.Server.Utils
             {
                 _list.Add(e);
             }
+        }
+
+        public void Execute(string step, Action action)
+        {
+            using (DisposeAudit.Step(step))
+                Execute(action);
+        }
+
+        public void Execute(string step, IDisposable d)
+        {
+            using (DisposeAudit.Step(step))
+                Execute(d);
         }
 
         public async Task ExecuteAsync(Task task)

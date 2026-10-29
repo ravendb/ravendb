@@ -179,7 +179,7 @@ namespace Raven.Server.Documents.TimeSeries
             foreach (var config in Configuration.Collections)
             {
                 var collection = config.Key;
-                var collectionName = _database.DocumentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+                var collectionName = _database.DocumentsStorage.GetCollectionFromLatestCommittedState(collection, throwIfDoesNotExist: false);
                 if (collectionName == null)
                     continue;
 
@@ -356,7 +356,7 @@ namespace Raven.Server.Documents.TimeSeries
                 
                     using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        var collectionName = _database.DocumentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+                        var collectionName = _database.DocumentsStorage.GetCollectionFromLatestCommittedState(collection, throwIfDoesNotExist: false);
                         if (collectionName == null)
                             continue;
                         

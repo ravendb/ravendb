@@ -1,0 +1,8 @@
+export default {
+    save: "Save",
+    cancel: "Cancel",
+    delete: "Delete",
+    refresh: "Refresh",
+    loadFromFile: "Load from file",
+    usefulLinks: "useful links",
+} as const;

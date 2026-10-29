@@ -26,6 +26,9 @@ public class RavenDB_24327 : StorageTest
         options.ManualFlushing = true;
         options.ManualSyncing = true;
         options.MaxLogFileSize = 1 * 1024 * 1024;
+
+        // the expected numbers of 4KB blocks below are LZ4 sizes 
+        options.ForTestingPurposesOnly().ForceMeasuredDeviceClass = DeviceWriteBudget.DeviceClass.Unknown;
     }
 
     [RavenFact(RavenTestCategory.Voron)]
@@ -531,7 +534,7 @@ public class RavenDB_24327 : StorageTest
             tx.Commit();
         }
         
-        var header = Env.Journal.CurrentFile.GetLastReadTxHeader(txIdToCheck);
+        var header = Env.Journal.CurrentFile.GetLastReadTxHeader(txIdToCheck, Env.HeaderAccessor.JournalId);
         
         Assert.False(header.Flags.HasFlag(TransactionPersistenceModeFlags.HasFreePages));
     }
@@ -584,7 +587,7 @@ public class RavenDB_24327 : StorageTest
             tx.Commit();
         }
         
-        var header = Env.Journal.CurrentFile.GetLastReadTxHeader(txIdToCheck);
+        var header = Env.Journal.CurrentFile.GetLastReadTxHeader(txIdToCheck, Env.HeaderAccessor.JournalId);
         
         Assert.False(header.Flags.HasFlag(TransactionPersistenceModeFlags.HasFreePages));
     }

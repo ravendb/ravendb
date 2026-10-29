@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using System.Threading;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client;
@@ -635,15 +636,15 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
 
             await AssertWaitForTimeSeriesEntry(dest, users[0].Id, timeSeriesName, times[0]);
 
+            // the server-side internal notification is a per-collection wakeup (no per-item detail,
+            // to avoid allocations) - observe the change through the client Changes() API instead,
+            // which still delivers per-document notifications to connected clients
             var countOfTsChanged = 0;
-            var database = await GetDatabase(dest.Database);
-
-            void OnTimeSeriesChange(TimeSeriesChange obj)
-            {
-                if (obj.DocumentId.Equals(users[0].Id, StringComparison.OrdinalIgnoreCase))
-                    countOfTsChanged++;
-            }
-            database.Changes.OnTimeSeriesChange += OnTimeSeriesChange;
+            using var destChanges = dest.Changes();
+            await destChanges.EnsureConnectedNow();
+            var tsObservable = destChanges.ForTimeSeriesOfDocument(users[0].Id, timeSeriesName);
+            using var tsSubscription = tsObservable.Subscribe(_ => Interlocked.Increment(ref countOfTsChanged));
+            await tsObservable.EnsureSubscribedNow();
 
             const string changed = "Changed";
             using (var session = src.OpenAsyncSession())

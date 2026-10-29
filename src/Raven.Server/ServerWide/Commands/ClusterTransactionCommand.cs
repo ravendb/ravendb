@@ -788,9 +788,9 @@ namespace Raven.Server.ServerWide.Commands
 
             using (GetPrefix(context, database, out var prefixSlice))
             {
-                return items.DeleteByPrimaryKeyPrefix(prefixSlice, shouldAbort: (tvb) =>
+                return items.DeleteByPrimaryKeyPrefix(prefixSlice, shouldAbort: (in TableValueReader tvb) =>
                 {
-                    var value = tvb.Reader.Read((int)ClusterTransactionCommand.TransactionCommandsColumn.Key, out var size);
+                    var value = tvb.Read((int)ClusterTransactionCommand.TransactionCommandsColumn.Key, out var size);
                     var prevCommandsCount = Bits.SwapBytes(*(long*)(value + size - sizeof(long)));
                     return prevCommandsCount > upToCommandCount;
                 });
@@ -896,7 +896,7 @@ namespace Raven.Server.ServerWide.Commands
                 var commandsBulk = items.SeekByPrimaryKey(prefixSlice, 0);
                 foreach (var command in commandsBulk)
                 {
-                    var reader = command.Reader;
+                    var reader = command;
                     var result = ReadCommand(context, reader);
                     if (result == null)
                         return null;
@@ -928,7 +928,7 @@ namespace Raven.Server.ServerWide.Commands
                     if (take <= 0)
                         yield break;
 
-                    var reader = command.Value.Reader;
+                    var reader = command.Value;
                     var result = ReadCommand(context, reader);
                     if (result == null)
                         yield break;
@@ -965,7 +965,7 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        private static unsafe SingleClusterDatabaseCommand ReadCommand<TTransaction>(TransactionOperationContext<TTransaction> context, TableValueReader reader)
+        private static unsafe SingleClusterDatabaseCommand ReadCommand<TTransaction>(TransactionOperationContext<TTransaction> context, in TableValueReader reader)
             where TTransaction : RavenTransaction
         {
             var ptr = reader.Read((int)TransactionCommandsColumn.Commands, out var size);

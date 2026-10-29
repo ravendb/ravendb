@@ -693,7 +693,6 @@ namespace Raven.Server.ServerWide
                         throw new FileLoadException($"The server store secret key is provided in {secretKey} but the server failed to read the file. Admin assistance required.", e);
                     }
 
-                    options.DoNotConsiderMemoryLockFailureAsCatastrophicError = Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
                     try
                     {
                         options.Encryption.MasterKey = Secrets.Unprotect(buffer);
@@ -846,24 +845,38 @@ namespace Raven.Server.ServerWide
                     Logger.Info("An error occurred while raising the high read_ahead_kb alert", e);
             }
 
+            options.OnRecoverableFailure += (obj, e) =>
+            {
+                var title = "Recoverable Voron error - System Storage";
+                var message = $"Failure {e.FailureMessage} in the following environment: {e.EnvironmentPath}";
+
+                if (Logger.IsWarnEnabled)
+                    Logger.Warn($"{title}. {message}", e.Exception);
+
+                var alert = AlertRaised.Create(
+                    null,
+                    title,
+                    message,
+                    AlertReason.RecoverableVoronFailure,
+                    NotificationSeverity.Warning,
+                    key: e.EnvironmentId.ToString(),
+                    details: new ExceptionDetails(e.Exception));
+
+                if (NotificationCenter.IsInitialized)
+                {
+                    NotificationCenter.Add(alert);
+                }
+                else
+                {
+                    _storeAlertForLateRaise.Add(alert);
+                }
+            };
+
             options.SchemaVersion = SchemaUpgrader.CurrentVersion.ServerVersion;
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Server, null, null, this);
             options.BeforeSchemaUpgrade = _server.BeforeSchemaUpgrade;
             options.AfterDatabaseCreation = _server.AfterDatabaseCreation;
-            options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
-            options.EnablePrefetching = Configuration.Storage.EnablePrefetching;
-            options.DiscardVirtualMemory = Configuration.Storage.DiscardVirtualMemory;
-            options.UseSequentialReadAheadHintForJournalRecovery = Configuration.Storage.UseSequentialReadAheadHintForJournalRecovery;
-
-            if (Configuration.Storage.MaxScratchBufferSize.HasValue)
-                options.MaxScratchBufferSize = Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
-            options.PrefetchSegmentSize = Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
-            options.PrefetchResetThreshold = Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
-            options.SyncJournalsCountThreshold = Configuration.Storage.SyncJournalsCountThreshold;
-            options.IgnoreInvalidJournalErrors = Configuration.Storage.IgnoreInvalidJournalErrors;
-            options.SkipChecksumValidationOnDatabaseLoading = Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
-            options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
-            options.MaxLogFileSize = Configuration.Storage.MaxJournalFileSize.GetValue(SizeUnit.Bytes);
+            VoronOptionsFromConfiguration.Apply(options, Configuration);
 
             DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, Configuration.Storage, nameof(DirectoryExecUtils.EnvironmentType.System), DirectoryExecUtils.EnvironmentType.System, Logger);
 
@@ -2759,9 +2772,7 @@ namespace Raven.Server.ServerWide
                     break;
                 case ConnectionStringType.Ai:
                     var aiCs = JsonDeserializationCluster.AiConnectionString(connectionString);
-                    if (string.IsNullOrWhiteSpace(aiCs.Identifier))
-                        aiCs.Identifier = AiTaskIdentifierHelper.GenerateIdentifier(aiCs.Name);
-                    if (AiTaskIdentifierHelper.ValidateIdentifier(aiCs.Identifier, out var idErrors) == false)
+                    if (aiCs.EnsureIdentifier(out var idErrors) == false)
                         ThrowInvalidConfigurationIfNecessary(connectionString, idErrors);
                     command = new PutAiConnectionStringCommand(aiCs, databaseName, raftRequestId);
                     break;
@@ -2777,193 +2788,17 @@ namespace Raven.Server.ServerWide
             if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
                 throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
 
-            UpdateDatabaseCommand command;
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            using (var rawRecord = Cluster.ReadRawDatabaseRecord(ctx, databaseName))
+            UpdateDatabaseCommand command = connectionStringType switch
             {
-                switch (connectionStringType)
-                {
-                    case ConnectionStringType.Raven:
-
-                        // Don't delete the connection string if used by tasks types: External Replication || Raven Etl
-
-                        var ravenEtls = rawRecord.RavenEtls;
-                        if (ravenEtls != null)
-                        {
-                            foreach (var ravenETlTask in ravenEtls)
-                            {
-                                if (ravenETlTask.ConnectionStringName == connectionStringName)
-                                {
-                                    throw new InvalidOperationException(
-                                        $"Can't delete connection string: {connectionStringName}. It is used by task: {ravenETlTask.Name}");
-                                }
-                            }
-                        }
-
-                        var externalReplications = rawRecord.ExternalReplications;
-                        if (externalReplications != null)
-                        {
-                            foreach (var replicationTask in externalReplications)
-                            {
-                                if (replicationTask.ConnectionStringName == connectionStringName)
-                                {
-                                    throw new InvalidOperationException(
-                                        $"Can't delete connection string: {connectionStringName}. It is used by task: {replicationTask.Name}");
-                                }
-                            }
-                        }
-
-                        command = new RemoveRavenConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
-                        break;
-
-                    case ConnectionStringType.Sql:
-
-                        var sqlEtls = rawRecord.SqlEtls;
-
-                        // Don't delete the connection string if used by tasks types: SQL Etl
-                        if (sqlEtls != null)
-                        {
-                            foreach (var sqlETlTask in sqlEtls)
-                            {
-                                if (sqlETlTask.ConnectionStringName == connectionStringName)
-                                {
-                                    throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {sqlETlTask.Name}");
-                                }
-                            }
-                        }
-
-                        command = new RemoveSqlConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
-                        break;
-
-                    case ConnectionStringType.Olap:
-
-                        var olapEtls = rawRecord.OlapEtls;
-
-                        // Don't delete the connection string if used by tasks types: Olap Etl
-                        if (olapEtls != null)
-                        {
-                            foreach (var olapETlTask in olapEtls)
-                            {
-                                if (olapETlTask.ConnectionStringName == connectionStringName)
-                                {
-                                    throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {olapETlTask.Name}");
-                                }
-                            }
-                        }
-
-                        command = new RemoveOlapConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
-                        break;
-
-                    case ConnectionStringType.ElasticSearch:
-
-                        var elasticSearchEtls = rawRecord.ElasticSearchEtls;
-
-                        // Don't delete the connection string if used by tasks types: ElasticSearch Etl
-                        if (elasticSearchEtls != null)
-                        {
-                            foreach (var elasticSearchETlTask in elasticSearchEtls)
-                            {
-                                if (elasticSearchETlTask.ConnectionStringName == connectionStringName)
-                                {
-                                    throw new InvalidOperationException(
-                                        $"Can't delete connection string: {connectionStringName}. It is used by task: {elasticSearchETlTask.Name}");
-                                }
-                            }
-                        }
-
-                        command = new RemoveElasticSearchConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
-                        break;
-
-                    case ConnectionStringType.Queue:
-
-                        var queueEtls = rawRecord.QueueEtls;
-
-                        // Don't delete the connection string if used by tasks types: Queue Etl
-                        if (queueEtls != null)
-                        {
-                            foreach (var queueEtlTask in queueEtls)
-                            {
-                                if (queueEtlTask.ConnectionStringName == connectionStringName)
-                                {
-                                    throw new InvalidOperationException(
-                                        $"Can't delete connection string: {connectionStringName}. It is used by task: {queueEtlTask.Name}");
-                                }
-                            }
-                        }
-
-                        var queueSinks = rawRecord.QueueSinks;
-
-                        // Don't delete the connection string if used by tasks types: Queue Sink
-                        if (queueSinks != null)
-                        {
-                            foreach (var queueSinkTask in queueSinks)
-                            {
-                                if (queueSinkTask.ConnectionStringName == connectionStringName)
-                                {
-                                    throw new InvalidOperationException(
-                                        $"Can't delete connection string: {connectionStringName}. It is used by task: {queueSinkTask.Name}");
-                                }
-                            }
-                        }
-
-                        command = new RemoveQueueConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
-                        break;
-
-                    case ConnectionStringType.Snowflake:
-
-                        var snowflakeEtls = rawRecord.SnowflakeEtls;
-
-                        // Don't delete the connection string if used by tasks types: Snowflake Etl
-                        if (snowflakeEtls != null)
-                        {
-                            foreach (var snowflakeEtlTask in snowflakeEtls)
-                            {
-                                if (snowflakeEtlTask.ConnectionStringName == connectionStringName)
-                                {
-                                    throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {snowflakeEtlTask.Name}");
-                                }
-                            }
-                        }
-
-                        command = new RemoveSnowflakeConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
-                        break;
-
-                    case ConnectionStringType.Ai:
-
-                        // Don't delete the connection string if used by tasks types: Embeddings, GenAi
-
-                        var embeddingsGenerationTasks = rawRecord.EmbeddingsGenerations;
-                        if (embeddingsGenerationTasks != null)
-                        {
-                            foreach (var embeddingsTask in embeddingsGenerationTasks)
-                            {
-                                if (embeddingsTask.ConnectionStringName == connectionStringName)
-                                {
-                                    throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {embeddingsTask.Name}");
-                                }
-                            }
-                        }
-
-                        var genAiTasks = rawRecord.GenAis;
-                        if (genAiTasks != null)
-                        {
-                            foreach (var genAiTask in genAiTasks)
-                            {
-                                if (genAiTask.ConnectionStringName == connectionStringName)
-                                {
-                                    throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {genAiTask.Name}");
-                                }
-                            }
-                        }
-
-                        command = new RemoveAiConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
-                        break;
-
-                    default:
-                        throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
-                }
-            }
+                ConnectionStringType.Raven => new RemoveRavenConnectionStringCommand(connectionStringName, databaseName, raftRequestId),
+                ConnectionStringType.Sql => new RemoveSqlConnectionStringCommand(connectionStringName, databaseName, raftRequestId),
+                ConnectionStringType.Olap => new RemoveOlapConnectionStringCommand(connectionStringName, databaseName, raftRequestId),
+                ConnectionStringType.ElasticSearch => new RemoveElasticSearchConnectionStringCommand(connectionStringName, databaseName, raftRequestId),
+                ConnectionStringType.Queue => new RemoveQueueConnectionStringCommand(connectionStringName, databaseName, raftRequestId),
+                ConnectionStringType.Snowflake => new RemoveSnowflakeConnectionStringCommand(connectionStringName, databaseName, raftRequestId),
+                ConnectionStringType.Ai => new RemoveAiConnectionStringCommand(connectionStringName, databaseName, raftRequestId),
+                _ => throw new NotSupportedException($"Unknown connection string type: {connectionStringType}")
+            };
 
             return await SendToLeaderAsync(command);
         }
@@ -2997,6 +2832,8 @@ namespace Raven.Server.ServerWide
 
                     _shutdownNotification.Cancel();
 
+                    using var audit = DisposeAudit.BeginOrStep(nameof(ServerStore));
+
                     if (ContextPool != null)
                     {
                         _server.Statistics.Persist(ContextPool, Logger);
@@ -3006,7 +2843,7 @@ namespace Raven.Server.ServerWide
 
                     var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {nameof(ServerStore)}.");
 
-                    exceptionAggregator.Execute(() =>
+                    exceptionAggregator.Execute("Rachis engine", () =>
                     {
                         try
                         {
@@ -3018,36 +2855,36 @@ namespace Raven.Server.ServerWide
                         }
                     });
 
-                    exceptionAggregator.Execute(() =>
+                    exceptionAggregator.Execute("join the cluster maintenance setup thread", () =>
                     {
                         if (_clusterMaintenanceSetupTask != null && _clusterMaintenanceSetupTask != PoolOfThreads.LongRunningWork.Current)
                             _clusterMaintenanceSetupTask.Join(int.MaxValue);
                     });
 
-                    exceptionAggregator.Execute(() =>
+                    exceptionAggregator.Execute("join the topology change notification thread", () =>
                     {
                         if (_updateTopologyChangeNotification != null && _updateTopologyChangeNotification != PoolOfThreads.LongRunningWork.Current)
                             _updateTopologyChangeNotification.Join(int.MaxValue);
                     });
 
-                    var toDispose = new List<IDisposable>
+                    var toDispose = new List<(string Name, IDisposable Disposable)>
                     {
-                        StorageSpaceMonitor,
-                        ServerLimitsMonitor,
-                        GcThreadContentionDetector,
-                        NotificationCenter,
-                        LicenseManager,
-                        DatabasesLandlord,
-                        _env,
-                        _leaderRequestExecutor,
-                        ContextPool,
-                        ByteStringMemoryCache.Cleaner,
-                        InitializationCompleted,
-                        _fileLocker
+                        (nameof(StorageSpaceMonitor), StorageSpaceMonitor),
+                        (nameof(ServerLimitsMonitor), ServerLimitsMonitor),
+                        (nameof(GcThreadContentionDetector), GcThreadContentionDetector),
+                        (nameof(NotificationCenter), NotificationCenter),
+                        (nameof(LicenseManager), LicenseManager),
+                        (nameof(DatabasesLandlord), DatabasesLandlord),
+                        ("server storage environment", _env),
+                        ("leader request executor", _leaderRequestExecutor),
+                        (nameof(ContextPool), ContextPool),
+                        ("byte string memory cache cleaner", ByteStringMemoryCache.Cleaner),
+                        (nameof(InitializationCompleted), InitializationCompleted),
+                        ("file locker", _fileLocker)
                     };
 
-                    foreach (var disposable in toDispose)
-                        exceptionAggregator.Execute(() =>
+                    foreach (var (name, disposable) in toDispose)
+                        exceptionAggregator.Execute(name, () =>
                         {
                             try
                             {
@@ -3670,7 +3507,9 @@ namespace Raven.Server.ServerWide
                 || _leaderRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
             {
                 var newExecutor = CreateNewClusterRequestExecutor(leaderUrl);
-                Interlocked.Exchange(ref _leaderRequestExecutor, newExecutor);
+                var oldExecutor = Interlocked.Exchange(ref _leaderRequestExecutor, newExecutor);
+                // the old executor may still be in use, its finalizer disposes it
+                oldExecutor?.ForgetAbout();
             }
 
             return _leaderRequestExecutor;

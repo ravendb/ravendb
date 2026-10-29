@@ -374,7 +374,7 @@ AppsEndpoints.Map(app);
 ChannelsEndpoints.Map(app);
 SlackEndpoints.Map(app);
 DiscordEndpoints.Map(app);
-IFrameCustomizationEndpoints.Map(app);
+WidgetThemeEndpoints.Map(app);
 EmbedLinksEndpoints.Map(app);
 AiConnectionStringsEndpoints.Map(app);
 AiModelsEndpoints.Map(app);

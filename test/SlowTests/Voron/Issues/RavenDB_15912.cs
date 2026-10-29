@@ -1,4 +1,4 @@
-﻿﻿﻿using System;
+﻿﻿using System;
 using System.Linq;
 using FastTests.Voron;
 using FastTests.Voron.Tables;
@@ -77,11 +77,11 @@ namespace SlowTests.Voron.Issues
                 {
                     foreach (var reader in itemsTable.SeekBackwardFrom(fixedSizedIndex, long.MaxValue))
                     {
-                        var p = reader.Reader.Read(1, out var sizeOfInt);
+                        var p = reader.Read(1, out var sizeOfInt);
                         Assert.Equal(sizeOfInt, sizeof(long));
                         var i = Bits.SwapBytes(*(long*)p);
 
-                        var keyPtr = reader.Reader.Read(0, out var keySize);
+                        var keyPtr = reader.Read(0, out var keySize);
                         using (Slice.From(tx.Allocator, keyPtr, keySize, out var currentKey))
                         using (Slice.From(tx.Allocator, "val" + i, out var expectedKey))
                         {

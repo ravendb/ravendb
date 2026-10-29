@@ -53,6 +53,8 @@ internal sealed class IndexedField
     private readonly SupportedFeatures _supportedFeatures;
     public readonly bool IsVirtual;
     public bool HasMultipleTermsPerField;
+    private DocumentEntryId _lastEntryIdWithTerm = DocumentEntryId.Invalid;
+
     private long _fieldRootPage;
 
     public long FieldRootPage
@@ -126,6 +128,7 @@ internal sealed class IndexedField
         _supportedFeatures = source._supportedFeatures;
         IsVirtual = source.IsVirtual;
         HasMultipleTermsPerField = source.HasMultipleTermsPerField;
+        _lastEntryIdWithTerm = source._lastEntryIdWithTerm;
         FieldRootPage = source.FieldRootPage;
         TermsVectorFieldRootPage = source.TermsVectorFieldRootPage;
         VectorIndexer = source.VectorIndexer;
@@ -249,7 +252,20 @@ internal sealed class IndexedField
         Hnsw.Create(llt, Name, vectorSize, _vectorOptions.NumberOfEdges, _vectorOptions.NumberOfCandidates, _vectorOptions.VectorEmbeddingType);
         _hnswIsCreated = true;
     }
-    
+
+    /// <summary>One term written for this field in this entry. A second one for the same entry means the field holds
+    /// several terms per entry. The state sits on the root, so a dynamic write through a virtual field counts together
+    /// with the declared field whose dictionaries it shares (RavenDB-27565).</summary>
+    public void RecordTermForEntry(DocumentEntryId entryId)
+    {
+        var root = _parent ?? this;
+
+        if (root._lastEntryIdWithTerm == entryId)
+            root.HasMultipleTermsPerField = true;
+        else
+            root._lastEntryIdWithTerm = entryId;
+    }
+
     public void Clear()
     {
         Suggestions?.Clear();
@@ -258,7 +274,8 @@ internal sealed class IndexedField
         Longs?.Clear();
         Textual?.Clear();
         EntryToTerms = default;
-        
+        _lastEntryIdWithTerm = DocumentEntryId.Invalid;
+
         PortableExceptions.ThrowIfOnDebug<InvalidOperationException>(VectorIndexer is { IsCommited: false }, "VectorIndexer is { IsDisposed: false }");
         VectorIndexer = null; // after Commit it will be recreated from scratch
     }
@@ -271,7 +288,7 @@ internal sealed class IndexedField
             nameof(_parent), nameof(Spatial), nameof(Storage), nameof(Textual), nameof(_entryToTerms), nameof(Longs), nameof(Doubles), nameof(Suggestions),
             nameof(Analyzer), nameof(NameForStatistics), nameof(Name), nameof(NameLong), nameof(NameDouble), nameof(NameTotalLengthOfTerms), nameof(Id),
             nameof(FieldIndexingMode), nameof(ShouldIndex), nameof(HasSuggestions), nameof(ShouldStore), nameof(_supportedFeatures), nameof(IsVirtual),
-            nameof(HasMultipleTermsPerField), nameof(FieldRootPage), nameof(TermsVectorFieldRootPage), nameof(FieldSupportsPhraseQuery), nameof(IsCreatedByDelete), nameof(_vectorOptions), nameof(VectorIndexer), nameof(_isCreatedByField), nameof(_fieldRootPage), nameof(_hnswIsCreated)
+            nameof(HasMultipleTermsPerField), nameof(_lastEntryIdWithTerm), nameof(FieldRootPage), nameof(TermsVectorFieldRootPage), nameof(FieldSupportsPhraseQuery), nameof(IsCreatedByDelete), nameof(_vectorOptions), nameof(VectorIndexer), nameof(_isCreatedByField), nameof(_fieldRootPage), nameof(_hnswIsCreated)
         ];
 
         var fields = this.GetType().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);

@@ -464,9 +464,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Returns a web-widget channel's own theme plus the resolved app default, for the theme editor. A null theme means the channel follows the app default. */
+        /** @description Returns an embedded chat channel's own theme plus the resolved app default, for the theme editor. A null theme means the channel follows the app default. */
         get: operations["iframe.getTheme"];
-        /** @description Saves a web-widget channel's theme. A null theme clears the channel's choice so it follows the app default. */
+        /** @description Saves an embedded chat channel's theme. A null theme clears the channel's choice so it follows the app default. */
         put: operations["iframe.updateTheme"];
         post?: never;
         delete?: never;
@@ -482,9 +482,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Returns the app-level default web-widget theme applied to channels that make no choice of their own. */
+        /** @description Returns the app-level default chat widget theme applied to channels that make no choice of their own. */
         get: operations["iframe.getDefaultTheme"];
-        /** @description Saves the app-level default web-widget theme. A null theme resets it to the built-in default. */
+        /** @description Saves the app-level default chat widget theme. A null theme resets it to the built-in default. */
         put: operations["iframe.updateDefaultTheme"];
         post?: never;
         delete?: never;
@@ -503,7 +503,7 @@ export interface paths {
         /** @description Lists the app's active embed links (non-expired, non-revoked), most recent first. Each item carries its token, the channel + agent it targets, the bound parameters, the TTL/cap, and how many turns it has consumed — so the operator can audit and revoke links. */
         get: operations["embedLinks.list"];
         put?: never;
-        /** @description Mints a per-user embed link for an iFrame channel (by channelId). SERVER-SIDE ONLY: it needs the operator key, which must never reach a browser, and it sends no CORS headers — call it from your backend and pass only the returned url to the page. Parameters are validated against the channel's agent and bound into the link server-side (never client-supplied). ttlSeconds and maxInvocations are bounded; both default when omitted. Returns the opaque token + an absolute, paste-ready embed URL. */
+        /** @description Mints a per-user embed link for an embedded chat channel (by channelId). SERVER-SIDE ONLY: it needs the operator key, which must never reach a browser, and it sends no CORS headers — call it from your backend and pass only the returned url to the page. Parameters are validated against the channel's agent and bound into the link server-side (never client-supplied). ttlSeconds and maxInvocations are bounded; both default when omitted. Returns the opaque token + an absolute, paste-ready embed URL. */
         post: operations["embedLinks.mint"];
         delete?: never;
         options?: never;
@@ -1089,6 +1089,7 @@ export interface components {
             huggingFaceSettings?: components["schemas"]["HuggingFaceSettings"];
             mistralAiSettings?: components["schemas"]["MistralAiSettings"];
             vertexSettings?: components["schemas"]["VertexSettings"];
+            anthropicSettings?: components["schemas"]["AnthropicSettings"];
             modelType?: components["schemas"]["AiModelType"];
             name?: null | string;
         };
@@ -1116,7 +1117,7 @@ export interface components {
         /** @enum {unknown} */
         AiConnectionStringUsageKind: "AiAgent" | "GenAi" | "EmbeddingsGeneration";
         /** @enum {unknown} */
-        AiConnectorType: "None" | "OpenAi" | "AzureOpenAi" | "Ollama" | "Embedded" | "Google" | "HuggingFace" | "MistralAi" | "Vertex";
+        AiConnectorType: "None" | "OpenAi" | "AzureOpenAi" | "Ollama" | "Embedded" | "Google" | "HuggingFace" | "MistralAi" | "Vertex" | "Anthropic";
         AiConversationMessage: {
             role?: components["schemas"]["AiMessageRole"];
             content?: null | string;
@@ -1162,6 +1163,18 @@ export interface components {
             /** Format: int64 */
             reasoningTokens?: number;
         };
+        AnthropicSettings: {
+            apiKey?: null | string;
+            model?: null | string;
+            endpoint?: null | string;
+            /** Format: int32 */
+            maxOutputTokens?: null | number;
+            reasoningEffort?: null | string;
+            enablePromptCache?: null | boolean;
+            apiVersion?: null | string;
+            /** Format: int32 */
+            embeddingsMaxConcurrentBatches?: null | number;
+        };
         ApiErrorResponse: {
             error?: null | string;
             errors?: null | string[];
@@ -1189,7 +1202,7 @@ export interface components {
             adaptersCount: number;
             /** Format: int32 */
             agentsCount: number;
-            channelsLabel: null | string;
+            channelTypes: components["schemas"]["ChannelType"][];
             statusSubtitle: null | string;
             /** Format: date-time */
             createdAt: string;
@@ -1229,6 +1242,7 @@ export interface components {
         AppUsageMetrics: {
             conversations: components["schemas"]["MetricCard"];
             tokens: components["schemas"]["MetricCard"];
+            buckets: string[];
         };
         AppUsageResponse: {
             metrics: components["schemas"]["AppUsageMetrics"];
@@ -1412,7 +1426,7 @@ export interface components {
             discord?: null | components["schemas"]["DiscordSummaryResponse"];
         };
         /** @enum {unknown} */
-        ChannelType: "IFrame" | "Telegram" | "WhatsApp" | "Slack" | "Discord" | null;
+        ChannelType: "IFrame" | "Telegram" | "WhatsApp" | "Slack" | "Discord";
         ChatRequest: {
             agentId: string;
             prompt: string;
@@ -1857,6 +1871,7 @@ export interface components {
             configuration: null | components["schemas"]["CdcSinkConfiguration"];
             rationale: string[];
             status: string;
+            unmappedTables: string[];
         };
         TelegramChannelMessages: {
             greeting?: null | string;
@@ -1953,6 +1968,7 @@ export interface components {
         UsageResponse: {
             points: components["schemas"]["UsagePoint"][];
             writesByApp: components["schemas"]["AppWrites"][];
+            isWritesUnavailable: boolean;
         };
         VerifyCdcRequest: {
             tables: components["schemas"]["VerifyCdcTableRequest"][];
@@ -3970,6 +3986,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
         };
     };
     "settings.feedback": {
@@ -4439,6 +4464,7 @@ export type AiModelsResponse = components["schemas"]["AiModelsResponse"];
 export type AiModelType = components["schemas"]["AiModelType"];
 export type AiToolCallResult = components["schemas"]["AiToolCallResult"];
 export type AiUsage = components["schemas"]["AiUsage"];
+export type AnthropicSettings = components["schemas"]["AnthropicSettings"];
 export type ApiErrorResponse = components["schemas"]["ApiErrorResponse"];
 export type AppCdcConfigurationResponse = components["schemas"]["AppCdcConfigurationResponse"];
 export type ApplianceAppResponse = components["schemas"]["ApplianceAppResponse"];

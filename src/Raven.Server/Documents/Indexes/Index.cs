@@ -798,28 +798,9 @@ namespace Raven.Server.Documents.Indexes
             options.OnRecoveryError += (s, e) => documentDatabase.HandleOnIndexRecoveryError(name, s, e);
             options.OnIntegrityErrorOfAlreadySyncedData += (s, e) => documentDatabase.HandleOnIndexIntegrityErrorOfAlreadySyncedData(name, s, e);
             options.OnRecoverableFailure += documentDatabase.HandleRecoverableFailure;
-            options.CompressTxAboveSizeInBytes = documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
-            options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
-            options.EnablePrefetching = documentDatabase.Configuration.Storage.EnablePrefetching;
-            options.DiscardVirtualMemory = documentDatabase.Configuration.Storage.DiscardVirtualMemory;
-            options.UseSequentialReadAheadHintForJournalRecovery = documentDatabase.Configuration.Storage.UseSequentialReadAheadHintForJournalRecovery;
-            options.TimeToSyncAfterFlushInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
             options.Encryption.MasterKey = documentDatabase.MasterKey?.ToArray(); //clone
             options.Encryption.RegisterForJournalCompressionHandler();
-            options.DoNotConsiderMemoryLockFailureAsCatastrophicError = documentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
-            if (documentDatabase.Configuration.Storage.MaxScratchBufferSize.HasValue)
-                options.MaxScratchBufferSize = documentDatabase.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
-            options.PrefetchSegmentSize = documentDatabase.Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
-            options.PrefetchResetThreshold = documentDatabase.Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
-            options.SyncJournalsCountThreshold = documentDatabase.Configuration.Storage.SyncJournalsCountThreshold;
-            options.IgnoreInvalidJournalErrors = documentDatabase.Configuration.Storage.IgnoreInvalidJournalErrors;
-            options.SkipChecksumValidationOnDatabaseLoading = documentDatabase.Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
-            options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = documentDatabase.Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
-            options.DisableSparseRegions = documentDatabase.Configuration.Storage.DisableSparseRegions;
-            options.JournalsCompressionAcceleration = documentDatabase.Configuration.Storage.JournalsCompressionAcceleration;
-            options.MinimumSharedJournalsMergeCount = documentDatabase.Configuration.Indexing.MinimumSharedJournalsMergeCount;
-            options.MaxLogFileSize = documentDatabase.Configuration.Storage.MaxJournalFileSize.GetValue(SizeUnit.Bytes);
-
+            VoronOptionsFromConfiguration.Apply(options, documentDatabase.Configuration);
 
             if (documentDatabase.ServerStore.GlobalIndexingScratchSpaceMonitor != null)
                 options.ScratchSpaceUsage.AddMonitor(documentDatabase.ServerStore.GlobalIndexingScratchSpaceMonitor);
@@ -2087,7 +2068,7 @@ namespace Raven.Server.Documents.Indexes
 
 
                         if (totalSizeOfJournals >= Configuration.MinimumTotalSizeOfJournalsToRunFlushAndSyncWhenReplacingSideBySideIndex)
-                            FlushAndSync(_environment, (int)Configuration.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex.AsTimeSpan.TotalMilliseconds);
+                            FlushAndSync(_environment, (int)Configuration.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex.AsTimeSpan.TotalMilliseconds, tryCleanupRecycledJournals: true);
 
                         // this side-by-side index will be replaced in a second, notify about indexing success
                         // so we know that indexing batch is no longer in progress
@@ -2360,7 +2341,7 @@ namespace Raven.Server.Documents.Indexes
                                        $"going to try flushing and syncing the environment to cleanup the storage. " +
                                        $"Will wait for flush for: {timeToWaitInMilliseconds}ms", dfe);
 
-                FlushAndSync(storageEnvironment, timeToWaitInMilliseconds);
+                FlushAndSync(storageEnvironment, timeToWaitInMilliseconds, tryCleanupRecycledJournals: true);
                 return;
             }
 
@@ -2370,10 +2351,11 @@ namespace Raven.Server.Documents.Indexes
             if (State == IndexState.Error)
                 return;
 
+            storageEnvironment.Options.TryCleanupRecycledJournals();
             SetErrorState($"State was changed due to excessive number of disk full errors ({diskFullErrors}).");
         }
 
-        private void FlushAndSync(StorageEnvironment storageEnvironment, int timeToWaitInMilliseconds)
+        private void FlushAndSync(StorageEnvironment storageEnvironment, int timeToWaitInMilliseconds, bool tryCleanupRecycledJournals = false)
         {
             try
             {
@@ -2401,7 +2383,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
             }
 
-            storageEnvironment.Cleanup();
+            storageEnvironment.Cleanup(tryCleanupRecycledJournals);
         }
 
         private void SetErrorState(string reason)
@@ -3519,6 +3501,7 @@ namespace Raven.Server.Documents.Indexes
                                 Reference<long> totalResults = new();
                                 Reference<long> skippedResults = new();
                                 Reference<long> scannedResults = new();
+                                reader.TrackResultsForLogging(totalResults, skippedResults);
                                 IncludeCountersCommand includeCountersCommand = null;
                                 IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
                                 IncludeRevisionsCommand includeRevisionsCommand = new(DocumentDatabase, queryContext.Documents, query.Metadata.RevisionIncludes);
@@ -4132,12 +4115,38 @@ namespace Raven.Server.Documents.Indexes
         {
             throw new IndexCompactionInProgressException($"Index '{Name}' is currently being compacted.");
         }
-
+        
         private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(QueryMetadata metadata)
         {
             foreach (var field in metadata.IndexFieldNames)
             {
-                AssertKnownField(field, metadata);
+                AssertField(field);
+            }
+
+            if (metadata.HasFacet)
+            {
+                // The fields of a facet come from the select clause, not from IndexFieldNames. Only the terms
+                // question is asked of them - a facet on a field the index does not have at all is rejected further
+                // down, with its own exception type.
+                foreach (var selectField in metadata.SelectFields)
+                {
+                    // facets over all results and those taken from a setup document carry no fields here
+                    if (selectField is not FacetField { FacetSetupDocumentId: null } facet)
+                        continue;
+
+                    if (facet.Name?.Value is not null)
+                        QueryBuilderHelper.AssertFieldIsIndexed(facet.Name.Value, this);
+
+                    // sum/min/max/avg read the terms of the field they aggregate, not of the one grouped by
+                    foreach (var aggregation in facet.Aggregations)
+                    {
+                        foreach (var aggregationField in aggregation.Value)
+                        {
+                            if (aggregationField.Name is not null)
+                                QueryBuilderHelper.AssertFieldIsIndexed(aggregationField.Name, this);
+                        }
+                    }
+                }
             }
 
             if (metadata.OrderBy != null)
@@ -4157,8 +4166,14 @@ namespace Raven.Server.Documents.Indexes
                         continue;
 #endif
 
-                    AssertKnownField(f, metadata);
+                    AssertField(f);
                 }
+            }
+
+            void AssertField(QueryFieldName field)
+            {
+                AssertKnownField(field, metadata);
+                QueryBuilderHelper.AssertFieldIsIndexed(field.Value, this);
             }
         }
 

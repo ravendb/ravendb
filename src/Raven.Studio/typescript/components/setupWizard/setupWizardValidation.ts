@@ -38,7 +38,7 @@ const userDomainsWithIpsSchema = yup.object().shape({
         if (!value) {
             return true;
         }
-        return Object.entries(value).every(([_key, subDomains]) => {
+        return Object.entries(value).every(([, subDomains]) => {
             return (
                 Array.isArray(subDomains) &&
                 subDomains.every((subDomain) => subDomainAndIpsSchema.isValidSync(subDomain))

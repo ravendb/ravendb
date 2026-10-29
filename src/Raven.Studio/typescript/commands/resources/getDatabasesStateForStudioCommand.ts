@@ -5,7 +5,9 @@ import StudioDatabasesState = Raven.Server.Web.System.Processors.Studio.StudioDa
 class getDatabasesStateForStudioCommand extends commandBase {
 
     private readonly nodeTag: string;
-    
+
+    protected readonly showProtractedRequestMessage = false;
+
     constructor(nodeTag: string) {
         super();
         this.nodeTag = nodeTag;
@@ -17,7 +19,7 @@ class getDatabasesStateForStudioCommand extends commandBase {
             nodeTag: this.nodeTag
         }
 
-        return this.query<StudioDatabasesResponse>(url, args);
+        return this.query<StudioDatabasesResponse>(url, args, null, null, { timeout: commandBase.perNodeRequestTimeoutMs });
     }
 }
 

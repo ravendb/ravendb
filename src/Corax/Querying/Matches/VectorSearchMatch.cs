@@ -409,6 +409,8 @@ public struct VectorSearchMatch : IPostFilterMatch
     
     public long Count { get; private set; }
 
+    internal bool ReturnsResultsByDistance => _sortByScore;
+
     public bool IsBoosting { get; init; }
 
     private void Dispose()

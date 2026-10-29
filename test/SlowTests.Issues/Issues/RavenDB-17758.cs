@@ -94,7 +94,7 @@ namespace SlowTests.Issues
                         table.Insert(builder);
                     }
 
-                    table.ReadLast(idx); // force to read the new dictionary
+                    table.ReadLast(idx, out TableValueReader _unused); // force to read the new dictionary
                 }
                 
                 // explicitly discard the change

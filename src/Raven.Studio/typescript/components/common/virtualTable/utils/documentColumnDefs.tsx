@@ -39,7 +39,7 @@ export const columnDocumentFlags: ColumnDef<document> = {
                     className={classNames({ "time-series": flags.includes("HasTimeSeries") })}
                 />
                 <Icon icon="data-archival" title="Archived" className={classNames({ archived: metadata.archived })} />
-                {metadata.shardNumber && (
+                {metadata.shardNumber != null && (
                     <span title={`Shard ${metadata.shardNumber}`} className="small-label">
                         <Icon icon="shard" color="shard" />
                         {metadata.shardNumber}

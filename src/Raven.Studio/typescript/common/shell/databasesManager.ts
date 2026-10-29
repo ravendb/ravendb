@@ -1,4 +1,4 @@
-﻿import router = require("plugins/router");
+import router = require("plugins/router");
 import database = require("models/resources/database");
 import changesContext = require("common/changesContext");
 import appUrl = require("common/appUrl");
@@ -95,16 +95,7 @@ class databasesManager {
         const task = $.Deferred<canActivateResultDto>();
         const databasesListView = appUrl.forDatabases();
 
-        const incomingDatabaseName = db ? db.name : undefined;
-
         this.initialized.done(() => {
-            const currentActiveDatabase = this.activeDatabaseTracker.database();
-            
-            if (currentActiveDatabase != null && currentActiveDatabase.name === incomingDatabaseName) {
-                task.resolve({ can: true });
-                return;
-            }
-
             if (db && !db.disabled() && db.relevant()) {
                 this.activate(db)
                     .done(() => task.resolve({ can: true }))
@@ -130,7 +121,23 @@ class databasesManager {
         return task;
     }
 
+    switchDatabase(db: database): void {
+        const currentPageUrlForDatabase = appUrl.getDatabaseNameFromUrl() ? appUrl.forCurrentPage(db) : null;
+
+        if (currentPageUrlForDatabase && currentPageUrlForDatabase !== window.location.hash) {
+            router.navigate(currentPageUrlForDatabase);
+            return;
+        }
+
+        this.activate(db);
+    }
+
     activate(db: database, opts: { waitForNotificationCenterWebSocket: boolean } = undefined): JQueryPromise<void> {
+        const existingActivationTask = this.activeDatabaseTracker.getActivationTask(db);
+        if (existingActivationTask) {
+            return existingActivationTask;
+        }
+
         this.changesContext.changeDatabase(db);
 
         const basicTask = this.activeDatabaseTracker.onActivation(db);

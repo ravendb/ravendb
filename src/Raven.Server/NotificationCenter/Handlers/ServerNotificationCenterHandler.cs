@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net;
@@ -49,44 +48,48 @@ namespace Raven.Server.NotificationCenter.Handlers
         public async Task Get()
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+            using (var token = CreateHttpRequestBoundOperationToken())
             {
                 var isValidFor = GetDatabaseAccessValidationFunc();
-                using (var writer = new NotificationCenterWebSocketWriter<TransactionOperationContext>(webSocket, ServerStore.NotificationCenter, ServerStore.ContextPool, ServerStore.ServerShutdown))
-                {
-                    using (ServerStore.NotificationCenter.GetStored(out IEnumerable<NotificationTableValue> storedNotifications, postponed: false))
-                    {
-                        foreach (var action in storedNotifications)
-                        {
-                            using (action)
-                            {
-                                if (isValidFor != null)
-                                {
-                                    if (action.Json.TryGet("Database", out string db) == false ||
-                                        isValidFor(db, false) == false)
-                                        continue; // not valid for this, skipping
-                                }
 
+                try
+                {
+                    using (var writer = new NotificationCenterWebSocketWriter<TransactionOperationContext>(webSocket, ServerStore.NotificationCenter, ServerStore.ContextPool, token.Token))
+                    {
+                        Func<BlittableJsonReaderObject, bool> shouldInclude = null;
+                        if (isValidFor != null)
+                            shouldInclude = json => json.TryGet("Database", out string db) && isValidFor(db, false); // skipping the ones that are not valid for this
+
+                        using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext notificationsContext))
+                        using (ServerStore.NotificationCenter.GetStored(out var storedNotifications, postponed: false, context: notificationsContext, shouldInclude: shouldInclude))
+                        {
+                            foreach (var action in storedNotifications)
+                            {
                                 if (TrafficWatchManager.HasRegisteredClients)
                                     AddStringToHttpContext(action.Json.ToString(), TrafficWatchChangeType.Notifications);
 
                                 await writer.WriteToWebSocket(action.Json);
                             }
                         }
+
+                        foreach (var operation in ServerStore.Operations.GetActive().OrderBy(x => x.Description.StartTime))
+                        {
+                            var action = OperationChanged.Create(null, operation.Id, operation.Description, operation.State, operation.Killable);
+
+                            if (TrafficWatchManager.HasRegisteredClients)
+                                AddStringToHttpContext(action.ToJson().ToString(), TrafficWatchChangeType.Notifications);
+
+                            await writer.WriteToWebSocket(action.ToJson());
+                        }
+
+                        // update the connection with the current cluster topology
+                        writer.AfterTrackActionsRegistration = ServerStore.NotifyAboutClusterTopologyAndConnectivityChanges;
+                        await writer.WriteNotifications(isValidFor);
                     }
-
-                    foreach (var operation in ServerStore.Operations.GetActive().OrderBy(x => x.Description.StartTime))
-                    {
-                        var action = OperationChanged.Create(null, operation.Id, operation.Description, operation.State, operation.Killable);
-
-                        if (TrafficWatchManager.HasRegisteredClients)
-                            AddStringToHttpContext(action.ToJson().ToString(), TrafficWatchChangeType.Notifications);
-                       
-                        await writer.WriteToWebSocket(action.ToJson());
-                    }
-
-                    // update the connection with the current cluster topology
-                    writer.AfterTrackActionsRegistration = ServerStore.NotifyAboutClusterTopologyAndConnectivityChanges;
-                    await writer.WriteNotifications(isValidFor);
+                }
+                catch (OperationCanceledException)
+                {
+                    // ignored
                 }
             }
         }

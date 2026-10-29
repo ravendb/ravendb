@@ -47,7 +47,7 @@ class migrateDatabaseCommand<T> extends commandBase {
     
     static getCollections(db: database | string, dto: Raven.Server.Smuggler.Migration.MigrationConfiguration) {
         dto.InputConfiguration.Command = "collections";
-        return new migrateDatabaseCommand<{ Collections: Array<string>; HasGridFS: boolean; }>(db, dto, false);
+        return new migrateDatabaseCommand<{ Collections: Array<string> }>(db, dto, false);
     }
 }
 

@@ -20,7 +20,7 @@ namespace FastTests.Voron.Optimizations
 
             using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
-                var tableSchema = new TableSchema();
+                var tableSchema = database.DocumentsStorage.TombstonesSchema;
 
                 DocumentsOperationContext context;
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))

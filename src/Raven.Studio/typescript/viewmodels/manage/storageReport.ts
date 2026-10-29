@@ -1,8 +1,16 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getSystemStorageReportCommand = require("commands/resources/getSystemStorageReportCommand");
+import getDatabasesStateForStudioCommand = require("commands/resources/getDatabasesStateForStudioCommand");
 import generalUtils = require("common/generalUtils");
+import messagePublisher = require("common/messagePublisher");
+import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import databasesManager = require("common/shell/databasesManager");
 import storageReportItem = require("models/database/status/storageReportItem");
+import databaseStorageReportItem = require("models/database/status/databaseStorageReportItem");
+import storageReportSort = require("models/database/status/storageReportSort");
+import router = require("plugins/router");
 import d3 = require("d3");
+import StudioDatabaseState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseState;
 
 type positionAndSizes = {
     dx: number,
@@ -18,6 +26,7 @@ class storageReport extends viewModelBase {
     static readonly animationLength = 200;
 
     private rawData: detailedSystemStorageReportItemDto;
+    private databaseStates: StudioDatabaseState[] = [];
 
     private currentPath: KnockoutComputed<Array<storageReportItem>>;
 
@@ -41,6 +50,9 @@ class storageReport extends viewModelBase {
     allocatedNodeSize: KnockoutComputed<string>;
     onDiskNodeSize: KnockoutComputed<string>;
 
+    readonly sort = new storageReportSort.storageReportSort();
+    sortedChildren: KnockoutComputed<storageReportItem[]>;
+
     constructor() {
         super();
         this.bindToCurrentInstance("onClick");
@@ -51,11 +63,22 @@ class storageReport extends viewModelBase {
 
         this.initObservables();
 
-        return new getSystemStorageReportCommand()
+        const systemReportTask = new getSystemStorageReportCommand()
             .execute()
             .done(result => {
                 this.rawData = result;
             });
+
+        const databaseStatesTask = new getDatabasesStateForStudioCommand(clusterTopologyManager.default.localNodeTag())
+            .execute()
+            .then(
+                result => {
+                    this.databaseStates = result.Databases;
+                },
+                (response: JQueryXHR) => messagePublisher.reportError("Failed to load databases", response.responseText, response.statusText)
+            );
+
+        return $.when<any>(systemReportTask, databaseStatesTask);
     }
 
     compositionComplete() {
@@ -103,14 +126,25 @@ class storageReport extends viewModelBase {
         this.onDiskNodeSize = ko.pureComputed(() =>
             generalUtils.formatBytesToSize(this.node().physicalSize ?? this.node().size)
         );
+
+        this.sortedChildren = ko.pureComputed(() => this.sort.apply(this.node().internalChildren));
+        this.node.subscribe(() => this.sort.reset());
     }
 
     private processData() {
-        const data = this.rawData;
-        this.root = this.mapReport(data);
+        const system = this.mapReport(this.rawData);
+        const databases = this.databaseStates.map(x => this.mapDatabase(x));
+        const items = [system, ...databases];
+
+        this.root = new storageReportItem(clusterTopologyManager.default.localNodeTag(), "node", false, items.reduce((p, c) => p + c.size, 0), items);
         this.sortBySize(this.root);
 
         this.node(this.root);
+    }
+
+    private mapDatabase(state: StudioDatabaseState): storageReportItem {
+        const isDisabled = databasesManager.default.getDatabaseByName(state.Name)?.disabled() ?? false;
+        return new databaseStorageReportItem(state, isDisabled);
     }
 
     private sortBySize(node: storageReportItem) {
@@ -137,6 +171,9 @@ class storageReport extends viewModelBase {
                 + (journals.physicalSize ?? journals.size)
                 + tempFiles.size;
         }
+
+        item.dataSize = dataFile.size + journals.size;
+        item.tempBuffersSize = tempFiles.size;
 
         return item;
     }
@@ -447,7 +484,7 @@ class storageReport extends viewModelBase {
             .attr("height", d => Math.max(0, d.dy - 1));
 
         rectangles
-            .filter(x => x.hasChildren())
+            .filter(x => x.hasChildren() || !!x.link)
             .style('cursor', 'pointer');
 
         cell.append("svg:text")
@@ -487,6 +524,11 @@ class storageReport extends viewModelBase {
     } 
 
     onClick(d: storageReportItem, goingIn: boolean) {
+        if (d.link) {
+            router.navigate(d.link);
+            return;
+        }
+
         if (this.transitioning || this.node() === d) {
             return;
         }
@@ -533,7 +575,7 @@ class storageReport extends viewModelBase {
         if (this.shouldDisplayNumberOfEntries(d)) {
             html += "<span>Entries: <strong>" + d.numberOfEntries.toLocaleString() + "</strong></span>";
         }
-        html += "<span class='size'>Size: <strong>" + generalUtils.formatBytesToSize(d.size) + "</strong></span>";
+        html += "<span class='size'>Size: <strong>" + d.formatSize(true) + "</strong></span>";
 
         this.tooltip.html(html);
         this.onMouseMove();

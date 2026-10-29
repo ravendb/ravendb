@@ -48,6 +48,8 @@ namespace Tests.Infrastructure
 
         static unsafe RachisConsensusTestBase()
         {
+            PalTestConfiguration.Apply();
+
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             ZstdLib.CreateDictionaryException = message => new VoronErrorException(message);
             RachisStateMachine.EnableDebugLongCommit = true;

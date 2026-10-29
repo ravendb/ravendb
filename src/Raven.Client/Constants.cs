@@ -480,6 +480,8 @@ namespace Raven.Client
                 /// </summary>
                 public const string Collection = "@collection";
 
+                internal static ReadOnlySpan<byte> CollectionAsSpan => "@collection"u8;
+
                 /// <summary>
                 /// Metadata field name for query projections.
                 /// </summary>
@@ -490,10 +492,14 @@ namespace Raven.Client
                 /// </summary>
                 public const string Key = "@metadata";
 
+                internal static ReadOnlySpan<byte> KeyAsSpan => "@metadata"u8;
+
                 /// <summary>
                 /// Metadata field name for document identifier.
                 /// </summary>
                 public const string Id = "@id";
+
+                internal static ReadOnlySpan<byte> IdAsSpan => "@id"u8;
 
                 /// <summary>
                 /// Metadata field name for conflict information.
@@ -510,20 +516,28 @@ namespace Raven.Client
                 /// </summary>
                 public const string Flags = "@flags";
 
+                internal static ReadOnlySpan<byte> FlagsAsSpan => "@flags"u8;
+
                 /// <summary>
                 /// Metadata field name for document attachments.
                 /// </summary>
                 public const string Attachments = "@attachments";
+
+                internal static ReadOnlySpan<byte> AttachmentsAsSpan => "@attachments"u8;
 
                 /// <summary>
                 /// Metadata field name for document counters.
                 /// </summary>
                 public const string Counters = "@counters";
 
+                internal static ReadOnlySpan<byte> CountersAsSpan => "@counters"u8;
+
                 /// <summary>
                 /// Metadata field name for document time series.
                 /// </summary>
                 public const string TimeSeries = "@timeseries";
+
+                internal static ReadOnlySpan<byte> TimeSeriesAsSpan => "@timeseries"u8;
 
                 /// <summary>
                 /// Metadata field name for time series with named values.
@@ -550,6 +564,8 @@ namespace Raven.Client
                 /// </summary>
                 public const string IndexScore = "@index-score";
 
+                internal static ReadOnlySpan<byte> IndexScoreAsSpan => "@index-score"u8;
+
                 /// <summary>
                 /// Metadata field name for spatial query results.
                 /// </summary>
@@ -559,6 +575,8 @@ namespace Raven.Client
                 /// Metadata field name for last modified timestamp.
                 /// </summary>
                 public const string LastModified = "@last-modified";
+
+                internal static ReadOnlySpan<byte> LastModifiedAsSpan => "@last-modified"u8;
 
                 /// <summary>
                 /// Metadata field name for the .NET CLR type information.
@@ -570,17 +588,29 @@ namespace Raven.Client
                 /// </summary>
                 public const string ChangeVector = "@change-vector";
 
+                internal static ReadOnlySpan<byte> ChangeVectorAsSpan => "@change-vector"u8;
+
                 public const string Expires = "@expires";
+
+                internal static ReadOnlySpan<byte> ExpiresAsSpan => "@expires"u8;
 
                 public const string Refresh = "@refresh";
 
+                internal static ReadOnlySpan<byte> RefreshAsSpan => "@refresh"u8;
+
                 public const string ArchiveAt = "@archive-at";
 
+                internal static ReadOnlySpan<byte> ArchiveAtAsSpan => "@archive-at"u8;
+
                 public const string Archived = "@archived";
+
+                internal static ReadOnlySpan<byte> ArchivedAsSpan => "@archived"u8;
 
                 public const string HasValue = "HasValue";
 
                 public const string Etag = "@etag";
+
+                internal static ReadOnlySpan<byte> EtagAsSpan => "@etag"u8;
                 
                 public const string Quantization = "@quantization";
 

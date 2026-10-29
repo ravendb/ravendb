@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
@@ -17,9 +17,9 @@ namespace Raven.Server.Documents
         {
             var table = context.CountersTable(this);
 
-            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, CountersSchema.DynamicKeyIndexes[CountersBucketAndEtagSlice], bucket, etag))
+            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, Schemas.Counters.CountersBucketAndEtagIndex, bucket, etag))
             {
-                yield return CreateReplicationBatchItem(context, ref result.Result.Reader);
+                yield return CreateReplicationBatchItem(context, result.Result);
             }
         }
 
@@ -27,30 +27,30 @@ namespace Raven.Server.Documents
         {
             var table = context.CountersTombstonesTable(this);
 
-            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, CounterTombstonesSchema.DynamicKeyIndexes[CounterTombstonesBucketAndEtagSlice], bucket, etag))
+            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, Schemas.CounterTombstones.CounterTombstonesBucketAndEtagIndex, bucket, etag))
             {
-                yield return TableValueToCounterTombstoneDetail(context, ref result.Result.Reader);
+                yield return TableValueToCounterTombstoneDetail(context, result.Result);
             }
         }
 
         [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForCounters(Transaction tx, ref TableValueReader tvr, out Slice slice)
+        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForCounters(Transaction tx, in TableValueReader tvr, out Slice slice)
         {
-            return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(tx, (int)CountersTable.CounterKey, (int)CountersTable.Etag, ref tvr, out slice);
+            return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(tx, (int)CountersTable.CounterKey, (int)CountersTable.Etag, tvr, out slice);
         }
 
         [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForCounterTombstones(Transaction tx, ref TableValueReader tvr, out Slice slice)
+        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForCounterTombstones(Transaction tx, in TableValueReader tvr, out Slice slice)
         {
-            return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(tx, (int)CounterTombstonesTable.CounterTombstoneKey, (int)CounterTombstonesTable.Etag, ref tvr, out slice);
+            return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(tx, (int)CounterTombstonesTable.CounterTombstoneKey, (int)CounterTombstonesTable.Etag, tvr, out slice);
         }
 
-        internal static void UpdateBucketStatsForCounters(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
+        internal static void UpdateBucketStatsForCounters(Transaction tx, Slice key, in TableValueReader oldValue, in TableValueReader newValue)
         {
-            ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, ref newValue, changeVectorIndex: (int)CountersTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
+            ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, newValue, changeVectorIndex: (int)CountersTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
         }
 
-        internal static void UpdateBucketStatsForCounterTombstones(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
+        internal static void UpdateBucketStatsForCounterTombstones(Transaction tx, Slice key, in TableValueReader oldValue, in TableValueReader newValue)
         {
             // counter tombstones are not replicated, no need to update the merged-cv of the bucket 
             ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, sizeChange: newValue.Size - oldValue.Size);

@@ -1,4 +1,4 @@
-﻿using Sparrow.Server;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 
@@ -37,6 +37,13 @@ namespace Raven.Server.Documents.Schemas
             Flags = 8
         }
 
+        internal static readonly TableSchema.FixedSizeKeyIndexDef AllConflictedDocsEtagsIndex;
+
+        internal static readonly TableSchema.DynamicKeyIndexDef ConflictsBucketAndEtagIndex;
+
+        internal static readonly TableSchema.IndexDef IdAndChangeVectorIndex;
+        internal static readonly TableSchema.IndexDef ConflictsIdIndex;
+
         static Conflicts()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -49,6 +56,37 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, "Conflicts", ByteStringType.Immutable, out ConflictsSlice);
                 Slice.From(ctx, "ConflictsBucketAndEtag", ByteStringType.Immutable, out ConflictsBucketAndEtagSlice);
             }
+
+            AllConflictedDocsEtagsIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)ConflictsTable.Etag,
+                Name = AllConflictedDocsEtagsSlice,
+                IsGlobal = true
+            };
+            IdAndChangeVectorIndex = new TableSchema.IndexDef
+            {
+                StartIndex = (int)ConflictsTable.LowerId,
+                Count = 3,
+                IsGlobal = false,
+                Name = IdAndChangeVectorSlice
+            };
+
+            ConflictsIdIndex = new TableSchema.IndexDef
+            {
+                StartIndex = (int)ConflictsTable.LowerId,
+                Count = 1,
+                IsGlobal = true,
+                Name = ConflictsIdSlice
+            };
+
+            ConflictsBucketAndEtagIndex = new TableSchema.DynamicKeyIndexDef
+            {
+                GenerateKey = ConflictsStorage.GenerateBucketAndEtagIndexKeyForConflicts,
+                IsGlobal = true,
+                Name = ConflictsBucketAndEtagSlice
+            };
+
+
 
             DefineIndexesForConflictsSchema(ConflictsSchemaBase);
             DefineIndexesForShardingConflictsSchemaBase();
@@ -75,26 +113,9 @@ We need a separator in order to delete all conflicts all "users/1" without delet
                     Name = ChangeVectorSlice
                 });
                 // required to get conflicts by ID
-                schema.DefineIndex(new TableSchema.IndexDef
-                {
-                    StartIndex = (int)ConflictsTable.LowerId,
-                    Count = 3,
-                    IsGlobal = false,
-                    Name = IdAndChangeVectorSlice
-                });
-                schema.DefineIndex(new TableSchema.IndexDef
-                {
-                    StartIndex = (int)ConflictsTable.LowerId,
-                    Count = 1,
-                    IsGlobal = true,
-                    Name = ConflictsIdSlice
-                });
-                schema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)ConflictsTable.Etag,
-                    IsGlobal = true,
-                    Name = AllConflictedDocsEtagsSlice
-                });
+                schema.DefineIndex(IdAndChangeVectorIndex);
+                schema.DefineIndex(ConflictsIdIndex);
+                schema.DefineFixedSizeIndex(AllConflictedDocsEtagsIndex);
                 schema.DefineIndex(new TableSchema.IndexDef
                 {
                     StartIndex = (int)ConflictsTable.Collection,
@@ -108,12 +129,7 @@ We need a separator in order to delete all conflicts all "users/1" without delet
             {
                 DefineIndexesForConflictsSchema(ShardingConflictsSchemaBase);
 
-                ShardingConflictsSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
-                {
-                    GenerateKey = ConflictsStorage.GenerateBucketAndEtagIndexKeyForConflicts,
-                    IsGlobal = true,
-                    Name = ConflictsBucketAndEtagSlice
-                });
+                ShardingConflictsSchemaBase.DefineIndex(ConflictsBucketAndEtagIndex);
             }
         }
     }

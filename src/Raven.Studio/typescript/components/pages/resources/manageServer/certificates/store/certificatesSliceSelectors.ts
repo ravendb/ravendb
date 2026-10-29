@@ -259,5 +259,5 @@ export const certificatesSelectors = {
     ssoServerCertificates: selectSsoServerCertificates,
     ssoUserCertificates: selectSsoUserCertificates,
     hasActiveFilter: selectHasActiveFilter,
-    isRenewedModalOpen: (state: RootState) => state.certificates.isRenewedModalOpen,
+    isReadyModalOpen: (state: RootState) => state.certificates.isReadyModalOpen,
 };

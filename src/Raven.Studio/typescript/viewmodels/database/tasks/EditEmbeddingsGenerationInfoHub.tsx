@@ -7,7 +7,7 @@ import FeatureAvailabilitySummaryWrapper, {
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import { useAppUrls } from "hooks/useAppUrls";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { allAiExternalProviders } from "components/utils/common";
+import { aiConnectionStringUtils } from "components/pages/database/settings/connectionStrings/editForms/aiConnectionStringUtils";
 import { Icon } from "components/common/Icon";
 import { useRavenLink } from "hooks/useRavenLink";
 
@@ -131,8 +131,8 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         quill: { value: true },
         helperInfo: (
             <ul>
-                {allAiExternalProviders.map((provider) => (
-                    <li key={provider}>{provider}</li>
+                {aiConnectionStringUtils.getExternalConnectorOptions().map((x) => (
+                    <li key={x.value}>{x.label}</li>
                 ))}
             </ul>
         ),

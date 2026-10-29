@@ -66,7 +66,7 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings, IAiSettings
     /// Enables sending a <c>prompt_cache_key</c> field in chat completion requests,
     /// allowing providers that support it to cache and reuse prompt prefixes across
     /// requests with the same key.
-    /// When <c>null</c>, the server applies a provider-specific default
+    /// When <c>null</c>, the key is sent for AI agents and for GenAI tasks with query tools, and never for Google.
     /// </summary>
     public bool? EnablePromptCache { get; set; }
 

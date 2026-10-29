@@ -165,6 +165,75 @@ namespace FastTests.Sparrow
             writerTask.Wait(TimeSpan.FromSeconds(5));
         }
 
+#if DEBUG
+        [RavenFact(RavenTestCategory.Core)]
+        public void EnterWrite_IgnoresStaleDrainSignalFromPreviousWriter()
+        {
+            using ReaderDrainLock l = new ReaderDrainLock();
+            using ManualResetEventSlim readerParked = new ManualResetEventSlim(false);
+            using ManualResetEventSlim releaseReaderPark = new ManualResetEventSlim(false);
+            using ManualResetEventSlim firstWriterEntered = new ManualResetEventSlim(false);
+            using ManualResetEventSlim firstWriterMayExit = new ManualResetEventSlim(false);
+
+            l.AcquireRead(CancellationToken.None);
+
+            Task firstWriter = Task.Run(() =>
+            {
+                using IDisposable w = l.EnterWrite(CancellationToken.None);
+                firstWriterEntered.Set();
+                firstWriterMayExit.Wait();
+            });
+
+            Assert.True(SpinWait.SpinUntil(l.HasWriterPendingForTesting, TimeSpan.FromSeconds(5)));
+
+            // Park the releasing reader after it decided the count reached zero
+            // but before it signals the drain.
+            l.OnZeroCrossingForTesting = () =>
+            {
+                l.OnZeroCrossingForTesting = null;
+                readerParked.Set();
+                releaseReaderPark.Wait();
+            };
+
+            Task parkedRelease = Task.Run(() => l.ReleaseRead());
+            Assert.True(readerParked.Wait(TimeSpan.FromSeconds(5)));
+
+            // A rejected reader's rollback signal lets the first writer through
+            // while the parked signal is still undelivered.
+            Assert.False(l.TryAcquireRead());
+            Assert.True(firstWriterEntered.Wait(TimeSpan.FromSeconds(5)));
+            firstWriterMayExit.Set();
+            Assert.True(firstWriter.Wait(TimeSpan.FromSeconds(5)));
+
+            // Held for the rest of the test, so the second writer must never acquire.
+            l.AcquireRead(CancellationToken.None);
+
+            bool secondWriterAcquired = false;
+            Task secondWriter = Task.Run(() =>
+            {
+                try
+                {
+                    using CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+                    using IDisposable w = l.EnterWrite(cts.Token);
+                    secondWriterAcquired = true;
+                }
+                catch (OperationCanceledException)
+                {
+                }
+            });
+
+            Assert.True(SpinWait.SpinUntil(l.HasWriterPendingForTesting, TimeSpan.FromSeconds(5)));
+
+            releaseReaderPark.Set();
+            Assert.True(parkedRelease.Wait(TimeSpan.FromSeconds(5)));
+            Assert.True(secondWriter.Wait(TimeSpan.FromSeconds(10)));
+
+            l.ReleaseRead();
+
+            Assert.False(secondWriterAcquired);
+        }
+#endif
+
         [RavenFact(RavenTestCategory.Core)]
         public void Readers_AndWriters_NeverOverlap()
         {

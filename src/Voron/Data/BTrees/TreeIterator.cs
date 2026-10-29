@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -61,7 +61,7 @@ namespace Voron.Data.BTrees
             ThrowIfDisposedOnDebug(this, "TreeIterator " + _tree.Name);
 
             _currentPage = _tree.FindPageFor(key, node: out TreeNodeHeader* node, 
-                cursor: out TreeCursorConstructor constructor,
+                cursor: out TreeCursor constructor,
                 allowCompressed: _tree.IsLeafCompressionSupported, backward: backward);
             
             if (_currentPage.IsCompressed)
@@ -70,7 +70,7 @@ namespace Voron.Data.BTrees
                 node = _currentPage.Search(_tx, key, backward: backward);
             }
 
-            _cursor = constructor.Build(key);
+            _cursor = constructor;
             _cursor.Pop();
 
             if (node != null)
@@ -95,7 +95,7 @@ namespace Voron.Data.BTrees
             {
                 // We know that the exact value isn't there, but it is possible that the next page has values 
                 // that is actually greater than the key, so we need to check it as well.
-                _currentPage.LastSearchPosition = _currentPage.NumberOfEntries; // force next MoveNext to move to the next _page_.
+                _currentPage.LastSearchPosition = (short)_currentPage.NumberOfEntries; // force next MoveNext to move to the next _page_.
                 return MoveNext();
             }
         }
@@ -154,7 +154,7 @@ namespace Voron.Data.BTrees
                         if (_currentPage.IsCompressed)
                             DecompressedCurrentPage();
 
-                        _currentPage.LastSearchPosition = _currentPage.NumberOfEntries - 1;
+                        _currentPage.LastSearchPosition = (short)(_currentPage.NumberOfEntries - 1);
                     }
 
                     // We should be prefetching data pages down here.
@@ -176,7 +176,7 @@ namespace Voron.Data.BTrees
                     break;
                 _currentPage = _cursor.Pop();
             }
-            _currentPage = null;
+            _currentPage = default;
             return false;
         }
 
@@ -189,7 +189,7 @@ namespace Voron.Data.BTrees
         {
             ThrowIfDisposedOnDebug(this, "TreeIterator " + _tree.Name);
 
-            while (_currentPage != null)
+            while (_currentPage.IsValid)
             {
                 _currentPage.LastSearchPosition++;
                 if (_currentPage.LastSearchPosition < _currentPage.NumberOfEntries)
@@ -229,7 +229,7 @@ namespace Voron.Data.BTrees
                     break;
                 _currentPage = _cursor.Pop();
             }
-            _currentPage = null;
+            _currentPage = default;
 
             return false;
         }
@@ -248,8 +248,8 @@ namespace Voron.Data.BTrees
             }
 
             if (DoRequireValidation)
-                return _currentPage != null && this.ValidateCurrentKey(_tx, Current);
-            return _currentPage != null;
+                return _currentPage.IsValid && this.ValidateCurrentKey(_tx, Current);
+            return _currentPage.IsValid;
         }
 
         public ValueReader CreateReaderForCurrent()
@@ -271,12 +271,11 @@ namespace Voron.Data.BTrees
             if (MaxKey.HasValue)
                 MaxKey.Release(_tx.Allocator);
             _prevKeyScope.Dispose();
-            _cursor?.Dispose();
             _decompressedPage?.Dispose();
             OnDisposal?.Invoke(this);
 
             // We want most operations to fail even if we are only checking disposed on debug. 
-            _currentPage = null;
+            _currentPage = default;
         }
 
 

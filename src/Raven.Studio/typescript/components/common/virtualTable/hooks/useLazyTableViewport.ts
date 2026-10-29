@@ -1,0 +1,211 @@
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import useTimeout from "components/hooks/useTimeout";
+import { useResizeObserver } from "components/hooks/useResizeObserver";
+import { LazyRows } from "components/common/virtualTable/hooks/useLazyRows";
+import { LazyVirtualTablePagination } from "components/common/virtualTable/partials/LazyVirtualTablePaginationBar";
+import { virtualTableConstants } from "components/common/virtualTable/utils/virtualTableConstants";
+import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
+import { isSameRange, RowRange } from "components/common/virtualTable/utils/lazyTableUtils";
+
+interface UseLazyTableViewportProps<T> {
+    lazyRows: LazyRows<T>;
+    isPaginated: boolean;
+    setIsPaginated?: (isPaginated: boolean) => void;
+    fixedHeightInPx?: number;
+}
+
+const {
+    defaultRowHeightInPx: rowHeightInPx,
+    headerHeightInPx,
+    maxBodyHeightInPx,
+    defaultTableHeightInPx,
+} = virtualTableConstants;
+const MAX_ROWS_IN_DOM = Math.floor(maxBodyHeightInPx / rowHeightInPx);
+const OVERSCAN_IN_ROWS = 25;
+const WINDOW_STEP_IN_ROWS = 10;
+const PAGE_SIZE_OPTIONS = [25, 50, 100];
+const LOADING_INDICATOR_DELAY_IN_MS = 300;
+const SCROLL_SETTLE_DELAY_IN_MS = 100;
+
+export function useLazyTableViewport<T>({
+    lazyRows,
+    isPaginated,
+    setIsPaginated,
+    fixedHeightInPx,
+}: UseLazyTableViewportProps<T>) {
+    const { rows, totalCount, loadedCount, hasMore, fetchMode, isFetching, error, resetId, getItem, setRange } =
+        lazyRows;
+
+    const areaRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const lastScrollTopRef = useRef(0);
+    const scrollSettleTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
+
+    const measuredArea = useResizeObserver({ ref: areaRef });
+    const heightInPx = fixedHeightInPx ?? measuredArea.height ?? defaultTableHeightInPx;
+
+    const [scrollRange, setScrollRange] = useState(() => getScrollRange(0, 0));
+    const [isAtBottom, setIsAtBottom] = useState(false);
+    const [pageFirstRowIndex, setPageFirstRowIndex] = useState<number>(null);
+    const [selectedPageSize, setSelectedPageSize] = useState<number>(null);
+    const [isFetchingLong, setIsFetchingLong] = useState(false);
+
+    const isSkipTake = fetchMode === "skipTake";
+    const defaultPageSize = Math.min(getFitPageSize(heightInPx), totalCount || Infinity);
+    const pageSize = selectedPageSize ?? defaultPageSize;
+    const page = Math.floor((pageFirstRowIndex ?? 0) / pageSize) + 1;
+    const pageStart = (page - 1) * pageSize;
+    const pageRowCount = totalCount === null ? rows.length : Math.max(0, Math.min(pageSize, totalCount - pageStart));
+    const scrollableRowCount = Math.min(isSkipTake ? (totalCount ?? 0) : loadedCount, MAX_ROWS_IN_DOM);
+    const bodyHeightInPx = (isPaginated ? pageRowCount : scrollableRowCount) * rowHeightInPx;
+    const range = isPaginated ? { start: pageStart, end: pageStart + pageSize } : scrollRange;
+    const lastPageStart = totalCount ? (Math.ceil(totalCount / pageSize) - 1) * pageSize : 0;
+    const isDomLimitReached = isSkipTake ? totalCount > MAX_ROWS_IN_DOM : loadedCount >= MAX_ROWS_IN_DOM && hasMore;
+
+    if (isPaginated && pageFirstRowIndex !== null && totalCount !== null && pageStart > lastPageStart) {
+        setPageFirstRowIndex(lastPageStart);
+    }
+
+    const updateScrollState = useCallback(() => {
+        clearTimeout(scrollSettleTimeoutRef.current);
+
+        if (isPaginated) {
+            return;
+        }
+
+        const { scrollTop, clientHeight, scrollHeight } = containerRef.current;
+        const isJumpToMissingRows =
+            Math.abs(scrollTop - lastScrollTopRef.current) > OVERSCAN_IN_ROWS * rowHeightInPx &&
+            getItem(Math.floor(scrollTop / rowHeightInPx)) === undefined;
+
+        lastScrollTopRef.current = scrollTop;
+        setIsAtBottom(scrollTop + clientHeight >= scrollHeight - 1);
+
+        // Rows passed by a fast scroll (e.g. dragging the scrollbar) are neither fetched nor rendered,
+        // only the ones where the scrolling settles
+        if (isJumpToMissingRows) {
+            scrollSettleTimeoutRef.current = setTimeout(updateScrollState, SCROLL_SETTLE_DELAY_IN_MS);
+            return;
+        }
+
+        const nextRange = getScrollRange(scrollTop, clientHeight);
+        setScrollRange((prev) => (isSameRange(prev, nextRange) ? prev : nextRange));
+    }, [isPaginated, getItem]);
+
+    useEffect(() => () => clearTimeout(scrollSettleTimeoutRef.current), []);
+
+    // Keeps the same rows on the screen when switching between the scrolled and the paginated view
+    useLayoutEffect(() => {
+        if (isPaginated) {
+            const isScrolledToDomLimit = isDomLimitReached && isAtBottom && lastScrollTopRef.current > 0;
+            const firstVisibleRowIndex = Math.round(lastScrollTopRef.current / rowHeightInPx);
+            setPageFirstRowIndex(isScrolledToDomLimit ? scrollableRowCount - 1 : firstVisibleRowIndex);
+        } else if (pageFirstRowIndex !== null) {
+            containerRef.current.scrollTop = Math.min(pageStart, scrollableRowCount - 1) * rowHeightInPx;
+            setPageFirstRowIndex(null);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isPaginated]);
+
+    // Reloaded rows are shown from the first one
+    useLayoutEffect(() => {
+        containerRef.current.scrollTop = 0;
+        setPageFirstRowIndex((prev) => (prev === null ? null : 0));
+    }, [resetId]);
+
+    // Resizing the container or its body changes the visible rows without a scroll event
+    useLayoutEffect(() => {
+        updateScrollState();
+    }, [heightInPx, bodyHeightInPx, updateScrollState]);
+
+    const isPageStartKnown = !isPaginated || pageFirstRowIndex !== null;
+
+    useLayoutEffect(() => {
+        if (isPageStartKnown) {
+            setRange(range);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [range.start, range.end, isPageStartKnown, setRange]);
+
+    useTimeout(() => setIsFetchingLong(true), isFetching ? LOADING_INDICATOR_DELAY_IN_MS : null);
+    if (!isFetching && isFetchingLong) {
+        setIsFetchingLong(false);
+    }
+
+    const scrollToTop = () => {
+        containerRef.current.scrollTop = 0;
+    };
+
+    const pagination: LazyVirtualTablePagination = isPaginated
+        ? {
+              page,
+              totalPages: totalCount ? Math.ceil(totalCount / pageSize) : page + (rows.length === pageSize ? 1 : 0),
+              firstRowNumber: pageRowCount > 0 ? pageStart + 1 : 0,
+              lastRowNumber: pageStart + pageRowCount,
+              totalCount,
+              pageSize,
+              pageSizeOptions: [
+                  defaultPageSize,
+                  ...PAGE_SIZE_OPTIONS.filter((x) => x > defaultPageSize && (totalCount === null || x < totalCount)),
+              ],
+              onPageChange: (nextPage) => {
+                  scrollToTop();
+                  setPageFirstRowIndex((nextPage - 1) * pageSize);
+              },
+              onPageSizeChange: (nextPageSize) => {
+                  scrollToTop();
+                  setSelectedPageSize(nextPageSize === defaultPageSize ? null : nextPageSize);
+              },
+          }
+        : null;
+
+    const getHasNoRows = () => {
+        if (isPaginated) {
+            return rows.length === 0 && !totalCount;
+        }
+        if (isSkipTake) {
+            return totalCount === 0;
+        }
+        return loadedCount === 0 && !hasMore;
+    };
+
+    const isEmpty = !isFetching && !error && getHasNoRows();
+
+    return {
+        areaRef,
+        containerRef,
+        heightInPx,
+        bodyHeightInPx,
+        firstRowIndex: isPaginated ? pageStart : 0,
+        isLoading: isFetching && (rows.length === 0 || isFetchingLong),
+        isEmpty,
+        error,
+        isDomLimitBannerVisible: isDomLimitReached && isAtBottom && !isPaginated,
+        turnOnPagination: () => setIsPaginated?.(true),
+        pagination,
+        onScroll: updateScrollState,
+    };
+}
+
+function getScrollRange(scrollTop: number, clientHeight: number): RowRange {
+    const firstVisibleRow = Math.floor(scrollTop / rowHeightInPx);
+    const lastVisibleRow = Math.ceil((scrollTop + clientHeight) / rowHeightInPx);
+
+    return {
+        start: Math.max(0, snapDown(firstVisibleRow - OVERSCAN_IN_ROWS)),
+        end: Math.min(snapUp(lastVisibleRow + OVERSCAN_IN_ROWS), MAX_ROWS_IN_DOM),
+    };
+}
+
+function snapDown(rowIndex: number) {
+    return Math.floor(rowIndex / WINDOW_STEP_IN_ROWS) * WINDOW_STEP_IN_ROWS;
+}
+
+function snapUp(rowIndex: number) {
+    return Math.ceil(rowIndex / WINDOW_STEP_IN_ROWS) * WINDOW_STEP_IN_ROWS;
+}
+
+function getFitPageSize(heightInPx: number) {
+    const rowsHeightInPx = virtualTableUtils.getTableContainerHeightInPx(heightInPx) - headerHeightInPx;
+    return Math.max(1, Math.floor(rowsHeightInPx / rowHeightInPx));
+}

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -32,6 +32,8 @@ namespace Raven.Server.Documents.TimeSeries
         public static readonly Slice TimeSeriesRollupTable;
         private static readonly Slice RollupKey;
         private static readonly Slice NextRollupIndex;
+
+        private static readonly TableSchema.IndexDef NextRollupIndexDef;
         private enum RollupColumns
         {
             // documentId/Name
@@ -70,6 +72,13 @@ namespace Raven.Server.Documents.TimeSeries
             }
 
             RollupSchema = new TableSchema();
+            NextRollupIndexDef = new TableSchema.IndexDef
+            {
+                StartIndex = (int)RollupColumns.NextRollup,
+                Count = 1,
+                Name = NextRollupIndex
+            };
+
             RollupSchema.DefineKey(new TableSchema.IndexDef
             {
                 StartIndex = (int)RollupColumns.Key,
@@ -77,12 +86,7 @@ namespace Raven.Server.Documents.TimeSeries
                 Name = RollupKey
             });
 
-            RollupSchema.DefineIndex(new TableSchema.IndexDef // this isn't fixed-size since we expect to have duplicates
-            {
-                StartIndex = (int)RollupColumns.NextRollup,
-                Count = 1,
-                Name = NextRollupIndex
-            });
+            RollupSchema.DefineIndex(NextRollupIndexDef);
         }
 
         private readonly RavenLogger _logger;
@@ -195,16 +199,16 @@ namespace Raven.Server.Documents.TimeSeries
 
             using (DocumentsStorage.GetEtagAsSlice(context, start, out var startSlice))
             {
-                foreach (var item in table.SeekForwardFrom(RollupSchema.Indexes[NextRollupIndex], startSlice, 0))
+                foreach (var item in table.SeekForwardFrom(NextRollupIndexDef, startSlice, 0))
                 {
                     if (take <= 0)
                         return;
 
-                    var rollUpTime = DocumentsStorage.TableValueToEtag((int)RollupColumns.NextRollup, ref item.Result.Reader);
+                    var rollUpTime = DocumentsStorage.TableValueToEtag((int)RollupColumns.NextRollup, item.Result);
                     if (rollUpTime > currentTicks)
                         return;
 
-                    DocumentsStorage.TableValueToSlice(context, (int)RollupColumns.Key, ref item.Result.Reader, out var key);
+                    DocumentsStorage.TableValueToSlice(context, (int)RollupColumns.Key, item.Result, out var key);
                     SplitKey(key, out var docId, out var name);
                     name = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetOriginalName(context, docId, name);
 
@@ -213,11 +217,11 @@ namespace Raven.Server.Documents.TimeSeries
                         Key = key,
                         DocId = docId,
                         Name = name,
-                        Collection = DocumentsStorage.TableValueToId(context, (int)RollupColumns.Collection, ref item.Result.Reader),
+                        Collection = DocumentsStorage.TableValueToId(context, (int)RollupColumns.Collection, item.Result),
                         NextRollup = new DateTime(rollUpTime),
-                        RollupPolicy = DocumentsStorage.TableValueToString(context, (int)RollupColumns.PolicyToApply, ref item.Result.Reader),
-                        Etag = DocumentsStorage.TableValueToLong((int)RollupColumns.Etag, ref item.Result.Reader),
-                        ChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)RollupColumns.ChangeVector, ref item.Result.Reader)
+                        RollupPolicy = DocumentsStorage.TableValueToString(context, (int)RollupColumns.PolicyToApply, item.Result),
+                        Etag = DocumentsStorage.TableValueToLong((int)RollupColumns.Etag, item.Result),
+                        ChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)RollupColumns.ChangeVector, item.Result)
                     };
 
                     if (_logger.IsInfoEnabled)
@@ -440,7 +444,7 @@ namespace Raven.Server.Documents.TimeSeries
                         continue;
                     }
 
-                    if (item.Etag != DocumentsStorage.TableValueToLong((int)RollupColumns.Etag, ref current))
+                    if (item.Etag != DocumentsStorage.TableValueToLong((int)RollupColumns.Etag, current))
                         continue; // concurrency check
 
                     try

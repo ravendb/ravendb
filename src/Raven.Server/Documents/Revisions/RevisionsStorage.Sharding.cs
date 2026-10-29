@@ -15,26 +15,26 @@ namespace Raven.Server.Documents.Revisions
         {
             var table = context.RevisionsTable(this);
 
-            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, RevisionsSchema.DynamicKeyIndexes[RevisionsBucketAndEtagSlice], bucket, etag))
+            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, Schemas.Revisions.RevisionsBucketAndEtagIndex, bucket, etag))
             {
-                yield return TableValueToRevision(context, ref result.Result.Reader);
+                yield return TableValueToRevision(context, result.Result);
             }
         }
 
         [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForRevisions(Transaction tx, ref TableValueReader tvr, out Slice slice)
+        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForRevisions(Transaction tx, in TableValueReader tvr, out Slice slice)
         {
-            return ShardedDocumentsStorage.GenerateBucketAndEtagIndexKey(tx, idIndex: (int)RevisionsTable.LowerId, etagIndex: (int)RevisionsTable.Etag, ref tvr, out slice);
+            return ShardedDocumentsStorage.GenerateBucketAndEtagIndexKey(tx, idIndex: (int)RevisionsTable.LowerId, etagIndex: (int)RevisionsTable.Etag, tvr, out slice);
         }
 
-        internal static void UpdateBucketStatsForRevisions(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
+        internal static void UpdateBucketStatsForRevisions(Transaction tx, Slice key, in TableValueReader oldValue, in TableValueReader newValue)
         {
             var changeVectorIndex = (int)RevisionsTable.FullChangeVector;
             if (newValue is { Size: > 0, Count: 12 })
                 // this is a legacy revision record, which doesn't have the full change vector, so we need to use the revision PK as the change vector index
                 changeVectorIndex = (int)RevisionsTable.RevisionPk;
 
-            ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, ref newValue, changeVectorIndex, sizeChange: newValue.Size - oldValue.Size);
+            ShardedDocumentsStorage.UpdateBucketStatsInternal(tx, key, newValue, changeVectorIndex, sizeChange: newValue.Size - oldValue.Size);
         }
 
     }

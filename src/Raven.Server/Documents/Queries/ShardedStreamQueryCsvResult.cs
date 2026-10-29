@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,20 +32,11 @@ public sealed class ShardedStreamQueryCsvResult : StreamQueryResult<BlittableJso
                     {
                         [Constants.Documents.Metadata.Id] = result.GetMetadata().GetId()
                     };
-                    var properties = result.GetPropertyNames();
-                    foreach (var property in properties)
-                    {
-                        if (_timeSeries == property)
-                            continue;
+                    CopyPropertiesTo(result, djv, skipProperty: _timeSeries);
 
-                        djv[property] = result[property];
-                    }
                     foreach (BlittableJsonReaderObject entry in arr)
                     {
-                        foreach (var property in entry.GetPropertyNames())
-                        {
-                            djv[property] = entry[property];
-                        }
+                        CopyPropertiesTo(entry, djv, skipProperty: null);
 
                         await writer.AddResultAsync(_context.ReadObject(djv, "ts->csv"), token).ConfigureAwait(false);
                     }
@@ -58,6 +49,22 @@ public sealed class ShardedStreamQueryCsvResult : StreamQueryResult<BlittableJso
         }
 
         GetToken().Delay();
+    }
+
+    private static unsafe void CopyPropertiesTo(BlittableJsonReaderObject source, DynamicJsonValue djv, string skipProperty)
+    {
+        var prop = new BlittableJsonReaderObject.PropertyDetails();
+        using (var properties = source.GetPropertiesByInsertionOrder())
+        {
+            for (int i = 0; i < properties.Size; i++)
+            {
+                source.GetPropertyByIndex(properties.Properties[i], ref prop);
+                if (skipProperty != null && prop.Name == skipProperty)
+                    continue;
+
+                djv[prop.Name] = prop.Value;
+            }
+        }
     }
 
     public ShardedStreamQueryCsvResult(JsonOperationContext context, HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer, IndexQueryServerSide query, OperationCancelToken token) : base(response, writer, indexDefinitionRaftIndex: null, token)

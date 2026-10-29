@@ -342,6 +342,10 @@ int32_t rvn_write_io_ring(
         *detailed_error_code = submittion.result;
         rc = FAIL_IO_RING_WRITE;
     }
+    else
+    {
+        _mark_dirty_pages(handle, buffers, count);
+    }
 
 exit:
     LeaveCriticalSection(&handle_ptr->global_state->lock);
@@ -365,9 +369,6 @@ rvn_one_time_init(int32_t* detailed_error_code)
             // no break here, we want to fall through
         case rvn_write_mode_file_io:
             g_cfg.write_mode = rvn_write_mode_file_io;
-            return SUCCESS;
-        case rvn_write_mode_mmap:
-            g_cfg.write_mode = rvn_write_mode_mmap;
             return SUCCESS;
         default:
             *detailed_error_code = ERROR_NOT_SUPPORTED;

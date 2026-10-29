@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -414,7 +414,7 @@ namespace Sparrow.Json
             return value;
         }
 
-        private static Dictionary<string, T> ToDictionaryOfPrimitive<T>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
+        private static unsafe Dictionary<string, T> ToDictionaryOfPrimitive<T>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
             where T : struct
         {
             var dic = new Dictionary<string, T>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
@@ -423,18 +423,17 @@ namespace Sparrow.Json
             if (json.TryGet(name, out obj) == false || obj == null)
                 return dic;
 
-            foreach (var propertyName in obj.GetPropertyNames())
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            using var properties = obj.GetPropertiesByInsertionOrder();
+            for (int i = 0; i < properties.Size; i++)
             {
-                object val;
-                if (obj.TryGetMember(propertyName, out val))
-                {
-                    dic[propertyName] = (T)val;
-                }
+                obj.GetPropertyByIndex(properties.Properties[i], ref prop);
+                dic[prop.Name] = (T)prop.Value;
             }
             return dic;
         }
 
-        private static Dictionary<TK, TV> ToDictionary<TK, TV>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute, Func<BlittableJsonReaderObject, TV> converter)
+        private static unsafe Dictionary<TK, TV> ToDictionary<TK, TV>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute, Func<BlittableJsonReaderObject, TV> converter)
         {
             var isStringKey = typeof(TK) == typeof(string);
             IEqualityComparer<TK> comparer = default;
@@ -449,11 +448,13 @@ namespace Sparrow.Json
             if (json.TryGet(name, out obj) == false || obj == null)
                 return dictionary;
 
-            foreach (var propertyName in obj.GetPropertyNames())
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            using var properties = obj.GetPropertiesByInsertionOrder();
+            for (int i = 0; i < properties.Size; i++)
             {
-                object val;
-                if (obj.TryGetMember(propertyName, out val) == false)
-                    continue;
+                obj.GetPropertyByIndex(properties.Properties[i], ref prop);
+                string propertyName = prop.Name;
+                object val = prop.Value;
 
                 dynamic key;
                 if (isStringKey)
@@ -506,7 +507,7 @@ namespace Sparrow.Json
             return (T)methodToCall.Invoke(null, new[] { obj });
         }
 
-        private static Dictionary<string, TEnum> ToDictionaryOfEnum<TEnum>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
+        private static unsafe Dictionary<string, TEnum> ToDictionaryOfEnum<TEnum>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
             var dic = new Dictionary<string, TEnum>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
@@ -515,18 +516,18 @@ namespace Sparrow.Json
             if (json.TryGet(name, out obj) == false || obj == null)
                 return dic;
 
-            foreach (var propertyName in obj.GetPropertyNames())
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            using var properties = obj.GetPropertiesByInsertionOrder();
+            for (int i = 0; i < properties.Size; i++)
             {
-                string val;
-                if (obj.TryGet(propertyName, out val))
-                {
-                    dic[propertyName] = (TEnum)Enum.Parse(typeof(TEnum), val, true);
-                }
+                obj.GetPropertyByIndex(properties.Properties[i], ref prop);
+                BlittableJsonReaderObject.ConvertType(prop.Value, out string val);
+                dic[prop.Name] = (TEnum)Enum.Parse(typeof(TEnum), val, true);
             }
             return dic;
         }
 
-        private static Dictionary<TKey, string> ToDictionaryOfPrimitiveKeys<TKey>(BlittableJsonReaderObject json, string name)
+        private static unsafe Dictionary<TKey, string> ToDictionaryOfPrimitiveKeys<TKey>(BlittableJsonReaderObject json, string name)
         {
             var dic = new Dictionary<TKey, string>();
 
@@ -537,19 +538,18 @@ namespace Sparrow.Json
 
             var type = typeof(TKey);
 
-            foreach (var propertyName in obj.GetPropertyNames())
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            using var properties = obj.GetPropertiesByInsertionOrder();
+            for (int i = 0; i < properties.Size; i++)
             {
-                object val;
-                if (obj.TryGet(propertyName, out val))
-                {
-                    var key = (TKey)Convert.ChangeType(propertyName, type);
-                    dic[key] = val?.ToString();
-                }
+                obj.GetPropertyByIndex(properties.Properties[i], ref prop);
+                var key = (TKey)Convert.ChangeType((string)prop.Name, type);
+                dic[key] = prop.Value?.ToString();
             }
             return dic;
         }
 
-        private static Dictionary<TEnum, string> ToDictionaryOfEnumKeys<TEnum>(BlittableJsonReaderObject json, string name)
+        private static unsafe Dictionary<TEnum, string> ToDictionaryOfEnumKeys<TEnum>(BlittableJsonReaderObject json, string name)
         {
             var dic = new Dictionary<TEnum, string>();
 
@@ -558,18 +558,17 @@ namespace Sparrow.Json
             if (json.TryGet(name, out obj) == false || obj == null)
                 return dic;
 
-            foreach (var propertyName in obj.GetPropertyNames())
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            using var properties = obj.GetPropertiesByInsertionOrder();
+            for (int i = 0; i < properties.Size; i++)
             {
-                object val;
-                if (obj.TryGet(propertyName, out val))
-                {
-                    dic[(TEnum)Enum.Parse(typeof(TEnum), propertyName, true)] = val?.ToString();
-                }
+                obj.GetPropertyByIndex(properties.Properties[i], ref prop);
+                dic[(TEnum)Enum.Parse(typeof(TEnum), prop.Name, true)] = prop.Value?.ToString();
             }
             return dic;
         }
 
-        private static Dictionary<string, string> ToDictionaryOfString(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
+        private static unsafe Dictionary<string, string> ToDictionaryOfString(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
             var dic = new Dictionary<string, string>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
@@ -578,18 +577,17 @@ namespace Sparrow.Json
             if (json.TryGet(name, out obj) == false || obj == null)
                 return dic;
 
-            foreach (var propertyName in obj.GetPropertyNames())
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            using var properties = obj.GetPropertiesByInsertionOrder();
+            for (int i = 0; i < properties.Size; i++)
             {
-                object val;
-                if (obj.TryGet(propertyName, out val))
-                {
-                    dic[propertyName] = val?.ToString();
-                }
+                obj.GetPropertyByIndex(properties.Properties[i], ref prop);
+                dic[prop.Name] = prop.Value?.ToString();
             }
             return dic;
         }
 
-        private static Dictionary<TK, List<TV>> ToDictionaryOfList<TK, TV>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute, Func<BlittableJsonReaderObject, TV> converter)
+        private static unsafe Dictionary<TK, List<TV>> ToDictionaryOfList<TK, TV>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute, Func<BlittableJsonReaderObject, TV> converter)
         {
             var type = typeof(TK);
             Dictionary<TK, List<TV>> dic;
@@ -610,36 +608,37 @@ namespace Sparrow.Json
                 return dic;
             
             var isPrimitiveValue = typeof(TV).IsPrimitive;
-            foreach (var propertyName in obj.GetPropertyNames())
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            using var properties = obj.GetPropertiesByInsertionOrder();
+            for (int i = 0; i < properties.Size; i++)
             {
-                BlittableJsonReaderArray array;
-                if (obj.TryGet(propertyName, out array))
-                {
-                    var list = new List<TV>(array.Length);
+                obj.GetPropertyByIndex(properties.Properties[i], ref prop);
+                BlittableJsonReaderObject.ConvertType(prop.Value, out BlittableJsonReaderArray array);
 
-                    if (isPrimitiveValue)
+                var list = new List<TV>(array.Length);
+
+                if (isPrimitiveValue)
+                {
+                    foreach (TV item in array)
                     {
-                        foreach (TV item in array)
-                        {
-                            list.Add(item);
-                        }
+                        list.Add(item);
                     }
-                    else
-                    {
-                        foreach (BlittableJsonReaderObject item in array)
-                        {
-                            list.Add(converter(item));
-                        }
-                    }
-                    
-                    var key = (TK)Convert.ChangeType(propertyName, type);
-                    dic[key] = list;
                 }
+                else
+                {
+                    foreach (BlittableJsonReaderObject item in array)
+                    {
+                        list.Add(converter(item));
+                    }
+                }
+
+                var key = (TK)Convert.ChangeType((string)prop.Name, type);
+                dic[key] = list;
             }
             return dic;
         }
 
-        private static Dictionary<string, List<string>> ToDictionaryOfStringList(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
+        private static unsafe Dictionary<string, List<string>> ToDictionaryOfStringList(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
             var dic = new Dictionary<string, List<string>>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
@@ -648,23 +647,24 @@ namespace Sparrow.Json
             if (json.TryGet(name, out obj) == false || obj == null)
                 return dic;
 
-            foreach (var propertyName in obj.GetPropertyNames())
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            using var properties = obj.GetPropertiesByInsertionOrder();
+            for (int i = 0; i < properties.Size; i++)
             {
-                BlittableJsonReaderArray array;
-                if (obj.TryGet(propertyName, out array))
+                obj.GetPropertyByIndex(properties.Properties[i], ref prop);
+                BlittableJsonReaderObject.ConvertType(prop.Value, out BlittableJsonReaderArray array);
+
+                var list = new List<string>(array.Length);
+                foreach (object item in array)
                 {
-                    var list = new List<string>(array.Length);
-                    foreach (object item in array)
-                    {
-                        list.Add(item?.ToString());
-                    }
-                    dic[propertyName] = list;
+                    list.Add(item?.ToString());
                 }
+                dic[prop.Name] = list;
             }
             return dic;
         }
 
-        private static Dictionary<string, string[]> ToDictionaryOfStringArray(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
+        private static unsafe Dictionary<string, string[]> ToDictionaryOfStringArray(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
             var dic = new Dictionary<string, string[]>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
@@ -673,23 +673,24 @@ namespace Sparrow.Json
             if (json.TryGet(name, out obj) == false || obj == null)
                 return dic;
 
-            foreach (var propertyName in obj.GetPropertyNames())
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            using var properties = obj.GetPropertiesByInsertionOrder();
+            for (int propIndex = 0; propIndex < properties.Size; propIndex++)
             {
-                BlittableJsonReaderArray val;
-                if (obj.TryGet(propertyName, out val))
+                obj.GetPropertyByIndex(properties.Properties[propIndex], ref prop);
+                BlittableJsonReaderObject.ConvertType(prop.Value, out BlittableJsonReaderArray val);
+
+                var array = new string[val.Length];
+                for (int i = 0; i < val.Length; i++)
                 {
-                    var array = new string[val.Length];
-                    for (int i = 0; i < val.Length; i++)
-                    {
-                        array[i] = val[i]?.ToString();
-                    }
-                    dic[propertyName] = array;
+                    array[i] = val[i]?.ToString();
                 }
+                dic[prop.Name] = array;
             }
             return dic;
         }
 
-        private static Dictionary<string, double[]> ToDictionaryOfDoubleArray(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
+        private static unsafe Dictionary<string, double[]> ToDictionaryOfDoubleArray(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
             var dic = new Dictionary<string, double[]>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
@@ -697,23 +698,24 @@ namespace Sparrow.Json
             if (json.TryGet(name, out obj) == false || obj == null)
                 return dic;
 
-            foreach (var propertyName in obj.GetPropertyNames())
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            using var properties = obj.GetPropertiesByInsertionOrder();
+            for (int propIndex = 0; propIndex < properties.Size; propIndex++)
             {
-                BlittableJsonReaderArray val;
-                if (obj.TryGet(propertyName, out val))
+                obj.GetPropertyByIndex(properties.Properties[propIndex], ref prop);
+                BlittableJsonReaderObject.ConvertType(prop.Value, out BlittableJsonReaderArray val);
+
+                var array = new double[val.Length];
+                for (int i = 0; i < val.Length; i++)
                 {
-                    var array = new double[val.Length];
-                    for (int i = 0; i < val.Length; i++)
-                    {
-                        array[i] = Convert.ToDouble(val[i]);
-                    }
-                    dic[propertyName] = array;
+                    array[i] = Convert.ToDouble(val[i]);
                 }
+                dic[prop.Name] = array;
             }
             return dic;
         }
 
-        private static Dictionary<string, Dictionary<string, string[]>> ToDictionaryOfDictionaryOfStringArray(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
+        private static unsafe Dictionary<string, Dictionary<string, string[]>> ToDictionaryOfDictionaryOfStringArray(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
             var dic = new Dictionary<string, Dictionary<string, string[]>>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
@@ -722,32 +724,34 @@ namespace Sparrow.Json
             if (json.TryGet(name, out obj) == false || obj == null)
                 return dic;
 
-            foreach (var propertyName in obj.GetPropertyNames())
+            var outerProp = new BlittableJsonReaderObject.PropertyDetails();
+            var innerProp = new BlittableJsonReaderObject.PropertyDetails();
+            using var properties = obj.GetPropertiesByInsertionOrder();
+            for (int propIndex = 0; propIndex < properties.Size; propIndex++)
             {
-                BlittableJsonReaderObject result;
-                if (obj.TryGet(propertyName, out result))
+                obj.GetPropertyByIndex(properties.Properties[propIndex], ref outerProp);
+                BlittableJsonReaderObject.ConvertType(outerProp.Value, out BlittableJsonReaderObject result);
+
+                var prop = new Dictionary<string, string[]>();
+                dic[outerProp.Name] = prop;
+                using var innerProperties = result.GetPropertiesByInsertionOrder();
+                for (int innerIndex = 0; innerIndex < innerProperties.Size; innerIndex++)
                 {
-                    var prop = new Dictionary<string, string[]>();
-                    dic[propertyName] = prop;
-                    foreach (var innerPropName in result.GetPropertyNames())
+                    result.GetPropertyByIndex(innerProperties.Properties[innerIndex], ref innerProp);
+                    BlittableJsonReaderObject.ConvertType(innerProp.Value, out BlittableJsonReaderArray val);
+
+                    var array = new string[val.Length];
+                    for (int i = 0; i < val.Length; i++)
                     {
-                        BlittableJsonReaderArray val;
-                        if (result.TryGet(innerPropName, out val))
-                        {
-                            var array = new string[val.Length];
-                            for (int i = 0; i < val.Length; i++)
-                            {
-                                array[i] = val[i]?.ToString();
-                            }
-                            prop[innerPropName] = array;
-                        }
+                        array[i] = val[i]?.ToString();
                     }
+                    prop[innerProp.Name] = array;
                 }
             }
             return dic;
         }
 
-        private static Dictionary<string, Dictionary<string, double[]>> ToDictionaryOfDictionaryOfDoubleArray(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
+        private static unsafe Dictionary<string, Dictionary<string, double[]>> ToDictionaryOfDictionaryOfDoubleArray(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
             var dic = new Dictionary<string, Dictionary<string, double[]>>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
@@ -756,26 +760,28 @@ namespace Sparrow.Json
             if (json.TryGet(name, out obj) == false || obj == null)
                 return dic;
 
-            foreach (var propertyName in obj.GetPropertyNames())
+            var outerProp = new BlittableJsonReaderObject.PropertyDetails();
+            var innerProp = new BlittableJsonReaderObject.PropertyDetails();
+            using var properties = obj.GetPropertiesByInsertionOrder();
+            for (int propIndex = 0; propIndex < properties.Size; propIndex++)
             {
-                BlittableJsonReaderObject result;
-                if (obj.TryGet(propertyName, out result))
+                obj.GetPropertyByIndex(properties.Properties[propIndex], ref outerProp);
+                BlittableJsonReaderObject.ConvertType(outerProp.Value, out BlittableJsonReaderObject result);
+
+                var prop = new Dictionary<string, double[]>();
+                dic[outerProp.Name] = prop;
+                using var innerProperties = result.GetPropertiesByInsertionOrder();
+                for (int innerIndex = 0; innerIndex < innerProperties.Size; innerIndex++)
                 {
-                    var prop = new Dictionary<string, double[]>();
-                    dic[propertyName] = prop;
-                    foreach (var innerPropName in result.GetPropertyNames())
+                    result.GetPropertyByIndex(innerProperties.Properties[innerIndex], ref innerProp);
+                    BlittableJsonReaderObject.ConvertType(innerProp.Value, out BlittableJsonReaderArray val);
+
+                    var array = new double[val.Length];
+                    for (int i = 0; i < val.Length; i++)
                     {
-                        BlittableJsonReaderArray val;
-                        if (result.TryGet(innerPropName, out val))
-                        {
-                            var array = new double[val.Length];
-                            for (int i = 0; i < val.Length; i++)
-                            {
-                                array[i] = (double)val[i];
-                            }
-                            prop[innerPropName] = array;
-                        }
+                        array[i] = (double)val[i];
                     }
+                    prop[innerProp.Name] = array;
                 }
             }
             return dic;

@@ -298,6 +298,12 @@ namespace Raven.Server.Platform.Posix
         [SnmpIndex(60)]
         public Size Balloon { get; set; }
 
+        [SnmpIndex(61)]
+        public Size GPUActive { get; set; }
+
+        [SnmpIndex(62)]
+        public Size GPUReclaim { get; set; }
+
         public Dictionary<string, Size> Other { get; set; }
 
         public void Set(string name, long value, SizeUnit unit)

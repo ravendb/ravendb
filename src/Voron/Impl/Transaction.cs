@@ -45,6 +45,7 @@ namespace Voron.Impl
         private Dictionary<Slice, Tree> _trees;
 
         private Dictionary<Slice, FixedSizeTree> _globalFixedSizeTree;
+        private Dictionary<Tuple<Tree, Slice>, FixedSizeTree> _nestedFixedSizeTrees;
 
         public IEnumerable<Tree> Trees => _trees?.Values ?? Enumerable.Empty<Tree>();
         
@@ -326,7 +327,7 @@ namespace Voron.Impl
 
         internal void AddMultiValueTree(Tree tree, Slice key, Tree mvTree)
         {
-            _multiValueTrees ??= new Dictionary<Tuple<Tree, Slice>, Tree>(new TreeAndSliceComparer());
+            _multiValueTrees ??= new Dictionary<Tuple<Tree, Slice>, Tree>(TreeAndSliceComparer.Instance);
 
             mvTree.IsMultiValueTree = true;
             _multiValueTrees.Add(Tuple.Create(tree, key.Clone(_lowLevelTransaction.Allocator, ByteStringType.Immutable)), mvTree);
@@ -583,6 +584,26 @@ namespace Voron.Impl
             return tree;
         }
 
+        // This is used for table local index trees, which are nested under the table tree. The parent tree is the table tree, and the name is the name of the index.
+        internal FixedSizeTree GetNestedFixedSizeTree(Tree parent, Slice name, ushort valSize, bool isIndexTree, NewPageAllocator newPageAllocator)
+        {
+            _nestedFixedSizeTrees ??= new Dictionary<Tuple<Tree, Slice>, FixedSizeTree>(TreeAndSliceComparer.Instance);
+
+            var key = Tuple.Create(parent, name);
+
+            if (_nestedFixedSizeTrees.TryGetValue(key, out FixedSizeTree tree) == false)
+            {
+                tree = new FixedSizeTree(LowLevelTransaction, parent, name, valSize, isIndexTree: isIndexTree, newPageAllocator: newPageAllocator);
+                _nestedFixedSizeTrees[Tuple.Create(parent, tree.Name)] = tree;
+                return tree;
+            }
+
+            if (newPageAllocator != null && tree.HasNewPageAllocator == false)
+                tree.SetNewPageAllocator(newPageAllocator);
+
+            return tree;
+        }
+
         [Conditional("DEBUG")]
         public static void DebugDisposeReaderAfterTransaction(Transaction tx, BlittableJsonReaderObject reader)
         {
@@ -610,11 +631,11 @@ namespace Voron.Impl
 
             // delete table data
 
-            table.DeleteByPrimaryKey(Slices.BeforeAllKeys, x =>
+            table.DeleteByPrimaryKey(Slices.BeforeAllKeys, (in TableValueReader reader) =>
             {
                 if (schema.Key.IsGlobal)
                 {
-                    return table.IsOwned(x.Reader.Id);
+                    return table.IsOwned(reader.Id);
                 }
 
                 return true;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using JetBrains.Annotations;
@@ -70,9 +70,9 @@ public abstract class AbstractCompareExchangeStorage
         using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
         using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
         {
-            foreach (var tvr in table.SeekForwardFromPrefix(ClusterStateMachine.CompareExchangeTombstoneSchema.Indexes[ClusterStateMachine.CompareExchangeTombstoneIndex], keySlice, prefix, 0))
+            foreach (var tvr in table.SeekForwardFromPrefix(ClusterStateMachine.CompareExchangeTombstoneIndexDef, keySlice, prefix, 0))
             {
-                var index = ClusterStateMachine.ReadCompareExchangeOrTombstoneIndex(tvr.Result.Reader);
+                var index = ClusterStateMachine.ReadCompareExchangeOrTombstoneIndex(tvr.Result);
                 if (index <= end)
                     return true;
 
@@ -122,12 +122,11 @@ public abstract class AbstractCompareExchangeStorage
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.CompareExchangeTombstoneSchema, ClusterStateMachine.CompareExchangeTombstones);
 
-            var tvh = table.SeekOneBackwardFrom(ClusterStateMachine.CompareExchangeTombstoneSchema.Indexes[ClusterStateMachine.CompareExchangeTombstoneIndex], prefix.Slice, last.Slice);
-
-            if (tvh == null)
+            if (table.SeekOneBackwardFrom(ClusterStateMachine.CompareExchangeTombstoneIndexDef,
+                    prefix.Slice, last.Slice, out var reader) == false)
                 return 0;
 
-            return ClusterStateMachine.ReadCompareExchangeOrTombstoneIndex(tvh.Reader);
+            return ClusterStateMachine.ReadCompareExchangeOrTombstoneIndex(reader);
         }
     }
 
@@ -157,9 +156,9 @@ public abstract class AbstractCompareExchangeStorage
             foreach (var item in items.SeekByPrimaryKeyPrefix(keySlice, Slices.Empty, start))
             {
                 pageSize--;
-                var key = ClusterStateMachine.ReadCompareExchangeKey(context, item.Value.Reader, _databaseName);
-                var index = ClusterStateMachine.ReadCompareExchangeOrTombstoneIndex(item.Value.Reader);
-                var value = ClusterStateMachine.ReadCompareExchangeValue(context, item.Value.Reader);
+                var key = ClusterStateMachine.ReadCompareExchangeKey(context, item.Value, _databaseName);
+                var index = ClusterStateMachine.ReadCompareExchangeOrTombstoneIndex(item.Value);
+                var value = ClusterStateMachine.ReadCompareExchangeValue(context, item.Value);
                 yield return (key, index, value);
 
                 if (pageSize == 0)

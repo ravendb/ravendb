@@ -321,7 +321,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
                     page = decompressed;
                 }
 
-                if (page.NumberOfEntries == 0 && page != rootPage)
+                if (page.NumberOfEntries == 0 && page.PageNumber != rootPage.PageNumber)
                     throw new InvalidOperationException($"The page {page.PageNumber} is empty");
 
                 for (var i = 0; i < page.NumberOfEntries; i++)

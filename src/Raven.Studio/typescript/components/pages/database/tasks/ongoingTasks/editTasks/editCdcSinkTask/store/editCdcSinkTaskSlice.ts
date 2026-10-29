@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
-import { FieldPath } from "react-hook-form/dist/types/path/eager";
+import { FieldPath } from "react-hook-form";
 import {
     EmbeddedTablePath,
     LinkedTablePath,
@@ -31,6 +31,7 @@ interface EditCdcSinkTaskState {
     isFieldMappingExpandedByDefault: boolean;
     isRawView: boolean;
     rawViewContent: string;
+    rawViewPristineContent: string;
     taskId: number;
 }
 
@@ -55,6 +56,7 @@ const initialState: EditCdcSinkTaskState = {
     ),
     isRawView: false,
     rawViewContent: null,
+    rawViewPristineContent: null,
     taskId: null,
 };
 
@@ -101,11 +103,21 @@ export const editCdcSinkTaskSlice = createSlice({
         fieldMappingExpandedByDefaultSet: (state, action: PayloadAction<boolean>) => {
             state.isFieldMappingExpandedByDefault = action.payload;
         },
-        rawViewToggled: (state) => {
-            state.isRawView = !state.isRawView;
+        rawViewOpened: (state, action: PayloadAction<string>) => {
+            state.isRawView = true;
+            state.rawViewContent = action.payload;
+            state.rawViewPristineContent = action.payload;
+        },
+        rawViewClosed: (state) => {
+            state.isRawView = false;
+            state.rawViewContent = null;
+            state.rawViewPristineContent = null;
         },
         rawViewContentSet: (state, action: PayloadAction<string>) => {
             state.rawViewContent = action.payload;
+        },
+        rawViewContentSaved: (state) => {
+            state.rawViewPristineContent = state.rawViewContent;
         },
         reset: () => initialState,
     },
@@ -123,4 +135,6 @@ export const editCdcSinkTaskSelectors = {
     isFieldMappingExpandedByDefault: (state: RootState) => state.editCdcSinkTask.isFieldMappingExpandedByDefault,
     isRawView: (state: RootState) => state.editCdcSinkTask.isRawView,
     rawViewContent: (state: RootState) => state.editCdcSinkTask.rawViewContent,
+    isRawViewDirty: (state: RootState) =>
+        state.editCdcSinkTask.rawViewContent !== state.editCdcSinkTask.rawViewPristineContent,
 };

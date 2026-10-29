@@ -220,12 +220,16 @@ namespace Raven.Server.Documents.Indexes
             public const long CoraxOrderPreservingCompoundNumericEncoding = Base72Version; // RavenDB-26831
             public const long CoraxNumericTreesWithoutFrequencies_72 = 72_002; // RavenDB-27171
             public const long LuceneExactDatesUseTimeTicks_72 = 72_003; // RavenDB-27052
+            public const long CoraxPerEntryMultipleTermsMarker_72 = 72_004; // RavenDB-27565
+            public const long CoraxCharAsString_72 = 72_005; // RavenDB-27596
+
+            public const long Base80Version = 80_000;
 
             // RavenDB-25281: Corax rejects a compound field whose first source field is tokenized/non-keyword
             // (it cannot produce the order-preserving prefix a compound field needs). Gated by version so indexes
             // created before this validation existed keep working after an upgrade; only indexes at this version
             // or higher are validated.
-            public const long CoraxCompoundFieldFirstFieldValidation = 72_004; // RavenDB-25281
+            public const long CoraxCompoundFieldFirstFieldValidation = Base80Version; // RavenDB-25281
 
             /// <summary>
             /// Remember to bump this
@@ -287,6 +291,16 @@ namespace Raven.Server.Documents.Indexes
                     return indexVersion >= LuceneExactDatesUseTimeTicks_72;
 
                 return indexVersion >= LuceneExactDatesUseTimeTicks_62;
+            }
+
+            public static bool IsPerEntryMultipleTermsMarkerSupported(long indexVersion)
+            {
+                return indexVersion >= CoraxPerEntryMultipleTermsMarker_72;
+            }
+
+            public static bool IsCoraxCharAsStringSupported(long indexVersion)
+            {
+                return indexVersion >= CoraxCharAsString_72;
             }
         }
     }

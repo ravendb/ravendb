@@ -6,6 +6,8 @@ namespace Voron.Impl
 {
     internal sealed class TreeAndSliceComparer : IEqualityComparer<Tuple<Tree, Slice>>
     {
+        public static readonly TreeAndSliceComparer Instance = new TreeAndSliceComparer();
+
         public bool Equals(Tuple<Tree, Slice> x, Tuple<Tree, Slice> y)
         {
             if (x == null && y == null)

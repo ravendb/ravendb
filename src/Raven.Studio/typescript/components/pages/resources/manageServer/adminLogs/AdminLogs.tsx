@@ -18,7 +18,7 @@ import AdminLogsExportButton from "components/pages/resources/manageServer/admin
 import AdminLogsViewSettingsModal from "components/pages/resources/manageServer/adminLogs/view/AdminLogsViewSettingsModal";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { logLevelOptions } from "components/utils/common";
-import { useEffect } from "react";
+import { ChangeEvent, useEffect } from "react";
 import { StylesConfig } from "react-select";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
@@ -235,7 +235,7 @@ export default function AdminLogs() {
                         type="text"
                         placeholder="Search..."
                         value={localFilter}
-                        onChange={(e) => handleFilterChange(e.target.value)}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleFilterChange(e.target.value)}
                         className="pe-4"
                     />
                     {filter && (

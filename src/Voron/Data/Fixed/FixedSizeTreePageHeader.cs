@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+using System;
+using System.Runtime.InteropServices;
 
 namespace Voron.Data.Fixed
 {
@@ -25,5 +26,21 @@ namespace Voron.Data.Fixed
 
         [FieldOffset(14)]
         public ushort ValueSize;
+
+        [FieldOffset(16)]
+        public ushort NumberOfTombstones;
+
+        public int NumberOfActiveEntries =>
+            (TreeFlags & FixedSizeTreePageFlags.HasTombstonesBitmap) == FixedSizeTreePageFlags.HasTombstonesBitmap
+                ? NumberOfEntries - NumberOfTombstones
+                : NumberOfEntries;
+
+        public int CollapsedLevels
+        {
+            get => PageCollapsedLevels.Get(TreeFlags);
+            set => TreeFlags = PageCollapsedLevels.Set(TreeFlags, value);
+        }
+
+        public FixedSizeTreePageFlags PageType => PageCollapsedLevels.PageType(TreeFlags) & ~FixedSizeTreePageFlags.HasTombstonesBitmap;
     }
 }

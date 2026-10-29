@@ -75,6 +75,7 @@ export const sampleUsageResponse: UsageResponse = {
         { slug: "acme-warehouse", writes: 0 },
         { slug: "acme-internal", writes: 1200000 },
     ],
+    isWritesUnavailable: false,
 };
 
 export const sampleDashboardApps: ApplianceAppResponse[] = [
@@ -90,7 +91,7 @@ export const sampleDashboardApps: ApplianceAppResponse[] = [
         channelsCount: 3,
         adaptersCount: 0,
         agentsCount: 3,
-        channelsLabel: "Web widget, Telegram, WhatsApp, Slack, Discord",
+        channelTypes: ["IFrame", "Telegram", "WhatsApp", "Slack", "Discord"],
         statusSubtitle: null,
         createdAt: "2026-05-02T10:00:00Z",
         updatedAt: "2026-06-25T09:00:00Z",
@@ -107,7 +108,7 @@ export const sampleDashboardApps: ApplianceAppResponse[] = [
         channelsCount: 1,
         adaptersCount: 0,
         agentsCount: 2,
-        channelsLabel: "iframe",
+        channelTypes: ["IFrame"],
         statusSubtitle: "Replication lag: 42 min",
         createdAt: "2026-05-14T08:30:00Z",
         updatedAt: "2026-06-25T08:18:00Z",
@@ -124,7 +125,7 @@ export const sampleDashboardApps: ApplianceAppResponse[] = [
         channelsCount: 0,
         adaptersCount: 0,
         agentsCount: 0,
-        channelsLabel: null,
+        channelTypes: [],
         statusSubtitle: "Initial load 62% · ETA 1h 14m",
         createdAt: "2026-06-25T07:40:00Z",
         updatedAt: "2026-06-25T09:02:00Z",
@@ -141,7 +142,7 @@ export const sampleDashboardApps: ApplianceAppResponse[] = [
         channelsCount: 1,
         adaptersCount: 0,
         agentsCount: 2,
-        channelsLabel: "Telegram",
+        channelTypes: ["Telegram"],
         statusSubtitle: "Sync failed · stalled for 2h",
         createdAt: "2026-04-28T12:00:00Z",
         updatedAt: "2026-06-25T07:05:00Z",
@@ -231,7 +232,7 @@ export const sampleConversations: ConversationDto[] = [
     {
         id: "cv_a1xTk",
         appId: "demo",
-        channelName: "Telegram bot",
+        channelName: "Telegram",
         agentName: "Support",
         agentInitials: "S",
         params: [
@@ -280,7 +281,7 @@ export const sampleConversations: ConversationDto[] = [
     {
         id: "cv_b2yUl",
         appId: "demo",
-        channelName: "Web widget",
+        channelName: "Embedded chat",
         agentName: "Support",
         agentInitials: "S",
         params: [
@@ -330,7 +331,7 @@ export const sampleConversations: ConversationDto[] = [
     {
         id: "cv_c3zVm",
         appId: "demo",
-        channelName: "Web widget",
+        channelName: "Embedded chat",
         agentName: "Support",
         agentInitials: "S",
         params: [
@@ -402,7 +403,7 @@ export const sampleConversations: ConversationDto[] = [
     {
         id: "cv_d4aWn",
         appId: "demo",
-        channelName: "Telegram bot",
+        channelName: "Telegram",
         agentName: "Billing",
         agentInitials: "B",
         params: [
@@ -426,7 +427,7 @@ export const sampleConversations: ConversationDto[] = [
     {
         id: "cv_5kPq2",
         appId: "demo",
-        channelName: "Web widget",
+        channelName: "Embedded chat",
         agentName: "Sales",
         agentInitials: "SA",
         params: [
@@ -535,15 +536,17 @@ const sampleTranscript: ConversationDto["transcript"] = [
 ];
 
 const usageSparkline = (base: number) =>
-    Array.from({ length: 14 }, (_, index) => Math.round(base * (0.7 + 0.3 * Math.sin((index / 13) * Math.PI * 2))));
+    Array.from({ length: 30 }, (_, index) => Math.round(base * (0.7 + 0.3 * Math.sin((index / 13) * Math.PI * 2))));
 
-// Builds a multi-series breakdown shaped like the backend's SeriesData — one
-// { t, <key>: number } row per bucket. The generated `points` type is Record<string, never>,
-// so assemble the rows loosely and cast to the contract shape.
+const usageBuckets = Array.from(
+    { length: 30 },
+    (_, index) => `2026-06-${String(index + 1).padStart(2, "0")}T00:00:00Z`,
+);
+
 const buildSeries = (keys: SeriesKey[], bases: number[]): SeriesData => {
     const seriesValues = bases.map((base) => usageSparkline(base));
-    const points = Array.from({ length: 14 }, (_, index) => {
-        const row: Record<string, number | string> = { t: `2026-06-${String(index + 12).padStart(2, "0")}` };
+    const points = Array.from({ length: 30 }, (_, index) => {
+        const row: Record<string, number | string> = { t: `2026-06-${String(index + 1).padStart(2, "0")}` };
         keys.forEach((key, seriesIndex) => {
             row[key.key] = seriesValues[seriesIndex][index];
         });
@@ -555,7 +558,8 @@ const buildSeries = (keys: SeriesKey[], bases: number[]): SeriesData => {
 export const sampleAppUsage: AppUsageResponse = {
     metrics: {
         conversations: { value: 7400, delta: 12.5, sparkline: usageSparkline(520) },
-        tokens: { value: 6100000, delta: 15, sparkline: usageSparkline(430000) },
+        tokens: { value: 6100000, delta: -15, sparkline: usageSparkline(430000) },
+        buckets: usageBuckets,
     },
     tokensByCapability: buildSeries(
         [
@@ -573,7 +577,7 @@ export const sampleAppUsage: AppUsageResponse = {
     ),
     conversationsByChannel: buildSeries(
         [
-            { key: "web", label: "Web widget" },
+            { key: "web", label: "Embedded chat" },
             { key: "telegram", label: "Telegram" },
         ],
         [320, 200],

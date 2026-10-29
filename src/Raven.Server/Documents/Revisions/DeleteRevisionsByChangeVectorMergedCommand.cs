@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
@@ -66,7 +66,7 @@ public partial class RevisionsStorage
                 if (revisionsStorage.TryReadRevision(table, in revisionKey, out TableValueReader tvr) == false)
                     yield break;
 
-                revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId | DocumentFields.Id);
+                revision = TableValueToRevision(context, tvr, DocumentFields.ChangeVector | DocumentFields.LowerId | DocumentFields.Id);
             }
 
             if (revision.Id != _id)

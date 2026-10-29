@@ -1293,6 +1293,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     mltTerms = mlt.Like(blittableJson);
             }
 
+            if (query.PageSize == 0)
+                yield break;
+
             // Materialize into bitmap via OR
             Voron.Data.RoaringBitmaps.RoaringBitmap mltBitmapData = new(_allocator);
             long[] ids = null;
@@ -1330,6 +1333,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 mltIterator = mltBitmapData.GetIterator();
 
                 var ravenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                if (baseDocId.HasValue)
+                {
+                    // by id, not by entry: a fanout index gives the base document several entries
+                    var baseDocumentId = _documentIdReader.GetTermFor(baseDocId.Value);
+                    if (baseDocumentId != null)
+                        ravenIds.Add(baseDocumentId);
+                }
+
                 ids = QueryPool.Rent(pageSize);
                 long returnedDocs = 0;
                 long skippedDocs = 0;
@@ -1339,16 +1350,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 {
                     for (int i = 0; i < read; i++)
                     {
-                        if (returnedDocs >= query.Limit)
+                        if (returnedDocs >= query.PageSize)
                             yield break;
-                        
+
                         var hit = ids[i];
                         token.ThrowIfCancellationRequested();
 
-                        if (hit == baseDocId)
-                            continue;
-                        
                         var id = _documentIdReader.GetTermFor(hit);
+                        if (id == null)
+                            continue;
+
                         if (ravenIds.Add(id) == false)
                             continue;
 
@@ -1357,7 +1368,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             skippedDocs++;
                             continue;
                         }
-                        
+
                         var termsReader = IndexSearcher.GetEntryTermsReader(hit, ref page);
                         var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, termsReader, id, _index.IndexFieldsPersistence.HasTimeValues);
                         var result = retriever.Get(ref retrieverInput, token);

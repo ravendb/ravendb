@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Sparrow.Binary;
 using Sparrow.Utils;
 
 namespace Sparrow.Json
@@ -14,12 +15,17 @@ namespace Sparrow.Json
         private readonly int _numberOfSlotsPerCore;
         private readonly T[][] _perCoreArrays;
         private readonly PaddedInt[] _perCoreArrayLength;
+        // number of per-core buckets, rounded up to a power of two so the processor id maps to a
+        // bucket with a mask instead of a division; the extra buckets just start out empty
+        private readonly int _coreMask;
 
         public PerCoreContainer(int numberOfSlotsPerCore = 64)
         {
             _numberOfSlotsPerCore = numberOfSlotsPerCore;
-            _perCoreArrays = new T[Environment.ProcessorCount][];
-            _perCoreArrayLength = new PaddedInt[Environment.ProcessorCount];
+            var buckets = Bits.PowerOf2(Environment.ProcessorCount);
+            _coreMask = buckets - 1;
+            _perCoreArrays = new T[buckets][];
+            _perCoreArrayLength = new PaddedInt[buckets];
 
             for (int i = 0; i < _perCoreArrays.Length; i++)
             {
@@ -27,29 +33,38 @@ namespace Sparrow.Json
             }
         }
 
+        // Items are pulled where work runs but often pushed back from a different thread - request
+        // completions funnel through the transaction merger's notification thread, so the pushes all
+        // land on ONE core while the pulls happen everywhere else. If each side only ever touched its
+        // own core, the pusher's slots would fill up (discarding warm items) while every puller missed
+        // (rebuilding them from scratch). The local core stays the fast path; on a miss we steal from
+        // the other cores, on overflow we spill to them.
+
         public bool TryPull(out T output)
         {
-            int currentProcessorId = CurrentProcessorIdHelper.GetCurrentProcessorId() % _perCoreArrays.Length;
-            if (_perCoreArrayLength[currentProcessorId].Value <= 0)
-            {
-                output = default;
-                return false;
-            }
+            int currentProcessorId = CurrentProcessorIdHelper.GetCurrentProcessorId() & _coreMask;
 
-            var coreItems = _perCoreArrays[currentProcessorId];
-
-            for (int i = 0; i < coreItems.Length; i++)
+            for (int attempt = 0; attempt < _perCoreArrays.Length; attempt++)
             {
-                var cur = coreItems[i];
-                if (cur == null)
+                int core = (currentProcessorId + attempt) & _coreMask;
+                if (_perCoreArrayLength[core].Value <= 0)
                     continue;
 
-                if (Interlocked.CompareExchange(ref coreItems[i], null, cur) != cur)
-                    continue;
+                var coreItems = _perCoreArrays[core];
 
-                Interlocked.Decrement(ref _perCoreArrayLength[currentProcessorId].Value);
-                output = cur;
-                return true;
+                for (int i = 0; i < coreItems.Length; i++)
+                {
+                    var cur = coreItems[i];
+                    if (cur == null)
+                        continue;
+
+                    if (Interlocked.CompareExchange(ref coreItems[i], null, cur) != cur)
+                        continue;
+
+                    Interlocked.Decrement(ref _perCoreArrayLength[core].Value);
+                    output = cur;
+                    return true;
+                }
             }
 
             output = default;
@@ -58,21 +73,26 @@ namespace Sparrow.Json
 
         public bool TryPush(T cur)
         {
-            int currentProcessorId = CurrentProcessorIdHelper.GetCurrentProcessorId() % _perCoreArrays.Length;
-            if (_perCoreArrayLength[currentProcessorId].Value >= _numberOfSlotsPerCore)
-                return false;
+            int currentProcessorId = CurrentProcessorIdHelper.GetCurrentProcessorId() & _coreMask;
 
-            var core = _perCoreArrays[currentProcessorId];
-
-            for (int i = 0; i < core.Length; i++)
+            for (int attempt = 0; attempt < _perCoreArrays.Length; attempt++)
             {
-                if (core[i] != null)
+                int coreId = (currentProcessorId + attempt) & _coreMask;
+                if (_perCoreArrayLength[coreId].Value >= _numberOfSlotsPerCore)
                     continue;
 
-                if (Interlocked.CompareExchange(ref core[i], cur, null) == null)
+                var core = _perCoreArrays[coreId];
+
+                for (int i = 0; i < core.Length; i++)
                 {
-                    Interlocked.Increment(ref _perCoreArrayLength[currentProcessorId].Value);
-                    return true;
+                    if (core[i] != null)
+                        continue;
+
+                    if (Interlocked.CompareExchange(ref core[i], cur, null) == null)
+                    {
+                        Interlocked.Increment(ref _perCoreArrayLength[coreId].Value);
+                        return true;
+                    }
                 }
             }
             return false;

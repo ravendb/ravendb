@@ -75,7 +75,7 @@ namespace Raven.Server.Storage
                 {
                     try
                     {
-                        storageEnvironment.Cleanup();
+                        storageEnvironment.Cleanup(tryCleanupRecycledJournals: true);
                     }
                     catch (ObjectDisposedException)
                     {

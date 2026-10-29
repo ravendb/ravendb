@@ -1,4 +1,5 @@
 using Sparrow;
+using ZstdLib = Sparrow.Utils.ZstdLib;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -20,6 +21,7 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
 using Voron.Logging;
+using Voron.Util;
 using Voron.Util.PFor;
 
 namespace Voron.Impl.Journal
@@ -47,8 +49,15 @@ namespace Voron.Impl.Journal
         private long? _lastSkippedTx;
         private long? _resyncedFromInvalid4KbPosition;
         private long? _resyncedToValid4KbPosition;
+        private long? _unexplainedInvalid4KbPosition;
 
         public bool RequireHeaderUpdate { get; private set; }
+
+        // An invalid region was found and valid data after it. We don't know which env used that, in the case of shared journals.
+        // Each env will deal with it on its own, but we don't want to keep writing to this file, we'll need a new one.
+        public bool BypassedInvalidRegion => _resyncedFromInvalid4KbPosition != null;
+
+        public bool EndedAtPipeliningHole { get; private set; }
 
         public long Next4Kb => _next4Kb;
 
@@ -81,7 +90,7 @@ namespace Voron.Impl.Journal
             _readAt4Kb = 0;
             LastTransactionHeader = previous;
             _journalPagerNumberOfAllocated4Kb = _journalPagerState.TotalAllocatedSize / (4 * Constants.Size.Kilobyte);
-            
+
             JournalId = environment.HeaderAccessor.MetadataAccessor.JournalId;
 
             if (journalPager.Options.Encryption.IsEnabled)
@@ -127,8 +136,16 @@ namespace Voron.Impl.Journal
             {
                 try
                 {
-                    LZ4.Decode64LongBuffers((byte*)current + sizeof(TransactionHeader), current->CompressedSize, outputPage,
-                        current->UncompressedSize, true);
+                    if ((current->TxMarker & TransactionMarker.ZstdCompressed) != 0)
+                    {
+                        ZstdLib.DecompressToBuffer((byte*)current + sizeof(TransactionHeader), current->CompressedSize, outputPage,
+                            current->UncompressedSize);
+                    }   
+                    else
+                    {
+                        LZ4.Decode64LongBuffers((byte*)current + sizeof(TransactionHeader), current->CompressedSize, outputPage,
+                            current->UncompressedSize, true);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -433,7 +450,12 @@ namespace Voron.Impl.Journal
                     $"LastTransactionHeader->TransactionId: {LastTransactionHeader->TransactionId}, transactionHeaders.Last().TransactionId: {transactionHeaders.Last().TransactionId}");
 
                 if (LastTransactionHeader != null)
-                    transactionHeaders.Add(*LastTransactionHeader);
+                {
+                    // on-disk header carries JournalId XORed with the incarnation guid - the in-memory uses the plain environment id
+                    var copy = *LastTransactionHeader;
+                    copy.JournalId = copy.JournalId.Xor(Incarnation);
+                    transactionHeaders.Add(copy);
+                }
             }
 
             ZeroRecoveryBufferIfNeeded(recoveryPagerState, ref txState, options);
@@ -498,6 +520,12 @@ namespace Voron.Impl.Journal
             if (current->HeaderMarker != Constants.TransactionHeaderMarker)
                 return false;
 
+            if ((current->Flags & TransactionPersistenceModeFlags.JournalHeaderRecord) != 0 &&
+                (_readAt4Kb != 0 || IsWellFormedJournalHeaderRecord(current) == false))
+            {
+                return false; // a *valid* journal header record can only be at the beginning of the journal file
+            }
+
             long actualTransactionSize = sizeof(TransactionHeader) + 
                               (current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize);
           
@@ -520,8 +548,10 @@ namespace Voron.Impl.Journal
                     throw new InvalidOperationException(
                         "Encountered an encrypted transaction when opening a non encrypted storage. Did you forget to provide the encryption key?");
 
-                bool hashIsValid = ValidatePagesHash(options, current);
-                if (hashIsValid == false && CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current->TransactionId, options))
+                if (ValidatePagesHash(options, current))
+                    return true;
+
+                if (CanIgnoreIntegrityErrorOfEntry(current, options))
                 {
                     options.InvokeIntegrityErrorOfAlreadySyncedData(this,
                         $"Invalid hash of data of first transaction which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalNumber}). " +
@@ -529,8 +559,12 @@ namespace Voron.Impl.Journal
 
                     return true;
                 }
-                return hashIsValid;
+                return false;
             }
+
+            // Hash of an encrypted entry is just the tag, and a stale entry would still decrypt
+            if (current->Hash != TransactionHeader.IncarnationTag(Incarnation) && MayBeOwnTransaction(current) == false)
+                return false;
 
             // We use temp buffers to hold the transaction before decrypting, and release the buffers afterwards.
             var pagesSize = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
@@ -550,7 +584,7 @@ namespace Voron.Impl.Journal
             }
             catch (InvalidOperationException ex)
             {
-                if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current->TransactionId, options))
+                if (CanIgnoreIntegrityErrorOfEntry(current, options))
                 {
                     options.InvokeIntegrityErrorOfAlreadySyncedData(this,
                         $"Unable to decrypt data of transaction which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalNumber}). " +
@@ -559,6 +593,9 @@ namespace Voron.Impl.Journal
 
                     return true;
                 }
+
+                if (MayBeOwnTransaction(current) == false)
+                    return false; // another environment reports its own corruption
 
                 RequireHeaderUpdate = true;
                 options.InvokeRecoveryError(this, $"Could not decrypt transaction {current->TransactionId}. It could be not committed", ex);
@@ -686,32 +723,47 @@ namespace Voron.Impl.Journal
                     return false;
                 }
 
-                RecoveredJournalIds.Add(current->JournalId);
+                if ((current->Flags & TransactionPersistenceModeFlags.JournalHeaderRecord) != 0)
+                {
+                    Debug.Assert(_readAt4Kb == 0, "Journal header record can only be at the beginning of the file (verified in TryValidateTransaction)");
+                    Incarnation = *(Guid*)((byte*)current + sizeof(TransactionHeader));
+
+                    _next4Kb = _readAt4Kb + GetTransactionSizeIn4Kb(current);
+                    _readAt4Kb += GetTransactionSizeIn4Kb(current) - 1;
+                    continue;
+                }
+
+                // entries are written with their JournalId XORed by the incarnation of the file,
+                // entries of a previous life of a recycled file decode to a foreign id
+                var effectiveJournalId = current->JournalId.Xor(Incarnation);
+
+                RecoveredJournalIds.Add(effectiveJournalId);
 
                 _next4Kb = _readAt4Kb + GetTransactionSizeIn4Kb(current);
 
                 if (JournalId == Guid.Empty)
                 {
-                    JournalId = current->JournalId;
+                    JournalId = effectiveJournalId;
                 }
 
-                if (current->Flags == TransactionPersistenceModeFlags.LinkedJournalsRecord &&
+                if ((current->Flags & TransactionPersistenceModeFlags.LinkedJournalsRecord) != 0 &&
+                    effectiveJournalId == WriteAheadJournal.LinkedJournalsRecord.LinkedJournalId &&
                     _environment.Options.RootJournal is null) // this only applies to the _root_, not to branches
                 {
                     ProcessLinkedJournalsRecord(current);
                     _readAt4Kb += GetTransactionSizeIn4Kb(current) - 1;
                     continue;
                 }
-                
-                if ((current->JournalId == JournalId) is false &&
-                    current->JournalId != Guid.Empty) // this may be legacy
+
+                if ((effectiveJournalId == JournalId) is false &&
+                    effectiveJournalId != Guid.Empty) // this may be legacy
                 {
-                    // not our env, skip processing it
+                    // not our env (or a stale entry of a previous incarnation), skip processing it
                     _readAt4Kb += GetTransactionSizeIn4Kb(current) - 1;
                     continue;
                 }
 
-                if (Legacy_IsOldTransactionFromRecycledJournal(current))
+                if (Legacy_IsOldTransactionFromRecycledJournal(current, effectiveJournalId))
                 {
                     _readAt4Kb += GetTransactionSizeIn4Kb(current) - 1;
                     continue;
@@ -720,14 +772,146 @@ namespace Voron.Impl.Journal
                 // transaction belongs to this environment - it either carries our JournalId or it has none
                 // at all, meaning a pre-8.0 (legacy) transaction
 
+                if (_unexplainedInvalid4KbPosition is { } holeAt4Kb && IsGapInOurTransactions(current, out var firstMissingTxId))
+                {
+                    AssertNoDurableTransactionOfOursAfterHole(options, ref txState, holeAt4Kb, firstMissingTxId);
+
+                    if (_log.IsInfoEnabled)
+                    {
+                        _log.Info(
+                            $"Journal {_journalPager.FileName} has no transaction {firstMissingTxId} at position " +
+                            $"{holeAt4Kb * 4 * Constants.Size.Kilobyte}, while transaction {current->TransactionId} ahead of it is valid and states that only transactions up to " +
+                            $"{current->LastDurableTxIdAtSubmit} were durable when it was submitted. This is an in-flight journal write lost to a crash - " +
+                            "recovery ends before the hole and discards everything after it.");
+                    }
+
+                    EndedAtPipeliningHole = true;
+                    _next4Kb = holeAt4Kb;
+                    current = null;
+                    return false;
+                }
+
                 VerifyTransactionSequence(options, current);
-                
+
+                _unexplainedInvalid4KbPosition = null;
+
                 LastTransactionHeader = current;
                 return true;
             }
 
             current = null;
             return false;
+        }
+
+        private bool IsGapInOurTransactions(TransactionHeader* current, out long firstMissingTxId)
+        {
+            var lastReadTxId = LastTransactionHeader != null
+                ? LastTransactionHeader->TransactionId
+                : _journalInfo.LastSyncedTransactionId;
+
+            firstMissingTxId = lastReadTxId + 1;
+
+            return lastReadTxId != -1 &&
+                   current->TransactionId > firstMissingTxId &&
+                   firstMissingTxId > _journalInfo.LastSyncedTransactionId;
+        }
+
+        // Pipelined journal writes can complete out of order, so a crash can leave a later transaction on disk without an earlier one:
+        //
+        //     ... | N-1 | <invalid> | N+1 | N+2 | ...
+        //                 hole at N
+        //
+        // Every header records W (LastDurableTxIdAtSubmit), the last durable transaction when its write was submitted. Transactions
+        // become durable in order, and a commit is acknowledged only once it is durable. So for a transaction of ours after the hole:
+        //
+        //     W <  N   N was still in flight when this one was submitted. Neither of them was acknowledged, so ending the
+        //              replay at N-1 loses nothing that we acknowledged.
+        //     W >= N   N was already durable, and so acknowledged, when this one was submitted. N is lost - hard error.
+        //     W == 0   nothing was recorded, so we cannot prove that N was not acknowledged - hard error.
+        //
+        // Every transaction of ours after the hole must pass, not just the first one:
+        //
+        //     ... | N-1 | <invalid> | N+1 (W=N-1) | N+2 (W=N-1) | N+3 (W=N+1) |
+        //                           |- in flight with N, fine --| N was durable, hard error
+        //
+        // With at most MaxSupportedConcurrentJournalWrites writes in flight, a real hole has only a few of our transactions after it.
+        private void AssertNoDurableTransactionOfOursAfterHole(StorageEnvironmentOptions options, ref Pager.PagerTransactionState txState, long holeAt4Kb, long firstMissingTxId)
+        {
+            using var _ = options.DisableOnRecoveryErrorHandler();
+            using var __ = options.DisableOnIntegrityErrorOfAlreadySyncedDataHandler();
+
+            var readAt4Kb = _readAt4Kb;
+            var requireHeaderUpdate = RequireHeaderUpdate;
+            try
+            {
+                while (_readAt4Kb < _journalPagerNumberOfAllocated4Kb)
+                {
+                    if (TryValidateTransaction(options, ref txState, out TransactionHeader* tx) == false)
+                    {
+                        _readAt4Kb++;
+                        continue;
+                    }
+
+                    // a legacy (pre-8.0) transaction has an empty JournalId and a zero delta - those bytes were never written
+                    var effectiveJournalId = tx->JournalId.Xor(Incarnation);
+                    if ((tx->Flags & (TransactionPersistenceModeFlags.JournalHeaderRecord | TransactionPersistenceModeFlags.LinkedJournalsRecord)) == 0 &&
+                        (effectiveJournalId == JournalId || effectiveJournalId == Guid.Empty) &&
+                        (tx->DurableTxIdDeltaAtSubmit == 0 || tx->LastDurableTxIdAtSubmit >= firstMissingTxId))
+                    {
+                        throw new InvalidJournalException(
+                            $"Journal {_journalPager.FileName} has no transaction {firstMissingTxId} at position {holeAt4Kb * 4 * Constants.Size.Kilobyte}, and transaction {tx->TransactionId} " +
+                            (tx->DurableTxIdDeltaAtSubmit == 0
+                                ? "after it does not record which transactions were durable when it was submitted, so we cannot tell whether the missing one was acknowledged."
+                                : $"after it states that transactions up to {tx->LastDurableTxIdAtSubmit} were durable when it was submitted, so the missing transaction was acknowledged and is lost.") +
+                            $" Debug details - file header {_currentFileHeader}", _journalInfo);
+                    }
+
+                    _readAt4Kb += GetTransactionSizeIn4Kb(tx);
+                }
+            }
+            finally
+            {
+                _readAt4Kb = readAt4Kb;
+                RequireHeaderUpdate = requireHeaderUpdate;
+            }
+        }
+
+        // Scans the whole journal for a valid transaction of ours with an id above the given one, without applying anything
+        internal (long TransactionId, long LastDurableTxIdAtSubmit)? FindTransactionOfOursAbove(StorageEnvironmentOptions options, ref Pager.PagerTransactionState txState, long transactionId)
+        {
+            using var _ = options.DisableOnRecoveryErrorHandler();
+            using var __ = options.DisableOnIntegrityErrorOfAlreadySyncedDataHandler();
+
+            for (_readAt4Kb = 0; _readAt4Kb < _journalPagerNumberOfAllocated4Kb;)
+            {
+                if (TryValidateTransaction(options, ref txState, out TransactionHeader* current) == false)
+                {
+                    _readAt4Kb++;
+                    continue;
+                }
+
+                if ((current->Flags & TransactionPersistenceModeFlags.JournalHeaderRecord) != 0)
+                {
+                    Incarnation = *(Guid*)((byte*)current + sizeof(TransactionHeader));
+                }
+                else if ((current->Flags & TransactionPersistenceModeFlags.LinkedJournalsRecord) == 0 &&
+                         current->TransactionId > transactionId &&
+                         MayBeOwnTransaction(current))
+                {
+                    return (current->TransactionId, current->DurableTxIdDeltaAtSubmit == 0 ? -1 : current->LastDurableTxIdAtSubmit);
+                }
+
+                _readAt4Kb += GetTransactionSizeIn4Kb(current);
+            }
+
+            return null;
+        }
+
+        private static bool IsWellFormedJournalHeaderRecord(TransactionHeader* current)
+        {
+            return current->TransactionId == WriteAheadJournal.JournalHeaderRecord.TransactionIdMarker &&
+                   current->CompressedSize == -1 &&
+                   current->UncompressedSize >= sizeof(Guid);
         }
 
         private void ProcessLinkedJournalsRecord(TransactionHeader* current)
@@ -810,6 +994,7 @@ namespace Voron.Impl.Journal
 
                 _resyncedFromInvalid4KbPosition ??= invalid4KbPosition;
                 _resyncedToValid4KbPosition ??= _readAt4Kb;
+                _unexplainedInvalid4KbPosition ??= invalid4KbPosition;
                 return true;
             }
 
@@ -817,6 +1002,10 @@ namespace Voron.Impl.Journal
         }
 
         public Guid JournalId;
+
+        // Unique value changed each time we recycle a journal file, to avoid confusing transactions from a previous incarnation with the current one
+        public Guid Incarnation { get; private set; }
+
         private RavenLogger _log;
 
         private bool CanIgnoreDataIntegrityErrorBecauseTxWasSynced(long transactionId, StorageEnvironmentOptions options)
@@ -828,11 +1017,9 @@ namespace Voron.Impl.Journal
                    IsAlreadySyncTransaction(transactionId);
         }
         
-        // a transaction left over from a previous use of a recycled journal file (< 8.0 feature):
-        // a legacy tx (no JournalId) whose id is older than what we have already read
-        private bool Legacy_IsOldTransactionFromRecycledJournal(TransactionHeader* currentTx)
+        private bool Legacy_IsOldTransactionFromRecycledJournal(TransactionHeader* currentTx, Guid effectiveJournalId)
         {
-            if (currentTx->JournalId != Guid.Empty)
+            if (effectiveJournalId != Guid.Empty)
                 return false;
 
             if (_firstValidTransactionHeader != null && currentTx->TransactionId < _firstValidTransactionHeader->TransactionId)
@@ -851,7 +1038,7 @@ namespace Voron.Impl.Journal
             var size = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
             if (size < 0)
             {
-                if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current->TransactionId, options) == false)
+                if (ShouldReportIntegrityErrorOf(current, options))
                 {
                     RequireHeaderUpdate = true;
                     // negative size is not supported
@@ -863,7 +1050,7 @@ namespace Voron.Impl.Journal
 
             if (size > (_journalPagerNumberOfAllocated4Kb - _readAt4Kb) * 4 * Constants.Size.Kilobyte)
             {
-                if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current->TransactionId, options) == false)
+                if (ShouldReportIntegrityErrorOf(current, options))
                 {
                     // we can't read past the end of the journal
                     RequireHeaderUpdate = true;
@@ -876,18 +1063,40 @@ namespace Voron.Impl.Journal
             }
 
             ulong hash = Hashing.XXHash64.Calculate(dataPtr, (ulong)size, (ulong)current->TransactionId);
-            if (hash != current->Hash)
-            {
-                if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current->TransactionId, options) == false)
-                {
-                    RequireHeaderUpdate = true;
-                    options.InvokeRecoveryError(this, "Invalid hash signature for transaction: " + current->ToString(), null);
-                }
 
-                return false;
+            if ((hash ^ current->Hash) == TransactionHeader.IncarnationTag(Incarnation))
+                return true;
+
+            if (ShouldReportIntegrityErrorOf(current, options))
+            {
+                RequireHeaderUpdate = true;
+                options.InvokeRecoveryError(this, "Invalid hash signature for transaction: " + current->ToString(), null);
             }
 
-            return true;
+            return false;
+        }
+
+        // Only our own entries are reported: an entry of an earlier incarnation of the file decodes to a foreign JournalId and
+        // is just the end of the live data, and another environment reports its own corruption
+        private bool ShouldReportIntegrityErrorOf(TransactionHeader* current, StorageEnvironmentOptions options)
+        {
+            return MayBeOwnTransaction(current) && CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current->TransactionId, options) == false;
+        }
+
+        // The already-synced leniency is for our own transactions only. An entry that is not ours has nothing to do with
+        // our synced state, and ignoring its error would make it pass as valid.
+        private bool CanIgnoreIntegrityErrorOfEntry(TransactionHeader* current, StorageEnvironmentOptions options)
+        {
+            return MayBeOwnTransaction(current) && CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current->TransactionId, options);
+        }
+
+        private bool MayBeOwnTransaction(TransactionHeader* current)
+        {
+            if (JournalId == Guid.Empty)
+                return true; // not known yet, so we cannot rule it out
+
+            var effectiveJournalId = current->JournalId.Xor(Incarnation);
+            return effectiveJournalId == JournalId || effectiveJournalId == Guid.Empty;
         }
 
         public override string ToString()

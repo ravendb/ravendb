@@ -33,15 +33,17 @@ class MockIO {
 }
 
 function Harness({ ids }: { ids: string[] }) {
-    const active = useScrollSpy(ids);
+    const { activeId, selectSection } = useScrollSpy(ids);
     return (
         <div>
             {ids.map((id) => (
                 <div key={id} id={id}>
-                    {id}
+                    <button type="button" data-testid={`select-${id}`} onClick={() => selectSection(id)}>
+                        {id}
+                    </button>
                 </div>
             ))}
-            <span data-testid="active">{active ?? "none"}</span>
+            <span data-testid="active">{activeId ?? "none"}</span>
         </div>
     );
 }
@@ -76,6 +78,26 @@ describe("useScrollSpy", () => {
         expect(screen.getByTestId("active")).toHaveTextContent("c");
     });
 
+    it("keeps a selected section active even when other sections are on screen", () => {
+        const { screen } = rtlRender(<Harness ids={["a", "b", "c"]} />);
+
+        act(() => screen.getByTestId("select-c").click());
+        expect(screen.getByTestId("active")).toHaveTextContent("c");
+
+        act(() => lastObserver!.fire([{ id: "b", isIntersecting: true }]));
+        expect(screen.getByTestId("active")).toHaveTextContent("c");
+    });
+
+    it("releases the selection once the user scrolls by hand", () => {
+        const { screen } = rtlRender(<Harness ids={["a", "b", "c"]} />);
+
+        act(() => screen.getByTestId("select-c").click());
+        act(() => window.dispatchEvent(new Event("wheel")));
+        act(() => lastObserver!.fire([{ id: "b", isIntersecting: true }]));
+
+        expect(screen.getByTestId("active")).toHaveTextContent("b");
+    });
+
     it("activates the last id when the scroll container reaches the bottom", () => {
         let scrollTop = 0;
         const root = document.createElement("div");
@@ -85,8 +107,8 @@ describe("useScrollSpy", () => {
         document.body.appendChild(root);
 
         function HarnessWithRoot({ ids }: { ids: string[] }): React.ReactElement {
-            const active = useScrollSpy(ids, { root });
-            return <span data-testid="active">{active ?? "none"}</span>;
+            const { activeId } = useScrollSpy(ids, { root });
+            return <span data-testid="active">{activeId ?? "none"}</span>;
         }
 
         const { screen } = rtlRender(<HarnessWithRoot ids={["a", "b", "c"]} />);
