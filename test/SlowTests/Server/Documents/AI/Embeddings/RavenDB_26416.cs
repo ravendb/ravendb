@@ -90,7 +90,7 @@ public class RavenDB_26416(ITestOutputHelper output) : EmbeddingsGenerationTestB
             storeTaskReady.TrySetResult(batch.StoreDocumentEmbeddingsAsync());
         };
 
-        generator.Start(); // InitializeWork -> HandleDatabaseRecordChange -> creates the worker for the task
+        generator.Start();
         Assert.True(await WaitForValueAsync(() => generator.EmbeddingTaskExists(taskId), true),
             "the embeddings worker did not register on the standalone generator");
 

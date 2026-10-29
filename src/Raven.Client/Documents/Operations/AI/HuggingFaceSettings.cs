@@ -43,6 +43,8 @@ public sealed class HuggingFaceSettings : AbstractAiSettings
 
     public override void ValidateFields(List<string> errors)
     {
+        base.ValidateFields(errors);
+
         if (string.IsNullOrWhiteSpace(Model))
             errors.Add($"Value of `{nameof(Model)}` field cannot be empty.");
 

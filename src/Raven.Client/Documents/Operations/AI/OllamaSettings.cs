@@ -54,6 +54,8 @@ public sealed class OllamaSettings : AbstractAiSettings, IAiSettings
 
     public override void ValidateFields(List<string> errors)
     {
+        base.ValidateFields(errors);
+
         if (string.IsNullOrWhiteSpace(Uri))
             errors.Add($"Value of `{nameof(Uri)}` field cannot be empty.");
 
