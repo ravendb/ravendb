@@ -81,11 +81,18 @@ namespace Raven.Server.Documents
             if (ForTestingPurposes != null)
                 return ForTestingPurposes;
 
-            return ForTestingPurposes = new TestingStuff();
+            return ForTestingPurposes = new TestingStuff(this);
         }
 
         internal sealed class TestingStuff
         {
+            private readonly DatabasesLandlord _parent;
+
+            public TestingStuff(DatabasesLandlord parent)
+            {
+                _parent = parent;
+            }
+
             internal Action<ServerStore> BeforeHandleClusterDatabaseChanged;
             internal Action<string> InsideHandleClusterDatabaseChanged;
             internal Action<(DocumentDatabase Database, string caller)> AfterDatabaseCreation;
@@ -100,11 +107,15 @@ namespace Raven.Server.Documents
             internal ManualResetEventSlim RescheduleIdleBackupStatusUpdateMre = null;
             internal bool SkipIncreasingLastWorkTimeBasedOnDatabaseSize = false;
             internal Action<Exception, string> OnFailedRescheduleNextScheduledActivity;
+            internal Action<string> AfterIdleBackupStatusSaved;
             internal bool PreventNodePromotion = false;
             internal Func<ServerStore, Task> BeforeHandleClusterTransactionOnDatabaseChanged;
             internal Action DelayNotifyFeaturesAboutStateChange;
             internal ManualResetEventSlim AfterDatabaseRemovedFromIdle = null;
             internal bool SkipShouldContinueDisposeCheck = false;
+
+            internal bool HasWakeupTimer(string databaseName) =>
+                _parent._wakeupTimers.TryGetValue(databaseName, out var timer) && timer.IsValueCreated;
         }
 
         private async Task HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType, object changeState)
@@ -785,10 +796,7 @@ namespace Raven.Server.Documents
 
         public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false, Action<string> addToInitLog = null, [CallerMemberName] string caller = null)
         {
-            if (_wakeupTimers.TryRemove(databaseName.Value, out var timer) && timer.IsValueCreated)
-            {
-                timer.Value.Dispose();
-            }
+            RemoveWakeupTimer(databaseName.Value);
             if (_disposing.TryEnter(out var idx) == false)
                 ThrowServerIsBeingDisposed(databaseName);
             try
@@ -909,6 +917,8 @@ namespace Raven.Server.Documents
                         ForTestingPurposes?.AfterDatabaseCreation?.Invoke((t.GetAwaiter().GetResult(), caller));
 
                         _serverStore.IdleDatabases.TryRemove(databaseName.Value, out _);
+                        RemoveWakeupTimer(databaseName.Value);
+
                         ForTestingPurposes?.AfterDatabaseRemovedFromIdle?.Set();
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously);
                 }
@@ -1378,13 +1388,17 @@ namespace Raven.Server.Documents
         {
             if (idleDatabaseActivity == null)
             {
-                if (_wakeupTimers.TryRemove(databaseName, out var oldTimer) && oldTimer.IsValueCreated)
-                    oldTimer.Value.Dispose();
-
+                RemoveWakeupTimer(databaseName);
                 return;
             }
 
             AddOrUpdateWakeupTimer(databaseName, idleDatabaseActivity);
+        }
+
+        private void RemoveWakeupTimer(string databaseName)
+        {
+            if (_wakeupTimers.TryRemove(databaseName, out var timer) && timer.IsValueCreated)
+                timer.Value.Dispose();
         }
 
         private void NextScheduledActivityCallback(string databaseName, IdleDatabaseActivity nextIdleDatabaseActivity)
@@ -1401,6 +1415,9 @@ namespace Raven.Server.Documents
                     switch (nextIdleDatabaseActivity.Type)
                     {
                         case IdleDatabaseActivityType.UpdateBackupStatusOnly:
+
+                            if (_serverStore.IdleDatabases.ContainsKey(databaseName) == false)
+                                break;
 
                             using (var backupStatusUpdate = _serverStore.ConcurrentBackupsCounter.TryStartIdleBackupStatusUpdate())
                             {
@@ -1424,6 +1441,11 @@ namespace Raven.Server.Documents
 
                                 BackupUtils.SaveBackupStatus(backupStatus, databaseName, _serverStore, _logger, backupResult);
                             }
+
+                            ForTestingPurposes?.AfterIdleBackupStatusSaved?.Invoke(databaseName);
+
+                            if (_serverStore.IdleDatabases.ContainsKey(databaseName) == false)
+                                break;
 
                             // choose the next backup that will arrive the earliest
                             nextIdleDatabaseActivity = BackupUtils.GetEarliestIdleDatabaseActivity(new BackupUtils.EarliestIdleDatabaseActivityParameters
@@ -1528,8 +1550,7 @@ namespace Raven.Server.Documents
             if (name == null)
                 return true;
 
-            if (_wakeupTimers.TryRemove(name, out var timer) && timer.IsValueCreated)
-                timer.Value.Dispose();
+            RemoveWakeupTimer(name);
 
             if (idleDatabaseActivity == null)
                 return true;
