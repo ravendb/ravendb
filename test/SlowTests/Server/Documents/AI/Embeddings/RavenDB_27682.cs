@@ -7,6 +7,7 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
+using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -41,6 +42,34 @@ public class RavenDB_27682(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
         Assert.True(await WaitForValueAsync(() => generator.EmbeddingTaskExists(healthyTaskId), true));
         Assert.False(generator.EmbeddingTaskExists(brokenTaskId));
+    }
+
+    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Etl, RavenArchitecture.AllX64)]
+    public async Task TaskWhoseWorkerFailsToStart_SurfacesTheFailureToEtlAndQueries()
+    {
+        using var store = GetDocumentStore();
+        var database = await GetDatabase(store.Database);
+        FailWorkerCreationFor(database.EmbeddingsGeneratorQueries, "brokenTask");
+        FailWorkerCreationFor(database.EmbeddingsGeneratorEtl, "brokenTask");
+
+        var (brokenTask, _) = AddEmbeddingsGenerationTask(store, embeddingsGenerationTaskName: "brokenTask", connectionStringName: "broken connection");
+        var brokenTaskId = new EmbeddingsGenerationTaskIdentifier(brokenTask.Identifier);
+        var (healthyTask, _) = AddEmbeddingsGenerationTask(store, embeddingsGenerationTaskName: "healthyTask", connectionStringName: "healthy connection");
+
+        var (queriesWorkerRegistered, etlWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, healthyTask);
+        Assert.True(queriesWorkerRegistered);
+        Assert.True(etlWorkerRegistered);
+
+        var etlException = Assert.Throws<InvalidOperationException>(() => database.EmbeddingsGeneratorEtl.BatchFor(brokenTaskId));
+        Assert.Contains(brokenTask.Identifier, etlException.Message);
+        Assert.Equal(WorkerCreationFailureMessage, etlException.InnerException?.Message);
+
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        {
+            var queryException = Assert.Throws<InvalidOperationException>(() => { database.EmbeddingsGeneratorQueries.GetEmbeddingsForQuery(context, brokenTaskId, "text"); });
+            Assert.Contains(brokenTask.Identifier, queryException.Message);
+            Assert.Equal(WorkerCreationFailureMessage, queryException.InnerException?.Message);
+        }
     }
 
     [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Etl, RavenArchitecture.AllX64)]
