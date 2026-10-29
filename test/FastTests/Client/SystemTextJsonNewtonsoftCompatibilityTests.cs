@@ -1112,6 +1112,36 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class OrderBase
+    {
+        public string BaseProperty { get; set; } = "base-property";
+
+        public string BaseField = "base-field";
+    }
+
+    private class OrderDerived : OrderBase
+    {
+        public string Answer = "answer";
+
+        public List<string> Ids { get; set; } = ["id"];
+
+        public string Name { get; set; } = "name";
+
+        public string Tail = "tail";
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonWritesMembersInNewtonsoftOrder()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(new OrderDerived(), context))
+        using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(new OrderDerived(), context))
+        {
+            Assert.Equal(expected.ToString(), actual.ToString());
+            Assert.Equal(expected.GetPropertyNames(), actual.GetPropertyNames());
+        }
+    }
+
     private class HoldsChars
     {
         public List<char> Chars { get; set; }

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
@@ -35,6 +36,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         private const int NewtonsoftNullValueHandlingIgnore = 1;
 
         private static readonly ConcurrentDictionary<Type, Action<object, IEnumerable>> _collectionAdders = new();
+
+        private static readonly ConcurrentDictionary<Type, Dictionary<string, int>> _memberRanks = new();
 
         private static readonly MethodInfo _addToCollectionMethod = typeof(RavenJsonTypeInfoResolver).GetMethod(nameof(AddToCollection), BindingFlags.NonPublic | BindingFlags.Static);
 
@@ -146,6 +149,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             SetupUnboundParameterizedConstructor(typeInfo);
             PopulateReadOnlyMembers(typeInfo);
             SetupIdentityPropertyConditionalSerialization(typeInfo);
+            ApplyNewtonsoftMemberOrder(typeInfo);
             ApplyNewtonsoftNullValueHandling(typeInfo);
             ApplySerializationCallbacks(typeInfo);
             AssertNoNewtonsoftMemberAttributes(typeInfo);
@@ -337,6 +341,56 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         private static bool IsIgnoredBySystemTextJson(MemberInfo member)
         {
             return member.GetCustomAttribute<JsonIgnoreAttribute>(inherit: true) is { Condition: JsonIgnoreCondition.Always };
+        }
+
+        private static void ApplyNewtonsoftMemberOrder(JsonTypeInfo typeInfo)
+        {
+            if (typeInfo.Properties.Count < 2)
+                return;
+
+            Dictionary<string, int> ranks = _memberRanks.GetOrAdd(typeInfo.Type, GetNewtonsoftMemberRanks);
+            List<JsonPropertyInfo> ordered = typeInfo.Properties
+                .OrderBy(property => property.AttributeProvider is MemberInfo member && ranks.TryGetValue(member.Name, out int rank) ? rank : int.MaxValue)
+                .ToList();
+
+            typeInfo.Properties.Clear();
+            foreach (JsonPropertyInfo property in ordered)
+                typeInfo.Properties.Add(property);
+        }
+
+        private static Dictionary<string, int> GetNewtonsoftMemberRanks(Type type)
+        {
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
+
+            var ranks = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (FieldInfo field in type.GetFields(flags))
+                AddRank(ranks, field.Name);
+
+            for (Type baseType = type.BaseType; baseType != null; baseType = baseType.BaseType)
+            {
+                foreach (FieldInfo field in baseType.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+                {
+                    if (field.IsPrivate)
+                        AddRank(ranks, field.Name);
+                }
+            }
+
+            foreach (PropertyInfo property in type.GetProperties(flags))
+                AddRank(ranks, property.Name);
+
+            for (Type baseType = type.BaseType; baseType != null; baseType = baseType.BaseType)
+            {
+                foreach (PropertyInfo property in baseType.GetProperties(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+                    AddRank(ranks, property.Name);
+            }
+
+            return ranks;
+        }
+
+        private static void AddRank(Dictionary<string, int> ranks, string name)
+        {
+            if (ranks.ContainsKey(name) == false)
+                ranks[name] = ranks.Count;
         }
 
         private static void ApplyNewtonsoftNullValueHandling(JsonTypeInfo typeInfo)
