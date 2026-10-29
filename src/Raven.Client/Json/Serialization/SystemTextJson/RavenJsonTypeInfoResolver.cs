@@ -33,6 +33,14 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private const string NewtonsoftJsonPropertyAttributeName = "Newtonsoft.Json.JsonPropertyAttribute";
 
+        private const string NewtonsoftJsonRequiredAttributeName = "Newtonsoft.Json.JsonRequiredAttribute";
+
+        private const string NewtonsoftJsonObjectAttributeName = "Newtonsoft.Json.JsonObjectAttribute";
+
+        private const int NewtonsoftMemberSerializationOptIn = 1;
+
+        private const int NewtonsoftMemberSerializationFields = 2;
+
         private const int NewtonsoftNullValueHandlingIgnore = 1;
 
         private static readonly ConcurrentDictionary<Type, Action<object, IEnumerable>> _collectionAdders = new();
@@ -140,6 +148,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
             FilterProperties(typeInfo, isRecord);
             AddNonPublicMembers(typeInfo, isRecord);
+            ApplyNewtonsoftMemberSerialization(typeInfo);
             ApplyStringDictionaryComparers(typeInfo);
             ApplyTypeNameHandling(typeInfo);
             ApplyPropertyRenames(typeInfo);
@@ -309,6 +318,58 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     typeInfo.Properties.Add(CreateJsonProperty(typeInfo, fieldInfo, fieldInfo.FieldType, fieldInfo.GetValue, set));
                 }
             }
+        }
+
+        private static void ApplyNewtonsoftMemberSerialization(JsonTypeInfo typeInfo)
+        {
+            int memberSerialization = GetNewtonsoftMemberSerialization(typeInfo.Type);
+            if (memberSerialization != NewtonsoftMemberSerializationOptIn && memberSerialization != NewtonsoftMemberSerializationFields)
+                return;
+
+            for (int i = typeInfo.Properties.Count - 1; i >= 0; i--)
+            {
+                if (typeInfo.Properties[i].AttributeProvider is not MemberInfo member)
+                    continue;
+
+                bool serialized = memberSerialization == NewtonsoftMemberSerializationFields
+                    ? member is FieldInfo
+                    : (member.IsDefined(typeof(DataMemberAttribute), inherit: true) && HasDataContract(member.DeclaringType)) ||
+                      GetNewtonsoftAttribute(member, NewtonsoftJsonPropertyAttributeName) != null ||
+                      GetNewtonsoftAttribute(member, NewtonsoftJsonRequiredAttributeName) != null;
+
+                if (serialized == false)
+                    typeInfo.Properties.RemoveAt(i);
+            }
+        }
+
+        private static int GetNewtonsoftMemberSerialization(Type type)
+        {
+            object jsonObject = GetNewtonsoftAttribute(type, NewtonsoftJsonObjectAttributeName);
+            if (jsonObject == null)
+            {
+                foreach (Type @interface in type.GetInterfaces())
+                {
+                    jsonObject = GetNewtonsoftAttribute(@interface, NewtonsoftJsonObjectAttributeName);
+                    if (jsonObject != null)
+                        break;
+                }
+            }
+
+            if (jsonObject != null)
+                return Convert.ToInt32(jsonObject.GetType().GetProperty("MemberSerialization")?.GetValue(jsonObject));
+
+            return HasDataContract(type) ? NewtonsoftMemberSerializationOptIn : 0;
+        }
+
+        private static bool HasDataContract(Type type)
+        {
+            for (Type current = type; current != null; current = current.BaseType)
+            {
+                if (current.IsDefined(typeof(DataContractAttribute), inherit: false))
+                    return true;
+            }
+
+            return false;
         }
 
         private static JsonPropertyInfo CreateJsonProperty(JsonTypeInfo typeInfo, MemberInfo member, Type memberType, Func<object, object> get, Action<object, object> set)
