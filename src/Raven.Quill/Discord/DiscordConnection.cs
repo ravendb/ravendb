@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Discord;
 using Discord.WebSocket;
 
@@ -6,7 +5,6 @@ namespace Raven.Quill.Discord;
 
 internal sealed class DiscordConnection(DiscordSdk sdk)
 {
-    private readonly ConcurrentDictionary<ulong, (DiscordSocketClient Client, IMessageChannel Channel)> _fetched = new();
     private volatile DiscordSocketClient? _client;
 
     public DiscordSocketClient? Client
@@ -41,14 +39,8 @@ internal sealed class DiscordConnection(DiscordSdk sdk)
         if (client.GetChannel(id) is IMessageChannel cached)
             return cached;
 
-        if (_fetched.TryGetValue(id, out var known) && ReferenceEquals(known.Client, client))
-            return known.Channel;
-
         var fetched = await DiscordMessages.GuardAsync("fetch channel", ct, client.GetChannelAsync(id, sdk.NewRequestOptions(ct)).AsTask());
-        var channel = fetched as IMessageChannel
-                      ?? throw new DiscordApiException($"Discord channel {dmChannelId} is not a message channel");
-
-        _fetched[id] = (client, channel);
-        return channel;
+        return fetched as IMessageChannel
+               ?? throw new DiscordApiException($"Discord channel {dmChannelId} is not a message channel");
     }
 }
