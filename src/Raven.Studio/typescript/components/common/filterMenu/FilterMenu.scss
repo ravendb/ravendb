@@ -1,0 +1,146 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.filter-menu-count {
+    $padding: 0.35em;
+
+    min-width: 1em + 2 * $padding;
+    padding: $padding;
+    font-size: sizes.$font-size-root * 0.75;
+}
+
+.filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: sizes.$gutter-xxs;
+
+    .filter-chip-dropdown {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .filter-chip {
+        display: inline-flex;
+        align-items: center;
+        max-width: 100%;
+        background-color: colors.$well-bg-var;
+        border: sizes.$border-width solid colors.$border-color-light-var;
+        border-radius: sizes.$border-radius-pill;
+        color: colors.$text-muted-var;
+        line-height: 1.2;
+        transition: border-color 0.2s ease-in-out;
+
+        &:hover {
+            border-color: colors.$text-muted-var;
+        }
+
+        .filter-chip-toggle,
+        .filter-chip-clear {
+            display: inline-flex;
+            align-items: center;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            font-size: inherit;
+            line-height: inherit;
+        }
+
+        .filter-chip-toggle {
+            min-width: 0;
+            padding: sizes.$gutter-xxs 0 sizes.$gutter-xxs sizes.$gutter-xs;
+
+            &::after {
+                display: none;
+            }
+        }
+
+        .filter-chip-clear {
+            padding: sizes.$gutter-xxs sizes.$gutter-xs sizes.$gutter-xxs sizes.$gutter-xxs;
+
+            &:hover {
+                color: colors.$text-emphasis-var;
+            }
+        }
+    }
+
+    .filter-chip-label {
+        margin-right: sizes.$gutter-xxxs;
+    }
+
+    .filter-chip-value {
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: colors.$text-emphasis-var;
+    }
+}
+
+.dropdown-menu.filter-menu-dropdown {
+    --bs-dropdown-link-hover-color: #{colors.$text-emphasis-var};
+    --bs-dropdown-link-active-bg: #{colors.$panel-bg-3-var};
+    --bs-dropdown-link-active-color: #{colors.$text-emphasis-var};
+    min-width: 240px;
+    padding-top: 0;
+    padding-bottom: var(--bs-dropdown-padding-x);
+    font-size: inherit;
+
+    .form-control {
+        font-size: inherit;
+    }
+
+    .form-check {
+        min-height: 0;
+        margin-bottom: 0;
+        line-height: inherit;
+
+        .form-check {
+            display: flex;
+            align-items: center;
+        }
+    }
+
+    .form-check-label {
+        line-height: inherit;
+    }
+
+    .filter-menu-checkbox {
+        padding: var(--bs-dropdown-item-padding-y) var(--bs-dropdown-item-padding-x);
+    }
+
+    .filter-menu-category-item,
+    .filter-menu-option {
+        display: flex;
+        align-items: center;
+    }
+
+    .filter-menu-category-label {
+        margin-right: sizes.$gutter-xs;
+    }
+
+    .filter-menu-active-dot {
+        flex-shrink: 0;
+        width: sizes.$gutter-xxs;
+        height: sizes.$gutter-xxs;
+        margin-left: auto;
+        border-radius: 50%;
+        background-color: colors.$primary-var;
+    }
+}
+
+.filter-menu-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: sizes.$gutter-xxs;
+    padding: sizes.$gutter-xs;
+    margin-bottom: var(--bs-dropdown-padding-x);
+    border-bottom: sizes.$border-width solid colors.$border-color-light-var;
+    color: colors.$text-emphasis-var;
+    white-space: nowrap;
+}
+
+.filter-menu-field {
+    padding: sizes.$gutter-xxxs;
+}
