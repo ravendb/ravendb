@@ -915,6 +915,55 @@ namespace FastTests.Client
             }
         }
 
+        private class Animal
+        {
+            public string Name { get; set; }
+        }
+
+        private class Dog : Animal
+        {
+            public bool Barks { get; set; }
+        }
+
+        private class Owner
+        {
+            public string Id { get; set; }
+
+            public Animal Pet { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.Patching)]
+        public async Task SessionPatchKeepsTheRuntimeTypeOfValuesDeclaredAsABaseType()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.Serialization = new SystemTextJsonSerializationConventions();
+                }
+            });
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Owner { Id = "owners/1", Pet = new Animal { Name = "generic" } });
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Advanced.Patch<Owner, Animal>("owners/1", x => x.Pet, new Dog { Name = "Rex", Barks = true });
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var owner = await session.LoadAsync<Owner>("owners/1");
+                var dog = Assert.IsType<Dog>(owner.Pet);
+                Assert.Equal("Rex", dog.Name);
+                Assert.True(dog.Barks);
+            }
+        }
+
         [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Querying)]
         public void VectorSearchFieldNamesFollowStoreConventions()
         {
