@@ -122,6 +122,8 @@ public static class IlEmitterShared
         typeof(EntryTermsReader).GetField(nameof(EntryTermsReader.IsNull));
     public static readonly FieldInfo ReaderIsNonExisting =
         typeof(EntryTermsReader).GetField(nameof(EntryTermsReader.IsNonExisting));
+    public static readonly FieldInfo ReaderHasNumeric =
+        typeof(EntryTermsReader).GetField(nameof(EntryTermsReader.HasNumeric));
 
     public static readonly MethodInfo SpanLongLength =
         typeof(Span<long>).GetMethod("get_Length")!;
@@ -141,6 +143,10 @@ public static class IlEmitterShared
         typeof(CompiledQueryHelper).GetMethod(nameof(CompiledQueryHelper.CheckFieldTermStartsWith));
     public static readonly MethodInfo CheckFieldTermEndsWith =
         typeof(CompiledQueryHelper).GetMethod(nameof(CompiledQueryHelper.CheckFieldTermEndsWith));
+    public static readonly MethodInfo CheckFieldTermExists =
+        typeof(CompiledQueryHelper).GetMethod(nameof(CompiledQueryHelper.CheckFieldTermExists));
+    public static readonly MethodInfo CheckFieldTermIsNull =
+        typeof(CompiledQueryHelper).GetMethod(nameof(CompiledQueryHelper.CheckFieldTermIsNull));
 
     public static readonly MethodInfo CheckFieldTermInSlice =
         typeof(CompiledQueryHelper).GetMethod(nameof(CompiledQueryHelper.CheckFieldTermInSlice));

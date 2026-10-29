@@ -269,29 +269,14 @@ public static class ResidualScanIlEmitter
         d.BranchIfStringTargetNotNull(paramSlot, concrete);
 
         // Null target: decide on reader.IsNull alone (Current is stale, no term comparison possible).
-        EmitFindNext(ref d, readerRefLocal, rootIdx);
-        if (isNotEqual)
-        {
-            // != null passes unless the field carries the explicit null-marker term.
-            EmitBranchFalse(ref d, leafDone.Il, leafDone.Name);   // no term → concrete/absent → pass
-            d.Il.Emit(OpCodes.Ldloc, readerRefLocal);
-            d.Il.Emit(OpCodes.Ldfld, IlEmitterShared.ReaderIsNull);
-            d.Il.Emit(OpCodes.Brtrue, failIl);
-            d.CsLine(JumpIf("reader.IsNull", failName));          // null-marker term → fail
-            d.Il.Emit(OpCodes.Br, leafDone.Il);                   // concrete term → pass
-            d.CsLine(Jump(leafDone.Name));
-        }
-        else
-        {
-            // = null passes only when the field carries the explicit null-marker term.
-            EmitBranchFalse(ref d, failIl, failName);             // no term → fail
-            d.Il.Emit(OpCodes.Ldloc, readerRefLocal);
-            d.Il.Emit(OpCodes.Ldfld, IlEmitterShared.ReaderIsNull);
-            d.Il.Emit(OpCodes.Brfalse, failIl);
-            d.CsLine(JumpIf("reader.IsNull is false", failName)); // concrete term → fail
-            d.Il.Emit(OpCodes.Br, leafDone.Il);                   // null-marker term → pass
-            d.CsLine(Jump(leafDone.Name));
-        }
+        d.Il.Emit(OpCodes.Ldloc, readerRefLocal);
+        d.CsStack.Push("ref reader");
+        d.LoadFieldRootPage(rootIdx);
+        d.PushConstBool(pred.IsSingleValued);
+        d.CallStatic(IlEmitterShared.CheckFieldTermIsNull);
+        EmitBranch(ref d, failOnTrue: isNotEqual, failIl, failName);
+        d.Il.Emit(OpCodes.Br, leafDone.Il);
+        d.CsLine(Jump(leafDone.Name));
 
         d.MarkLabel(concrete);
         EmitLeafComparison(ref d, in pred, failIl, failName, rootIdx, ref inSetIdx, paramSlot, readerRefLocal);
@@ -341,8 +326,11 @@ public static class ResidualScanIlEmitter
                 return;
             }
             case ScanCompareOp.Exists:
-                // reader.FindNext(rootPage); predicate succeeds iff a term exists.
-                EmitFindNext(ref d, readerRefLocal, rootIdx);
+                d.Il.Emit(OpCodes.Ldloc, readerRefLocal);
+                d.CsStack.Push("ref reader");
+                d.LoadFieldRootPage(rootIdx);
+                d.PushConstBool(pred.IsSingleValued);
+                d.CallStatic(IlEmitterShared.CheckFieldTermExists);
                 EmitBranchFalse(ref d, failIl, failName);
                 return;
             case ScanCompareOp.NotEquals when pred.IsSingleValued:
@@ -505,6 +493,28 @@ public static class ResidualScanIlEmitter
     }
 
     private static void EmitTypedComparison(ref DualEmit d, in ScanPredicateInfo pred, int paramSlot, LocalBuilder readerRefLocal)
+    {
+        if (pred.ValueType is not (ScanValueType.Long or ScanValueType.Double))
+        {
+            EmitValueComparison(ref d, in pred, paramSlot, readerRefLocal);
+            return;
+        }
+
+        // A term without a numeric value (e.g. a string) leaves CurrentLong/CurrentDouble stale, so it never satisfies a numeric comparison.
+        var noNumeric = d.Il.DefineLabel();
+        var done = d.Il.DefineLabel();
+        d.Il.Emit(OpCodes.Ldloc, readerRefLocal);
+        d.Il.Emit(OpCodes.Ldfld, IlEmitterShared.ReaderHasNumeric);
+        d.Il.Emit(OpCodes.Brfalse, noNumeric);
+        EmitValueComparison(ref d, in pred, paramSlot, readerRefLocal);
+        d.Il.Emit(OpCodes.Br, done);
+        d.Il.MarkLabel(noNumeric);
+        d.Il.Emit(OpCodes.Ldc_I4_0);
+        d.Il.MarkLabel(done);
+        d.CsStack.Push($"(reader.HasNumeric && {d.CsStack.Pop()})");
+    }
+
+    private static void EmitValueComparison(ref DualEmit d, in ScanPredicateInfo pred, int paramSlot, LocalBuilder readerRefLocal)
     {
         switch (pred.ValueType)
         {

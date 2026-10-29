@@ -53,6 +53,37 @@ public static class CompiledQueryHelper
         return false;
     }
 
+    // A null-marker term counts as a value, the non-existing marker does not
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool CheckFieldTermExists(ref EntryTermsReader reader, long fieldRootPage, bool singleValued)
+    {
+        reader.Reset();
+        while (reader.FindNext(fieldRootPage))
+        {
+            if (reader.IsNonExisting == false)
+                return true;
+            if (singleValued)
+                return false;
+        }
+
+        return false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool CheckFieldTermIsNull(ref EntryTermsReader reader, long fieldRootPage, bool singleValued)
+    {
+        reader.Reset();
+        while (reader.FindNext(fieldRootPage))
+        {
+            if (reader.IsNull)
+                return true;
+            if (singleValued)
+                return false;
+        }
+
+        return false;
+    }
+
     private interface ITermComparer<in T>
     {
         bool Matches(ref EntryTermsReader reader, T value);
@@ -65,13 +96,13 @@ public static class CompiledQueryHelper
 
     private struct LongComparer : ITermComparer<long>
     {
-        public bool Matches(ref EntryTermsReader reader, long value) => reader.CurrentLong == value;
+        public bool Matches(ref EntryTermsReader reader, long value) => reader.HasNumeric && reader.CurrentLong == value;
     }
 
     private struct DoubleComparer : ITermComparer<double>
     {
         // ReSharper disable once CompareOfFloatsByEqualityOperator
-        public bool Matches(ref EntryTermsReader reader, double value) => reader.CurrentDouble == value;
+        public bool Matches(ref EntryTermsReader reader, double value) => reader.HasNumeric && reader.CurrentDouble == value;
     }
 
     public static bool CheckFieldTermAllInSlice(ref EntryTermsReader reader, long fieldRootPage, ReadOnlySpan<Slice> values, bool includeNull)
@@ -125,6 +156,9 @@ public static class CompiledQueryHelper
         // we need to handle ALL IN ($terms), with null as an option, as well ass $terms = [x,x] - so the same value repeated
         
         TComparer compare = default;
+        if (values.Length == 0)
+            return includeNull == false || CheckFieldTermIsNull(ref reader, fieldRootPage, singleValued: false);
+
         bool hasNull = false;
         for (int chunk = 0; chunk < values.Length; chunk += 64)
         {
@@ -133,7 +167,7 @@ public static class CompiledQueryHelper
             ulong matched = 0;
 
             reader.Reset();
-            while (matched != allMatched && reader.FindNext(fieldRootPage))
+            while ((matched != allMatched || (includeNull && hasNull == false)) && reader.FindNext(fieldRootPage))
             {
                 if (reader.IsNonExisting)
                     continue;
