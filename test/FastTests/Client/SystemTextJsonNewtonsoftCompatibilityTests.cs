@@ -1619,6 +1619,38 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class HoldsException
+    {
+        public Exception Error;
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonSkipsExceptionTargetSiteLikeNewtonsoft()
+    {
+        Exception error;
+        try
+        {
+            throw new InvalidOperationException("failed");
+        }
+        catch (Exception e)
+        {
+            error = e;
+        }
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(new HoldsException { Error = error }, context))
+        using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(new HoldsException { Error = error }, context))
+        {
+            JObject expectedJson = JObject.Parse(expected.ToString());
+            JObject actualJson = JObject.Parse(actual.ToString());
+            ((JObject)expectedJson["Error"]).Remove(nameof(Exception.Data));
+            ((JObject)actualJson["Error"]).Remove(nameof(Exception.Data));
+            Assert.True(JToken.DeepEquals(expectedJson, actualJson), $"Expected {expectedJson} but got {actualJson}");
+            Assert.Null(actualJson["Error"]["TargetSite"]);
+            Assert.Equal("failed", (string)actualJson["Error"]["Message"]);
+        }
+    }
+
     private static DocumentConventions Newtonsoft { get; } = new() { Serialization = new NewtonsoftJsonSerializationConventions() };
 
     private static DocumentConventions SystemTextJson { get; } = new() { Serialization = new SystemTextJsonSerializationConventions() };
