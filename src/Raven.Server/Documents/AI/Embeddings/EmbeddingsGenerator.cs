@@ -500,6 +500,8 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
     private AiWorker CreateAiWorker(DatabaseRecord record, EmbeddingsGenerationConfiguration configuration)
     {
+        _forTestingPurposes?.BeforeCreateAiWorker?.Invoke(configuration);
+
         if (configuration.Disabled)
             throw new InvalidOperationException($"The task {configuration.Name} has been disabled and cannot be used");
 
@@ -1112,5 +1114,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         internal Action BeforeShutdownDrain;
 
         internal Action<int> OnGenerateBatch;
+
+        internal Action<EmbeddingsGenerationConfiguration> BeforeCreateAiWorker;
     }
 }
