@@ -54,7 +54,8 @@ internal sealed class ScanParamExtractor(QueryExecution exec, IndexSearcher inde
             }
         }
 
-        return new ResidualInValues { Base = baseIdx, Count = count, HasNull = exec1.HasNullTerm };
+        // an empty set must not point into a values array that may never have been allocated
+        return new ResidualInValues { Base = count == 0 ? 0 : baseIdx, Count = count, HasNull = exec1.HasNullTerm };
     }
 
     private void ExtractFromPredicate(ScanPredicateInfo pred, ClauseExecution cur)
