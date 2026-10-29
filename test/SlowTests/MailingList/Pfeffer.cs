@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -29,7 +30,10 @@ namespace SlowTests.MailingList
         public void QueryingUsingObjects(Options options)
         {
             options.ModifyDocumentStore = documentStore =>
+            {
+                documentStore.Conventions.Serialization = new NewtonsoftJsonSerializationConventions();
                 documentStore.Conventions.RegisterQueryValueConverter<object>(TryConvertValueForQueryDelegate, RangeType.None);
+            };
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
