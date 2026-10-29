@@ -240,7 +240,7 @@ function DestinationsList() {
 }
 
 function RemoteAttachmentsSettingsCard() {
-    const { control, formState } = useFormContext<RemoteAttachmentsFormData>();
+    const { control, formState, setValue } = useFormContext<RemoteAttachmentsFormData>();
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const formValues = useWatch({ control });
     const isSettingsDisabled =
@@ -260,6 +260,8 @@ function RemoteAttachmentsSettingsCard() {
                 <OverridableField
                     control={control}
                     overrideName="isCheckFrequencyInSecEnabled"
+                    valueName="checkFrequencyInSec"
+                    setValue={setValue}
                     label="Interval between remote attachments task runs"
                     disabled={isSettingsDisabled}
                 >
@@ -277,6 +279,8 @@ function RemoteAttachmentsSettingsCard() {
                 <OverridableField
                     control={control}
                     overrideName="isMaxItemsToProcessEnabled"
+                    valueName="maxItemsToProcess"
+                    setValue={setValue}
                     label="Max number of attachments to process in a single run"
                     disabled={isSettingsDisabled}
                 >
@@ -294,6 +298,8 @@ function RemoteAttachmentsSettingsCard() {
                 <OverridableField
                     control={control}
                     overrideName="isConcurrentUploadsEnabled"
+                    valueName="concurrentUploads"
+                    setValue={setValue}
                     label="Max number of concurrent uploads"
                     disabled={isSettingsDisabled}
                 >

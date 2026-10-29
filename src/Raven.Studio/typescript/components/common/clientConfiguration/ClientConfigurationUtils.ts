@@ -72,12 +72,12 @@ export default class ClientConfigurationUtils {
             identityPartsSeparatorValue: dto.IdentityPartsSeparator || null,
             maximumNumberOfRequestsEnabled: !!dto.MaxNumberOfRequestsPerSession,
             maximumNumberOfRequestsValue: dto.MaxNumberOfRequestsPerSession || null,
-            loadBalancerEnabled: dto.LoadBalanceBehavior === "UseSessionContext",
-            loadBalancerValue: dto.LoadBalanceBehavior || "None",
+            loadBalancerEnabled: !!dto.LoadBalanceBehavior,
+            loadBalancerValue: dto.LoadBalanceBehavior || null,
             loadBalancerSeedEnabled: !!dto.LoadBalancerContextSeed,
             loadBalancerSeedValue: dto.LoadBalancerContextSeed || null,
-            readBalanceBehaviorEnabled: !!dto.ReadBalanceBehavior && dto.ReadBalanceBehavior !== "None",
-            readBalanceBehaviorValue: dto.ReadBalanceBehavior || "None",
+            readBalanceBehaviorEnabled: !!dto.ReadBalanceBehavior,
+            readBalanceBehaviorValue: dto.ReadBalanceBehavior || null,
         };
     }
 

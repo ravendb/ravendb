@@ -33,7 +33,7 @@ describe("DataArchival", () => {
         expect(await screen.findByText(/Licensing/)).toBeInTheDocument();
     });
 
-    it("can set default batch size", async () => {
+    it("pre-fills the optimal batch size and suggests it again after a reset", async () => {
         const { screen, fireClick } = rtlRender(<InitialDataArchival />);
         const enableButton = await screen.findByRole("checkbox", { name: "Enable Data Archival" });
 
@@ -42,10 +42,22 @@ describe("DataArchival", () => {
 
         await fireClick(enableButton);
 
-        const setMaxNumberOfDocumentToProcessCheckbox = await screen.findByRole("checkbox", {
-            name: "Override Max number of documents to process in a single run",
-        });
-        expect(setMaxNumberOfDocumentToProcessCheckbox).toBeChecked();
         expect(await screen.findByName("maxItemsToProcess")).toHaveValue(65536);
+        expect(
+            screen.queryByText("Process at most 65,536 documents per run to keep each run short.")
+        ).not.toBeInTheDocument();
+        expect(screen.getByText("Optimal", { selector: ".badge" })).toBeInTheDocument();
+
+        await fireClick(
+            screen.getByRole("button", {
+                name: "Reset to default",
+                description: "Max number of documents to process in a single run",
+            })
+        );
+
+        expect(screen.getByName("maxItemsToProcess")).toHaveValue(null);
+        expect(
+            screen.getByText("Process at most 65,536 documents per run to keep each run short.")
+        ).toBeInTheDocument();
     });
 });

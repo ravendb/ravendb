@@ -257,6 +257,8 @@ export default function ClientDatabaseConfiguration() {
                                             <OverridableField
                                                 control={control}
                                                 overrideName="identityPartsSeparatorEnabled"
+                                                valueName="identityPartsSeparatorValue"
+                                                setValue={setValue}
                                                 tooltipPlacement="right"
                                                 label="Identity parts separator"
                                                 tooltip={<IdentityPartsSeparatorTooltip />}
@@ -275,6 +277,8 @@ export default function ClientDatabaseConfiguration() {
                                             <OverridableField
                                                 control={control}
                                                 overrideName="maximumNumberOfRequestsEnabled"
+                                                valueName="maximumNumberOfRequestsValue"
+                                                setValue={setValue}
                                                 tooltipPlacement="right"
                                                 label="Maximum number of requests per session"
                                                 tooltip={<MaximumNumberOfRequestsTooltip />}
@@ -372,6 +376,8 @@ export default function ClientDatabaseConfiguration() {
                                         <OverridableField
                                             control={control}
                                             overrideName="loadBalancerEnabled"
+                                            valueName="loadBalancerValue"
+                                            setValue={setValue}
                                             tooltipPlacement="right"
                                             label="Load Balance Behavior"
                                             tooltip={<LoadBalanceBehaviorTooltip />}
@@ -381,6 +387,7 @@ export default function ClientDatabaseConfiguration() {
                                                 <FormSelect
                                                     control={control}
                                                     name="loadBalancerValue"
+                                                    placeholder="Default (None)"
                                                     isDisabled={isDisabled}
                                                     inputId={controlId}
                                                     options={ClientConfigurationUtils.getLoadBalanceBehaviorOptions()}
@@ -393,6 +400,8 @@ export default function ClientDatabaseConfiguration() {
                                             <OverridableField
                                                 control={control}
                                                 overrideName="loadBalancerSeedEnabled"
+                                                valueName="loadBalancerSeedValue"
+                                                setValue={setValue}
                                                 tooltipPlacement="right"
                                                 label="Seed"
                                                 tooltip={<LoadBalancerSeedTooltip />}
@@ -415,6 +424,8 @@ export default function ClientDatabaseConfiguration() {
                                         <OverridableField
                                             control={control}
                                             overrideName="readBalanceBehaviorEnabled"
+                                            valueName="readBalanceBehaviorValue"
+                                            setValue={setValue}
                                             tooltipPlacement="right"
                                             label="Read Balance Behavior"
                                             tooltip={<ReadBalanceBehaviorTooltip />}
@@ -424,6 +435,7 @@ export default function ClientDatabaseConfiguration() {
                                                 <FormSelect
                                                     control={control}
                                                     name="readBalanceBehaviorValue"
+                                                    placeholder="Default (None)"
                                                     isDisabled={isDisabled}
                                                     inputId={controlId}
                                                     options={ClientConfigurationUtils.getReadBalanceBehaviorOptions()}

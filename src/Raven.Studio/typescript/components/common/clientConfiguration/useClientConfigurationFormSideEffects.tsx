@@ -15,11 +15,11 @@ export default function useClientConfigurationFormSideEffects(
                 setValue("maximumNumberOfRequestsValue", null, { shouldValidate: true });
             }
             if (name === "loadBalancerEnabled" && !values.loadBalancerEnabled) {
-                setValue("loadBalancerValue", "None", { shouldValidate: true });
+                setValue("loadBalancerValue", null, { shouldValidate: true });
                 setValue("loadBalancerSeedEnabled", false, { shouldValidate: true });
                 setValue("loadBalancerSeedValue", null, { shouldValidate: true });
             }
-            if (name === "loadBalancerValue" && values.loadBalancerValue === "None") {
+            if (name === "loadBalancerValue" && values.loadBalancerValue !== "UseSessionContext") {
                 setValue("loadBalancerSeedEnabled", false, { shouldValidate: true });
                 setValue("loadBalancerSeedValue", null, { shouldValidate: true });
             }
@@ -27,7 +27,7 @@ export default function useClientConfigurationFormSideEffects(
                 setValue("loadBalancerSeedValue", null, { shouldValidate: true });
             }
             if (name === "readBalanceBehaviorEnabled" && !values.readBalanceBehaviorEnabled) {
-                setValue("readBalanceBehaviorValue", "None", { shouldValidate: true });
+                setValue("readBalanceBehaviorValue", null, { shouldValidate: true });
             }
         });
 

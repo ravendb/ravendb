@@ -74,18 +74,10 @@ export default function DataArchival() {
             switch (name) {
                 case "isDataArchivalEnabled": {
                     if (values.isDataArchivalEnabled) {
-                        setValue("isLimitMaxItemsToProcessEnabled", true, { shouldValidate: true });
-                    } else {
-                        setValue("isLimitMaxItemsToProcessEnabled", false, { shouldValidate: true });
-                        setValue("isArchiveFrequencyEnabled", false, { shouldValidate: true });
-                    }
-                    break;
-                }
-                case "isLimitMaxItemsToProcessEnabled": {
-                    if (values.isLimitMaxItemsToProcessEnabled) {
                         setValue("maxItemsToProcess", defaultItemsToProcess, { shouldValidate: true });
                     } else {
                         setValue("maxItemsToProcess", null, { shouldValidate: true });
+                        setValue("isArchiveFrequencyEnabled", false, { shouldValidate: true });
                     }
                     break;
                 }
@@ -169,6 +161,8 @@ export default function DataArchival() {
                                             <OverridableField
                                                 control={control}
                                                 overrideName="isArchiveFrequencyEnabled"
+                                                valueName="archiveFrequency"
+                                                setValue={setValue}
                                                 label="Archive frequency"
                                                 disabled={formState.isSubmitting || !formValues.isDataArchivalEnabled}
                                             >
@@ -186,6 +180,11 @@ export default function DataArchival() {
                                             <OverridableField
                                                 control={control}
                                                 overrideName="isLimitMaxItemsToProcessEnabled"
+                                                valueName="maxItemsToProcess"
+                                                setValue={setValue}
+                                                optimalValue={defaultItemsToProcess}
+                                                optimalValueLabel={defaultItemsToProcess.toLocaleString()}
+                                                optimalValueHint={`Process at most ${defaultItemsToProcess.toLocaleString()} documents per run to keep each run short.`}
                                                 label="Max number of documents to process in a single run"
                                                 disabled={formState.isSubmitting || !formValues.isDataArchivalEnabled}
                                             >
