@@ -97,6 +97,7 @@ namespace Raven.Server.Documents
             internal Action BeforeActualDelete = null;
             internal Action<DocumentDatabase> OnBeforeDocumentDatabaseInitialization;
             internal ManualResetEventSlim RescheduleDatabaseWakeupMre = null;
+            internal ManualResetEventSlim RescheduleIdleBackupStatusUpdateMre = null;
             internal bool SkipIncreasingLastWorkTimeBasedOnDatabaseSize = false;
             internal Action<Exception, string> OnFailedRescheduleNextScheduledActivity;
             internal bool PreventNodePromotion = false;
@@ -1401,16 +1402,28 @@ namespace Raven.Server.Documents
                     {
                         case IdleDatabaseActivityType.UpdateBackupStatusOnly:
 
-                            PeriodicBackupStatus backupStatus = _serverStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(databaseName, nextIdleDatabaseActivity.TaskId);
+                            using (var backupStatusUpdate = _serverStore.ConcurrentBackupsCounter.TryStartIdleBackupStatusUpdate())
+                            {
+                                if (backupStatusUpdate == null)
+                                {
+                                    var delayInMs = RescheduleBackupStatusUpdate();
+                                    if (_logger.IsInfoEnabled)
+                                        _logger.Info($"Delaying the backup status update of the idle database '{databaseName}' because we reached max concurrent idle backup status updates " +
+                                                     $"({_serverStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups}), will retry in {delayInMs:#,#;;0}ms");
+                                    break;
+                                }
 
-                            backupStatus.LastIncrementalBackup = backupStatus.LastIncrementalBackupInternal = nextIdleDatabaseActivity.DateTime;
-                            backupStatus.LocalBackup.LastIncrementalBackup = nextIdleDatabaseActivity.DateTime;
-                            backupStatus.LocalBackup.IncrementalBackupDurationInMs = 0;
+                                PeriodicBackupStatus backupStatus = _serverStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(databaseName, nextIdleDatabaseActivity.TaskId);
 
-                            var backupResult = new BackupResult();
-                            backupResult.AddMessage($"Skipping incremental backup because no changes were made from last full backup on {backupStatus.LastFullBackup}.");
-                            
-                            BackupUtils.SaveBackupStatus(backupStatus, databaseName, _serverStore, _logger, backupResult);
+                                backupStatus.LastIncrementalBackup = backupStatus.LastIncrementalBackupInternal = nextIdleDatabaseActivity.DateTime;
+                                backupStatus.LocalBackup.LastIncrementalBackup = nextIdleDatabaseActivity.DateTime;
+                                backupStatus.LocalBackup.IncrementalBackupDurationInMs = 0;
+
+                                var backupResult = new BackupResult();
+                                backupResult.AddMessage($"Skipping incremental backup because no changes were made from last full backup on {backupStatus.LastFullBackup}.");
+
+                                BackupUtils.SaveBackupStatus(backupStatus, databaseName, _serverStore, _logger, backupResult);
+                            }
 
                             // choose the next backup that will arrive the earliest
                             nextIdleDatabaseActivity = BackupUtils.GetEarliestIdleDatabaseActivity(new BackupUtils.EarliestIdleDatabaseActivityParameters
@@ -1424,6 +1437,16 @@ namespace Raven.Server.Documents
 
                             RescheduleNextIdleDatabaseActivity(databaseName, nextIdleDatabaseActivity);
                             break;
+
+                            int RescheduleBackupStatusUpdate()
+                            {
+                                ForTestingPurposes?.RescheduleIdleBackupStatusUpdateMre?.Set();
+
+                                var delayInMs = _dueTimeOnRetry + Random.Shared.Next(0, _dueTimeOnRetry);
+                                nextIdleDatabaseActivity.RetryAt = DateTime.UtcNow.AddMilliseconds(delayInMs);
+                                RescheduleNextIdleDatabaseActivity(databaseName, nextIdleDatabaseActivity);
+                                return delayInMs;
+                            }
 
                         case IdleDatabaseActivityType.WakeUpDatabase:
                             if (_serverStore.ConcurrentBackupsCounter.CanRunBackup(ShardHelper.ToDatabaseName(databaseName)) == false)
@@ -1770,8 +1793,9 @@ namespace Raven.Server.Documents
         public IdleDatabaseActivityType Type { get; }
         public DateTime? DateTime { get; internal set; }
         public long TaskId { get; }
+        public DateTime? RetryAt { get; internal set; }
         public int DueTime => DateTime.HasValue
-            ? (int)Math.Min(int.MaxValue, Math.Max(0, (DateTime.Value - System.DateTime.UtcNow).TotalMilliseconds))
+            ? (int)Math.Min(int.MaxValue, Math.Max(0, ((RetryAt ?? DateTime.Value) - System.DateTime.UtcNow).TotalMilliseconds))
             : 0;
 
         public IdleDatabaseActivity(IdleDatabaseActivityType type)
