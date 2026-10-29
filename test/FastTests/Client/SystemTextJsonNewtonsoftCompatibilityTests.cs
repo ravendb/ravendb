@@ -1521,6 +1521,44 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    [JsonObject(NamingStrategyType = typeof(Newtonsoft.Json.Serialization.CamelCaseNamingStrategy))]
+    private class CamelCaseObject
+    {
+        public string FirstName { get; set; }
+    }
+
+    private class CamelCaseMember
+    {
+        [JsonProperty(NamingStrategyType = typeof(Newtonsoft.Json.Serialization.CamelCaseNamingStrategy))]
+        public string FirstName { get; set; }
+    }
+
+    [JsonDictionary(NamingStrategyType = typeof(Newtonsoft.Json.Serialization.CamelCaseNamingStrategy), NamingStrategyParameters = new object[] { true, false })]
+    private class CamelCaseDictionary : Dictionary<string, string>
+    {
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonRejectsNewtonsoftNamingStrategies()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            AssertRejected(new CamelCaseObject { FirstName = "x" }, nameof(CamelCaseObject));
+            AssertRejected(new CamelCaseMember { FirstName = "x" }, nameof(CamelCaseMember.FirstName));
+            AssertRejected(new CamelCaseDictionary { ["FirstName"] = "x" }, nameof(CamelCaseDictionary));
+
+            void AssertRejected(object entity, string target)
+            {
+                using (BlittableJsonReaderObject written = Newtonsoft.Serialization.DefaultConverter.ToBlittable(entity, context))
+                    Assert.Contains("\"firstName\"", written.ToString());
+
+                var exception = Assert.Throws<NotSupportedException>(() => SystemTextJson.Serialization.DefaultConverter.ToBlittable(entity, context));
+                Assert.Contains(target, exception.Message);
+                Assert.Contains("NamingStrategyType", exception.Message);
+            }
+        }
+    }
+
     private static DocumentConventions Newtonsoft { get; } = new() { Serialization = new NewtonsoftJsonSerializationConventions() };
 
     private static DocumentConventions SystemTextJson { get; } = new() { Serialization = new SystemTextJsonSerializationConventions() };
