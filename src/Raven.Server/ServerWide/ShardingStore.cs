@@ -211,6 +211,19 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        internal static ShardingConfiguration CopyWithPrefixedBucketRanges(ShardingConfiguration configuration)
+        {
+            var copy = new ShardingConfiguration
+            {
+                Shards = configuration.Shards,
+                Prefixed = configuration.Prefixed?.Select(setting => new PrefixedShardingSetting(setting.Prefix) { Shards = setting.Shards }).ToList()
+            };
+
+            FillPrefixedSharding(copy);
+
+            return copy;
+        }
+
         private static void FillPrefixedSharding(ShardingConfiguration shardingConfiguration)
         {
             if (shardingConfiguration.Prefixed is not { Count: > 0 })
