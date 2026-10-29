@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.Text.Json;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
@@ -103,8 +104,63 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             return JsonSerializer.Deserialize<T>(stjReader.GetUtf8Json(), Options);
         }
 
+        private static ReadOnlySpan<byte> NaN => "NaN"u8;
+
+        private static ReadOnlySpan<byte> Infinity => "Infinity"u8;
+
+        private static ReadOnlySpan<byte> NegativeInfinity => "-Infinity"u8;
+
+        private static Dictionary<long, double> ReplaceNamedFloatingPointLiterals(byte[] json)
+        {
+            Dictionary<long, double> literals = null;
+            bool inString = false;
+            for (int i = 0; i < json.Length; i++)
+            {
+                byte current = json[i];
+                if (inString)
+                {
+                    if (current == (byte)'\\')
+                        i++;
+                    else if (current == (byte)'"')
+                        inString = false;
+                    continue;
+                }
+
+                if (current == (byte)'"')
+                {
+                    inString = true;
+                    continue;
+                }
+
+                ReadOnlySpan<byte> rest = json.AsSpan(i);
+                if (rest.StartsWith(NegativeInfinity))
+                    i = ReplaceLiteral(json, i, "-0.000000"u8, double.NegativeInfinity, ref literals);
+                else if (rest.StartsWith(Infinity))
+                    i = ReplaceLiteral(json, i, "0.000000"u8, double.PositiveInfinity, ref literals);
+                else if (rest.StartsWith(NaN))
+                    i = ReplaceLiteral(json, i, "0e0"u8, double.NaN, ref literals);
+            }
+
+            return literals;
+        }
+
+        private static int ReplaceLiteral(byte[] json, int index, ReadOnlySpan<byte> replacement, double value, ref Dictionary<long, double> literals)
+        {
+            replacement.CopyTo(json.AsSpan(index));
+            (literals ??= new Dictionary<long, double>())[index] = value;
+            return index + replacement.Length - 1;
+        }
+
         private static void WriteJsonToBlittableWriter(IJsonWriter writer, ReadOnlySpan<byte> utf8Json)
         {
+            Dictionary<long, double> namedLiterals = null;
+            if (utf8Json.IndexOf(NaN) >= 0 || utf8Json.IndexOf(Infinity) >= 0)
+            {
+                byte[] copy = utf8Json.ToArray();
+                namedLiterals = ReplaceNamedFloatingPointLiterals(copy);
+                utf8Json = copy;
+            }
+
             var jsonReader = new Utf8JsonReader(utf8Json);
             while (jsonReader.Read())
             {
@@ -117,7 +173,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                     case JsonTokenType.PropertyName: writer.WritePropertyName(jsonReader.GetString()); break;
                     case JsonTokenType.String: writer.WriteValue(jsonReader.GetString()); break;
                     case JsonTokenType.Number:
-                        if (jsonReader.TryGetInt64(out long l)) writer.WriteValue(l);
+                        if (namedLiterals != null && namedLiterals.TryGetValue(jsonReader.TokenStartIndex, out double literal)) writer.WriteValue(literal);
+                        else if (jsonReader.TryGetInt64(out long l)) writer.WriteValue(l);
                         else if (jsonReader.TryGetDecimal(out decimal dec)) writer.WriteValue(dec);
                         else writer.WriteValue(jsonReader.GetDouble());
                         break;
