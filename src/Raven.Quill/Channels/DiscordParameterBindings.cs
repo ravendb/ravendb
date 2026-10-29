@@ -16,6 +16,9 @@ internal static class DiscordParameterBindings
 
         foreach (var (name, binding) in channelBindings)
         {
+            if (binding is null)
+                continue;
+
             switch (binding.Source)
             {
                 case ChannelParameterSource.Constant:

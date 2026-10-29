@@ -15,7 +15,7 @@ PROXY_DIR=/var/lib/quill/proxy
 RAVENDB_PORT="${RAVEN_QUILL_RAVENDB_INTERNAL_PORT:-8443}"
 RAVENDB_PROXY_PORT="${RAVEN_QUILL_RAVENDB_PROXY_PORT:-8447}"
 
-for port in $RAVENDB_PORT 8444 8445 8446 5000; do
+for port in $RAVENDB_PORT 8444 8445 8446 8448 5000; do
     if [ "$RAVENDB_PROXY_PORT" = "$port" ]; then
         echo "03-proxy: RAVEN_QUILL_RAVENDB_PROXY_PORT ($RAVENDB_PROXY_PORT) is already in use; pick another." >&2
         exit 1

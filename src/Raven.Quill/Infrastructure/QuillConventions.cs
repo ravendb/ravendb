@@ -20,9 +20,9 @@ public static class QuillConventions
         : type == typeof(TelegramLink) ? "@telegram-links"
         : type == typeof(TelegramBotReservation) ? "@telegram-bots"
         : type == typeof(SlackBotReservation) ? "@slack-bots"
-        : type == typeof(SlackWebhookRoute) ? "@slack-webhooks"
         : type == typeof(DiscordBotReservation) ? "@discord-bots"
         : type == typeof(ConversationPreview) ? ConversationPreview.Collection // "@ConversationPreviews"
+        : type == typeof(UsageMetrics) ? UsageMetrics.Collection
         : type == typeof(AgentActionBindings) ? "@agent-actions"
         : DocumentConventions.DefaultGetCollectionName(type);
 }

@@ -39,6 +39,51 @@ public class DashboardAppsEndpointTests(ITestOutputHelper output, QuillCollectio
         Assert.Equal("PostgreSQL", appResp.Source.Type);
     }
 
+    /// The test source is unreachable, so every app here is genuinely failing to sync; the row used to
+    /// report it as running because the status never consulted the sink's error store.
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task DashboardApps_says_an_app_needs_attention_when_its_data_sync_is_failing()
+    {
+        await using var app = await NewAppAsync();
+
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = "support", Name = "Support", SystemPrompt = "You help.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+        });
+
+        await WaitForCdcErrorsAsync(app.Slug);
+
+        var appResp = (await Host.GetDashboardAppsAsync()).Single(a => a.Slug == app.Slug);
+
+        Assert.Equal("error", appResp.Status);
+        Assert.Equal("Sync errors detected", appResp.StatusSubtitle);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task DashboardApps_keeps_setup_ahead_of_a_sync_failure_while_the_app_has_no_agent()
+    {
+        await using var app = await NewAppAsync();
+
+        await WaitForCdcErrorsAsync(app.Slug);
+
+        var appResp = (await Host.GetDashboardAppsAsync()).Single(a => a.Slug == app.Slug);
+
+        Assert.Equal("setup", appResp.Status);
+    }
+
+    private async Task WaitForCdcErrorsAsync(string slug)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while ((await Host.GetCdcErrorsAsync(slug)).Count == 0)
+        {
+            if (DateTime.UtcNow > deadline)
+                throw new TimeoutException($"no CDC error recorded for '{slug}' within 30s");
+
+            await Task.Delay(200);
+        }
+    }
+
     [RavenFact(RavenTestCategory.Quill)]
     public async Task DashboardApps_status_becomes_error_when_the_source_is_unreachable()
     {
@@ -68,10 +113,10 @@ public class DashboardAppsEndpointTests(ITestOutputHelper output, QuillCollectio
     [RavenFact(RavenTestCategory.Quill)]
     public void DashboardApps_status_is_running_when_the_sink_reports_no_errors()
     {
-        var hasSyncErrors = CdcPerformanceShaper.HasErrors(new CdcSinkErrorsRaw
+        var hasSyncErrors = CdcPerformanceShaper.ErrorsSince(new CdcSinkErrorsRaw
         {
             Results = [new CdcTaskErrorsRaw { TaskName = "cdc" }],
-        });
+        }, since: null).Any();
         Assert.False(hasSyncErrors);
 
         var (status, subtitle) = MetricsReadService.DeriveAppStatus(
@@ -84,27 +129,7 @@ public class DashboardAppsEndpointTests(ITestOutputHelper output, QuillCollectio
     [RavenFact(RavenTestCategory.Quill)]
     public void DashboardApps_status_is_error_when_the_sink_reports_errors()
     {
-        var hasSyncErrors = CdcPerformanceShaper.HasErrors(new CdcSinkErrorsRaw
-        {
-            Results =
-            [
-                new CdcTaskErrorsRaw
-                {
-                    TaskName = "cdc",
-                    ItemErrors =
-                    [
-                        new CdcTaskErrorRaw
-                        {
-                            TaskName = "cdc",
-                            CreatedAt = new DateTime(2026, 6, 25, 12, 0, 0, DateTimeKind.Utc),
-                            Step = "Transformation",
-                            Error = "bad row",
-                            DocumentId = "orders/1",
-                        },
-                    ],
-                },
-            ],
-        });
+        var hasSyncErrors = CdcPerformanceShaper.ErrorsSince(StoredErrorAt(ErrorTime), since: null).Any();
         Assert.True(hasSyncErrors);
 
         var (status, subtitle) = MetricsReadService.DeriveAppStatus(
@@ -113,6 +138,75 @@ public class DashboardAppsEndpointTests(ITestOutputHelper output, QuillCollectio
         Assert.Equal("error", status);
         Assert.Equal("Sync errors detected", subtitle);
     }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void DashboardApps_status_ignores_errors_older_than_the_last_sync_state_write()
+    {
+        var hasSyncErrors = CdcPerformanceShaper.ErrorsSince(StoredErrorAt(ErrorTime), since: ErrorTime.AddMinutes(1)).Any();
+        Assert.False(hasSyncErrors);
+
+        var (status, subtitle) = MetricsReadService.DeriveAppStatus(
+            agentsCount: 1, channelsCount: 1, enabledChannels: 1, cdcDisabled: false, hasSyncErrors);
+
+        Assert.Equal("running", status);
+        Assert.Null(subtitle);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void DashboardApps_status_ignores_errors_older_than_the_last_clean_batch_like_the_panel()
+    {
+        var performance = new CdcSinkPerformanceRaw
+        {
+            Results =
+            [
+                new CdcPerfTaskRaw
+                {
+                    TaskId = 1,
+                    TaskName = "cdc",
+                    Stats =
+                    [
+                        new CdcPerfProcessRaw
+                        {
+                            Performance =
+                            [
+                                new CdcPerfBatchRaw { Id = 1, Started = ErrorTime, Completed = ErrorTime.AddSeconds(1), ScriptProcessingErrorCount = 1 },
+                                new CdcPerfBatchRaw { Id = 2, Started = ErrorTime.AddMinutes(1), Completed = ErrorTime.AddMinutes(1).AddSeconds(1) },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        };
+        var stateWrittenBeforeTheError = ErrorTime.AddMinutes(-1);
+
+        Assert.False(CdcPerformanceShaper.HasErrorsSince(performance, StoredErrorAt(ErrorTime), stateWrittenBeforeTheError));
+        Assert.Equal(0, CdcPerformanceShaper.Shape(
+            performance, disabled: false, ErrorTime.AddMinutes(2), stateWrittenBeforeTheError, StoredErrorAt(ErrorTime)).ErrorCount);
+    }
+
+    private static readonly DateTime ErrorTime = new(2026, 6, 25, 12, 0, 0, DateTimeKind.Utc);
+
+    private static CdcSinkErrorsRaw StoredErrorAt(DateTime createdAt) => new()
+    {
+        Results =
+        [
+            new CdcTaskErrorsRaw
+            {
+                TaskName = "cdc",
+                ItemErrors =
+                [
+                    new CdcTaskErrorRaw
+                    {
+                        TaskName = "cdc",
+                        CreatedAt = createdAt,
+                        Step = "Transformation",
+                        Error = "bad row",
+                        DocumentId = "orders/1",
+                    },
+                ],
+            },
+        ],
+    };
 
     [RavenFact(RavenTestCategory.Quill)]
     public async Task DashboardApp_single_returns_enriched_app_or_404()

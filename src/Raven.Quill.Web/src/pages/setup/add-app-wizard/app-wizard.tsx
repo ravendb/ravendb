@@ -88,6 +88,7 @@ export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
             return await api.services.setup.provision({
                 appName: formValues.externalConnection.appName,
                 slug: formValues.externalConnection.slug,
+                updateExisting: isEditing,
             });
         },
         onSuccess: async (result, formValues) => {
