@@ -1,10 +1,11 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 
 namespace SlowTests.Issues
 {
@@ -18,6 +19,7 @@ namespace SlowTests.Issues
         [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Can_Get_Fields_With_Different_Casing(Options options)
         {
+            options.ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions();
             using var store = GetDocumentStore(options);
 
             var user = new User
@@ -57,7 +59,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public async Task DocumentQuery_RQL_Expression_Should_Not_Include_Private_Members()
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions() });
 
             using (var session = store.OpenSession())
             {
