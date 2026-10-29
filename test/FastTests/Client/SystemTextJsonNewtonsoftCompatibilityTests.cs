@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Dynamic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
@@ -1686,6 +1687,72 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
             Assert.Equal("Ayende", Assert.IsType<Person>(actualRead.Untyped["person"]).Name);
             Assert.Equal(expectedRead.ObjectKeys.Keys.OrderBy(k => k.ToString()), actualRead.ObjectKeys.Keys.OrderBy(k => k.ToString()));
             Assert.Equal("Two", Assert.IsType<Person>(actualRead.ObjectKeys["two"]).Name);
+        }
+    }
+
+    [TypeConverter(typeof(OrderIdConverter))]
+    private readonly struct OrderId(string value)
+    {
+        public string Value { get; } = value;
+    }
+
+    private sealed class OrderIdConverter : TypeConverter
+    {
+        public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType) => sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
+
+        public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType) => destinationType == typeof(string) || base.CanConvertTo(context, destinationType);
+
+        public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value) => value is string text ? new OrderId(text) : base.ConvertFrom(context, culture, value);
+
+        public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType) =>
+            destinationType == typeof(string) && value is OrderId orderId ? orderId.Value : base.ConvertTo(context, culture, value, destinationType);
+    }
+
+    private class HoldsStringContracts
+    {
+        public CultureInfo Culture { get; set; }
+
+        public Type Type { get; set; }
+
+        public OrderId OrderId { get; set; }
+
+        public OrderId? OptionalOrderId { get; set; }
+
+        public Dictionary<OrderId, string> ByOrderId { get; set; }
+
+        public object Untyped { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonWritesTypesWithStringConvertersAsStringsLikeNewtonsoft()
+    {
+        var value = new HoldsStringContracts
+        {
+            Culture = new CultureInfo("fr-CA"),
+            Type = typeof(Person),
+            OrderId = new OrderId("orders/1"),
+            OptionalOrderId = new OrderId("orders/2"),
+            ByOrderId = new Dictionary<OrderId, string> { [new OrderId("orders/3")] = "third" },
+            Untyped = new CultureInfo("en-US")
+        };
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(value, context))
+        using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(value, context))
+        {
+            JObject expectedJson = JObject.Parse(expected.ToString());
+            JObject actualJson = JObject.Parse(actual.ToString());
+            Assert.True(JToken.DeepEquals(expectedJson, actualJson), $"Expected {expectedJson} but got {actualJson}");
+            Assert.Equal("fr-CA", (string)actualJson[nameof(HoldsStringContracts.Culture)]);
+            Assert.Equal("orders/1", (string)actualJson[nameof(HoldsStringContracts.OrderId)]);
+
+            var read = SystemTextJson.Serialization.DefaultConverter.FromBlittable<HoldsStringContracts>(expected);
+            Assert.Equal("fr-CA", read.Culture.Name);
+            Assert.Equal(typeof(Person), read.Type);
+            Assert.Equal("orders/1", read.OrderId.Value);
+            Assert.Equal("orders/2", read.OptionalOrderId?.Value);
+            Assert.Equal("third", read.ByOrderId[new OrderId("orders/3")]);
+            Assert.Equal("en-US", read.Untyped?.ToString());
         }
     }
 
