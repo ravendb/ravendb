@@ -135,12 +135,14 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         IJsonSerializer ISerializationConventions.CreateDeserializer(CreateDeserializerOptions options)
         {
-            return new SystemTextJsonJsonSerializer(GetOptions(options?.TypeNameHandling ?? TypeNameHandling.Auto));
+            TypeNameHandling typeNameHandling = options?.TypeNameHandling ?? TypeNameHandling.Auto;
+            return new SystemTextJsonJsonSerializer(GetOptions(typeNameHandling), typeNameHandling);
         }
 
         IJsonSerializer ISerializationConventions.CreateSerializer(CreateSerializerOptions options)
         {
-            return new SystemTextJsonJsonSerializer(GetOptions(options?.TypeNameHandling ?? TypeNameHandling.Auto));
+            TypeNameHandling typeNameHandling = options?.TypeNameHandling ?? TypeNameHandling.Auto;
+            return new SystemTextJsonJsonSerializer(GetOptions(typeNameHandling), typeNameHandling);
         }
 
         IJsonWriter ISerializationConventions.CreateWriter(JsonOperationContext context)
