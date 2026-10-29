@@ -421,6 +421,17 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         public string Name { get; }
     }
 
+    private readonly struct NewtonsoftStructConstructor
+    {
+        [JsonConstructor]
+        public NewtonsoftStructConstructor(string name)
+        {
+            Name = name;
+        }
+
+        public string Name { get; }
+    }
+
     private class BothConstructorAttributes
     {
         public BothConstructorAttributes()
@@ -458,6 +469,7 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
             AssertRejected(new HoldsTypeWithNewtonsoftConverter { Value = new TypeWithNewtonsoftConverter { Name = "x" } }, "Newtonsoft.Json.JsonConverterAttribute");
             AssertRejected(new MemberWithNewtonsoftExtensionData { Name = "x" }, "Newtonsoft.Json.JsonExtensionDataAttribute");
             AssertRejected(new NewtonsoftConstructorAmongMany("x"), "Newtonsoft.Json.JsonConstructorAttribute");
+            AssertRejected(new NewtonsoftStructConstructor("x"), "Newtonsoft.Json.JsonConstructorAttribute");
 
             void AssertRejected(object entity, string attributeName)
             {

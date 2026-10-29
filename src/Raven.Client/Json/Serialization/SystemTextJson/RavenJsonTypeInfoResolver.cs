@@ -348,7 +348,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             if (marked == null || marked.GetParameters().Length == 0)
                 return;
 
-            if (hasParameterlessConstructor == false && publicConstructors == 1 && marked.IsPublic)
+            if (type.IsValueType == false && hasParameterlessConstructor == false && publicConstructors == 1 && marked.IsPublic)
                 return;
 
             ThrowNewtonsoftConstructorNotSupported(type);
