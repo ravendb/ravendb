@@ -41,6 +41,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
     private readonly ConcurrentDictionary<EmbeddingsGenerationTaskIdentifier, AiWorker> _workers = [];
     private readonly ConcurrentDictionary<EmbeddingsGenerationTaskIdentifier, Exception> _failedWorkers = [];
     private readonly object _workersLocker = new();
+    private bool _stopped;
     private readonly CompletableQueue<IEmbeddingsCommand> _work = new();
     private readonly RavenLogger _logger = logger;
     private readonly DocumentDatabase _database = database;
@@ -545,6 +546,11 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         }
         finally
         {
+            lock (_workersLocker)
+            {
+                _stopped = true;
+            }
+
             List<Task> tasks = [];
             foreach (var (_, state)  in _workers)
             {
@@ -764,7 +770,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
     private void HandleDatabaseRecordChangeUnderLock(DatabaseRecord record)
     {
-        if (record is null)
+        if (record is null || _stopped)
             return;
 
         HashSet<EmbeddingsGenerationTaskIdentifier> taskIdsToRetain = [];

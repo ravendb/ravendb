@@ -153,6 +153,31 @@ public class RavenDB_27682(ITestOutputHelper output) : EmbeddingsGenerationTestB
         Assert.True(generator.EmbeddingTaskExists(taskId));
     }
 
+    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Etl, RavenArchitecture.AllX64)]
+    public async Task RecordChangeAfterShutdown_RegistersNoWorker()
+    {
+        using var store = GetDocumentStore();
+        var (task, _) = AddEmbeddingsGenerationTask(store);
+        var taskId = new EmbeddingsGenerationTaskIdentifier(task.Identifier);
+        var database = await GetDatabase(store.Database);
+
+        using var generator = new EmbeddingsGenerator(database, database.Loggers.GetLogger<EmbeddingsGenerator>(),
+            database.DatabaseShutdown, EmbeddingsGenerator.Mode.Etl);
+        var shutdownDrained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        generator.ForTestingPurposesOnly().BeforeShutdownDrain = () => shutdownDrained.TrySetResult();
+        generator.Start();
+        Assert.True(await WaitForValueAsync(() => generator.EmbeddingTaskExists(taskId), true));
+
+        generator.Stop();
+        await shutdownDrained.Task.WaitAsync(TimeSpan.FromSeconds(30));
+
+        var (lateTask, _) = AddEmbeddingsGenerationTask(store, embeddingsGenerationTaskName: "lateTask", connectionStringName: "late connection");
+        var lateTaskId = new EmbeddingsGenerationTaskIdentifier(lateTask.Identifier);
+        generator.HandleDatabaseRecordChange(database.ReadDatabaseRecord());
+
+        Assert.False(generator.EmbeddingTaskExists(lateTaskId));
+    }
+
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Etl)]
     [InlineData(0)]
     [InlineData(-1)]
