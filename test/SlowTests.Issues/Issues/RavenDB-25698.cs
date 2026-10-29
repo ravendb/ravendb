@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json.Linq;
@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 
 namespace SlowTests.Issues;
 
@@ -18,7 +19,7 @@ public class RavenDB_25698(ITestOutputHelper output) : RavenTestBase(output)
     public async Task EmbeddingGenerationCreatesValueInEmbeddingCacheDocument()
     {
 
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions() });
         
         var aiConnectionString = new AiConnectionString { Name = "aiconnection", EmbeddedSettings = new EmbeddedSettings() };
         aiConnectionString.Identifier = aiConnectionString.GenerateIdentifier();

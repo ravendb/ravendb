@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
@@ -87,7 +87,8 @@ namespace SlowTests.Issues
 
         public static void ModifyDocumentStore(IDocumentStore documentStore)
         {
-            var serializationConventions = (NewtonsoftJsonSerializationConventions)documentStore.Conventions.Serialization;
+            var serializationConventions = new NewtonsoftJsonSerializationConventions();
+            documentStore.Conventions.Serialization = serializationConventions;
             Action<JsonSerializer> previousCustomSerializer = serializationConventions.CustomizeJsonSerializer;
             serializationConventions.CustomizeJsonSerializer = (serializer =>
             {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
@@ -10,6 +10,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 
 namespace SlowTests.Issues
 {
@@ -22,7 +23,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Querying)]
         public void ShouldGenerateSimpleLuceneBooleanQueriesWithoutManyBrackets()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions() }))
             {
                 using (var session = store.OpenSession())
                 {

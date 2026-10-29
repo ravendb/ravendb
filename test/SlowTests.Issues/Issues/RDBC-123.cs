@@ -1,10 +1,11 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 
 namespace SlowTests.Issues
 {
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Querying)]
         public void Can_Query_Using_an_Alias_on_Properties_of_Nested_Object_Array()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions() }))
             {
                 using (var session = store.OpenSession())
                 {
