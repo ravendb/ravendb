@@ -938,14 +938,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private static bool HasJsonIgnoreAttribute(ICustomAttributeProvider member)
         {
-            // Check both Newtonsoft and STJ JsonIgnore by attribute full name to avoid
-            // hard dependency issues. STJ's own [JsonIgnore] is already handled by
-            // DefaultJsonTypeInfoResolver, but Newtonsoft's [JsonIgnore] is not.
+            if (member is FieldInfo fieldInfo && fieldInfo.IsDefined(typeof(NonSerializedAttribute), inherit: false))
+                return true;
+
             object[] attributes = member.GetCustomAttributes(true);
             for (int i = 0; i < attributes.Length; i++)
             {
-                string fullName = attributes[i].GetType().FullName;
-                if (fullName == "Newtonsoft.Json.JsonIgnoreAttribute")
+                if (attributes[i] is IgnoreDataMemberAttribute || attributes[i].GetType().FullName == "Newtonsoft.Json.JsonIgnoreAttribute")
                     return true;
             }
 
