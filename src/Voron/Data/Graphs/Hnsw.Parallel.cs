@@ -160,6 +160,7 @@ public partial class Hnsw
             private readonly List<int> _nearestIndexes = [];
             private readonly List<int> _indexes = [];
             private readonly List<int> _requiresEdgeFiltering = [];
+            private readonly List<int> _pruned = [];
             private readonly List<UnmanagedSpan> _vectors = [];
 
             // Per-task, point-in-time copy of the current (node, level) edge indexes. Filled on the
@@ -336,7 +337,7 @@ public partial class Hnsw
                         }
                         _candidates.Reverse();
 
-                        if (_candidates.Count > _searchState.Options.NumberOfEdges)
+                        if (_candidates.Count > _searchState.Options.MaxEdgesAtLevel(level))
                         {
                             _indexes.Clear();
                             _vectors.Clear();
@@ -380,7 +381,7 @@ public partial class Hnsw
                                 edgeIndexes.Add(_searchState.Llt.Allocator, currentNodeIndex);
                         }
 
-                        if (edgeList.Count <= _searchState.Options.NumberOfEdges)
+                        if (edgeList.Count <= _searchState.Options.MaxEdgesAtLevel(level))
                             continue;
 
                         _requiresEdgeFiltering.Add(edgeIdx);
@@ -480,8 +481,11 @@ public partial class Hnsw
                     }
 
                     candidates.Clear();
+                    var pruned = Owner._pruned;
+                    pruned.Clear();
 
-                    while (candidates.Count <= searchState.Options.NumberOfEdges &&
+                    int maxEdges = searchState.Options.MaxEdgesAtLevel(Level);
+                    while (candidates.Count < maxEdges &&
                            queue.TryDequeue(out var cur, out var distance))
                     {
                         bool match = true;
@@ -501,7 +505,17 @@ public partial class Hnsw
                         {
                             candidates.Add(cur);
                         }
+                        else
+                        {
+                            pruned.Add(cur);
+                        }
                     }
+
+                    // Keep pruned connections: fill the free slots with the closest candidates the
+                    // diversity check rejected, so the node keeps its full degree. The queue yields the
+                    // closest candidate first, so pruned is already ordered by distance.
+                    for (int i = 0; i < pruned.Count && candidates.Count < maxEdges; i++)
+                        candidates.Add(pruned[i]);
 
                     for (int i = 0; i < candidates.Count; i++)
                     {
