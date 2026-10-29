@@ -170,6 +170,7 @@ namespace Raven.Server.Documents.Revisions
         private void CreateTrees(Transaction tx)
         {
             tx.CreateTree(RevisionsCountSlice);
+            tx.CreateTree(ConflictRevisionsSlice);
             _documentsStorage.TombstonesSchema.Create(tx, RevisionsTombstonesSlice, 16);
         }
 
@@ -405,7 +406,7 @@ namespace Raven.Server.Documents.Revisions
 
                 using (GetKeyPrefix(context, keys.Slices.LowerId, out Slice lowerIdPrefix))
                 {
-                    IncrementCountOfRevisions(context, lowerIdPrefix, 1);
+                    UpdateRevisionCountsByOne(context, flags, lowerIdPrefix, table, etag);
                     DeleteOldRevisions(context, table, lowerIdPrefix, collectionName, configuration, nonPersistentFlags, changeVector, lastModifiedTicks, documentDeleted: false, skipForceCreated: false);
                 }
             }
@@ -628,8 +629,6 @@ namespace Raven.Server.Documents.Revisions
             }
 
             var deleted = DeleteRevisionsInternal(context, table, lowerIdPrefix, collectionName, changeVector, lastModifiedTicks, revisionsToDelete, result, tombstoneFlags: flags);
-
-            IncrementCountOfRevisions(context, lowerIdPrefix, -deleted);
             result.Remaining = result.PreviousCount - deleted;
 
             if (ShouldAddConflictRevisionNotification(conflicted, nonPersistentFlags, deleted))
@@ -703,7 +702,9 @@ namespace Raven.Server.Documents.Revisions
                 using (TableValueToSlice(context, (int)RevisionsTable.LowerId, ref deleted.Reader, out Slice lowerId))
                 using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
                 {
-                    IncrementCountOfRevisions(context, prefixSlice, -1);
+                    var deletedFlags = TableValueToFlags((int)RevisionsTable.Flags, ref deleted.Reader);
+                    var deletedRevisionEtag = TableValueToEtag((int)RevisionsTable.Etag, ref deleted.Reader);
+                    UpdateRevisionCountsByOne(context, deletedFlags, prefixSlice, table, deletedRevisionEtag, increment: false);
                 }
 
                 return true;
@@ -851,6 +852,7 @@ namespace Raven.Server.Documents.Revisions
                 DeleteRevisionFromTable(context, table, writeTables, lastRevisionToDelete, collectionName, changeVector, lastModifiedTicks, tombstoneFlags);
 
                 deleted++;
+                UpdateRevisionCountsByOne(context, lastRevisionToDelete.Flags, lowerIdPrefix, table, lastRevisionToDelete.Etag, increment: false);
                 lastRevisionToDelete = revision;
             }
 
@@ -868,6 +870,7 @@ namespace Raven.Server.Documents.Revisions
                     maxEtagDeleted = Math.Max(maxEtagDeleted, lastRevisionToDelete.Etag);
                     DeleteRevisionFromTable(context, table, writeTables, lastRevisionToDelete, collectionName, changeVector, lastModifiedTicks, tombstoneFlags);
                     deleted++;
+                    UpdateRevisionCountsByOne(context, lastRevisionToDelete.Flags, lowerIdPrefix, table, lastRevisionToDelete.Etag, increment: false);
                 }
             }
 
@@ -1180,21 +1183,9 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private long GetConflictRevisionsCount(
-            DocumentsOperationContext context, Table table, Slice prefixSlice)
+        private long GetConflictRevisionsCount(DocumentsOperationContext context, Table table, Slice prefixSlice)
         {
-            long conflictCount = 0;
-            foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, skip: 0, startsWith: true))
-            {
-                var tvr = read.Result.Reader;
-                using (var revision = TableValueToRevision(context, ref tvr, DocumentFields.Default))
-                {
-                    if (revision.Flags.Contain(DocumentFlags.Conflicted) || revision.Flags.Contain(DocumentFlags.Resolved))
-                        conflictCount++;
-                }
-            }
-
-            return conflictCount;
+            return ListConflictRevisionsOnce(context, table, prefixSlice) - 1;
         }
 
         public enum RevisionType
@@ -1419,7 +1410,9 @@ namespace Raven.Server.Documents.Revisions
                     using (TableValueToSlice(context, (int)RevisionsTable.LowerId, ref tvr, out Slice lowerId))
                     using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
                     {
-                        IncrementCountOfRevisions(context, prefixSlice, -1);
+                        var deletedFlags = TableValueToFlags((int)RevisionsTable.Flags, ref tvr);
+                        var deletedRevisionEtag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr);
+                        UpdateRevisionCountsByOne(context, deletedFlags, prefixSlice, table, deletedRevisionEtag, increment: false);
                     }
 
                     revisionEtag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr);
@@ -1473,6 +1466,68 @@ namespace Raven.Server.Documents.Revisions
         {
             var numbers = context.Transaction.InnerTransaction.ReadTree(RevisionsCountSlice);
             return numbers.Increment(prefixedLowerId, delta);
+        }
+
+        private void UpdateRevisionCountsByOne(DocumentsOperationContext context, DocumentFlags flags, Slice lowerIdPrefix, Table table, long etag, bool increment = true)
+        {
+            IncrementCountOfRevisions(context, lowerIdPrefix, increment ? 1 : -1);
+
+            if (flags.Contain(DocumentFlags.Conflicted) == false && flags.Contain(DocumentFlags.Resolved) == false)
+                return;
+
+            if (increment)
+                AddConflictRevision(context, table, lowerIdPrefix, etag);
+            else
+                RemoveConflictRevision(context, table, lowerIdPrefix, etag);
+        }
+
+        private void AddConflictRevision(DocumentsOperationContext context, Table table, Slice prefixedLowerId, long etag)
+        {
+            ListConflictRevisionsOnce(context, table, prefixedLowerId);
+
+            using (DocumentsStorage.GetEtagAsSlice(context, etag, out var etagSlice))
+                context.Transaction.InnerTransaction.ReadTree(ConflictRevisionsSlice).MultiAdd(prefixedLowerId, etagSlice);
+        }
+
+        private void RemoveConflictRevision(DocumentsOperationContext context, Table table, Slice prefixedLowerId, long etag)
+        {
+            ListConflictRevisionsOnce(context, table, prefixedLowerId);
+
+            using (DocumentsStorage.GetEtagAsSlice(context, etag, out var etagSlice))
+                context.Transaction.InnerTransaction.ReadTree(ConflictRevisionsSlice).MultiDelete(prefixedLowerId, etagSlice);
+        }
+
+        // Etags start at 1; this marker makes a listed document's key exist even when it has no conflict revisions.
+        private const long ListedMarkerEtag = -1;
+
+        // Returns the number of values under the key, the marker included.
+        private long ListConflictRevisionsOnce(DocumentsOperationContext context, Table table, Slice prefixedLowerId)
+        {
+            var tree = context.Transaction.InnerTransaction.ReadTree(ConflictRevisionsSlice);
+
+            var count = tree.MultiCount(prefixedLowerId);
+            if (count > 0)
+                return count;
+
+            using (DocumentsStorage.GetEtagAsSlice(context, ListedMarkerEtag, out var markerSlice))
+                tree.MultiAdd(prefixedLowerId, markerSlice);
+            count = 1;
+
+            foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixedLowerId, skip: 0, startsWith: true))
+            {
+                var tvr = read.Result.Reader;
+                using (var revision = TableValueToRevision(context, ref tvr, DocumentFields.Default))
+                {
+                    if (revision.Flags.Contain(DocumentFlags.Conflicted) == false && revision.Flags.Contain(DocumentFlags.Resolved) == false)
+                        continue;
+
+                    using (DocumentsStorage.GetEtagAsSlice(context, revision.Etag, out var etagSlice))
+                        tree.MultiAdd(prefixedLowerId, etagSlice);
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         public void Delete(DocumentsOperationContext context, string id, Slice lowerId, CollectionName collectionName, ChangeVector changeVector,
@@ -1558,7 +1613,7 @@ namespace Raven.Server.Documents.Revisions
                     FullChangeVector = changeVector
                 }, isInsert: true);
 
-                IncrementCountOfRevisions(context, lowerIdPrefix, 1);
+                UpdateRevisionCountsByOne(context, flags, lowerIdPrefix, table, newEtag);
                 DeleteOldRevisions(context, table, lowerIdPrefix, collectionName, configuration, nonPersistentFlags, changeVector, lastModifiedTicks,
                     documentDeleted: true, skipForceCreated: false);
             }
@@ -1607,6 +1662,12 @@ namespace Raven.Server.Documents.Revisions
                 // Use incoming full CV: a Legacy source's `revision.ChangeVector` is version-only (field 0), would violate rule B.
                 FullChangeVector = incomingChangeVector
             }, isInsert: false);
+
+            using (GetKeyPrefix(context, keys.Slices.LowerId, out var lowerIdPrefix))
+            {
+                RemoveConflictRevision(context, table, lowerIdPrefix, revision.Etag);
+                AddConflictRevision(context, table, lowerIdPrefix, newEtag);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2125,9 +2186,8 @@ namespace Raven.Server.Documents.Revisions
             var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
             var result = new DeleteOldRevisionsResult() { PreviousCount = revisionsPreviousCount };
             var revisionsToDelete = getRevisions.Invoke(table, result);
-            var deleted = DeleteRevisionsInternal(context, table, lowerId, collectionName, changeVector, lastModifiedTicks, revisionsToDelete,
+            var deleted = DeleteRevisionsInternal(context, table, prefixSlice, collectionName, changeVector, lastModifiedTicks, revisionsToDelete,
                 result, tombstoneFlags);
-            IncrementCountOfRevisions(context, prefixSlice, -deleted);
 
             result.Remaining = revisionsPreviousCount - deleted;
             var moreWork = result.HasMore && result.Remaining > 0;
@@ -2254,7 +2314,7 @@ namespace Raven.Server.Documents.Revisions
                     FullChangeVector = changeVector
                 }, isInsert: true);
 
-                IncrementCountOfRevisions(context, lowerIdPrefix, 1);
+                UpdateRevisionCountsByOne(context, flags, lowerIdPrefix, table, newEtag);
             }
         }
 
