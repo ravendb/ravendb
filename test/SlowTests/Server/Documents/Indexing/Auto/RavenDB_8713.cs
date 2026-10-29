@@ -1,7 +1,8 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Threading;
 using FastTests;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
@@ -18,6 +19,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryOnCaseSensitiveFields(Options options)
         {
+            options.ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions();
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
@@ -50,6 +52,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
         {
             options.ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0";
 
+            options.ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions();
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
@@ -94,6 +97,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryOnCaseSensitiveGroupByFields(Options options)
         {
+            options.ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions();
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
@@ -146,6 +150,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryOnCaseSensitiveFields_UsingSearch(Options options)
         {
+            options.ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions();
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
