@@ -310,6 +310,9 @@ internal static partial class QueryPlanBuilder
                 _ => 1f
             }
         };
+
+        if (float.IsFinite(exec.BoostFactor) == false || exec.BoostFactor < 0)
+            throw new InvalidQueryException($"The boost value must be a finite, non-negative number, but was {boostVal}", builderParameters?.Metadata?.QueryText, queryParameters);
     }
 
     /// <summary> Foo BETWEEN $x AND $y - where $x > $y - returns nothing</summary>
