@@ -14,8 +14,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 {
     internal sealed class ParametersConverter : JsonConverter<Parameters>
     {
-        public static readonly ParametersConverter Instance = new ParametersConverter();
-
         private static readonly HashSet<Assembly> RavenAssemblies = new HashSet<Assembly>
         {
             typeof(ParametersConverter).Assembly,
@@ -48,8 +46,11 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 #endif
         }
 
-        private ParametersConverter()
+        private readonly Func<JsonSerializerOptions> _untypedOptions;
+
+        public ParametersConverter(Func<JsonSerializerOptions> untypedOptions)
         {
+            _untypedOptions = untypedOptions;
         }
 
         public override bool CanConvert(Type typeToConvert)
@@ -117,7 +118,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                             writer.WriteStringValue(((DateTimeOffset)v).UtcDateTime.GetDefaultRavenFormat(true));
                             break;
                         case ParameterType.Enumerable:
-                            JsonSerializer.Serialize(writer, v, vType, options);
+                            JsonSerializer.Serialize(writer, v, vType, _untypedOptions());
                             break;
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
                         case ParameterType.DateOnly:
