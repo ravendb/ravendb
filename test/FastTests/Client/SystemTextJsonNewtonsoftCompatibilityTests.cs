@@ -1055,6 +1055,27 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
+    public void SystemTextJsonWritesQueryParametersLikeNewtonsoft()
+    {
+        var parameters = new Raven.Client.Parameters
+        {
+            ["typed"] = new[] { new Person { Name = "Oren", Age = 40 } },
+            ["untyped"] = new List<object> { new Person { Name = "Oren", Age = 40 }, "text", 3 },
+            ["single"] = new Person { Name = "Oren", Age = 40 }
+        };
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(parameters, context))
+        using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(parameters, context))
+        {
+            JObject expectedJson = JObject.Parse(expected.ToString());
+            JObject actualJson = JObject.Parse(actual.ToString());
+
+            Assert.True(JToken.DeepEquals(expectedJson, actualJson), $"Expected {expectedJson} but got {actualJson}");
+        }
+    }
+
     private class HoldsChars
     {
         public List<char> Chars { get; set; }
