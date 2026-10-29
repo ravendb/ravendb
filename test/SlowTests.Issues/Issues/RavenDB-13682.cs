@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json.Linq;
@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 
 namespace SlowTests.Issues
 {
@@ -170,6 +171,7 @@ order by spatial.distance(
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanProjectDistanceComputation(Options options)
         {
+            options.ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions();
             using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
@@ -208,6 +210,7 @@ select {
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanProjectDistanceComputation_WithParameters(Options options)
         {
+            options.ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions();
             using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
