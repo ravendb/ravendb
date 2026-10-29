@@ -419,6 +419,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             Dictionary<string, int> ranks = _memberRanks.GetOrAdd(typeInfo.Type, GetNewtonsoftMemberRanks);
             List<JsonPropertyInfo> ordered = typeInfo.Properties
                 .OrderBy(property => property.AttributeProvider is MemberInfo member && ranks.TryGetValue(member.Name, out int rank) ? rank : int.MaxValue)
+                .OrderBy(property => property.AttributeProvider is MemberInfo member ? GetNewtonsoftOrder(member) : -1)
                 .ToList();
 
             typeInfo.Properties.Clear();
@@ -453,6 +454,28 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             }
 
             return ranks;
+        }
+
+        private static int GetNewtonsoftOrder(MemberInfo member)
+        {
+            foreach (CustomAttributeData attribute in member.GetCustomAttributesData())
+            {
+                if (attribute.AttributeType.FullName != NewtonsoftJsonPropertyAttributeName)
+                    continue;
+
+                foreach (CustomAttributeNamedArgument argument in attribute.NamedArguments)
+                {
+                    if (argument.MemberName == "Order")
+                        return (int)argument.TypedValue.Value;
+                }
+
+                return -1;
+            }
+
+            if (member.GetCustomAttribute<DataMemberAttribute>(inherit: true) is { Order: not -1 } dataMember && HasDataContract(member.DeclaringType))
+                return dataMember.Order;
+
+            return -1;
         }
 
         private static void AddRank(Dictionary<string, int> ranks, string name)
