@@ -1076,6 +1076,42 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class Flags
+    {
+        public bool FromString { get; set; }
+
+        public bool FromUpperCaseString { get; set; }
+
+        public bool FromNumber { get; set; }
+
+        public bool? Optional { get; set; }
+
+        public Dictionary<bool, int> ByFlag { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonReadsBooleansLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(
+                   "{\"FromString\":\"true\",\"FromUpperCaseString\":\"False\",\"FromNumber\":1,\"Optional\":\"true\",\"ByFlag\":{\"True\":1,\"False\":0}}", "flags"))
+        {
+            var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<Flags>(json);
+            var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<Flags>(json);
+
+            Assert.True(actual.FromString);
+            Assert.Equal(expected.FromString, actual.FromString);
+            Assert.Equal(expected.FromUpperCaseString, actual.FromUpperCaseString);
+            Assert.Equal(expected.FromNumber, actual.FromNumber);
+            Assert.Equal(expected.Optional, actual.Optional);
+            Assert.Equal(expected.ByFlag, actual.ByFlag);
+
+            using (BlittableJsonReaderObject newtonsoftWritten = Newtonsoft.Serialization.DefaultConverter.ToBlittable(expected, context))
+            using (BlittableJsonReaderObject written = SystemTextJson.Serialization.DefaultConverter.ToBlittable(actual, context))
+                Assert.Equal(newtonsoftWritten.ToString(), written.ToString());
+        }
+    }
+
     private class HoldsChars
     {
         public List<char> Chars { get; set; }
