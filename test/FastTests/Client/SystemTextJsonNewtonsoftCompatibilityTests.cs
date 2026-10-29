@@ -1559,6 +1559,66 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private enum Tone
+    {
+        Warm,
+        Cool
+    }
+
+    [JsonArray(ItemConverterType = typeof(UnixDateTimeConverter))]
+    private class UnixTimestamps : List<DateTime>
+    {
+    }
+
+    private class HoldsUnixTimestamps
+    {
+        public UnixTimestamps Timestamps { get; set; }
+    }
+
+    private class MemberItemConverter
+    {
+        [JsonProperty(ItemConverterType = typeof(UnixDateTimeConverter))]
+        public Dictionary<string, DateTime> Timestamps { get; set; }
+    }
+
+    private class TranslatedItemConverters
+    {
+        [JsonProperty(ItemConverterType = typeof(StringEnumConverter))]
+        public List<Tone> Tones { get; set; }
+
+        [JsonProperty(ItemConverterType = typeof(StringEnumConverter))]
+        public Dictionary<string, Tone?> TonesByName { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonRejectsUntranslatableNewtonsoftItemConverters()
+    {
+        var timestamp = new DateTime(2026, 10, 29, 0, 0, 0, DateTimeKind.Utc);
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            AssertRejected(new HoldsUnixTimestamps { Timestamps = [timestamp] }, nameof(UnixTimestamps));
+            AssertRejected(new MemberItemConverter { Timestamps = new Dictionary<string, DateTime> { ["x"] = timestamp } }, nameof(MemberItemConverter.Timestamps));
+
+            var translated = new TranslatedItemConverters { Tones = [Tone.Cool], TonesByName = new Dictionary<string, Tone?> { ["x"] = Tone.Warm } };
+            using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(translated, context))
+            using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(translated, context))
+            {
+                Assert.Equal(expected.ToString(), actual.ToString());
+                Assert.Contains("\"Cool\"", actual.ToString());
+            }
+
+            void AssertRejected(object entity, string target)
+            {
+                using (BlittableJsonReaderObject written = Newtonsoft.Serialization.DefaultConverter.ToBlittable(entity, context))
+                    Assert.Contains("1793232000", written.ToString());
+
+                var exception = Assert.Throws<NotSupportedException>(() => SystemTextJson.Serialization.DefaultConverter.ToBlittable(entity, context));
+                Assert.Contains(target, exception.Message);
+                Assert.Contains("ItemConverterType", exception.Message);
+            }
+        }
+    }
+
     private static DocumentConventions Newtonsoft { get; } = new() { Serialization = new NewtonsoftJsonSerializationConventions() };
 
     private static DocumentConventions SystemTextJson { get; } = new() { Serialization = new SystemTextJsonSerializationConventions() };
