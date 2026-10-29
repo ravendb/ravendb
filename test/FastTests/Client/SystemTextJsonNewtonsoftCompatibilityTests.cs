@@ -1212,6 +1212,122 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    [DataContract]
+    private class OptInBase
+    {
+        [DataMember]
+        public string BaseMember { get; set; } = "base member";
+
+        public string BaseOutside { get; set; } = "base outside";
+    }
+
+    private class OptInDerived : OptInBase
+    {
+        public string Id { get; set; }
+
+        [DataMember]
+        public string Member { get; set; } = "member";
+
+        [JsonProperty]
+        public string JsonPropertyMember { get; set; } = "json property";
+
+        [JsonRequired]
+        public string Required { get; set; } = "required";
+
+        public string Outside { get; set; } = "outside";
+
+        [DataMember]
+        private string PrivateMember { get; set; } = "private member";
+
+        private string PrivateOutside { get; set; } = "private outside";
+
+        public string Field = "field";
+
+        public string GetPrivateMember() => PrivateMember;
+    }
+
+    private class NoContractBase
+    {
+        [DataMember]
+        public string InheritedMember { get; set; } = "inherited member";
+    }
+
+    [DataContract]
+    private class ContractOverNoContractBase : NoContractBase
+    {
+        [DataMember]
+        public string Member { get; set; } = "member";
+    }
+
+    [JsonObject(MemberSerialization.OptIn)]
+    private class JsonObjectOptIn
+    {
+        [JsonProperty]
+        public string Member { get; set; } = "member";
+
+        [DataMember]
+        public string OutsideContract { get; set; } = "outside contract";
+
+        public string Outside { get; set; } = "outside";
+    }
+
+    [JsonObject(MemberSerialization.Fields)]
+    private class JsonObjectFields
+    {
+        public string Field = "field";
+
+        public string Property { get; set; } = "property";
+    }
+
+    [JsonObject]
+    [DataContract]
+    private class JsonObjectOptOut
+    {
+        public string Outside { get; set; } = "outside";
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonSerializesOnlyOptedInMembersLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            AssertSameJson(new OptInDerived { Id = "items/1" }, ["BaseMember", "JsonPropertyMember", "Member", "PrivateMember", "Required"]);
+            AssertSameJson(new ContractOverNoContractBase(), [nameof(ContractOverNoContractBase.Member)]);
+            AssertSameJson(new JsonObjectOptIn(), [nameof(JsonObjectOptIn.Member)]);
+            AssertSameJson(new JsonObjectFields(), [nameof(JsonObjectFields.Field)]);
+            AssertSameJson(new JsonObjectOptOut(), [nameof(JsonObjectOptOut.Outside)]);
+
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(
+                       "{\"BaseMember\":\"json\",\"BaseOutside\":\"json\",\"Member\":\"json\",\"Outside\":\"json\",\"PrivateMember\":\"json\",\"PrivateOutside\":\"json\",\"Field\":\"json\",\"Required\":\"json\"}", "opt-in"))
+            {
+                var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<OptInDerived>(json);
+                var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<OptInDerived>(json);
+
+                Assert.Equal("json", actual.Member);
+                Assert.Equal("outside", actual.Outside);
+                Assert.Equal(expected.BaseMember, actual.BaseMember);
+                Assert.Equal(expected.BaseOutside, actual.BaseOutside);
+                Assert.Equal(expected.Member, actual.Member);
+                Assert.Equal(expected.Outside, actual.Outside);
+                Assert.Equal(expected.GetPrivateMember(), actual.GetPrivateMember());
+                Assert.Equal(expected.Field, actual.Field);
+                Assert.Equal(expected.Required, actual.Required);
+            }
+
+            void AssertSameJson(object value, string[] members)
+            {
+                using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(value, context))
+                using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(value, context))
+                {
+                    JObject expectedJson = JObject.Parse(expected.ToString());
+                    JObject actualJson = JObject.Parse(actual.ToString());
+                    Assert.True(JToken.DeepEquals(expectedJson, actualJson), $"Expected {expectedJson} but got {actualJson}");
+                    Assert.Equal(members, actual.GetPropertyNames().Order());
+                }
+            }
+        }
+    }
+
     private static DocumentConventions Newtonsoft { get; } = new() { Serialization = new NewtonsoftJsonSerializationConventions() };
 
     private static DocumentConventions SystemTextJson { get; } = new() { Serialization = new SystemTextJsonSerializationConventions() };
