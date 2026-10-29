@@ -1,19 +1,24 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.IO;
 using System.Text.Json;
 using Raven.Client.Documents.Session;
+using Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters;
 using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 {
     internal sealed class SystemTextJsonJsonSerializer : IJsonSerializer
     {
+        private readonly TypeNameHandling _typeNameHandling;
+
         public JsonSerializerOptions Options { get; }
 
-        public SystemTextJsonJsonSerializer(JsonSerializerOptions options)
+        public SystemTextJsonJsonSerializer(JsonSerializerOptions options, TypeNameHandling typeNameHandling)
         {
             Options = options;
+            _typeNameHandling = typeNameHandling;
         }
 
         public void Serialize(IJsonWriter writer, object value)
@@ -28,15 +33,27 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 using var bufferWriter = new ContextMemoryBufferWriter(stjWriter.Context);
                 using (var utf8Writer = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter, SystemTextJsonSerializationConventions.WriterOptions))
                 {
-                    JsonSerializer.Serialize(utf8Writer, value, objectType, Options);
+                    SerializeValue(utf8Writer, value, objectType);
                 }
                 WriteJsonToBlittableWriter(writer, bufferWriter.WrittenSpan);
             }
             else
             {
-                var bytes = JsonSerializer.SerializeToUtf8Bytes(value, objectType, Options);
-                WriteJsonToBlittableWriter(writer, bytes);
+                using var stream = new MemoryStream();
+                using (var utf8Writer = new Utf8JsonWriter(stream, SystemTextJsonSerializationConventions.WriterOptions))
+                {
+                    SerializeValue(utf8Writer, value, objectType);
+                }
+                WriteJsonToBlittableWriter(writer, stream.ToArray());
             }
+        }
+
+        private void SerializeValue(Utf8JsonWriter writer, object value, Type objectType)
+        {
+            if (value != null && _typeNameHandling != TypeNameHandling.None && value.GetType() != objectType)
+                TypeNameConverter.WriteValue(writer, value, objectType, alwaysWriteObjectTypeName: _typeNameHandling == TypeNameHandling.Objects, Options);
+            else
+                JsonSerializer.Serialize(writer, value, objectType, Options);
         }
 
         internal unsafe BlittableJsonReaderObject SerializeToBlittable(object value, Type objectType, JsonOperationContext context)
