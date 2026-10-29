@@ -4,10 +4,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Logging;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -18,6 +22,33 @@ namespace SlowTests.Issues
     {
         public RavenDB_27691(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task SavingBackupStatusOfDeletedDatabaseShouldNotLeaveLocalStatus()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var config = Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder"));
+                var taskId = await Backup.UpdateConfigAsync(Server, config, store);
+
+                await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true));
+                var deleted = await WaitForValueAsync(async () => await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)) == null, true);
+                Assert.True(deleted, $"Database '{store.Database}' was not deleted");
+
+                var status = new PeriodicBackupStatus
+                {
+                    TaskId = taskId,
+                    NodeTag = Server.ServerStore.NodeTag,
+                    BackupType = BackupType.Backup,
+                    LastFullBackup = DateTime.UtcNow,
+                    LastFullBackupInternal = DateTime.UtcNow
+                };
+
+                BackupUtils.SaveBackupStatus(status, store.Database, Server.ServerStore, LoggingSource.Instance.GetLogger<RavenDB_27691>(store.Database));
+
+                Assert.Null(Server.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(store.Database, taskId));
+            }
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport)]
