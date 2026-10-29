@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Tests.Infrastructure;
 using Xunit;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 
 namespace SlowTests.Bugs
 {
@@ -24,7 +25,7 @@ namespace SlowTests.Bugs
         [RavenFact(RavenTestCategory.ClientApi)]
         public void EntitiesSerializeCorrectlyWithAttributes()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions() }))
             {
                 var jObject = JObject.FromObject(new Item { Version = "First" }, (JsonSerializer)store.Conventions.Serialization.CreateSerializer());
                 Assert.Equal("First", jObject["Version"]);

@@ -1,8 +1,9 @@
-﻿using FastTests;
+using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Tests.Infrastructure;
 using Xunit;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 
 namespace SlowTests.Issues
 {
@@ -20,7 +21,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Querying)]
         public void Projections_should_return_null_values_on_missing_properties()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions() }))
             {
                 using (var session = store.OpenSession())
                 {

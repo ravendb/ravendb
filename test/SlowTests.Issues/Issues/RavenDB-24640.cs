@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -10,6 +10,7 @@ using Sparrow.Collections;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 
 namespace SlowTests.Issues
 {
@@ -33,6 +34,7 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = s =>
                 {
+                    s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions();
                     s.Conventions.PreserveDocumentPropertiesNotFoundOnModel = true;
                     s.Conventions.IdentityPartsSeparator = '-';
                     s.Conventions.MaxNumberOfRequestsPerSession = int.MaxValue;
