@@ -1399,6 +1399,38 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    [DataContract]
+    private class OrderedByAttributes
+    {
+        [DataMember]
+        public string Unordered { get; set; } = "unordered";
+
+        [DataMember(Order = 2)]
+        public string Second { get; set; } = "second";
+
+        [JsonProperty(Order = 1)]
+        public string First { get; set; } = "first";
+
+        [JsonProperty(Order = -2)]
+        public string BeforeUnordered { get; set; } = "before unordered";
+
+        [JsonProperty]
+        [DataMember(Order = 3)]
+        public string JsonPropertyWins { get; set; } = "json property";
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonOrdersMembersByNewtonsoftOrderAttributes()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(new OrderedByAttributes(), context))
+        using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(new OrderedByAttributes(), context))
+        {
+            Assert.Equal(expected.ToString(), actual.ToString());
+            Assert.Equal(["BeforeUnordered", "Unordered", "JsonPropertyWins", "First", "Second"], JObject.Parse(actual.ToString()).Properties().Select(x => x.Name));
+        }
+    }
+
     private static DocumentConventions Newtonsoft { get; } = new() { Serialization = new NewtonsoftJsonSerializationConventions() };
 
     private static DocumentConventions SystemTextJson { get; } = new() { Serialization = new SystemTextJsonSerializationConventions() };
