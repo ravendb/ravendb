@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
@@ -1315,6 +1316,76 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
             }
 
             void AssertSameJson(object value, string[] members)
+            {
+                using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(value, context))
+                using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(value, context))
+                {
+                    JObject expectedJson = JObject.Parse(expected.ToString());
+                    JObject actualJson = JObject.Parse(actual.ToString());
+                    Assert.True(JToken.DeepEquals(expectedJson, actualJson), $"Expected {expectedJson} but got {actualJson}");
+                    Assert.Equal(members, actual.GetPropertyNames().Order());
+                }
+            }
+        }
+    }
+
+    [DataContract]
+    private class DefaultValues
+    {
+        [DataMember(EmitDefaultValue = false)]
+        public int Count { get; set; }
+
+        [DataMember(EmitDefaultValue = false)]
+        public string Text { get; set; }
+
+        [DataMember(EmitDefaultValue = false)]
+        public int? Optional { get; set; }
+
+        [DataMember(EmitDefaultValue = false)]
+        public Guid Key { get; set; }
+
+        [DataMember]
+        public int Emitted { get; set; }
+
+        [DataMember(EmitDefaultValue = false)]
+        public int Initialized { get; set; } = 5;
+
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+        [DefaultValue(10)]
+        public long Limit { get; set; } = 7;
+
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate)]
+        public double Ratio { get; set; } = 1.5;
+
+        [JsonProperty]
+        [DataMember(EmitDefaultValue = false)]
+        public int JsonPropertyWins { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonSkipsDefaultValuesLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            AssertSameJson(new DefaultValues(), ["Emitted", "Initialized", "JsonPropertyWins", "Limit", "Ratio"]);
+            AssertSameJson(new DefaultValues { Count = 1, Text = "text", Optional = 0, Key = Guid.NewGuid(), Initialized = 0, Limit = 10, Ratio = 0 },
+                ["Count", "Emitted", "JsonPropertyWins", "Key", "Optional", "Text"]);
+
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Count\":0,\"Initialized\":0,\"Limit\":10,\"Ratio\":0,\"Text\":null}", "defaults"))
+            {
+                var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<DefaultValues>(json);
+                var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<DefaultValues>(json);
+
+                Assert.Equal(5, actual.Initialized);
+                Assert.Equal(7, actual.Limit);
+                Assert.Equal(expected.Count, actual.Count);
+                Assert.Equal(expected.Initialized, actual.Initialized);
+                Assert.Equal(expected.Limit, actual.Limit);
+                Assert.Equal(expected.Ratio, actual.Ratio);
+                Assert.Equal(expected.Text, actual.Text);
+            }
+
+            void AssertSameJson(DefaultValues value, string[] members)
             {
                 using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(value, context))
                 using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(value, context))

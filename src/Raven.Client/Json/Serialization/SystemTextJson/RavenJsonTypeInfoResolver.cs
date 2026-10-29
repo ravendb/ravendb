@@ -2,7 +2,9 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Dynamic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -42,6 +44,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         private const int NewtonsoftMemberSerializationFields = 2;
 
         private const int NewtonsoftNullValueHandlingIgnore = 1;
+
+        private const int NewtonsoftDefaultValueHandlingIgnore = 1;
+
+        private const int NewtonsoftDefaultValueHandlingPopulate = 2;
 
         private static readonly ConcurrentDictionary<Type, Action<object, IEnumerable>> _collectionAdders = new();
 
@@ -160,6 +166,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             SetupIdentityPropertyConditionalSerialization(typeInfo);
             ApplyNewtonsoftMemberOrder(typeInfo);
             ApplyNewtonsoftNullValueHandling(typeInfo);
+            ApplyNewtonsoftDefaultValueHandling(typeInfo);
             ApplySerializationCallbacks(typeInfo);
             AssertNoNewtonsoftMemberAttributes(typeInfo);
             AssertNewtonsoftConstructorIsUsed(typeInfo.Type);
@@ -487,6 +494,77 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         {
             object value = jsonPropertyAttribute.GetType().GetProperty("NullValueHandling")?.GetValue(jsonPropertyAttribute);
             return value != null && Convert.ToInt32(value) == NewtonsoftNullValueHandlingIgnore;
+        }
+
+        private static void ApplyNewtonsoftDefaultValueHandling(JsonTypeInfo typeInfo)
+        {
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                JsonPropertyInfo property = typeInfo.Properties[i];
+                if (property.AttributeProvider is not MemberInfo member)
+                    continue;
+
+                int handling = GetNewtonsoftDefaultValueHandling(member);
+                if ((handling & NewtonsoftDefaultValueHandlingIgnore) == 0)
+                    continue;
+
+                object defaultValue = member.GetCustomAttribute<DefaultValueAttribute>(inherit: true) is { } defaultValueAttribute
+                    ? defaultValueAttribute.Value
+                    : property.PropertyType.IsValueType ? Activator.CreateInstance(property.PropertyType) : null;
+
+                Func<object, object, bool> shouldSerialize = property.ShouldSerialize;
+                property.ShouldSerialize = shouldSerialize == null
+                    ? (_, value) => IsNewtonsoftDefaultValue(value, defaultValue) == false
+                    : (target, value) => IsNewtonsoftDefaultValue(value, defaultValue) == false && shouldSerialize(target, value);
+
+                Action<object, object> set = property.Set;
+                if (set != null && (handling & NewtonsoftDefaultValueHandlingPopulate) == 0)
+                {
+                    property.Set = (target, value) =>
+                    {
+                        if (IsNewtonsoftDefaultValue(value, defaultValue) == false)
+                            set(target, value);
+                    };
+                }
+            }
+        }
+
+        private static int GetNewtonsoftDefaultValueHandling(MemberInfo member)
+        {
+            object jsonProperty = GetNewtonsoftAttribute(member, NewtonsoftJsonPropertyAttributeName);
+            if (jsonProperty != null)
+                return Convert.ToInt32(jsonProperty.GetType().GetProperty("DefaultValueHandling")?.GetValue(jsonProperty));
+
+            return member.GetCustomAttribute<DataMemberAttribute>(inherit: true) is { EmitDefaultValue: false } && HasDataContract(member.DeclaringType)
+                ? NewtonsoftDefaultValueHandlingIgnore
+                : 0;
+        }
+
+        private static bool IsNewtonsoftDefaultValue(object value, object defaultValue)
+        {
+            if (Equals(value, defaultValue))
+                return true;
+
+            if (value == null || defaultValue == null || value.GetType() == defaultValue.GetType())
+                return false;
+
+            if (IsInteger(value) && IsInteger(defaultValue))
+                return Convert.ToDecimal(value, CultureInfo.InvariantCulture) == Convert.ToDecimal(defaultValue, CultureInfo.InvariantCulture);
+
+            if (value is double or float or decimal && defaultValue is double or float or decimal)
+            {
+                double left = Convert.ToDouble(value, CultureInfo.InvariantCulture);
+                double right = Convert.ToDouble(defaultValue, CultureInfo.InvariantCulture);
+                double tolerance = (Math.Abs(left) + Math.Abs(right) + 10.0) * 2.2204460492503131E-16;
+                return left == right || Math.Abs(left - right) < tolerance;
+            }
+
+            return false;
+        }
+
+        private static bool IsInteger(object value)
+        {
+            return Type.GetTypeCode(value.GetType()) is >= TypeCode.SByte and <= TypeCode.UInt64;
         }
 
         private static void ApplySerializationCallbacks(JsonTypeInfo typeInfo)
