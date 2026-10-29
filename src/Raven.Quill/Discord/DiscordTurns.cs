@@ -1,4 +1,3 @@
-using Discord;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Hosting;
@@ -14,22 +13,17 @@ internal sealed record DiscordMessage(
 internal sealed class DiscordTurns(
     DiscordSettings settings,
     DiscordConnection connection,
-    DiscordSdk sdk,
     DiscordOptions options,
     QuillLogger<DiscordRuntime> logger) : IPlatformTurns<DiscordMessage>
 {
-    public async Task SendAsync(DiscordMessage replyTo, string text, CancellationToken ct)
-    {
-        var channel = await connection.DmChannelAsync(replyTo.DmChannel, ct);
-        await channel.CreateAsync(sdk, text, suppressEmbeds: false, ct);
-    }
+    public Task SendAsync(DiscordMessage replyTo, string text, CancellationToken ct) =>
+        connection.CreateAsync(replyTo.DmChannel, text, suppressEmbeds: false, ct);
 
     public async Task TypingAsync(DiscordMessage replyTo, CancellationToken ct)
     {
         try
         {
-            var channel = await connection.DmChannelAsync(replyTo.DmChannel, ct);
-            await channel.TypingAsync(sdk, ct);
+            await connection.TypingAsync(replyTo.DmChannel, ct);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
@@ -39,7 +33,7 @@ internal sealed class DiscordTurns(
     }
 
     public ChannelStreamingReply CreateReply(DiscordMessage replyTo) =>
-        new DiscordStreamingReply(connection, replyTo.DmChannel, sdk, options, logger);
+        new DiscordStreamingReply(connection, replyTo.DmChannel, options, logger);
 
     public string? DescribeApiFailure(Exception e) => e is DiscordApiException apiError ? apiError.Message : null;
 
