@@ -582,7 +582,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             return fieldsToFetch.IsDistinct || query.SkipDuplicateChecking || indexType.IsMapReduce();
         }
 
-        private (SortingDataTransfer SortingData, bool HasSortByDistance) SetupSortingData(IndexQueryServerSide query, QueryBuilderParameters builderParams, IQueryMatch queryMatch, int bufferSize)
+        private (SortingDataTransfer SortingData, bool HasSortByDistance) SetupSortingData(IndexQueryServerSide query, QueryBuilderParameters builderParams, IQueryMatch queryMatch, bool writesScores, int bufferSize)
         {
             var hasOrderByDistance = query.Metadata.OrderBy is [{ OrderingType: OrderByFieldType.Distance }, ..] && _index.Configuration.CoraxIncludeSpatialDistance;
 
@@ -591,7 +591,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 sortingData = new SortingDataTransfer
                 {
-                    ScoresBuffer = builderParams.NeedsScoresBuffer()
+                    ScoresBuffer = builderParams.NeedsScoresBuffer() && writesScores
                         ? ScorePool.Rent(bufferSize)
                         : null,
                     DistancesBuffer = _index.Configuration.CoraxIncludeSpatialDistance && hasOrderByDistance
@@ -728,7 +728,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 Page page = default;
                 totalResults.Value = 0;
 
-                var (sortingData, hasOrderByDistance) = SetupSortingData(query, compileResult.QueryBuilderParams, compileResult.QueryMatch, bufferSize);
+                var (sortingData, hasOrderByDistance) = SetupSortingData(query, compileResult.QueryBuilderParams, compileResult.QueryMatch, compileResult.WritesScores, bufferSize);
 
                 // We don't need to do any processing for the query beyond counting if we are getting a count.
                 long totalResultsBefore = totalResults.Value;
@@ -1445,7 +1445,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             var ids = QueryPool.Rent(CoraxBufferSize(IndexSearcher, take, query));
 
-            var (sortingData, _) = SetupSortingData(query, compileResult.QueryBuilderParams, queryMatch, ids.Length);
+            var (sortingData, _) = SetupSortingData(query, compileResult.QueryBuilderParams, queryMatch, compileResult.WritesScores, ids.Length);
 
             // docsToLoad is the logical page budget (how many entries to yield), and NOT the buffer-rental size.
             int docsToLoad = pageSize >= int.MaxValue ? int.MaxValue : (int)pageSize;

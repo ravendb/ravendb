@@ -69,7 +69,8 @@ internal static partial class QueryPlanBuilder
         if (orderByFields is null)
         {   
             if (p.HasBoost && p.Index is { } indexForScore && // add order by score() if we have boost
-                (indexForScore.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved || indexForScore.Configuration.CoraxVectorSearchOrderByScoreAutomatically))
+                (indexForScore.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved
+                 || (p.Metadata.HasVectorSearch && indexForScore.Configuration.CoraxVectorSearchOrderByScoreAutomatically)))
             {
                 return new SortMetadataTemplate
                 {
