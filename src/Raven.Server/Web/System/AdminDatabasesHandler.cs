@@ -398,7 +398,7 @@ namespace Raven.Server.Web.System
                 var options = InitializeOptions.SkipLoadingDatabaseRecord;
 
                 if (documentDatabase is ShardedDocumentDatabase sharded)
-                    sharded.ShardingConfiguration = databaseRecord.Sharding;
+                    sharded.ShardingConfiguration = ShardingStore.CopyWithPrefixedBucketRanges(databaseRecord.Sharding);
 
                 documentDatabase.Initialize(options);
 
