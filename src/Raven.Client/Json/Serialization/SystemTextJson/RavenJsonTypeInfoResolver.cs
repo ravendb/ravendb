@@ -123,6 +123,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             AssertNotNewtonsoftLinqType(type);
             AssertNoNewtonsoftTypeConverter(type);
             AssertNoNewtonsoftReferencePreservation(type);
+            AssertNoNewtonsoftNamingStrategy(type);
             return base.GetTypeInfo(type, options);
         }
 
@@ -223,6 +224,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 if (jsonProperty != null && PreservesNewtonsoftReferences(jsonProperty) && IsWrittenAsArray(property.PropertyType) == false)
                     ThrowNewtonsoftReferencesNotSupported($"Member '{member.DeclaringType?.FullName}.{member.Name}'");
 
+                if (jsonProperty != null && HasNewtonsoftNamingStrategy(jsonProperty))
+                    ThrowNewtonsoftNamingStrategyNotSupported($"Member '{member.DeclaringType?.FullName}.{member.Name}'");
+
                 if (member.IsDefined(typeof(JsonExtensionDataAttribute), inherit: true) == false &&
                     GetNewtonsoftAttribute(member, NewtonsoftJsonExtensionDataAttributeName) != null)
                     ThrowNewtonsoftExtensionDataNotSupported(member);
@@ -271,6 +275,18 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             }
 
             return null;
+        }
+
+        private static void AssertNoNewtonsoftNamingStrategy(Type type)
+        {
+            object container = GetNewtonsoftContainerAttribute(type);
+            if (container != null && HasNewtonsoftNamingStrategy(container))
+                ThrowNewtonsoftNamingStrategyNotSupported($"Type '{type.FullName}'");
+        }
+
+        private static bool HasNewtonsoftNamingStrategy(object attribute)
+        {
+            return attribute.GetType().GetProperty("NamingStrategyType")?.GetValue(attribute) != null;
         }
 
         private static bool IsWrittenAsArray(Type type)
@@ -1300,6 +1316,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 $"{target} preserves object references with Newtonsoft.Json (IsReference or ItemIsReference). " +
                 $"{nameof(SystemTextJsonSerializationConventions)} writes every object in full and reads Newtonsoft.Json '$ref' placeholders as empty objects, " +
                 "so remove reference preservation and convert documents that contain '$ref' before switching.");
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowNewtonsoftNamingStrategyNotSupported(string target) =>
+            throw new NotSupportedException(
+                $"{target} names members with a Newtonsoft.Json naming strategy (NamingStrategyType). " +
+                $"{nameof(SystemTextJsonSerializationConventions)} requires System.Text.Json.Serialization.JsonPropertyNameAttribute, " +
+                $"or a naming policy set through {nameof(SystemTextJsonSerializationConventions)}.{nameof(SystemTextJsonSerializationConventions.CustomizeJsonSerializerOptions)}.");
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void ThrowNewtonsoftConstructorNotSupported(Type type) =>
