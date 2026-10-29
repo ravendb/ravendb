@@ -33,6 +33,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
+using Sparrow.Json.Sync;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Operations;
@@ -806,15 +807,18 @@ namespace SlowTests.Client.Subscriptions
                 var subscriptionName = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions() { Query = @"from Dogs" });
 
                 using (var commands = store.Commands())
+                using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
                     Dog dog = new Dog(DateTime.UtcNow) { Name = 1 };
-                    var str = JsonSerializer.Serialize<Dog>(dog);
-                    dynamic json = JObject.Parse(str);
-                    json.Name = "a";
-                    await commands.PutAsync("dog/1", null, json, new Dictionary<string, object>
+                    var json = System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize<Dog>(dog));
+                    json["Name"] = "a";
+                    json[Constants.Documents.Metadata.Key] = new System.Text.Json.Nodes.JsonObject
                     {
-                        {Constants.Documents.Metadata.Collection, "Dogs"}
-                    });
+                        [Constants.Documents.Metadata.Collection] = "Dogs"
+                    };
+
+                    using (var document = context.Sync.ReadForMemory(json.ToJsonString(), "dog/1"))
+                        await commands.PutAsync("dog/1", null, document);
                 }
 
                 var subscription = store.Subscriptions.GetSubscriptionWorker<Dog>(subscriptionName);
