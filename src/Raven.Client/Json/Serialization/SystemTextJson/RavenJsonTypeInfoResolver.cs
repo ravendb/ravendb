@@ -124,6 +124,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             AssertNoNewtonsoftTypeConverter(type);
             AssertNoNewtonsoftReferencePreservation(type);
             AssertNoNewtonsoftNamingStrategy(type);
+            AssertNoNewtonsoftItemConverter(type);
             return base.GetTypeInfo(type, options);
         }
 
@@ -226,6 +227,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
                 if (jsonProperty != null && HasNewtonsoftNamingStrategy(jsonProperty))
                     ThrowNewtonsoftNamingStrategyNotSupported($"Member '{member.DeclaringType?.FullName}.{member.Name}'");
+
+                if (jsonProperty != null)
+                    AssertNewtonsoftItemConverterIsTranslated(jsonProperty, property.PropertyType, $"Member '{member.DeclaringType?.FullName}.{member.Name}'");
 
                 if (member.IsDefined(typeof(JsonExtensionDataAttribute), inherit: true) == false &&
                     GetNewtonsoftAttribute(member, NewtonsoftJsonExtensionDataAttributeName) != null)
@@ -352,15 +356,64 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private bool IsTranslatedConverter(object converterAttribute, Type valueType)
         {
-            Type enumType = Nullable.GetUnderlyingType(valueType) ?? valueType;
-            if (enumType.IsEnum == false || _conventions.Conventions?.SaveEnumsAsIntegers == true)
+            Type attributeType = converterAttribute.GetType();
+            return IsTranslatedConverter(
+                (Type)attributeType.GetProperty("ConverterType")?.GetValue(converterAttribute),
+                (object[])attributeType.GetProperty("ConverterParameters")?.GetValue(converterAttribute),
+                valueType);
+        }
+
+        private bool IsTranslatedConverter(Type converterType, object[] converterParameters, Type valueType)
+        {
+            Type enumType = valueType == null ? null : Nullable.GetUnderlyingType(valueType) ?? valueType;
+            if (enumType is not { IsEnum: true } || _conventions.Conventions?.SaveEnumsAsIntegers == true)
                 return false;
 
-            Type attributeType = converterAttribute.GetType();
-            var converterType = (Type)attributeType.GetProperty("ConverterType")?.GetValue(converterAttribute);
-            var converterParameters = (object[])attributeType.GetProperty("ConverterParameters")?.GetValue(converterAttribute);
-
             return converterType?.FullName == NewtonsoftStringEnumConverterName && (converterParameters == null || converterParameters.Length == 0);
+        }
+
+        private void AssertNoNewtonsoftItemConverter(Type type)
+        {
+            object container = GetNewtonsoftContainerAttribute(type);
+            if (container != null)
+                AssertNewtonsoftItemConverterIsTranslated(container, type, $"Type '{type.FullName}'");
+        }
+
+        private void AssertNewtonsoftItemConverterIsTranslated(object attribute, Type collectionType, string target)
+        {
+            Type attributeType = attribute.GetType();
+            var converterType = (Type)attributeType.GetProperty("ItemConverterType")?.GetValue(attribute);
+            if (converterType == null)
+                return;
+
+            var converterParameters = (object[])attributeType.GetProperty("ItemConverterParameters")?.GetValue(attribute);
+            if (IsTranslatedConverter(converterType, converterParameters, GetItemType(collectionType)) == false)
+                ThrowNewtonsoftItemConverterNotSupported(target);
+        }
+
+        private static Type GetItemType(Type type)
+        {
+            if (type == typeof(string))
+                return null;
+
+            if (type.IsArray)
+                return type.GetElementType();
+
+            Type itemType = null;
+            foreach (Type candidate in type.GetInterfaces().Prepend(type))
+            {
+                if (candidate.IsGenericType == false)
+                    continue;
+
+                Type definition = candidate.GetGenericTypeDefinition();
+                if (definition == typeof(IDictionary<,>) || definition == typeof(IReadOnlyDictionary<,>))
+                    return candidate.GetGenericArguments()[1];
+
+                if (definition == typeof(IEnumerable<>))
+                    itemType = candidate.GetGenericArguments()[0];
+            }
+
+            return itemType;
         }
 
         private static object GetNewtonsoftAttribute(ICustomAttributeProvider provider, string attributeName)
@@ -1323,6 +1376,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 $"{target} names members with a Newtonsoft.Json naming strategy (NamingStrategyType). " +
                 $"{nameof(SystemTextJsonSerializationConventions)} requires System.Text.Json.Serialization.JsonPropertyNameAttribute, " +
                 $"or a naming policy set through {nameof(SystemTextJsonSerializationConventions)}.{nameof(SystemTextJsonSerializationConventions.CustomizeJsonSerializerOptions)}.");
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowNewtonsoftItemConverterNotSupported(string target) =>
+            throw new NotSupportedException(
+                $"{target} converts its items with a Newtonsoft.Json converter (ItemConverterType). " +
+                $"{nameof(SystemTextJsonSerializationConventions)} requires a System.Text.Json converter for the item type, " +
+                $"registered through {nameof(SystemTextJsonSerializationConventions)}.{nameof(SystemTextJsonSerializationConventions.CustomizeJsonSerializerOptions)}.");
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void ThrowNewtonsoftConstructorNotSupported(Type type) =>
