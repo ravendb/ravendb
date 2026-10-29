@@ -13,14 +13,10 @@ public abstract class AbstractAiSettings : IDynamicJson
     /// <summary>
     /// Validates provider-specific fields, adding messages to the supplied error list.
     /// </summary>
-    public abstract void ValidateFields(List<string> errors);
-
-    internal void Validate(List<string> errors)
+    public virtual void ValidateFields(List<string> errors)
     {
         if (EmbeddingsMaxConcurrentBatches is <= 0)
             errors.Add($"Value of `{nameof(EmbeddingsMaxConcurrentBatches)}` field must be a positive number.");
-
-        ValidateFields(errors);
     }
 
     /// <summary>
