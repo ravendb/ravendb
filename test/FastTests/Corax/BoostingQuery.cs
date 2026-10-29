@@ -92,6 +92,36 @@ namespace FastTests.Corax
         }
 
         [RavenTheory(RavenTestCategory.Corax)]
+        [InlineData(BitmapAndFillMode.Off)]
+        [InlineData(BitmapAndFillMode.Force)]
+        public void AndUnderOrScoresOnlyItsOwnMatches(BitmapAndFillMode bitmapAndFillMode)
+        {
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = "list/1", Content1 = 1, Content2 = 1});
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = "list/2", Content1 = 1, Content2 = 2});
+            longList.Add(new IndexSingleNumericalEntry<long, long> {Id = "list/3", Content1 = 2, Content2 = 3});
+
+            IndexEntries();
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
+            var and = searcher.And(searcher.TermQuery("Content1", "1", hasBoost: true), searcher.TermQuery("Content2", "1", hasBoost: true));
+            var withAnd = Scores(searcher, searcher.Or(and, searcher.TermQuery("Content2", "2", hasBoost: true)));
+            var withoutAnd = Scores(searcher, searcher.TermQuery("Content2", "2", hasBoost: true));
+
+            Assert.Equal(withoutAnd["list/2"], withAnd["list/2"]);
+        }
+
+        private static Dictionary<string, float> Scores(IndexSearcher searcher, IQueryMatch match)
+        {
+            var ids = new long[16];
+            var read = match.Fill(ids);
+            Array.Sort(ids, 0, read);
+            var scores = new float[read];
+            match.Score(ids.AsSpan(0, read), scores, 1f);
+
+            var termsReader = searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName());
+            return Enumerable.Range(0, read).ToDictionary(i => termsReader.GetTermFor(ids[i]), i => scores[i]);
+        }
+
+        [RavenTheory(RavenTestCategory.Corax)]
         [InlineData(256, 29)]
         [InlineData(512, 29)]
         [InlineData(1024, 29)]

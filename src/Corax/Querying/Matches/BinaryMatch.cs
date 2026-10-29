@@ -6,6 +6,8 @@ using Corax.Querying.Matches.Meta;
 using Corax.Utils;
 using Sparrow.Server;
 using Sparrow.Server.Collections;
+using Sparrow.Server.Utils;
+using Voron.Util;
 
 namespace Corax.Querying.Matches
 {
@@ -37,7 +39,11 @@ namespace Corax.Querying.Matches
         private GrowableBitArray _innerBitmap;
         private GrowableBitArray _outerBitmap;
         private long _lastReturnedId;
+        private long _returnedMatches;
         private bool _finished;
+
+        private bool _returnedIdsTracked;
+        private ContextBoundNativeList<long> _returnedIds;
 
         public SkipSortingResult AttemptToSkipSorting() => _skipSortingResult;
 
@@ -78,7 +84,10 @@ namespace Corax.Querying.Matches
             _innerBitmap = default;
             _outerBitmap = default;
             _lastReturnedId = 0;
+            _returnedMatches = 0;
             _finished = false;
+            _returnedIdsTracked = false;
+            _returnedIds = new ContextBoundNativeList<long>(_ctx);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -97,17 +106,104 @@ namespace Corax.Querying.Matches
             if (results > 0 && _fillCallCounter++ > 0)
                 _skipSortingResult = SkipSortingResult.SortingIsRequired;
 
+            TrackReturnedIds(buffer[..results]);
             return results;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int AndWith(Span<long> buffer, int matches)
         {
-            return _andWithFunc(ref this, buffer, matches);
+            var results = _andWithFunc(ref this, buffer, matches);
+            TrackReturnedIds(buffer[..results]);
+            return results;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void TrackReturnedIds(Span<long> ids)
+        {
+            if (typeof(TBinaryOperationMarker) != typeof(BinaryMatch.And) || _materialized || IsBoosting == false)
+                return;
+
+            _returnedIdsTracked = true;
+            if (ids.IsEmpty == false)
+                _returnedIds.AddRange(ids);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Score(Span<long> matches, Span<float> scores, float boostFactor)
+        {
+            // Empty match, nothing to score.
+            if (_totalResults == 0 && _confidence == QueryCountConfidence.High)
+                return;
+
+            // The children of an AND might have seen more documents than the AND returned. We must exclude the ones it did not return.
+            if (typeof(TBinaryOperationMarker) == typeof(BinaryMatch.And) && _materialized && IsBoosting)
+            {
+                if (_returnedMatches > 0)
+                {
+                    using var own = new BinaryMatchScoringBuffer(_ctx, (int)Math.Min(matches.Length, _returnedMatches));
+                    for (var i = 0; i < matches.Length; i++)
+                    {
+                        if (IsOwnMatch(matches[i]))
+                            own.Add(matches[i], i);
+                    }
+
+                    ScoreSides(own.Matches, own.Scores, boostFactor);
+                    own.AddScoresTo(scores);
+                }
+
+                _innerBitmap.Dispose();
+                _outerBitmap.Dispose();
+                return;
+            }
+
+            if (typeof(TBinaryOperationMarker) == typeof(BinaryMatch.And) && _returnedIdsTracked && IsBoosting)
+            {
+                if (_returnedIds.Count > 0 && matches.IsEmpty == false)
+                    ScoreReturnedIds(matches, scores, boostFactor);
+
+                _returnedIds.Dispose();
+                return;
+            }
+
+            ScoreSides(matches, scores, boostFactor);
+        }
+
+        private bool IsOwnMatch(long id) => _innerBitmap.Contains(id) && _outerBitmap.Contains(id);
+
+        private void ScoreReturnedIds(Span<long> matches, Span<float> scores, float boostFactor)
+        {
+            Debug.Assert(IsSorted(matches), "Matches passed to Score are not sorted by id.");
+
+            var returned = _returnedIds.ToSpan();
+            if (IsSorted(returned) == false)
+                returned = returned[..Sorting.SortAndRemoveDuplicates(returned)];
+
+            using var own = new BinaryMatchScoringBuffer(_ctx, Math.Min(matches.Length, returned.Length));
+            var position = 0;
+            for (var i = 0; i < matches.Length; i++)
+            {
+                position = Bm25Relevance.FindLowerBound(returned, position, matches[i], gallop: true);
+                if (position < returned.Length && returned[position] == matches[i])
+                    own.Add(matches[i], i);
+            }
+
+            ScoreSides(own.Matches, own.Scores, boostFactor);
+            own.AddScoresTo(scores);
+        }
+
+        private static bool IsSorted(Span<long> ids)
+        {
+            for (var i = 1; i < ids.Length; i++)
+            {
+                if (ids[i - 1] > ids[i])
+                    return false;
+            }
+
+            return true;
+        }
+
+        private void ScoreSides(Span<long> matches, Span<float> scores, float boostFactor)
         {
             // Nothing to do if there is no boosting happening at this level.
             // Remember: When you're sorting by score and primitives can be boosted, those should be true!
@@ -116,7 +212,7 @@ namespace Corax.Querying.Matches
             if (innerBoosting == false && outerBoosting == false)
                 return;
 
-            // From now on we have boosting happening somewhere in this chain. 
+            // From now on we have boosting happening somewhere in this chain.
 
             // If there are two chains we need to combine them.
             if (innerBoosting == true && outerBoosting == true)
@@ -126,7 +222,7 @@ namespace Corax.Querying.Matches
                 return;
             }
 
-            // From now on, only a single requires score calculations. 
+            // From now on, only a single requires score calculations.
 
             if (innerBoosting == true)
             {

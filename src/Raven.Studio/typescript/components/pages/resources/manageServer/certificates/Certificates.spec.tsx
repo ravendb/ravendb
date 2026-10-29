@@ -196,7 +196,7 @@ describe("Certificates", () => {
             await fireClick(screen.getByRole("button", { name: selectors.manageUserAccessButton }));
             await fireClick(await screen.findByText(selectors.generateClientCertItem));
             await user.type(await screen.findByRole("textbox", { name: selectors.nameInput }), "new-client");
-            await fireClick(screen.getByRole("button", { name: selectors.generateCertButton }));
+            await user.click(screen.getByRole("button", { name: selectors.generateCertButton }));
             await fireClick(await screen.findByRole("button", { name: selectors.saveAnywayButton }));
 
             expect(await screen.findByText(selectors.readyDialogTitle)).toBeInTheDocument();

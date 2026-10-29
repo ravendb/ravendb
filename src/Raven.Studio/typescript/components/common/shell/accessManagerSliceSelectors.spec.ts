@@ -1,4 +1,4 @@
-import { createStoreConfiguration } from "components/store";
+import { createTestStore } from "test/createTestStore";
 import { accessManagerActions } from "components/common/shell/accessManagerSlice";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { databasesSlice } from "components/common/shell/databasesSlice";
@@ -15,7 +15,7 @@ function createStoreWithAccess({
     securityClearance = "ValidUser",
     activeDatabaseName = null,
 }: CreateStoreArgs) {
-    const store = createStoreConfiguration();
+    const store = createTestStore();
     store.dispatch(accessManagerActions.onDatabaseAccessLoaded(databaseAccess));
     store.dispatch(accessManagerActions.onSecurityClearanceSet(securityClearance));
     if (activeDatabaseName) {

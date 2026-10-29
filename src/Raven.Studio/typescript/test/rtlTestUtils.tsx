@@ -17,7 +17,7 @@ import * as byNameQueries from "./byNameQueries";
 import * as byClassNameQueries from "./byClassNameQueries";
 import { ChangesProvider } from "hooks/useChanges";
 import { mockHooks } from "test/mocks/hooks/MockHooks";
-import { createStoreConfiguration } from "components/store";
+import { createTestStore } from "test/createTestStore";
 import { Provider as ReduxProvider } from "react-redux";
 import { setEffectiveTestStore } from "components/storeCompat";
 import { DirtyFlagProvider } from "components/hooks/useDirtyFlag";
@@ -83,15 +83,13 @@ async function fillInput(element: HTMLElement, value: string) {
 
 const AllProviders = () => MockProviders;
 
-const JEST_WORKER_WARN_AFTER_MS = 1000;
-
 interface MockProvidersProps {
     children: React.ReactNode;
     isSplitViewDisabled?: boolean;
 }
 
 export function MockProviders({ children, isSplitViewDisabled }: MockProvidersProps) {
-    const [store] = useState(() => createStoreConfiguration({ devChecksWarnAfterMs: JEST_WORKER_WARN_AFTER_MS }));
+    const [store] = useState(createTestStore);
 
     setEffectiveTestStore(store);
 

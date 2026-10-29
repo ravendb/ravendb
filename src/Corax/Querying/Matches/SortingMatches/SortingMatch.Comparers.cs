@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
 using Corax.Mappings;
 using Corax.Utils;
 using Corax.Utils.Spatial;
@@ -92,16 +93,20 @@ unsafe partial struct SortingMatch<TInner>
             // We perform the scoring process. 
             match._inner.Score(batchResults, readScores, 1f);
 
-            // If we need to do documents boosting then we need to modify the based on documents stored score. 
-            if (match._searcher.DocumentsAreBoosted)
-            {
-                // We get the boosting tree and go to check every document. 
-                BoostDocuments(match, batchResults, readScores);
-            }
+            match._searcher.BoostDocuments(batchResults, readScores,
+                sortedById: match._inner is not (VectorSearchMatch { ReturnsResultsByDistance: true } or MultiVectorSearchMatch { ReturnsResultsByDistance: true }));
             
             // Note! readScores & indexes are aliased and same as batchTermIds
             var heapSize = Math.Min(match._take, batchResults.Length);
             heapSize = heapSize < 0 ? batchResults.Length : heapSize;
+
+            // The heap is cheaper only while it keeps a small part of the matches.
+            if (heapSize > batchResults.Length / 8)
+            {
+                SortAll(ref match, batchResults, batchTermIds, readScores, heapSize, descending);
+                return;
+            }
+
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[(batchTermIds.Length)..];
             using var _ = llt.Allocator.Allocate(heapSize, out Span<float> terms);
             var heapSorter = HeapSorterBuilder.BuildSingleNumericalSorter(indexes.Slice(0, heapSize), terms, descending == false, match.NullIsSmallest);
@@ -116,24 +121,71 @@ unsafe partial struct SortingMatch<TInner>
             heapSorter.Fill(batchResults, ref match._results, ref match._scoresResults, readScores);
         }
 
-        private static void BoostDocuments(SortingMatch<TInner> match, Span<long> batchResults, Span<float> readScores)
+        private static void SortAll(ref SortingMatch<TInner> match, Span<long> batchResults, Span<long> keys, Span<float> scores, int take, bool descending)
         {
-            var tree = match._searcher.GetDocumentBoostTree();
-            if (tree is { NumberOfEntries: > 0 })
+            var direction = descending ? 0 : -1;
+            var i = 0;
+            if (AdvInstructionSet.IsAcceleratedVector512)
             {
-                // We are going to read from the boosting tree all the boosting values and apply that to the scores array.
-                ref var scoresRef = ref MemoryMarshal.GetReference(readScores);
-                ref var matchesRef = ref MemoryMarshal.GetReference(batchResults);
-                for (int idx = 0; idx < batchResults.Length; idx++)
+                ref var scoresRef = ref MemoryMarshal.GetReference(scores);
+                ref var keysRef = ref MemoryMarshal.GetReference(keys);
+                var directions = Vector512.Create(direction);
+                var positions = Vector512<long>.Indices;
+                for (; i + Vector512<float>.Count <= scores.Length; i += Vector512<float>.Count)
                 {
-                    var ptr = (float*)tree.ReadPtr(Unsafe.Add(ref matchesRef, idx), out var _);
-                    if (ptr == null)
-                        continue;
-
-                    ref var scoresIdx = ref Unsafe.Add(ref scoresRef, idx);
-                    scoresIdx *= *ptr;
+                    var (lower, upper) = PackScores(Vector512.LoadUnsafe(ref Unsafe.Add(ref scoresRef, i)), directions, positions);
+                    lower.StoreUnsafe(ref Unsafe.Add(ref keysRef, i));
+                    upper.StoreUnsafe(ref Unsafe.Add(ref keysRef, i + Vector512<long>.Count));
+                    positions += Vector512.Create((long)Vector512<float>.Count);
                 }
             }
+
+            for (; i < scores.Length; i++)
+                keys[i] = PackScore(scores[i], i, direction);
+
+            Sort.Run(keys);
+
+
+            var exposeScores = match._scoresResults.HasContext;
+            match._results.EnsureCapacityFor(take);
+            if (exposeScores)
+                match._scoresResults.EnsureCapacityFor(take);
+
+            foreach (var key in keys[..take])
+            {
+                var index = (int)key;
+                match._results.AddUnsafe(batchResults[index]);
+                if (exposeScores)
+                    match._scoresResults.AddUnsafe(scores[index]);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static long PackScore(float score, int position, int direction)
+        {
+            int key;
+            if (score > 0)
+                key = BitConverter.SingleToInt32Bits(score);
+            else if (float.IsNaN(score))
+                key = int.MinValue;
+            else if (score == 0)
+                key = 0;
+            else
+                key = BitConverter.SingleToInt32Bits(score) ^ int.MaxValue;
+
+            return ((long)(key ^ direction) << 32) | (uint)position;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static (Vector512<long> Lower, Vector512<long> Upper) PackScores(Vector512<float> scores, Vector512<int> direction, Vector512<long> positions)
+        {
+            var bits = scores.AsInt32();
+            var keys = bits ^ (Vector512.ShiftRightArithmetic(bits, 31) & Vector512.Create(int.MaxValue));
+            keys = Vector512.ConditionalSelect(Vector512.Equals(scores, Vector512<float>.Zero).AsInt32(), Vector512<int>.Zero, keys);
+            keys = Vector512.ConditionalSelect(Vector512.Equals(scores, scores).AsInt32(), keys, Vector512.Create(int.MinValue));
+
+            var (lower, upper) = Vector512.Widen(keys ^ direction);
+            return (Vector512.ShiftLeft(lower, 32) | positions, Vector512.ShiftLeft(upper, 32) | (positions + Vector512.Create((long)Vector512<long>.Count)));
         }
 
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
