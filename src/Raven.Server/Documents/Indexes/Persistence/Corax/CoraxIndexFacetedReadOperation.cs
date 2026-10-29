@@ -41,6 +41,8 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         {
             MaxFacetQueryFilterSizeInBytes = index.Configuration.MaxFacetQueryFilterSize.GetValue(SizeUnit.Bytes),
             PlanCache = (index.IndexPersistence as CoraxIndexPersistence)?.SharedPlanCache ?? new global::Corax.Querying.Planning.PlanCache(),
+            AssumeMultipleTermsInEveryField = index.Definition.HasDynamicFields
+                                              && IndexDefinitionBaseServerSide.IndexVersion.IsPerEntryMultipleTermsMarkerSupported(index.Definition.Version) == false,
         };
     }
 

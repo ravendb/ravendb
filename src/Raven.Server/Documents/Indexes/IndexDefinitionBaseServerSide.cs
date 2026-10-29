@@ -224,6 +224,7 @@ namespace Raven.Server.Documents.Indexes
             public const long CoraxCharAsString_72 = 72_005; // RavenDB-27596
 
             public const long Base80Version = 80_000;
+            public const long CoraxPerEntryMultipleTermsMarker_80 = Base80Version; // RavenDB-27565
 
             // RavenDB-25281: Corax rejects a compound field whose first source field is tokenized/non-keyword
             // (it cannot produce the order-preserving prefix a compound field needs). Gated by version so indexes
@@ -295,7 +296,7 @@ namespace Raven.Server.Documents.Indexes
 
             public static bool IsPerEntryMultipleTermsMarkerSupported(long indexVersion)
             {
-                return indexVersion >= CoraxPerEntryMultipleTermsMarker_72;
+                return indexVersion >= CoraxPerEntryMultipleTermsMarker_80;
             }
 
             public static bool IsCoraxCharAsStringSupported(long indexVersion)

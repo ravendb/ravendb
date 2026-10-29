@@ -110,6 +110,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 MaxFacetQueryFilterSizeInBytes = index.Configuration.MaxFacetQueryFilterSize.GetValue(SizeUnit.Bytes),
                 PlanCache = (index.IndexPersistence as CoraxIndexPersistence)?.SharedPlanCache ?? new PlanCache(),
+                AssumeMultipleTermsInEveryField = index.Definition.HasDynamicFields
+                                                  && IndexDefinitionBaseServerSide.IndexVersion.IsPerEntryMultipleTermsMarkerSupported(index.Definition.Version) == false,
             };
 
             // Attach the per-field HNSW node caches from this transaction's client state and the current

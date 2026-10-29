@@ -123,6 +123,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private bool _nonExistingPostingListsTreeLoaded;
 
     public long MaxFacetQueryFilterSizeInBytes = 128 * 1024 * 1024;
+
+    public bool AssumeMultipleTermsInEveryField;
  
     public bool DocumentsAreBoosted => GetDocumentBoostTree().NumberOfEntries > 0;
 
@@ -737,6 +739,9 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public bool HasMultipleTermsInField(string fieldName)
     {
+        if (AssumeMultipleTermsInEveryField)
+            return true;
+
         if (_fieldsWithMultipleTerms is { } snapshot)
             return snapshot.Contains(fieldName);
 
@@ -757,6 +762,9 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private Dictionary<Slice, bool> _hasMultipleTermsInFieldCache;
     private bool HasMultipleTermsInField(Slice fieldName)
     {
+        if (AssumeMultipleTermsInEveryField)
+            return true;
+
         if (_multipleTermsInField is null)
             return false;
 
