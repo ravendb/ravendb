@@ -14,9 +14,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 {
     internal static class TypeNameConverter
     {
-        private const string TypePropertyName = "$type";
+        internal const string TypePropertyName = "$type";
 
-        private const string ValuesPropertyName = "$values";
+        internal const string ValuesPropertyName = "$values";
 
         private static readonly ConcurrentDictionary<Type, string> _typeNames = new();
 

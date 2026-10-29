@@ -964,6 +964,101 @@ namespace FastTests.Client
             }
         }
 
+        private class PartialOrder
+        {
+            public string Name { get; set; }
+
+            public PartialAddress ShipTo { get; set; }
+
+            public List<PartialLine> Lines { get; set; }
+
+            public Dictionary<string, PartialLine> LinesByKey { get; set; }
+        }
+
+        private class PartialAddress
+        {
+            public PartialLocation Location { get; set; }
+        }
+
+        private class PartialLocation
+        {
+            public double Latitude { get; set; }
+        }
+
+        private class PartialLine
+        {
+            public string Product { get; set; }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task SessionPreservesNestedPropertiesMissingFromTheModel(bool useSystemTextJson)
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.Serialization = useSystemTextJson
+                    ? new SystemTextJsonSerializationConventions()
+                    : new NewtonsoftJsonSerializationConventions()
+            });
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Advanced.Defer(new PutCommandData("orders/1", null, new DynamicJsonValue
+                {
+                    ["Name"] = "order",
+                    ["Unmapped"] = "top",
+                    ["ShipTo"] = new DynamicJsonValue
+                    {
+                        ["City"] = "Frankfurt",
+                        ["Location"] = new DynamicJsonValue { ["Latitude"] = 52.502065599999987, ["Extra"] = "location" }
+                    },
+                    ["Lines"] = new DynamicJsonArray
+                    {
+                        new DynamicJsonValue { ["Product"] = "p1", ["Discount"] = "d1" },
+                        new DynamicJsonValue { ["Product"] = "p2", ["Discount"] = "d2" }
+                    },
+                    ["LinesByKey"] = new DynamicJsonValue
+                    {
+                        ["a"] = new DynamicJsonValue { ["Product"] = "p3", ["Discount"] = "d3" }
+                    },
+                    [Raven.Client.Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    {
+                        [Raven.Client.Constants.Documents.Metadata.Collection] = "PartialOrders"
+                    }
+                }));
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order = await session.LoadAsync<PartialOrder>("orders/1");
+                order.ShipTo.Location.Latitude = order.ShipTo.Location.Latitude;
+                Assert.Empty(session.Advanced.WhatChanged());
+
+                order.Name = "changed";
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var raw = await session.LoadAsync<BlittableJsonReaderObject>("orders/1");
+                Assert.Equal("changed", raw["Name"].ToString());
+                Assert.Equal("top", raw["Unmapped"].ToString());
+
+                var shipTo = (BlittableJsonReaderObject)raw["ShipTo"];
+                Assert.Equal("Frankfurt", shipTo["City"].ToString());
+                Assert.Equal("location", ((BlittableJsonReaderObject)shipTo["Location"])["Extra"].ToString());
+
+                var lines = (BlittableJsonReaderArray)raw["Lines"];
+                Assert.Equal("d1", ((BlittableJsonReaderObject)lines[0])["Discount"].ToString());
+                Assert.Equal("d2", ((BlittableJsonReaderObject)lines[1])["Discount"].ToString());
+
+                var linesByKey = (BlittableJsonReaderObject)raw["LinesByKey"];
+                Assert.Equal("d3", ((BlittableJsonReaderObject)linesByKey["a"])["Discount"].ToString());
+            }
+        }
+
         [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Querying)]
         public void VectorSearchFieldNamesFollowStoreConventions()
         {

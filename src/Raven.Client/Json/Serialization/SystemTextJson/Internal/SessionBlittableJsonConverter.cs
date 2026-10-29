@@ -4,7 +4,6 @@ using System.IO;
 using Raven.Client.Documents.Session;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 {
@@ -134,17 +133,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             using (var writer = new SystemTextJsonBlittableWriter(_session.Context, documentInfo))
                 document = ToBlittableInternal(entity, _session.Conventions, _session.Context, _session.JsonSerializer, writer);
 
-            if (MissingProperties != null && MissingProperties.TryGetValue(entity, out var missingProps) && missingProps.Count > 0)
-            {
-                if (document.Modifications == null)
-                    document.Modifications = new DynamicJsonValue(document);
-
-                foreach (var kvp in missingProps)
-                    document.Modifications[(string)kvp.Key] = kvp.Value;
-
-                using (var old = document)
-                    document = _session.Context.ReadObject(document, "restore/missingProperties");
-            }
+            document = RestoreMissingProperties(entity, document, _session.Context);
 
             if (documentInfo != null)
                 _session.OnAfterConversionToDocumentInvoke(documentInfo.Id, entity, ref document);
