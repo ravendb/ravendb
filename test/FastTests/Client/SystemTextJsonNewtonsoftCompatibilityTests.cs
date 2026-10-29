@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Dynamic;
@@ -1643,11 +1644,48 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         {
             JObject expectedJson = JObject.Parse(expected.ToString());
             JObject actualJson = JObject.Parse(actual.ToString());
-            ((JObject)expectedJson["Error"]).Remove(nameof(Exception.Data));
-            ((JObject)actualJson["Error"]).Remove(nameof(Exception.Data));
             Assert.True(JToken.DeepEquals(expectedJson, actualJson), $"Expected {expectedJson} but got {actualJson}");
             Assert.Null(actualJson["Error"]["TargetSite"]);
             Assert.Equal("failed", (string)actualJson["Error"]["Message"]);
+        }
+    }
+
+    private class HoldsUntypedDictionaries
+    {
+        public Hashtable Table { get; set; }
+
+        public IDictionary Untyped { get; set; }
+
+        public Dictionary<object, object> ObjectKeys { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonWritesAndReadsNonGenericDictionariesLikeNewtonsoft()
+    {
+        var value = new HoldsUntypedDictionaries
+        {
+            Table = new Hashtable { ["text"] = "value", ["person"] = new Person { Name = "Oren" } },
+            Untyped = new SortedList { ["person"] = new Person { Name = "Ayende" } },
+            ObjectKeys = new Dictionary<object, object> { [1] = "one", ["two"] = new Person { Name = "Two" } }
+        };
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(value, context))
+        using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(value, context))
+        {
+            JObject expectedJson = JObject.Parse(expected.ToString());
+            JObject actualJson = JObject.Parse(actual.ToString());
+            Assert.True(JToken.DeepEquals(expectedJson, actualJson), $"Expected {expectedJson} but got {actualJson}");
+
+            var expectedRead = Newtonsoft.Serialization.DefaultConverter.FromBlittable<HoldsUntypedDictionaries>(expected);
+            var actualRead = SystemTextJson.Serialization.DefaultConverter.FromBlittable<HoldsUntypedDictionaries>(expected);
+
+            Assert.Equal("value", actualRead.Table["text"]);
+            Assert.Equal("Oren", Assert.IsType<Person>(actualRead.Table["person"]).Name);
+            Assert.Equal(expectedRead.Untyped.GetType(), actualRead.Untyped.GetType());
+            Assert.Equal("Ayende", Assert.IsType<Person>(actualRead.Untyped["person"]).Name);
+            Assert.Equal(expectedRead.ObjectKeys.Keys.OrderBy(k => k.ToString()), actualRead.ObjectKeys.Keys.OrderBy(k => k.ToString()));
+            Assert.Equal("Two", Assert.IsType<Person>(actualRead.ObjectKeys["two"]).Name);
         }
     }
 
