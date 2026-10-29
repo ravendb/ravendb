@@ -91,7 +91,7 @@ public sealed class AiConnectionString : ConnectionString
         var configuredSettings = allSettings.Where(s => s != null).ToArray();
 
         foreach (var setting in configuredSettings)
-            setting.Validate(errors);
+            setting.ValidateFields(errors);
 
         switch (configuredSettings.Length)
         {
