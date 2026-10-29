@@ -35,8 +35,9 @@ public class RavenDB_25410(ITestOutputHelper output) : StorageTest(output)
         while (queryToRun.Fill(ids.Slice(offset, 2)) is var read and > 0)
             offset += read;
         Assert.Equal(16, offset);
-        
-        queryToRun.Score(ids, scores, 1);
+
+        ids.Slice(0, offset).Sort();
+        queryToRun.Score(ids.Slice(0, offset), scores.Slice(0, offset), 1);
         Assert.Equal(ids.Slice(0, 16).ToArray().Select(x => (float)x), scores.Slice(0, 16).ToArray());
     }
     

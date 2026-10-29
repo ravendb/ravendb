@@ -94,7 +94,7 @@ public static partial class CoraxQueryBuilder
             ? QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, builderParameters.QueryParameters, me.Arguments[0], metadata)
             : metadata.GetVectorFieldName(me, builderParameters.QueryParameters);
 
-        var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(builderParameters, fieldName, hasBoost: builderParameters.HasBoost);
+        var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(builderParameters, fieldName, hasBoost: builderParameters.QueryHasBoost);
         QueryExpression srcVector = me.Arguments[1];
 
         if (srcVector is MethodExpression methodValue) // embedding.forDoc(docId) ...

@@ -20,10 +20,10 @@
     <Project Path="bench/Indexing.Benchmark/Indexing.Benchmark.csproj">
       <BuildType Solution="Validate|*" Project="Release" />
     </Project>
-    <Project Path="bench/Micro.Benchmark/Micro.Benchmark.csproj">
+    <Project Path="bench/Integration.Benchmark/Integration.Benchmark.csproj">
       <BuildType Solution="Validate|*" Project="Release" />
     </Project>
-    <Project Path="bench/RequestHandler.Benchmark/RequestHandler.Benchmark.csproj">
+    <Project Path="bench/Micro.Benchmark/Micro.Benchmark.csproj">
       <BuildType Solution="Validate|*" Project="Release" />
     </Project>
     <Project Path="bench/ServerStoreTxMerger.Benchmark/ServerStoreTxMerger.Benchmark.csproj">
