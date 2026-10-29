@@ -148,9 +148,9 @@ export default function RevisionsBinCleaner() {
                                                             !formValues.isMinimumEntriesAgeToKeepEnabled
                                                         }
                                                         placeholder={{
-                                                            days: "Default (30)",
-                                                            hours: "Default (0)",
-                                                            minutes: "Default (0)",
+                                                            days: "0",
+                                                            hours: "0",
+                                                            minutes: "0",
                                                         }}
                                                         name="minimumEntriesAgeToKeep"
                                                         showDays
@@ -161,6 +161,8 @@ export default function RevisionsBinCleaner() {
                                         <OverridableField
                                             control={control}
                                             overrideName="isCleanerFrequencyInSecEnabled"
+                                            valueName="cleanerFrequencyInSec"
+                                            setValue={setValue}
                                             label="Cleaner frequency"
                                             disabled={
                                                 !hasDatabaseAdminAccess ||

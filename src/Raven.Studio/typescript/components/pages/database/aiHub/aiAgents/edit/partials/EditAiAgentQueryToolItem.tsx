@@ -180,36 +180,38 @@ export default function EditAiAgentQueryToolItem({ index, remove, save, edit }: 
                             <OverridableField
                                 control={control}
                                 overrideName={`queries.${index}.isAllowModelQueriesOverride`}
-                                resetOnDisable={{ setValue, valueName: `queries.${index}.isAllowModelQueries` }}
+                                valueName={`queries.${index}.isAllowModelQueries`}
+                                setValue={setValue}
                                 label="Allow model queries"
                                 tooltip={<AllowModelQueriesTooltip />}
                             >
-                                {({ isOverridden, isDisabled, controlId }) => (
+                                {({ isDisabled, controlId }) => (
                                     <FormSelect
                                         control={control}
                                         name={`queries.${index}.isAllowModelQueries`}
                                         options={isAllowModelQueriesOptions}
                                         isDisabled={isDisabled}
                                         inputId={controlId}
-                                        placeholder={isOverridden ? "Select True or False" : "Default (True)"}
+                                        placeholder="Default (True)"
                                     />
                                 )}
                             </OverridableField>
                             <OverridableField
                                 control={control}
                                 overrideName={`queries.${index}.isAddToInitialContextOverride`}
-                                resetOnDisable={{ setValue, valueName: `queries.${index}.isAddToInitialContext` }}
+                                valueName={`queries.${index}.isAddToInitialContext`}
+                                setValue={setValue}
                                 label="Add to initial context"
                                 tooltip={<AddToInitialContextTooltip />}
                             >
-                                {({ isOverridden, isDisabled, controlId }) => (
+                                {({ isDisabled, controlId }) => (
                                     <FormSelect
                                         control={control}
                                         name={`queries.${index}.isAddToInitialContext`}
                                         options={isAddToInitialContextOptions}
                                         isDisabled={isDisabled}
                                         inputId={controlId}
-                                        placeholder={isOverridden ? "Select True or False" : "Default (False)"}
+                                        placeholder="Default (False)"
                                     />
                                 )}
                             </OverridableField>
