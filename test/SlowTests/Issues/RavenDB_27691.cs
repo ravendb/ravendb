@@ -88,6 +88,47 @@ namespace SlowTests.Issues
             Assert.Equal(backupTime, await WaitForValueAsync(() => Task.FromResult(GetLastIncrementalBackup(server, store.Database, taskId)), backupTime));
         }
 
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task IdleDatabaseLoadingWhileItsBackupStatusSaveEndsShouldNotKeepWakeupTimer()
+        {
+            using var server = GetNewServer();
+            using var store = GetDocumentStore(new Options { Server = server });
+            var (taskId, lastEtag) = await CreateBackedUpDatabaseAsync(server, store);
+            var landlord = server.ServerStore.DatabasesLandlord;
+            var saved = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var release = new ManualResetEventSlim();
+            using var loadGate = new ManualResetEventSlim();
+
+            landlord.ForTestingPurposesOnly().AfterIdleBackupStatusSaved = _ =>
+            {
+                saved.TrySetResult(null);
+                release.Wait(TimeSpan.FromMinutes(1));
+            };
+
+            try
+            {
+                MakeIdle(server, store.Database, new IdleDatabaseActivity(IdleDatabaseActivityType.UpdateBackupStatusOnly, DateTime.UtcNow, taskId, lastEtag));
+                Assert.True(await saved.Task.WaitWithoutExceptionAsync(TimeSpan.FromSeconds(30)), "The idle backup status save didn't start");
+
+                landlord.ForTestingPurposesOnly().OnBeforeDocumentDatabaseInitialization = _ => loadGate.Wait(TimeSpan.FromMinutes(1));
+                var loadTask = landlord.TryGetOrCreateResourceStore(store.Database);
+                Assert.True(await WaitForValueAsync(() => landlord.DatabasesCache.TryGetValue(store.Database, out _), true), "The database didn't start loading");
+
+                release.Set();
+                Assert.True(await WaitForValueAsync(() => landlord.ForTestingPurposesOnly().HasWakeupTimer(store.Database), true), "The wakeup timer wasn't rescheduled while the database was still loading");
+
+                loadGate.Set();
+                await loadTask;
+
+                Assert.False(await WaitForValueAsync(() => landlord.ForTestingPurposesOnly().HasWakeupTimer(store.Database), false), "A wakeup timer was left for a loaded database");
+            }
+            finally
+            {
+                release.Set();
+                loadGate.Set();
+            }
+        }
+
         private async Task<(long TaskId, long LastEtag)> CreateBackedUpDatabaseAsync(RavenServer server, DocumentStore store)
         {
             using (var session = store.OpenAsyncSession())
