@@ -332,6 +332,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
             options.Converters.Add(CharConverter.Instance);
             options.Converters.Add(StringConverter.Instance);
+            options.Converters.Add(BooleanConverter.Instance);
 
             options.Converters.Add(FloatingPointConverters.Double);
             options.Converters.Add(FloatingPointConverters.Single);
