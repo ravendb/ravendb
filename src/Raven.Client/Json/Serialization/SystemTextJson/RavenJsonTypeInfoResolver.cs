@@ -1221,6 +1221,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             if (isRecord && propertyInfo.Name == Sparrow.Extensions.TypeExtensions.RecordEqualityContractPropertyName)
                 return true;
 
+            if (propertyInfo.DeclaringType == typeof(Exception) && propertyInfo.Name == nameof(Exception.TargetSite))
+                return true;
+
 #if NETSTANDARD2_0
             if (propertyInfo.PropertyType.IsByRef)
 #else
