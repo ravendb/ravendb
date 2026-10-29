@@ -1431,6 +1431,96 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    [JsonObject(IsReference = true)]
+    private class ReferencedByJsonObject
+    {
+        public string Name { get; set; }
+    }
+
+    [DataContract(IsReference = true)]
+    private class ReferencedByDataContract
+    {
+        [DataMember]
+        public string Name { get; set; }
+    }
+
+    [JsonObject(IsReference = false)]
+    [DataContract(IsReference = true)]
+    private class ContainerOverridesDataContract
+    {
+        [DataMember]
+        public string Name { get; set; }
+    }
+
+    private class HoldsReferencedType
+    {
+        public ReferencedByJsonObject Value { get; set; }
+    }
+
+    private class MemberPreservesReferences
+    {
+        [JsonProperty(IsReference = true)]
+        public Person Owner { get; set; }
+    }
+
+    [JsonDictionary(IsReference = true)]
+    private class ReferencedDictionary : Dictionary<string, Person>
+    {
+    }
+
+    [JsonArray(IsReference = true)]
+    private class ReferencedList : List<Person>
+    {
+    }
+
+    private class ArraysIgnoreReferences
+    {
+        [JsonProperty(ItemIsReference = true)]
+        public List<Person> People { get; set; }
+
+        [JsonProperty(IsReference = true)]
+        public Person[] Array { get; set; }
+
+        public ReferencedList List { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonRejectsNewtonsoftReferencePreservation()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            AssertRejected(new ReferencedByJsonObject { Name = "x" }, nameof(ReferencedByJsonObject));
+            AssertRejected(new ReferencedByDataContract { Name = "x" }, nameof(ReferencedByDataContract));
+            AssertRejected(new HoldsReferencedType { Value = new ReferencedByJsonObject { Name = "x" } }, nameof(ReferencedByJsonObject));
+            AssertRejected(new MemberPreservesReferences { Owner = new Person { Name = "x" } }, nameof(MemberPreservesReferences.Owner));
+            AssertRejected(new ReferencedDictionary { ["x"] = new Person { Name = "x" } }, nameof(ReferencedDictionary));
+
+            var person = new Person { Name = "x" };
+            AssertAccepted(new ContainerOverridesDataContract { Name = "x" });
+            AssertAccepted(new ArraysIgnoreReferences { People = [person, person], Array = [person], List = [person] });
+
+            void AssertAccepted(object entity)
+            {
+                using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(entity, context))
+                using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(entity, context))
+                {
+                    Assert.DoesNotContain("\"$id\"", expected.ToString());
+                    Assert.Equal(expected.ToString(), actual.ToString());
+                }
+            }
+
+            void AssertRejected(object entity, string target)
+            {
+                using (BlittableJsonReaderObject written = Newtonsoft.Serialization.DefaultConverter.ToBlittable(entity, context))
+                    Assert.Contains("\"$id\"", written.ToString());
+
+                var exception = Assert.Throws<NotSupportedException>(() => SystemTextJson.Serialization.DefaultConverter.ToBlittable(entity, context));
+                Assert.Contains(target, exception.Message);
+                Assert.Contains("IsReference", exception.Message);
+            }
+        }
+    }
+
     private static DocumentConventions Newtonsoft { get; } = new() { Serialization = new NewtonsoftJsonSerializationConventions() };
 
     private static DocumentConventions SystemTextJson { get; } = new() { Serialization = new SystemTextJsonSerializationConventions() };
