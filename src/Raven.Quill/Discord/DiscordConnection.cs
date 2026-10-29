@@ -15,7 +15,25 @@ internal sealed class DiscordConnection(DiscordSdk sdk)
         set => _client = value;
     }
 
-    public async Task<IMessageChannel> DmChannelAsync(string dmChannelId, CancellationToken ct)
+    public async Task<string> CreateAsync(string dmChannelId, string text, bool suppressEmbeds, CancellationToken ct)
+    {
+        var channel = await DmChannelAsync(dmChannelId, ct);
+        return await channel.CreateAsync(sdk, text, suppressEmbeds, ct);
+    }
+
+    public async Task EditAsync(string dmChannelId, string messageId, string text, bool suppressEmbeds, CancellationToken ct)
+    {
+        var channel = await DmChannelAsync(dmChannelId, ct);
+        await channel.EditAsync(sdk, messageId, text, suppressEmbeds, ct);
+    }
+
+    public async Task TypingAsync(string dmChannelId, CancellationToken ct)
+    {
+        var channel = await DmChannelAsync(dmChannelId, ct);
+        await channel.TypingAsync(sdk, ct);
+    }
+
+    private async Task<IMessageChannel> DmChannelAsync(string dmChannelId, CancellationToken ct)
     {
         var client = _client ?? throw new DiscordApiException("the Discord gateway is not connected");
         var id = DiscordMessages.ParseSnowflake(dmChannelId, "channel id");
