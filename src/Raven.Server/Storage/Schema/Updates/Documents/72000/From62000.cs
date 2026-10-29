@@ -54,6 +54,13 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         public bool Update(UpdateStep step)
         {
             var isSharded = step.DocumentsStorage is ShardedDocumentsStorage;
+
+            if (isSharded)
+            {
+                var database = ShardedDocumentDatabase.CastToShardedDocumentDatabase(step.DocumentsStorage.DocumentDatabase);
+                database.ShardingConfiguration ??= database.ReadDatabaseRecord().Sharding;
+            }
+
             step.WriteTx.CreateTree(AttachmentsFlagAndHashSlice, isIndexTree: true);
             
             TableSchema attachmentsSchemaBase = new TableSchema();
