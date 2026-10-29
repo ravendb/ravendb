@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
@@ -111,6 +112,45 @@ public class RavenDB_27682(ITestOutputHelper output) : EmbeddingsGenerationTestB
         Assert.True(database.EmbeddingsGeneratorEtl.EmbeddingTaskExists(healthyTaskId));
         Assert.False(database.EmbeddingsGeneratorQueries.EmbeddingTaskExists(taskToBreakId));
         Assert.False(database.EmbeddingsGeneratorEtl.EmbeddingTaskExists(taskToBreakId));
+    }
+
+    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Etl, RavenArchitecture.AllX64)]
+    public async Task ConcurrentRecordChanges_CreateTheWorkerOnce()
+    {
+        using var store = GetDocumentStore();
+        var (task, _) = AddEmbeddingsGenerationTask(store);
+        var taskId = new EmbeddingsGenerationTaskIdentifier(task.Identifier);
+        var database = await GetDatabase(store.Database);
+        var record = database.ReadDatabaseRecord();
+
+        using var shutdown = new CancellationTokenSource();
+        shutdown.Cancel();
+        using var generator = new EmbeddingsGenerator(database, database.Loggers.GetLogger<EmbeddingsGenerator>(),
+            shutdown.Token, EmbeddingsGenerator.Mode.Etl);
+        generator.Start();
+
+        using var firstCreationEntered = new ManualResetEventSlim();
+        using var releaseFirstCreation = new ManualResetEventSlim();
+        var creations = 0;
+        generator.ForTestingPurposesOnly().BeforeCreateAiWorker = _ =>
+        {
+            if (Interlocked.Increment(ref creations) != 1)
+                return;
+
+            firstCreationEntered.Set();
+            releaseFirstCreation.Wait(TimeSpan.FromSeconds(30));
+        };
+
+        var first = Task.Run(() => generator.HandleDatabaseRecordChange(record));
+        Assert.True(firstCreationEntered.Wait(TimeSpan.FromSeconds(30)));
+        var second = Task.Run(() => generator.HandleDatabaseRecordChange(record));
+        await Task.Delay(500);
+        releaseFirstCreation.Set();
+
+        await Task.WhenAll(first, second).WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.Equal(1, creations);
+        Assert.True(generator.EmbeddingTaskExists(taskId));
     }
 
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Etl)]
