@@ -292,6 +292,46 @@ namespace FastTests.Client
             }
         }
 
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task SessionStoresNamedFloatingPointLiterals(bool useSystemTextJson)
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.Serialization = useSystemTextJson
+                        ? new SystemTextJsonSerializationConventions()
+                        : new NewtonsoftJsonSerializationConventions();
+                }
+            });
+
+            var literals = new NamedLiterals
+            {
+                NaN = double.NaN,
+                PositiveInfinity = double.PositiveInfinity,
+                NegativeInfinity = float.NegativeInfinity,
+                Text = "NaN \"Infinity\" -Infinity"
+            };
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(literals, "literals/1");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var read = await session.LoadAsync<NamedLiterals>("literals/1");
+
+                Assert.True(double.IsNaN(read.NaN));
+                Assert.Equal(double.PositiveInfinity, read.PositiveInfinity);
+                Assert.Equal(float.NegativeInfinity, read.NegativeInfinity);
+                Assert.Equal(literals.Text, read.Text);
+            }
+        }
+
         private class NamedLiterals
         {
             public double NaN { get; set; }
