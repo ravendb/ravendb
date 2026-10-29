@@ -1167,6 +1167,51 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class IgnoredMembers
+    {
+        [IgnoreDataMember]
+        public string Computed { get; set; } = "computed";
+
+        [IgnoreDataMember]
+        public Func<string> Factory { get; set; } = () => "factory";
+
+        [NonSerialized]
+        public string Transient = "transient";
+
+        [IgnoreDataMember]
+        private string PrivateIgnored { get; set; } = "private";
+
+        public string Kept { get; set; } = "kept";
+
+        public string GetPrivateIgnored() => PrivateIgnored;
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonSkipsIgnoreDataMemberAndNonSerializedMembersLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(new IgnoredMembers(), context))
+            using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(new IgnoredMembers(), context))
+            {
+                Assert.Equal(expected.ToString(), actual.ToString());
+                Assert.Equal([nameof(IgnoredMembers.Kept)], actual.GetPropertyNames());
+            }
+
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Computed\":\"json\",\"Transient\":\"json\",\"PrivateIgnored\":\"json\",\"Kept\":\"json\"}", "ignored"))
+            {
+                var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<IgnoredMembers>(json);
+                var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<IgnoredMembers>(json);
+
+                Assert.Equal("computed", actual.Computed);
+                Assert.Equal(expected.Computed, actual.Computed);
+                Assert.Equal(expected.Transient, actual.Transient);
+                Assert.Equal(expected.GetPrivateIgnored(), actual.GetPrivateIgnored());
+                Assert.Equal(expected.Kept, actual.Kept);
+            }
+        }
+    }
+
     private static DocumentConventions Newtonsoft { get; } = new() { Serialization = new NewtonsoftJsonSerializationConventions() };
 
     private static DocumentConventions SystemTextJson { get; } = new() { Serialization = new SystemTextJsonSerializationConventions() };
