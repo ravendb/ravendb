@@ -46,21 +46,34 @@ describe("RevisionsBinCleaner", () => {
         });
     });
 
-    it("can disable 'set custom refresh frequency' after disabling 'enable revisions bin cleaner'", async () => {
+    it("asks for an age greater than 0 when the minimum age is cleared", async () => {
+        const { screen, user } = await rtlRender_WithWaitForLoad(<DefaultRevisionsBinCleaner />);
+
+        const durationPicker = await screen.findByTestId("durationPicker");
+        const [, , minutesInput] = queryAllByClassName(durationPicker, "form-control");
+
+        await user.clear(minutesInput);
+
+        expect(
+            await screen.findByText(
+                "The age must be greater than 0. To delete all items in the Revisions Bin, toggle 'Set minimum entries age to keep' off."
+            )
+        ).toBeInTheDocument();
+    });
+
+    it("can disable cleaner frequency after disabling 'enable revisions bin cleaner'", async () => {
         const { screen, user } = await rtlRender_WithWaitForLoad(<DefaultRevisionsBinCleaner />);
 
         const refreshFrequencyBefore = await screen.findByName("cleanerFrequencyInSec");
-
-        await user.click(screen.getByRole("checkbox", { name: "Set custom cleaner frequency" }));
-
         expect(refreshFrequencyBefore).toBeEnabled();
 
+        await user.type(refreshFrequencyBefore, "500");
         await user.click(screen.getByRole("checkbox", { name: "Enable Revisions Bin Cleaner" }));
 
-        const refreshFrequencyAfter = await screen.findByName("cleanerFrequencyInSec");
-
-        expect(refreshFrequencyAfter).toBeDisabled();
-        expect(refreshFrequencyAfter).toHaveValue(null);
+        expect(await screen.findByName("cleanerFrequencyInSec")).toBeDisabled();
+        expect(
+            screen.queryByRole("button", { name: "Reset to default", description: "Cleaner frequency" })
+        ).not.toBeInTheDocument();
     });
 
     it("can hide 'Save' button when has access below database admin", async () => {
@@ -90,14 +103,15 @@ describe("RevisionsBinCleaner", () => {
         const minimumEntriesAgeToKeepSwitch = await screen.findByRole("checkbox", {
             name: "Set minimum entries age to keep",
         });
-        const refreshFrequencySwitch = await screen.findByRole("checkbox", { name: "Set custom cleaner frequency" });
-
         expect(isRevisionBinCleanerEnabledSwitch).toBeDisabled();
         expect(minimumEntriesAgeToKeepSwitch).toBeDisabled();
-        expect(refreshFrequencySwitch).toBeDisabled();
+        expect(await screen.findByName("cleanerFrequencyInSec")).toBeDisabled();
+        expect(
+            screen.queryByRole("button", { name: "Reset to default", description: "Cleaner frequency" })
+        ).not.toBeInTheDocument();
     });
 
-    it("can remove value from 'refresh frequency' when disabling checkbox", async () => {
+    it("can reset cleaner frequency to the default", async () => {
         const { screen, user } = await rtlRender_WithWaitForLoad(
             <DefaultRevisionsBinCleaner
                 revisionsBinCleanerDto={{
@@ -108,22 +122,15 @@ describe("RevisionsBinCleaner", () => {
             />
         );
 
-        const refreshFrequencySwitchBefore = (await screen.findByRole("checkbox", {
-            name: "Set custom cleaner frequency",
-        })) as HTMLInputElement;
-        const refreshFrequencyBefore = await screen.findByName("cleanerFrequencyInSec");
+        expect(await screen.findByName("cleanerFrequencyInSec")).toHaveValue(500);
 
-        expect(refreshFrequencyBefore).toHaveValue(500);
-        expect(refreshFrequencySwitchBefore.checked).toBe(true);
-        await user.click(refreshFrequencySwitchBefore);
+        await user.click(screen.getByRole("button", { name: "Reset to default", description: "Cleaner frequency" }));
 
-        const refreshFrequencySwitchAfter = (await screen.findByRole("checkbox", {
-            name: "Set custom cleaner frequency",
-        })) as HTMLInputElement;
         const refreshFrequencyAfter = await screen.findByName("cleanerFrequencyInSec");
-
         expect(refreshFrequencyAfter).toHaveValue(null);
-        expect(refreshFrequencyAfter).toBeDisabled();
-        expect(refreshFrequencySwitchAfter.checked).toBe(false);
+        expect(refreshFrequencyAfter).toBeEnabled();
+        expect(
+            screen.queryByRole("button", { name: "Reset to default", description: "Cleaner frequency" })
+        ).not.toBeInTheDocument();
     });
 });

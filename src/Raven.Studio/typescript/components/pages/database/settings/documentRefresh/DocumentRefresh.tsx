@@ -5,7 +5,10 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
-import { FormInput, FormSwitch } from "components/common/Form";
+import { FormDurationPicker, FormInput, FormSwitch } from "components/common/Form";
+import FieldLabel from "components/common/FieldLabel";
+import OverridableField from "components/common/OverridableField";
+import useUniqueId from "components/hooks/useUniqueId";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -29,11 +32,13 @@ import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUti
 import moment from "moment";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
-import RichAlert from "components/common/RichAlert";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { useStudioTranslation } from "hooks/useStudioTranslation";
 import { StudioTrans } from "components/common/i18n/StudioTrans";
 
 const defaultItemsToProcess = 65536;
+const defaultRefreshFrequencyInSec = 60;
+const overriddenRefreshFrequencyPlaceholder = { hours: "0", minutes: "0", seconds: "0" };
 
 export default function DocumentRefresh() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -67,36 +72,53 @@ export default function DocumentRefresh() {
         ],
     });
 
-    const refreshFrequencyInHours = moment.duration(formValues.refreshFrequency, "seconds").asHours();
-    const minPeriodForRefreshInSeconds = moment.duration(minPeriodForRefreshInHours, "hours").asSeconds();
+    const buyLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
+    const licenseLimitedFrequencyLabelId = useUniqueId("refresh-frequency-label-");
+
+    const isLicenseLimited = minPeriodForRefreshInHours > 0;
+    const licenseMinRefreshFrequencyInSec = moment.duration(minPeriodForRefreshInHours, "hours").asSeconds();
+
+    const effectiveRefreshFrequencyInSec =
+        isLicenseLimited || formValues.isRefreshFrequencyEnabled
+            ? (formValues.refreshFrequency ?? defaultRefreshFrequencyInSec)
+            : defaultRefreshFrequencyInSec;
+
+    const refreshFrequencyInHours = moment.duration(effectiveRefreshFrequencyInSec, "seconds").asHours();
 
     const isLimitWarningVisible =
-        minPeriodForRefreshInHours > 0 &&
-        formValues.isRefreshFrequencyEnabled &&
-        refreshFrequencyInHours < minPeriodForRefreshInHours;
+        isLicenseLimited && formValues.isDocumentRefreshEnabled && refreshFrequencyInHours < minPeriodForRefreshInHours;
+
+    const licenseLimitMessage = t("limitWarning", { hours: minPeriodForRefreshInHours });
+
+    const defaultRefreshFrequency = moment.duration(defaultRefreshFrequencyInSec, "seconds");
+    const defaultRefreshFrequencyPlaceholder = {
+        hours: t("frequencyPlaceholder", { value: Math.floor(defaultRefreshFrequency.asHours()) }),
+        minutes: t("frequencyPlaceholder", { value: defaultRefreshFrequency.minutes() }),
+        seconds: t("frequencyPlaceholder", { value: defaultRefreshFrequency.seconds() }),
+    };
 
     useEffect(() => {
         const { unsubscribe } = watch((values, { name }) => {
             switch (name) {
                 case "isDocumentRefreshEnabled": {
                     if (values.isDocumentRefreshEnabled) {
-                        setValue("isLimitMaxItemsToProcessEnabled", true, { shouldValidate: true });
+                        setValue("maxItemsToProcess", defaultItemsToProcess, { shouldValidate: true });
+
+                        if (minPeriodForRefreshInHours > 0) {
+                            setValue("isRefreshFrequencyEnabled", true, { shouldValidate: true });
+                        }
                     } else {
-                        setValue("isLimitMaxItemsToProcessEnabled", false, { shouldValidate: true });
+                        setValue("maxItemsToProcess", null, { shouldValidate: true });
                         setValue("isRefreshFrequencyEnabled", false, { shouldValidate: true });
                     }
                     break;
                 }
-                case "isLimitMaxItemsToProcessEnabled": {
-                    if (values.isLimitMaxItemsToProcessEnabled) {
-                        setValue("maxItemsToProcess", defaultItemsToProcess, { shouldValidate: true });
-                    } else {
-                        setValue("maxItemsToProcess", null, { shouldValidate: true });
-                    }
-                    break;
-                }
                 case "isRefreshFrequencyEnabled": {
-                    if (!values.isRefreshFrequencyEnabled) {
+                    if (values.isRefreshFrequencyEnabled) {
+                        if (values.refreshFrequency == null && minPeriodForRefreshInHours > 0) {
+                            setValue("refreshFrequency", licenseMinRefreshFrequencyInSec, { shouldValidate: true });
+                        }
+                    } else {
                         setValue("refreshFrequency", null, { shouldValidate: true });
                     }
                     break;
@@ -104,7 +126,7 @@ export default function DocumentRefresh() {
             }
         });
         return () => unsubscribe();
-    }, [setValue, watch]);
+    }, [licenseMinRefreshFrequencyInSec, minPeriodForRefreshInHours, setValue, watch]);
 
     const onSave: SubmitHandler<DocumentRefreshFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -112,7 +134,8 @@ export default function DocumentRefresh() {
 
             await databasesService.saveRefreshConfiguration(databaseName, {
                 Disabled: !formData.isDocumentRefreshEnabled,
-                RefreshFrequencyInSec: formData.isRefreshFrequencyEnabled ? formData.refreshFrequency : null,
+                RefreshFrequencyInSec:
+                    isLicenseLimited || formData.isRefreshFrequencyEnabled ? formData.refreshFrequency : null,
                 MaxItemsToProcess: formData.isLimitMaxItemsToProcessEnabled ? formData.maxItemsToProcess : null,
             });
 
@@ -138,20 +161,24 @@ export default function DocumentRefresh() {
                     <Col>
                         <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
                             <AboutViewHeading title={t("title")} icon="expos-refresh" />
-                            <ButtonWithSpinner
-                                type="submit"
-                                variant="primary"
-                                className="mb-3"
-                                icon="save"
-                                disabled={!formState.isDirty || isLimitWarningVisible}
-                                isSpinning={formState.isSubmitting}
+                            <ConditionalPopover
+                                conditions={{ isActive: isLimitWarningVisible, message: licenseLimitMessage }}
                             >
-                                {commonT("save")}
-                            </ButtonWithSpinner>
+                                <ButtonWithSpinner
+                                    type="submit"
+                                    variant="primary"
+                                    className="mb-3"
+                                    icon="save"
+                                    disabled={!formState.isDirty || isLimitWarningVisible}
+                                    isSpinning={formState.isSubmitting}
+                                >
+                                    {commonT("save")}
+                                </ButtonWithSpinner>
+                            </ConditionalPopover>
                             <Col>
                                 <Card>
                                     <Card.Body>
-                                        <div className="vstack gap-2">
+                                        <div className="vstack gap-3">
                                             <FormSwitch
                                                 name="isDocumentRefreshEnabled"
                                                 control={control}
@@ -159,63 +186,105 @@ export default function DocumentRefresh() {
                                             >
                                                 {t("enableSwitch")}
                                             </FormSwitch>
-                                            <div>
-                                                <FormSwitch
-                                                    name="isRefreshFrequencyEnabled"
-                                                    control={control}
-                                                    className="mb-3"
-                                                    disabled={
-                                                        formState.isSubmitting || !formValues.isDocumentRefreshEnabled
-                                                    }
-                                                >
-                                                    {t("customFrequencySwitch")}
-                                                </FormSwitch>
-                                                <FormInput
-                                                    name="refreshFrequency"
-                                                    control={control}
-                                                    type="number"
-                                                    disabled={
-                                                        formState.isSubmitting || !formValues.isRefreshFrequencyEnabled
-                                                    }
-                                                    placeholder={t("frequencyPlaceholder", {
-                                                        seconds:
-                                                            minPeriodForRefreshInHours > 0
-                                                                ? minPeriodForRefreshInSeconds
-                                                                : 60,
-                                                    })}
-                                                    addon={t("secondsAddon")}
-                                                />
-                                                {isLimitWarningVisible && (
-                                                    <RichAlert variant="warning" className="mt-3">
-                                                        {t("limitWarning", {
-                                                            hours: minPeriodForRefreshInHours,
-                                                            seconds: minPeriodForRefreshInSeconds,
-                                                        })}
-                                                    </RichAlert>
+                                            {isLicenseLimited ? (
+                                                <div>
+                                                    <FieldLabel id={licenseLimitedFrequencyLabelId} className="d-block">
+                                                        {t("frequencyLabel")}
+                                                    </FieldLabel>
+                                                    <div className="d-inline-block mw-100">
+                                                        <div data-testid="refreshFrequencyDurationPicker">
+                                                            <FormDurationPicker
+                                                                name="refreshFrequency"
+                                                                control={control}
+                                                                disabled={
+                                                                    formState.isSubmitting ||
+                                                                    !formValues.isDocumentRefreshEnabled
+                                                                }
+                                                                aria-labelledby={licenseLimitedFrequencyLabelId}
+                                                                placeholder={overriddenRefreshFrequencyPlaceholder}
+                                                                showSeconds
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="d-flex flex-wrap align-items-center column-gap-2 mt-1 small">
+                                                        {isLimitWarningVisible && !formState.errors.refreshFrequency ? (
+                                                            <span className="text-danger">
+                                                                <Icon icon="warning" />
+                                                                {licenseLimitMessage}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-muted">
+                                                                <StudioTrans
+                                                                    ns="documentRefresh"
+                                                                    i18nKey="licenseMinimum"
+                                                                    components={{ strong: <strong /> }}
+                                                                    options={{ hours: minPeriodForRefreshInHours }}
+                                                                />
+                                                            </span>
+                                                        )}
+                                                        <a href={buyLink} target="_blank">
+                                                            {t("compareLicensePlans")}
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="align-self-start mw-100">
+                                                    <OverridableField
+                                                        control={control}
+                                                        overrideName="isRefreshFrequencyEnabled"
+                                                        valueName="refreshFrequency"
+                                                        setValue={setValue}
+                                                        label={t("frequencyLabel")}
+                                                        disabled={
+                                                            formState.isSubmitting ||
+                                                            !formValues.isDocumentRefreshEnabled
+                                                        }
+                                                    >
+                                                        {({ isOverridden, isDisabled, labelId }) => (
+                                                            <div data-testid="refreshFrequencyDurationPicker">
+                                                                <FormDurationPicker
+                                                                    name="refreshFrequency"
+                                                                    control={control}
+                                                                    disabled={isDisabled}
+                                                                    aria-labelledby={labelId}
+                                                                    placeholder={
+                                                                        isOverridden
+                                                                            ? overriddenRefreshFrequencyPlaceholder
+                                                                            : defaultRefreshFrequencyPlaceholder
+                                                                    }
+                                                                    showSeconds
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </OverridableField>
+                                                </div>
+                                            )}
+                                            <OverridableField
+                                                control={control}
+                                                overrideName="isLimitMaxItemsToProcessEnabled"
+                                                valueName="maxItemsToProcess"
+                                                setValue={setValue}
+                                                optimalValue={defaultItemsToProcess}
+                                                optimalValueLabel={defaultItemsToProcess.toLocaleString()}
+                                                optimalValueHint={t("maxItemsOptimalHint", {
+                                                    items: defaultItemsToProcess.toLocaleString(),
+                                                })}
+                                                label={t("maxItemsLabel")}
+                                                disabled={
+                                                    formState.isSubmitting || !formValues.isDocumentRefreshEnabled
+                                                }
+                                            >
+                                                {({ isDisabled }) => (
+                                                    <FormInput
+                                                        name="maxItemsToProcess"
+                                                        control={control}
+                                                        type="number"
+                                                        placeholder={t("maxItemsPlaceholder")}
+                                                        disabled={isDisabled}
+                                                        addon={t("itemsAddon")}
+                                                    />
                                                 )}
-                                            </div>
-                                            <div>
-                                                <FormSwitch
-                                                    name="isLimitMaxItemsToProcessEnabled"
-                                                    control={control}
-                                                    className="mb-3"
-                                                    disabled={
-                                                        formState.isSubmitting || !formValues.isDocumentRefreshEnabled
-                                                    }
-                                                >
-                                                    {t("maxItemsSwitch")}
-                                                </FormSwitch>
-                                                <FormInput
-                                                    name="maxItemsToProcess"
-                                                    control={control}
-                                                    type="number"
-                                                    disabled={
-                                                        formState.isSubmitting ||
-                                                        !formValues.isLimitMaxItemsToProcessEnabled
-                                                    }
-                                                    addon={t("itemsAddon")}
-                                                />
-                                            </div>
+                                            </OverridableField>
                                         </div>
                                     </Card.Body>
                                 </Card>

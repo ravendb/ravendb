@@ -1,4 +1,4 @@
-﻿import { useEffect } from "react";
+import { useEffect } from "react";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
@@ -20,6 +20,7 @@ import { LoadError } from "components/common/LoadError";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { FormInput, FormSwitch } from "components/common/Form";
+import OverridableField from "components/common/OverridableField";
 import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
@@ -73,18 +74,10 @@ export default function DataArchival() {
             switch (name) {
                 case "isDataArchivalEnabled": {
                     if (values.isDataArchivalEnabled) {
-                        setValue("isLimitMaxItemsToProcessEnabled", true, { shouldValidate: true });
-                    } else {
-                        setValue("isLimitMaxItemsToProcessEnabled", false, { shouldValidate: true });
-                        setValue("isArchiveFrequencyEnabled", false, { shouldValidate: true });
-                    }
-                    break;
-                }
-                case "isLimitMaxItemsToProcessEnabled": {
-                    if (values.isLimitMaxItemsToProcessEnabled) {
                         setValue("maxItemsToProcess", defaultItemsToProcess, { shouldValidate: true });
                     } else {
                         setValue("maxItemsToProcess", null, { shouldValidate: true });
+                        setValue("isArchiveFrequencyEnabled", false, { shouldValidate: true });
                     }
                     break;
                 }
@@ -157,7 +150,7 @@ export default function DataArchival() {
                             <Col className={hasDataArchival ? "" : "item-disabled pe-none"}>
                                 <Card>
                                     <Card.Body>
-                                        <div className="vstack gap-2">
+                                        <div className="vstack gap-3">
                                             <FormSwitch
                                                 name="isDataArchivalEnabled"
                                                 control={control}
@@ -165,50 +158,47 @@ export default function DataArchival() {
                                             >
                                                 Enable Data Archival
                                             </FormSwitch>
-                                            <div>
-                                                <FormSwitch
-                                                    name="isArchiveFrequencyEnabled"
-                                                    control={control}
-                                                    className="mb-3"
-                                                    disabled={
-                                                        formState.isSubmitting || !formValues.isDataArchivalEnabled
-                                                    }
-                                                >
-                                                    Set custom archive frequency
-                                                </FormSwitch>
-                                                <FormInput
-                                                    name="archiveFrequency"
-                                                    control={control}
-                                                    type="number"
-                                                    disabled={
-                                                        formState.isSubmitting || !formValues.isArchiveFrequencyEnabled
-                                                    }
-                                                    placeholder="Default (60)"
-                                                    addon="seconds"
-                                                />
-                                            </div>
-                                            <div>
-                                                <FormSwitch
-                                                    name="isLimitMaxItemsToProcessEnabled"
-                                                    control={control}
-                                                    className="mb-3"
-                                                    disabled={
-                                                        formState.isSubmitting || !formValues.isDataArchivalEnabled
-                                                    }
-                                                >
-                                                    Set max number of documents to process in a single run
-                                                </FormSwitch>
-                                                <FormInput
-                                                    name="maxItemsToProcess"
-                                                    control={control}
-                                                    type="number"
-                                                    disabled={
-                                                        formState.isSubmitting ||
-                                                        !formValues.isLimitMaxItemsToProcessEnabled
-                                                    }
-                                                    addon="items"
-                                                />
-                                            </div>
+                                            <OverridableField
+                                                control={control}
+                                                overrideName="isArchiveFrequencyEnabled"
+                                                valueName="archiveFrequency"
+                                                setValue={setValue}
+                                                label="Archive frequency"
+                                                disabled={formState.isSubmitting || !formValues.isDataArchivalEnabled}
+                                            >
+                                                {({ isDisabled }) => (
+                                                    <FormInput
+                                                        name="archiveFrequency"
+                                                        control={control}
+                                                        type="number"
+                                                        disabled={isDisabled}
+                                                        placeholder="Default (60)"
+                                                        addon="seconds"
+                                                    />
+                                                )}
+                                            </OverridableField>
+                                            <OverridableField
+                                                control={control}
+                                                overrideName="isLimitMaxItemsToProcessEnabled"
+                                                valueName="maxItemsToProcess"
+                                                setValue={setValue}
+                                                optimalValue={defaultItemsToProcess}
+                                                optimalValueLabel={defaultItemsToProcess.toLocaleString()}
+                                                optimalValueHint={`Process at most ${defaultItemsToProcess.toLocaleString()} documents per run to keep each run short.`}
+                                                label="Max number of documents to process in a single run"
+                                                disabled={formState.isSubmitting || !formValues.isDataArchivalEnabled}
+                                            >
+                                                {({ isDisabled }) => (
+                                                    <FormInput
+                                                        name="maxItemsToProcess"
+                                                        control={control}
+                                                        type="number"
+                                                        placeholder="Default (unlimited)"
+                                                        disabled={isDisabled}
+                                                        addon="items"
+                                                    />
+                                                )}
+                                            </OverridableField>
                                         </div>
                                     </Card.Body>
                                 </Card>
