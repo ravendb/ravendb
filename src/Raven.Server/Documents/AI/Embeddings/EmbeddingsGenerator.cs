@@ -531,7 +531,10 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
     protected override async Task DoWork()
     {
-        HandleDatabaseRecordChange(_database.ReadDatabaseRecord());
+        lock (_workersLocker)
+        {
+            HandleDatabaseRecordChangeUnderLock(_database.ReadDatabaseRecord());
+        }
 
         try
         {
@@ -753,9 +756,6 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
     
     public void HandleDatabaseRecordChange(DatabaseRecord record)
     {
-        if (record is null)
-            return;
-
         lock (_workersLocker)
         {
             HandleDatabaseRecordChangeUnderLock(record);
@@ -764,6 +764,9 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
     private void HandleDatabaseRecordChangeUnderLock(DatabaseRecord record)
     {
+        if (record is null)
+            return;
+
         HashSet<EmbeddingsGenerationTaskIdentifier> taskIdsToRetain = [];
 
         foreach (EmbeddingsGenerationConfiguration configuration in record.EmbeddingsGenerations)
