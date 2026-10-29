@@ -39,6 +39,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private const string NewtonsoftJsonObjectAttributeName = "Newtonsoft.Json.JsonObjectAttribute";
 
+        private const string NewtonsoftJsonContainerAttributeName = "Newtonsoft.Json.JsonContainerAttribute";
+
         private const int NewtonsoftMemberSerializationOptIn = 1;
 
         private const int NewtonsoftMemberSerializationFields = 2;
@@ -120,6 +122,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             AssertMembersCanBeResolved(type);
             AssertNotNewtonsoftLinqType(type);
             AssertNoNewtonsoftTypeConverter(type);
+            AssertNoNewtonsoftReferencePreservation(type);
             return base.GetTypeInfo(type, options);
         }
 
@@ -216,10 +219,88 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                         ThrowNewtonsoftConverterNotSupported($"Member '{member.DeclaringType?.FullName}.{member.Name}'");
                 }
 
+                object jsonProperty = GetNewtonsoftAttribute(member, NewtonsoftJsonPropertyAttributeName);
+                if (jsonProperty != null && PreservesNewtonsoftReferences(jsonProperty) && IsWrittenAsArray(property.PropertyType) == false)
+                    ThrowNewtonsoftReferencesNotSupported($"Member '{member.DeclaringType?.FullName}.{member.Name}'");
+
                 if (member.IsDefined(typeof(JsonExtensionDataAttribute), inherit: true) == false &&
                     GetNewtonsoftAttribute(member, NewtonsoftJsonExtensionDataAttributeName) != null)
                     ThrowNewtonsoftExtensionDataNotSupported(member);
             }
+        }
+
+        private static void AssertNoNewtonsoftReferencePreservation(Type type)
+        {
+            if (IsWrittenAsArray(type))
+                return;
+
+            object container = GetNewtonsoftContainerAttribute(type);
+            bool preservesReferences = container != null
+                ? PreservesNewtonsoftReferences(container)
+                : GetDataContractAttribute(type) is { IsReference: true };
+
+            if (preservesReferences)
+                ThrowNewtonsoftReferencesNotSupported($"Type '{type.FullName}'");
+        }
+
+        private static object GetNewtonsoftContainerAttribute(Type type)
+        {
+            object container = FindNewtonsoftContainerAttribute(type);
+            if (container != null)
+                return container;
+
+            foreach (Type @interface in type.GetInterfaces())
+            {
+                container = FindNewtonsoftContainerAttribute(@interface);
+                if (container != null)
+                    return container;
+            }
+
+            return null;
+        }
+
+        private static object FindNewtonsoftContainerAttribute(Type type)
+        {
+            foreach (object attribute in type.GetCustomAttributes(true))
+            {
+                for (Type current = attribute.GetType(); current != null; current = current.BaseType)
+                {
+                    if (current.FullName == NewtonsoftJsonContainerAttributeName)
+                        return attribute;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool IsWrittenAsArray(Type type)
+        {
+            if (type == typeof(string) || typeof(IEnumerable).IsAssignableFrom(type) == false || typeof(IDictionary).IsAssignableFrom(type) || IsGenericDictionary(type))
+                return false;
+
+            foreach (Type @interface in type.GetInterfaces())
+            {
+                if (IsGenericDictionary(@interface))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static bool IsGenericDictionary(Type type)
+        {
+            if (type.IsGenericType == false)
+                return false;
+
+            Type definition = type.GetGenericTypeDefinition();
+            return definition == typeof(IDictionary<,>) || definition == typeof(IReadOnlyDictionary<,>);
+        }
+
+        private static bool PreservesNewtonsoftReferences(object attribute)
+        {
+            Type attributeType = attribute.GetType();
+            return attributeType.GetProperty("IsReference")?.GetValue(attribute) is true ||
+                   attributeType.GetProperty("ItemIsReference")?.GetValue(attribute) is true;
         }
 
         private static void AssertNewtonsoftConstructorIsUsed(Type type)
@@ -370,13 +451,18 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private static bool HasDataContract(Type type)
         {
+            return GetDataContractAttribute(type) != null;
+        }
+
+        private static DataContractAttribute GetDataContractAttribute(Type type)
+        {
             for (Type current = type; current != null; current = current.BaseType)
             {
-                if (current.IsDefined(typeof(DataContractAttribute), inherit: false))
-                    return true;
+                if (current.GetCustomAttribute<DataContractAttribute>(inherit: false) is { } dataContract)
+                    return dataContract;
             }
 
-            return false;
+            return null;
         }
 
         private static JsonPropertyInfo CreateJsonProperty(JsonTypeInfo typeInfo, MemberInfo member, Type memberType, Func<object, object> get, Action<object, object> set)
@@ -1207,6 +1293,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             throw new NotSupportedException(
                 $"Member '{member.DeclaringType?.FullName}.{member.Name}' is annotated with {NewtonsoftJsonExtensionDataAttributeName}. " +
                 $"{nameof(SystemTextJsonSerializationConventions)} requires System.Text.Json.Serialization.JsonExtensionDataAttribute.");
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowNewtonsoftReferencesNotSupported(string target) =>
+            throw new NotSupportedException(
+                $"{target} preserves object references with Newtonsoft.Json (IsReference or ItemIsReference). " +
+                $"{nameof(SystemTextJsonSerializationConventions)} writes every object in full and reads Newtonsoft.Json '$ref' placeholders as empty objects, " +
+                "so remove reference preservation and convert documents that contain '$ref' before switching.");
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void ThrowNewtonsoftConstructorNotSupported(Type type) =>

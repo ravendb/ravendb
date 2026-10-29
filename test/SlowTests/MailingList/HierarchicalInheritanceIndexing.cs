@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Xunit;
 using Tests.Infrastructure;
 
@@ -22,7 +23,7 @@ namespace SlowTests.MailingList
             var rootId = Guid.NewGuid().ToString();
             var childId = Guid.NewGuid().ToString();
             var grandChildId = Guid.NewGuid().ToString();
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions() }))
             {
                 using (var session = documentStore.OpenSession())
                 {
