@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -106,15 +106,17 @@ namespace FastTests.Server.Documents.Indexing
         }
 
         [RavenFact(RavenTestCategory.Indexes)]
-        public void RangeAndTimeFieldNamesAreBuiltOnceFromFieldName()
+        public void LuceneFieldNamesAreBuiltOnceFromFieldName()
         {
             var field = new IndexField { Name = "Price" };
 
-            var names = field.RangeAndTimeNames;
+            var names = field.LuceneNames;
             Assert.Equal("Price" + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble, names.RangeDouble);
             Assert.Equal("Price" + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong, names.RangeLong);
             Assert.Equal("Price" + Constants.Documents.Indexing.Fields.TimeFieldSuffix, names.Time);
-            Assert.Same(names, field.RangeAndTimeNames);
+            Assert.Equal("Price_IsArray", names.IsArray);
+            Assert.Equal("Price_ConvertToJson", names.ConvertToJson);
+            Assert.Same(names, field.LuceneNames);
         }
     }
 }
