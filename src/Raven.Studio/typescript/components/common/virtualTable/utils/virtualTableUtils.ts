@@ -9,6 +9,7 @@ const {
     scrollbarWidthInPx,
     scrollbarHeightInPx,
     minTableHeightInPx,
+    minRelativeColumnWidthInPx,
 } = virtualTableConstants;
 
 interface TableBodyWidthOptions {
@@ -58,7 +59,13 @@ function fitColumnsToWidth<T>(columns: ColumnDef<T>[], containerWidth: number): 
 
     return columns.map((column) =>
         isRelative(column)
-            ? { ...column, size: Math.floor((freeWidth * column.meta.relativeWidth) / totalRelativeWidth) }
+            ? {
+                  ...column,
+                  size: Math.max(
+                      column.minSize ?? minRelativeColumnWidthInPx,
+                      Math.floor((freeWidth * column.meta.relativeWidth) / totalRelativeWidth)
+                  ),
+              }
             : column
     );
 }
