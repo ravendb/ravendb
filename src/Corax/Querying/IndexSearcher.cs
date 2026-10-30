@@ -479,8 +479,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     /// </summary>
     public long GetNumberOfDistinctTermsInField(in FieldMetadata field)
     {
-        var fieldTree = _fieldsTree?.CompactTreeFor(field.FieldName);
-        if (fieldTree == null)
+        if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field.FieldName, out var fieldTree) == false)
             return 0;
 
         var numberOfTerms = fieldTree.NumberOfEntries;
