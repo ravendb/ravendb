@@ -74,14 +74,16 @@ internal static partial class QueryPlanBuilder
 
   
     // Structural plan key: a SHA256 digest over a canonical structural WHERE +ORDER BY AST.
-    // Note that other things (SELECT / LIMIT, etc) do NOT affect the cache key, since they don't impact the plan
+    // Note that other things (SELECT / LIMIT, etc) do NOT affect the cache key, since they don't impact the plan.
+    // The exception is whether the query scores: an unscored query can use optimizations a scored one cannot.
     [SkipLocalsInit]
     private static Vector256<long> ComputeStructuralKey(PlanParameters planParams)
     {
         var builder = new PlanCacheKeyBuilder();
-        
+
         AppendCanonicalExpression(ref builder, planParams.Metadata.Query.Where, planParams.IndexSearcher);
         AppendCanonicalOrderBy(ref builder, planParams.Metadata.OrderBy, planParams.IndexSearcher);
+        builder.Append(planParams.HasBoost.ToInt32(), 1);
 
         return builder.ToHash();
     }
