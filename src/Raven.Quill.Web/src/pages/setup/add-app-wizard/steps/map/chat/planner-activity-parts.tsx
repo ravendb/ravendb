@@ -1,13 +1,13 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { Check, ChevronDown, ChevronRight, TriangleAlert, X } from "lucide-react";
 import { Button } from "@/components/shadcn/ui/button";
-import { CollapsibleTrigger } from "@/components/shadcn/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/shadcn/ui/collapsible";
 import { Spinner } from "@/components/shadcn/ui/spinner";
 import { Text } from "@/components/typography";
 import { cn } from "@/lib/utils";
-import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
+import { usePlannerActions } from "@/pages/setup/add-app-wizard/steps/map/use-planner-actions";
 
-export function PlannerWorkingCard({
+export function PlannerWorkingActivity({
     title,
     detail,
     children,
@@ -16,44 +16,68 @@ export function PlannerWorkingCard({
     detail?: string;
     children: ReactNode;
 }) {
+    const [isOpen, setIsOpen] = useState(true);
+
     return (
-        <div className="rounded-lg border bg-card">
-            <div role="status" className="flex items-center gap-2 px-3 py-2">
-                <Spinner className="text-primary-strong" aria-hidden="true" />
-                <Text variant="label" as="span">
-                    {title}
-                </Text>
-                {detail && (
-                    <Text variant="muted" as="span" className="ml-auto">
-                        {detail}
-                    </Text>
-                )}
-            </div>
-            <ActivityRowList>{children}</ActivityRowList>
-        </div>
+        <ActivityGroup
+            icon={<Spinner className="size-3.5 text-primary-strong" aria-hidden="true" />}
+            title={title}
+            detail={detail}
+            isOpen={isOpen}
+            onOpenChange={setIsOpen}
+        >
+            {children}
+        </ActivityGroup>
     );
 }
 
-export function ActivityRowList({ children }: { children: ReactNode }) {
-    return <ul className="flex flex-col gap-1.5 pr-3 pb-2.5 pl-9">{children}</ul>;
-}
-
-export function CollapsibleHeader({
+export function ActivityGroup({
+    icon,
+    title,
+    detail,
+    isDetailDestructive = false,
     isOpen,
-    className,
+    onOpenChange,
     children,
 }: {
+    icon: ReactNode;
+    title: string;
+    detail?: string;
+    isDetailDestructive?: boolean;
     isOpen: boolean;
-    className?: string;
+    onOpenChange: (isOpen: boolean) => void;
     children: ReactNode;
 }) {
     const Chevron = isOpen ? ChevronDown : ChevronRight;
 
     return (
-        <CollapsibleTrigger className={cn("flex w-full items-center gap-2 py-2 text-left", className)}>
-            <Chevron className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            {children}
-        </CollapsibleTrigger>
+        <Collapsible open={isOpen} onOpenChange={onOpenChange}>
+            <div className="flex items-center gap-2">
+                <div role="status" className="flex items-center gap-2">
+                    <span className="flex size-3.5 shrink-0 items-center justify-center">{icon}</span>
+                    <Text variant="label" as="span">
+                        {title}
+                    </Text>
+                    {detail && (
+                        <Text
+                            variant="muted"
+                            as="span"
+                            className={cn(isDetailDestructive && "text-badge-destructive-fg")}
+                        >
+                            {detail}
+                        </Text>
+                    )}
+                </div>
+                <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="icon-xs" aria-label="Steps" className="text-muted-foreground">
+                        <Chevron aria-hidden="true" />
+                    </Button>
+                </CollapsibleTrigger>
+            </div>
+            <CollapsibleContent>
+                <ul className="mt-1 ml-1.5 flex flex-col gap-1.5 border-l py-1 pl-4">{children}</ul>
+            </CollapsibleContent>
+        </Collapsible>
     );
 }
 
@@ -70,7 +94,7 @@ export function ActivityRowLayout({
     className?: string;
     children: ReactNode;
 }) {
-    const openPlannerPanel = useSetupWizardStore((state) => state.openPlannerPanel);
+    const { openCollectionByName } = usePlannerActions();
 
     return (
         <li className={cn("flex flex-wrap items-center gap-2", className)}>
@@ -78,13 +102,13 @@ export function ActivityRowLayout({
             {collection && (
                 <Button
                     variant="link"
-                    className="h-auto p-0 text-foreground underline decoration-border underline-offset-3"
-                    onClick={() => openPlannerPanel(collection)}
+                    className="h-auto p-0 text-foreground underline decoration-muted-foreground/60 underline-offset-3"
+                    onClick={() => openCollectionByName(collection)}
                 >
                     {collection}
                 </Button>
             )}
-            <Text variant="muted" as="span">
+            <Text variant="muted" as="span" className="min-w-0 flex-1">
                 {children}
             </Text>
             {detail && (

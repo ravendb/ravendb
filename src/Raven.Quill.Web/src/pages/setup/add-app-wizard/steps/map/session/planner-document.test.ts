@@ -7,7 +7,6 @@ import {
     documentFromProposal,
     getEmbeddedTables,
     getLinkTargets,
-    getShapeRows,
     indexDiscovery,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-document";
 import { resolveProposalTables } from "@/pages/setup/add-app-wizard/steps/map/session/planner-table-refs";
@@ -124,7 +123,7 @@ describe("indexDiscovery", () => {
     });
 });
 
-describe("getShapeRows", () => {
+describe("getEmbeddedTables", () => {
     const registered: CdcSinkTableConfig = {
         collectionName: "Orders",
         sourceTableSchema: "dbo",
@@ -145,19 +144,7 @@ describe("getShapeRows", () => {
         ],
     };
 
-    it("lists every property under its parent, with its depth", () => {
-        expect(
-            getShapeRows(documentFromConfig(registered, null), null).map(({ path, depth }) => ({ path, depth })),
-        ).toEqual([
-            { path: "placedAt", depth: 0 },
-            { path: "customer", depth: 0 },
-            { path: "lines", depth: 0 },
-            { path: "lines.quantity", depth: 1 },
-            { path: "lines.product", depth: 1 },
-        ]);
-    });
-
-    it("names an embedded table without a schema in its parent's, and reads it from the table it resolved to", () => {
+    it("names an embedded table without a schema after the table it resolved to, and reads it from there", () => {
         const orderLines = { sourceTableSchema: "dbo", sourceTableName: "OrderLines" };
         const tableRef = {
             table: { sourceTableSchema: "dbo", sourceTableName: "Orders" },
@@ -169,23 +156,9 @@ describe("getShapeRows", () => {
         ]);
     });
 
-    it("reads a table that fits no selected table from nowhere", () => {
+    it("reads a table that fits no selected table from nowhere, under the name the configuration gives it", () => {
         expect(getEmbeddedTables(documentFromConfig(registered, null))).toEqual([
-            { table: "dbo.OrderLines", source: null, path: "lines" },
+            { table: "OrderLines", source: null, path: "lines" },
         ]);
-    });
-
-    it("marks what the previous registration did not have", () => {
-        const previous = { ...registered, embeddedTables: [{ ...registered.embeddedTables![0], linkedTables: [] }] };
-
-        const newPaths = getShapeRows(documentFromConfig(registered, null), documentFromConfig(previous, null))
-            .filter((row) => row.isNew)
-            .map((row) => row.path);
-
-        expect(newPaths).toEqual(["lines.product"]);
-    });
-
-    it("marks nothing new on a first registration", () => {
-        expect(getShapeRows(documentFromConfig(registered, null), null).some((row) => row.isNew)).toBe(false);
     });
 });

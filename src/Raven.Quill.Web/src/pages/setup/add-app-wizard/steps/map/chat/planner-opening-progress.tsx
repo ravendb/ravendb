@@ -6,7 +6,7 @@ import {
     ActivityRowLayout,
     DoneIcon,
     PendingIcon,
-    PlannerWorkingCard,
+    PlannerWorkingActivity,
     WorkingIcon,
 } from "@/pages/setup/add-app-wizard/steps/map/chat/planner-activity-parts";
 import { PlannerMessage } from "@/pages/setup/add-app-wizard/steps/map/chat/planner-message";
@@ -33,10 +33,9 @@ export function PlannerOpeningProgress({ turn }: { turn: PlannerReplyTurn }) {
             <Text>
                 I&apos;m reading the schema of the <strong>{formatCount(tables.length, "table")}</strong> you selected
                 (names, columns, types and keys, never row data) to suggest how{" "}
-                {isSingleTable ? "it becomes" : "they become"} collections. Nothing reaches the mapping until you apply
-                it.
+                {isSingleTable ? "it becomes" : "they become"} collections.
             </Text>
-            <PlannerWorkingCard title="Planning collections" detail={`Step ${hasProposal ? 3 : 2} of ${STEP_COUNT}`}>
+            <PlannerWorkingActivity title="Planning collections" detail={`${hasProposal ? 3 : 2} of ${STEP_COUNT}`}>
                 <li className="flex flex-col gap-1.5">
                     <PlannerSelectedTables tables={tables} onChangeSelection={changeSelection} />
                 </li>
@@ -44,11 +43,9 @@ export function PlannerOpeningProgress({ turn }: { turn: PlannerReplyTurn }) {
                     {hasProposal ? "Grouped tables into collections" : "Grouping tables into collections…"}
                 </ProgressStep>
                 <ProgressStep state={hasProposal ? "active" : "pending"}>
-                    {hasProposal
-                        ? "Asking about anything the schema can't answer…"
-                        : "Ask about anything the schema can't answer"}
+                    {hasProposal ? "Checking what the schema can't answer…" : "Check what the schema can't answer"}
                 </ProgressStep>
-            </PlannerWorkingCard>
+            </PlannerWorkingActivity>
         </PlannerMessage>
     );
 }
@@ -60,9 +57,5 @@ const STEP_ICONS: Record<StepState, ReactNode> = {
 };
 
 function ProgressStep({ state, children }: { state: StepState; children: ReactNode }) {
-    return (
-        <ActivityRowLayout icon={STEP_ICONS[state]} className={state === "pending" ? "opacity-60" : undefined}>
-            {children}
-        </ActivityRowLayout>
-    );
+    return <ActivityRowLayout icon={STEP_ICONS[state]}>{children}</ActivityRowLayout>;
 }

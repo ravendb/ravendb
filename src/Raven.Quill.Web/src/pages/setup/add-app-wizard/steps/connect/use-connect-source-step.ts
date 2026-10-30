@@ -6,6 +6,7 @@ import { useSetupWizardStore, type ConnectionAttempt } from "@/pages/setup/add-a
 import { resolveConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
 import { getTableKey, isTableSupported } from "@/pages/setup/add-app-wizard/discover-utils";
 import { discoverTables } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
+import { selectHasSession } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
 import { useFormContext } from "react-hook-form";
 
 export type ConnectSourceInput = Pick<
@@ -77,6 +78,12 @@ export function useConnectSourceStep() {
 
         if (connectKey === store.connectKey) {
             return;
+        }
+
+        // A plan is tied to its source and slug. Running turns are stopped so they do not hold their locks
+        // and spend tokens on a plan nobody can reach.
+        if (selectHasSession(store)) {
+            store.resetPlannerState();
         }
 
         if (!isConnectionVerified(store.connectionAttempt, connectKey)) {

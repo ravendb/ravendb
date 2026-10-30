@@ -7,6 +7,7 @@ import { scaffoldRootTable } from "@/pages/setup/add-app-wizard/steps/map-tables
 import type {
     PlannerAnswersTurn,
     PlannerPromptTurn,
+    SelectedTables,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 
 // Valid values for every step, so any step renders with realistic data and Next/Back keep
@@ -44,7 +45,9 @@ export function buildSeed(discovery: DiscoverResponse): AppFormData {
 }
 
 export type PlannerScriptTurn = {
-    /** What the operator said; omitted for the turn that opens the session. */
+    /** The area whose agent the turn belongs to; omitted for the planner's own turns. */
+    area?: string;
+    /** What the operator said; omitted for a turn that opens its chat. */
     userTurn?: PlannerPromptTurn | PlannerAnswersTurn;
     frames: MigrationFrame[];
     /** Leaves the turn running, as if its stream were still open. */
@@ -52,22 +55,35 @@ export type PlannerScriptTurn = {
 };
 
 /** Plays recorded turns through the store, so a story starts from a session the planner really produced. */
-export function replayPlannerTurns(turns: PlannerScriptTurn[], selectedTables: AppFormData["verifySchema"]["tables"]) {
+export function replayPlannerTurns(
+    turns: PlannerScriptTurn[],
+    { slug, selectedTables, defaultSchema }: { slug: string; selectedTables: SelectedTables; defaultSchema: string },
+) {
     const store = useSetupWizardStore.getState();
 
+    store.openPlannerSession({ slug, selectedTables, defaultSchema });
+
     for (const turn of turns) {
-        if (turn.userTurn) {
-            store.beginPlannerTurn({ userTurn: turn.userTurn, controller: new AbortController() });
-        } else {
-            store.openPlannerSession({ selectedTables, controller: new AbortController() });
+        const chatId = turn.area ?? null;
+        const isOpening = !turn.userTurn;
+
+        if (chatId !== null) {
+            store.markPlannerAreaStarted(chatId, true);
         }
 
+        store.beginPlannerTurn({
+            chatId,
+            userTurn: turn.userTurn ?? null,
+            controller: new AbortController(),
+            isOpening,
+        });
+
         for (const frame of turn.frames) {
-            store.receivePlannerFrame(frame);
+            store.receivePlannerFrame(chatId, frame);
         }
 
         if (!turn.isWorking) {
-            store.endPlannerTurn({ error: null, isStopped: false });
+            store.endPlannerTurn(chatId, { error: null, isStopped: false });
         }
     }
 }

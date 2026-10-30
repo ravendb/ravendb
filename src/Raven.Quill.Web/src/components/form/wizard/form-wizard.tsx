@@ -42,12 +42,12 @@ export type WizardConfirmNext = {
     title: ReactNode;
     description?: ReactNode;
     confirmLabel?: ReactNode;
-    /** Runs only once Next passed its checks and `beforeNext`, right before the wizard moves on. */
+    /** Runs only once Next passed its checks and `beforeNext`, right before the wizard moves on or completes. */
     onConfirm?: () => void;
 };
 
 /** Lets a step move the wizard itself, for actions inside the step that end in another step. */
-export type WizardStepNavigation = {
+export type WizardStepNavigation<StepId extends string = string> = {
     goToPreviousStep: () => void;
     /**
      * Moves on once `action` succeeds, for a step that can finish another way than its Next. The action
@@ -55,9 +55,11 @@ export type WizardStepNavigation = {
      * step's own checks and `beforeNext`.
      */
     advanceWith: (action: () => void | Promise<void>) => void;
+    /** Method syntax keeps the parameter bivariant, so a component typed for any step id accepts the wizard's own. */
+    goToStep(stepId: StepId): void;
 };
 
-export type WizardBodyComponentProps<StepId extends string = string> = WizardStepNavigation & {
+export type WizardBodyComponentProps<StepId extends string = string> = WizardStepNavigation<StepId> & {
     currentStepId: StepId;
     isBusy: boolean;
 };
@@ -228,6 +230,16 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
         });
     };
 
+    const goToStep = (stepId: StepId) => {
+        if (isAdvancingRef.current) {
+            return;
+        }
+
+        setAdvanceError(null);
+        // The flow may gain the step in the same update, so the id is resolved against the next render's flow.
+        setCurrentStepId(stepId);
+    };
+
     const advance = async (onPassed?: () => void) => {
         await runAction(async (progress) => {
             if (!(await validateCurrentStep(progress))) {
@@ -253,9 +265,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
         await advance();
     };
 
-    const confirmNext = () => void advance(currentStep.confirmNext?.onConfirm);
-
-    const handleComplete = async () => {
+    const complete = async (onPassed?: () => void) => {
         if (completion.type !== "action") {
             return;
         }
@@ -266,8 +276,23 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
             }
 
             await currentStep.beforeNext?.(progress);
+            onPassed?.();
             await completion.onComplete(progress);
         });
+    };
+
+    const handleComplete = async () => {
+        if (currentStep.confirmNext?.isRequired) {
+            setIsConfirmingNext(true);
+            return;
+        }
+
+        await complete();
+    };
+
+    const confirmNext = () => {
+        const onConfirm = currentStep.confirmNext?.onConfirm;
+        void (stepPosition === "last" ? complete(onConfirm) : advance(onConfirm));
     };
 
     return (
@@ -305,6 +330,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                                         isBusy={isBusy}
                                         goToPreviousStep={goPrev}
                                         advanceWith={advanceWith}
+                                        goToStep={goToStep}
                                     />
                                 )}
                             </header>
@@ -314,6 +340,7 @@ export function FormWizard<StepId extends string, Values extends FieldValues>({
                                 isBusy={isBusy}
                                 goToPreviousStep={goPrev}
                                 advanceWith={advanceWith}
+                                goToStep={goToStep}
                             />
                             {advanceError && <WizardErrorAlert error={advanceError} />}
                         </section>

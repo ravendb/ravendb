@@ -11,40 +11,31 @@ import {
 } from "@/components/shadcn/ui/command";
 import { InputGroup, InputGroupAddon, InputGroupTextarea } from "@/components/shadcn/ui/input-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/shadcn/ui/popover";
-import { Text } from "@/components/typography";
 import { isSendMessageKey } from "@/lib/form-utils";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
-import { describeWork } from "@/pages/setup/add-app-wizard/steps/map/chat/planner-activity";
 import { PlannerMentionChip } from "@/pages/setup/add-app-wizard/steps/map/chat/planner-mention-chip";
 import {
-    useCanAskPlanner,
-    useCanComposeForPlanner,
+    useCanSendMessage,
+    useChatPhase,
     usePlannerWorkspace,
 } from "@/pages/setup/add-app-wizard/steps/map/planner-workspace-context";
 import type { PlanCollection } from "@/pages/setup/add-app-wizard/steps/map/session/planner-plan";
 import { describeMentionPlaceholder } from "@/pages/setup/add-app-wizard/steps/map/session/planner-prompts";
-import { getLatestReply, selectPlannerPhase } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
-import {
-    hasUnbuiltMention,
-    usePlannerSession,
-} from "@/pages/setup/add-app-wizard/steps/map/session/use-planner-session";
+import { selectChat } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
+import type { PlannerChatId } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
+import { usePlannerSession } from "@/pages/setup/add-app-wizard/steps/map/session/use-planner-session";
 
 const MENTION_TRIGGER = "@";
 
-/**
- * Where the operator talks to the planner. While the first plan is being made it collects instructions
- * that go in once that plan is ready; after that it sends prompts, with collections mentioned by `@`.
- */
-export function PlannerComposer({ collections }: { collections: PlanCollection[] }) {
-    const { composerRef } = usePlannerWorkspace();
+/** While the agent works, what the operator writes waits here, to be sent once it is done or stopped. */
+export function PlannerComposer({ chatId, collections }: { chatId: PlannerChatId; collections: PlanCollection[] }) {
+    const { composerRef, isBusy } = usePlannerWorkspace();
     const session = usePlannerSession();
-    const canAsk = useCanAskPlanner();
-    const canCompose = useCanComposeForPlanner();
-    const phase = useSetupWizardStore(selectPlannerPhase);
-    const latestReply = useSetupWizardStore((state) => getLatestReply(state.plannerTurns));
-    const draft = useSetupWizardStore((state) => state.plannerDraft);
-    const mentions = useSetupWizardStore((state) => state.plannerMentions);
-    const canSendPicksAlone = useSetupWizardStore(hasUnbuiltMention);
+    const canSendMessage = useCanSendMessage(chatId);
+    const phase = useChatPhase(chatId);
+    const hasProposal = useSetupWizardStore((state) => state.plannerProposal !== null);
+    const draft = useSetupWizardStore((state) => selectChat(state, chatId).draft);
+    const mentions = useSetupWizardStore((state) => selectChat(state, chatId).mentions);
     const setPlannerDraft = useSetupWizardStore((state) => state.setPlannerDraft);
     const addPlannerMention = useSetupWizardStore((state) => state.addPlannerMention);
     const removePlannerMention = useSetupWizardStore((state) => state.removePlannerMention);
@@ -53,9 +44,11 @@ export function PlannerComposer({ collections }: { collections: PlanCollection[]
     const mentionTriggerIndexRef = useRef<number | null>(null);
     const caretAfterPickerRef = useRef<number | null>(null);
 
-    const isOpening = phase === "opening";
-    const isWorking = isOpening || phase === "working";
-    const canSend = canAsk && (draft.trim() !== "" || canSendPicksAlone);
+    const isWorking = phase === "working";
+    // Until the first plan is there, there is nothing yet to ask the planner about.
+    const isReadingSchema = isWorking && chatId === null && !hasProposal;
+    const canSend = canSendMessage && draft.trim() !== "";
+    const setDraft = (value: string) => setPlannerDraft(chatId, value);
 
     // Typing MENTION_TRIGGER where a word starts opens the picker, which adds the collection as a chip. Pasted text,
     // deleting, or backing out of the picker leave the MENTION_TRIGGER as written.
@@ -65,9 +58,9 @@ export function PlannerComposer({ collections }: { collections: PlanCollection[]
         const isTriggerTyped = input.inputType === "insertText" && input.data === MENTION_TRIGGER;
         const isWordStart = selectionStart === 1 || /\s/.test(value.charAt(selectionStart - 2));
 
-        setPlannerDraft(value);
+        setDraft(value);
 
-        if (canAsk && isTriggerTyped && isWordStart) {
+        if (!isBusy && isTriggerTyped && isWordStart) {
             mentionTriggerIndexRef.current = selectionStart - 1;
             setIsMentionPickerOpen(true);
         }
@@ -86,11 +79,11 @@ export function PlannerComposer({ collections }: { collections: PlanCollection[]
         mentionTriggerIndexRef.current = null;
 
         if (triggerIndex !== null && draft.charAt(triggerIndex) === MENTION_TRIGGER) {
-            setPlannerDraft(draft.slice(0, triggerIndex) + draft.slice(triggerIndex + 1));
+            setDraft(draft.slice(0, triggerIndex) + draft.slice(triggerIndex + 1));
             caretAfterPickerRef.current = triggerIndex;
         }
 
-        addPlannerMention(collection);
+        addPlannerMention(chatId, collection);
     };
 
     const escapeMentionPicker = () => {
@@ -119,7 +112,7 @@ export function PlannerComposer({ collections }: { collections: PlanCollection[]
                         <PlannerMentionChip
                             key={collection}
                             collection={collection}
-                            onRemove={() => removePlannerMention(collection)}
+                            onRemove={() => removePlannerMention(chatId, collection)}
                         />
                     ))}
                 </InputGroupAddon>
@@ -127,10 +120,10 @@ export function PlannerComposer({ collections }: { collections: PlanCollection[]
             <InputGroupTextarea
                 ref={composerRef}
                 rows={1}
-                aria-label={isOpening ? "Instructions for the planner" : "Prompt for the planner"}
-                placeholder={describePlaceholder({ isOpening, isWorking, isFailed: phase === "failed", mentions })}
+                aria-label={chatId === null ? "Message for the planner" : `Message for the ${chatId} agent`}
+                placeholder={describePlaceholder({ chatId, isWorking, isReadingSchema, mentions })}
                 value={draft}
-                disabled={!canCompose}
+                disabled={isBusy || isReadingSchema}
                 className="max-h-48 min-h-10 px-3.5"
                 onChange={changeDraft}
                 onKeyDown={(event) => {
@@ -138,31 +131,24 @@ export function PlannerComposer({ collections }: { collections: PlanCollection[]
                         event.preventDefault();
 
                         if (canSend) {
-                            void session.sendDraft();
+                            void session.sendDraft(chatId);
                         }
                     }
                 }}
             />
             <InputGroupAddon align="block-end" className="gap-2 pt-0">
                 {isWorking ? (
-                    <>
-                        <Text variant="caption" as="span">
-                            {isOpening
-                                ? "Optional. Sent once the first plan is ready, and the planner revises it."
-                                : latestReply && describeWork(latestReply)}
-                        </Text>
-                        <Button
-                            variant="secondary"
-                            size="icon-sm"
-                            className="ml-auto"
-                            aria-label="Stop"
-                            onClick={session.stop}
-                        >
-                            <Square className="fill-current" aria-hidden="true" />
-                        </Button>
-                    </>
+                    <Button
+                        variant="secondary"
+                        size="icon-sm"
+                        className="ml-auto"
+                        aria-label={chatId === null ? "Stop the planner" : `Stop the ${chatId} agent`}
+                        onClick={() => void session.stop(chatId)}
+                    >
+                        <Square className="fill-current" aria-hidden="true" />
+                    </Button>
                 ) : (
-                    canAsk && (
+                    canSendMessage && (
                         <>
                             <MentionPicker
                                 collections={collections.filter((collection) => !mentions.includes(collection.name))}
@@ -177,7 +163,7 @@ export function PlannerComposer({ collections }: { collections: PlanCollection[]
                                 className="ml-auto"
                                 aria-label="Send"
                                 disabled={!canSend}
-                                onClick={() => void session.sendDraft()}
+                                onClick={() => void session.sendDraft(chatId)}
                             >
                                 <ArrowUp aria-hidden="true" />
                             </Button>
@@ -263,29 +249,29 @@ function MentionPicker({
 }
 
 function describePlaceholder({
-    isOpening,
+    chatId,
     isWorking,
-    isFailed,
+    isReadingSchema,
     mentions,
 }: {
-    isOpening: boolean;
+    chatId: PlannerChatId;
     isWorking: boolean;
-    isFailed: boolean;
+    isReadingSchema: boolean;
     mentions: string[];
 }): string {
-    if (isOpening) {
-        return "Anything the planner should know? For example: orders are always read with their lines.";
+    if (isReadingSchema) {
+        return "The planner is working on a first plan.";
     }
 
     if (isWorking) {
-        return "The planner is working. Write your next prompt, and send it once it is done.";
+        return `${chatId === null ? "The planner" : "The area agent"} is working. Stop it to send a new message.`;
     }
 
-    if (isFailed) {
-        return "Start over to run the planner again.";
+    if (mentions.length > 0) {
+        return describeMentionPlaceholder(mentions);
     }
 
-    return mentions.length > 0
-        ? describeMentionPlaceholder(mentions)
-        : `Ask the planner for a change. Type ${MENTION_TRIGGER} to mention a collection.`;
+    return chatId === null
+        ? `Ask the planner about the plan. Type ${MENTION_TRIGGER} to mention a collection.`
+        : `Ask the ${chatId} agent for a change. Type ${MENTION_TRIGGER} to mention a collection.`;
 }

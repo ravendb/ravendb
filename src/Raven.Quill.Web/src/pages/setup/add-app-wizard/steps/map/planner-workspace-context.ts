@@ -1,15 +1,19 @@
 import { createContext, useContext, type RefObject } from "react";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
-import { selectPlannerPhase, type PlannerPhase } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
-import { useIsRemovingPlannerCollection } from "@/pages/setup/add-app-wizard/steps/map/session/use-remove-planner-collection";
+import {
+    getChatPhase,
+    isAreaStarted,
+    selectCanEditPlan,
+    selectChat,
+    selectHasUnsavedEdits,
+    type PlannerChatPhase,
+} from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
+import type { PlannerChatId } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 
 type PlannerWorkspaceValue = {
     composerRef: RefObject<HTMLTextAreaElement | null>;
-    /** The wizard is applying the plan; nothing in the planner may start a turn or change the plan meanwhile. */
+    /** The wizard is finishing the step; nothing in the planner may start a turn or change the plan meanwhile. */
     isBusy: boolean;
-    isPanelOpen: boolean;
-    /** No room for the plan beside the chat, so an open plan covers it. */
-    isNarrow: boolean;
     changeSelection: () => void;
 };
 
@@ -25,52 +29,39 @@ export function usePlannerWorkspace(): PlannerWorkspaceValue {
     return workspace;
 }
 
-export function usePlannerChatWidthClass(): string {
-    const { isPanelOpen, isNarrow } = usePlannerWorkspace();
+/** An area that never started has no agent yet, so its view shows the proposal agent's chat. */
+export function useShownChatId(): PlannerChatId {
+    return useSetupWizardStore((state) => {
+        const area = state.plannerView.area;
 
-    return isPanelOpen && !isNarrow ? "max-w-170" : "max-w-180";
+        return area !== null && isAreaStarted(state, area) ? area : null;
+    });
 }
 
-export function useFocusPlannerComposer() {
-    const { composerRef, isNarrow, isPanelOpen } = usePlannerWorkspace();
-    const closePlannerPanel = useSetupWizardStore((state) => state.closePlannerPanel);
-
-    return () => {
-        if (isNarrow && isPanelOpen) {
-            closePlannerPanel();
-        }
-
-        composerRef.current?.focus();
-    };
+export function useChatPhase(chatId: PlannerChatId): PlannerChatPhase {
+    return useSetupWizardStore((state) => getChatPhase(selectChat(state, chatId)));
 }
 
-/**
- * A prompt can go to the planner: it is ready for one, the wizard is not busy, and no removal is still
- * being saved - the turn would start from a plan that still holds the collection.
- */
-export function useCanAskPlanner(): boolean {
-    return useCanStartTurnWhen("ready");
+export function useCanAsk(chatId: PlannerChatId): boolean {
+    const phase = useChatPhase(chatId);
+    const canSendMessage = useCanSendMessage(chatId);
+
+    return phase !== "awaitingAnswers" && canSendMessage;
 }
 
-export function useCanAnswerPlanner(): boolean {
-    return useCanStartTurnWhen("awaitingAnswers");
-}
-
-function useCanStartTurnWhen(phase: PlannerPhase): boolean {
-    const currentPhase = useSetupWizardStore(selectPlannerPhase);
-    const { isBusy } = usePlannerWorkspace();
-    const isRemoving = useIsRemovingPlannerCollection();
-
-    return currentPhase === phase && !isBusy && !isRemoving;
-}
-
-/**
- * The composer takes what the operator writes - also while the planner works, for once it is done - but
- * not while the planner's questions stand in for it, nor once a failed opening left no conversation.
- */
-export function useCanComposeForPlanner(): boolean {
-    const phase = useSetupWizardStore(selectPlannerPhase);
+/** The operator may close the planner's questions and write in the chat instead; the message drops them. */
+export function useCanSendMessage(chatId: PlannerChatId): boolean {
+    const phase = useChatPhase(chatId);
+    const isSaving = useSetupWizardStore((state) => state.plannerIsSaving);
+    const hasUnsavedEdits = useSetupWizardStore(selectHasUnsavedEdits);
     const { isBusy } = usePlannerWorkspace();
 
-    return (phase === "opening" || phase === "working" || phase === "ready") && !isBusy;
+    return phase !== "working" && !isSaving && !isBusy && !hasUnsavedEdits;
+}
+
+export function useCanEditPlan(): boolean {
+    const canEdit = useSetupWizardStore(selectCanEditPlan);
+    const { isBusy } = usePlannerWorkspace();
+
+    return canEdit && !isBusy;
 }

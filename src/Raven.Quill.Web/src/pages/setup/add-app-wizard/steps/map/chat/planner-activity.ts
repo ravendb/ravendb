@@ -1,11 +1,5 @@
 import { formatCount, joinList } from "@/lib/format";
 import { UNSPECIFIED_PROPERTY_CASE } from "@/pages/setup/add-app-wizard/steps/map/session/planner-frames";
-import {
-    getRegisteredState,
-    isBuilt,
-    type PlanCollection,
-} from "@/pages/setup/add-app-wizard/steps/map/session/planner-plan";
-import { getLatestReply, type PlannerState } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
 import type { PlannerActivity, PlannerReplyTurn } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 
 /** `kept` are built collections whose latest change was rejected: they stay as they were built. */
@@ -15,8 +9,7 @@ export type PlanProgress = { builtCount: number; totalCount: number };
 
 export type ActivityHeadline = { title: string; detail: string; isDetailDestructive: boolean };
 
-/** `keeps` names the built collections whose rejected change the reply lets go. */
-export type SuggestedReply = { label: string; prompt: string; isRetry: boolean; keeps: string[] };
+export type SuggestedReply = { label: string; prompt: string };
 
 const PROPERTY_CASE_LABELS: Record<string, string> = {
     CamelCase: "camelCase",
@@ -31,7 +24,7 @@ export function getTurnOutcomes(activity: PlannerActivity[]): TurnOutcomes {
     for (const item of activity) {
         switch (item.type) {
             case "registered":
-                outcomes.set(item.collection, getRegisteredState(item.version));
+                outcomes.set(item.collection, getRegisteredOutcome(item.version));
                 break;
             case "rejected":
                 outcomes.set(item.collection, item.isChange ? "kept" : "failed");
@@ -54,6 +47,40 @@ export function getTurnOutcomes(activity: PlannerActivity[]): TurnOutcomes {
     };
 }
 
+/** A turn's steps, each collection once: where it first came up, as its latest frame left it. */
+export function getActivityRows(activity: PlannerActivity[]): PlannerActivity[] {
+    const latest = new Map<string, PlannerActivity>();
+
+    for (const item of activity) {
+        if ("collection" in item) {
+            latest.set(item.collection, item);
+        }
+    }
+
+    const shown = new Set<string>();
+
+    return activity.flatMap((item) => {
+        if (item.type === "proposal") {
+            return [];
+        }
+
+        if (!("collection" in item)) {
+            return [item];
+        }
+
+        if (shown.has(item.collection)) {
+            return [];
+        }
+
+        shown.add(item.collection);
+        return [latest.get(item.collection) ?? item];
+    });
+}
+
+export function getRegisteredOutcome(version: number): "built" | "updated" {
+    return version > 1 ? "updated" : "built";
+}
+
 export function hasCollectionOutcomes(outcomes: TurnOutcomes): boolean {
     return Object.values(outcomes).some((names) => names.length > 0);
 }
@@ -63,12 +90,6 @@ export function isBuildingCollections(turn: PlannerReplyTurn): boolean {
         (activity) =>
             activity.type === "registered" || activity.type === "rejected" || activity.type === "transientError",
     );
-}
-
-export function selectIsBuildingCollections(state: PlannerState): boolean {
-    const latestReply = getLatestReply(state.plannerTurns);
-
-    return latestReply?.status === "working" && isBuildingCollections(latestReply);
 }
 
 /** The one line a turn's tool activity folds into, e.g. "Built 2 of 3 collections · 1 failed". */
@@ -106,23 +127,14 @@ export function describeConventions(activity: Extract<PlannerActivity, { type: "
             ? null
             : `Property names set to ${PROPERTY_CASE_LABELS[activity.propertyCase] ?? activity.propertyCase}`,
         activity.propertyLanguage ? `Property names in ${activity.propertyLanguage}` : null,
-        activity.mustReEmit.length > 0 ? `re-emitting ${joinList(activity.mustReEmit)}` : null,
     ].filter((part) => part !== null);
 
     return parts.length > 0 ? parts.join(", ") : "Naming conventions updated";
 }
 
+/** An area's first turn builds from the start; any other turn builds once it touched a collection. */
 export function describeWork(turn: PlannerReplyTurn): string {
-    return isBuildingCollections(turn) ? "Building collections" : "Working on your prompt";
-}
-
-/** Before anything is built, the whole proposal is one click away instead of a prompt to write. */
-export function getCollectionsToBuildFirst(collections: PlanCollection[]): string[] {
-    if (collections.some(isBuilt)) {
-        return [];
-    }
-
-    return collections.filter((collection) => collection.state === "suggested").map((collection) => collection.name);
+    return turn.isOpening || isBuildingCollections(turn) ? "Building collections" : "Working on your prompt";
 }
 
 export function getSuggestedReplies({ failed, kept }: Pick<TurnOutcomes, "failed" | "kept">): SuggestedReply[] {
@@ -135,14 +147,10 @@ export function getSuggestedReplies({ failed, kept }: Pick<TurnOutcomes, "failed
             {
                 label: failed.length === 1 ? `Retry ${names}` : `Retry the ${failed.length} failed`,
                 prompt: `Retry ${names}.`,
-                isRetry: true,
-                keeps: [],
             },
             {
                 label: failed.length === 1 ? `Carry on without ${names}` : "Carry on without them",
                 prompt: `Carry on without ${names}.`,
-                isRetry: false,
-                keeps: [],
             },
         );
     }
@@ -154,14 +162,10 @@ export function getSuggestedReplies({ failed, kept }: Pick<TurnOutcomes, "failed
             {
                 label: kept.length === 1 ? `Retry the change to ${names}` : `Retry the ${kept.length} changes`,
                 prompt: `Retry the change to ${names}.`,
-                isRetry: true,
-                keeps: [],
             },
             {
                 label: kept.length === 1 ? "Keep the previous version" : "Keep the previous versions",
                 prompt: `Keep ${names} as ${kept.length === 1 ? "it is" : "they are"}.`,
-                isRetry: false,
-                keeps: kept,
             },
         );
     }

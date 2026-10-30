@@ -16,18 +16,10 @@ export function composePlannerPrompt({ text, mentions }: PlannerPrompt): string 
  * The answers as the next turn. The question goes along with each answer because the planner reads this
  * as a fresh message, and "Link" on its own does not say what it answers.
  */
-export function composeAnswersPrompt({
-    answers,
-    isSkipped,
-    instructions,
-}: Pick<PlannerAnswersTurn, "answers" | "isSkipped" | "instructions">): string {
-    const heading = isSkipped
-        ? "I skipped your open questions - go with your recommendations:"
-        : "Answers to your open questions:";
+export function composeAnswersPrompt({ answers }: Pick<PlannerAnswersTurn, "answers">): string {
     const lines = answers.map(({ question, answer }, index) => `${index + 1}. ${question}\n   ${answer}`);
-    const answersPrompt = [heading, ...lines].join("\n");
 
-    return instructions?.text ? `${answersPrompt}\n\n${composePlannerPrompt(instructions)}` : answersPrompt;
+    return ["Answers to your open questions:", ...lines].join("\n");
 }
 
 export function composeAddTablesPrompt(tables: string[]): string {
@@ -38,8 +30,14 @@ export function composeBuildCollectionsPrompt(collections: string[]): string {
     return `Build ${joinList(collections)}.`;
 }
 
-export function composeFixCollectionPrompt(collection: string): string {
-    return `Fix the ${collection} collection.`;
+export function composeFixCollectionPrompt(collection: string, problems: string[]): string {
+    return problems.length > 0
+        ? `Fix the ${collection} collection. It was rejected: ${problems.join(" ")}`
+        : `Fix the ${collection} collection.`;
+}
+
+export function composeConventionsPrompt(propertyNames: string): string {
+    return `Use ${propertyNames} for property names in every collection.`;
 }
 
 export function describeMentionPlaceholder(mentions: string[]): string {

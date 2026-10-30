@@ -2,21 +2,29 @@ import type { ApiClient } from "@/api/http-client";
 import { streamNdjsonLines } from "@/api/custom-services/response-stream";
 import {
     API_ENDPOINTS,
-    type MigrationAskRequest,
+    type MigrationAreaAskRequest,
+    type MigrationAreaStartRequest,
     type MigrationFrame,
-    type MigrationStartRequest,
+    type MigrationProposalAskRequest,
+    type MigrationProposalStartRequest,
 } from "@/api/generated/server-api";
 
-// The generated client hands back the raw response and cannot be cancelled. The planner streams one
-// NDJSON frame per thing that already happened, which the view shows as it arrives, and the operator
-// can stop a turn.
+// The generated client hands back the raw response and cannot be cancelled. Every planner turn streams
+// one NDJSON frame per thing that already happened, which the view shows as it arrives. Aborting only
+// disconnects the browser: the turn goes on on the server until migrationStop ends it.
 export function createMigrationService(client: ApiClient) {
     return {
-        start: (request: MigrationStartRequest, signal?: AbortSignal) =>
-            streamFrames(client, API_ENDPOINTS.setup.migrationStart, request, signal),
+        proposalStart: (request: MigrationProposalStartRequest, signal?: AbortSignal) =>
+            streamFrames(client, API_ENDPOINTS.setup.migrationProposalStart, request, signal),
 
-        ask: (request: MigrationAskRequest, signal?: AbortSignal) =>
-            streamFrames(client, API_ENDPOINTS.setup.migrationAsk, request, signal),
+        proposalAsk: (request: MigrationProposalAskRequest, signal?: AbortSignal) =>
+            streamFrames(client, API_ENDPOINTS.setup.migrationProposalAsk, request, signal),
+
+        areaStart: (request: MigrationAreaStartRequest, signal?: AbortSignal) =>
+            streamFrames(client, API_ENDPOINTS.setup.migrationAreaStart, request, signal),
+
+        areaAsk: (request: MigrationAreaAskRequest, signal?: AbortSignal) =>
+            streamFrames(client, API_ENDPOINTS.setup.migrationAreaAsk, request, signal),
     };
 }
 

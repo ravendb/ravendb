@@ -27,25 +27,25 @@ export function resolveProposalTables(proposal: MigrationProposal, selectedTable
     };
 }
 
-export function resolveConfigTables(config: CdcSinkTableConfig, selectedTables: SelectedTables): ConfigTableRef {
+/** A table without a schema reads from the provider's default schema, as CDC Sink resolves it. */
+export function resolveConfigTables(
+    config: CdcSinkTableConfig,
+    selectedTables: SelectedTables,
+    defaultSchema: string | null,
+): ConfigTableRef {
     const resolve = createTableResolver(selectedTables);
 
-    // An embedded table without a schema reads from its parent's, as the plan validator takes it.
-    const resolveTable = (
-        table: CdcSinkTableConfig | CdcSinkEmbeddedTableConfig,
-        parentSchema: string | null,
-    ): ConfigTableRef => {
-        const schema = table.sourceTableSchema?.trim() || parentSchema;
+    const resolveTable = (table: CdcSinkTableConfig | CdcSinkEmbeddedTableConfig): ConfigTableRef => ({
+        table: resolve(
+            getTableLabel({
+                sourceTableSchema: table.sourceTableSchema?.trim() || defaultSchema,
+                sourceTableName: table.sourceTableName?.trim(),
+            }),
+        ),
+        embeddedTables: (table.embeddedTables ?? []).map(resolveTable),
+    });
 
-        return {
-            table: resolve(
-                getTableLabel({ sourceTableSchema: schema, sourceTableName: table.sourceTableName?.trim() }),
-            ),
-            embeddedTables: (table.embeddedTables ?? []).map((embedded) => resolveTable(embedded, schema)),
-        };
-    };
-
-    return resolveTable(config, null);
+    return resolveTable(config);
 }
 
 function createTableResolver(selectedTables: SelectedTables) {

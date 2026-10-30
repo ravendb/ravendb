@@ -21,7 +21,7 @@ export const Default: Story = {
 // The raw editor can only be left through a mapping that validates, so an incomplete table (here a
 // just-added empty one) must not be able to open it - that used to be a one-way trip into raw JSON.
 export const RawViewBlockedByInvalidTable: Story = {
-    tags: ["!dev"],
+    tags: ["test-only"],
     render: () => (
         <AppWizardAtStep
             initialStep="mapTables"

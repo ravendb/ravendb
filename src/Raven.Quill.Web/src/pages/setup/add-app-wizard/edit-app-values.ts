@@ -7,7 +7,7 @@ import {
     parseConnectionString,
 } from "@/pages/setup/add-app-wizard/connection-string";
 import { resolveProviderFromSourceType } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-options";
-import { wrapDtoTablesToFormShape } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
+import { mapDtoTablesToForm } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 import { getTableLabel } from "@/pages/setup/add-app-wizard/discover-utils";
 import type { EditedApp } from "@/pages/setup/add-app-wizard/app-wizard";
 
@@ -28,7 +28,7 @@ export function buildEditAppSeed(
     cdc: AppCdcConfigurationResponse,
 ): EditAppSeed | { error: string } {
     const configTables = cdc.configuration.tables ?? [];
-    const parsedTables = tablesSchema.safeParse(wrapDtoTablesToFormShape(configTables));
+    const parsedTables = tablesSchema.safeParse(mapDtoTablesToForm(configTables));
 
     if (!parsedTables.success) {
         return {

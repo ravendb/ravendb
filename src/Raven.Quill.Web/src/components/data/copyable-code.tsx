@@ -29,7 +29,7 @@ export function CopyableCode({ code, copyLabel, language, className }: CopyableC
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                className="absolute top-1/2 right-1.5 -translate-y-1/2"
+                className="absolute top-1 right-1"
                 aria-label={copyLabel}
                 onClick={() => copyToClipboard(code)}
             >

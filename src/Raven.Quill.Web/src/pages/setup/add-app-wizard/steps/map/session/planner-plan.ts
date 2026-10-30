@@ -1,250 +1,193 @@
-import type { CdcSinkTableConfig, DiscoverTableResponse } from "@/api/generated/server-api";
+import type { CdcSinkTableConfig } from "@/api/generated/server-api";
 import { getTableKey, getTableLabel } from "@/pages/setup/add-app-wizard/discover-utils";
 import {
     documentFromConfig,
     documentFromProposal,
     getEmbeddedTables,
-    getLinkedCollections,
     getLinkTargets,
     type DiscoverIndex,
     type LinkTargets,
     type PlanDocument,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-document";
-import { isRegistered, type PlannerState } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
+import {
+    isAreaStarted,
+    isChatWorking,
+    selectChat,
+    type PlannerState,
+} from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
+import { resolveConfigTables } from "@/pages/setup/add-app-wizard/steps/map/session/planner-table-refs";
 import type {
-    PlannerCollection,
-    PlannerProposal,
+    PlannerEdit,
+    PlannerEntry,
     ProposedCollection,
-    SelectedTables,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 
-export type PlanCollectionState = "suggested" | "built" | "updated" | "failed";
+export type PlanCollectionState = "suggested" | "building" | "built" | "updated" | "failed" | "removed";
 
 export const PLAN_STATE_LABELS: Record<PlanCollectionState, string> = {
-    suggested: "Suggested",
+    suggested: "Not built",
+    building: "Building",
     built: "Built",
     updated: "Updated",
     failed: "Failed",
+    removed: "Removed",
 };
 
 export type PlanCollection = {
     name: string;
+    area: string;
     state: PlanCollectionState;
-    area: string | null;
     why: string | null;
     rootTable: string | null;
+    /** The mapping as built, or as the operator edited it; the proposal's outline before anything is built. */
     document: PlanDocument | null;
-    previousDocument: PlanDocument | null;
     config: CdcSinkTableConfig | null;
     warnings: string[];
-    errors: string[];
-    /** The collection's name and its tables, as the name filter looks for them. */
+    /** Why the agent rejected the collection, or its latest change. */
+    problems: string[];
+    retryErrors: string[];
+    edit: PlannerEdit | null;
     searchKey: string;
 };
 
-export type PlanArea = { name: string | null; collections: PlanCollection[] };
+export type PlanAreaState = "notStarted" | "building" | "partlyBuilt" | "built" | "failed";
 
-export type PlanTableGroup = "notMigrated" | "notSelected" | "inCollections";
-
-/** Tables without a collection come first, so nothing gets forgotten. */
-export const PLAN_TABLE_GROUP_LABELS: Record<PlanTableGroup, string> = {
-    notMigrated: "Not migrated",
-    notSelected: "Not selected",
-    inCollections: "In collections",
+export type PlanArea = {
+    name: string;
+    why: string | null;
+    state: PlanAreaState;
+    isStarted: boolean;
+    isBuilding: boolean;
+    collections: PlanCollection[];
+    /** Proposed collections nothing was built for yet: what Build still has to do. */
+    pendingCollections: string[];
 };
 
-export type PlanTable = { label: string; detail: string; searchKey: string } & (
-    | { group: "inCollections"; collection: PlanCollection }
-    | { group: "notMigrated" | "notSelected"; collection: null }
-);
+export type CollectionSourceKind = "table" | "embed" | "link";
 
-/** What the plan is made of: the latest proposal, what the planner registered, and what was taken out since. */
-export type PlanSource = Pick<PlannerState, "plannerProposal" | "plannerCollections" | "plannerRemovedCollections">;
+/** `as` is the property an embedded table lands under. */
+export type CollectionSource = { kind: CollectionSourceKind; name: string; as: string | null };
+
+export type CollectionSources = {
+    table: CollectionSource | null;
+    embeds: CollectionSource[];
+    links: CollectionSource[];
+};
+
+export type PlanLeftOutTable = { table: string; why: string; searchKey: string };
+
+export type Plan = { areas: PlanArea[]; collections: PlanCollection[]; leftOut: PlanLeftOutTable[] };
+
+export type PlanSource = Pick<
+    PlannerState,
+    | "plannerProposal"
+    | "plannerEntries"
+    | "plannerRetrying"
+    | "plannerRejectionIssues"
+    | "plannerStartedAreas"
+    | "plannerProposalChat"
+    | "plannerAreaChats"
+    | "plannerEdits"
+    | "plannerSelectedTables"
+    | "plannerDefaultSchema"
+>;
+
+const proposedDocuments = new WeakMap<ProposedCollection, PlanDocument | null>();
 
 /**
- * A collection is rebuilt only when something it is made of changed, so a frame about one collection
- * leaves every other collection - and whatever renders it - as it was.
+ * The plan as the views show it: the proposal's areas in its order, each with the collections it holds
+ * now. A stored collection decides where it is - a move takes it to another area - and one the proposal
+ * names but the plan renamed shows once, under its new name.
  */
-const planCollections = new WeakMap<object, { inputs: unknown[]; collection: PlanCollection }>();
-
-/**
- * One list for the whole plan: every proposed collection in the proposal's order, followed by any the
- * planner registered without proposing it. Registering a collection is what moves it past Suggested.
- */
-export function buildPlanCollections(source: PlanSource, index: DiscoverIndex): PlanCollection[] {
+export function buildPlan(source: PlanSource, index: DiscoverIndex): Plan {
     const proposal = source.plannerProposal;
-    const proposedByName = new Map(
-        proposedCollections(proposal).flatMap((proposed) =>
-            proposed.collection ? [[proposed.collection, proposed] as const] : [],
+    const proposedNames = new Set(
+        proposal?.areas.flatMap((area) => area.collections.flatMap(({ collection }) => collection ?? [])) ?? [],
+    );
+    const linkTargets = getLinkTargets(proposal?.areas.flatMap((area) => area.collections) ?? [], index);
+    const renamedRootTables = new Set(
+        Object.values(source.plannerEntries).flatMap((entry) =>
+            !proposedNames.has(entry.name) && entry.tableRef?.table ? [getTableKey(entry.tableRef.table)] : [],
         ),
     );
-    const areaByName = getAreaByName(proposal);
-    const linkTargets = getLinkTargets(proposedCollections(proposal), index);
 
-    return getPlanCollectionNames(source).map((name) => {
-        const proposed = proposedByName.get(name) ?? null;
-        const registered: PlannerCollection | null = source.plannerCollections[name] ?? null;
-        const area = areaByName.get(name) ?? null;
+    const areaNames = [
+        ...new Set([
+            ...(proposal?.areas.flatMap((area) => area.area?.trim() || []) ?? []),
+            ...Object.values(source.plannerEntries).flatMap((entry) => entry.area ?? []),
+        ]),
+    ];
 
-        return reusePlanCollection(registered ?? proposed, [name, proposed, registered, area, index], () =>
-            toPlanCollection(name, proposed, registered, area, index, linkTargets),
+    const areas = areaNames.map((areaName): PlanArea => {
+        const proposed = proposal?.areas.find((area) => area.area?.trim() === areaName);
+        const isBuilding = isChatWorking(selectChat(source, areaName));
+        const isStarted = isAreaStarted(source, areaName);
+
+        const proposedHere = (proposed?.collections ?? []).filter((collection) => {
+            const name = collection.collection;
+
+            if (!name) {
+                return false;
+            }
+
+            const entry: PlannerEntry | undefined = source.plannerEntries[name];
+
+            if (entry) {
+                return entry.area === null || entry.area === areaName;
+            }
+
+            return !collection.rootTableRef || !renamedRootTables.has(getTableKey(collection.rootTableRef));
+        });
+        const storedHere = Object.values(source.plannerEntries).filter(
+            (entry) => entry.area === areaName && !proposedHere.some(({ collection }) => collection === entry.name),
         );
+
+        const collections = [
+            ...proposedHere.map((proposedCollection) =>
+                toPlanCollection(
+                    proposedCollection.collection!,
+                    areaName,
+                    proposedCollection,
+                    source,
+                    index,
+                    linkTargets,
+                    isBuilding,
+                ),
+            ),
+            ...storedHere.map((entry) =>
+                toPlanCollection(entry.name, areaName, null, source, index, linkTargets, isBuilding),
+            ),
+        ];
+
+        return {
+            name: areaName,
+            why: proposed?.why ?? null,
+            state: getAreaState(collections, isStarted, isBuilding),
+            isStarted,
+            isBuilding,
+            collections,
+            pendingCollections: proposedHere
+                .filter(({ collection }) => !source.plannerEntries[collection!])
+                .map(({ collection }) => collection!),
+        };
     });
+
+    const collections = areas.flatMap((area) => area.collections);
+
+    return { areas, collections, leftOut: buildLeftOutTables(source, index, collections) };
 }
 
-export function getRegisteredState(version: number): "built" | "updated" {
-    return version > 1 ? "updated" : "built";
-}
-
-export function isBuilt(collection: PlanCollection): boolean {
+export function isBuilt(collection: Pick<PlanCollection, "state">): boolean {
     return collection.state === "built" || collection.state === "updated";
 }
 
-export function countByState(collections: PlanCollection[]): Record<PlanCollectionState, number> {
-    const counts: Record<PlanCollectionState, number> = { suggested: 0, built: 0, updated: 0, failed: 0 };
-
-    for (const collection of collections) {
-        counts[collection.state] += 1;
-    }
-
-    return counts;
+/** A collection the agent mapped, so it has a page with its mapping, and can be edited by hand. */
+export function isMapped(collection: Pick<PlanCollection, "state" | "config">): boolean {
+    return (isBuilt(collection) || collection.state === "failed") && collection.config !== null;
 }
 
-export function countByGroup(tables: PlanTable[]): Record<PlanTableGroup, number> {
-    const counts: Record<PlanTableGroup, number> = { notMigrated: 0, notSelected: 0, inCollections: 0 };
-
-    for (const table of tables) {
-        counts[table.group] += 1;
-    }
-
-    return counts;
-}
-
-export function countUnbuilt(source: PlanSource): number {
-    return getPlanCollectionNames(source).filter((name) => {
-        const collection = source.plannerCollections[name];
-
-        return !collection || !isRegistered(collection);
-    }).length;
-}
-
-/**
- * The other collections that link to `target`; without it in the plan, those links point at nothing. A
- * link names its collection the way the configuration was written, so the case is not taken as given.
- */
-export function findCollectionsLinkingTo(collections: PlanCollection[], target: string): string[] {
-    const isTarget = (name: string) => name.toLowerCase() === target.toLowerCase();
-
-    return collections
-        .filter(
-            (collection) =>
-                !isTarget(collection.name) &&
-                collection.document !== null &&
-                getLinkedCollections(collection.document).some(isTarget),
-        )
-        .map((collection) => collection.name);
-}
-
-export function getMemberTables(collection: Pick<PlanCollection, "document" | "rootTable">): string[] {
-    if (!collection.document) {
-        return collection.rootTable ? [collection.rootTable] : [];
-    }
-
-    return [collection.document.table, ...getEmbeddedTables(collection.document).map((embedded) => embedded.table)];
-}
-
-/** Areas in the proposal's order. Collections the proposal never placed come last, outside any area. */
-export function groupByArea(collections: PlanCollection[], proposal: PlannerProposal | null): PlanArea[] {
-    const areaNames = [...new Set(getAreaByName(proposal).values())];
-
-    return [...areaNames, null]
-        .map((name) => ({ name, collections: collections.filter((collection) => collection.area === name) }))
-        .filter((area) => area.collections.length > 0);
-}
-
-export function buildPlanTables(
-    index: DiscoverIndex,
-    selectedTables: SelectedTables,
-    collections: PlanCollection[],
-    proposal: PlannerProposal | null,
-): PlanTable[] {
-    const selectedKeys = new Set(selectedTables.map(getTableKey));
-    const membership = new Map<DiscoverTableResponse, { collection: PlanCollection; path: string | null }>();
-    const droppedWhy = new Map<DiscoverTableResponse, string>();
-
-    for (const collection of collections) {
-        if (!collection.document) {
-            continue;
-        }
-
-        const members = [{ source: collection.document.source, path: null }, ...getEmbeddedTables(collection.document)];
-
-        for (const { source, path } of members) {
-            const table = index.find(source);
-
-            if (table && !membership.has(table)) {
-                membership.set(table, { collection, path });
-            }
-        }
-    }
-
-    for (const dropped of proposal?.dropped ?? []) {
-        const table = index.find(dropped.tableRef);
-
-        if (table && dropped.why) {
-            droppedWhy.set(table, dropped.why);
-        }
-    }
-
-    return index.tables.map((table): PlanTable => {
-        const label = getTableLabel(table);
-        const member = membership.get(table);
-
-        if (member) {
-            return {
-                label,
-                searchKey: toSearchKey(label, member.collection.name),
-                group: "inCollections",
-                detail: member.path
-                    ? `Inside ${member.collection.name} as ${member.path}`
-                    : `One ${member.collection.name} document per row`,
-                collection: member.collection,
-            };
-        }
-
-        const searchKey = toSearchKey(label);
-
-        if (selectedKeys.has(getTableKey(table))) {
-            return {
-                label,
-                searchKey,
-                group: "notMigrated",
-                detail: droppedWhy.get(table) ?? "Not in any collection.",
-                collection: null,
-            };
-        }
-
-        return {
-            label,
-            searchKey,
-            group: "notSelected",
-            detail: table.unsupportedReason ?? "Not selected in Verify your schema.",
-            collection: null,
-        };
-    });
-}
-
-/** What each collection looked like, to tell later which of them changed. */
-export function getPlanRevisions(source: PlanSource): Record<string, string> {
-    return Object.fromEntries(
-        getPlanCollectionNames(source).map((name) => [name, getRevision(source.plannerCollections[name])]),
-    );
-}
-
-export function countChangedSince(revisions: Record<string, string>, source: PlanSource): number {
-    return getPlanCollectionNames(source).filter(
-        (name) => revisions[name] !== getRevision(source.plannerCollections[name]),
-    ).length;
+export function countBuilt(collections: PlanCollection[]): number {
+    return collections.filter(isBuilt).length;
 }
 
 export function toSearchKey(...names: string[]): string {
@@ -258,114 +201,208 @@ export function createNameMatcher(filter: string): (searchKey: string) => boolea
     return (searchKey) => !wanted || searchKey.includes(wanted);
 }
 
-/** Every proposed collection in the proposal's order, across its areas. */
-export function proposedCollections<Collection>(
-    proposal: { areas: { collections: Collection[] }[] } | null,
-): Collection[] {
-    return proposal?.areas.flatMap((area) => area.collections) ?? [];
-}
-
-function getPlanCollectionNames(source: PlanSource): string[] {
-    const removedNames = new Set(source.plannerRemovedCollections);
-    const proposedNames = proposedCollections(source.plannerProposal).flatMap(({ collection }) =>
-        collection && !removedNames.has(collection) ? [collection] : [],
-    );
-
-    return [...new Set([...proposedNames, ...Object.keys(source.plannerCollections)])];
-}
-
-/** The area each proposed collection belongs to. A blank area name places it in no area. */
-function getAreaByName(proposal: PlannerProposal | null): Map<string, string> {
-    const areaByName = new Map<string, string>();
-
-    for (const { area, collections } of proposal?.areas ?? []) {
-        const areaName = area?.trim();
-
-        if (!areaName) {
-            continue;
-        }
-
-        for (const { collection } of collections) {
-            if (collection) {
-                areaByName.set(collection, areaName);
-            }
-        }
+export function getMemberTables(collection: Pick<PlanCollection, "document" | "rootTable">): string[] {
+    if (!collection.document) {
+        return collection.rootTable ? [collection.rootTable] : [];
     }
 
-    return areaByName;
+    return [collection.document.table, ...getEmbeddedTables(collection.document).map((embedded) => embedded.table)];
 }
 
-function reusePlanCollection(key: object | null, inputs: unknown[], build: () => PlanCollection): PlanCollection {
-    const cached = key ? planCollections.get(key) : undefined;
+/**
+ * Where a collection's documents come from: its table, the tables it embeds, and every collection it links to.
+ * Only a built mapping names the property an embedded table lands under; the proposal has no names yet.
+ */
+export function getCollectionSources(
+    collection: Pick<PlanCollection, "document" | "rootTable" | "config">,
+): CollectionSources {
+    const { document } = collection;
 
-    if (cached?.inputs.every((input, position) => input === inputs[position])) {
-        return cached.collection;
+    if (!document) {
+        return {
+            table: collection.rootTable ? { kind: "table", name: collection.rootTable, as: null } : null,
+            embeds: [],
+            links: [],
+        };
     }
 
-    const collection = build();
+    const embeds = document.properties.filter((property) => property.kind === "embed");
 
-    if (key) {
-        planCollections.set(key, { inputs, collection });
-    }
+    return {
+        table: { kind: "table", name: document.table, as: null },
+        embeds: embeds.map((embed) => ({
+            kind: "embed",
+            name: embed.document.table,
+            as: collection.config ? embed.name : null,
+        })),
+        links: [...new Set(getLinkedCollections(document))].map((name) => ({ kind: "link", name, as: null })),
+    };
+}
 
-    return collection;
+/** The area's name without the word area, for the plan, where the areas already sit under an Areas heading. */
+export function getAreaShortName(area: string): string {
+    return area.replace(/\s+area$/i, "") || area;
 }
 
 function toPlanCollection(
     name: string,
+    area: string,
     proposed: ProposedCollection | null,
-    registered: PlannerCollection | null,
-    area: string | null,
+    source: PlanSource,
     index: DiscoverIndex,
     linkTargets: LinkTargets,
+    isAreaBuilding: boolean,
 ): PlanCollection {
-    const getProposedDocument = () => (proposed ? documentFromProposal(proposed, index, linkTargets) : null);
-    const withSearchKey = (collection: Omit<PlanCollection, "searchKey">): PlanCollection => ({
-        ...collection,
-        searchKey: toSearchKey(collection.name, ...getMemberTables(collection)),
-    });
-
-    if (registered && isRegistered(registered)) {
-        const document = registered.config
-            ? documentFromConfig(registered.config, registered.tableRef)
-            : getProposedDocument();
-
-        return withSearchKey({
-            name,
-            state: getRegisteredState(registered.version),
-            area,
-            why: registered.rationale ?? proposed?.why ?? null,
-            rootTable: document?.table ?? proposed?.rootTable ?? null,
-            document,
-            previousDocument: registered.previousConfig ? documentFromConfig(registered.previousConfig, null) : null,
-            config: registered.config,
-            warnings: registered.warnings,
-            errors: registered.rejectionErrors,
-        });
-    }
-
-    const document = getProposedDocument();
-
-    return withSearchKey({
+    const entry: PlannerEntry | undefined = source.plannerEntries[name];
+    const edit = source.plannerEdits[name] ?? null;
+    const config = edit?.config ?? entry?.config ?? null;
+    const document = getDocument(config, entry, edit, proposed, source, index, linkTargets);
+    const retryErrors = source.plannerRetrying[name] ?? [];
+    const rejection = source.plannerRejectionIssues[name]?.map((issue) => issue.message);
+    const isRejected = entry?.status === "Rejected";
+    const collection = {
         name,
-        state: registered ? "failed" : "suggested",
         area,
-        why: proposed?.why ?? null,
+        state: getCollectionState(entry, edit, isAreaBuilding, retryErrors.length > 0),
+        why: entry?.rationale ?? proposed?.why ?? null,
         rootTable: document?.table ?? proposed?.rootTable ?? null,
         document,
-        previousDocument: null,
-        config: null,
-        warnings: [],
-        errors: registered?.errors ?? [],
-    });
+        config,
+        warnings: isRejected ? [] : (entry?.warnings ?? []),
+        problems: rejection ?? (isRejected ? (entry?.warnings ?? []) : []),
+        retryErrors,
+        edit,
+    };
+
+    return { ...collection, searchKey: toSearchKey(name, ...getMemberTables(collection)) };
 }
 
-function getRevision(collection: PlannerCollection | undefined): string {
-    if (!collection) {
+/** A hand edit reads like the agent's own: an edited collection is Updated, a fixed failure Built. */
+function getCollectionState(
+    entry: PlannerEntry | undefined,
+    edit: PlannerEdit | null,
+    isAreaBuilding: boolean,
+    isRetrying: boolean,
+): PlanCollectionState {
+    if (isAreaBuilding && (!entry || isRetrying)) {
+        return "building";
+    }
+
+    if (!entry) {
         return "suggested";
     }
 
-    return isRegistered(collection)
-        ? `built:${collection.registrationNumber}:${collection.rejectionErrors.length}`
-        : `failed:${collection.errors.length}`;
+    switch (entry.status) {
+        case "Removed":
+            return "removed";
+        case "Rejected":
+            return edit?.config ? "built" : "failed";
+        case "Registered":
+            return edit?.config || entry.version > 1 ? "updated" : "built";
+    }
+}
+
+function getDocument(
+    config: CdcSinkTableConfig | null,
+    entry: PlannerEntry | undefined,
+    edit: PlannerEdit | null,
+    proposed: ProposedCollection | null,
+    source: PlanSource,
+    index: DiscoverIndex,
+    linkTargets: LinkTargets,
+): PlanDocument | null {
+    if (config) {
+        const tableRef =
+            edit?.config || !entry
+                ? resolveConfigTables(config, source.plannerSelectedTables ?? [], source.plannerDefaultSchema)
+                : entry.tableRef;
+
+        return documentFromConfig(config, tableRef);
+    }
+
+    if (!proposed) {
+        return null;
+    }
+
+    if (!proposedDocuments.has(proposed)) {
+        proposedDocuments.set(proposed, documentFromProposal(proposed, index, linkTargets));
+    }
+
+    return proposedDocuments.get(proposed) ?? null;
+}
+
+function getAreaState(collections: PlanCollection[], isStarted: boolean, isBuilding: boolean): PlanAreaState {
+    if (isBuilding) {
+        return "building";
+    }
+
+    if (collections.some((collection) => collection.state === "failed")) {
+        return "failed";
+    }
+
+    const builtCount = countBuilt(collections);
+
+    if (!isStarted && builtCount === 0) {
+        return "notStarted";
+    }
+
+    return collections.every((collection) => isBuilt(collection) || collection.state === "removed")
+        ? "built"
+        : "partlyBuilt";
+}
+
+function buildLeftOutTables(
+    source: PlanSource,
+    index: DiscoverIndex,
+    collections: PlanCollection[],
+): PlanLeftOutTable[] {
+    const covered = new Set(
+        collections
+            .filter((collection) => collection.state !== "removed")
+            .flatMap((collection) => getCoveredTableKeys(collection)),
+    );
+    const droppedWhy = new Map(
+        (source.plannerProposal?.dropped ?? []).flatMap((dropped) =>
+            dropped.tableRef && dropped.why ? [[getTableKey(dropped.tableRef), dropped.why] as const] : [],
+        ),
+    );
+
+    return (source.plannerSelectedTables ?? [])
+        .filter((table) => !covered.has(getTableKey(table)))
+        .map((table) => {
+            const label = getTableLabel(index.find(table) ?? table);
+
+            return {
+                table: label,
+                why: droppedWhy.get(getTableKey(table)) ?? "Not in any collection.",
+                searchKey: toSearchKey(label),
+            };
+        })
+        .toSorted((left, right) => left.table.localeCompare(right.table));
+}
+
+function getLinkedCollections(document: PlanDocument): string[] {
+    return document.properties.flatMap((property) => {
+        switch (property.kind) {
+            case "link":
+                return [property.collection];
+            case "embed":
+                return getLinkedCollections(property.document);
+            default:
+                return [];
+        }
+    });
+}
+
+function getCoveredTableKeys(collection: PlanCollection): string[] {
+    if (!collection.document) {
+        return [];
+    }
+
+    const sources = [
+        collection.document.source,
+        ...getEmbeddedTables(collection.document).map((table) => table.source),
+    ];
+
+    return sources.flatMap((table) => (table ? [getTableKey(table)] : []));
 }

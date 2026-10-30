@@ -36,7 +36,9 @@ type AiConsentGateHeroProps = {
     variant: Extract<AiConsentGateVariant, "hero">;
     copy: AiConsentHeroCopy;
     figure?: ReactNode;
+    /** Runs right after consent is granted, or on the accept button when it was granted before. */
     onGranted?: () => void;
+    secondaryAction?: ReactNode;
 };
 
 type AiConsentGateProps =
@@ -45,7 +47,14 @@ type AiConsentGateProps =
 
 export function AiConsentGate(props: AiConsentGateProps) {
     if (props.variant === "hero") {
-        return <AiConsentHero copy={props.copy} figure={props.figure} onGranted={props.onGranted} />;
+        return (
+            <AiConsentHero
+                copy={props.copy}
+                figure={props.figure}
+                onGranted={props.onGranted}
+                secondaryAction={props.secondaryAction}
+            />
+        );
     }
 
     return <AiConsentNotice copy={props.copy} variant={props.variant ?? "panel"} />;
@@ -127,11 +136,12 @@ function AiConsentLayout({ variant, tone = "default", icon, message, action }: A
     );
 }
 
-function AiConsentHero({ copy, figure, onGranted }: Omit<AiConsentGateHeroProps, "variant">) {
+function AiConsentHero({ copy, figure, onGranted, secondaryAction }: Omit<AiConsentGateHeroProps, "variant">) {
     const consent = useAiConsent();
     const acceptance = useConsentAcceptance(onGranted);
+    const isAccepted = consent.isGranted || acceptance.isAccepted;
 
-    if (consent.isPending || consent.isGranted) {
+    if (consent.isPending) {
         return null;
     }
 
@@ -154,23 +164,28 @@ function AiConsentHero({ copy, figure, onGranted }: Omit<AiConsentGateHeroProps,
                                     {consent.unavailableReason}
                                 </Text>
                                 <AiConsentRetryButton consent={consent} size="lg" className="self-start" />
+                                {secondaryAction}
                             </>
                         ) : (
                             <>
-                                <AiConsentTermsCheckbox
-                                    isAccepted={acceptance.isAccepted}
-                                    onAcceptedChange={acceptance.setIsAccepted}
-                                    disabled={acceptance.isPending}
-                                />
-                                <Button
-                                    size="lg"
-                                    className="self-start"
-                                    disabled={!acceptance.isAccepted || acceptance.isPending}
-                                    onClick={acceptance.accept}
-                                >
-                                    {acceptance.isPending ? <Spinner /> : <Sparkles aria-hidden="true" />}
-                                    {copy.acceptLabel}
-                                </Button>
+                                {!consent.isGranted && (
+                                    <AiConsentTermsCheckbox
+                                        isAccepted={acceptance.isAccepted}
+                                        onAcceptedChange={acceptance.setIsAccepted}
+                                        disabled={acceptance.isPending}
+                                    />
+                                )}
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                                    <Button
+                                        size="lg"
+                                        disabled={!isAccepted || acceptance.isPending}
+                                        onClick={consent.isGranted ? onGranted : acceptance.accept}
+                                    >
+                                        {acceptance.isPending ? <Spinner /> : <Sparkles aria-hidden="true" />}
+                                        {copy.acceptLabel}
+                                    </Button>
+                                    {secondaryAction}
+                                </div>
                             </>
                         )}
                         <AiConsentGrantError error={acceptance.error} />

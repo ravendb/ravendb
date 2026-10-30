@@ -5,6 +5,7 @@ import type {
     CdcSinkTableConfig,
     DiscoverResponse,
     DiscoverTableResponse,
+    ProposedField,
 } from "@/api/generated/server-api";
 import { getTableKey, getTableLabel, type SourceTableRef } from "@/pages/setup/add-app-wizard/discover-utils";
 import { getForeignKeysToTable } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
@@ -28,8 +29,6 @@ export type PlanEmbedProperty = {
 export type PlanProperty = PlanColumnProperty | PlanLinkProperty | PlanEmbedProperty;
 
 export type PlanEmbeddedTable = { table: string; source: SourceTableRef | null; path: string };
-
-export type PlanShapeRow = { property: PlanProperty; path: string; depth: number; isNew: boolean };
 
 /** The discovered tables, looked up by name once instead of scanned for every reference. */
 export type DiscoverIndex = {
@@ -72,16 +71,16 @@ export function documentFromConfig(config: CdcSinkTableConfig, tableRef: ConfigT
         return cached.document;
     }
 
-    const document = toConfigDocument(config, null, tableRef);
+    const document = toConfigDocument(config, tableRef);
     configDocuments.set(config, { tableRef, document });
 
     return document;
 }
 
 /**
- * The document a suggested collection would produce. The proposal names tables only, so the properties
- * carry their source names: the root table's columns, embedded tables under their own names, and links
- * under the column that holds the reference. Columns a relation consumes are not repeated as properties.
+ * The document a suggested collection would produce: the root table's columns, embedded tables under their
+ * own names, and links under the column that holds the reference. Columns take the property names the
+ * proposal gives them, or their source names. Columns a relation consumes are not repeated as properties.
  */
 export function documentFromProposal(
     proposed: ProposedCollection,
@@ -147,7 +146,7 @@ export function documentFromProposal(
         });
     }
 
-    return toProposalDocument(rootNode);
+    return toProposalDocument(rootNode, createPropertyNamer(proposed.fields ?? []));
 }
 
 export function getLinkTargets(proposed: ProposedCollection[], index: DiscoverIndex): LinkTargets {
@@ -187,16 +186,6 @@ export function getLinkedCollections(document: PlanDocument): string[] {
     });
 }
 
-/** The document as table rows, nested properties under their parent. `previous` marks what is new. */
-export function getShapeRows(document: PlanDocument, previous: PlanDocument | null): PlanShapeRow[] {
-    const previousPaths = previous ? new Set(flattenProperties(previous, "", 0).map((row) => row.path)) : null;
-
-    return flattenProperties(document, "", 0).map((row) => ({
-        ...row,
-        isNew: previousPaths !== null && !previousPaths.has(row.path),
-    }));
-}
-
 function createDiscoverIndex(tables: DiscoverTableResponse[]): DiscoverIndex {
     const byKey = new Map(tables.map((table) => [getTableKey(table), table]));
 
@@ -206,27 +195,16 @@ function createDiscoverIndex(tables: DiscoverTableResponse[]): DiscoverIndex {
     };
 }
 
-function flattenProperties(document: PlanDocument, parentPath: string, depth: number): Omit<PlanShapeRow, "isNew">[] {
-    return document.properties.flatMap((property) => {
-        const path = joinPath(parentPath, property.name);
-        const row = { property, path, depth };
-
-        return property.kind === "embed" ? [row, ...flattenProperties(property.document, path, depth + 1)] : [row];
-    });
-}
-
 function joinPath(parentPath: string, name: string): string {
     return parentPath ? `${parentPath}.${name}` : name;
 }
 
-/** The planner leaves an embedded table's schema out when it matches the parent's, as the server reads it too. */
+/** A table the configuration names without a schema is labelled as resolved, in the provider's default schema. */
 function toConfigDocument(
     table: CdcSinkTableConfig | CdcSinkEmbeddedTableConfig,
-    parentSchema: string | null,
     tableRef: ConfigTableRef | null,
 ): PlanDocument {
-    const schema = table.sourceTableSchema || parentSchema;
-    const label = getTableLabel({ sourceTableSchema: schema, sourceTableName: table.sourceTableName });
+    const label = getTableLabel(tableRef?.table ?? table);
     const linkedTables: CdcSinkLinkedTableConfig[] = table.linkedTables ?? [];
 
     return {
@@ -255,7 +233,7 @@ function toConfigDocument(
                     name: embedded.propertyName ?? "",
                     relation: embedded.type ?? "Array",
                     joinColumns: embedded.joinColumns ?? [],
-                    document: toConfigDocument(embedded, schema, tableRef?.embeddedTables[position] ?? null),
+                    document: toConfigDocument(embedded, tableRef?.embeddedTables[position] ?? null),
                 }),
             ),
         ],
@@ -289,7 +267,20 @@ function findReference(
     return undefined;
 }
 
-function toProposalDocument(node: ProposalNode): PlanDocument {
+type PropertyNamer = (table: DiscoverTableResponse, column: string) => string;
+
+/** The proposal names a column's property by its schema-qualified table, as the planner spells it. */
+function createPropertyNamer(fields: ProposedField[]): PropertyNamer {
+    const toKey = (table: string, column: string) => `${table.toLowerCase()}|${column.toLowerCase()}`;
+    const properties = new Map(fields.map((field) => [toKey(field.table, field.column), field.property]));
+
+    return (table, column) =>
+        properties.get(toKey(getTableLabel(table), column)) ??
+        properties.get(toKey(table.sourceTableName, column)) ??
+        column;
+}
+
+function toProposalDocument(node: ProposalNode, nameProperty: PropertyNamer): PlanDocument {
     const label = getTableLabel(node.table);
     const consumedColumns = new Set([...node.joinColumns, ...node.links.flatMap((link) => link.joinColumns)]);
 
@@ -305,7 +296,7 @@ function toProposalDocument(node: ProposalNode): PlanDocument {
                 .map(
                     (column): PlanProperty => ({
                         kind: "column",
-                        name: column.name,
+                        name: nameProperty(node.table, column.name),
                         column: column.name,
                         table: label,
                     }),
@@ -317,7 +308,7 @@ function toProposalDocument(node: ProposalNode): PlanDocument {
                     name: embed.table.sourceTableName,
                     relation: "Array",
                     joinColumns: embed.joinColumns,
-                    document: toProposalDocument(embed),
+                    document: toProposalDocument(embed, nameProperty),
                 }),
             ),
         ],

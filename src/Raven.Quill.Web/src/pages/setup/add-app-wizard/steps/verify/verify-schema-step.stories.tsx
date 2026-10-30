@@ -3,13 +3,12 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { DiscoverResponse } from "@/api/generated/server-api";
 import { RANGE_PREVIEW_ROW_CLASSNAME } from "@/components/table/row-range-selection";
 import { defaultApiMocks, discoverHandlers, mockHandlers } from "@/mocks/default-mocks";
-import { plannerOpeningFrames, PLANNER_CONVERSATION_ID } from "@/mocks/migration-mocks";
+import { PLANNER_DEFAULT_SCHEMA, plannerOpeningFrames } from "@/mocks/migration-mocks";
 import {
     discoveryWithAllStates,
     failedCdcVerification,
     failedDiscovery,
     manyTablesDiscovery,
-    sampleDiscovery,
     setupMocks,
 } from "@/mocks/setup-mocks";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
@@ -261,8 +260,16 @@ export const CdcVerificationFailed: Story = {
     },
 };
 
-const withPlannerSession = (seed: AppFormData) =>
-    replayPlannerTurns([{ frames: plannerOpeningFrames }], seed.verifySchema.tables);
+const replaySession =
+    (frames: typeof plannerOpeningFrames, isWorking = false) =>
+    (seed: AppFormData) =>
+        replayPlannerTurns([{ frames, isWorking }], {
+            slug: seed.externalConnection.slug,
+            selectedTables: seed.verifySchema.tables,
+            defaultSchema: PLANNER_DEFAULT_SCHEMA,
+        });
+
+const withPlannerSession = replaySession(plannerOpeningFrames);
 
 // Changing the tables under a planner session asks before throwing the session away.
 export const ChangedUnderPlannerSession: Story = {
@@ -286,7 +293,7 @@ export const ChangedUnderPlannerSession: Story = {
         await userEvent.click(body.getByRole("button", { name: /cancel/i }));
         await waitFor(() => expect(body.queryByRole("alertdialog")).not.toBeInTheDocument());
         expect(canvas.getByRole("heading", { name: /verify your schema/i })).toBeInTheDocument();
-        expect(useSetupWizardStore.getState().plannerConversationId).toBe(PLANNER_CONVERSATION_ID);
+        expect(useSetupWizardStore.getState().plannerProposal).not.toBeNull();
 
         await userEvent.click(canvas.getByRole("button", { name: /^next$/i }));
         await userEvent.click(await body.findByRole("button", { name: /start over/i }));
@@ -294,21 +301,16 @@ export const ChangedUnderPlannerSession: Story = {
         await waitFor(() =>
             expect(canvas.getByRole("heading", { name: /plan your document model/i })).toBeInTheDocument(),
         );
-        // The planner starts over on the new selection.
-        expect(useSetupWizardStore.getState().plannerConversationId).not.toBe(PLANNER_CONVERSATION_ID);
-        expect(useSetupWizardStore.getState().plannerSelectedTables).toHaveLength(sampleDiscovery.tables.length - 1);
+        // The plan is gone; the planner starts again from the welcome view, on the new selection.
+        expect(useSetupWizardStore.getState().plannerProposal).toBeNull();
+        expect(await canvas.findByRole("button", { name: "Start the planner" })).toBeInTheDocument();
     },
 };
 
 // The planner reads its tables as it opens, so a session still opening counts as one too.
 export const ChangedWhilePlannerOpens: Story = {
-    tags: ["!dev"],
-    render: () => (
-        <AppWizardAtStep
-            initialStep="verifySchema"
-            seedStore={(seed) => replayPlannerTurns([{ frames: [], isWorking: true }], seed.verifySchema.tables)}
-        />
-    ),
+    tags: ["test-only"],
+    render: () => <AppWizardAtStep initialStep="verifySchema" seedStore={replaySession([], true)} />,
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
         const body = within(canvasElement.ownerDocument.body);
@@ -322,7 +324,7 @@ export const ChangedWhilePlannerOpens: Story = {
 
 // An unchanged selection moves on without asking.
 export const UnchangedUnderPlannerSession: Story = {
-    tags: ["!dev"],
+    tags: ["test-only"],
     render: () => <AppWizardAtStep initialStep="verifySchema" seedStore={withPlannerSession} />,
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
@@ -332,6 +334,6 @@ export const UnchangedUnderPlannerSession: Story = {
         await waitFor(() =>
             expect(canvas.getByRole("heading", { name: /plan your document model/i })).toBeInTheDocument(),
         );
-        expect(useSetupWizardStore.getState().plannerConversationId).toBe(PLANNER_CONVERSATION_ID);
+        expect(useSetupWizardStore.getState().plannerProposal).not.toBeNull();
     },
 };
