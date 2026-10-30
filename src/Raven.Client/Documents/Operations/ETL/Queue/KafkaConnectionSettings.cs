@@ -52,9 +52,16 @@ public sealed class KafkaConnectionSettings
 
     public override int GetHashCode()
     {
+        var optionsHash = 0;
+        if (ConnectionOptions != null)
+        {
+            foreach (var option in ConnectionOptions)
+                optionsHash += HashCode.Combine(option.Key, option.Value);
+        }
+
         var hashCode = new HashCode();
-        hashCode.Add(BootstrapServers);
-        hashCode.Add(ConnectionOptions?.GetDictionaryHashCode() ?? 0);
+        hashCode.Add(BootstrapServers, StringComparer.OrdinalIgnoreCase);
+        hashCode.Add(optionsHash);
         hashCode.Add(UseRavenCertificate);
         return hashCode.ToHashCode();
     }
