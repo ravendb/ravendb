@@ -267,15 +267,15 @@ namespace Raven.Server.Documents.Indexes.Static
                     return DynamicNullObject.Null;
                 }
 
-                if (document.TryGetMetadata(out var metadata) && metadata.TryGet(Constants.Documents.Metadata.Collection, out string collection))
+                if (document.TryGetMetadata(out var metadata) && metadata.TryGet(Constants.Documents.Metadata.Collection, out LazyStringValue collection))
                 {
-                    if (string.Equals(collection, collectionName, StringComparison.OrdinalIgnoreCase) == false && collectionName != Constants.Documents.Collections.AllDocumentsCollection)
+                    if (IsSameCollection(collection, collectionName) == false && collectionName != Constants.Documents.Collections.AllDocumentsCollection)
                     {
                         MismatchedReferencesWarningHandler ??= new MismatchedReferencesWarningHandler();
 
                         if (MismatchedReferencesWarningHandler.IsFull == false)
                         {
-                            MismatchedReferencesWarningHandler.HandleMismatchedReference(document, collectionName, id, collection);
+                            MismatchedReferencesWarningHandler.HandleMismatchedReference(document, collectionName, id, collection?.ToString());
                         }
 
                         return DynamicNullObject.Null;
@@ -290,6 +290,23 @@ namespace Raven.Server.Documents.Indexes.Static
                 // we can't share one DynamicBlittableJson instance among all documents because we can have multiple LoadDocuments in a single scope
                 return new DynamicBlittableJson(document);
             }
+        }
+
+        private static unsafe bool IsSameCollection(LazyStringValue collection, string collectionName)
+        {
+            if (collection == null)
+                return false;
+
+            // collection names are short, so we compare them without materializing a string
+            const int maxSizeToDecodeOnStack = 256;
+            if (collection.Size <= maxSizeToDecodeOnStack)
+            {
+                Span<char> chars = stackalloc char[maxSizeToDecodeOnStack];
+                var length = Encodings.Utf8.GetChars(new ReadOnlySpan<byte>(collection.Buffer, collection.Size), chars);
+                return chars.Slice(0, length).Equals(collectionName.AsSpan(), StringComparison.OrdinalIgnoreCase);
+            }
+
+            return string.Equals(collection.ToString(), collectionName, StringComparison.OrdinalIgnoreCase);
         }
 
         public string[] SchemaGetErrorsFor(BlittableJsonReaderObject doc)
