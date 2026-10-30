@@ -5,4 +5,5 @@ namespace Raven.Quill.Contracts;
 public sealed record SuggestCdcResponse(
     CdcSinkConfiguration? Configuration,
     IReadOnlyList<string> Rationale,
-    string Status);
+    string Status,
+    IReadOnlyList<string> UnmappedTables);

@@ -118,12 +118,7 @@ public unsafe sealed partial class SortingMultiMatch<TInner>
             else
                 match._inner.Score(batchResults, readScores, 1f);
             
-            // If we need to do documents boosting then we need to modify the based on documents stored score. 
-            if (match._searcher.DocumentsAreBoosted)
-            {
-                // We get the boosting tree and go to check every document. 
-                BoostDocuments(match, batchResults, readScores);
-            }
+            match._searcher.BoostDocuments(batchResults, readScores, sortedById: true);
         }
 
         public void SortBatch<TComparer2, TComparer3>(SortingMultiMatch<TInner> match,
@@ -147,12 +142,7 @@ public unsafe sealed partial class SortingMultiMatch<TInner>
                 match._inner.Score(batchResults, readScores, 1f);
             match._token.ThrowIfCancellationRequested();
 
-            // If we need to do documents boosting then we need to modify the based on documents stored score. 
-            if (match._searcher.DocumentsAreBoosted)
-            {
-                // We get the boosting tree and go to check every document. 
-                BoostDocuments(match, batchResults, readScores);
-            }
+            match._searcher.BoostDocuments(batchResults, readScores, sortedById: true);
 
             // Note! readScores & indexes are aliased and same as batchTermIds
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
@@ -170,26 +160,6 @@ public unsafe sealed partial class SortingMultiMatch<TInner>
                 match._results.Add(batchResults[indexes[i]]);
                 if (match._sortingDataTransfer.IncludeScores)
                     match._scoresResults.Add((float)batchTerms[indexes[i]].Double);
-            }
-        }
-
-        private static void BoostDocuments(SortingMultiMatch<TInner> match, Span<long> batchResults, Span<float> readScores)
-        {
-            var tree = match._searcher.GetDocumentBoostTree();
-            if (tree is {NumberOfEntries: > 0})
-            {
-                // We are going to read from the boosting tree all the boosting values and apply that to the scores array.
-                ref var scoresRef = ref MemoryMarshal.GetReference(readScores);
-                ref var matchesRef = ref MemoryMarshal.GetReference(batchResults);
-                for (int idx = 0; idx < batchResults.Length; idx++)
-                {
-                    var ptr = (float*)tree.ReadPtr(Unsafe.Add(ref matchesRef, idx), out var _);
-                    if (ptr == null)
-                        continue;
-
-                    ref var scoresIdx = ref Unsafe.Add(ref scoresRef, idx);
-                    scoresIdx *= *ptr;
-                }
             }
         }
 

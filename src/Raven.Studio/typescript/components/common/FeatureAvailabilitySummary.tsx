@@ -2,7 +2,7 @@ import "./FeatureAvailabilitySummary.scss";
 import classNames from "classnames";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import { useAppSelector } from "components/store";
-import { uniqueId } from "lodash";
+import { isEqual, uniqueId, uniqWith } from "lodash";
 import { ReactNode } from "react";
 import Table from "react-bootstrap/Table";
 import Button from "react-bootstrap/Button";
@@ -16,6 +16,8 @@ import Tooltip from "react-bootstrap/Tooltip";
 import PopoverWithHoverWrapper from "./PopoverWithHoverWrapper";
 import useBoolean from "components/hooks/useBoolean";
 import Modal from "components/common/Modal";
+import { useStudioTranslation } from "hooks/useStudioTranslation";
+import useUniqueId from "components/hooks/useUniqueId";
 
 const ravendbLogo = require("Content/img/ravendb_logo.svg");
 
@@ -23,9 +25,15 @@ export type AvailabilityValue = boolean | number | string;
 
 type LicenseTextType = Exclude<Raven.Server.Commercial.LicenseType, "None"> | "Free" | "Production";
 
+export interface FeatureAvailabilityFootnote {
+    title: string;
+    items: { label: string; icon?: IconName }[];
+}
+
 export interface FeatureAvailabilityValueData {
     value: AvailabilityValue;
     overwrittenValue?: AvailabilityValue;
+    footnote?: FeatureAvailabilityFootnote;
 }
 
 export interface FeatureAvailabilityData {
@@ -48,10 +56,19 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
 
     const currentLicense = useAppSelector(licenseSelectors.licenseType);
     const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
-    const isQuill = currentLicense === "Quill";
     const buyLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
 
     const { allLicenseTextTypes, getIsCurrent, getLicenseTypeClass } = useLicenseTextTypes();
+
+    const columns = getAvailabilityColumns(currentLicense, isCloud);
+    const footnotes: FeatureAvailabilityFootnote[] = uniqWith(
+        data.flatMap((row) => columns.map((column) => column.getValue(row).footnote)).filter(Boolean),
+        isEqual
+    );
+    const getFootnoteNumber = (footnote: FeatureAvailabilityFootnote) =>
+        footnotes.findIndex((x) => isEqual(x, footnote)) + 1;
+    const footnoteIdPrefix = useUniqueId("feature-availability-footnote-");
+    const getFootnoteId = (number: number) => `${footnoteIdPrefix}-${number}`;
 
     return (
         <>
@@ -138,56 +155,30 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                         </div>
                                     )}
                                 </th>
-                                {isQuill ? (
-                                    <td className="quill current">{formatAvailabilityValue(data.quill)}</td>
-                                ) : (
-                                    <>
+                                {columns.map((column) => {
+                                    const valueData = column.getValue(data);
+                                    const footnoteNumber = valueData.footnote && getFootnoteNumber(valueData.footnote);
+
+                                    return (
                                         <td
-                                            className={classNames("community", {
-                                                "current ":
-                                                    currentLicense === "Community" ||
-                                                    currentLicense === "Essential" ||
-                                                    currentLicense === "None",
-                                            })}
+                                            key={column.className}
+                                            className={classNames(column.className, { current: column.isCurrent })}
                                         >
-                                            {formatAvailabilityValue(data.community)}
+                                            {valueData.footnote ? (
+                                                <div className="position-relative d-inline-block">
+                                                    {formatAvailabilityValue(valueData, column.canBeEnabledInCloud)}
+                                                    <FootnoteMark
+                                                        footnote={valueData.footnote}
+                                                        number={footnoteNumber}
+                                                        descriptionId={getFootnoteId(footnoteNumber)}
+                                                    />
+                                                </div>
+                                            ) : (
+                                                formatAvailabilityValue(valueData, column.canBeEnabledInCloud)
+                                            )}
                                         </td>
-                                        {!isCloud && (
-                                            <td
-                                                className={classNames("professional", {
-                                                    "current ": currentLicense === "Professional",
-                                                })}
-                                            >
-                                                {formatAvailabilityValue(data.professional)}
-                                            </td>
-                                        )}
-                                        <td
-                                            className={classNames("enterprise", {
-                                                "current ": currentLicense === "Enterprise",
-                                            })}
-                                        >
-                                            {formatAvailabilityValue(data.enterprise, isCloud)}
-                                        </td>
-                                        {!isCloud && (
-                                            <td
-                                                className={classNames("enterprise-ai", {
-                                                    current: currentLicense === "EnterpriseAi",
-                                                })}
-                                            >
-                                                {formatAvailabilityValue(data.enterpriseAi ?? data.enterprise, isCloud)}
-                                            </td>
-                                        )}
-                                        {currentLicense === "Developer" && (
-                                            <td
-                                                className={classNames("developer", {
-                                                    current: currentLicense === "Developer",
-                                                })}
-                                            >
-                                                {formatAvailabilityValue(data.enterpriseAi ?? data.enterprise, isCloud)}
-                                            </td>
-                                        )}
-                                    </>
-                                )}
+                                    );
+                                })}
                             </tr>
                         ))}
                         <tr className="current-indicator-row">
@@ -212,6 +203,18 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                     </tbody>
                 </Table>
             </div>
+            {footnotes.length > 0 && (
+                <div className="vstack gap-1 pt-3 small">
+                    {footnotes.map((footnote, idx) => (
+                        <div key={idx} className="hstack gap-1 align-items-baseline">
+                            <span className="small-label text-info">{idx + 1}</span>
+                            <span id={getFootnoteId(idx + 1)} className="text-muted">
+                                {footnote.title}: {footnote.items.map((x) => x.label).join(", ")}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )}
             {currentLicense === "None" && (
                 <div className="hstack gap-4 justify-content-center mt-4 flex-wrap">
                     <a
@@ -226,6 +229,101 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                 </div>
             )}
         </>
+    );
+}
+
+interface AvailabilityColumn {
+    className: string;
+    isCurrent: boolean;
+    getValue: (data: FeatureAvailabilityData) => FeatureAvailabilityValueData;
+    canBeEnabledInCloud?: boolean;
+}
+
+function getAvailabilityColumns(
+    currentLicense: Raven.Server.Commercial.LicenseType,
+    isCloud: boolean
+): AvailabilityColumn[] {
+    if (currentLicense === "Quill") {
+        return [{ className: "quill", isCurrent: true, getValue: (x) => x.quill }];
+    }
+
+    const getEnterpriseAiValue = (x: FeatureAvailabilityData) => x.enterpriseAi ?? x.enterprise;
+
+    const columns: AvailabilityColumn[] = [
+        {
+            className: "community",
+            isCurrent: currentLicense === "Community" || currentLicense === "Essential" || currentLicense === "None",
+            getValue: (x) => x.community,
+        },
+    ];
+
+    if (!isCloud) {
+        columns.push({
+            className: "professional",
+            isCurrent: currentLicense === "Professional",
+            getValue: (x) => x.professional,
+        });
+    }
+
+    columns.push({
+        className: "enterprise",
+        isCurrent: currentLicense === "Enterprise",
+        getValue: (x) => x.enterprise,
+        canBeEnabledInCloud: isCloud,
+    });
+
+    if (!isCloud) {
+        columns.push({
+            className: "enterprise-ai",
+            isCurrent: currentLicense === "EnterpriseAi",
+            getValue: getEnterpriseAiValue,
+        });
+    }
+
+    if (currentLicense === "Developer") {
+        columns.push({
+            className: "developer",
+            isCurrent: true,
+            getValue: getEnterpriseAiValue,
+            canBeEnabledInCloud: isCloud,
+        });
+    }
+
+    return columns;
+}
+
+interface FootnoteMarkProps {
+    footnote: FeatureAvailabilityFootnote;
+    number: number;
+    descriptionId: string;
+}
+
+function FootnoteMark({ footnote, number, descriptionId }: FootnoteMarkProps) {
+    return (
+        <PopoverWithHoverWrapper
+            placement="top"
+            overlayProps={{ flip: true }}
+            inline={false}
+            isInPopoverBody={false}
+            wrapperClassName="footnote-mark"
+            message={
+                <div className="footnote-popover vstack gap-2 p-2 text-start">
+                    <div>{footnote.title}:</div>
+                    <div className="vstack gap-1">
+                        {footnote.items.map((item) => (
+                            <div key={item.label} className="hstack gap-1">
+                                {item.icon && <Icon icon={item.icon} margin="m-0" />}
+                                {item.label}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            }
+        >
+            <sup className="small-label text-info" tabIndex={0} aria-describedby={descriptionId}>
+                {number}
+            </sup>
+        </PopoverWithHoverWrapper>
     );
 }
 
@@ -285,6 +383,7 @@ export default function FeatureAvailabilitySummaryWrapper({
 }: FeatureAvailabilitySummaryProps & { isUnlimited: boolean; isOpenedByDefault?: boolean }) {
     const { value: isOpen, toggle: toggleIsOpen } = useBoolean(isOpenedByDefault);
     const isQuill = useAppSelector(licenseSelectors.licenseType) === "Quill";
+    const t = useStudioTranslation("featureAvailabilitySummary");
 
     return (
         <>
@@ -303,12 +402,10 @@ export default function FeatureAvailabilitySummaryWrapper({
                         ></Icon>
                         <div className="vstack gap-1">
                             <div className="hstack flex-wrap gap-1">
-                                <h4 className="m-0">Licensing</h4>
+                                <h4 className="m-0">{t("heading")}</h4>
                             </div>
                             <small className="description">
-                                {isQuill
-                                    ? "See what features are included in this license"
-                                    : "See which plans include this feature and other exciting features"}
+                                {t("description", { context: isQuill ? "quill" : "plans" })}
                             </small>
                         </div>
                     </button>
@@ -429,7 +526,10 @@ function formatAvailabilityValue(data: FeatureAvailabilityValueData, canBeEnable
         <>
             <div className="overwritten-value">
                 {formattedValue}
-                <PopoverWithHoverWrapper message={`Default value for your license is ${data.value.toString()}.`}>
+                <PopoverWithHoverWrapper
+                    wrapperClassName="overwritten-mark"
+                    message={`Default value for your license is ${data.value.toString()}.`}
+                >
                     <Icon id={id} icon="info" color="info" margin="m-0" />
                 </PopoverWithHoverWrapper>
             </div>

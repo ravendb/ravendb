@@ -1,7 +1,7 @@
 import React from "react";
 import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "./ConnectionStrings.stories";
-import { rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
+import { rtlRender_WithWaitForLoad, within } from "test/rtlTestUtils";
 
 const { DefaultConnectionStrings } = composeStories(stories);
 
@@ -10,6 +10,7 @@ const selectors = {
     delete: /delete connection string/i,
     addNew: /add new/i,
     emptyList: /no connection strings/i,
+    licensing: "Licensing",
 };
 
 describe("ConnectionStrings", () => {
@@ -48,4 +49,32 @@ describe("ConnectionStrings", () => {
         deleteButtons.forEach((btn) => expect(btn).toBeDisabled());
         addNewButtons.forEach((btn) => expect(btn).toBeDisabled());
     });
+
+    it.each([
+        { licenseType: "Professional", hasEmbeddingsGeneration: true, availableConnectors: /Anthropic.*OpenAI/ },
+        {
+            licenseType: "Enterprise",
+            hasEmbeddingsGeneration: false,
+            availableConnectors: "Available connectors: Embedded (bge-micro-v2)",
+        },
+    ] satisfies {
+        licenseType: Raven.Server.Commercial.LicenseType;
+        hasEmbeddingsGeneration: boolean;
+        availableConnectors: string | RegExp;
+    }[])(
+        "can show available AI connectors in license comparison based on embeddings generation for $licenseType license",
+        async ({ licenseType, hasEmbeddingsGeneration, availableConnectors }) => {
+            const { screen, fireClick } = await rtlRender_WithWaitForLoad(
+                <DefaultConnectionStrings licenseType={licenseType} hasEmbeddingsGeneration={hasEmbeddingsGeneration} />
+            );
+
+            await fireClick(screen.getByText(selectors.licensing));
+
+            const currentAiCell = screen.getAllByClassName("current").find((x) => x.tagName === "TD");
+
+            expect(within(currentAiCell).getByText(/\d/, { selector: "sup" })).toHaveAccessibleDescription(
+                availableConnectors
+            );
+        }
+    );
 });

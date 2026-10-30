@@ -8,7 +8,7 @@ export interface AllRevisionsWithSizeProps {
 }
 
 export interface AllRevisionsFetcherRef {
-    reload: () => Promise<void | pagedResultWithToken<RevisionsPreviewResultItem>>;
+    reload: () => void | Promise<unknown>;
 }
 
 export interface AllRevisionsTableProps extends AllRevisionsWithSizeProps {
@@ -17,4 +17,9 @@ export interface AllRevisionsTableProps extends AllRevisionsWithSizeProps {
     fetcherRef: React.RefObject<AllRevisionsFetcherRef>;
     selectedRows: RevisionsPreviewResultItem[];
     setSelectedRows: (rows: RevisionsPreviewResultItem[]) => void;
+}
+
+export interface AllRevisionsPaginationProps {
+    isPaginated: boolean;
+    onIsPaginatedChange: (isPaginated: boolean) => void;
 }

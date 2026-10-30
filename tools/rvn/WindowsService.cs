@@ -4,36 +4,40 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.ServiceProcess;
 using System.Text.RegularExpressions;
 using System.Threading;
-using DasMulli.Win32.ServiceUtils;
+using Sparrow.Utils;
+
+// the windows-service command is registered only on Windows
+#pragma warning disable CA1416 // Validate platform compatibility
 
 namespace rvn
 {
-    public static class WindowsService
+    public static partial class WindowsService
     {
-        public static void Register(string serviceName, string username, string password, string ravenServerDir, List<string> args)
+        public static bool Register(string serviceName, string username, string password, string ravenServerDir, List<string> args)
         {
-            new WindowsServiceController(serviceName, username, password).Install(ravenServerDir, args);
+            return new WindowsServiceController(serviceName, username, password).Install(ravenServerDir, args);
         }
 
-        public static void Unregister(string serviceName)
+        public static bool Unregister(string serviceName)
         {
-            new WindowsServiceController(serviceName, username: null, password: null).Uninstall();
+            return new WindowsServiceController(serviceName, username: null, password: null).Uninstall();
         }
 
-        public static void Start(string serviceName)
+        public static bool Start(string serviceName)
         {
-            new WindowsServiceController(serviceName, username: null, password: null).Start();
+            return new WindowsServiceController(serviceName, username: null, password: null).Start();
         }
 
-        public static void Stop(string serviceName)
+        public static bool Stop(string serviceName)
         {
-            new WindowsServiceController(serviceName, username: null, password: null).Stop();
+            return new WindowsServiceController(serviceName, username: null, password: null).Stop();
         }
 
-        internal class WindowsServiceController
+        internal partial class WindowsServiceController
         {
             public const string WindowServiceDescription = "Next generation NoSQL Database";
 
@@ -42,6 +46,20 @@ namespace rvn
             private const uint ErrorServiceMarkedForDeletion = 0x00000430;
 
             private const uint ErrorAccessIsDenied = 0x00000005;
+
+            private const string LocalServiceAccountName = @"NT AUTHORITY\LocalService";
+
+            // the server reports its progress while stopping, so it is given enough time to shut down gracefully when the system shuts down
+            // (the SCM continues the shutdown as soon as the service is stopped, the Windows default is only 10 seconds)
+            private static readonly TimeSpan PreshutdownTimeout = TimeSpan.FromMinutes(3);
+
+            private static readonly TimeSpan RecoveryResetPeriod = TimeSpan.FromDays(1);
+
+            private static readonly TimeSpan RecoveryRestartDelay = TimeSpan.FromMinutes(1);
+
+            private static readonly TimeSpan StatusChangeTimeout = TimeSpan.FromSeconds(60);
+
+            private static readonly string ServiceControlToolPath = Path.Combine(Environment.SystemDirectory, "sc.exe");
 
             private readonly string _serviceName;
             private readonly string _username;
@@ -56,65 +74,230 @@ namespace rvn
                 _password = password;
             }
 
-            public void Install(string ravenServerDir, List<string> args)
+            public bool Install(string ravenServerDir, List<string> args)
             {
-                using (var serviceController = GetServiceController())
+                string serviceCommand;
+                try
                 {
-                    InstallInternal(serviceController, ravenServerDir, args);
+                    serviceCommand = GetServiceCommand(ravenServerDir, args);
+                }
+                catch (ArgumentException e)
+                {
+                    Console.WriteLine($"Cannot register service {ServiceFullName}: {e.Message}");
+                    return false;
+                }
+
+                return InstallInternal(serviceCommand, reinstalling: false);
+            }
+
+            private bool InstallInternal(string serviceCommand, bool reinstalling, int counter = 0)
+            {
+                var normalizedServiceName = NormalizeServiceName(_serviceName);
+
+                var createArgs = new List<string> { "create", normalizedServiceName };
+
+                // sc.exe expects each option as two tokens: a name ending in '=' followed by the
+                // value (e.g. "type=" then "own"), never "type=own".
+                void AddOption(string name, string value)
+                {
+                    createArgs.Add(name + "=");
+                    createArgs.Add(value);
+                }
+
+                AddOption("type", "own");
+                AddOption("start", "auto");
+                AddOption("error", "normal");
+                AddOption("binPath", serviceCommand);
+                AddOption("DisplayName", _serviceName);
+                AddOption("obj", string.IsNullOrWhiteSpace(_username) ? LocalServiceAccountName : _username);
+                if (string.IsNullOrWhiteSpace(_username) == false)
+                    AddOption("password", _password ?? string.Empty);
+
+                var result = RunServiceControlTool(createArgs);
+
+                switch ((uint)result.ExitCode)
+                {
+                    case 0:
+                        Configure(normalizedServiceName);
+
+                        Console.WriteLine($"Service {ServiceFullName} has been registered.");
+                        return true;
+
+                    case ErrorServiceExists when reinstalling == false:
+                        using (var serviceController = GetServiceController())
+                        {
+                            if (serviceController != null)
+                            {
+                                if (IsRavenServerService(serviceController) == false)
+                                    return false;
+
+                                Console.WriteLine($"Service {ServiceFullName} already exists. Reinstalling...");
+
+                                if (UninstallInternal(serviceController) == false)
+                                    return false;
+                            }
+                        }
+
+                        return InstallInternal(serviceCommand, reinstalling: true);
+
+                    case ErrorServiceMarkedForDeletion:
+                        if (counter < 10)
+                        {
+                            Console.WriteLine($"Service {ServiceFullName} has been marked for deletion. Performing {counter + 1} installation attempt.");
+
+                            Thread.Sleep(1000);
+                            counter++;
+
+                            return InstallInternal(serviceCommand, reinstalling, counter);
+                        }
+
+                        Console.WriteLine($"Cannot register service {ServiceFullName}, because it is still marked for deletion. " +
+                                          "Please close all applications which might be using it (e.g. the Services console) and try again.");
+                        return false;
+
+                    case ErrorAccessIsDenied:
+                        Console.WriteLine($"Cannot register service {ServiceFullName} due to insufficient privileges. Please use Administrator account to install the service.");
+                        return false;
+
+                    default:
+                        Console.WriteLine($"Cannot register service {ServiceFullName}: { FormatServiceControlToolError(result) }");
+                        return false;
                 }
             }
 
-            private void InstallInternal(
-                ServiceController serviceController, string ravenServerDir, List<string> serviceArgs, int counter = 0)
+            // a failure here leaves the service registered, just without the given setting
+            private void Configure(string serviceName)
             {
-                var serviceName = _serviceName;
-                var serviceCommand = GetServiceCommand(ravenServerDir, serviceArgs);
-                var serviceDesc = WindowServiceDescription;
+                var descriptionResult = RunServiceControlTool(["description", serviceName, WindowServiceDescription]);
+                if (descriptionResult.ExitCode != 0)
+                    Console.WriteLine($"Service {ServiceFullName} was registered, but its description could not be set: { FormatServiceControlToolError(descriptionResult) }");
+
+                // restart the service when it crashes or stops with an error (e.g. it fails to start or to restart)
+                var restartAction = $"restart/{(long)RecoveryRestartDelay.TotalMilliseconds}";
+                var failureResult = RunServiceControlTool([
+                    "failure", serviceName,
+                    "reset=", ((long)RecoveryResetPeriod.TotalSeconds).ToString(),
+                    "actions=", string.Join("/", restartAction, restartAction, restartAction)
+                ]);
+
+                if (failureResult.ExitCode == 0)
+                    failureResult = RunServiceControlTool(["failureflag", serviceName, "1"]);
+
+                if (failureResult.ExitCode != 0)
+                    Console.WriteLine($"Service {ServiceFullName} was registered, but its recovery actions could not be set: { FormatServiceControlToolError(failureResult) }");
 
                 try
                 {
-                    var credentials = Win32ServiceCredentials.LocalService;
-                    if (string.IsNullOrWhiteSpace(_username) == false)
-                        credentials = new Win32ServiceCredentials(_username, _password);
-
-                    new Win32ServiceManager().CreateService(new ServiceDefinition(NormalizeServiceName(serviceName), serviceCommand)
-                    {
-                        DisplayName = serviceName,
-                        Description = serviceDesc,
-                        Credentials = credentials,
-                        AutoStart = true,
-                        DelayedAutoStart = false,
-                        ErrorSeverity = ErrorSeverity.Normal
-                    });
-
-                    Console.WriteLine($"Service {ServiceFullName} has been registered.");
+                    SetPreshutdownTimeout(serviceName, PreshutdownTimeout);
                 }
-                catch (Win32Exception e) when (e.NativeErrorCode == ErrorServiceExists)
+                catch (Exception e) when (e is Win32Exception or InvalidOperationException)
                 {
-                    Console.WriteLine($"Service {ServiceFullName} already exists. Reinstalling...");
-                    Reinstall(serviceController, ravenServerDir, serviceArgs);
-                }
-                catch (Win32Exception e) when (e.NativeErrorCode == ErrorServiceMarkedForDeletion)
-                {
-                    if (counter < 10)
-                    {
-                        Console.WriteLine($"Service {ServiceFullName} has been marked for deletion. Performing {counter + 1} installation attempt.");
-
-                        Thread.Sleep(1000);
-                        counter++;
-
-                        InstallInternal(serviceController, ravenServerDir, serviceArgs, counter);
-                    }
-                }
-                catch (Win32Exception e) when (e.NativeErrorCode == ErrorAccessIsDenied)
-                {
-                    Console.WriteLine($"Cannot register service {ServiceFullName} due to insufficient privileges. Please use Administrator account to install the service.");
-                }
-                catch (Win32Exception e)
-                {
-                    Console.WriteLine($"Cannot register service {ServiceFullName}: { FormatWin32ErrorMessage(e) }");
+                    var win32Exception = e as Win32Exception ?? e.InnerException as Win32Exception;
+                    var message = win32Exception != null ? FormatWin32ErrorMessage(win32Exception) : e.Message;
+                    Console.WriteLine($"Service {ServiceFullName} was registered, but its preshutdown timeout could not be set: {message}");
                 }
             }
+
+            // sc.exe has no command for the preshutdown timeout
+            private static void SetPreshutdownTimeout(string serviceName, TimeSpan timeout)
+            {
+                using (var serviceController = new ServiceController(serviceName))
+                using (var serviceHandle = serviceController.ServiceHandle)
+                {
+                    var info = new ServicePreshutdownInfo
+                    {
+                        PreshutdownTimeout = (uint)timeout.TotalMilliseconds
+                    };
+
+                    if (ChangeServiceConfig2(serviceHandle, ServiceConfigPreshutdownInfo, ref info) == false)
+                        throw new Win32Exception(Marshal.GetLastPInvokeError());
+                }
+            }
+
+            private const uint ServiceConfigPreshutdownInfo = 7;
+
+            [StructLayout(LayoutKind.Sequential)]
+            private struct ServicePreshutdownInfo
+            {
+                public uint PreshutdownTimeout;
+            }
+
+            [LibraryImport("advapi32.dll", EntryPoint = "ChangeServiceConfig2W", SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            private static partial bool ChangeServiceConfig2(SafeHandle service, uint infoLevel, ref ServicePreshutdownInfo info);
+
+            // ServiceController does not expose the binary path and the registry API does not support the longest (256 characters) service names
+            private static string GetServiceBinaryPath(string serviceName)
+            {
+                var serviceManager = OpenSCManager(null, null, ScManagerConnect);
+                if (serviceManager == IntPtr.Zero)
+                    throw new Win32Exception(Marshal.GetLastPInvokeError());
+
+                try
+                {
+                    var service = OpenService(serviceManager, serviceName, ServiceQueryConfig);
+                    if (service == IntPtr.Zero)
+                        throw new Win32Exception(Marshal.GetLastPInvokeError());
+
+                    try
+                    {
+                        if (QueryServiceConfig(service, IntPtr.Zero, 0, out var bytesNeeded) == false && Marshal.GetLastPInvokeError() != ErrorInsufficientBuffer)
+                            throw new Win32Exception(Marshal.GetLastPInvokeError());
+
+                        var buffer = Marshal.AllocHGlobal(bytesNeeded);
+                        try
+                        {
+                            if (QueryServiceConfig(service, buffer, bytesNeeded, out _) == false)
+                                throw new Win32Exception(Marshal.GetLastPInvokeError());
+
+                            var config = Marshal.PtrToStructure<QueryServiceConfigHeader>(buffer);
+                            return Marshal.PtrToStringUni(config.BinaryPathName);
+                        }
+                        finally
+                        {
+                            Marshal.FreeHGlobal(buffer);
+                        }
+                    }
+                    finally
+                    {
+                        CloseServiceHandle(service);
+                    }
+                }
+                finally
+                {
+                    CloseServiceHandle(serviceManager);
+                }
+            }
+
+            private const uint ScManagerConnect = 0x0001;
+
+            private const uint ServiceQueryConfig = 0x0001;
+
+            private const int ErrorInsufficientBuffer = 122;
+
+            // the beginning of QUERY_SERVICE_CONFIGW
+            [StructLayout(LayoutKind.Sequential)]
+            private struct QueryServiceConfigHeader
+            {
+                public uint ServiceType;
+                public uint StartType;
+                public uint ErrorControl;
+                public IntPtr BinaryPathName;
+            }
+
+            [LibraryImport("advapi32.dll", EntryPoint = "OpenSCManagerW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+            private static partial IntPtr OpenSCManager(string machineName, string databaseName, uint desiredAccess);
+
+            [LibraryImport("advapi32.dll", EntryPoint = "OpenServiceW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+            private static partial IntPtr OpenService(IntPtr serviceManager, string serviceName, uint desiredAccess);
+
+            [LibraryImport("advapi32.dll", EntryPoint = "QueryServiceConfigW", SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            private static partial bool QueryServiceConfig(IntPtr service, IntPtr config, int bufferSize, out int bytesNeeded);
+
+            [LibraryImport("advapi32.dll", SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            private static partial bool CloseServiceHandle(IntPtr handle);
 
             private static string FormatWin32ErrorMessage(Win32Exception exception)
             {
@@ -126,112 +309,206 @@ namespace rvn
                 return Regex.Replace(serviceName, @"[\/\s]", "_");
             }
 
-            public void Uninstall()
+            private static string FormatServiceControlToolError((int ExitCode, string Output) result)
             {
-                using (var serviceController = GetServiceController())
+                var message = string.IsNullOrWhiteSpace(result.Output) ? "sc.exe reported a failure." : result.Output;
+                return $"{message} (ERROR CODE 0x{result.ExitCode:x8}).";
+            }
+
+            // The .NET BCL exposes no managed API to create/delete a Windows service, so register
+            // and unregister shell out to sc.exe (the tool ships in %SystemRoot%\System32). sc.exe
+            // returns the underlying Win32 error code as its process exit code, which lets the
+            // callers branch on the same ERROR_* codes used elsewhere in this file.
+            private static (int ExitCode, string Output) RunServiceControlTool(IReadOnlyList<string> arguments)
+            {
+                var startInfo = new ProcessStartInfo
                 {
-                    UninstallInternal(serviceController);
+                    FileName = ServiceControlToolPath,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                foreach (var argument in arguments)
+                    startInfo.ArgumentList.Add(argument);
+
+                using (var process = Process.Start(startInfo))
+                {
+                    // read stderr concurrently, so neither of the redirected pipes can fill up and block sc.exe
+                    var errorTask = process.StandardError.ReadToEndAsync();
+                    var output = process.StandardOutput.ReadToEnd();
+                    var error = errorTask.GetAwaiter().GetResult();
+                    process.WaitForExit();
+
+                    var combined = string.Join(
+                        Environment.NewLine,
+                        new[] { output, error }.Where(part => string.IsNullOrWhiteSpace(part) == false));
+
+                    return (process.ExitCode, combined.Trim());
                 }
             }
 
-            private void UninstallInternal(ServiceController serviceController)
+            public bool Uninstall()
             {
-                if (serviceController == null)
+                using (var serviceController = GetServiceController())
                 {
-                    Console.WriteLine($"Service {ServiceFullName} does not exist. No action taken.");
-                    return;
-                }
-
-#pragma warning disable CA1416 // Validate platform compatibility
-                if ((serviceController.Status == ServiceControllerStatus.Stopped || serviceController.Status == ServiceControllerStatus.StopPending) == false)
-#pragma warning restore CA1416 // Validate platform compatibility
-                {
-                    try
+                    if (serviceController == null)
                     {
-                        StopInternal(serviceController);
+                        Console.WriteLine($"Service {ServiceFullName} does not exist. No action taken.");
+                        return true;
                     }
-                    catch (InvalidOperationException invalidOperationException)
-                    {
-                        var win32Exception = invalidOperationException.InnerException as Win32Exception;
-                        if (win32Exception == null)
-                            throw;
 
-                        Console.WriteLine($"Error stopping service {ServiceFullName}: { FormatWin32ErrorMessage(win32Exception) }");
-                        return;
-                    }
+                    if (IsRavenServerService(serviceController) == false)
+                        return false;
+
+                    return UninstallInternal(serviceController);
                 }
+            }
 
+            // protects other services from being stopped and deleted when their name is passed by mistake
+            private bool IsRavenServerService(ServiceController serviceController)
+            {
+                string binaryPath;
                 try
                 {
-                    new Win32ServiceManager().DeleteService(NormalizeServiceName(_serviceName));
-                    Console.WriteLine($"Service {ServiceFullName} has been unregistered.");
+                    binaryPath = GetServiceBinaryPath(serviceController.ServiceName);
                 }
-                catch (Win32Exception exception) when (exception.NativeErrorCode == ErrorAccessIsDenied)
+                catch (Win32Exception e)
                 {
-                    Console.WriteLine($"Cannot unregister service {ServiceFullName} due to insufficient privileges. Please use Administrator account to uninstall the service.");
+                    Console.WriteLine($"Cannot check whether service {ServiceFullName} runs RavenDB Server: { FormatWin32ErrorMessage(e) } No action taken.");
+                    return false;
                 }
-                catch (Win32Exception exception)
-                {
-                    Console.WriteLine($"Cannot unregister service {ServiceFullName}: { FormatWin32ErrorMessage(exception) }");
-                }
+
+                if (binaryPath != null && binaryPath.Contains("Raven.Server", StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+                Console.WriteLine($"Service {ServiceFullName} exists, but it does not run RavenDB Server ({binaryPath}). No action taken, please use a different service name.");
+                return false;
             }
 
-            private void Reinstall(ServiceController serviceController, string ravenServerDir, List<string> serviceArgs)
+            private bool UninstallInternal(ServiceController serviceController)
             {
-                StopInternal(serviceController);
-                UninstallInternal(serviceController);
-                InstallInternal(serviceController, ravenServerDir, serviceArgs);
-            }
+                if (StopInternal(serviceController) == false)
+                    return false;
 
-            private void StopInternal(ServiceController serviceController)
-            {
-                if (serviceController == null)
-                    return;
+                var result = RunServiceControlTool(["delete", serviceController.ServiceName]);
 
-#pragma warning disable CA1416 // Validate platform compatibility
-                if (!(serviceController.Status == ServiceControllerStatus.Stopped || serviceController.Status == ServiceControllerStatus.StopPending))
+                switch ((uint)result.ExitCode)
                 {
-                    Console.WriteLine($"Service {ServiceFullName} is being stopped.");
-                    serviceController.Stop();
+                    case 0:
+                        Console.WriteLine($"Service {ServiceFullName} has been unregistered.");
+                        return true;
+
+                    case ErrorAccessIsDenied:
+                        Console.WriteLine($"Cannot unregister service {ServiceFullName} due to insufficient privileges. Please use Administrator account to uninstall the service.");
+                        return false;
+
+                    default:
+                        Console.WriteLine($"Cannot unregister service {ServiceFullName}: { FormatServiceControlToolError(result) }");
+                        return false;
                 }
-
-                serviceController.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(60));
-#pragma warning restore CA1416 // Validate platform compatibility
-
-                Console.WriteLine($"Service {ServiceFullName} stopped.");
             }
 
-            private void StartInternal(ServiceController serviceController)
+            private bool StopInternal(ServiceController serviceController)
             {
-                if (serviceController == null)
-                    return;
-
-#pragma warning disable CA1416 // Validate platform compatibility
-                if (!(serviceController.Status == ServiceControllerStatus.Running | serviceController.Status == ServiceControllerStatus.StartPending))
+                try
                 {
-                    Console.WriteLine($"Service {ServiceFullName} is starting.");
-                    serviceController.Start();
+                    var status = serviceController.Status;
+                    if (status != ServiceControllerStatus.Stopped && status != ServiceControllerStatus.StopPending)
+                    {
+                        Console.WriteLine($"Service {ServiceFullName} is being stopped.");
+                        serviceController.Stop();
+                    }
+
+                    if (WaitForStatus(serviceController, ServiceControllerStatus.Stopped, failedStatus: null) == false)
+                    {
+                        Console.WriteLine($"Service {ServiceFullName} did not stop within {StatusChangeTimeout.TotalSeconds} seconds.");
+                        return false;
+                    }
+
+                    Console.WriteLine($"Service {ServiceFullName} stopped.");
+                    return true;
                 }
-
-                serviceController.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(60));
-#pragma warning restore CA1416 // Validate platform compatibility
-
-                Console.WriteLine($"Service {ServiceFullName} started.");
+                catch (InvalidOperationException e) when (e.InnerException is Win32Exception win32Exception)
+                {
+                    Console.WriteLine($"Error stopping service {ServiceFullName}: { FormatWin32ErrorMessage(win32Exception) }");
+                    return false;
+                }
             }
 
-            public void Start()
+            private bool StartInternal(ServiceController serviceController)
+            {
+                try
+                {
+                    var status = serviceController.Status;
+                    if (status != ServiceControllerStatus.Running && status != ServiceControllerStatus.StartPending)
+                    {
+                        Console.WriteLine($"Service {ServiceFullName} is starting.");
+                        serviceController.Start();
+                    }
+
+                    if (WaitForStatus(serviceController, ServiceControllerStatus.Running, failedStatus: ServiceControllerStatus.Stopped) == false)
+                    {
+                        Console.WriteLine(serviceController.Status == ServiceControllerStatus.Stopped
+                            ? $"Service {ServiceFullName} failed to start. Please check the RavenDB logs and the System event log for details."
+                            : $"Service {ServiceFullName} did not start within {StatusChangeTimeout.TotalSeconds} seconds.");
+                        return false;
+                    }
+
+                    Console.WriteLine($"Service {ServiceFullName} started.");
+                    return true;
+                }
+                catch (InvalidOperationException e) when (e.InnerException is Win32Exception win32Exception)
+                {
+                    Console.WriteLine($"Error starting service {ServiceFullName}: { FormatWin32ErrorMessage(win32Exception) }");
+                    return false;
+                }
+            }
+
+            private static bool WaitForStatus(ServiceController serviceController, ServiceControllerStatus desiredStatus, ServiceControllerStatus? failedStatus)
+            {
+                var sw = Stopwatch.StartNew();
+                while (true)
+                {
+                    serviceController.Refresh();
+
+                    var status = serviceController.Status;
+                    if (status == desiredStatus)
+                        return true;
+
+                    if (status == failedStatus || sw.Elapsed > StatusChangeTimeout)
+                        return false;
+
+                    Thread.Sleep(250);
+                }
+            }
+
+            public bool Start()
             {
                 using (var serviceController = GetServiceController())
                 {
-                    StartInternal(serviceController);
+                    if (serviceController == null)
+                    {
+                        Console.WriteLine($"Service {ServiceFullName} does not exist.");
+                        return false;
+                    }
+
+                    return StartInternal(serviceController);
                 }
             }
 
-            public void Stop()
+            public bool Stop()
             {
                 using (var serviceController = GetServiceController())
                 {
-                    StopInternal(serviceController);
+                    if (serviceController == null)
+                    {
+                        Console.WriteLine($"Service {ServiceFullName} does not exist.");
+                        return false;
+                    }
+
+                    return StopInternal(serviceController);
                 }
             }
 
@@ -251,8 +528,8 @@ namespace rvn
                     else
                         serverDir = serverDirInfo.FullName;
 
-                    var serviceCommandResult = Path.Combine(serverDirInfo.FullName, "Raven.Server.exe");
-                    if (File.Exists(serviceCommandResult) == false)
+                    var serverExecutable = Path.Combine(serverDirInfo.FullName, "Raven.Server.exe");
+                    if (File.Exists(serverExecutable) == false)
                     {
                         throw new ArgumentException($"Could not find RavenDB Server executable under {serverDirInfo.FullName}.");
                     }
@@ -260,21 +537,21 @@ namespace rvn
                     if (argsForService.Any(x => x.StartsWith("--service-name")) == false)
                     {
                         argsForService.Add("--service-name");
-                        argsForService.Add($"\"{_serviceName}\"");
+                        argsForService.Add(_serviceName);
                     }
 
-                    serviceCommandResult = $"{serviceCommandResult} {string.Join(" ", argsForService)}";
-
-                    return serviceCommandResult;
+                    // Build the SCM ImagePath (executable + arguments) with the shared escaper so
+                    // the executable path and each argument are quoted correctly, e.g. when the
+                    // installation directory or an argument value contains spaces.
+                    return CommandLineArgumentEscaper.EscapeAndConcatenate(argsForService.Prepend(serverExecutable));
                 }
             }
 
             private ServiceController GetServiceController()
             {
+                // service names are case insensitive
                 var serviceName = NormalizeServiceName(_serviceName);
-#pragma warning disable CA1416 // Validate platform compatibility
-                return ServiceController.GetServices().FirstOrDefault(x => x.ServiceName == serviceName);
-#pragma warning restore CA1416 // Validate platform compatibility
+                return ServiceController.GetServices().FirstOrDefault(x => string.Equals(x.ServiceName, serviceName, StringComparison.OrdinalIgnoreCase));
             }
         }
     }

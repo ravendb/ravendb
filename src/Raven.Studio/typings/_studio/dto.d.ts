@@ -226,6 +226,17 @@ interface confirmDialogResult {
     can: boolean;
 }
 
+type attachmentUploadStatus = "uploading" | "uploaded" | "failed" | "skipped" | "cancelled";
+
+interface attachmentUploadProgress {
+    position: number;
+    count: number;
+    fileName: string;
+    status: attachmentUploadStatus;
+    loaded: number;
+    total: number;
+}
+
 interface disableDatabaseResult {
     Name: string;
     Success: boolean;
@@ -403,7 +414,7 @@ interface recentErrorDto extends Raven.Server.NotificationCenter.Notifications.N
     HttpStatus?: string;
 }
 
-declare module studio.settings {
+declare namespace studio.settings {
     type numberFormatting = "raw" | "formatted";
     type dontShowAgain = "UnsupportedBrowser";
     type saveLocation = "local" | "remote";
@@ -664,7 +675,7 @@ type virtualNotificationType =
     | "CumulativeDeleteByQuery"
     | "CumulativeDeleteByQueryFailures";
 
-declare module Raven.Server.NotificationCenter.Notifications {
+declare namespace Raven.Server.NotificationCenter.Notifications {
     interface Notification {
         // extend server side type to contain local virtual notifications 
         Type: Raven.Server.NotificationCenter.Notifications.NotificationType | virtualNotificationType;
@@ -800,7 +811,6 @@ interface confirmationDialogOptions {
     defaultOption?: string;
     html?: boolean;
     wideDialog?: boolean;
-    isCancelHidden?: boolean;
 }
 
 type IndexEntriesFieldType = "Static" | "Dynamic";
@@ -1040,6 +1050,15 @@ type databaseLocationSpecifier = {
     nodeTag: string;
 }
 
+type bucketReportSortColumn = "range" | "buckets" | "documents" | "size";
+
+type bucketReportSortDirection = "asc" | "desc";
+
+type bucketReportSort = {
+    column: bucketReportSortColumn;
+    direction: bucketReportSortDirection;
+}
+
 interface PopoverUtilsOptions extends PopoverOptions {
     rounded?: boolean;
 }
@@ -1069,6 +1088,8 @@ interface ReactInKnockoutOptions<T> {
     component: T;
     props?: Parameters<T>[0];
     dirtyFlag?: ReactDirtyFlag;
+    isPageView?: boolean;
+    databaseName?: string;
 }
 
 type ReactInKnockout<T> = KnockoutComputed<ReactInKnockoutOptions<T>>;
@@ -1153,11 +1174,14 @@ type AiConnectionStringsSettings =
     | Raven.Client.Documents.Operations.AI.GoogleSettings
     | Raven.Client.Documents.Operations.AI.HuggingFaceSettings
     | Raven.Client.Documents.Operations.AI.MistralAiSettings
-    | Raven.Client.Documents.Operations.AI.VertexSettings;
+    | Raven.Client.Documents.Operations.AI.VertexSettings
+    | Raven.Client.Documents.Operations.AI.AnthropicSettings;
 
 interface AiModelsRequestDto {
-    ConnectorType: Extract<Raven.Client.Documents.Operations.AI.AiConnectorType, "Ollama" | "OpenAi" | "AzureOpenAi">;
+    ConnectorType: Extract<Raven.Client.Documents.Operations.AI.AiConnectorType, "Ollama" | "OpenAi" | "AzureOpenAi" | "Google" | "Anthropic">;
     AzureOpenAiSettings?: Pick<Raven.Client.Documents.Operations.AI.AzureOpenAiSettings, "Endpoint", "ApiKey">;
+    GoogleSettings?: Pick<Raven.Client.Documents.Operations.AI.GoogleSettings, "Endpoint" | "ApiKey" | "AiVersion">;
+    AnthropicSettings?: Pick<Raven.Client.Documents.Operations.AI.AnthropicSettings, "Endpoint" | "ApiKey" | "ApiVersion">;
     OllamaSettings?: Pick<Raven.Client.Documents.Operations.AI.OllamaSettings, "Uri" | "Think">;
     OpenAiSettings?: Pick<Raven.Client.Documents.Operations.AI.OpenAiSettings, "Endpoint" | "ApiKey" | "OrganizationId" | "ProjectId">;
 }

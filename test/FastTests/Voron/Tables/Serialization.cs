@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Linq;
 using System.Text;
 using Sparrow.Server;
@@ -129,7 +129,7 @@ namespace FastTests.Voron.Tables
                 fixed (byte* serializedPtr = serialized)
                 {
                     var reader = new TableValueReader(serializedPtr, serialized.Length);
-                    var actualIndex = TableSchema.IndexDef.ReadFrom(tx.Allocator, ref reader);
+                    var actualIndex = TableSchema.IndexDef.ReadFrom(tx.Allocator, reader);
                     Assert.Equal(serialized, actualIndex.Serialize());
                     SchemaIndexDefEqual(expectedIndex, actualIndex);
                     expectedIndex.EnsureIdentical(actualIndex);
@@ -269,7 +269,7 @@ namespace FastTests.Voron.Tables
                 fixed (byte* serializedPtr = serialized)
                 {
                     var reader = new TableValueReader(serializedPtr, serialized.Length);
-                    var actualIndex = TableSchema.DynamicKeyIndexDef.ReadFrom(tx.Allocator, ref reader);
+                    var actualIndex = TableSchema.DynamicKeyIndexDef.ReadFrom(tx.Allocator, reader);
                     Assert.Equal(serialized, actualIndex.Serialize());
                     SchemaIndexDefEqual(expectedIndex, actualIndex);
                     expectedIndex.EnsureIdentical(actualIndex);
@@ -294,7 +294,7 @@ namespace FastTests.Voron.Tables
                 fixed (byte* serializedPtr = serialized)
                 {
                     var reader = new TableValueReader(serializedPtr, serialized.Length);
-                    var actualIndex = TableSchema.DynamicKeyIndexDef.ReadFrom(tx.Allocator, ref reader);
+                    var actualIndex = TableSchema.DynamicKeyIndexDef.ReadFrom(tx.Allocator, reader);
                     Assert.Equal(serialized, actualIndex.Serialize());
                     SchemaIndexDefEqual(expectedIndex, actualIndex);
                     expectedIndex.EnsureIdentical(actualIndex);
@@ -320,7 +320,7 @@ namespace FastTests.Voron.Tables
                 fixed (byte* serializedPtr = serialized)
                 {
                     var reader = new TableValueReader(serializedPtr, serialized.Length);
-                    var actualIndex = TableSchema.DynamicKeyIndexDef.ReadFrom(tx.Allocator, ref reader);
+                    var actualIndex = TableSchema.DynamicKeyIndexDef.ReadFrom(tx.Allocator, reader);
                     Assert.Equal(serialized, actualIndex.Serialize());
                     SchemaIndexDefEqual(expectedIndex, actualIndex);
                     expectedIndex.EnsureIdentical(actualIndex);
@@ -362,7 +362,7 @@ namespace FastTests.Voron.Tables
                 fixed (byte* bytes1Ptr = bytes1)
                 {
                     var reader = new TableValueReader(bytes1Ptr, bytes1.Length);
-                    var bytes1Index = TableSchema.DynamicKeyIndexDef.ReadFrom(tx.Allocator, ref reader);
+                    var bytes1Index = TableSchema.DynamicKeyIndexDef.ReadFrom(tx.Allocator, reader);
                     Assert.Equal(serialized1, bytes1Index.Serialize());
                     SchemaIndexDefEqual(expectedIndex1, bytes1Index);
                     expectedIndex1.EnsureIdentical(bytes1Index);
@@ -371,7 +371,7 @@ namespace FastTests.Voron.Tables
                 fixed (byte* bytes2Ptr = bytes2)
                 {
                     var reader = new TableValueReader(bytes2Ptr, bytes2.Length);
-                    var bytes2Index = TableSchema.DynamicKeyIndexDef.ReadFrom(tx.Allocator, ref reader);
+                    var bytes2Index = TableSchema.DynamicKeyIndexDef.ReadFrom(tx.Allocator, reader);
                     Assert.Equal(serialized2, bytes2Index.Serialize());
                     SchemaIndexDefEqual(expectedIndex2, bytes2Index);
                     expectedIndex2.EnsureIdentical(bytes2Index);
@@ -445,7 +445,7 @@ namespace FastTests.Voron.Tables
                 fixed (byte* serializedPtr = serialized)
                 {
                     var reader = new TableValueReader(serializedPtr, serialized.Length);
-                    var actualIndex = TableSchema.DynamicKeyIndexDef.ReadFrom(tx.Allocator, ref reader);
+                    var actualIndex = TableSchema.DynamicKeyIndexDef.ReadFrom(tx.Allocator, reader);
                     Assert.Equal(serialized, actualIndex.Serialize());
                     SchemaIndexDefEqual(expectedIndex, actualIndex);
                     expectedIndex.EnsureIdentical(actualIndex);

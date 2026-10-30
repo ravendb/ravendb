@@ -11,6 +11,6 @@ public sealed class EmbeddingsGenerationTestScriptResult : TestEtlScriptResult
         public ReadOnlyMemory<byte> Embeddings;
     }
 
-    public Dictionary<string, List<Item>> Results { get; set; }
+    public Dictionary<string, List<Item>> Results { get; set; } = new();
 }
 

@@ -5,6 +5,7 @@ import generalUtils = require("common/generalUtils");
 import database = require("models/resources/database");
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import moment = require("moment");
+import copyToClipboard = require("common/copyToClipboard");
 
 abstract class abstractOperationDetails extends dialogViewModelBase {
     
@@ -24,7 +25,7 @@ abstract class abstractOperationDetails extends dialogViewModelBase {
 
     constructor(op: operation, notificationCenter: notificationCenter) {
         super();
-        this.bindToCurrentInstance("close", "killOperation");
+        this.bindToCurrentInstance("close", "killOperation", "copyErrorDetails");
         this.op = op;
         this.killFunction = () => notificationCenter.killOperation(op);
         this.openDetails = () => notificationCenter.openDetails(op);
@@ -61,7 +62,13 @@ abstract class abstractOperationDetails extends dialogViewModelBase {
                 }
             });
     }
-    
+
+    copyErrorDetails(_: unknown, event: Event): void {
+        const exceptionResult = this.op.result() as Raven.Client.Documents.Operations.OperationExceptionResult;
+        const dialogContainer = (event.currentTarget as Element).closest(".modal-dialog");
+        copyToClipboard.copy(exceptionResult.Error, "Error has been copied to clipboard", dialogContainer);
+    }
+
     protected calculateProcessingSpeed(processed: number): number {
         const durationInSeconds = this.op.durationInSeconds();
         return abstractOperationDetails.calculateProcessingSpeed(durationInSeconds, processed);

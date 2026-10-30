@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
@@ -16,12 +18,15 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Outgoing;
@@ -33,6 +38,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Utils;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Operations;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
@@ -513,59 +519,240 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
         Assert.Equal(GetVersionChangeVector(storeBChangeVector), GetVersionChangeVector(storeCChangeVector));
     }
 
+    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task BidirectionalPullReplicationReportsEstablishedConnectionDiagnostics(bool hubSupportsFeature, bool sinkSupportsFeature)
+    {
+        var certificates = Certificates.SetupServerAuthentication();
+        using var hub = GetSecuredDocumentStore(certificates, hubSupportsFeature ? null : StripPullReplicationCompositeChangeVectorsToken);
+        using var sink = GetSecuredDocumentStore(certificates, sinkSupportsFeature ? null : StripPullReplicationCompositeChangeVectorsToken);
+        using var pullCert = ExportCertificate(certificates.ClientCertificate1.Value);
+        DocumentDatabase hubDatabase = await Databases.GetDocumentDatabaseInstanceFor(hub);
+        DocumentDatabase sinkDatabase = await Databases.GetDocumentDatabaseInstanceFor(sink);
+
+        await SetupHubToSinkPullReplicationAsync(hub, sink, pullCert, FilteredPullName, withFiltering: true,
+            allowedHubToSinkPaths: [IncludedItemsPath], allowedSinkToHubPaths: [IncludedItemsPath],
+            mode: PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub);
+
+        await StoreTestItemAsync(hub, "items/include/from-hub", "hub");
+        await StoreTestItemAsync(sink, "items/include/from-sink", "sink");
+        Assert.True(WaitForDocument(sink, "items/include/from-hub", 30_000));
+        Assert.True(WaitForDocument(hub, "items/include/from-sink", 30_000));
+
+        PullReplicationChangeVectorWireMode expectedMode = hubSupportsFeature && sinkSupportsFeature
+            ? PullReplicationChangeVectorWireMode.SendAsIs : PullReplicationChangeVectorWireMode.SendLegacyCompatible;
+        await AssertPullConnectionDiagnosticsAsync(hub, sinkDatabase, expectedMode, asHub: true);
+        await AssertPullConnectionDiagnosticsAsync(sink, hubDatabase, expectedMode, asHub: false);
+
+        await StoreTestItemAsync(hub, "items/include/additional-batch", "additional");
+        Assert.True(WaitForDocument(sink, "items/include/additional-batch", 30_000));
+        OutgoingPullReplicationHandlerAsHub outgoing = hubDatabase.ReplicationLoader.OutgoingHandlers.OfType<OutgoingPullReplicationHandlerAsHub>().Single();
+        long acknowledgedEtag = 0;
+        outgoing.SuccessfulTwoWaysCommunication += handler => Interlocked.Exchange(ref acknowledgedEtag, handler.LastSentDocumentEtag);
+        // With only an excluded new item, the normal scan sends an empty-batch heartbeat.
+        await StoreTestItemAsync(hub, "items/exclude/heartbeat", "excluded");
+        long excludedEtag = await GetLastDocumentEtagAsync(hub);
+        await AssertWaitForTrueAsync(() => Task.FromResult(Interlocked.Read(ref acknowledgedEtag) >= excludedEtag), timeout: 30_000);
+        using (var session = sink.OpenSession())
+            Assert.Null(session.Load<TestItem>("items/exclude/heartbeat"));
+        await AssertPullConnectionDiagnosticsAsync(hub, sinkDatabase, expectedMode, asHub: true);
+        await AssertPullConnectionDiagnosticsAsync(sink, hubDatabase, expectedMode, asHub: false);
+    }
+
+    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
+    [InlineData(PullReplicationMode.HubToSink)]
+    [InlineData(PullReplicationMode.SinkToHub)]
+    public async Task PullInitiatorReportsRequestedDirectionBeforeHandshake(PullReplicationMode mode)
+    {
+        using var handshakeGate = new ManualResetEventSlim();
+        var certificates = Certificates.SetupServerAuthentication();
+        using var hub = GetSecuredDocumentStore(certificates);
+        using var sink = GetSecuredDocumentStore(certificates);
+        using var pullCert = ExportCertificate(certificates.ClientCertificate1.Value);
+        DocumentDatabase sinkDatabase = await Databases.GetDocumentDatabaseInstanceFor(sink);
+        var started = new TaskCompletionSource<DatabaseOutgoingReplicationHandler>(TaskCreationOptions.RunContinuationsAsynchronously);
+        sinkDatabase.ReplicationLoader.ForTestingPurposesOnly().OnOutgoingReplicationStart = handler =>
+        {
+            started.TrySetResult(handler);
+            CancellationToken cancellation = handler.CancellationToken;
+            try
+            {
+                handshakeGate.Wait(cancellation);
+            }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+            {
+                // Let the existing replication error handler complete cancellation.
+            }
+        };
+        try
+        {
+            await SetupHubToSinkPullReplicationAsync(hub, sink, pullCert, FilteredPullName, withFiltering: true,
+                allowedHubToSinkPaths: [IncludedItemsPath], allowedSinkToHubPaths: [IncludedItemsPath], mode: mode);
+            Assert.IsType<OutgoingPullReplicationHandlerAsSink>(await started.Task.WaitAsync(TimeSpan.FromSeconds(30)));
+            var response = await sink.Maintenance.SendAsync(new GetReplicationActiveConnectionsInfoOperation());
+            var outgoing = Assert.Single(response.OutgoingConnections);
+            Assert.Equal(mode, outgoing.PullReplicationMode);
+            Assert.Equal(PullReplicationChangeVectorWireMode.NotNegotiated, outgoing.ChangeVectorWireMode);
+            Assert.Equal(FilteredPullName, outgoing.PullReplicationDefinitionName);
+        }
+        finally
+        {
+            sinkDatabase.ReplicationLoader.ForTestingPurposesOnly().OnOutgoingReplicationStart = null;
+            handshakeGate.Set();
+        }
+
+        DocumentStore source = mode == PullReplicationMode.HubToSink ? hub : sink;
+        DocumentStore destination = mode == PullReplicationMode.HubToSink ? sink : hub;
+        await StoreTestItemAsync(source, "items/include/after-handshake", "after-handshake");
+        Assert.True(WaitForDocument(destination, "items/include/after-handshake", 30_000));
+    }
+
+    [RavenFact(RavenTestCategory.Replication)]
+    public void ActiveConnectionsReaderAcceptsPullRowsWithoutDiagnostics()
+    {
+        using (JsonOperationContext context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject response = context.ReadObject(new DynamicJsonValue
+        {
+            ["IncomingConnections"] = new DynamicJsonArray
+            {
+                new DynamicJsonValue { ["SourceDatabaseName"] = "sink", ["SourceUrl"] = "https://sink" }
+            },
+            ["OutgoingConnections"] = new DynamicJsonArray
+            {
+                new PullReplicationAsHub { Database = "sink", Url = "https://sink", Name = FilteredPullName }.ToJson(),
+                new PullReplicationAsSink { Database = "hub", Url = "https://hub", HubName = FilteredPullName }.ToJson()
+            }
+        }, "legacy-active-connections"))
+        {
+            var command = new GetReplicationActiveConnectionsInfoCommand();
+            command.SetResponse(context, response, fromCache: false);
+            var incoming = Assert.Single(command.Result.IncomingConnections);
+            Assert.Equal("sink", incoming.Connection.SourceDatabaseName);
+            Assert.Null(incoming.ChangeVectorWireMode);
+            Assert.Null(incoming.PullReplicationMode);
+            Assert.Null(incoming.PullReplicationDefinitionName);
+            Assert.Equal(2, command.Result.OutgoingConnections.Count);
+            Assert.IsType<PullReplicationAsHub>(command.Result.OutgoingConnections[0].Connection);
+            Assert.IsType<PullReplicationAsSink>(command.Result.OutgoingConnections[1].Connection);
+            Assert.All(command.Result.OutgoingConnections, outgoing =>
+            {
+                Assert.Null(outgoing.ChangeVectorWireMode);
+                Assert.Null(outgoing.PullReplicationMode);
+                Assert.Null(outgoing.PullReplicationDefinitionName);
+            });
+        }
+    }
+
+    private static async Task AssertPullConnectionDiagnosticsAsync(DocumentStore store, DocumentDatabase remote,
+        PullReplicationChangeVectorWireMode expectedMode, bool asHub)
+    {
+        var response = await store.Maintenance.SendAsync(new GetReplicationActiveConnectionsInfoOperation());
+        var incoming = Assert.Single(response.IncomingConnections);
+        Assert.Equal(remote.Name, incoming.Connection.SourceDatabaseName);
+        Assert.Equal(remote.ServerStore.GetNodeHttpServerUrl(), incoming.Connection.SourceUrl);
+        Assert.Equal(remote.DbId.ToString(), incoming.Connection.SourceDatabaseId);
+        Assert.Equal(FilteredPullName, incoming.PullReplicationDefinitionName);
+        Assert.Equal(asHub ? PullReplicationMode.SinkToHub : PullReplicationMode.HubToSink, incoming.PullReplicationMode);
+        Assert.Equal(expectedMode, incoming.ChangeVectorWireMode);
+
+        var outgoing = Assert.Single(response.OutgoingConnections);
+        Assert.Equal(remote.Name, outgoing.Connection.Database);
+        Assert.Equal(remote.ServerStore.GetNodeHttpServerUrl(), outgoing.Connection.Url);
+        Assert.Equal(asHub ? ReplicationNode.ReplicationType.PullAsHub : ReplicationNode.ReplicationType.PullAsSink, outgoing.Connection.Type);
+        Assert.Equal(FilteredPullName, outgoing.PullReplicationDefinitionName);
+        Assert.Equal(asHub ? PullReplicationMode.HubToSink : PullReplicationMode.SinkToHub, outgoing.PullReplicationMode);
+        Assert.Equal(expectedMode, outgoing.ChangeVectorWireMode);
+    }
+
+    private static async Task AssertOutgoingWireModeAsync(DocumentStore store, PullReplicationChangeVectorWireMode expectedMode)
+    {
+        var response = await store.Maintenance.SendAsync(new GetReplicationActiveConnectionsInfoOperation());
+        Assert.NotEmpty(response.OutgoingConnections);
+        foreach (var row in response.OutgoingConnections)
+        {
+            Assert.Equal(ReplicationNode.ReplicationType.PullAsHub, row.Connection.Type);
+            Assert.Equal(FilteredPullName, row.PullReplicationDefinitionName);
+            Assert.Equal(PullReplicationMode.HubToSink, row.PullReplicationMode);
+            Assert.Equal(expectedMode, row.ChangeVectorWireMode);
+        }
+    }
+
     [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
     public async Task LiveFeatureToggleReopensFilteredPullReplicationOnCompositeChangeVectorLane()
     {
+        using var handshakeGate = new ManualResetEventSlim();
         var certificates = Certificates.SetupServerAuthentication();
-        using var hub = GetDocumentStore(new Options
+        using var hub = GetSecuredDocumentStore(certificates, StripPullReplicationCompositeChangeVectorsToken);
+        using var sink = GetSecuredDocumentStore(certificates, StripPullReplicationCompositeChangeVectorsToken);
+        using var pullCert = ExportCertificate(certificates.ClientCertificate1.Value);
+        DocumentDatabase hubDatabase = await Databases.GetDocumentDatabaseInstanceFor(hub);
+        var heldHandlers = new ConcurrentQueue<OutgoingPullReplicationHandlerAsHub>();
+        hubDatabase.ReplicationLoader.ForTestingPurposesOnly().OnOutgoingReplicationStart = handler =>
         {
-            ClientCertificate = certificates.ServerCertificateForCommunication.Value,
-            AdminCertificate = certificates.ServerCertificateForCommunication.Value,
-            ModifyDatabaseRecord = StripPullReplicationCompositeChangeVectorsToken
-        });
-        using var sink = GetDocumentStore(new Options
+            if (handler is not OutgoingPullReplicationHandlerAsHub asHub)
+                return;
+            heldHandlers.Enqueue(asHub);
+            CancellationToken cancellation = handler.CancellationToken;
+            try
+            {
+                handshakeGate.Wait(cancellation);
+            }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+            {
+                // Let the existing replication error handler observe cancellation and dispose the handler.
+            }
+        };
+        try
         {
-            ClientCertificate = certificates.ServerCertificateForCommunication.Value,
-            AdminCertificate = certificates.ServerCertificateForCommunication.Value,
-            ModifyDatabaseRecord = StripPullReplicationCompositeChangeVectorsToken
-        });
+            try
+            {
+                await SetupFilteredHubToSinkPullReplicationAsync(hub, sink, pullCert);
+                await AssertWaitForTrueAsync(() => Task.FromResult(heldHandlers.IsEmpty == false), timeout: 30_000);
+                await AssertOutgoingWireModeAsync(hub, PullReplicationChangeVectorWireMode.NotNegotiated);
+            }
+            finally
+            {
+                handshakeGate.Set();
+            }
 
-#pragma warning disable SYSLIB0057
-        using var pullCert = new X509Certificate2(
-            certificates.ClientCertificate1.Value.Export(X509ContentType.Pfx), (string)null,
-            X509KeyStorageFlags.Exportable);
-#pragma warning restore SYSLIB0057
+            await StoreTestItemAsync(hub, "items/include/before-toggle", "before-toggle");
+            Assert.True(WaitForDocument(sink, "items/include/before-toggle", 30_000));
+            Assert.DoesNotContain("|", GetChangeVectorFor(sink, "items/include/before-toggle"));
+            OutgoingPullReplicationHandlerAsHub hubOutgoingHandler = await AssertOutgoingPullHandlerAsHubAsync(
+                hub, FilteredPullName, PullReplicationChangeVectorWireMode.SendLegacyCompatible);
+            await AssertOutgoingWireModeAsync(hub, PullReplicationChangeVectorWireMode.SendLegacyCompatible);
 
-        await SetupFilteredHubToSinkPullReplicationAsync(hub, sink, pullCert);
+            handshakeGate.Reset();
+            try
+            {
+                await SetPullReplicationCompositeChangeVectorsFeatureAsync(hub, enabled: true);
+                await SetPullReplicationCompositeChangeVectorsFeatureAsync(sink, enabled: true);
+                await AssertWaitForTrueAsync(() => Task.FromResult(hubOutgoingHandler.IsConnectionDisposed &&
+                    hubDatabase.ReplicationLoader.OutgoingHandlers.Any(handler => ReferenceEquals(handler, hubOutgoingHandler)) == false), timeout: 30_000);
+                await AssertWaitForTrueAsync(() => Task.FromResult(heldHandlers.Any(handler =>
+                    ReferenceEquals(handler, hubOutgoingHandler) == false && handler.IsConnectionDisposed == false &&
+                    handler.CancellationToken.IsCancellationRequested == false)), timeout: 30_000);
+                await AssertOutgoingWireModeAsync(hub, PullReplicationChangeVectorWireMode.NotNegotiated);
+            }
+            finally
+            {
+                handshakeGate.Set();
+            }
 
-        await StoreTestItemAsync(hub, "items/include/before-toggle", "before-toggle");
-        Assert.True(WaitForDocument(sink, "items/include/before-toggle", 30_000));
-
-        var beforeToggleChangeVector = GetChangeVectorFor(sink, "items/include/before-toggle");
-        Assert.DoesNotContain("|", beforeToggleChangeVector);
-
-        var hubDatabase = await Databases.GetDocumentDatabaseInstanceFor(hub);
-
-        var hubOutgoingHandler = await AssertWaitForNotNullAsync(
-            () => Task.FromResult(hubDatabase.ReplicationLoader.OutgoingHandlers.OfType<OutgoingPullReplicationHandlerAsHub>().SingleOrDefault()),
-            timeout: 30_000);
-        Assert.Equal(PullReplicationChangeVectorWireMode.SendLegacyCompatible, hubOutgoingHandler.ChangeVectorWireMode);
-
-        var sinkDatabase = await Databases.GetDocumentDatabaseInstanceFor(sink);
-
-        await SetPullReplicationCompositeChangeVectorsFeatureAsync(hub, enabled: true);
-        await SetPullReplicationCompositeChangeVectorsFeatureAsync(sink, enabled: true);
-
-        await AssertWaitForTrueAsync(
-            () => Task.FromResult(hubDatabase.ReplicationLoader.OutgoingHandlers.OfType<OutgoingPullReplicationHandlerAsHub>().Any(x =>
-                x.ChangeVectorWireMode == PullReplicationChangeVectorWireMode.SendAsIs)),
-            timeout: 30_000);
-
-        await StoreTestItemAsync(hub, "items/include/after-toggle", "after-toggle");
-        Assert.True(WaitForDocument(sink, "items/include/after-toggle", 30_000));
-
-        var afterToggleChangeVector = GetChangeVectorFor(sink, "items/include/after-toggle");
-        Assert.Contains("|", afterToggleChangeVector);
+            await AssertOutgoingPullHandlerAsHubAsync(hub, FilteredPullName, PullReplicationChangeVectorWireMode.SendAsIs);
+            await StoreTestItemAsync(hub, "items/include/after-toggle", "after-toggle");
+            Assert.True(WaitForDocument(sink, "items/include/after-toggle", 30_000));
+            Assert.Contains("|", GetChangeVectorFor(sink, "items/include/after-toggle"));
+            await AssertOutgoingWireModeAsync(hub, PullReplicationChangeVectorWireMode.SendAsIs);
+        }
+        finally
+        {
+            hubDatabase.ReplicationLoader.ForTestingPurposesOnly().OnOutgoingReplicationStart = null;
+            handshakeGate.Set();
+        }
     }
 
     [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
@@ -681,12 +868,13 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
         string pullName,
         bool withFiltering,
         string[] allowedHubToSinkPaths = null,
-        string[] allowedSinkToHubPaths = null)
+        string[] allowedSinkToHubPaths = null,
+        PullReplicationMode mode = PullReplicationMode.HubToSink)
     {
         await hub.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
         {
             Name = pullName,
-            Mode = PullReplicationMode.HubToSink,
+            Mode = mode,
             WithFiltering = withFiltering
         }));
 
@@ -713,7 +901,7 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
             ConnectionStringName = connectionStringName,
             CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
             HubName = pullName,
-            Mode = PullReplicationMode.HubToSink
+            Mode = mode
         }));
     }
 
@@ -1048,11 +1236,11 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
             {
                 foreach (var counterGroup in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
                 {
-                    var reader = counterGroup.Value.Reader;
+                    var reader = counterGroup.Value;
                     return DocumentsStorage.TableValueToChangeVector(
                         context,
                         (int)Raven.Server.Documents.Schemas.Counters.CountersTable.ChangeVector,
-                        ref reader);
+                        reader);
                 }
             }
 

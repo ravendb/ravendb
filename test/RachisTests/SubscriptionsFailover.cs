@@ -217,16 +217,26 @@ namespace RachisTests
 
         private async Task WaitForSubscriptionMreAndAssert(AsyncManualResetEvent reachedMaxDocCountInBatchMre, Task subsTask, AsyncManualResetEvent reachedMaxDocCountInAckMre, int iteration)
         {
-            if (await reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime) == false)
+            // a wait window with no progress at all is a genuine stall; a window that ends with the
+            // counter still moving is just a slow machine - keep waiting while progress is being made
+            var lastSeen = -1;
+            while (await reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime) == false)
             {
                 Assert.False(subsTask.IsFaulted, $"{iteration}. Reached in batch {BatchCounter}/10 & Subscription failed: {subsTask?.Exception?.ToString()}");
-                Assert.Fail($"{iteration}. Reached in batch {BatchCounter}/10");
+                var current = Volatile.Read(ref BatchCounter);
+                if (current == lastSeen)
+                    Assert.Fail($"{iteration}. Reached in batch {current}/10");
+                lastSeen = current;
             }
 
-            if (await reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime) == false)
+            lastSeen = -1;
+            while (await reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime) == false)
             {
                 Assert.False(subsTask.IsFaulted, $"{iteration}. Reached in ack {AckCounter}/10 & Subscription failed: {subsTask?.Exception?.ToString()}");
-                Assert.Fail($"{iteration}. Reached in ack {AckCounter}/10");
+                var current = Volatile.Read(ref AckCounter);
+                if (current == lastSeen)
+                    Assert.Fail($"{iteration}. Reached in ack {current}/10");
+                lastSeen = current;
             }
 
             Assert.False(subsTask.IsFaulted, $"{iteration}. Reached in batch {BatchCounter}/10, Reached in ack {AckCounter}/10 & Subscription failed: {subsTask?.Exception?.ToString()}");

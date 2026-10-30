@@ -72,7 +72,7 @@ function generateAllMenuItems() {
         getIndexesMenuItem(appUrls),
         getSettingsMenuItem(appUrls),
         getTasksMenuItem(appUrls),
-        getStatsMenuItem(appUrls),
+        getStatsMenuItem(appUrls, true),
         getAiHubMenuItem(appUrls),
         getDatabasesMenuItem(appUrls),
         getManageServerMenuItem(),

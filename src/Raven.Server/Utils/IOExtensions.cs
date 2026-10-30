@@ -215,8 +215,12 @@ namespace Raven.Server.Utils
             if (AfterGc != null)
                 sw = Stopwatch.StartNew();
 
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
+            // we need to do this dance to ensure that all pager states are properly disposed before attempting to delete the directory
+            // required to avoid issues with open file handles on Windows, and we close pager states in a background thread triggered from the finalizer
+
+            GC.Collect(); // collect all the abandoned pager states
+            GC.WaitForPendingFinalizers(); // wait for their finalizers to run (and queue the pager close)
+            Voron.Impl.Paging.Pager.State.DrainPendingDisposal(); // now we wait for all pending pager disposals to complete
 
             if (AfterGc != null)
                 AfterGc(null, (path, sw.Elapsed, attempt));

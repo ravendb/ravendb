@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -141,9 +141,16 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
         public long TotalResults;
         public List<string> AvailableColumns;
 
-        public DynamicJsonValue ArrayStubsJson = new DynamicJsonValue();
-        public DynamicJsonValue ObjectStubsJson = new DynamicJsonValue();
-        public HashSet<LazyStringValue> TrimmedValue = new HashSet<LazyStringValue>();
+        public readonly DynamicJsonValue ArrayStubsJson = new DynamicJsonValue();
+        public readonly DynamicJsonValue ObjectStubsJson = new DynamicJsonValue();
+        public readonly HashSet<LazyStringValue> TrimmedValue = new HashSet<LazyStringValue>();
+
+        public void ResetDocumentStubs()
+        {
+            ArrayStubsJson.Properties.Clear();
+            ObjectStubsJson.Properties.Clear();
+            TrimmedValue.Clear();
+        }
 
         public virtual DynamicJsonValue CreateMetadata(BlittableJsonReaderObject current)
         {
@@ -166,6 +173,8 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
     {
         using (document.Data)
         {
+            state.ResetDocumentStubs();
+
             writer.WriteStartObject();
 
             document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);

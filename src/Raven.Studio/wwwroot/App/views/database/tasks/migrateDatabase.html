@@ -57,43 +57,12 @@
                                 </ul>
                             </div>
                         </div>
-                        <div class="form-group" data-bind="validationElement: selectMigrationOption, validationOptions: { insertMessages: false }">
+                        <div class="form-group">
                             <label class="control-label">Database Source</label>
-                            <div>
-                                <div class="btn-group">
-                                    <button type="button" class="btn btn-default"
-                                            data-bind="click: _.partial(selectMigrationOption, 'MongoDB'), css: { active: selectMigrationOption() === 'MongoDB' }">
-                                        MongoDB
-                                    </button>
-                                    <button type="button" class="btn btn-default"
-                                            data-bind="click: _.partial(selectMigrationOption, 'CosmosDB'), css: { active: selectMigrationOption() === 'CosmosDB' }">
-                                        CosmosDB
-                                    </button>
-                                </div>
-                                <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: selectMigrationOption">
-                                    <div class="help-block" data-bind="validationMessage: selectMigrationOption"></div>
-                                </div>
+                            <div class="flex-grow">
+                                <div class="form-control-static">Azure Cosmos DB</div>
                             </div>
                         </div>
-                        <!-- ko with: mongoDbConfiguration -->
-                        <div data-bind="visible: $parent.showMongoDbOptions">
-                            <div class="form-group" data-bind="validationElement: connectionString">
-                                <label class="control-label">Connection String</label>
-                                <div class="flex-grow">
-                                    <input data-bind="textInput: connectionString" type="text" class="form-control" placeholder="mongodb://[username:password@]host[:port]" />
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="control-label migrate-gridfs">
-                                    <small><i class="icon-info text-info"></i></small>
-                                </label>
-                                <div class="toggle">
-                                    <input class="styled" type="checkbox" id="migrate-gridfs" data-bind="checked: migrateGridFs">
-                                    <label for="migrate-gridfs">Migrate GridFS</label>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- /ko -->
                         <!-- ko with: cosmosDbConfiguration -->
                         <div data-bind="if: $parent.showCosmosDbOptions">
                             <div class="form-group" data-bind="validationElement: azureEndpointUrl">

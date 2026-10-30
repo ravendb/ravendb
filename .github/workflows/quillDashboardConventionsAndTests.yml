@@ -1,0 +1,103 @@
+name: quill-dashboard/checks
+
+on:
+  push:
+    branches:
+        - feature/*
+        - release/**
+        - 'v[4-9]+.[0-9]+'
+
+  pull_request:
+    branches:
+        - feature/*
+        - release/**
+        - 'v[4-9]+.[0-9]+'
+
+jobs:
+  quill-dashboard:
+    name: Quill Dashboard Conventions and Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: ./src/Raven.Quill.Web
+    steps:
+    # paths-filter reads the REST API on pull_request but shells out to git on push,
+    # so the checkout has to come first and stay ungated.
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+      id: changes
+      with:
+        filters: |
+          quill:
+            - 'src/Raven.Quill/**'
+            - 'src/Raven.Quill.Web/**'
+            - '.github/workflows/quillDashboardConventionsAndTests.yml'
+
+    - name: Setup .NET
+      if: steps.changes.outputs.quill == 'true'
+      uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      with:
+        global-json-file: global.json
+
+    - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      if: steps.changes.outputs.quill == 'true'
+      with:
+        package_json_file: src/Raven.Quill.Web/package.json
+
+    - name: Setup nodejs
+      if: steps.changes.outputs.quill == 'true'
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: 24
+        cache: pnpm
+        cache-dependency-path: src/Raven.Quill.Web/pnpm-lock.yaml
+
+    - name: Install dependencies
+      id: install
+      if: steps.changes.outputs.quill == 'true'
+      run: pnpm install --frozen-lockfile
+
+    # Builds Raven.Quill to get the OpenAPI spec. If it fails, later checks use the committed server-api.ts.
+    - name: Regenerate API client
+      id: generate
+      if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+      run: pnpm generate:api
+
+    # server-api.ts is generated but committed, and typechecks fine when stale.
+    - name: Verify committed API client matches
+      if: ${{ !cancelled() && steps.generate.outcome == 'success' }}
+      run: |
+        if ! git diff --exit-code -- src/api/generated/server-api.ts; then
+          echo "::error::src/api/generated/server-api.ts is stale. Run 'pnpm generate:api' in src/Raven.Quill.Web and commit the result."
+          exit 1
+        fi
+
+    - name: Lint
+      if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+      run: pnpm lint
+
+    - name: Prettier
+      if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+      run: pnpm format:check
+
+    - name: Typecheck
+      if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+      run: pnpm typecheck
+
+    # The spec is already built by "Regenerate API client", so skip the second dotnet build.
+    - name: Compile
+      if: ${{ !cancelled() && steps.generate.outcome == 'success' }}
+      run: pnpm build
+      env:
+        RAVEN_QUILL_OPENAPI_SKIP_SPEC_BUILD: '1'
+
+    - name: Unit tests
+      if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+      run: pnpm test:unit
+
+    # No playwright install: vitest targets system Chrome, which runners preinstall.
+    - name: Storybook tests
+      if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+      run: pnpm test:storybook

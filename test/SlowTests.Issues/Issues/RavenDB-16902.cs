@@ -36,7 +36,7 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
-        public void DocumentWithUnicodeCharacterShouldNotHaveChangesOnLoad()
+        public void DocumentWithCompressedUnicodeCharacterShouldNotHaveChangesOnLoad()
         {
             // compressed string case does not affect the comparison and should work as well 
             var description = new string('\u0003', 4096);

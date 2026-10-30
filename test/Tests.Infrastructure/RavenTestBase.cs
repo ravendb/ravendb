@@ -31,6 +31,7 @@ using Raven.Server.Exceptions.Attachments;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Tests.Infrastructure;
@@ -307,6 +308,10 @@ namespace FastTests
                             Assert.Equal(options.ReplicationFactor, record.IsSharded ? record.Sharding.Shards[0].Count : record.Topology.ReplicationFactor);
                             raftCommand = record.Etag;
                         }
+                        catch (RavenException e) when (e.InnerException is TimeoutException)
+                        {
+                            throw new TimeoutException($"{e.Message}{Environment.NewLine}{DescribeDatabaseLoads(servers.Count > 0 ? servers : [serverToUse])}", e);
+                        }
 
                         Assert.True(raftCommand > 0); //sanity check
 
@@ -355,10 +360,16 @@ namespace FastTests
                         }
                         catch (Exception e)
                         {
-                            if (realException != null)
-                                throw new AggregateException(realException, e);
+                            var disposes = DisposeAudit.SnapshotAll();
+                            var error = disposes == null ? e : new InvalidOperationException($"{e.Message}{Environment.NewLine}Disposes still running:{Environment.NewLine}{disposes}", e);
 
-                            throw;
+                            if (realException != null)
+                                throw new AggregateException(realException, error);
+
+                            if (disposes == null)
+                                throw;
+
+                            throw error;
                         }
                     };
 
@@ -397,6 +408,62 @@ namespace FastTests
             {
                 // if we can't determine if it's a compression test, we assume it's not
                 return false;
+            }
+        }
+
+        private static string DescribeDatabaseLoads(List<RavenServer> servers)
+        {
+            var sb = new StringBuilder();
+            foreach (var server in servers)
+            {
+                var landlord = server.ServerStore.DatabasesLandlord;
+                sb.AppendLine($"Databases on {server.ServerStore.NodeTag} ({server.WebUrl}):");
+                foreach (var (name, task) in landlord.DatabasesCache)
+                    sb.AppendLine($"  '{name}': {task.Status} {task.Exception?.InnerException?.Message}");
+
+                // a database has an init log only while it is loading
+                foreach (var (name, log) in landlord.InitLog)
+                {
+                    sb.AppendLine($"  '{name}' is still loading:");
+                    foreach (var line in log)
+                        sb.AppendLine($"    {line}");
+                }
+            }
+
+            sb.AppendLine("Disposes still running:");
+            sb.AppendLine(DisposeAudit.SnapshotAll() ?? "  none");
+            sb.AppendLine("Stack traces of the threads that run our code:");
+            sb.Append(DescribeStackTraces());
+            return sb.ToString();
+        }
+
+        private static string DescribeStackTraces()
+        {
+            try
+            {
+                using var sw = new StringWriter();
+                Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.OutputResultToStream(sw);
+
+                var sb = new StringBuilder();
+                foreach (var stack in Newtonsoft.Json.Linq.JObject.Parse(sw.ToString())["Results"])
+                {
+                    var frames = stack["StackTrace"].Values<string>().ToList();
+
+                    // an idle pool thread tells nothing, and neither does the thread that is getting the stack traces
+                    if (frames.Any(frame => frame.Contains("Raven.") || frame.Contains("Voron") || frame.Contains("Sparrow")) == false ||
+                        frames.Any(frame => frame.Contains(nameof(DescribeStackTraces))))
+                        continue;
+
+                    sb.AppendLine($"  thread {string.Join(", ", stack["ThreadIds"].Values<int>())}:");
+                    foreach (var frame in frames.Take(40))
+                        sb.AppendLine($"    {frame}");
+                }
+
+                return sb.ToString();
+            }
+            catch (Exception e)
+            {
+                return $"  could not get them: {e}";
             }
         }
 

@@ -110,6 +110,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 MaxFacetQueryFilterSizeInBytes = index.Configuration.MaxFacetQueryFilterSize.GetValue(SizeUnit.Bytes),
                 PlanCache = (index.IndexPersistence as CoraxIndexPersistence)?.SharedPlanCache ?? new PlanCache(),
+                AssumeMultipleTermsInEveryField = index.Definition.HasDynamicFields
+                                                  && IndexDefinitionBaseServerSide.IndexVersion.IsPerEntryMultipleTermsMarkerSupported(index.Definition.Version) == false,
             };
 
             // Attach the per-field HNSW node caches from this transaction's client state and the current
@@ -580,7 +582,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             return fieldsToFetch.IsDistinct || query.SkipDuplicateChecking || indexType.IsMapReduce();
         }
 
-        private (SortingDataTransfer SortingData, bool HasSortByDistance) SetupSortingData(IndexQueryServerSide query, QueryBuilderParameters builderParams, IQueryMatch queryMatch, int bufferSize)
+        private (SortingDataTransfer SortingData, bool HasSortByDistance) SetupSortingData(IndexQueryServerSide query, QueryBuilderParameters builderParams, IQueryMatch queryMatch, bool writesScores, int bufferSize)
         {
             var hasOrderByDistance = query.Metadata.OrderBy is [{ OrderingType: OrderByFieldType.Distance }, ..] && _index.Configuration.CoraxIncludeSpatialDistance;
 
@@ -589,7 +591,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 sortingData = new SortingDataTransfer
                 {
-                    ScoresBuffer = builderParams.NeedsScoresBuffer()
+                    ScoresBuffer = builderParams.NeedsScoresBuffer() && writesScores
                         ? ScorePool.Rent(bufferSize)
                         : null,
                     DistancesBuffer = _index.Configuration.CoraxIncludeSpatialDistance && hasOrderByDistance
@@ -726,7 +728,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 Page page = default;
                 totalResults.Value = 0;
 
-                var (sortingData, hasOrderByDistance) = SetupSortingData(query, compileResult.QueryBuilderParams, compileResult.QueryMatch, bufferSize);
+                var (sortingData, hasOrderByDistance) = SetupSortingData(query, compileResult.QueryBuilderParams, compileResult.QueryMatch, compileResult.WritesScores, bufferSize);
 
                 // We don't need to do any processing for the query beyond counting if we are getting a count.
                 long totalResultsBefore = totalResults.Value;
@@ -1293,6 +1295,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     mltTerms = mlt.Like(blittableJson);
             }
 
+            if (query.PageSize == 0)
+                yield break;
+
             // Materialize into bitmap via OR
             Voron.Data.RoaringBitmaps.RoaringBitmap mltBitmapData = new(_allocator);
             long[] ids = null;
@@ -1330,6 +1335,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 mltIterator = mltBitmapData.GetIterator();
 
                 var ravenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                if (baseDocId.HasValue)
+                {
+                    // by id, not by entry: a fanout index gives the base document several entries
+                    var baseDocumentId = _documentIdReader.GetTermFor(baseDocId.Value);
+                    if (baseDocumentId != null)
+                        ravenIds.Add(baseDocumentId);
+                }
+
                 ids = QueryPool.Rent(pageSize);
                 long returnedDocs = 0;
                 long skippedDocs = 0;
@@ -1339,16 +1352,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 {
                     for (int i = 0; i < read; i++)
                     {
-                        if (returnedDocs >= query.Limit)
+                        if (returnedDocs >= query.PageSize)
                             yield break;
-                        
+
                         var hit = ids[i];
                         token.ThrowIfCancellationRequested();
 
-                        if (hit == baseDocId)
-                            continue;
-                        
                         var id = _documentIdReader.GetTermFor(hit);
+                        if (id == null)
+                            continue;
+
                         if (ravenIds.Add(id) == false)
                             continue;
 
@@ -1357,7 +1370,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             skippedDocs++;
                             continue;
                         }
-                        
+
                         var termsReader = IndexSearcher.GetEntryTermsReader(hit, ref page);
                         var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, termsReader, id, _index.IndexFieldsPersistence.HasTimeValues);
                         var result = retriever.Get(ref retrieverInput, token);
@@ -1432,7 +1445,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             var ids = QueryPool.Rent(CoraxBufferSize(IndexSearcher, take, query));
 
-            var (sortingData, _) = SetupSortingData(query, compileResult.QueryBuilderParams, queryMatch, ids.Length);
+            var (sortingData, _) = SetupSortingData(query, compileResult.QueryBuilderParams, queryMatch, compileResult.WritesScores, ids.Length);
 
             // docsToLoad is the logical page budget (how many entries to yield), and NOT the buffer-rental size.
             int docsToLoad = pageSize >= int.MaxValue ? int.MaxValue : (int)pageSize;

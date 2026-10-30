@@ -1,5 +1,7 @@
 using System;
 using Corax.Querying.Matches.Meta;
+using Corax.Querying.Matches.SortingMatches;
+using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Querying.Planning;
 using Corax.Utils;
 
@@ -19,6 +21,9 @@ internal record struct CompiledQuery(
     /// so we need to explicitly Score() after the Fill() call
     /// </summary>
     public bool ScoresProducedDuringFill => Execution is { VectorPostFilterProvidesScoreOrder: true };
+
+    public bool WritesScores => ScoresProducedDuringFill
+                                || (QueryMatch is IRequireSortingDataTransfer && Array.Exists(OrderByFields ?? [], x => x.FieldType == MatchCompareFieldType.Score));
 
     public void Dispose()
     {

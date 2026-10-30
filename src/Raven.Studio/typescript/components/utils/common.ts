@@ -3,6 +3,7 @@ import { SelectOption } from "components/common/select/Select";
 import { loadableData } from "components/models/common";
 import { StoryFn } from "@storybook/react-webpack5";
 import typeUtils = require("common/typeUtils");
+import recentError = require("common/notifications/models/recentError");
 
 export function withPreventDefault(action: (...args: any[]) => void): MouseEventHandler<HTMLElement> {
     return (e: MouseEvent<HTMLElement>) => {
@@ -59,6 +60,19 @@ export function getErrorHeadline(error: string): string {
     const looksLikeExceptionType = prefix.length > 0 && !prefix.includes(" ") && !isUriScheme;
 
     return looksLikeExceptionType ? prefix.trim() : error;
+}
+
+export function getRequestErrorMessage(response: JQueryXHR): string {
+    if (response.statusText === "timeout") {
+        return "Request timed out";
+    }
+
+    const { message, error } = recentError.tryExtractMessageAndException(response.responseText);
+    if (!message) {
+        return response.statusText;
+    }
+
+    return error ? `${message}: ${error}` : message;
 }
 
 export async function delay(ms: number) {
@@ -216,8 +230,6 @@ export const logFilterActionOptions: SelectOption<Sparrow.Logging.LogFilterActio
         value: action,
     })
 );
-
-export const allAiExternalProviders = ["Azure OpenAI", "Google AI", "Ollama", "OpenAI", "Mistral AI"];
 
 export type RecursiveRequired<T> = Required<{
     [P in keyof T]: T[P] extends object | undefined ? RecursiveRequired<Required<T[P]>> : T[P];

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <RuntimeFrameworkVersion>10.0.12</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>10.0.13</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>SlowTests</AssemblyName>
     <PackageId>SlowTests</PackageId>
@@ -65,6 +65,8 @@
     <EmbeddedResource Include="Data\RavenDB_24423\PreRavenDB_24423.gz" />
     <None Remove="Data\RavenDB_24423\PreRavenDB_24423.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_24423\PreRavenDB_24423.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_27533\unmarked-leaves-next-to-branch.zip" />
+    <EmbeddedResource Include="Data\RavenDB_27533\unmarked-leaves-next-to-branch.zip" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values-2.txt" />
@@ -117,7 +119,6 @@
     <PackageReference Include="FubarDev.FtpServer" />
     <PackageReference Include="FubarDev.FtpServer.FileSystem.DotNet" />
     <PackageReference Include="FubarDev.FtpServer.FileSystem.InMemory" />
-    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" VersionOverride="2.0.77" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="System.DirectoryServices.Protocols" />
     <PackageReference Include="xunit.runner.visualstudio">

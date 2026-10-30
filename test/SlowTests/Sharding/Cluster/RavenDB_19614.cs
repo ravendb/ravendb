@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -331,15 +331,15 @@ namespace SlowTests.Sharding.Cluster
             var index = storage.DocsSchema.DynamicKeyIndexes[Documents.AllDocsBucketAndEtagSlice];
             foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, index, bucket, 0))
             {
-                var documentCv = DocumentsStorage.TableValueToChangeVector(context, (int)Documents.DocumentsTable.ChangeVector, ref result.Result.Reader);
+                var documentCv = DocumentsStorage.TableValueToChangeVector(context, (int)Documents.DocumentsTable.ChangeVector, result.Result);
                 merged = merged.MergeWith(documentCv, context);
             }
 
             index = storage.TombstonesSchema.DynamicKeyIndexes[Tombstones.TombstonesBucketAndEtagSlice];
             foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, index, bucket, 0))
             {
-                var tombstoneCv = DocumentsStorage.TableValueToChangeVector(context, (int)Tombstones.TombstoneTable.ChangeVector, ref result.Result.Reader);
-                var flags = DocumentsStorage.TableValueToFlags((int)Tombstones.TombstoneTable.Flags, ref result.Result.Reader);
+                var tombstoneCv = DocumentsStorage.TableValueToChangeVector(context, (int)Tombstones.TombstoneTable.ChangeVector, result.Result);
+                var flags = DocumentsStorage.TableValueToFlags((int)Tombstones.TombstoneTable.Flags, result.Result);
                 if (flags.HasFlag(DocumentFlags.Artificial | DocumentFlags.FromResharding))
                     continue;
 
@@ -349,28 +349,28 @@ namespace SlowTests.Sharding.Cluster
             index = database.DocumentsStorage.CountersStorage.CountersSchema.DynamicKeyIndexes[Counters.CountersBucketAndEtagSlice];
             foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, index, bucket, 0))
             {
-                var counterCv = DocumentsStorage.TableValueToChangeVector(context, (int)Counters.CountersTable.ChangeVector, ref result.Result.Reader);
+                var counterCv = DocumentsStorage.TableValueToChangeVector(context, (int)Counters.CountersTable.ChangeVector, result.Result);
                 merged = merged.MergeWith(counterCv, context);
             }
 
             index = database.DocumentsStorage.ConflictsStorage.ConflictsSchema.DynamicKeyIndexes[Conflicts.ConflictsBucketAndEtagSlice];
             foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, index, bucket, 0))
             {
-                var conflictCv = DocumentsStorage.TableValueToChangeVector(context, (int)Conflicts.ConflictsTable.ChangeVector, ref result.Result.Reader);
+                var conflictCv = DocumentsStorage.TableValueToChangeVector(context, (int)Conflicts.ConflictsTable.ChangeVector, result.Result);
                 merged = merged.MergeWith(conflictCv, context);
             }
 
             index = database.DocumentsStorage.RevisionsStorage.RevisionsSchema.DynamicKeyIndexes[Revisions.RevisionsBucketAndEtagSlice];
             foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, index, bucket, 0))
             {
-                var revisionCv = RevisionsStorage.ReadChangeVectorFromTvr(context, ref result.Result.Reader);
+                var revisionCv = RevisionsStorage.ReadChangeVectorFromTvr(context, result.Result);
                 merged = merged.MergeWith(revisionCv, context);
             }
 
             index = database.DocumentsStorage.AttachmentsStorage.AttachmentsSchema.DynamicKeyIndexes[Attachments.AttachmentsBucketAndEtagSlice];
             foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, index, bucket, 0))
             {
-                var attachmentCv = DocumentsStorage.TableValueToChangeVector(context, (int)Attachments.AttachmentsTable.ChangeVector, ref result.Result.Reader);
+                var attachmentCv = DocumentsStorage.TableValueToChangeVector(context, (int)Attachments.AttachmentsTable.ChangeVector, result.Result);
                 merged = merged.MergeWith(attachmentCv, context);
             }
 
@@ -378,14 +378,14 @@ namespace SlowTests.Sharding.Cluster
                 Raven.Server.Documents.Schemas.TimeSeries.TimeSeriesBucketAndEtagSlice];
             foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, index, bucket, 0))
             {
-                var tsCv = DocumentsStorage.TableValueToChangeVector(context, (int)Raven.Server.Documents.Schemas.TimeSeries.TimeSeriesTable.ChangeVector, ref result.Result.Reader);
+                var tsCv = DocumentsStorage.TableValueToChangeVector(context, (int)Raven.Server.Documents.Schemas.TimeSeries.TimeSeriesTable.ChangeVector, result.Result);
                 merged = merged.MergeWith(tsCv, context);
             }
 
             index = database.DocumentsStorage.TimeSeriesStorage.DeleteRangesSchema.DynamicKeyIndexes[DeletedRanges.DeletedRangesBucketAndEtagSlice];
             foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, index, bucket, 0))
             {
-                var deletedRangeCv = DocumentsStorage.TableValueToChangeVector(context, (int)DeletedRanges.DeletedRangeTable.ChangeVector, ref result.Result.Reader);
+                var deletedRangeCv = DocumentsStorage.TableValueToChangeVector(context, (int)DeletedRanges.DeletedRangeTable.ChangeVector, result.Result);
                 merged = merged.MergeWith(deletedRangeCv, context);
             }
 

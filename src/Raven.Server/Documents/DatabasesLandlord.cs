@@ -30,6 +30,7 @@ using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Threading;
 using Sparrow.Utils;
+using Sparrow.Server.Utils;
 using Voron.Exceptions;
 using Voron.Util.Settings;
 
@@ -569,7 +570,9 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
-            _disposing.CloseAndLock();
+            using (DisposeAudit.Step("close the `_disposing` guard"))
+                _disposing.CloseAndLock();
+
             var exceptionAggregator = new ExceptionAggregator(_logger, "Failure to dispose landlord");
             try
             {
@@ -641,7 +644,7 @@ namespace Raven.Server.Documents
                         }
                     });
                 else if (dbTask.Status == TaskStatus.RanToCompletion && dbTask.Result != null)
-                    exceptionAggregator.Execute(dbTask.Result.Dispose);
+                    exceptionAggregator.Execute(dbTask.Result.Dispose); // the database audits its own dispose
                 // there is no else, the db is probably faulted
             });
             DatabasesCache.Clear();
@@ -655,7 +658,7 @@ namespace Raven.Server.Documents
             }, dbTask =>
             {
                 // this is not really a task
-                exceptionAggregator.Execute(dbTask.Result.Dispose);
+                exceptionAggregator.Execute($"sharded database '{dbTask.Result.DatabaseName}'", dbTask.Result.Dispose);
             });
             exceptionAggregator.Execute(ShardedDatabasesCache.Clear);
 

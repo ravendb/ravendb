@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.CompilerServices;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Logging;
@@ -96,7 +96,7 @@ namespace Raven.Server.Documents
                         return false;
                 }
 
-                using (var databaseInfoJson = Read(context, ref infoTvr))
+                using (var databaseInfoJson = Read(context, infoTvr))
                 {
                     action(databaseInfoJson);
                     return true;
@@ -105,7 +105,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe BlittableJsonReaderObject Read(JsonOperationContext context, ref TableValueReader reader)
+        private static unsafe BlittableJsonReaderObject Read(JsonOperationContext context, in TableValueReader reader)
         {
             var ptr = reader.Read(DatabaseInfoSchema.DatabaseInfoTable.JsonIndex, out int size);
             return new BlittableJsonReaderObject(ptr, size, context);

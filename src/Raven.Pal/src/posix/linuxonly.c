@@ -152,17 +152,53 @@ int32_t rvn_write_vectored_file_io(
         if (rc != SUCCESS)
             return rc;
     }
+    _mark_dirty_pages(handle, buffers, count);
+    return SUCCESS;
+}
+
+PRIVATE int32_t
+_writeback_supported(struct handle *handle_ptr)
+{
+    (void)handle_ptr;
+    return true;
+}
+
+PRIVATE int32_t
+_writeback_range_start(struct handle *handle_ptr, int64_t offset, int64_t length, int32_t *detailed_error_code)
+{
+    int rc;
+    do
+    {
+        rc = sync_file_range(handle_ptr->file_fd, offset, length, SYNC_FILE_RANGE_WRITE);
+    } while (rc != 0 && errno == EINTR);
+    if (rc != 0)
+    {
+        *detailed_error_code = errno;
+        return FAIL_SYNC_FILE;
+    }
+    return SUCCESS;
+}
+
+PRIVATE int32_t
+_writeback_range_complete(struct handle *handle_ptr, int64_t offset, int64_t length, int32_t *detailed_error_code)
+{
+    int rc;
+    do
+    {
+        rc = sync_file_range(handle_ptr->file_fd, offset, length,
+                             SYNC_FILE_RANGE_WAIT_BEFORE | SYNC_FILE_RANGE_WRITE | SYNC_FILE_RANGE_WAIT_AFTER);
+    } while (rc != 0 && errno == EINTR);
+    if (rc != 0)
+    {
+        *detailed_error_code = errno;
+        return FAIL_SYNC_FILE;
+    }
     return SUCCESS;
 }
 
 EXPORT
 rvn_writer rvn_get_writer(void *handle)
 {
-    struct handle *handle_ptr = handle;
-
-    if (handle_ptr->write_address)
-        return rvn_write_mmap;
-
     switch (g_cfg.write_mode)
     {
     case rvn_write_mode_vectored_file_io:
@@ -171,21 +207,19 @@ rvn_writer rvn_get_writer(void *handle)
         return rvn_write_file_io;
     case rvn_write_mode_io_ring:
         return rvn_write_io_ring;
-    case rvn_write_mode_mmap:
-        if (handle_ptr->global_state->open_flags & OPEN_FILE_DO_NOT_MAP)
-            return rvn_write_mmap32;
-        return rvn_write_invalid_setup;
     default:
         return io_ring_setup_successful() ? rvn_write_io_ring : rvn_write_vectored_file_io;
     }
 }
 
 EXPORT int32_t
-rvn_write_journal(void *handle, struct journal_entry *buffer, int64_t count_of_entries, int64_t offset, int32_t *detailed_error_code)
+rvn_write_journal(void *handle, void *context, struct journal_entry *buffer, int64_t count_of_entries, int64_t offset, int32_t *detailed_error_code)
 {
+    (void)context; // context is unused in posix
     struct journal_handle *jfh = handle;
     struct iovec elements[IOV_MAX];
     int32_t index = 0;
+    int64_t bytes_in_batch = 0;
     for (size_t i = 0; i < count_of_entries; i++)
     {
         elements[index].iov_base = buffer[i].base;
@@ -195,13 +229,15 @@ rvn_write_journal(void *handle, struct journal_entry *buffer, int64_t count_of_e
             *detailed_error_code = EOVERFLOW;
             return FAIL_MATH_OVERFLOW;
         }
+        bytes_in_batch += (int64_t)elements[index].iov_len;
         index++;
         if (index == IOV_MAX)
         {
             int32_t rc = _pwritev(jfh->fd, elements, index, offset, detailed_error_code);
             if (rc != SUCCESS)
                 return rc;
-            offset += index * SYS_PAGE_SIZE;
+            offset += bytes_in_batch;
+            bytes_in_batch = 0;
             index = 0;
         }
     }

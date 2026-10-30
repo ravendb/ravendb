@@ -9,4 +9,6 @@ declare module "*.html" {
     export = _temp;
 }
 
+declare module "*.scss";
+
 

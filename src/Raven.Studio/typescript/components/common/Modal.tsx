@@ -13,6 +13,7 @@ interface ModalProps extends ReactBootstrapModalProps {
 export function Modal({ children, container, isLoading, className, ...props }: ModalProps) {
     return (
         <ReactBootstrapModal
+            scrollable
             centered
             contentClassName={classNames("position-relative", className)}
             container={container || document.getElementById("bs5-modal")}

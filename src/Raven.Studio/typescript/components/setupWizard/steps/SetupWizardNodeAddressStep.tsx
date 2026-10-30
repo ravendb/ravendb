@@ -37,7 +37,7 @@ import { useServices } from "hooks/useServices";
 import { SelectOption } from "components/common/select/Select";
 import { isEmpty } from "common/typeUtils";
 import Row from "react-bootstrap/Row";
-import Col from "react-bootstrap/esm/Col";
+import Col from "react-bootstrap/Col";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { setupWizardGA4Prefixes } from "components/setupWizard/utils/setupWizardConstants";
 import { getMaxClusterSize } from "components/setupWizard/utils/setupWizardUtils";
@@ -78,6 +78,15 @@ export function SetupWizardNodeAddressStep() {
         return cn.replace("*", tag);
     };
 
+    const getDefaultDnsName = (tag: string): string => {
+        if (securityOption !== "ownCertificate" || isWildcardCertificate) {
+            return undefined;
+        }
+
+        const tagPrefix = `${tag.toLowerCase()}.`;
+        return cns.find((cn) => cn.toLowerCase().startsWith(tagPrefix)) ?? cns[0];
+    };
+
     const handleDefaultNodeUrlConfiguration = () => {
         if (securityOption === "letsEncrypt") {
             return fullDomain;
@@ -108,7 +117,7 @@ export function SetupWizardNodeAddressStep() {
                     ipAddress: asyncGetSetupParameters.result?.IsDocker ? "" : "127.0.0.1",
                 },
             ],
-            dnsName: securityOption === "ownCertificate" && !isWildcardCertificate ? cns[0] : undefined,
+            dnsName: getDefaultDnsName(availableNodeTag),
             isEditing: true,
             isNewlyAdded: true,
         });
@@ -124,7 +133,7 @@ export function SetupWizardNodeAddressStep() {
                         ipAddress: asyncGetSetupParameters.result?.IsDocker ? "" : "127.0.0.1",
                     },
                 ],
-                dnsName: securityOption === "ownCertificate" && !isWildcardCertificate ? cns[0] : undefined,
+                dnsName: getDefaultDnsName("A"),
                 isEditing: true, // the first node should be added with default values and in editing mode
                 isNewlyAdded: false,
                 isPassive: false,
@@ -908,7 +917,7 @@ interface AddAnotherNodeProps {
     onAddNode: () => void;
 }
 
-function AddAnotherNode({ onAddNode }: AddAnotherNodeProps) {
+export function AddAnotherNode({ onAddNode }: AddAnotherNodeProps) {
     const { getValues } = useFormContext<SetupWizardFormData>();
 
     const licenseKeyStep = getValues("licenseKeyStep");
@@ -928,7 +937,7 @@ function AddAnotherNode({ onAddNode }: AddAnotherNodeProps) {
             <ConditionalPopover
                 conditions={[
                     {
-                        isActive: !hasLicense,
+                        isActive: !hasLicense && isMaxClusterNodes,
                         message: (
                             <>
                                 <p className="mb-0">
@@ -1531,6 +1540,29 @@ export const nodeEditFormSchema = yup.object({
             }
 
             return true;
+        })
+        .test("unique", "DNS name and HTTPS port must be unique across nodes", function (value) {
+            const { securityOption, isWildcardCertificate, nodeAddressStep, currentIndex } = this.options.context as {
+                securityOption: SetupWizardSecurityOption;
+                isWildcardCertificate: boolean;
+                nodeAddressStep: SetupWizardFormData["nodeAddressStep"];
+                currentIndex: number;
+            };
+
+            if (securityOption !== "ownCertificate" || isWildcardCertificate || !value || !nodeAddressStep?.nodes) {
+                return true;
+            }
+
+            const httpPort = this.parent.httpPort ?? 443;
+
+            return (
+                nodeAddressStep.nodes.findIndex(
+                    (node, idx) =>
+                        idx !== currentIndex &&
+                        node.dnsName?.toLowerCase() === value.toLowerCase() &&
+                        (node.httpPort ?? 443) === httpPort
+                ) === -1
+            );
         }),
     httpPort: yup
         .number()
@@ -1564,7 +1596,7 @@ export const nodeEditFormSchema = yup.object({
 
                 return hasExtConfig || hasZeroAddress;
             },
-            then: (schema) =>
+            then: (schema: yup.StringSchema) =>
                 schema
                     .required(
                         "External IP address is required, it tells RavenDB how to identify itself to other nodes and clients"
@@ -1579,7 +1611,7 @@ export const nodeEditFormSchema = yup.object({
                         "Please enter a valid IPv4 address (hostname not allowed, no port)",
                         (value) => !!value && genUtils.regexIPv4.test(value)
                     ),
-            otherwise: (schema) =>
+            otherwise: (schema: yup.StringSchema) =>
                 schema.test(
                     "valid-ipv4-optional",
                     "Please enter a valid IPv4 address (hostname not allowed, no port)",

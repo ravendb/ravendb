@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -65,7 +65,7 @@ namespace Raven.Server.ServerWide.Commands
             return null;
         }
 
-        public static unsafe long GetValue(TableValueReader tvr)
+        public static unsafe long GetValue(in TableValueReader tvr)
         {
             return *(long*)tvr.Read((int)ClusterStateMachine.IdentitiesTable.Value, out _);
         }

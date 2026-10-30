@@ -6,6 +6,7 @@ import saveTimeSeriesCommand = require("commands/database/documents/timeSeries/s
 import popoverUtils = require("common/popoverUtils");
 import moment = require("moment");
 import typeUtils = require("common/typeUtils");
+import generalUtils = require("common/generalUtils");
 
 class editTimeSeriesEntry extends dialogViewModelBase {
     
@@ -13,8 +14,8 @@ class editTimeSeriesEntry extends dialogViewModelBase {
 
     static aggregationColumns = timeSeriesEntryModel.aggregationColumns;
     
-    static utcTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
-    static localTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
+    static utcTimeFormat = generalUtils.timeSeriesFullDateFormat;
+    static localTimeFormat = generalUtils.timeSeriesFullDateFormat;
 
     static readonly incrementalTimeSeriesInfo =
         `<ul class="margin-top margin-top-xs no-padding-left margin-left">
@@ -29,7 +30,7 @@ class editTimeSeriesEntry extends dialogViewModelBase {
     };
     
     datePickerOptions = {
-        format: "YYYY-MM-DD HH:mm:ss.SSS",
+        format: generalUtils.timeSeriesFullDateFormat,
         sideBySide: true
     };
     

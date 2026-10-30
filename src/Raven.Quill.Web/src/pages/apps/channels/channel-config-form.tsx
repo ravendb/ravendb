@@ -34,7 +34,7 @@ type EditChannelFormData = z.infer<typeof editChannelSchema>;
 
 // The channel's editable settings, rendered inside the edit sheet. The caller owns the surrounding
 // chrome by supplying container classes and the footer (which receives the pending state so it can
-// disable/spin its submit button). The visible fields depend on the channel type: web widgets edit
+// disable/spin its submit button). The visible fields depend on the channel type: embedded chat channels edit
 // their allowed origins, Telegram bots rotate their token (their canned messages live in the detail's
 // Bot messages tab).
 export function ChannelConfigForm({
@@ -212,9 +212,9 @@ export function ChannelConfigForm({
                         control={form.control}
                         name="allowedOrigins"
                         label="Allowed origins"
-                        description="The widget only loads on these origins. Leave empty to allow any site."
+                        description="The widget only loads on these origins. Leave empty to allow any origin."
                         addButtonLabel="Add origin"
-                        emptyLabel="No origins — the widget can be embedded on any site."
+                        emptyLabel="No origins — the widget can be embedded anywhere."
                         defaultValue={{ value: "" }}
                         fieldName={(index) => `allowedOrigins.${index}.value`}
                         itemLabel={(index) => `Origin ${index + 1}`}

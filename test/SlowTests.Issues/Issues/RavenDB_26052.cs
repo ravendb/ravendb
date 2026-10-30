@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using FastTests.Voron;
@@ -32,7 +32,7 @@ public class RavenDB_26052 : StorageTest
     }
 
     [StorageIndexEntryKeyGenerator]
-    private static unsafe ByteStringContext.Scope TestGenerateDynamicKey(Transaction tx, ref TableValueReader tvr, out Slice slice)
+    private static unsafe ByteStringContext.Scope TestGenerateDynamicKey(Transaction tx, in TableValueReader tvr, out Slice slice)
     {
         var ptr = tvr.Read(1, out var size);
         var scope = tx.Allocator.Allocate(size, out var buffer);

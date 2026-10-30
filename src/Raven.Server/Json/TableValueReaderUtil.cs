@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
@@ -8,11 +8,11 @@ namespace Raven.Server.Json
 {
     public static class TableValueReaderUtil
     {
-        public static unsafe ReleaseMemory CloneTableValueReader(DocumentsOperationContext context, Table.TableValueHolder read)
+        public static unsafe ReleaseMemory CloneTableValueReader(DocumentsOperationContext context, ref TableValueReader read)
         {
-            var copyReadMemory = context.GetMemory(read.Reader.Size);
-            Memory.Copy(copyReadMemory.Address, read.Reader.Pointer, read.Reader.Size);
-            read.Reader = new TableValueReader(copyReadMemory.Address, read.Reader.Size);
+            var copyReadMemory = context.GetMemory(read.Size);
+            Memory.Copy(copyReadMemory.Address, read.Pointer, read.Size);
+            read = new TableValueReader(copyReadMemory.Address, read.Size);
             return new ReleaseMemory(context, copyReadMemory);
         }
 

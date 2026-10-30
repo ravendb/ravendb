@@ -27,6 +27,8 @@ namespace Voron.Data.Tables
             public bool IsGlobal;
 
             public Slice Name;
+
+            public int CachePosition = -1;
         }
 
         public sealed class IndexDef : AbstractTreeIndexDef
@@ -42,7 +44,7 @@ namespace Voron.Data.Tables
 
             public int Count = -1;
 
-            public ByteStringContext.Scope GetValue(ByteStringContext context, ref TableValueReader value,
+            public ByteStringContext.Scope GetValue(ByteStringContext context, in TableValueReader value,
                 out Slice slice)
             {
                 var ptr = value.Read(StartIndex, out int totalSize);
@@ -177,7 +179,7 @@ namespace Voron.Data.Tables
                     throw new ArgumentOutOfRangeException(nameof(StartIndex), "StartIndex cannot be negative");
             }
 
-            public static IndexDef ReadFrom(ByteStringContext context, ref TableValueReader input)
+            public static IndexDef ReadFrom(ByteStringContext context, in TableValueReader input)
             {
                 var indexDef = new IndexDef();
 
@@ -201,9 +203,9 @@ namespace Voron.Data.Tables
         {
             public override TreeIndexType Type => TreeIndexType.DynamicKeyValues;
 
-            public delegate ByteStringContext.Scope IndexEntryKeyGenerator(Transaction tx, ref TableValueReader value, out Slice slice);
+            public delegate ByteStringContext.Scope IndexEntryKeyGenerator(Transaction tx, in TableValueReader value, out Slice slice);
 
-            public delegate void OnIndexEntryChangedDelegate(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue);
+            public delegate void OnIndexEntryChangedDelegate(Transaction tx, Slice key, in TableValueReader oldValue, in TableValueReader newValue);
 
             public OnIndexEntryChangedDelegate OnEntryChanged;
 
@@ -211,10 +213,10 @@ namespace Voron.Data.Tables
 
             public bool SupportDuplicateKeys = false;
 
-            public ByteStringContext.Scope GetValue(Transaction tx, ref TableValueReader value,
+            public ByteStringContext.Scope GetValue(Transaction tx, in TableValueReader value,
                 out Slice slice)
             {
-                return GenerateKey(tx, ref value, out slice);
+                return GenerateKey(tx, value, out slice);
             }
 
             public ByteStringContext.Scope GetValue(Transaction tx, TableValueBuilder value,
@@ -226,18 +228,18 @@ namespace Voron.Data.Tables
 
                     value.CopyTo(buffer.Ptr);
                     var reader = value.CreateReader(buffer.Ptr);
-                    return GenerateKey(tx, ref reader, out slice);
+                    return GenerateKey(tx, reader, out slice);
                 }
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void OnIndexEntryChanged(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
+            public void OnIndexEntryChanged(Transaction tx, Slice key, in TableValueReader oldValue, in TableValueReader newValue)
             {
-                OnEntryChanged?.Invoke(tx, key, ref oldValue, ref newValue);
+                OnEntryChanged?.Invoke(tx, key, oldValue, newValue);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void OnIndexEntryChanged(Transaction tx, Slice key, ref TableValueReader oldValue, TableValueBuilder newValue)
+            public void OnIndexEntryChanged(Transaction tx, Slice key, in TableValueReader oldValue, TableValueBuilder newValue)
             {
                 if (OnEntryChanged == null)
                     return;
@@ -249,7 +251,7 @@ namespace Voron.Data.Tables
 
                     newValue.CopyTo(buffer.Ptr);
                     var reader = newValue.CreateReader(buffer.Ptr);
-                    OnIndexEntryChanged(tx, key, ref oldValue, ref reader);
+                    OnIndexEntryChanged(tx, key, oldValue, reader);
                 }
             }
 
@@ -349,7 +351,7 @@ namespace Voron.Data.Tables
             private const int BigDynamicIndexTableLengthNew = 9;
 
 
-            public static DynamicKeyIndexDef ReadFrom(ByteStringContext context, ref TableValueReader input)
+            public static DynamicKeyIndexDef ReadFrom(ByteStringContext context, in TableValueReader input)
             {
                 var indexDef = new DynamicKeyIndexDef();
 
@@ -534,7 +536,9 @@ namespace Voron.Data.Tables
 
             public int StartIndex = -1;
 
-            public long GetValue(ref TableValueReader value)
+            public int CachePosition = -1;
+
+            public long GetValue(in TableValueReader value)
             {
                 var ptr = value.Read(StartIndex, out int totalSize);
                 Debug.Assert(totalSize == sizeof(long), $"{totalSize} == sizeof(long) - {Name}");

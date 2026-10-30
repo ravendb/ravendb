@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
+using Sparrow.Server.Platform;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
@@ -23,7 +24,8 @@ public class RavenDB_26707(ITestOutputHelper output) : RavenTestBase(output)
     // the returning shared journals are renumbered higher, leaving a numbering gap above them. The pre-fix recovery cleanup scanned
     // contiguously down from LastSyncedJournal and stopped at the gap, so the synced journals below it leaked. Each phase forces the
     // index env's sync to advance LastSyncedJournal (the background sync won't fire in a fast test). Asserts no journal below
-    // LastSyncedJournal survives after recovery.
+    // LastSyncedJournal survives after recovery, and that the journals a branch finds at startup are retired by the branch itself
+    // once synced instead of waiting for the next recovery.
     [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Indexes)]
     public async Task Standalone_era_journals_must_be_cleaned_after_returning_to_shared_mode()
     {
@@ -67,6 +69,7 @@ public class RavenDB_26707(ITestOutputHelper output) : RavenTestBase(output)
 
         // Phase 3 (ON, branch): standalone-era journals survive; the returning shared journals are renumbered higher, opening a
         // numbering gap above them - the synced journals below that gap are what must be reclaimed.
+        long p3EndJournal;
         using (var server = GetNewServer(new ServerCreationOptions { RunInMemory = false, DeletePrevious = false, DataDirectory = dataDirectory, CustomSettings = sharedOn }))
         {
             using var store = new DocumentStore { Urls = new[] { server.WebUrl }, Database = dbName }.Initialize();
@@ -81,9 +84,34 @@ public class RavenDB_26707(ITestOutputHelper output) : RavenTestBase(output)
             var p3Survivors = standaloneEra.Where(p3OnDisk.Contains).ToArray();
             Assert.True(p3Survivors.Length == 0,
                 $"standalone-era journals must be retired at runtime; survivors: [{string.Join(",", p3Survivors)}] (onDisk=[{string.Join(",", p3OnDisk)}])");
+
+            // leave the index with a synced journal and a newer unflushed one, so P4 starts with two journals: stop the background
+            // flusher for this env (it would sync the tail and retire the older journal before the shutdown) and write until the index rolls
+            var p3Env = await GetIndexEnv(server, store, dbName);
+            p3Env.Options.ManualFlushing = true;
+            var p3LastJournal = p3OnDisk.Max();
+            for (int from = 30_000; ListJournalNumbers(indexDataPath).Max() == p3LastJournal; from += 1_000)
+            {
+                Assert.True(from < 130_000, $"the index did not roll past journal {p3LastJournal}");
+                await StoreDocs(store, from, from + 1_000);
+                Indexes.WaitForIndexing(store, databaseName: dbName);
+            }
+            p3EndJournal = ListJournalNumbers(indexDataPath).Max();
+
+            // the leak needs the root to still hold its links when P4 recovers the index (a journal the root already retired is a
+            // plain file that recovery tracks anyway), and the root's own sync after its recovery races the index's recovery for that.
+            // Pin the journals with an extra link of our own, so the index sees them hard-linked no matter who wins.
+            var pinned = Directory.CreateDirectory(Path.Combine(indexDataPath, "pinned")).FullName;
+            foreach (var journal in Directory.GetFiles(Path.Combine(indexDataPath, "Journals"), "*.journal"))
+            {
+                var rc = Pal.rvn_hard_link_non_durable(journal, Path.Combine(pinned, Path.GetFileName(journal)), out var errorCode);
+                Assert.True(rc == PalFlags.FailCodes.Success, $"could not pin {journal}: {rc} errno={errorCode}");
+            }
+            Output.WriteLine($"P3 end:   {await DescribeBranch(server, store, dbName, indexDataPath)}");
         }
 
-        // Phase 4 (restart ON): branch recovery must reclaim every journal below LastSyncedJournal.
+        // Phase 4 (restart ON): branch recovery must reclaim every journal below LastSyncedJournal, and once the sync after the
+        // recovery advances it past the journals the branch started with, those must go too.
         using (var server = GetNewServer(new ServerCreationOptions { RunInMemory = false, DeletePrevious = false, DataDirectory = dataDirectory, CustomSettings = sharedOn }))
         {
             using var store = new DocumentStore { Urls = new[] { server.WebUrl }, Database = dbName }.Initialize();
@@ -91,17 +119,28 @@ public class RavenDB_26707(ITestOutputHelper output) : RavenTestBase(output)
             Indexes.WaitForIndexing(store, databaseName: dbName);
 
             var branchEnv = await GetIndexEnv(server, store, dbName);
-            var lsj = branchEnv.Journal.GetCurrentJournalInfo().LastSyncedJournal;
-            var onDisk = ListJournalNumbers(indexDataPath);
-            var belowLsj = onDisk.Where(n => n < lsj).ToArray();
+
+            // wait until LastSyncedJournal reached the last journal the index had at shutdown (the first flush and sync may run
+            // before we get here, or need the forced sync), and the sync writes the header before it deletes the journals
+            long lsj;
+            long[] onDisk, belowLsj;
+            var sw = Stopwatch.StartNew();
+            do
+            {
+                branchEnv.ForceSyncDataFile();
+                await Task.Delay(250);
+                lsj = branchEnv.Journal.GetCurrentJournalInfo().LastSyncedJournal;
+                onDisk = ListJournalNumbers(indexDataPath);
+                belowLsj = onDisk.Where(n => n < lsj).ToArray();
+            } while ((lsj < p3EndJournal || belowLsj.Length > 0) && sw.Elapsed < TimeSpan.FromSeconds(60));
             var standaloneSurvivors = standaloneEra.Where(onDisk.Contains).ToArray();
 
-            var diag = $"reopenLsj={lsj}, onDisk=[{string.Join(",", onDisk)}], standaloneEra=[{string.Join(",", standaloneEra)}], " +
+            var diag = $"p3EndJournal={p3EndJournal}, lsj={lsj}, onDisk=[{string.Join(",", onDisk)}], standaloneEra=[{string.Join(",", standaloneEra)}], " +
                        $"belowLsj=[{string.Join(",", belowLsj)}], standaloneSurvivors=[{string.Join(",", standaloneSurvivors)}]";
             Output.WriteLine("P4 (ON):  " + diag);
 
-            Assert.True(belowLsj.Length == 0,
-                "branch recovery must reclaim every synced journal (below LastSyncedJournal); survivors below a gap: " + diag);
+            Assert.True(lsj >= p3EndJournal && belowLsj.Length == 0,
+                "the branch must retire every journal below LastSyncedJournal once the sync after the recovery passed the journals it started with: " + diag);
         }
     }
 

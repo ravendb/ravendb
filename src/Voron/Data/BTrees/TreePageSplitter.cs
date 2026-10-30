@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Text;
 using Voron.Data.Compression;
@@ -10,10 +10,10 @@ using Voron.Impl.Paging;
 
 namespace Voron.Data.BTrees
 {
-    public sealed unsafe class TreePageSplitter
+    public unsafe ref struct TreePageSplitter
     {
         private const DecompressionUsage WriteDecompressionUsage = DecompressionUsage.Write;
-        private readonly TreeCursor _cursor;
+        private readonly ref TreeCursor _cursor;
         private readonly bool _splittingOnDecompressed;
         private readonly int _len;
         private readonly Slice _newKey;
@@ -24,6 +24,7 @@ namespace Voron.Data.BTrees
         private TreePage _page;
         private TreePage _parentPage;
         private DecompressedLeafPage _pageDecompressed;
+        private TreePage _decompressedOriginal;
 
         public TreePageSplitter(LowLevelTransaction tx,
             Tree tree,
@@ -31,9 +32,10 @@ namespace Voron.Data.BTrees
             int len,
             long pageNumber,
             TreeNodeFlags nodeType,
-            TreeCursor cursor,
+            ref TreeCursor cursor,
             bool splittingOnDecompressed = false,
-            DecompressedLeafPage pageDecompressed = null)
+            DecompressedLeafPage pageDecompressed = null,
+            TreePage decompressedOriginal = default)
         {
             _tx = tx;
             _tree = tree;
@@ -41,15 +43,14 @@ namespace Voron.Data.BTrees
             _len = len;
             _pageNumber = pageNumber;
             _nodeType = nodeType;
-            _cursor = cursor;
+            _cursor = ref cursor;
             _splittingOnDecompressed = splittingOnDecompressed;
-            TreePage page = _cursor.Pages.Peek();
+            TreePage page = _cursor.CurrentPage;
 
             if (_splittingOnDecompressed == false)
                 _page = _tree.ModifyPage(page);
             else
             {
-                Debug.Assert(page is DecompressedLeafPage);
                 _page = page;
             }
 
@@ -61,6 +62,7 @@ namespace Voron.Data.BTrees
             Debug.Assert(pageDecompressed == null || (_page.IsCompressed && pageDecompressed.PageNumber == _page.PageNumber && pageDecompressed.Usage == WriteDecompressionUsage));
 
             _pageDecompressed = pageDecompressed;
+            _decompressedOriginal = decompressedOriginal;
         }
 
         private FreeSpaceHandlingDisabler DisableFreeSpaceUsageIfSplittingRootTree()
@@ -102,7 +104,7 @@ namespace Voron.Data.BTrees
                             {
                                 RecompressPageIfNeeded(wasModified: true);
 
-                                var pos = InsertNewKey(_page);
+                                var pos = InsertNewKey(ref _page);
                                 return pos;
                             }
                         }
@@ -110,12 +112,11 @@ namespace Voron.Data.BTrees
                     _page = _pageDecompressed;
                 }
                 
-                TreePage rightPage = _tree.NewPage(_page.TreeFlags, _page.PageNumber);
+                TreePage rightPage = _tree.NewPage(_page.PageType, _page.PageNumber);
 
                 if (_cursor.PageCount == 0) // we need to do a root split
                 {
                     TreePage newRootPage = _tree.NewPage(TreePageFlags.Branch, _page.PageNumber);
-                    _cursor.Push(newRootPage);
 
                     ref var header = ref _tree.ModifyHeader();
                     header.RootPageNumber = newRootPage.PageNumber;
@@ -123,8 +124,9 @@ namespace Voron.Data.BTrees
 
                     // now add implicit left page
                     newRootPage.AddPageRefNode(0, Slices.BeforeAllKeys, _page.PageNumber);
+                    newRootPage.LastSearchPosition++;
                     _parentPage = newRootPage;
-                    _parentPage.LastSearchPosition++;
+                    _cursor.Push(newRootPage); // pushing last, so the cursor sees the final search position
                 }
                 else
                 {
@@ -132,7 +134,11 @@ namespace Voron.Data.BTrees
 
                     _parentPage = _tree.ModifyPage(_cursor.CurrentPage);
 
+                    ParentPageAction.EnsureValidLastSearchPosition(ref _parentPage, _page.PageNumber, _parentPage.LastSearchPosition);
                     _cursor.SetTopPage(_parentPage);
+
+                    if (ShouldPromotePage())
+                        WrapPageInBranch();
                 }
 
                 using (_pageDecompressed)
@@ -241,6 +247,54 @@ namespace Voron.Data.BTrees
                 default:
                     throw new NotSupportedException($"Unknown node type: {_nodeType}");
             }
+        }
+
+        private bool ShouldPromotePage()
+        {
+            Debug.Assert(_parentPage.GetNode(_parentPage.LastSearchPosition)->PageNumber == _page.PageNumber, "the parent is not positioned at the page being split");
+
+            if (_page.CollapsedLevels > 0)
+                return true;
+
+            // Before RavenDB-27533 - we didn't have CollapsedLevels, so we need heuristics
+            if (_page.IsBranch)
+                return false; // we cannot tell from a branch without the counter
+
+            // heuristics - we probe the left & right siblings, a leaf splitting next to a branch sibling
+            // would add a leaf pointer next to branch pointers
+            int count = _parentPage.NumberOfEntries;
+            int position = _parentPage.LastSearchPosition;
+            return IsBranchPage((position - 1 + count) % count) || IsBranchPage((position + 1) % count);
+        }
+
+        private bool IsBranchPage(int pos)
+        {
+            long pageNumber = _parentPage.GetNode(pos)->PageNumber;
+            return pageNumber != _page.PageNumber && _tree.GetReadOnlyTreePage(pageNumber).IsBranch;
+        }
+
+        private void WrapPageInBranch()
+        {
+            var wrapper = _tree.NewPage(TreePageFlags.Branch, _page.PageNumber);
+            wrapper.AddPageRefNode(0, Slices.BeforeAllKeys, _page.PageNumber);
+
+            // the wrapper takes the place of the page it wraps, same range
+            var node = _parentPage.GetNode(_parentPage.LastSearchPosition);
+            Debug.Assert(node->PageNumber == _page.PageNumber);
+            node->PageNumber = wrapper.PageNumber;
+
+            wrapper.CollapsedLevels = _page.CollapsedLevels - 1;
+            _page.CollapsedLevels = 0;
+
+            // decompressed is a copy, have to set the original one
+            if (_pageDecompressed != null)
+                _pageDecompressed.Original.CollapsedLevels = 0;
+            else if (_decompressedOriginal.IsValid)
+                _decompressedOriginal.CollapsedLevels = 0;
+
+            _parentPage = wrapper;
+            _parentPage.LastSearchPosition++;
+            _cursor.Push(_parentPage); // pushing last, so the cursor sees the final search position
         }
 
         private byte* SplitPageInHalf(TreePage rightPage)
@@ -361,7 +415,7 @@ namespace Voron.Data.BTrees
                         }
 
                         // actually insert the new key
-                        pos = InsertNewKey(toRight ? rightPage : _page);
+                        pos = InsertNewKey(ref toRight ? ref rightPage : ref _page);
                     }
                     catch (InvalidOperationException e)
                     {
@@ -427,7 +481,7 @@ namespace Voron.Data.BTrees
             _tree.FreePage(page);
         }
 
-        private byte* InsertNewKey(TreePage p)
+        private byte* InsertNewKey(ref TreePage p)
         {
             int pos = p.NodePositionFor(_tx, _newKey);
 
@@ -437,7 +491,7 @@ namespace Voron.Data.BTrees
             {
                 _cursor.Push(p);
 
-                var pageSplitter = new TreePageSplitter(_tx, _tree, _newKey, _len, _pageNumber, _nodeType, _cursor);
+                var pageSplitter = new TreePageSplitter(_tx, _tree, _newKey, _len, _pageNumber, _nodeType, ref _cursor);
 
                 return pageSplitter.Execute();
             }
@@ -449,7 +503,7 @@ namespace Voron.Data.BTrees
 
         private byte* AddSeparatorToParentPage(long pageRefNumber, Slice separatorKey, out TreePage parentOfPageRef)
         {
-            var parent = new ParentPageAction(_parentPage, _page, _tree, _cursor, _tx);
+            var parent = new ParentPageAction(ref _parentPage, _page, _tree, ref _cursor, _tx);
 
             var pos = parent.AddSeparator(separatorKey, pageRefNumber);
 

@@ -64,6 +64,16 @@ namespace Sparrow.Server.Platform
             FailCreateEvent = 54,
             FailWriteCompletion = 55,
             FailMathOverflow = 56,
+            FailInvalidConfiguration = 57,
+            FailAlreadyConfigured = 58,
+            FailCreateEventFd = 59,
+            FailIoRingRegEventFd = 60,
+            FailPollEventFd = 61,
+            FailCreateThread = 62,
+            FailMutexLock = 63,
+            FailMutexUnlock = 64,
+            FailWritebackNotSupported = 65,
+            FailMoveFile = 66,
         };
 
         [Flags]

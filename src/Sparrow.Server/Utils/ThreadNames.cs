@@ -58,6 +58,14 @@ public static class ThreadNames
         };
     }
 
+    public static ThreadInfo ForJournalZeroing(string threadName)
+    {
+        return new ThreadInfo(threadName)
+        {
+            Details = new ThreadDetails.JournalZeroing()
+        };
+    }
+
     public static ThreadInfo ForUploadBackupFile(string threadName, string dbName, string targetName, string taskName)
     {
         return new ThreadInfo(threadName)
@@ -339,6 +347,14 @@ public static class ThreadNames
             public string GetShortName()
             {
                 return $"IdxJrnl {dbName}";
+            }
+        }
+
+        public sealed class JournalZeroing : IThreadDetails
+        {
+            public string GetShortName()
+            {
+                return "JrnlZeroing";
             }
         }
 

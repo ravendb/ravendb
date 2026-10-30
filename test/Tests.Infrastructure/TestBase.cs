@@ -60,6 +60,8 @@ namespace FastTests
 
         private static readonly ConcurrentSet<string> GlobalPathsToDelete = new(StringComparer.OrdinalIgnoreCase);
 
+        private static readonly string NuGetPackagesPath;
+
         private readonly ConcurrentSet<string> _localPathsToDelete = new(StringComparer.OrdinalIgnoreCase);
 
         private static RavenServer _globalServer;
@@ -108,6 +110,8 @@ namespace FastTests
 
         static unsafe TestBase()
         {
+            PalTestConfiguration.Apply();
+
             DebugStuff.Attach();
 
             IgnoreProcessorAffinityChanges(ignore: true);
@@ -140,7 +144,7 @@ namespace FastTests
             RestorePointsBase.FileNameRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2})?(-[0-9]{7})?)", RegexOptions.Compiled);
 
             var packagesPath = new PathSetting(RavenTestHelper.NewDataPath("NuGetPackages", 0, forceCreateDir: true));
-            GlobalPathsToDelete.Add(packagesPath.FullPath);
+            NuGetPackagesPath = packagesPath.FullPath;
             MultiSourceNuGetFetcher.ForIndexes.Initialize(packagesPath, "https://api.nuget.org/v3/index.json", allowPreleasePackages: true);
             MultiSourceNuGetFetcher.ForLogging.Initialize(packagesPath, "https://api.nuget.org/v3/index.json", allowPreleasePackages: true);
 
@@ -203,10 +207,6 @@ namespace FastTests
             configuration.Logs.MinLevel = LogLevel.Off;
 
             RavenLogManager.Instance.ConfigureLogging(configuration);
-            
-            PalConfiguration.LowPriorityIo = configuration.Storage.LowPriorityFlushAndSync;
-            PalConfiguration.WriteMode = configuration.Storage.WriteMode;
-            PalConfiguration.IoRingQueueSize = configuration.Storage.IoRingQueueSize;
 
             TrafficWatchToLog.Instance.UpdateConfiguration(RavenConfiguration.Default.TrafficWatch);
             EventListenerToLog.Instance.UpdateConfiguration(new EventListenerToLog.EventListenerConfiguration
@@ -441,6 +441,15 @@ namespace FastTests
                     var exceptionAggregator = new ExceptionAggregator("Failed to cleanup test databases");
 
                     RavenTestHelper.DeletePaths(GlobalPathsToDelete, exceptionAggregator);
+
+                    try
+                    {
+                        Directory.Delete(NuGetPackagesPath, recursive: true);
+                    }
+                    catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+                    {
+                        // assemblies loaded from NuGet packages stay locked on Windows until the process exits
+                    }
 
                     exceptionAggregator.ThrowIfNeeded();
                 }
@@ -914,19 +923,23 @@ namespace FastTests
                 var task = Task.Run(server.Dispose);
 
                 if (await amre.WaitAsync(timeout) == false)
-                    await ThrowCouldNotDisposeServerExceptionAsync(url, debugTag, timeout);
+                    await ThrowCouldNotDisposeServerExceptionAsync(url, debugTag, timeout, server.DisposeAudit?.Snapshot());
 
                 await task;
             }
         }
 
-        private static async Task ThrowCouldNotDisposeServerExceptionAsync(string url, string debugTag, TimeSpan timeout)
+        private static async Task ThrowCouldNotDisposeServerExceptionAsync(string url, string debugTag, TimeSpan timeout, string disposeAudit)
         {
             using (var process = Process.GetCurrentProcess())
             using (var ms = new MemoryStream())
             using (var outputWriter = new StreamWriter(ms, leaveOpen: true))
             {
                 var sb = new StringBuilder($"Could not dispose server with URL '{url}' and DebugTag: '{debugTag}' in '{timeout}'.");
+
+                // where the dispose is stuck and what it waits for, straight in the failure
+                if (disposeAudit != null)
+                    sb.Append($"{Environment.NewLine}{disposeAudit}{Environment.NewLine}");
 
                 try
                 {

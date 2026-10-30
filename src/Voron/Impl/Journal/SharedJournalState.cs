@@ -9,20 +9,20 @@ namespace Voron.Impl.Journal;
 
 public class SharedJournalState()
 {
-    private readonly ConcurrentQueue<WriteAheadJournal.PendingJournalStateRecord> _mergedCommitsQueue = new();
+    private readonly ConcurrentQueue<WriteAheadJournal.JournalStateRecord> _mergedCommitsQueue = new();
     private readonly List<WriteAheadJournal.JournalStateRecord> _mergedJournalJournalRecordsBuffer = new List<WriteAheadJournal.JournalStateRecord>();
     private readonly List<Pal.journal_entry> _mergedEntriesBuffer = new List<Pal.journal_entry>();
     public bool HasBranchCommits => _mergedCommitsQueue.IsEmpty is false;
 
-    public void Enqueue(WriteAheadJournal.PendingJournalStateRecord record) => _mergedCommitsQueue.Enqueue(record);
+    public void Enqueue(WriteAheadJournal.JournalStateRecord record) => _mergedCommitsQueue.Enqueue(record);
 
-    public bool TryDequeue(out WriteAheadJournal.PendingJournalStateRecord record) => _mergedCommitsQueue.TryDequeue(out record);
+    public bool TryDequeue(out WriteAheadJournal.JournalStateRecord record) => _mergedCommitsQueue.TryDequeue(out record);
 
     public bool IsEmpty => _mergedCommitsQueue.IsEmpty;
 
     public Span<Pal.journal_entry> Entries => CollectionsMarshal.AsSpan(_mergedEntriesBuffer);
     public List<WriteAheadJournal.JournalStateRecord> JournalRecords => _mergedJournalJournalRecordsBuffer;
-    public ConcurrentQueue<WriteAheadJournal.PendingJournalStateRecord> MergedCommitsQueue => _mergedCommitsQueue;
+    public ConcurrentQueue<WriteAheadJournal.JournalStateRecord> MergedCommitsQueue => _mergedCommitsQueue;
 
     public void PrepareForCommit(WriteAheadJournal.JournalStateRecord state)
     {
@@ -43,23 +43,14 @@ public class SharedJournalState()
 
     public void SetException(Exception e)
     {
-        var edi = ExceptionDispatchInfo.Capture(e);
-
         while (_mergedCommitsQueue.TryDequeue(out var rec))
         {
-            MarkCatastrophicFailure(rec.Transaction.Environment, edi);
-            rec.Tcs.TrySetException(e);
+            rec.Transaction.FailDurableCommit(e);
         }
 
         foreach (var record in _mergedJournalJournalRecordsBuffer)
         {
-            MarkCatastrophicFailure(record.Transaction.Environment, edi);
-            record.Tcs.TrySetException(e);
-        }
-
-        static void MarkCatastrophicFailure(StorageEnvironment env, ExceptionDispatchInfo edi)
-        {
-            try { env.Options.SetCatastrophicFailure(edi); } catch { /* best-effort */ }
+            record.Transaction.FailDurableCommit(e);
         }
     }
 
@@ -67,12 +58,12 @@ public class SharedJournalState()
     {
         while (_mergedCommitsQueue.TryDequeue(out var rec))
         {
-            rec.Tcs.TrySetCanceled();
+            rec.Transaction.CancelDurableCommit();
         }
 
         foreach (var record in _mergedJournalJournalRecordsBuffer)
         {
-            record.Tcs.TrySetCanceled();
+            record.Transaction.CancelDurableCommit();
         }
     }
 }

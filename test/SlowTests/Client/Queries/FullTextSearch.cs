@@ -218,7 +218,7 @@ namespace SlowTests.Client.Queries
 
                     var query = RavenTestHelper.GetIndexQuery(ravenQueryable);
 
-                    Assert.Equal("from index 'test' where search(Tags, $p0) or Name = $p1", query.Query);
+                    Assert.Equal("from index 'test' where search(Tags, $p0) and (Name = $p1)", query.Query);
                     Assert.Equal("i love cats", query.QueryParameters["p0"]);
                     Assert.Equal("User", query.QueryParameters["p1"]);
                 }
@@ -305,7 +305,7 @@ namespace SlowTests.Client.Queries
 
                     var query = RavenTestHelper.GetIndexQuery(ravenQueryable);
 
-                    Assert.Equal("from index 'test' where (exists(Tags) and not search(Tags, $p0)) or Name = $p1", query.Query);
+                    Assert.Equal("from index 'test' where (exists(Tags) and not search(Tags, $p0)) and (Name = $p1)", query.Query);
                     Assert.Equal("i love cats", query.QueryParameters["p0"]);
                     Assert.Equal("User", query.QueryParameters["p1"]);
                 }

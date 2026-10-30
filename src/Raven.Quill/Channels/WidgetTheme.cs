@@ -47,7 +47,7 @@ public sealed record WidgetThemeColors(
     string MessageColor,
     string BackgroundColor);
 
-/// The whole of a web widget's look and copy. Colors are per scheme (<see cref="Light"/> / <see cref="Dark"/>);
+/// The whole of a chat widget's look and copy. Colors are per scheme (<see cref="Light"/> / <see cref="Dark"/>);
 /// <see cref="Appearance"/> picks which scheme is the default, and an embedding page can override it per
 /// visitor with a `?appearance=` query parameter or an `appearance` postMessage. Everything else is shared
 /// between the schemes. <see cref="CustomCss"/> is the escape hatch for whatever the derived palette cannot

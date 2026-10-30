@@ -1,0 +1,144 @@
+@use "Content/scss/bs5variables";
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+$badge-size: 32px;
+$row-indent: calc(#{$badge-size} + #{sizes.$gutter-xs});
+
+.file-upload-list {
+    .file-upload-list__card {
+        background-color: colors.$panel-bg-2-var;
+        border: 1px solid colors.$border-color-light-var;
+        border-radius: sizes.$border-radius-md;
+        overflow: hidden;
+    }
+
+    .file-upload-list__items {
+        &.capped {
+            position: relative;
+        }
+
+        &.expanded {
+            overflow-y: auto;
+        }
+    }
+
+    .file-upload-list__row {
+        overflow: hidden;
+
+        & + .file-upload-list__row {
+            border-top: 1px solid colors.$border-color-light-var;
+        }
+
+        &.hidden {
+            display: none;
+        }
+    }
+
+    .file-upload-item {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: sizes.$gutter-xs;
+        padding: sizes.$gutter-xs;
+        transition: bs5variables.$transition-base;
+
+        &:hover {
+            background-color: rgba(var(--bs-emphasis-color-rgb), 0.035);
+        }
+
+        &--failed {
+            background-color: rgba(var(--bs-danger-rgb), 0.07);
+        }
+
+        &--skipped,
+        &--cancelled {
+            background-color: rgba(var(--bs-warning-rgb), 0.07);
+        }
+
+        &--uploaded .file-upload-item__name {
+            color: colors.$text-muted-var;
+        }
+    }
+
+    .file-upload-item__badge,
+    .file-upload-item__thumbnail {
+        flex: none;
+        width: $badge-size;
+        height: $badge-size;
+        border-radius: sizes.$border-radius-sm;
+    }
+
+    .file-upload-item__badge {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: sizes.$font-size-xs;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+    }
+
+    @each $name in (success, info, primary, warning, muted) {
+        .file-upload-item__badge--#{$name} {
+            background-color: var(--faded-#{$name});
+            color: var(--text-faded-#{$name});
+        }
+    }
+
+    .file-upload-item__thumbnail {
+        object-fit: cover;
+    }
+
+    .file-upload-item__details {
+        flex: 1;
+        min-width: 0;
+        line-height: 1.25;
+    }
+
+    .file-upload-item__name {
+        margin-bottom: 1px;
+    }
+
+    .file-upload-item__action {
+        flex: none;
+        color: colors.$text-muted-var;
+        transition: bs5variables.$transition-base;
+
+        &:hover,
+        &:focus-visible {
+            color: colors.$danger-var;
+        }
+    }
+
+    .file-upload-item__progress {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        height: 2px;
+        background-color: colors.$primary-var;
+        transition: width 0.2s ease;
+    }
+
+    .file-upload-list__fade {
+        position: absolute;
+        inset-inline: 0;
+        bottom: 0;
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        height: 4.5rem;
+        padding-bottom: sizes.$gutter-xs;
+        background: linear-gradient(180deg, transparent, colors.$panel-bg-2-var);
+        pointer-events: none;
+    }
+
+    .file-upload-list__toggle {
+        pointer-events: auto;
+    }
+
+    .file-upload-list__collapse {
+        display: flex;
+        justify-content: flex-end;
+        padding: sizes.$gutter-xxxs sizes.$gutter-xxs 0;
+    }
+}

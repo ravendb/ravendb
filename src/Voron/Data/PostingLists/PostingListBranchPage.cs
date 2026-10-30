@@ -27,7 +27,7 @@ namespace Voron.Data.PostingLists
         public void Init()
         {
             Header->Flags = PageFlags.Single | PageFlags.Other;
-            Header->SetFlags = ExtendedPageType.PostingListBranch;
+            Header->SetFlags = PageCollapsedLevels.SetPageType(Header->SetFlags, ExtendedPageType.PostingListBranch);
             Header->NumberOfEntries = 0;
             Header->Upper = Constants.Storage.PageSize;
         }

@@ -2,8 +2,13 @@ import { rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
 import React from "react";
 import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "./IndexCleanup.stories";
+import moment from "moment";
+import { IndexesStubs } from "test/stubs/IndexesStubs";
+import { within } from "@testing-library/dom";
 
-const { EmptyView, CleanupSuggestions, LicenseRestricted } = composeStories(stories);
+const { EmptyView, CleanupSuggestions, LicenseRestricted, CleanupSuggestionsInCluster } = composeStories(stories);
+
+const toLocalDate = (date: string) => `(${moment(date).format("MM/DD/YY, h:mma")})`;
 
 describe("IndexCleanup", function () {
     it("can render empty view", async () => {
@@ -17,6 +22,33 @@ describe("IndexCleanup", function () {
 
         expect(screen.getByText("Review suggested merge")).toBeInTheDocument();
     });
+
+    it("shows last query and indexing times of merge candidates in local time", async () => {
+        const { screen } = await rtlRender_WithWaitForLoad(<CleanupSuggestions />);
+
+        const { LastQueryingTime, LastIndexingTime } = IndexesStubs.getSampleStats().find(
+            (x) => x.Name === "Product/Search"
+        );
+
+        const [mergeCandidateRow] = screen.getAllByRole("row", { name: /Product\/Search/ });
+        const [, lastQueryCell, lastIndexingCell] = within(mergeCandidateRow).getAllByRole("cell");
+
+        expect(lastQueryCell).toHaveTextContent(toLocalDate(LastQueryingTime));
+        expect(lastIndexingCell).toHaveTextContent(toLocalDate(LastIndexingTime));
+    });
+
+    it("shows the latest last query and indexing times across cluster nodes", async () => {
+        const { screen } = await rtlRender_WithWaitForLoad(<CleanupSuggestionsInCluster />);
+
+        const { latestTime } = CleanupSuggestionsInCluster.args;
+
+        const [mergeCandidateRow] = screen.getAllByRole("row", { name: /Product\/Search/ });
+        const [, lastQueryCell, lastIndexingCell] = within(mergeCandidateRow).getAllByRole("cell");
+
+        expect(lastQueryCell).toHaveTextContent(toLocalDate(latestTime));
+        expect(lastIndexingCell).toHaveTextContent(toLocalDate(latestTime));
+    });
+
     it("is license restricted", async () => {
         const { screen } = await rtlRender_WithWaitForLoad(<LicenseRestricted />);
 

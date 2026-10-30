@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -68,7 +68,7 @@ public class CountersRepairTask
 
                             hasMore = true;
 
-                            using (var docId = ExtractDocId(context, ref tvh.Reader))
+                            using (var docId = ExtractDocId(context, tvh))
                             {
                                 if (docId != lastDocId)
                                 {
@@ -80,7 +80,7 @@ public class CountersRepairTask
                                     }
                                 }
 
-                                using (var data = GetCounterValuesData(context, ref tvh.Reader))
+                                using (var data = GetCounterValuesData(context, tvh))
                                 {
                                     data.TryGet(Values, out BlittableJsonReaderObject counterValues);
                                     data.TryGet(CounterNames, out BlittableJsonReaderObject counterNames);
@@ -237,10 +237,10 @@ public class CountersRepairTask
             {
                 foreach (var result in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
                 {
-                    var tvr = result.Value.Reader;
+                    var tvr = result.Value;
                     BlittableJsonReaderObject data;
 
-                    using (data = GetCounterValuesData(context, ref tvr))
+                    using (data = GetCounterValuesData(context, tvr))
                     {
                         data = data.Clone(context);
                     }
@@ -259,7 +259,7 @@ public class CountersRepairTask
 
                     if (collection == null)
                     {
-                        collection = TableValueToId(context, (int)Counters.CountersTable.Collection, ref tvr);
+                        collection = TableValueToId(context, (int)Counters.CountersTable.Collection, tvr);
                         collectionName = _database.DocumentsStorage.ExtractCollectionName(context, collection);
 
                         writeTable = _database.DocumentsStorage.CountersStorage.GetOrCreateTable(context.Transaction.InnerTransaction, _database.DocumentsStorage.CountersStorage.CountersSchema, collectionName, CollectionTableType.CounterGroups);
@@ -343,10 +343,10 @@ public class CountersRepairTask
 
                     // we're using the same change vector and etag here, in order to avoid replicating
                     // the counter group to other nodes (each node should fix its counters locally)
-                    using var changeVector = TableValueToString(context, (int)Counters.CountersTable.ChangeVector, ref tvr);
-                    var groupEtag = TableValueToEtag((int)Counters.CountersTable.Etag, ref tvr);
+                    using var changeVector = TableValueToString(context, (int)Counters.CountersTable.ChangeVector, tvr);
+                    var groupEtag = TableValueToEtag((int)Counters.CountersTable.Etag, tvr);
 
-                    using (var counterGroupKey = TableValueToString(context, (int)Counters.CountersTable.CounterKey, ref tvr))
+                    using (var counterGroupKey = TableValueToString(context, (int)Counters.CountersTable.CounterKey, tvr))
                     using (context.Allocator.Allocate(counterGroupKey.Size, out var buffer))
                     {
                         counterGroupKey.CopyTo(buffer.Ptr);
