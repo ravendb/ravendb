@@ -193,6 +193,47 @@ namespace Sparrow.Json
             return _lazyStringTempBuffer;
         }
 
+#if NETCOREAPP3_1_OR_GREATER
+
+        /// <summary>
+        /// Decodes the value into the per-thread temp buffer, so string-like searches can run on it without materializing a string.
+        /// The returned span is valid only until the next use of the temp buffer.
+        /// </summary>
+        private ReadOnlySpan<char> DecodeToTempBuffer()
+        {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
+            var length = Length;
+            if (length == 0)
+                return ReadOnlySpan<char>.Empty;
+
+            var buffer = GetlazyStringTempBuffer(length);
+            fixed (char* pChars = buffer)
+                Encodings.Utf8.GetChars(Buffer, Size, pChars, length);
+
+            return new ReadOnlySpan<char>(buffer, 0, length);
+        }
+
+        private int IndexOfInTempBuffer(string value, int startIndex, int count, StringComparison comparisonType)
+        {
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+
+            var chars = DecodeToTempBuffer();
+
+            if ((uint)startIndex > (uint)chars.Length)
+                throw new ArgumentOutOfRangeException(nameof(startIndex), startIndex, "Index was out of range. Must be non-negative and less than or equal to the size of the string.");
+
+            if ((uint)count > (uint)(chars.Length - startIndex))
+                throw new ArgumentOutOfRangeException(nameof(count), count, "Count must be positive and count must refer to a location within the string.");
+
+            var index = chars.Slice(startIndex, count).IndexOf(value.AsSpan(), comparisonType);
+            return index < 0 ? -1 : index + startIndex;
+        }
+
+#endif
+
         private static byte[] GetLazyStringTempComparisonBuffer(int charCount)
         {
             // Inlined from Encodings.Utf8.GetMaxByteCount(charCount) to avoid virtual dispatch indirection.
@@ -565,7 +606,11 @@ namespace Sparrow.Json
             if (_string != null)
                 return _string.Contains(value);
 
+#if NETCOREAPP3_1_OR_GREATER
+            return DecodeToTempBuffer().IndexOf(value) >= 0;
+#else
             return ToString().Contains(value);
+#endif
         }
 
 #if NETCOREAPP3_1_OR_GREATER
@@ -578,7 +623,7 @@ namespace Sparrow.Json
             if (_string != null)
                 return _string.Contains(value, comparisonType);
 
-            return ToString().Contains(value, comparisonType);
+            return DecodeToTempBuffer().IndexOf(new ReadOnlySpan<char>(in value), comparisonType) >= 0;
         }
 
 #endif
@@ -591,7 +636,14 @@ namespace Sparrow.Json
             if (_string != null)
                 return _string.Contains(value);
 
+#if NETCOREAPP3_1_OR_GREATER
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+
+            return DecodeToTempBuffer().IndexOf(value.AsSpan()) >= 0;
+#else
             return ToString().Contains(value);
+#endif
         }
 
 #if NETCOREAPP3_1_OR_GREATER
@@ -604,7 +656,10 @@ namespace Sparrow.Json
             if (_string != null)
                 return _string.Contains(value, comparisonType);
 
-            return ToString().Contains(value, comparisonType);
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+
+            return DecodeToTempBuffer().IndexOf(value.AsSpan(), comparisonType) >= 0;
         }
 
 #endif
@@ -642,7 +697,17 @@ namespace Sparrow.Json
 
         public bool EndsWith(string value, StringComparison comparisonType)
         {
+#if NETCOREAPP3_1_OR_GREATER
+            if (_string != null)
+                return _string.EndsWith(value, comparisonType);
+
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+
+            return DecodeToTempBuffer().EndsWith(value.AsSpan(), comparisonType);
+#else
             return ToString().EndsWith(value, comparisonType);
+#endif
         }
 
 #if !NETSTANDARD1_3
@@ -674,7 +739,7 @@ namespace Sparrow.Json
             if (_string != null)
                 return _string.IndexOf(value, comparisonType);
 
-            return ToString().IndexOf(value, comparisonType);
+            return DecodeToTempBuffer().IndexOf(new ReadOnlySpan<char>(in value), comparisonType);
         }
 
 #endif
@@ -722,32 +787,76 @@ namespace Sparrow.Json
 
         public int IndexOf(string value)
         {
+#if NETCOREAPP3_1_OR_GREATER
+            if (_string != null)
+                return _string.IndexOf(value, StringComparison.Ordinal);
+
+            return IndexOfInTempBuffer(value, 0, Length, StringComparison.Ordinal);
+#else
             return ToString().IndexOf(value, StringComparison.Ordinal);
+#endif
         }
 
         public int IndexOf(string value, int startIndex)
         {
+#if NETCOREAPP3_1_OR_GREATER
+            if (_string != null)
+                return _string.IndexOf(value, startIndex);
+
+            // like string.IndexOf(string, int), this is a culture-sensitive search
+            return IndexOfInTempBuffer(value, startIndex, Length - startIndex, StringComparison.CurrentCulture);
+#else
             return ToString().IndexOf(value, startIndex);
+#endif
         }
 
         public int IndexOf(string value, int startIndex, int count)
         {
+#if NETCOREAPP3_1_OR_GREATER
+            if (_string != null)
+                return _string.IndexOf(value, startIndex, count);
+
+            // like string.IndexOf(string, int, int), this is a culture-sensitive search
+            return IndexOfInTempBuffer(value, startIndex, count, StringComparison.CurrentCulture);
+#else
             return ToString().IndexOf(value, startIndex, count);
+#endif
         }
 
         public int IndexOf(string value, int startIndex, StringComparison comparisonType)
         {
+#if NETCOREAPP3_1_OR_GREATER
+            if (_string != null)
+                return _string.IndexOf(value, startIndex, comparisonType);
+
+            return IndexOfInTempBuffer(value, startIndex, Length - startIndex, comparisonType);
+#else
             return ToString().IndexOf(value, startIndex, comparisonType);
+#endif
         }
 
         public int IndexOf(string value, int startIndex, int count, StringComparison comparisonType)
         {
+#if NETCOREAPP3_1_OR_GREATER
+            if (_string != null)
+                return _string.IndexOf(value, startIndex, count, comparisonType);
+
+            return IndexOfInTempBuffer(value, startIndex, count, comparisonType);
+#else
             return ToString().IndexOf(value, startIndex, count, comparisonType);
+#endif
         }
 
         public int IndexOf(string value, StringComparison comparisonType)
         {
+#if NETCOREAPP3_1_OR_GREATER
+            if (_string != null)
+                return _string.IndexOf(value, comparisonType);
+
+            return IndexOfInTempBuffer(value, 0, Length, comparisonType);
+#else
             return ToString().IndexOf(value, comparisonType);
+#endif
         }
 
         public int IndexOfAny(char[] anyOf)
@@ -827,12 +936,26 @@ namespace Sparrow.Json
             if (_string != null)
                 return _string.LastIndexOf(value, StringComparison.Ordinal);
 
+#if NETCOREAPP3_1_OR_GREATER
+            return LastIndexOf(value, StringComparison.Ordinal);
+#else
             return ToString().LastIndexOf(value, StringComparison.Ordinal);
+#endif
         }
 
         public int LastIndexOf(string value, StringComparison comparisonType)
         {
+#if NETCOREAPP3_1_OR_GREATER
+            if (_string != null)
+                return _string.LastIndexOf(value, comparisonType);
+
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+
+            return DecodeToTempBuffer().LastIndexOf(value.AsSpan(), comparisonType);
+#else
             return ToString().LastIndexOf(value, comparisonType);
+#endif
         }
 
         public int LastIndexOf(string value, int startIndex)
@@ -1079,7 +1202,14 @@ namespace Sparrow.Json
             if (value.Length > Size)
                 return false;
 
+#if NETCOREAPP3_1_OR_GREATER
+            if (_string != null)
+                return _string.StartsWith(value, comparisionType);
+
+            return DecodeToTempBuffer().StartsWith(value.AsSpan(), comparisionType);
+#else
             return ToString().StartsWith(value, comparisionType);
+#endif
         }
 
 #if !NETSTANDARD1_3
