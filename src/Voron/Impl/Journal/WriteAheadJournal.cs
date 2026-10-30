@@ -96,7 +96,8 @@ namespace Voron.Impl.Journal
             private readonly List<Guid> _journalIds = new();
             private int _linksDataSize;
             private readonly Dictionary<string, long> _lastCreatedJournals = [];
-            private readonly Dictionary<string, long> _lastFlushedJournals = [];
+            // GetFoldersToSync runs under the write tx and MarkFoldersSynced under the flushing lock, they can overlap
+            private readonly Dictionary<string, long> _lastSyncedJournals = [];
 
             public void Add(string relativePath, Guid journalId)
             {
@@ -108,20 +109,36 @@ namespace Voron.Impl.Journal
             
             public void RegisterNewJournal(string journal, long number) => _lastCreatedJournals[journal] =  number;
 
-            public List<string> GetFoldersToSync(long lastJournal)
+            // The links recorded in journals up to lastJournal must be durable before those journals are deleted.
+            // Returns each folder that may hold such a link with the latest journal linked into it.
+            public List<(string Path, long Journal)> GetFoldersToSync(long lastJournal)
             {
-                List<string> folders = null;
-                foreach (var (path, number) in _lastCreatedJournals)
+                List<(string Path, long Journal)> folders = null;
+                lock (_lastSyncedJournals)
                 {
-                    ref var index = ref CollectionsMarshal.GetValueRefOrAddDefault(_lastFlushedJournals, path, out _);
-                    if (index >= lastJournal)
-                        continue;
+                    foreach ((string path, long created) in _lastCreatedJournals)
+                    {
+                        long synced = _lastSyncedJournals.GetValueOrDefault(path, -1);
+                        if (synced >= created || synced >= lastJournal)
+                            continue;
 
-                    folders ??= [];
-                    folders.Add(path);
-                    _lastCreatedJournals[path] = number;
+                        folders ??= [];
+                        folders.Add((path, created));
+                    }
                 }
                 return folders;
+            }
+
+            // only after the folders were fsynced, a flush state may be replaced before its sync runs
+            public void MarkFoldersSynced(List<(string Path, long Journal)> folders)
+            {
+                lock (_lastSyncedJournals)
+                {
+                    foreach ((string path, long journal) in folders)
+                    {
+                        _lastSyncedJournals[path] = Math.Max(_lastSyncedJournals.GetValueOrDefault(path, -1), journal);
+                    }
+                }
             }
             
             public bool HasEntries => _paths.Count > 0;
@@ -943,7 +960,7 @@ namespace Voron.Impl.Journal
             public sealed record LastFlushState(long TransactionId, 
                 JournalFile Journal, 
                 List<JournalFile> JournalsToDelete,
-                List<string> PathsToSync,
+                List<(string Path, long Journal)> PathsToSync,
                 TreeRootHeader Root,
                 long LastPageNumber)
             {
@@ -1419,7 +1436,7 @@ namespace Voron.Impl.Journal
                     AddJournalToDelete(unused);
                 }
 
-                List<string> pathsToSync = null;
+                List<(string Path, long Journal)> pathsToSync = null;
                 var journalsToDelete = _journalsToDelete.Values.ToList();
                 if (journalsToDelete.Count > 0)
                 {
@@ -1674,11 +1691,10 @@ namespace Voron.Impl.Journal
                     if (_lastFlushed.PathsToSync is not null)
                     {
                         var record = parent._waj._env.CurrentStateRecord;
-                        var rc = Pal.rvn_sync_directories(record.DataPagerState.Handle, 
-                            _lastFlushed.PathsToSync.ToArray(),
-                            _lastFlushed.PathsToSync.Count, out var err);
+                        string[] paths = _lastFlushed.PathsToSync.Select(x => x.Path).ToArray();
+                        var rc = Pal.rvn_sync_directories(record.DataPagerState.Handle, paths, paths.Length, out var err);
                         if(rc != PalFlags.FailCodes.Success)
-                            PalHelper.ThrowLastError(rc, err, $"Failed to sync directories during flush: {string.Join(",", _lastFlushed.PathsToSync)}");
+                            PalHelper.ThrowLastError(rc, err, $"Failed to sync directories during flush: {string.Join(",", paths)}");
                     }
 
                     // can take a long time, need to check again
@@ -1712,6 +1728,9 @@ namespace Voron.Impl.Journal
                     }
 
                     parent.UpdateFileHeaderAfterDataFileSync(_lastFlushed, ignoreLastSyncJournalMissing);
+
+                    if (_lastFlushed.PathsToSync is not null)
+                        parent._waj._linkedJournalsRecord.MarkFoldersSynced(_lastFlushed.PathsToSync);
 
                     foreach (var toDelete in _lastFlushed.JournalsToDelete)
                     {
@@ -2375,7 +2394,7 @@ namespace Voron.Impl.Journal
                 current.Release();
             }
 
-            public void SetLastFlushed(long lastTransactionId, JournalFile journalFile, List<JournalFile> journalFiles, List<string> pathsToSync)
+            public void SetLastFlushed(long lastTransactionId, JournalFile journalFile, List<JournalFile> journalFiles, List<(string Path, long Journal)> pathsToSync)
             {
                 var lastFlushedTxHeader = journalFile.GetLastReadTxHeader(lastTransactionId, _waj._env.HeaderAccessor.JournalId);
          

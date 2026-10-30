@@ -66,7 +66,8 @@ struct IoRingSetup
     HANDLE event;
     HANDLE thread;
     HANDLE has_error;
-    long errored;
+    int32_t error_code; // set before has_error is signaled
+    int32_t inflight;   // submitted minus popped, worker thread only
     struct workitem *volatile head;
 };
 
@@ -125,14 +126,20 @@ void queue_work(struct workitem *head, struct workitem *last)
 
 void close_ring_with_error(HRESULT hr)
 {
-    UINT32 events_submitted = 0;
-    // read the number of events submitted
-    IoRing.SubmitIoRing(IoRing.io_ring, 0, 0, &events_submitted);
-    // wait for all the submitted events to complete
-    IoRing.SubmitIoRing(IoRing.io_ring, events_submitted, INFINITE, NULL);
+    UINT32 submitted = 0;
+    if (SUCCEEDED(IoRing.SubmitIoRing(IoRing.io_ring, 0, 0, &submitted)))
+        IoRing.inflight += submitted;
+    // closing the ring with operations in flight would leave their callers waiting forever
     IORING_CQE cqe;
-    while (SUCCEEDED(IoRing.PopIoRingCompletion(IoRing.io_ring, &cqe)))
+    while (IoRing.inflight > 0)
     {
+        if (IoRing.PopIoRingCompletion(IoRing.io_ring, &cqe) != S_OK) // S_FALSE when empty
+        {
+            WaitForSingleObject(IoRing.event, INFINITE);
+            ResetEvent(IoRing.event);
+            continue;
+        }
+        IoRing.inflight--;
         struct workitem *work = (struct workitem *)cqe.UserData;
         work->submittion->result = hresult_to_detailed_error(hr);        
         work->submittion->error = true;
@@ -142,7 +149,7 @@ void close_ring_with_error(HRESULT hr)
         }
     }
     IoRing.CloseIoRing(IoRing.io_ring);
-    IoRing.io_ring = NULL;
+    InterlockedExchangePointer((PVOID volatile *)&IoRing.io_ring, NULL);
 }
 
 DWORD WINAPI do_ring_work(LPVOID lpThreadParameter)
@@ -197,13 +204,16 @@ DWORD WINAPI do_ring_work(LPVOID lpThreadParameter)
 
                 work = work->next;
             }
-            hr = must_wait ? IoRing.SubmitIoRing(ring, 1, INFINITE, NULL) : IoRing.SubmitIoRing(ring, 0, 0, NULL);
+            UINT32 submitted = 0;
+            hr = must_wait ? IoRing.SubmitIoRing(ring, 1, INFINITE, &submitted) : IoRing.SubmitIoRing(ring, 0, 0, &submitted);
             if (FAILED(hr))
                 goto error;
+            IoRing.inflight += submitted;
 
             IORING_CQE cqe;
             while (IoRing.PopIoRingCompletion(ring, &cqe) == S_OK)
             {
+                IoRing.inflight--;
                 has_work = true;
                 struct workitem *cur = (struct workitem *)cqe.UserData;
                 switch (cur->type)
@@ -238,22 +248,26 @@ DWORD WINAPI do_ring_work(LPVOID lpThreadParameter)
         }
     }
 error:
-    InterlockedExchange(&IoRing.errored, hr);
+    IoRing.error_code = hr ? hresult_to_detailed_error(hr) : ERROR_IO_INCOMPLETE;
     SetEvent(IoRing.has_error);
     close_ring_with_error(hr);
-    IoRing.io_ring = NULL;
     // here we are going to keep answering all future inquires
-    // with an immediate error
+    // with an immediate error, starting with the work we didn't submit yet
     while (true)
     {
-        WaitForSingleObject(IoRing.event, INFINITE);
-        ResetEvent(IoRing.event);
-        work = InterlockedExchangePointer((void *volatile *)&IoRing.head, 0);
+        if (!work)
+            work = InterlockedExchangePointer((void *volatile *)&IoRing.head, 0);
+        if (!work)
+        {
+            WaitForSingleObject(IoRing.event, INFINITE);
+            ResetEvent(IoRing.event);
+            continue;
+        }
         while (work)
         {
             struct workitem *n = work->next;
 
-            work->submittion->result = ERROR_IO_INCOMPLETE;
+            work->submittion->result = IoRing.error_code;
             work->submittion->error = true;
             if (--work->submittion->count == 0)
             {
@@ -278,7 +292,7 @@ int32_t rvn_write_io_ring(
 
     if (WaitForSingleObject(IoRing.has_error, 0) == WAIT_OBJECT_0)
     {
-        *detailed_error_code = ERROR_IO_INCOMPLETE;
+        *detailed_error_code = IoRing.error_code;
         return FAIL_IO_RING_SUBMIT;
     }
 
@@ -439,6 +453,6 @@ error:
 
 int io_ring_setup_successful()
 {
-    return IoRing.io_ring != NULL;
+    return InterlockedCompareExchangePointer((PVOID volatile *)&IoRing.io_ring, NULL, NULL) != NULL;
 }
 

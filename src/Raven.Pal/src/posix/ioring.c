@@ -76,29 +76,37 @@ struct worker
     int eventfd;
     _Atomic bool errored;
     int result;
+    int32_t inflight; // SQEs taken minus CQEs seen, worker thread only
     pthread_t thread;
     struct workitem *_Atomic head;
 };
 
 struct worker g_worker = {.eventfd = -1, .ring = {.ring_fd = -1}};
 
-uint64_t done = 1;
+#define FSYNC_STAGE_TAG ((uintptr_t)1) // low bit of user_data, workitems are pointer aligned
 
-void notify_work_completed(struct io_uring *ring, struct workitem *work)
+// Every SQE we use posts exactly one CQE, so capping in-flight SQEs at the CQ size means the CQ never
+// overflows. On overflow, 5.10 - 5.12 fail submits with -EBUSY and newer kernels may drop CQEs.
+struct io_uring_sqe *get_sqe(struct io_uring *ring)
+{
+    if (g_worker.inflight >= (int32_t)ring->cq.ring_entries)
+        return NULL;
+    struct io_uring_sqe *sqe = io_uring_get_sqe(ring);
+    if (sqe)
+        g_worker.inflight++;
+    return sqe;
+}
+
+void notify_work_completed(struct workitem *work)
 {
     if (--work->submittion->count > 0)
     {
         return; // not yet completed
     }
-    struct io_uring_sqe *sqe = io_uring_get_sqe(ring);
-    if (!sqe) // if we can't notify via the io_uring because it is full, let's use direct syscall
-    {
-        // explicitly ignoring the return value, we can't do anything about it
-        eventfd_write(work->submittion->notifyfd, done);
-        return;
-    }
-    io_uring_prep_write(sqe, work->submittion->notifyfd, &done, sizeof(done), 0);
-    io_uring_sqe_set_data(sqe, 0);
+    // A direct syscall, not an io_uring write. io-wq cancels queued work when it can't start a worker
+    // (e.g. a signal pending on this thread), a canceled notification would leave the caller waiting forever.
+    // Explicitly ignoring the return value, we can't do anything about it.
+    eventfd_write(work->submittion->notifyfd, 1);
 }
 
 void queue_work(struct workitem *head, struct workitem *last)
@@ -110,33 +118,50 @@ void queue_work(struct workitem *head, struct workitem *last)
     } while (!atomic_compare_exchange_weak(&g_worker.head, &cur_head, head));
 }
 
+void fail_work(struct workitem *work, int rc)
+{
+    work->submittion->error = true;
+    work->submittion->result = rc;
+    notify_work_completed(work);
+}
+
+// SQEs the kernel never consumed will never complete
+void fail_unsubmitted_sqes(struct io_uring *ring, int rc)
+{
+    for (unsigned head = *ring->sq.khead; head != ring->sq.sqe_tail; head++)
+    {
+        struct io_uring_sqe *sqe = &ring->sq.sqes[head & ring->sq.ring_mask];
+        struct workitem *work = (struct workitem *)(uintptr_t)sqe->user_data;
+        g_worker.inflight--;
+        if (work != NULL && !((uintptr_t)work & FSYNC_STAGE_TAG)) // the tagged fsync's linked close fails the work
+            fail_work(work, rc);
+    }
+}
+
+// Closing the ring with ops in flight would leave their callers waiting forever, so we wait for all of them.
+// They are file ops that finish on their own, so we don't cancel (IORING_ASYNC_CANCEL_ANY needs 5.19 anyway).
 void mark_all_cqes_as_errors(struct io_uring *ring, int rc)
 {
-    struct io_uring_cqe *cqe;
-    struct __kernel_timespec timeout = {.tv_sec = 0, .tv_nsec = 100 * 1000000}; // 100ms
-    while (!io_uring_wait_cqe_timeout(ring, &cqe, &timeout))
+    while (g_worker.inflight > 0)
     {
-        struct workitem *work = io_uring_cqe_get_data(cqe);
-        io_uring_cqe_seen(ring, cqe);
-        if (work == NULL || --work->submittion->count > 0)
+        struct io_uring_cqe *cqe;
+        if (io_uring_peek_cqe(ring, &cqe))
         {
+            eventfd_t v;
+            eventfd_read(g_worker.eventfd, &v); // signaled on every CQE
             continue;
         }
-        work->submittion->error = true;
-        work->submittion->result = rc;
-        eventfd_write(work->submittion->notifyfd, 1);
+        g_worker.inflight--;
+        struct workitem *work = io_uring_cqe_get_data(cqe);
+        io_uring_cqe_seen(ring, cqe);
+        if (work != NULL && !((uintptr_t)work & FSYNC_STAGE_TAG))
+            fail_work(work, rc);
     }
 }
 
 void close_ring_with_error(struct io_uring *ring, int rc)
 {
-    struct io_uring_sqe *sqe = io_uring_get_sqe(ring);
-    if (sqe)
-    {
-        io_uring_prep_cancel(sqe, 0, 0); // Cancel all, if possible
-        io_uring_sqe_set_data(sqe, 0);   // The SQE can have a stale pointer. We need to clear it because we will try to read it in mark_all_cqes_as_errors.
-        io_uring_submit_and_get_events(ring);
-    }
+    fail_unsubmitted_sqes(ring, rc);
     mark_all_cqes_as_errors(ring, rc);
     io_uring_queue_exit(ring);
 }
@@ -186,10 +211,10 @@ void *do_ring_work(void *arg)
             {
                 has_work = true;
 
-                struct io_uring_sqe *sqe = io_uring_get_sqe(ring);
+                struct io_uring_sqe *sqe = get_sqe(ring);
                 if (sqe == NULL)
                 {
-                    must_wait = 1;
+                    must_wait = g_worker.inflight / 2; // wake up for a batch of completions, not for each one
                     goto sumbit_and_wait; // will retry
                 }
                 io_uring_sqe_set_data(sqe, work);
@@ -200,16 +225,18 @@ void *do_ring_work(void *arg)
                     break;
                 case workitem_fsync_folders:
                 {
-                    struct io_uring_sqe *sqe2 = io_uring_get_sqe(ring);
+                    struct io_uring_sqe *sqe2 = get_sqe(ring);
                     if (sqe2 == NULL)
                     {
                         io_uring_prep_nop(sqe);
+                        io_uring_sqe_set_data64(sqe, 0); // the nop must not complete the work item, it is retried below
                         must_wait = 2;
                         goto sumbit_and_wait; // will retry
                     }
+                    // a hard link runs the close even when the fsync fails, the tagged fsync CQE only records its error
                     io_uring_prep_fsync(sqe, work->op.folder_sync.folderid, 0);
-                    io_uring_sqe_set_data64(sqe, 0);
-                    sqe->flags |= IOSQE_IO_LINK;
+                    io_uring_sqe_set_data64(sqe, (uintptr_t)work | FSYNC_STAGE_TAG);
+                    sqe->flags |= IOSQE_IO_HARDLINK;
                     io_uring_prep_close(sqe2, work->op.folder_sync.folderid);
                     io_uring_sqe_set_data(sqe2, work);
                     break;
@@ -227,7 +254,12 @@ void *do_ring_work(void *arg)
             }
         sumbit_and_wait:
             rc = must_wait ? io_uring_submit_and_wait(ring, must_wait) : io_uring_submit(ring);
-            if (rc < 0)
+            if (rc == -EINTR || rc == -EAGAIN || rc == -EBUSY)
+            {
+                // transient, the unsubmitted SQEs stay queued for the next submit
+                has_work = true;
+            }
+            else if (rc < 0)
             {
                 rc = -rc;
                 goto error;
@@ -239,14 +271,24 @@ void *do_ring_work(void *arg)
             io_uring_for_each_cqe(ring, head, cqe)
             {
                 i++;
+                g_worker.inflight--;
                 has_work = true; // force another run of the inner loop, to ensure that we call io_uring_submit again
                 struct workitem *cur = io_uring_cqe_get_data(cqe);
 
                 if (!cur)
                 {
-                    // can be null if it is:
-                    // *  a notification about eventfd write
-                    // *  multi stage process that completed a non final part
+                    // a nop we used to wait for free SQEs
+                    continue;
+                }
+
+                if ((uintptr_t)cur & FSYNC_STAGE_TAG)
+                {
+                    cur = (struct workitem *)((uintptr_t)cur & ~(uintptr_t)FSYNC_STAGE_TAG);
+                    if (cqe->res != 0)
+                    {
+                        cur->submittion->error = true;
+                        cur->submittion->result = -cqe->res;
+                    }
                     continue;
                 }
 
@@ -255,7 +297,7 @@ void *do_ring_work(void *arg)
                 {
                 case workitem_open_folders:
                     cur->op.folder_sync.folderid = result;
-                    notify_work_completed(ring, cur);
+                    notify_work_completed(cur);
                     break;
                 case workitem_fsync_folders:
                 case workitem_fsync:
@@ -264,7 +306,7 @@ void *do_ring_work(void *arg)
                         cur->submittion->error = true;
                         cur->submittion->result = -result; // cqe->res is -errno
                     }
-                    notify_work_completed(ring, cur);
+                    notify_work_completed(cur);
                     break;
                 case workitem_write:
                     if (result > 0)
@@ -316,10 +358,11 @@ void *do_ring_work(void *arg)
                         // a write of zero bytes usually means the disk is full as well
                         cur->submittion->result = result == 0 ? ENOSPC : -result;
                     }
-                    notify_work_completed(ring, cur);
+                    notify_work_completed(cur);
                     break;
                 default:
                     rc = FAIL_INVALID_CONFIGURATION;
+                    io_uring_cq_advance(ring, i); // the error path must not see these CQEs again
                     goto error;
                 }
             }
@@ -330,25 +373,24 @@ void *do_ring_work(void *arg)
 error:
     g_worker.result = rc;
     atomic_store(&g_worker.errored, true);
-    close(g_worker.eventfd);
-    g_worker.eventfd = -1;
     close_ring_with_error(ring, rc);
-    g_worker.ring = (struct io_uring){.ring_fd = -1};
+    __atomic_store_n(&g_worker.ring.ring_fd, -1, __ATOMIC_RELEASE);
+    // Submitters that raced the error may still queue work and write to the eventfd, so we
+    // keep both the eventfd and this thread alive and fail all such work from now on.
     while (true)
     {
-        if (!work) // fill from the global list if needed
-        {
+        if (!work)
             work = atomic_exchange(&g_worker.head, 0);
-            if (!work)
-                break; // nothing remains to be done
+        if (!work)
+        {
+            eventfd_t v;
+            eventfd_read(g_worker.eventfd, &v);
+            continue;
         }
         while (work)
         {
             struct workitem *next = work->next;
-            work->submittion->error = true;
-            work->submittion->result = rc;
-            if (--work->submittion->count == 0)
-                eventfd_write(work->submittion->notifyfd, 1);
+            fail_work(work, rc);
             work = next;
         }
     }
@@ -428,6 +470,13 @@ rvn_sync_pager(void *handle,
         }
         return SUCCESS;
     }
+    // the eventfd is shared with rvn_sync_directories_ioring, a waiter must not consume the other's completion
+    int lock_rc = pthread_mutex_lock(&handle_ptr->global_state->fsync_dir_arena.lock);
+    if (lock_rc != 0)
+    {
+        *detailed_error_code = lock_rc;
+        return FAIL_MUTEX_LOCK;
+    }
     int eventfd = handle_ptr->global_state->fsync_dir_arena.eventfd;
     struct submittion submittion = {
         .filefd = handle_ptr->file_fd,
@@ -446,6 +495,12 @@ rvn_sync_pager(void *handle,
     if (*detailed_error_code)
     {
         rc = FAIL_SYNC_FILE;
+    }
+    int unlock_rc = pthread_mutex_unlock(&handle_ptr->global_state->fsync_dir_arena.lock);
+    if (unlock_rc && rc == SUCCESS)
+    {
+        *detailed_error_code = unlock_rc;
+        return FAIL_MUTEX_UNLOCK;
     }
     return rc;
 }
@@ -665,7 +720,7 @@ error:
 
 int io_ring_setup_successful()
 {
-    return g_worker.ring.ring_fd != -1;
+    return __atomic_load_n(&g_worker.ring.ring_fd, __ATOMIC_ACQUIRE) != -1;
 }
 
 PRIVATE int32_t
@@ -762,15 +817,13 @@ rvn_sync_directories_ioring(void *handle, char **folders, int32_t count, int32_t
             .next = previous};
     }
 
-    if (!submittion.count)
+    if (submittion.count)
     {
-        return SUCCESS;
+        queue_work(&arr[submittion.count - 1], &arr[0]);
+        rc = wait_for_work_completion(handle_ptr, &submittion, detailed_error_code);
+        if (*detailed_error_code)
+            rc = FAIL_IO_RING_WRITE_RESULT;
     }
-    queue_work(&arr[submittion.count - 1], &arr[0]);
-    *detailed_error_code = 0;
-    rc = wait_for_work_completion(handle_ptr, &submittion, detailed_error_code);
-    if (*detailed_error_code)
-        rc = FAIL_IO_RING_WRITE_RESULT;
 
     int unlock_rc = pthread_mutex_unlock(&handle_ptr->global_state->fsync_dir_arena.lock);
     if (unlock_rc && rc == SUCCESS)
