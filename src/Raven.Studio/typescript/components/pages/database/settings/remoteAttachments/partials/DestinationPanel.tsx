@@ -34,6 +34,7 @@ import {
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useViewSheet, ViewSheet } from "components/common/splitView/ViewSheet";
+import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { remoteAttachmentsConstants } from "components/pages/database/settings/remoteAttachments/remoteAttachmentsConstants";
 import { remoteAttachmentsUtils } from "components/pages/database/settings/remoteAttachments/remoteAttachmentsUtils";
 import { OptionWithIcon, SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
@@ -143,7 +144,7 @@ export function DestinationEditorPanel({ editingDestinationId }: CreateNewDestin
         ? destinations.find((d) => d.identifier === editingDestinationId)
         : null;
 
-    const { close } = useViewSheet();
+    const { close, forceClose } = useViewSheet();
 
     const form = useForm<RemoteAttachmentsDestinationFormData>({
         resolver: remoteAttachmentsDestinationYupResolver,
@@ -154,7 +155,10 @@ export function DestinationEditorPanel({ editingDestinationId }: CreateNewDestin
         defaultValues: getDefaultValues(editingDestination),
     });
 
-    const { control, watch, handleSubmit, trigger, setValue } = form;
+    const { control, watch, handleSubmit, trigger, setValue, formState } = form;
+
+    useDirtyFlag(formState.isDirty);
+
     const formValues = useWatch({ control });
 
     const asyncTest = useAsyncCallback<Raven.Server.Web.System.NodeConnectionTestResult, []>(async () => {
@@ -220,7 +224,7 @@ export function DestinationEditorPanel({ editingDestinationId }: CreateNewDestin
             dispatch(remoteAttachmentsActions.destinationAdded(destinationData));
         }
 
-        close();
+        forceClose();
     };
 
     return (

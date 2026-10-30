@@ -18,10 +18,18 @@ import SizeGetter from "../SizeGetter";
 import { ClassNameProps } from "components/models/common";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { splitViewActions, splitViewSelectors } from "components/common/splitView/store/splitViewSlice";
+import useConfirm from "components/common/ConfirmDialog";
+import { DirtyFlagProvider, useDirtyFlag } from "components/hooks/useDirtyFlag";
+
+interface PageDirtyState {
+    isDirty: boolean;
+    customDialog?: () => JQueryDeferred<confirmDialogResult>;
+}
 
 const SplitViewContext = createContext<{
     sheetComponent: ReactNode;
     setSheetComponent: (sheetComponent: ReactNode) => void;
+    confirmBeforeClose: (action: () => void) => void;
     registerSheetClose: (callback: (() => void) | null) => void;
     activeSheetOwnerId: string | null;
     setActiveSheetOwnerId: (ownerId: string | null) => void;
@@ -41,6 +49,35 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
     const [activeSheetOwnerId, setActiveSheetOwnerId] = useState<string | null>(null);
     const [sheetPortalNode, setSheetPortalNode] = useState<HTMLDivElement | null>(null);
     const onSheetCloseRef = useRef<(() => void) | null>(null);
+    const [pageDirtyState, setPageDirtyState] = useState<PageDirtyState>({ isDirty: false });
+    const [isSheetDirty, setIsSheetDirty] = useState(false);
+    const confirm = useConfirm();
+
+    useDirtyFlag(pageDirtyState.isDirty || isSheetDirty, pageDirtyState.customDialog);
+
+    const setIsPageDirty = useCallback(
+        (isDirty: boolean, customDialog?: PageDirtyState["customDialog"]) =>
+            setPageDirtyState({ isDirty, customDialog }),
+        []
+    );
+
+    const confirmBeforeClose = useCallback(
+        (action: () => void) => {
+            if (!isSheetDirty) {
+                action();
+                return;
+            }
+
+            confirm({
+                title: "Unsaved changes",
+                icon: "warning",
+                message: "You have unsaved changes. Do you want to discard them?",
+                confirmText: "Discard",
+                confirmIcon: "trash",
+            }).then((isConfirmed) => isConfirmed && action());
+        },
+        [confirm, isSheetDirty]
+    );
 
     const setSheetComponent = useCallback((component: ReactNode) => {
         if (component === null) {
@@ -48,6 +85,8 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
             onSheetCloseRef.current = null;
             setActiveSheetOwnerId(null);
         }
+        // useDirtyFlag does not reset on unmount, so the replaced sheet's flag is cleared here
+        setIsSheetDirty(false);
         setSheetComponentState(component);
     }, []);
 
@@ -63,20 +102,25 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
         () => ({
             sheetComponent,
             setSheetComponent,
+            confirmBeforeClose,
             registerSheetClose,
             activeSheetOwnerId,
             setActiveSheetOwnerId,
             sheetPortalNode,
             setSheetPortalNode,
         }),
-        [sheetComponent, setSheetComponent, registerSheetClose, activeSheetOwnerId, sheetPortalNode]
+        [sheetComponent, setSheetComponent, confirmBeforeClose, registerSheetClose, activeSheetOwnerId, sheetPortalNode]
     );
 
     return (
         <SplitViewContext.Provider value={contextValue}>
             <div className="split-view">
-                <BodyWrapper>{props.children}</BodyWrapper>
-                <SheetWrapper>{sheetComponent}</SheetWrapper>
+                <DirtyFlagProvider setIsDirty={setIsPageDirty}>
+                    <BodyWrapper>{props.children}</BodyWrapper>
+                </DirtyFlagProvider>
+                <DirtyFlagProvider setIsDirty={setIsSheetDirty}>
+                    <SheetWrapper>{sheetComponent}</SheetWrapper>
+                </DirtyFlagProvider>
             </div>
         </SplitViewContext.Provider>
     );

@@ -53,10 +53,10 @@ interface CloseButtonProps extends PropsWithChildren, ClassNameProps {
 function CloseButton(props: CloseButtonProps) {
     const { children, className = "text-reset", variant = "link" } = props;
 
-    const { setSheetComponent } = useSplitViewContext();
+    const { close } = useViewSheet();
 
     return (
-        <Button variant={variant} className={className} onClick={() => setSheetComponent(null)}>
+        <Button variant={variant} className={className} onClick={close}>
             {children ? children : <Icon icon="close" margin="m-0" />}
         </Button>
     );
@@ -110,6 +110,7 @@ export function useViewSheet() {
     const dispatch = useAppDispatch();
     const {
         setSheetComponent,
+        confirmBeforeClose,
         sheetComponent,
         registerSheetClose,
         activeSheetOwnerId,
@@ -128,15 +129,18 @@ export function useViewSheet() {
         [viewWidthInPx]
     );
 
-    const open = (options: OpenSheetOptions) => {
-        registerSheetClose(options.onClose ?? null);
-        setActiveSheetOwnerId(options.ownerId ?? null);
-        setSheetComponent(options.component);
-        dispatch(splitViewActions.isSheetPinnedSet(options.isPinned ?? false));
-        dispatch(splitViewActions.initialPanelWidthInPxSet(getWidthInPx(options.initialWidth ?? "50%")));
-        dispatch(splitViewActions.minPanelWidthInPxSet(getWidthInPx(options.minWidth ?? "30%")));
-        dispatch(splitViewActions.maxPanelWidthInPxSet(getWidthInPx(options.maxWidth ?? "75%")));
-    };
+    const open = (options: OpenSheetOptions) =>
+        confirmBeforeClose(() => {
+            registerSheetClose(options.onClose ?? null);
+            setActiveSheetOwnerId(options.ownerId ?? null);
+            setSheetComponent(options.component);
+            dispatch(splitViewActions.isSheetPinnedSet(options.isPinned ?? false));
+            dispatch(splitViewActions.initialPanelWidthInPxSet(getWidthInPx(options.initialWidth ?? "50%")));
+            dispatch(splitViewActions.minPanelWidthInPxSet(getWidthInPx(options.minWidth ?? "30%")));
+            dispatch(splitViewActions.maxPanelWidthInPxSet(getWidthInPx(options.maxWidth ?? "75%")));
+        });
+
+    const forceClose = () => setSheetComponent(null);
 
     // For sheets whose content must stay in sync with a distribution row's own props (e.g. live task/progress
     // updates), render into this node from that row's JSX - via SheetPortalOutlet passed as `component` to `open` -
@@ -147,7 +151,8 @@ export function useViewSheet() {
     return {
         open,
         renderIntoSheet,
-        close: () => setSheetComponent(null),
+        close: () => confirmBeforeClose(forceClose),
+        forceClose,
         isOpen: !!sheetComponent,
         activeSheetOwnerId,
     };
