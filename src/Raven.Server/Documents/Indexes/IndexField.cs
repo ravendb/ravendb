@@ -152,6 +152,30 @@ namespace Raven.Server.Documents.Indexes
                 Vector = Vector
             };
         }
+
+        private RangeAndTimeFieldNames _rangeAndTimeNames;
+
+        /// <summary>
+        /// Names of the numeric range and time fields created for this field.
+        /// Cached so we don't allocate them for every indexed value.
+        /// </summary>
+        internal RangeAndTimeFieldNames RangeAndTimeNames => _rangeAndTimeNames ??= new RangeAndTimeFieldNames(Name);
+
+        internal sealed class RangeAndTimeFieldNames
+        {
+            public readonly string RangeDouble;
+
+            public readonly string RangeLong;
+
+            public readonly string Time;
+
+            public RangeAndTimeFieldNames(string name)
+            {
+                RangeDouble = name + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
+                RangeLong = name + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong;
+                Time = name + Constants.Documents.Indexing.Fields.TimeFieldSuffix;
+            }
+        }
     }
 
     public sealed class AutoIndexField : IndexFieldBase
