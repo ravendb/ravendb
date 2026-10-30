@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Tests.Infrastructure;
 using Xunit;
@@ -167,12 +169,12 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [InlineData(IndexCompiler.MaxAllowedInvocationChainDepth, false)]
-        [InlineData(IndexCompiler.MaxAllowedInvocationChainDepth + 1, true)]
-        public void Method_Call_Chain_Inside_A_Lambda_Is_Measured_Against_Its_Own_Budget(int chainDepth, bool shouldFail)
+        [InlineData(IndexCompiler.MaxAllowedInvocationChainDepth - 1, false)] // 8001 + the 3 calls around the lambda
+        [InlineData(IndexCompiler.MaxAllowedInvocationChainDepth, true)] // 8128 + 3, over the budget
+        public void Method_Call_Chain_Inside_A_Lambda_Adds_Up_With_The_Calls_Around_It(int chainDepth, bool shouldFail)
         {
-            // a lambda is compiled into a method of its own with its own stack frame, so the chain in its body does not add up with
-            // the calls around it, but it is held to the same budget since that frame overflows the same way
+            // a lambda is compiled into a method of its own, but it runs on top of the frame of Map_0, so the chain in its body is costed as a scope
+            // of its own and then added to the cost of the scope around it: 'user.Tags.Select(...).SelectMany(...).ToArray()' costs 0 + 1 + 2 = 3
             using (var store = GetDocumentStore())
             {
                 var chain = "user.Tags" + string.Concat(Enumerable.Repeat(".Concat(user.Tags)", chainDepth - 1)) + ".ToArray()"; // 'chainDepth' calls, the ToArray() included
@@ -207,7 +209,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Indexes)]
         public void Map_With_An_Extremely_Deep_Method_Call_Chain_Should_Fail_Compilation_Without_Crashing()
         {
-            // the parser and the rewriters recurse over the tree, Roslyn guards that recursion and the compiler reports the failure
+            // the first gate on the parsed tree rejects it before NormalizeWhitespace(), which recurses over the tree without a stack guard
             using (var store = GetDocumentStore())
             {
                 var indexDefinition = new IndexDefinition
@@ -217,9 +219,69 @@ namespace SlowTests.Issues
                 };
 
                 var ex = Assert.Throws<IndexCompilationException>(() => store.Maintenance.Send(new PutIndexesOperation(indexDefinition)));
-                Assert.Contains("The map function nests its method calls too deeply", ex.Message); // the first gate reports it, not Roslyn's 'insufficient stack'
+                Assert.Contains("The map function nests its method calls too deeply", ex.Message);
                 Assert.Equal(nameof(IndexDefinition.Maps), ex.IndexDefinitionProperty);
             }
+        }
+
+        [RavenFact(RavenTestCategory.Indexes)]
+        public void Map_With_Nested_Lambdas_Each_Within_The_Budget_That_Together_Overflow_The_Stack_Should_Fail_Compilation()
+        {
+            // a nested lambda runs while the frames of Map_0 and of every enclosing lambda are still on the stack, so their costs add up along the nesting
+            // measured on x64 (default stack): 8 nested scopes with a 32-link '?.' chain each are accepted, and the indexing thread overflows at the 5th frame
+            // no documents are stored on purpose, if the index is wrongly accepted the test fails on the assertion instead of crashing the test process
+            const int scopes = 8;
+            const int links = 32;
+
+            var chain = "user.Tags" + string.Concat(Enumerable.Repeat("?.Concat(user.Tags)", links)) + "?.ToArray()";
+            var body = chain;
+            for (var level = scopes - 1; level >= 1; level--)
+                body = $"new {{ A = {chain}, B = user.Tags.Select(t{level} => {body}).ToArray() }}";
+
+            using (var store = GetDocumentStore())
+            {
+                var indexDefinition = new IndexDefinition
+                {
+                    Name = "NestedLambdasIndex",
+                    Maps = { $"from user in docs.Users select {body}" }
+                };
+
+                var ex = Assert.Throws<IndexCompilationException>(() => store.Maintenance.Send(new PutIndexesOperation(indexDefinition)));
+                Assert.Contains("The map function nests its method calls too deeply", ex.Message);
+                Assert.Equal(nameof(IndexDefinition.Maps), ex.IndexDefinitionProperty);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Indexes)]
+        public void Map_With_An_Extremely_Deep_Expression_Without_Method_Calls_Should_Be_Rejected_By_The_First_Gate()
+        {
+            // NormalizeWhitespace() recurses over the tree without Roslyn's stack guard (SyntaxNormalizer.GetDeclarationDepth), so when this map is put
+            // through the server it crashes the whole process with a StackOverflowException (measured on x64: 3000 terms, 3 out of 3 runs)
+            // the compiler is called directly on a thread with a large stack here, so without the gate the test fails on the assertion instead of crashing
+            var indexDefinition = new IndexDefinition
+            {
+                Name = "DeepExpressionIndex",
+                Maps = { $"from user in docs.Users select new {{ Values = {string.Join(" + ", Enumerable.Repeat("user.Name", 3000))} }}" }
+            };
+
+            Exception exception = null;
+            var thread = new Thread(() =>
+            {
+                try
+                {
+                    IndexCompiler.Compile(indexDefinition, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
+                }
+                catch (Exception e)
+                {
+                    exception = e;
+                }
+            }, maxStackSize: 256 * 1024 * 1024);
+            thread.Start();
+            thread.Join();
+
+            var ex = Assert.IsType<IndexCompilationException>(exception);
+            Assert.Contains("The map function is nested too deeply", ex.Message);
+            Assert.Equal(nameof(IndexDefinition.Maps), ex.IndexDefinitionProperty);
         }
 
         [RavenFact(RavenTestCategory.Indexes)]
