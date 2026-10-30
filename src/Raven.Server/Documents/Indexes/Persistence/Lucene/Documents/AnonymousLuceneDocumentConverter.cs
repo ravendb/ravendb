@@ -78,45 +78,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             var storedValue = _storeValue ? new DynamicJsonValue() : null;
 
-            foreach (var property in accessor.GetProperties(documentToProcess))
-            {
-                var value = property.Value;
-
-                IndexField field;
-
-                try
-                {
-                    field = _fields[property.Key];
-                }
-                catch (KeyNotFoundException e)
-                {
-                    throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.", e);
-                }
-
-                var numberOfCreatedFields = GetRegularFields(instance, field, value, indexContext, sourceDocument, out var shouldSkip);
-
-                newFields += numberOfCreatedFields;
-
-                if (boostedValue != null)
-                {
-                    var fields = instance.GetFields();
-                    for (int idx = fields.Count - 1; numberOfCreatedFields > 0; numberOfCreatedFields--, idx--)
-                    {
-                        var luceneField = fields[idx];
-                        luceneField.OmitNorms = false;
-                    }
-                }
-
-                if (storedValue != null && shouldSkip == false)
-                {
-                    var blittableValue = TypeConverter.ToBlittableSupportedType(value, out TypeConverter.BlittableSupportedReturnType returnType, flattenArrays: true);
-
-                    if (returnType == TypeConverter.BlittableSupportedReturnType.Ignored)
-                        continue;
-
-                    storedValue[property.Key] = blittableValue;
-                }
-            }
+            // the property accessor of anonymous types has a struct enumerator, iterating over it directly avoids boxing it per entry
+            if (accessor is PropertyAccessor propertyAccessor)
+                newFields += GetPropertiesFields(propertyAccessor.GetProperties(documentToProcess));
+            else
+                newFields += GetPropertiesFields(accessor.GetProperties(documentToProcess));
 
             if (_storeValue)
             {
@@ -125,6 +91,61 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
 
             return newFields;
+
+            int GetPropertiesFields<TEnumerator>(TEnumerator properties) where TEnumerator : IEnumerator<PropertyItem>
+            {
+                var numberOfFields = 0;
+
+                try
+                {
+                    while (properties.MoveNext())
+                    {
+                        var property = properties.Current;
+                        var value = property.Value;
+
+                        IndexField field;
+
+                        try
+                        {
+                            field = _fields[property.Key];
+                        }
+                        catch (KeyNotFoundException e)
+                        {
+                            throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.", e);
+                        }
+
+                        var numberOfCreatedFields = GetRegularFields(instance, field, value, indexContext, sourceDocument, out var shouldSkip);
+
+                        numberOfFields += numberOfCreatedFields;
+
+                        if (boostedValue != null)
+                        {
+                            var fields = instance.GetFields();
+                            for (int idx = fields.Count - 1; numberOfCreatedFields > 0; numberOfCreatedFields--, idx--)
+                            {
+                                var luceneField = fields[idx];
+                                luceneField.OmitNorms = false;
+                            }
+                        }
+
+                        if (storedValue != null && shouldSkip == false)
+                        {
+                            var blittableValue = TypeConverter.ToBlittableSupportedType(value, out TypeConverter.BlittableSupportedReturnType returnType, flattenArrays: true);
+
+                            if (returnType == TypeConverter.BlittableSupportedReturnType.Ignored)
+                                continue;
+
+                            storedValue[property.Key] = blittableValue;
+                        }
+                    }
+                }
+                finally
+                {
+                    properties.Dispose();
+                }
+
+                return numberOfFields;
+            }
         }
     }
 }

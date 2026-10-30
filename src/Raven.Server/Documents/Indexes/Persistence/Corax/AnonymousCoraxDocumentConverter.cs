@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Amazon.SimpleNotificationService.Model;
 using Raven.Client.Documents.Indexes;
@@ -54,31 +55,10 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
         if (CompoundFields != null)
             HandleCompoundFields();
 
-        bool hasFields = false;
-        
-        foreach (var property in accessor.GetProperties(documentToProcess))
-        {
-            var value = property.Value;
-
-            if (_fields.TryGetValue(property.Key, out var field) == false)
-                throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.");
-
-            InsertRegularField(field, value, indexContext, builder, sourceDocument, out var innerShouldSkip);
-
-            if (innerShouldSkip)
-                RegisterMissingFieldFor(field);
-            
-            hasFields |= innerShouldSkip == false;
-                
-            if (storedValue is not null && innerShouldSkip == false)
-            {
-                //Notice: we are always saving values inside Corax index. This method is explicitly for MapReduce because we have to have JSON as the last item.
-                var blittableValue = TypeConverter.ToBlittableSupportedType(value, out TypeConverter.BlittableSupportedReturnType returnType, flattenArrays: true);
-
-                if (returnType != TypeConverter.BlittableSupportedReturnType.Ignored)
-                    storedValue[property.Key] = blittableValue;
-            }
-        }
+        // the property accessor of anonymous types has a struct enumerator, iterating over it directly avoids boxing it per entry
+        bool hasFields = accessor is PropertyAccessor propertyAccessor
+            ? InsertPropertiesFields(propertyAccessor.GetProperties(documentToProcess))
+            : InsertPropertiesFields(accessor.GetProperties(documentToProcess));
 
         if (hasFields is false && _indexEmptyEntries is false)
             return false;
@@ -98,7 +78,46 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
         WriteNonExistingMarkerForMissingFields(builder);
 
         return true;
-        
+
+        bool InsertPropertiesFields<TEnumerator>(TEnumerator properties) where TEnumerator : IEnumerator<PropertyItem>
+        {
+            bool anyFields = false;
+
+            try
+            {
+                while (properties.MoveNext())
+                {
+                    var property = properties.Current;
+                    var value = property.Value;
+
+                    if (_fields.TryGetValue(property.Key, out var field) == false)
+                        throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.");
+
+                    InsertRegularField(field, value, indexContext, builder, sourceDocument, out var innerShouldSkip);
+
+                    if (innerShouldSkip)
+                        RegisterMissingFieldFor(field);
+
+                    anyFields |= innerShouldSkip == false;
+
+                    if (storedValue is not null && innerShouldSkip == false)
+                    {
+                        //Notice: we are always saving values inside Corax index. This method is explicitly for MapReduce because we have to have JSON as the last item.
+                        var blittableValue = TypeConverter.ToBlittableSupportedType(value, out TypeConverter.BlittableSupportedReturnType returnType, flattenArrays: true);
+
+                        if (returnType != TypeConverter.BlittableSupportedReturnType.Ignored)
+                            storedValue[property.Key] = blittableValue;
+                    }
+                }
+            }
+            finally
+            {
+                properties.Dispose();
+            }
+
+            return anyFields;
+        }
+
         void HandleCompoundFields()
         {
             _compoundFieldsBuffer ??= new byte[128];
