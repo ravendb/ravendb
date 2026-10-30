@@ -3,14 +3,17 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
+using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.Queue;
 using Raven.Server.Documents.ETL.Providers.Queue.Kafka;
 using Raven.Server.Documents.ETL.Providers.Queue.RabbitMq;
@@ -153,6 +156,37 @@ namespace SlowTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.Etl)]
+        public async Task OlapEtl_restarts_when_only_target_specific_fields_change()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var config = NewOlapConfiguration();
+                var taskId = Etl.AddEtl(store, config, NewOlapConnectionString()).TaskId;
+
+                config.OlapTables.Add(new OlapEtlTable { TableName = "Orders", DocumentIdColumn = "Id" });
+                config.CustomPartitionValue = "partition";
+                var process = await UpdateAndWaitForNewProcess<OlapEtl, OlapConnectionString>(store, taskId, config);
+
+                Assert.Equal(2, process.Configuration.OlapTables.Count);
+                Assert.Equal("partition", process.Configuration.CustomPartitionValue);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Etl)]
+        public async Task OlapEtl_keeps_running_process_when_tables_are_only_reordered()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var config = NewOlapConfiguration();
+                config.OlapTables.Add(new OlapEtlTable { TableName = "Orders", DocumentIdColumn = "Id" });
+                var taskId = Etl.AddEtl(store, config, NewOlapConnectionString()).TaskId;
+
+                config.OlapTables.Reverse();
+                await UpdateAndAssertSameProcess(store, taskId, config);
+            }
+        }
+
         private static Transformation NewTransformation() => new Transformation
         {
             Name = "Users",
@@ -166,6 +200,21 @@ namespace SlowTests.Issues
             ConnectionStringName = "sql-cs",
             SqlTables = { new SqlEtlTable { TableName = "Users", DocumentIdColumn = "Id" } },
             Transforms = { NewTransformation() }
+        };
+
+        private OlapEtlConfiguration NewOlapConfiguration() => new OlapEtlConfiguration
+        {
+            Name = "olap",
+            ConnectionStringName = "olap-cs",
+            RunFrequency = "0 0 * * *",
+            OlapTables = new List<OlapEtlTable> { new OlapEtlTable { TableName = "Users", DocumentIdColumn = "Id" } },
+            Transforms = { NewTransformation() }
+        };
+
+        private OlapConnectionString NewOlapConnectionString() => new OlapConnectionString
+        {
+            Name = "olap-cs",
+            LocalSettings = new LocalSettings { FolderPath = NewDataPath() }
         };
 
         private static SqlConnectionString NewSqlConnectionString() => new SqlConnectionString

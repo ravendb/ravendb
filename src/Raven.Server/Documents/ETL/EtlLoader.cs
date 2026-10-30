@@ -741,7 +741,7 @@ namespace Raven.Server.Documents.ETL
                             {
                                 var diff = olapEtl.Configuration.Compare(config, record.OlapConnectionStrings);
 
-                                if (diff == EtlConfigurationCompareDifferences.None && olapEtl.Configuration.Equals(config))
+                                if (diff == EtlConfigurationCompareDifferences.None)
                                 {
                                     existing = config;
                                     break;
