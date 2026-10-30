@@ -195,8 +195,12 @@ namespace Sparrow.Json
 
 #if NETCOREAPP3_1_OR_GREATER
 
+        // keeps the per-thread temp buffer below the large object heap threshold (85,000 bytes)
+        private const int MaxLengthToDecodeInTempBuffer = 32 * 1024;
+
         /// <summary>
         /// Decodes the value into the per-thread temp buffer, so string-like searches can run on it without materializing a string.
+        /// Longer values are materialized (and cached) as a string instead, so the temp buffer doesn't grow to the largest value seen.
         /// The returned span is valid only until the next use of the temp buffer.
         /// </summary>
         private ReadOnlySpan<char> DecodeToTempBuffer()
@@ -207,6 +211,9 @@ namespace Sparrow.Json
             var length = Length;
             if (length == 0)
                 return ReadOnlySpan<char>.Empty;
+
+            if (length > MaxLengthToDecodeInTempBuffer)
+                return ToString().AsSpan();
 
             var buffer = GetlazyStringTempBuffer(length);
             fixed (char* pChars = buffer)

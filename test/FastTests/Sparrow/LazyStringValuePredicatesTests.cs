@@ -101,6 +101,27 @@ namespace FastTests.Sparrow
         }
 
         [RavenTheory(RavenTestCategory.Core)]
+        [InlineData(32 * 1024, false)]
+        [InlineData(32 * 1024 + 1, true)]
+        public void LongValuesAreMaterializedInsteadOfDecodedIntoTheTempBuffer(int length, bool expectMaterialized)
+        {
+            var value = new string('x', length - 6) + "London";
+
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            using (var doc = ctx.ReadObject(new DynamicJsonValue { ["Value"] = value }, "doc"))
+            {
+                Assert.True(doc.TryGet("Value", out LazyStringValue lazy));
+
+                Assert.True(lazy.Contains("London"));
+                Assert.True(lazy.EndsWith("london", StringComparison.OrdinalIgnoreCase));
+                Assert.Equal(value.IndexOf("London", StringComparison.Ordinal), lazy.IndexOf("London"));
+                Assert.Equal(-1, lazy.IndexOf("Paris", StringComparison.OrdinalIgnoreCase));
+
+                Assert.Equal(expectMaterialized, lazy.HasStringValue);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData("­abc", "abc")] // soft hyphen is ignored by a linguistic comparison
         [InlineData("abc­", "abc")]
         [InlineData("café", "cafe")] // combining acute accent
