@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Extensions;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.SQL
@@ -133,6 +134,23 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
             }
         }
 
+        internal override EtlConfigurationCompareDifferences Compare(EtlConfiguration<SqlConnectionString> config, Dictionary<string, SqlConnectionString> connectionStrings, List<(string TransformationName, EtlConfigurationCompareDifferences Difference)> transformationDiffs = null)
+        {
+            var diff = base.Compare(config, connectionStrings, transformationDiffs);
+
+            if (config is SqlEtlConfiguration sqlConfig)
+            {
+                if (sqlConfig.ParameterizeDeletes != ParameterizeDeletes ||
+                    sqlConfig.ForceQueryRecompile != ForceQueryRecompile ||
+                    sqlConfig.QuoteTables != QuoteTables ||
+                    sqlConfig.CommandTimeout != CommandTimeout ||
+                    EnumerableExtension.ContentEqualsIgnoringOrder(sqlConfig.SqlTables, SqlTables) == false)
+                    diff |= EtlConfigurationCompareDifferences.ConfigurationOptions;
+            }
+
+            return diff;
+        }
+
         public override string GetDefaultTaskName()
         {
             return $"SQL ETL to {ConnectionStringName}";
@@ -163,10 +181,20 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
         public string DocumentIdColumn { get; set; }
         public bool InsertOnlyMode { get; set; }
 
-        protected bool Equals(SqlEtlTable other)
+        private bool Equals(SqlEtlTable other)
         {
             return string.Equals(TableName, other.TableName) && string.Equals(DocumentIdColumn, other.DocumentIdColumn, StringComparison.OrdinalIgnoreCase) &&
                    InsertOnlyMode == other.InsertOnlyMode;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return ReferenceEquals(this, obj) || obj is SqlEtlTable other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(TableName, DocumentIdColumn?.ToLowerInvariant(), InsertOnlyMode);
         }
 
         public DynamicJsonValue ToJson()

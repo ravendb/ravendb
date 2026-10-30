@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Extensions;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.Queue
@@ -69,7 +70,22 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
         {
             return $"Queue ETL to {ConnectionStringName}";
         }
-        
+
+        internal override EtlConfigurationCompareDifferences Compare(EtlConfiguration<QueueConnectionString> config, Dictionary<string, QueueConnectionString> connectionStrings, List<(string TransformationName, EtlConfigurationCompareDifferences Difference)> transformationDiffs = null)
+        {
+            var diff = base.Compare(config, connectionStrings, transformationDiffs);
+
+            if (config is QueueEtlConfiguration queueConfig)
+            {
+                if (queueConfig.BrokerType != BrokerType ||
+                    queueConfig.SkipAutomaticQueueDeclaration != SkipAutomaticQueueDeclaration ||
+                    EnumerableExtension.ContentEqualsIgnoringOrder(queueConfig.Queues, Queues) == false)
+                    diff |= EtlConfigurationCompareDifferences.ConfigurationOptions;
+            }
+
+            return diff;
+        }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
@@ -92,6 +108,21 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
         public string Name { get; set; }
 
         public bool DeleteProcessedDocuments { get; set; }
+
+        private bool Equals(EtlQueue other)
+        {
+            return string.Equals(Name, other.Name) && DeleteProcessedDocuments == other.DeleteProcessedDocuments;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return ReferenceEquals(this, obj) || obj is EtlQueue other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Name, DeleteProcessedDocuments);
+        }
 
         public DynamicJsonValue ToJson()
         {
