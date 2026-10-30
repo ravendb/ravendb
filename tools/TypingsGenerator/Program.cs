@@ -335,6 +335,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(EtlWarningDetails));
             scripter.AddType(typeof(SlowSqlDetails));
             scripter.AddType(typeof(SlowIoDetails));
+            scripter.AddType(typeof(Raven.Server.NotificationCenter.Notifications.Details.StorageCongestionDetails));
             scripter.AddType(typeof(ServerLimitsDetails));
 
             // indexes
@@ -497,6 +498,12 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IOMetricsResponse));
             scripter.AddType(typeof(FileStatus));
             scripter.AddType(typeof(IoMetrics.MeterType));
+            scripter.AddType(typeof(IoMetrics.SyncReason));
+
+            // storage I/O (RavenDB-27821)
+            scripter.AddType(typeof(Raven.Server.Storage.StorageIoReport));
+            scripter.AddType(typeof(Raven.Server.Storage.StorageStatusInfo));
+            scripter.AddType(typeof(Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.StorageIoAnalysisInfo));
 
             // replication stats
             scripter.AddType(typeof(LiveReplicationPerformanceCollector.OutgoingPerformanceStats));

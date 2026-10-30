@@ -14,6 +14,13 @@ type OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 type SettingsResult = Raven.Server.Config.SettingsResult;
 type NetworkAnalysisInfo = Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.NetworkAnalysisInfo;
 type ThreadsInfo = Raven.Server.Dashboard.ThreadsInfo;
+type StorageIoAnalysisInfo =
+    Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.StorageIoAnalysisInfo;
+type StorageIoDeviceAnalysis =
+    Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.StorageIoDeviceAnalysis;
+type StorageIoDatabaseAnalysis =
+    Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.StorageIoDatabaseAnalysis;
+type SharedJournalsIoInfo = Raven.Server.Storage.SharedJournalsIoInfo;
 
 // Stubs are intentionally partial - they only fill the fields the UI reads. Typing them as DeepPartial of the
 // real server type (instead of `as unknown as ...`) keeps that partiality while still failing the build if a
@@ -772,5 +779,131 @@ export class DebugPackageStubs {
             ],
         };
         return stub as ThreadsInfo;
+    }
+
+    // per node storage I/O as the analyzer returns it: A saturated by its disk, B paced but fast, C healthy
+    static storageIo(nodeTag: string): StorageIoAnalysisInfo {
+        const profile = {
+            A: {
+                status: "Saturated",
+                paced: 0.57,
+                now: 1.3,
+                typical: 15.9,
+                peak: 9214,
+                slowestSec: 37.9,
+                sync: 0,
+                journal: [18, 22],
+                syncs: [242, 454],
+                syncMax: [4576, 14304],
+                paced2: [0.88, 0.9],
+            },
+            B: {
+                status: "Busy",
+                paced: 0.21,
+                now: 2.3,
+                typical: 2.1,
+                peak: 247,
+                slowestSec: 2.9,
+                sync: 0,
+                journal: [4.4, 3.3],
+                syncs: [4.1, 6.2],
+                syncMax: [143, 238],
+                paced2: [0.28, 0.24],
+            },
+            C: {
+                status: "Ok",
+                paced: 0.11,
+                now: 3.6,
+                typical: 1.6,
+                peak: 851.6,
+                slowestSec: 10.1,
+                sync: 0.5,
+                journal: [2.6, 6.3],
+                syncs: [3, 6.6],
+                syncMax: [84, 140],
+                paced2: [0.11, 0.23],
+            },
+        }[nodeTag] ?? {
+            status: "Ok",
+            paced: 0,
+            now: 1,
+            typical: 1,
+            peak: 5,
+            slowestSec: null,
+            sync: 1,
+            journal: [1, 1],
+            syncs: [2, 2],
+            syncMax: [10, 10],
+            paced2: [0, 0],
+        };
+
+        const device: StorageIoDeviceAnalysis = {
+            Name: "/",
+            Status: profile.status as Raven.Server.Storage.StorageDeviceStatus,
+            StatusReason:
+                profile.status === "Saturated"
+                    ? "Saturated since 2026-10-27 07:30:54Z: writes were paced more than 50% of an hour because the disk was congested."
+                    : null,
+            Class: "Unknown",
+            ClassDescription:
+                "journal writes average 7 KB, below 256 KB, too small to tell a slow disk from a fast one",
+            DrainShareOfLastHour: profile.paced,
+            LikelyDraining: profile.paced > 0,
+            JournalWriteLatencyInMs: profile.now,
+            TypicalJournalWriteLatencyInMs: profile.typical,
+            PeakJournalWriteLatencyInMs: profile.peak,
+            SlowestWrite:
+                profile.slowestSec == null
+                    ? null
+                    : {
+                          Key: "JournalWrite//ravendb/data/Databases/CarDealership/Journals/0000000000000000294.journal",
+                          Type: "JournalWrite",
+                          Path: "/ravendb/data/Databases/CarDealership/Journals/0000000000000000294.journal",
+                          DataWrittenInMb: 4 / 1024,
+                          DurationInSec: profile.slowestSec,
+                          SpeedInMbPerSec: 4 / 1024 / profile.slowestSec,
+                          Date: "2026-10-27T10:47:04Z",
+                      },
+            JournalWriteSizeInBytes: 7 * 1024,
+            SyncCostInMs: profile.sync,
+            IsBottleneck: profile.status === "Saturated",
+        };
+
+        const databases: StorageIoDatabaseAnalysis[] = ["CarDealership", "CarDealership-Core"].map((database, i) => ({
+            Database: database,
+            CompressionAlgorithms: nodeTag === "C" ? ["Lz4"] : ["Lz4", "Zstd"],
+            JournalWrites: 2000 + i * 400,
+            JournalWriteAverageInMs: profile.journal[i],
+            PipelinedShare: 0.12 + i * 0.05,
+            Syncs: 150 + i * 150,
+            SyncAverageInMs: profile.syncs[i],
+            SyncMaxInMs: profile.syncMax[i],
+            MandatorySyncShare: 0,
+            DrainSyncShare: profile.paced2[i],
+        }));
+
+        const sharedJournals: SharedJournalsIoInfo[] = [
+            ["CarDealership", 23],
+            ["CarDealership-Core", 41],
+        ].map(
+            ([database, sharing]): SharedJournalsIoInfo => ({
+                Database: database as string,
+                Files: [],
+                IndexesSharing: sharing as number,
+                IndexesNotSharing: [],
+                MergedCommitsQueue: nodeTag === "A" ? 1 : 0,
+                CommitToDurableInMs: nodeTag === "B" ? 0 : 2.2,
+                RetainedBy: null,
+                LinksOfUnknownSource: 0,
+            })
+        );
+
+        return {
+            FromStorageIoEndpoint: true,
+            WriteMode: { Effective: "IoRing", Configured: "Auto", IoRingQueueSize: 1024, LowPriorityIo: false },
+            Devices: [device],
+            Databases: databases,
+            SharedJournals: sharedJournals,
+        };
     }
 }

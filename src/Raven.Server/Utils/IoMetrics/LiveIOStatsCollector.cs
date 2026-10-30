@@ -201,16 +201,7 @@ namespace Raven.Server.Utils.IoMetrics
 
                 foreach (var item in listOfMeterItems)
                 {
-                    var preparedRecentStats = new IOMetricsRecentStats
-                    {
-                        Start = item.Start.GetDefaultRavenFormat(true),
-                        Size = item.Size,
-                        HumaneSize = Sizes.Humane(item.Size),
-                        FileSize = item.FileSize,
-                        HumaneFileSize = Sizes.Humane(item.FileSize),
-                        Duration = Math.Round(item.Duration.TotalMilliseconds, 2),
-                        Type = item.Type
-                    };
+                    var preparedRecentStats = IoMetricsUtil.GetIoMetricsRecentStats(item);
 
                     responseHasContent = true;
                     preparedFilesInfo.Recent.Add(preparedRecentStats);

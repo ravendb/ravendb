@@ -17,6 +17,8 @@ public class ServerAnalysisInfo
     public MemoryAnalysisInfo MemoryInfo { get; set; }
     
     public ThreadsAnalysisInfo ThreadsInfo { get; set; }
+
+    public StorageIoAnalysisInfo StorageIo { get; set; }
     
     public string ServerUrl { get; set; }
     public string PublicServerUrl { get; set; }

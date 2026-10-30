@@ -30,6 +30,9 @@ namespace Voron.Impl.Journal
 
         public bool IsHardLinked { get; init; }
 
+        // for a branch environment: the root (shared) journal this file is a hard link of; -1 when not a branch link, or recovered from disk
+        public long SourceJournalNumber { get; init; } = -1;
+
         public override string ToString()
         {
             return $"Number: {Number}";
@@ -117,7 +120,7 @@ namespace Voron.Impl.Journal
         /// <summary>
         /// Write a buffer of transactions (from lazy, usually) to the file
         /// </summary>
-        public long Write(long posBy4Kb, Span<Pal.journal_entry> entries, SafeJournalWriteContext context)
+        public long Write(long posBy4Kb, Span<Pal.journal_entry> entries, SafeJournalWriteContext context, bool pipelined = false, int batchOperations = 0)
         {
             Debug.Assert(DoneWriting is null || DoneWriting.IsRaised() == false, $"Journal {Number} was written after DoneWriting was raised.");
 
@@ -129,7 +132,7 @@ namespace Voron.Impl.Journal
                 Debug.Assert(readTxHeader->HeaderMarker == Constants.TransactionHeaderMarker);
             }
 
-            JournalWriter.Write(posBy4Kb, entries, totalNumberOf4Kbs, context);
+            JournalWriter.Write(posBy4Kb, entries, totalNumberOf4Kbs, context, pipelined, batchOperations);
             
             return totalNumberOf4Kbs;
         }

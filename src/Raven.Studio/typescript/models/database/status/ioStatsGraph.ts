@@ -11,6 +11,34 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 import moment = require("moment");
 import d3 = require("d3");
 import typeUtils = require("common/typeUtils");
+import accessManager = require("common/shell/accessManager");
+import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import getStorageIoCommand = require("commands/database/debug/getStorageIoCommand");
+import storageIoTerms = require("common/storageIoTerms");
+import appUrl = require("common/appUrl");
+
+type StorageEnvironmentType = Voron.StorageEnvironmentWithType.StorageEnvironmentType;
+
+type storageScope = {
+    // picks the environments of this page from /admin/debug/storage/io
+    environmentFilter: (env: Raven.Server.Storage.StorageEnvironmentIoInfo) => boolean;
+    // node shown by the graph, null for the node Studio is connected to
+    nodeTag: string;
+};
+
+type storageDeviceItem = {
+    name: string;
+    usedBy: string;
+    statusText: string;
+    statusCss: string;
+    statusHelp: string;
+    draining: boolean;
+    modeText: string;
+    modeHelp: string;
+    drainShareText: string;
+    classText: string;
+    classHelp: string;
+};
 
 type rTreeLeaf = {
     minX: number;
@@ -229,6 +257,9 @@ class ioStatsGraph {
 
     private static readonly indexesString = "Indexes";
 
+    private static readonly noCompressedWrites = "no compressed writes in view";
+    private static readonly drainSyncMarkerHeight = 4;
+
     private static readonly meterTypes: Array<Sparrow.Server.Meters.IoMetrics.MeterType> = [ "JournalWrite", "DataFlush", "DataSync", "Compression" ];
 
     /* private observables */
@@ -254,6 +285,19 @@ class ioStatsGraph {
     private legends = new Map<Sparrow.Server.Meters.IoMetrics.MeterType, KnockoutObservable<legend>>();
     private itemSizePositions = new Map<Sparrow.Server.Meters.IoMetrics.MeterType, KnockoutObservable<string>>();
     private itemHovered = new Map<Sparrow.Server.Meters.IoMetrics.MeterType, KnockoutObservable<boolean>>();
+
+    private readonly help = storageIoTerms.ioStatsHelp;
+    private readonly termHelp = storageIoTerms.storageTermHelp;
+    private journalCompression = ko.observable<string>(ioStatsGraph.noCompressedWrites);
+
+    // disk state from /admin/debug/storage/io, Operator only
+    private readonly storageScope: storageScope;
+    private canSeeStorageDevices: KnockoutComputed<boolean>;
+    private storageDevices = ko.observableArray<storageDeviceItem>([]);
+    private storageDevicesNote = ko.observable<string>();
+    private storageDevicesAsOf = ko.observable<string>();
+    private storageDevicesLoading = ko.observable<boolean>(false);
+    private readonly storageIoUrl = appUrl.forDebugAdvancedStorageIo();
 
     /* private */
 
@@ -301,7 +345,8 @@ class ioStatsGraph {
         trackNameFg: undefined as string,
         openedTrackArrow: undefined as string,
         closedTrackArrow: undefined as string,
-        text: undefined as string
+        text: undefined as string,
+        drainSync: undefined as string
     };
 
     private eventsColors: { [typeName in Sparrow.Server.Meters.IoMetrics.MeterType]: { low: string; high: string } } = {
@@ -323,13 +368,17 @@ class ioStatsGraph {
                 tracksOrder: string[],
                 supportsIndexes: boolean,
         liveClientProvider: (onData: (data: Raven.Server.Utils.IoMetrics.IOMetricsResponse) => void,
-                                     dateCutOff?: Date) => liveIOStatsWebSocketClient) {
-        
+                                     dateCutOff?: Date) => liveIOStatsWebSocketClient,
+                storageScope: storageScope) {
+
         this.statsNameProvider = statsNameProvider;
         this.tracksOrder = tracksOrder;
         this.supportsIndexes = supportsIndexes;
         this.liveViewClientProvider = liveClientProvider;
-        _.bindAll(this, "clearGraphWithConfirm");
+        this.storageScope = storageScope;
+        _.bindAll(this, "clearGraphWithConfirm", "refreshStorageDevices");
+
+        this.canSeeStorageDevices = accessManager.default.isOperatorOrAbove;
 
         this.searchText.throttle(700).subscribe(() => this.filterTracks());
 
@@ -388,6 +437,7 @@ class ioStatsGraph {
             () => this.hideTooltip());
 
         this.enableLiveView();
+        this.refreshStorageDevices();
     }
 
     private initLegendImages() {
@@ -406,6 +456,9 @@ class ioStatsGraph {
         // Init max size (for legend scale)
         this.legends.forEach(x => legendsCache.set(x().type, 0));
 
+        let hasCompression = false;
+        const latestAlgorithmPerType = new Map<StorageEnvironmentType, { at: number; algorithm: string }>();
+
         this.data.Environments.forEach(env => {
 
             if (env.Type === "Index") {
@@ -413,12 +466,24 @@ class ioStatsGraph {
             }
 
             env.Files.forEach(file => {
-                file.Recent.forEach(recentItem => {
+                file.Recent.forEach((recentItem: IOMetricsRecentStatsWithCache) => {
 
                     // Calc highest batch size for each type
                     const itemValue = ioStatsGraph.extractItemValue(recentItem);
                     const currentLegendMax = legendsCache.get(recentItem.Type);
                     legendsCache.set(recentItem.Type, itemValue > currentLegendMax ? itemValue : currentLegendMax);
+
+                    if (recentItem.Type === "Compression") {
+                        hasCompression = true;
+                        // missing in files from older versions
+                        if (recentItem.Algorithm != null) {
+                            const at = recentItem.StartedAsDate ? recentItem.StartedAsDate.getTime() : 0;
+                            const latest = latestAlgorithmPerType.get(env.Type);
+                            if (!latest || at >= latest.at) {
+                                latestAlgorithmPerType.set(env.Type, { at, algorithm: recentItem.Algorithm });
+                            }
+                        }
+                    }
 
                     this.hasAnyData(true);
                 });
@@ -428,6 +493,43 @@ class ioStatsGraph {
         this.legends.forEach(legend => {
             legend().maxSize(Math.max(1, legendsCache.get(legend().type)));
         });
+
+        this.journalCompression(ioStatsGraph.describeJournalCompression(hasCompression, latestAlgorithmPerType));
+    }
+
+    private static describeJournalCompression(hasCompression: boolean,
+                                              latestAlgorithmPerType: Map<StorageEnvironmentType, { at: number; algorithm: string }>): string {
+        if (!hasCompression) {
+            return ioStatsGraph.noCompressedWrites;
+        }
+
+        if (latestAlgorithmPerType.size === 0) {
+            return "not recorded (data from an older version)";
+        }
+
+        const typesPerAlgorithm: Record<string, string[]> = {};
+        latestAlgorithmPerType.forEach((latest, type) =>
+            (typesPerAlgorithm[ioStatsGraph.formatCompressionAlgorithm(latest.algorithm)] ??= []).push(ioStatsGraph.storageTypeName(type)));
+
+        const algorithms = Object.keys(typesPerAlgorithm);
+        return algorithms.length === 1
+            ? algorithms[0]
+            : algorithms.map(a => `${a} (${typesPerAlgorithm[a].join(", ")})`).join(", ");
+    }
+
+    private static formatCompressionAlgorithm(algorithm: string): string {
+        return storageIoTerms.journalCompressionLabel[algorithm as Voron.JournalCompressionAlgorithm] ?? algorithm;
+    }
+
+    private static storageTypeName(type: StorageEnvironmentType): string {
+        switch (type) {
+            case "Index":
+                return "Indexes";
+            case "SharedJournals":
+                return "Shared journals";
+            default:
+                return type;
+        }
     }
 
     private initCanvas() {
@@ -1085,6 +1187,7 @@ class ioStatsGraph {
                     const dx = originalDx < ioStatsGraph.minItemWidth ? ioStatsGraph.minItemWidth : originalDx;
                     context.fillStyle = this.calcItemColor(recentItem.Type, recentItem);
                     context.fillRect(x1, yStartItem, dx, ioStatsGraph.itemHeight);
+                    this.drawDrainSyncMarker(context, recentItem, x1, yStartItem, dx);
 
                     // Register track item for tooltip (but not for the 'closed' indexes track)
                     this.hitTest.registerTrackItem(x1 - 2, yStartItem, dx + 2, ioStatsGraph.itemHeight, recentItem);
@@ -1161,6 +1264,7 @@ class ioStatsGraph {
                 const dx = originalDx < ioStatsGraph.minItemWidth ? ioStatsGraph.minItemWidth : originalDx;
                 context.fillStyle = this.calcItemColor(recentItem.Type);
                 context.fillRect(x1, yStartItem, dx, ioStatsGraph.itemHeight);
+                this.drawDrainSyncMarker(context, recentItem, x1, yStartItem, dx);
 
                 // On the closed index track: 
                 // Register toggle, so that indexes details will open
@@ -1169,6 +1273,17 @@ class ioStatsGraph {
         }
 
         context.restore();
+    }
+
+    private drawDrainSyncMarker(context: CanvasRenderingContext2D, item: Raven.Server.Utils.IoMetrics.IOMetricsRecentStats,
+                                x: number, yStart: number, width: number) {
+        if (item.Type === "DataSync" && item.Drain) {
+            context.fillStyle = this.colors.drainSync;
+            context.fillRect(x, yStart, width, ioStatsGraph.drainSyncMarkerHeight);
+            // separator line, keeps the marker visible on the orange end of the sync colors
+            context.fillStyle = this.colors.trackBackground;
+            context.fillRect(x, yStart + ioStatsGraph.drainSyncMarkerHeight, width, 1);
+        }
     }
 
     /**
@@ -1413,6 +1528,84 @@ class ioStatsGraph {
         this.dateCutoff = null;
         this.isImport(false);
         this.clearGraph();
+        this.refreshStorageDevices();
+    }
+
+    refreshStorageDevices() {
+        // device level state is shared by every database on the disk, the endpoint is Operator only
+        if (!this.canSeeStorageDevices()) {
+            return;
+        }
+
+        const localNodeTag = clusterTopologyManager.default.localNodeTag();
+        const nodeTag = this.storageScope.nodeTag;
+        if (nodeTag && nodeTag !== localNodeTag) {
+            const connectedTo = localNodeTag ? ` (node ${localNodeTag})` : "";
+            this.setStorageDevices(null, [], `Disk state: available only for the node this Studio is connected to${connectedTo}.`);
+            return;
+        }
+
+        this.storageDevicesLoading(true);
+
+        new getStorageIoCommand()
+            .execute()
+            .done(report => this.onStorageReport(report))
+            .fail(() => this.setStorageDevices(null, [], "Disk state: failed to load."))
+            .always(() => this.storageDevicesLoading(false));
+    }
+
+    private onStorageReport(report: Raven.Server.Storage.StorageIoReport) {
+        const environments = report.Environments.filter(x => this.storageScope.environmentFilter(x));
+        const deviceIds = new Set(environments.map(x => x.DeviceId).filter(x => x));
+        const devices = report.Devices.filter(x => deviceIds.has(x.DeviceId));
+
+        const items = devices.map(device => ioStatsGraph.toStorageDeviceItem(device,
+            devices.length > 1 ? environments.filter(x => x.DeviceId === device.DeviceId) : null));
+
+        let note: string = null;
+        if (!environments.length) {
+            note = "Disk state: no open storage on this node (the database may be idle or not hosted here).";
+        } else if (!devices.length) {
+            note = "Disk state: the disk could not be identified.";
+        }
+
+        this.setStorageDevices(moment().format("HH:mm:ss"), items, note);
+    }
+
+    private setStorageDevices(asOf: string, items: storageDeviceItem[], note: string) {
+        this.storageDevices(items);
+        this.storageDevicesNote(note);
+        this.storageDevicesAsOf(asOf);
+    }
+
+    private static toStorageDeviceItem(device: Raven.Server.Storage.StorageDeviceIoInfo,
+                                       environmentsOnDevice: Raven.Server.Storage.StorageEnvironmentIoInfo[]): storageDeviceItem {
+        const share = device.DrainShareOfLastHour ?? 0;
+
+        return {
+            name: device.MountPoint ?? device.PathOnDevice ?? device.DeviceId,
+            usedBy: environmentsOnDevice ? ioStatsGraph.describeEnvironments(environmentsOnDevice) : "",
+            statusText: storageIoTerms.storageStatusLabel[device.Status] ?? device.Status,
+            statusCss: "label-" + (storageIoTerms.storageStatusColor[device.Status] ?? "default"),
+            statusHelp: Array.from(new Set([device.StatusReason, storageIoTerms.storageStatusHelp[device.Status]].filter(x => x))).join("\n"),
+            draining: device.Draining,
+            modeText: device.Draining ? "Paced" : "Normal",
+            modeHelp: device.Draining ? storageIoTerms.storageTermHelp.drain : storageIoTerms.storageTermHelp.trickle,
+            drainShareText: share > 0 && share < 0.01 ? "< 1%" : Math.round(share * 100) + "%",
+            classText: device.Class,
+            classHelp: [device.ClassDescription, storageIoTerms.deviceClassHelp[device.Class]].filter(x => x).join("\n"),
+        };
+    }
+
+    private static describeEnvironments(environments: Raven.Server.Storage.StorageEnvironmentIoInfo[]): string {
+        const countPerType = new Map<StorageEnvironmentType, number>();
+        environments.forEach(x => countPerType.set(x.Type, (countPerType.get(x.Type) ?? 0) + 1));
+
+        return Array.from(countPerType.entries())
+            .map(([type, count]) => type === "Index"
+                ? `${count} ${count === 1 ? "index" : "indexes"}`
+                : ioStatsGraph.storageTypeName(type))
+            .join(", ");
     }
 
     private resetGraphData() {
@@ -1421,6 +1614,7 @@ class ioStatsGraph {
         this.hasAnyData(false);
         this.allIndexesAreFiltered(false);
         this.bufferUsage("0.0");
+        this.journalCompression(ioStatsGraph.noCompressedWrites);
         this.setZoomAndBrush([0, this.totalWidth], brush => brush.clear());
     }
 
@@ -1559,8 +1753,57 @@ class ioStatsGraph {
                 tooltipHtml += `<div class="tooltip-li">Compression speed: <span class="value">${compressionSpeed}</span></div>`;
             }
 
+            tooltipHtml += ioStatsGraph.adaptiveIoTooltip(element);
+
             this.handleTooltip(element, x, y, tooltipHtml);
         }
+    }
+
+    // adaptive I/O decisions, missing in files from older versions
+    private static adaptiveIoTooltip(element: Raven.Server.Utils.IoMetrics.IOMetricsRecentStats): string {
+        // values can come from an imported file, escape them
+        const escape = (value: unknown) => generalUtils.escapeHtml(String(value));
+        const line = (label: string, value: string) => `<div class="tooltip-li">${label}: <span class="value">${escape(value)}</span></div>`;
+        const yesNo = (value: boolean) => (value ? "yes" : "no");
+        const formatMs = (value: number) => generalUtils.formatMillis(Number(value));
+
+        let html = "";
+
+        switch (element.Type) {
+            case "Compression":
+                if (element.Algorithm != null) {
+                    html += line("Algorithm", ioStatsGraph.formatCompressionAlgorithm(element.Algorithm));
+                }
+                break;
+            case "JournalWrite":
+                if (element.Pipelined != null) {
+                    html += line("Pipelined", yesNo(element.Pipelined));
+                }
+                if (element.BatchOperations > 0) {
+                    html += line("Merged operations", Number(element.BatchOperations).toLocaleString());
+                }
+                break;
+            case "DataSync":
+                if (element.SyncReason != null && element.SyncReason !== "None") {
+                    html += line("Reason", storageIoTerms.syncReasonLabel[element.SyncReason] ?? element.SyncReason);
+                    const help = storageIoTerms.syncReasonHelp[element.SyncReason];
+                    if (help) {
+                        html += `<div class="tooltip-li tooltip-help">${escape(help)}</div>`;
+                    }
+                }
+                if (element.Drain != null) {
+                    html += line("Paced", yesNo(element.Drain));
+                    if (element.Drain && element.WritebackSize != null) {
+                        const size = generalUtils.formatBytesToSize(Number(element.WritebackSize));
+                        const ranges = Number(element.WritebackRanges ?? 0).toLocaleString();
+                        const fsync = Number(element.Duration) - Number(element.WritebackDuration);
+                        html += line("Time", `${formatMs(element.WritebackDuration)} writing ${size} in blocks (${ranges} ranges), then ${formatMs(fsync)} fsync`);
+                    }
+                }
+                break;
+        }
+
+        return html;
     }
 
     private handleTooltip(element: Raven.Server.Utils.IoMetrics.IOMetricsRecentStats | timeGapInfo, x: number, y: number, tooltipHtml: string) {

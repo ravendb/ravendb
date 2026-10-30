@@ -1485,11 +1485,11 @@ namespace Voron.Impl.Journal
             /// Push data to the drive, in a paced manner, so if we have 1GB to write, we won't push that all at once. 
             /// We send it in blocks, and that avoids saturating the I/O channels, so journal writes aren't "stuck in a traffic jam".
             /// </summary>
-            private void WritebackDirtyRanges()
+            private Pal.WritebackStats WritebackDirtyRanges()
             {
                 var options = _waj._env.Options;
                 if (_writebackNotSupported)
-                    return;
+                    return default;
 
                 var dataPager = _waj._env.DataPager;
                 var dataPagerState = _waj._env.CurrentStateRecord.DataPagerState;
@@ -1502,7 +1502,7 @@ namespace Voron.Impl.Journal
                 if (rc == PalFlags.FailCodes.FailWritebackNotSupported)
                 {
                     _writebackNotSupported = true;
-                    return;
+                    return default;
                 }
 
                 if (rc != PalFlags.FailCodes.Success)
@@ -1516,6 +1516,8 @@ namespace Voron.Impl.Journal
                         $"{stats.BytesSkipped / Constants.Size.Kilobyte:#,#0} kb in sparse runs left to the kernel, " +
                         $"{stats.SetBitsRemaining:#,#0} dirty pages remain) for {dataPager.FileName}");
                 }
+
+                return stats;
             }
 
             /// <summary>
@@ -1640,7 +1642,7 @@ namespace Voron.Impl.Journal
             // 2) Take a snapshot of the current status of this env flushing status
             // 3) Release the lock & sync the file (take a long time)
             // 4) Re-take the lock, update the sync status in the header with the values we snapshotted
-            public sealed class SyncOperation(WriteAheadJournal.JournalApplicator parent) : IDisposable
+            public sealed class SyncOperation(WriteAheadJournal.JournalApplicator parent, IoMetrics.SyncReason reason = IoMetrics.SyncReason.Explicit) : IDisposable
             {
                 bool _fsyncLockTaken;
                 private LastFlushState _lastFlushed;
@@ -1743,6 +1745,7 @@ namespace Voron.Impl.Journal
                 private void CallPagerSync()
                 {
                     // We do the sync _outside_ of the lock, letting the rest of the stuff proceed
+                    DateTime startedAt = DateTime.UtcNow;
                     var sp = Stopwatch.StartNew();
                     var dataPager = parent._waj._env.DataPager;
                     var currentStateRecord = parent._waj._env.CurrentStateRecord;
@@ -1752,16 +1755,28 @@ namespace Voron.Impl.Journal
 
                     // In trickle mode, we already initiated the writeback, so we don't need to do it again here.
                     // In drain mode, we drain first to avoid big I/O hitting all at once, causing congestion.
-                    if (gate?.ShouldDrain() == true)
-                        parent.WritebackDirtyRanges();
+                    bool drain = gate?.ShouldDrain() == true;
+                    Pal.WritebackStats writebackStats = drain ? parent.WritebackDirtyRanges() : default;
+                    TimeSpan writeback = drain ? sp.Elapsed : TimeSpan.Zero;
 
                     // The coming sync will cover all the dirty pages, no need for trickling to the disk
                     var resetRc = Pal.rvn_pager_reset_dirty_tracking(dataPagerState.Handle, out var resetPages, out var resetError);
                     if (resetRc != PalFlags.FailCodes.Success)
                         PalHelper.ThrowLastError(resetRc, resetError, $"Failed to reset dirty tracking of {dataPager.FileName}");
 
-                    dataPager.Sync(dataPagerState, Interlocked.Read(ref parent._totalWrittenButUnsyncedBytes));
+                    dataPager.Sync(dataPagerState, Interlocked.Read(ref parent._totalWrittenButUnsyncedBytes), startedAt,
+                        new IoMetrics.SyncDetails(reason, drain, writebackStats.BytesWritten, writebackStats.RangesWritten, writeback));
                     gate?.RecordSyncCost(sp.Elapsed.Ticks);
+                    parent._waj._env.WriteFlow.RecordSync(new WriteFlowPolicy.SyncInfo(reason, _currentTotalWrittenBytes, sp.Elapsed, writeback, drain, DateTime.UtcNow));
+
+                    // past the mandatory cap the sync runs whatever the device state; each such line needs that much written since the last sync, so no rate limit
+                    if (_currentTotalWrittenBytes > options.MaxUnsyncedBytesBeforeMandatorySync && parent._waj._logger.IsInfoEnabled)
+                    {
+                        parent._waj._logger.Info(
+                            $"Mandatory sync of {dataPager.FileName}: {new Size(_currentTotalWrittenBytes, SizeUnit.Bytes)} were written but not synced " +
+                            $"(limit {new Size(options.MaxUnsyncedBytesBeforeMandatorySync, SizeUnit.Bytes)}), the sync took {sp.Elapsed.TotalMilliseconds:#,#0} ms" +
+                            (drain ? $" of which {writeback.TotalMilliseconds:#,#0} ms was the paced writeback of {new Size(writebackStats.BytesWritten, SizeUnit.Bytes)} (the device is congested)." : "."));
+                    }
                     if (parent._waj._logger.IsDebugEnabled)
                     {
                         var sizeInKb = (dataPagerState.NumberOfAllocatedPages * Constants.Storage.PageSize) / Constants.Size.Kilobyte;
@@ -2441,6 +2456,7 @@ namespace Voron.Impl.Journal
                 long numberOfUncompressedPages = 0;
                 long numberOf4Kbs = 0;
                 TaskCompletionSource branchCommit = tx.PreparedDurableCommit;
+                long branchSubmittedAt = 0;
                 try
                 {
                     var rootJournal = _env.Options.RootJournal ?? this;
@@ -2460,6 +2476,7 @@ namespace Voron.Impl.Journal
                         if (this != rootJournal)
                         {
                             rootJournal.SharedJournalState.Enqueue(journalStateRecord);
+                            branchSubmittedAt = Stopwatch.GetTimestamp();
                         }
                         
                         _numberOfUsedCompressionBufferPagesSinceZeroing = Math.Max(_numberOfUsedCompressionBufferPagesSinceZeroing, numberOfUsedCompressionBufferPages);
@@ -2480,6 +2497,7 @@ namespace Voron.Impl.Journal
                     {
                         Debug.Assert(tx.ShouldWriteTransactionChangesToJournal, "ShouldWriteTransactionChangesToJournal must be true for branch commit");
                         rootJournal.SubmitBranchJournalEntry(branchCommit?.Task);
+                        rootJournal._branchCommitToDurableTicks.Update(Stopwatch.GetElapsedTime(branchSubmittedAt).Ticks);
                     }
 
                     if (_env.Options.Encryption.IsEnabled && _env.Options.Encryption.HasExternalJournalCompressionBufferHandlerRegistration == false)
@@ -2507,6 +2525,12 @@ namespace Voron.Impl.Journal
         }
 
         public IJournalMerger BranchJournalMerger;
+
+        // root only: from a branch handing its entry to the shared journal until the root made it durable.
+        // Several branches update it concurrently, a lost sample is fine for an average.
+        private SimpleEwma<long> _branchCommitToDurableTicks = new(smoothing: 16);
+
+        public TimeSpan BranchCommitToDurable => TimeSpan.FromTicks(_branchCommitToDurableTicks.Current);
 
         /// <summary>
         /// Called when a branch environment cannot be hard-linked because the file system
@@ -2732,9 +2756,9 @@ namespace Voron.Impl.Journal
             tx._forTestingPurposes?.ActionToCallJustBeforeWritingToJournal?.Invoke();
 
             if (tx.IsAsyncCommit && _env.WriteFlow.CanPipeline(totalNumberOf4Kbs))
-                _writePipeline.SubmitPipelined(CurrentFile, writePosIn4Kbs, entries, totalNumberOf4Kbs, _transactionsForCurrentWrite);
+                _writePipeline.SubmitPipelined(CurrentFile, writePosIn4Kbs, entries, totalNumberOf4Kbs, _transactionsForCurrentWrite, tx.BatchOperations);
             else
-                _writePipeline.WriteInline(CurrentFile, writePosIn4Kbs, entries, totalNumberOf4Kbs, _transactionsForCurrentWrite);
+                _writePipeline.WriteInline(CurrentFile, writePosIn4Kbs, entries, totalNumberOf4Kbs, _transactionsForCurrentWrite, tx.BatchOperations);
 
             var elapsed = Stopwatch.GetElapsedTime(start);
 
@@ -2810,7 +2834,8 @@ namespace Voron.Impl.Journal
                 var journal = new JournalFile(journalWriter, index, FrozenSet<Guid>.Empty)
                 {
                     IsHardLinked = isHardLinked,
-                    Incarnation = journalFile.Incarnation
+                    Incarnation = journalFile.Incarnation,
+                    SourceJournalNumber = journalFile.Number
                 };
                 journal.NewlyCreatedFile = true;
                 journal.DoneWriting = journalFile.DoneWriting;
@@ -3040,7 +3065,8 @@ namespace Voron.Impl.Journal
                         ? ZstdLib.CompressWithLevel(txPageInfoPtr, totalSizeWritten, compressionBuffer, outputBufferSize, level: 1)
                         : LZ4.Encode64LongBuffer(txPageInfoPtr, compressionBuffer, totalSizeWritten, outputBufferSize, compressionAcceleration);
 
-                    metrics.SetCompressionResults(totalSizeWritten, compressedLen, compressionAcceleration);
+                    metrics.SetCompressionResults(totalSizeWritten, compressedLen, compressionAcceleration,
+                        compressionAlgorithm == JournalCompressionAlgorithm.Zstd ? nameof(JournalCompressionAlgorithm.Zstd) : nameof(JournalCompressionAlgorithm.Lz4));
                 }
 
                 if (compressedLen >= totalSizeWritten)

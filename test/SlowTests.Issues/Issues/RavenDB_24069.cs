@@ -8,6 +8,8 @@ using FastTests;
 using FastTests.Voron.SharedJournal;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.Storage;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -84,6 +86,18 @@ public class RavenDB_24069 : RavenTestBase
                     Assert.Equal(1, results.Count);
                 }
             }
+
+            // the fallback is an alert for the users of the database, and shows in the storage I/O report
+            foreach (var fellBack in new[] { "Users/ByName_0", "Users/ByName_1" })
+                Assert.True(await WaitForValueAsync(() => database.NotificationCenter.Exists(AlertRaised.GetKey(AlertReason.Indexing_SharedJournalsFallback, fellBack)), true));
+
+            var sharedJournals = StorageIoReport.Create(Server.ServerStore.StorageDeviceMonitor).SharedJournals.Single(x => x.Database == store.Database);
+            Assert.Equal(2, sharedJournals.IndexesSharing);
+            Assert.Equal(["Users/ByName_0", "Users/ByName_1"], sharedJournals.IndexesNotSharing
+                .Where(x => x.Reason == IndexNotSharingReason.HardLinkLimit && x.Since != null)
+                .Select(x => x.Index)
+                .OrderBy(x => x));
+            Assert.NotEmpty(sharedJournals.Files);
         }
     }
 

@@ -5,6 +5,7 @@ using System.Runtime.ExceptionServices;
 using System.Threading;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
+using Sparrow.Server.Meters;
 using Sparrow.Utils;
 using Voron.Impl.Journal;
 using Voron.Logging;
@@ -35,6 +36,7 @@ namespace Voron
             public int IsSyncRun;
             public StorageEnvironment.IndirectReference Reference;
             public bool IsRequired;
+            public IoMetrics.SyncReason Reason;
         }
 
         private readonly ManualResetEventSlim _flushWriterEvent = new ManualResetEventSlim();
@@ -126,13 +128,18 @@ namespace Voron
                 if (env.IsDisposing || env.Disposed)
                     continue;
 
-                if (force == false && envSyncReq.Value.IsRequired == false && env.WriteFlow.ShouldSyncNow(env) == false)
+                IoMetrics.SyncReason reason = envSyncReq.Value.IsRequired ? IoMetrics.SyncReason.Explicit
+                    : force ? IoMetrics.SyncReason.Idle
+                    : env.WriteFlow.GetSyncReason(env);
+
+                if (reason == IoMetrics.SyncReason.None)
                     continue;
 
                 var isSyncRun = Interlocked.CompareExchange(ref envSyncReq.Value.IsSyncRun, 1, 0);
                 if (isSyncRun != 0)
                     continue;
 
+                envSyncReq.Value.Reason = reason;
 
                 _storageEnvironments.Enqueue(envSyncReq.Value);
             }
@@ -162,7 +169,7 @@ namespace Voron
 
             try
             {
-                using (var operation = new WriteAheadJournal.JournalApplicator.SyncOperation(storageEnvironment.Journal.Applicator))
+                using (var operation = new WriteAheadJournal.JournalApplicator.SyncOperation(storageEnvironment.Journal.Applicator, req.Reason))
                 {
                     operation.SyncDataFile();
                 }
@@ -210,6 +217,7 @@ namespace Voron
 
                 if (envToFlush.WriteFlow.ShouldFlusherYieldToJournal(envToFlush.Journal.IsJournalWriteActive, numberOfNewPagesSinceLastFlush))
                 {
+                    envToFlush.WriteFlow.RecordFlusherYield();
                     _maybeNeedToFlush.Enqueue(req);
                     continue;
                 }

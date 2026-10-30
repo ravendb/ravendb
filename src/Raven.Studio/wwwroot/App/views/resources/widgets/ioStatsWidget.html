@@ -12,6 +12,24 @@
                           attr: { title: fullscreen() ? 'Minimize widget' : 'Maximize widget' }"></i>
         </button>
     </div>
+    <div class="property-container property-collapse" data-bind="visible: showStorageStatus">
+        <h4>Disk load</h4>
+        <div class="property">
+            <div class="flex-horizontal">
+                <div class="nodes-container" data-bind="foreach: nodeStats">
+                    <div data-bind="attr: { class: 'nodes-item node-' + tag } ">
+                        <div class="nodes-item-header" data-bind="css: { 'no-data': !currentItem(), 'spinner': spinner }">
+                            <div class="node-label" data-bind="text: tag"></div>
+                            <div class="node-value">
+                                <span class="js-storage-status" data-bind="visible: storageStatusText, text: storageStatusText, css: storageStatusClass"></span>
+                                <span data-bind="text: storageStatusNoData"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="property-container property-collapse" data-bind="visible: !splitIops()">
         <h4>IOPS</h4>
         <div class="property">

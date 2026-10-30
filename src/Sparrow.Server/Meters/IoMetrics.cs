@@ -14,6 +14,18 @@ namespace Sparrow.Server.Meters
             DataSync,
         }
 
+        public enum SyncReason
+        {
+            None,
+            Explicit,      // requested by the caller (index, admin endpoint, backup)
+            Idle,          // no flush for a while, sync whatever is pending
+            JournalCount,  // too many journals wait for the sync before they can be reused
+            SoftThreshold, // unsynced bytes past Storage.MaxUnsyncedSizeBeforeSyncInMb
+            Mandatory      // unsynced bytes past Storage.MaxUnsyncedSizeBeforeMandatorySyncInMb
+        }
+
+        public readonly record struct SyncDetails(SyncReason Reason, bool Drain, long WritebackSize, long WritebackRanges, TimeSpan WritebackDuration);
+
         private readonly ConcurrentDictionary<string, FileIoMetrics> _fileMetrics =
             new ConcurrentDictionary<string, FileIoMetrics>();
 
