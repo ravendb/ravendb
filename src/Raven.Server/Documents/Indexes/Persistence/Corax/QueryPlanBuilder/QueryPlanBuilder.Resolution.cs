@@ -37,6 +37,7 @@ internal static partial class QueryPlanBuilder
 
         if (metadata.CachedPlanMemo is { } memo
             && memo.PlanCacheGeneration == generation
+            && memo.HasBoost == planParams.HasBoost
             && memo.Bucket.TryGetTarget(out var warmBucket))
         {
             return Finalize(warmBucket);
@@ -45,14 +46,14 @@ internal static partial class QueryPlanBuilder
         var structuralKey = ComputeStructuralKey(planParams);
         if (planCache.GetBucket(structuralKey) is { } existing)
         {
-            metadata.CachedPlanMemo = new QueryMetadata.PlanMemo(generation, existing);
+            metadata.CachedPlanMemo = new QueryMetadata.PlanMemo(generation, planParams.HasBoost, existing);
             return Finalize(existing);
         }
 
         var template = ParseTemplate(planParams);
         template.SortMetadataTemplate = BuildSortMetadataTemplate(planParams);
         var bucket = planCache.GetOrAddBucket(structuralKey, template, planParams.CacheKey);
-        metadata.CachedPlanMemo = new QueryMetadata.PlanMemo(generation, bucket);
+        metadata.CachedPlanMemo = new QueryMetadata.PlanMemo(generation, planParams.HasBoost, bucket);
         return Finalize(bucket);
 
         PlanTemplate Finalize(PlanCache.PerQueryPlans b)

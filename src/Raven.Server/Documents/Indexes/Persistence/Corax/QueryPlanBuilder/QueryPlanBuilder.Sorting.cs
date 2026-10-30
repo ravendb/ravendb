@@ -266,6 +266,9 @@ internal static partial class QueryPlanBuilder
 
         if (template.ImplicitScore)
         {
+            if (builderParameters.AllowImplicitScoreOrdering == false)
+                return null;
+
             builderParameters.IndexReadOperation.AssertCanOrderByScoreAutomaticallyWhenBoostingOrVectorSearchIsInvolved(template.HasVectorSearch);
             return template.Prebuilt;
         }
