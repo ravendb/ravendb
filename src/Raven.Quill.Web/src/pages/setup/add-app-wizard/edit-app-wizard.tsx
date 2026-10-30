@@ -1,7 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
-import type { AppCdcConfigurationResponse, ApplianceAppResponse } from "@/api/generated/server-api";
+import type {
+    AppCdcConfigurationResponse,
+    ApplianceAppResponse,
+    MigrationPlanGetResponse,
+    WizardDraftResponse,
+} from "@/api/generated/server-api";
 import { api } from "@/api/api";
+import { isApiError } from "@/api/http-client";
 import { ApiState } from "@/components/data/api-state";
 import { FormFieldsSkeleton } from "@/components/data/loading-skeletons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/shadcn/ui/alert";
@@ -15,23 +21,51 @@ export function EditAppWizard() {
     // The dashboard row carries the name and source type, the CDC response the mapping and its source.
     const appQuery = useQuery(api.queries.stats.dashboardApp(slug));
     const configurationQuery = useQuery(api.queries.apps.cdcGet(slug));
+    // Not kept between visits: an apply or a manual save since then decides whether the plan still applies.
+    const draftQuery = useQuery({ ...api.queries.setup.draft(slug), gcTime: 0 });
+    const hasNoDraft = isApiError(draftQuery.error) && draftQuery.error.status === 404;
+    const shouldReadPlan = !!draftQuery.data?.hasPlan && !!draftQuery.data.appliedPlanVersions;
+    const planQuery = useQuery({ ...api.queries.setup.migrationPlan(slug), gcTime: 0, enabled: shouldReadPlan });
+    const isPlanSettled = hasNoDraft || (draftQuery.isSuccess && (!shouldReadPlan || planQuery.isSuccess));
 
     // The wizard fills the bare layout, so it must not sit inside a padded state container.
-    if (appQuery.data && configurationQuery.data) {
-        return <EditAppWizardForm app={appQuery.data} cdc={configurationQuery.data} />;
+    if (appQuery.data && configurationQuery.data && isPlanSettled) {
+        return (
+            <EditAppWizardForm
+                app={appQuery.data}
+                cdc={configurationQuery.data}
+                draft={draftQuery.data ?? null}
+                plan={planQuery.data ?? null}
+            />
+        );
     }
 
     return (
         <div className="p-8">
             <ApiState
-                isLoading={appQuery.isPending || configurationQuery.isPending}
-                isError={appQuery.isError || configurationQuery.isError}
+                isLoading={
+                    appQuery.isPending ||
+                    configurationQuery.isPending ||
+                    draftQuery.isPending ||
+                    (shouldReadPlan && planQuery.isPending)
+                }
+                isError={
+                    appQuery.isError ||
+                    configurationQuery.isError ||
+                    (draftQuery.isError && !hasNoDraft) ||
+                    planQuery.isError
+                }
                 errorTitle="Could not load the app configuration"
                 loadingLabel="Loading the app configuration..."
                 skeleton={<FormFieldsSkeleton count={4} />}
                 onRetry={() => {
                     void appQuery.refetch();
                     void configurationQuery.refetch();
+                    void draftQuery.refetch();
+
+                    if (shouldReadPlan) {
+                        void planQuery.refetch();
+                    }
                 }}
             >
                 {null}
@@ -40,9 +74,19 @@ export function EditAppWizard() {
     );
 }
 
-// Mounted only once both responses are in, so the wizard seeds itself exactly once.
-function EditAppWizardForm({ app, cdc }: { app: ApplianceAppResponse; cdc: AppCdcConfigurationResponse }) {
-    const seed = buildEditAppSeed(app, cdc);
+// Mounted only once every response is in, so the wizard seeds itself exactly once.
+function EditAppWizardForm({
+    app,
+    cdc,
+    draft,
+    plan,
+}: {
+    app: ApplianceAppResponse;
+    cdc: AppCdcConfigurationResponse;
+    draft: WizardDraftResponse | null;
+    plan: MigrationPlanGetResponse | null;
+}) {
+    const seed = buildEditAppSeed(app, cdc, draft, plan);
 
     if ("error" in seed) {
         return (

@@ -275,6 +275,7 @@ public class MigrationServiceTests(ITestOutputHelper output) : RavenTestBase(out
 
         var state = await MigrationSamples.LoadStateAsync(store, Slug);
         Assert.Equal("Orders", Assert.Single(state!.LastMapConfiguration!.Tables).CollectionName);
+        Assert.Equal(new Dictionary<string, int> { ["Orders"] = 1 }, state.AppliedPlanVersions);
     }
 
     [RavenFact(RavenTestCategory.Quill)]

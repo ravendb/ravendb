@@ -25,8 +25,19 @@ import type {
     SelectedTables,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 
+export type PlannerSessionInput = {
+    slug: string;
+    connectKey: string;
+    selectedTables: SelectedTables;
+    defaultSchema: string;
+};
+
+/** A session the server already holds the plan of, opened again as it stands. */
+export type RestoredPlannerSession = { session: PlannerSessionInput; plan: MigrationPlanGetResponse };
+
 export type PlannerActions = {
-    openPlannerSession: (session: { slug: string; selectedTables: SelectedTables; defaultSchema: string }) => void;
+    openPlannerSession: (session: PlannerSessionInput) => void;
+    restorePlannerSession: (restored: RestoredPlannerSession) => void;
     beginPlannerTurn: (turn: {
         chatId: PlannerChatId;
         userTurn: PlannerPromptTurn | PlannerAnswersTurn | null;
@@ -84,8 +95,18 @@ export const createPlannerSlice: StateCreator<SetupWizardState, [], [], PlannerA
     };
 
     return {
-        openPlannerSession: ({ slug, selectedTables, defaultSchema }) =>
-            set({ plannerSlug: slug, plannerSelectedTables: selectedTables, plannerDefaultSchema: defaultSchema }),
+        openPlannerSession: ({ slug, connectKey, selectedTables, defaultSchema }) =>
+            set({
+                plannerSlug: slug,
+                plannerConnectKey: connectKey,
+                plannerSelectedTables: selectedTables,
+                plannerDefaultSchema: defaultSchema,
+            }),
+
+        restorePlannerSession: ({ session, plan }) => {
+            get().openPlannerSession(session);
+            get().receivePlannerPlan(plan);
+        },
 
         beginPlannerTurn: ({ chatId, userTurn, controller, isOpening }) => {
             // The chat's previous turn is finished, but its stream may still be closing; nothing it sends now counts.

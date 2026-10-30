@@ -253,6 +253,9 @@ public sealed class MigrationService(
 
         state.LastMapConfiguration = configuration;
         state.LastMapAt = DateTime.UtcNow;
+        state.AppliedPlanVersions = plan.Plan.Entries
+            .Where(pair => pair.Value.Status == PlanEntryStatus.Registered)
+            .ToDictionary(pair => pair.Key, pair => pair.Value.Version);
         await session.SaveChangesAsync(token);
 
         return (new MigrationApplyResponse(configuration, unmapped, []), null);

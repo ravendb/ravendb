@@ -8,6 +8,7 @@ import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-sto
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { DEFAULT_PROVIDER, resolveConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
 import { resolveDefaultSchema } from "@/pages/setup/add-app-wizard/discover-utils";
+import { computeConnectKey } from "@/pages/setup/add-app-wizard/steps/connect/use-connect-source-step";
 import {
     buildPlanChanges,
     getSavedView,
@@ -69,6 +70,7 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
 
         getStore().openPlannerSession({
             slug: connection.slug,
+            connectKey: computeConnectKey(connection),
             selectedTables: getSelectedTables(),
             defaultSchema: resolveDefaultSchema(provider, resolveConnectionString(connection)),
         });

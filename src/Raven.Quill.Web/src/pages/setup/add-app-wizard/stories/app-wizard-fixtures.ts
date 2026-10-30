@@ -61,7 +61,7 @@ export function replayPlannerTurns(
 ) {
     const store = useSetupWizardStore.getState();
 
-    store.openPlannerSession({ slug, selectedTables, defaultSchema });
+    store.openPlannerSession({ slug, connectKey: slug, selectedTables, defaultSchema });
 
     for (const turn of turns) {
         const chatId = turn.area ?? null;

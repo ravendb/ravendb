@@ -122,6 +122,8 @@ internal static class QuillRoutes
     // wizard (config-DB scoped)
     public const string SetupConnect = "/api/setup/connect";
     public const string SetupDiscover = "/api/setup/discover";
+    public const string SetupDraft = "/api/setup/draft";
+    public const string SetupDraftSave = "/api/setup/draft/save";
     public const string SetupMap = "/api/setup/map";
     public const string SetupVerifyCdc = "/api/setup/verify-cdc";
     public const string SetupProvision = "/api/setup/provision";

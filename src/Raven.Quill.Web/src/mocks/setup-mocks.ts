@@ -5,6 +5,7 @@ import type {
     ProvisionResponse,
     TestMappingResponse,
     VerifyCdcResponse,
+    WizardDraftResponse,
 } from "@/api/generated/server-api";
 import { apiHttp } from "./api-http";
 
@@ -13,6 +14,14 @@ export const setupMocks = {
         apiHttp.post("/api/setup/connect", ({ response }) => response(200).json(result)),
     discover: (discovery: DiscoverResponse = sampleDiscovery) =>
         apiHttp.post("/api/setup/discover", ({ response }) => response(200).json(discovery)),
+    draft: (draft: WizardDraftResponse) =>
+        apiHttp.post("/api/setup/draft", ({ response }) => response(200).json(draft)),
+    /** Nothing is stored for the slug. */
+    draftMissing: () =>
+        apiHttp.post("/api/setup/draft", ({ response }) =>
+            response(404).json({ error: "no wizard draft found", errors: null, code: null }),
+        ),
+    draftSave: () => apiHttp.post("/api/setup/draft/save", ({ response }) => response(204).empty()),
     verifyCdc: (result: VerifyCdcResponse = sampleCdcVerification) =>
         apiHttp.post("/api/setup/verify-cdc", ({ response }) => response(200).json(result)),
     map: (configuration: CdcSinkConfiguration = sampleCdcConfiguration) =>
