@@ -102,7 +102,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(TableName, DocumentIdColumn?.ToLowerInvariant());
+            return HashCode.Combine(TableName, DocumentIdColumn == null ? 0 : StringComparer.OrdinalIgnoreCase.GetHashCode(DocumentIdColumn));
         }
 
         public DynamicJsonValue ToJson()
