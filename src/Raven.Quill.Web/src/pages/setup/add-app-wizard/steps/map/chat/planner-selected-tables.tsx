@@ -47,6 +47,7 @@ export function PlannerSelectedTables({
                             </Text>
                         </>
                     )}
+                    {schemas.size > 1 && ` in ${formatCount(schemas.size, "schema")}`}
                 </Text>
                 <Button variant="link" className="h-auto p-0" onClick={onChangeSelection}>
                     Change selection

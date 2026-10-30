@@ -9,3 +9,7 @@ export const MAP_SOURCE_OPTIONS: MapSourceOption[] = [
     { value: "manual", label: "Manual" },
     { value: "import", label: "Imported" },
 ];
+
+export function isEditorMapping(origin: MapOrigin | null): boolean {
+    return origin?.source === "manual" || origin?.source === "import";
+}

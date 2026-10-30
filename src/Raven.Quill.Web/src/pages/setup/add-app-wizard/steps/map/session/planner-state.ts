@@ -1,133 +1,182 @@
+import type { NamingConventions, ValidationIssue } from "@/api/generated/server-api";
 import type {
-    PlannerCollection,
+    PlannerChat,
+    PlannerChatId,
+    PlannerEdit,
+    PlannerEntry,
     PlannerProposal,
     PlannerQuestion,
     PlannerReplyTurn,
     PlannerTurn,
-    RegisteredCollection,
+    PlannerView,
     SelectedTables,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 
 /**
  * The planner session. It lives in the wizard store rather than in the step body because the wizard
- * remounts the body on every step change - holding the conversation in component state would mean
- * leaving the step and coming back could only start over, never resume.
+ * remounts the body on every step change, and because a turn keeps streaming after the operator leaves
+ * the step. The server owns the plan and frames move it forward; plan/get reads it where frames fall short.
  */
 export type PlannerState = {
-    plannerTurns: PlannerTurn[];
-    plannerConversationId: string | null;
+    plannerSlug: string | null;
     plannerProposal: PlannerProposal | null;
-    plannerCollections: Record<string, PlannerCollection>;
-    plannerRegistrationCount: number;
-    /** Collections taken out of the plan since the proposal, which still lists them. */
-    plannerRemovedCollections: string[];
+    plannerConventions: NamingConventions | null;
+    plannerEntries: Record<string, PlannerEntry>;
+    /** The errors of the failed attempt, per collection the agent is retrying. */
+    plannerRetrying: Record<string, string[]>;
+    /** Kept here because the stored plan does not keep the issue paths of a rejection. */
+    plannerRejectionIssues: Record<string, ValidationIssue[]>;
+    /** Areas this session started. The plan does not record it. */
+    plannerStartedAreas: string[];
+    plannerProposalChat: PlannerChat;
+    plannerAreaChats: Record<string, PlannerChat>;
     plannerSelectedTables: SelectedTables | null;
-    /** Aborts the stream of the turn in flight. Whether a turn is running is the turn's own status. */
-    plannerAbortController: AbortController | null;
-    /** What the operator is writing. Written while a turn runs, it waits for the planner to finish. */
-    plannerDraft: string;
-    plannerMentions: string[];
-    /** "auto" opens the plan when there is room for it beside the chat; the operator's choice wins. */
-    plannerPanel: "auto" | "open" | "closed";
-    plannerDetailsCollection: string | null;
-    /** Each collection's revision when the panel was last closed, so the Plan button can flag changes. */
-    plannerSeenRevisions: Record<string, string>;
+    /** Where a table without a schema is read from, as CDC Sink resolves it for the source's provider. */
+    plannerDefaultSchema: string | null;
+    plannerEdits: Record<string, PlannerEdit>;
+    /** Goes up on every Discard, so the mapping editors start over from the plan. */
+    plannerDiscardCount: number;
+    /** Per collection, each path relative to the collection's mapping. */
+    plannerSaveIssues: Record<string, ValidationIssue[]>;
+    plannerSaveWarnings: string[];
+    plannerIsSaving: boolean;
+    plannerView: PlannerView;
+    plannerIsChatOpen: boolean;
+    plannerExpandedAreas: string[];
+    plannerFilter: string;
 };
 
-export type PlannerPhase = "idle" | "opening" | "working" | "awaitingAnswers" | "ready" | "failed";
+export type PlannerChatPhase = "idle" | "working" | "awaitingAnswers" | "ready";
+
+export const EMPTY_CHAT: PlannerChat = { turns: [], abortController: null, draft: "", mentions: [] };
+
+export const PLAN_VIEW: PlannerView = { area: null, collection: null };
 
 export const initialPlannerState: PlannerState = {
-    plannerTurns: [],
-    plannerConversationId: null,
+    plannerSlug: null,
     plannerProposal: null,
-    plannerCollections: {},
-    plannerRegistrationCount: 0,
-    plannerRemovedCollections: [],
+    plannerConventions: null,
+    plannerEntries: {},
+    plannerRetrying: {},
+    plannerRejectionIssues: {},
+    plannerStartedAreas: [],
+    plannerProposalChat: EMPTY_CHAT,
+    plannerAreaChats: {},
     plannerSelectedTables: null,
-    plannerAbortController: null,
-    plannerDraft: "",
-    plannerMentions: [],
-    plannerPanel: "auto",
-    plannerDetailsCollection: null,
-    plannerSeenRevisions: {},
+    plannerDefaultSchema: null,
+    plannerEdits: {},
+    plannerDiscardCount: 0,
+    plannerSaveIssues: {},
+    plannerSaveWarnings: [],
+    plannerIsSaving: false,
+    plannerView: PLAN_VIEW,
+    plannerIsChatOpen: true,
+    plannerExpandedAreas: [],
+    plannerFilter: "",
 };
 
 const NO_QUESTIONS: PlannerQuestion[] = [];
+
+export function selectChat(
+    state: Pick<PlannerState, "plannerProposalChat" | "plannerAreaChats">,
+    chatId: PlannerChatId,
+): PlannerChat {
+    return chatId === null ? state.plannerProposalChat : (state.plannerAreaChats[chatId] ?? EMPTY_CHAT);
+}
 
 export function getLatestReply(turns: PlannerTurn[]): PlannerReplyTurn | undefined {
     return turns.findLast((turn) => turn.kind === "planner");
 }
 
-/**
- * Where the session stands, from its latest reply: every surface reads it from here, so the composer,
- * the plan and the footer never disagree about whether the planner is busy or waiting on the operator.
- */
-export function selectPlannerPhase(state: PlannerState): PlannerPhase {
-    const latestReply = getLatestReply(state.plannerTurns);
+export function isChatWorking(chat: PlannerChat): boolean {
+    return getLatestReply(chat.turns)?.status === "working";
+}
+
+export function getChatPhase(chat: PlannerChat): PlannerChatPhase {
+    const latestReply = getLatestReply(chat.turns);
 
     if (!latestReply) {
         return "idle";
     }
 
     if (latestReply.status === "working") {
-        return latestReply.isOpening ? "opening" : "working";
+        return "working";
     }
 
-    if (state.plannerConversationId === null) {
-        return "failed";
-    }
-
-    return selectPendingQuestions(state).length > 0 ? "awaitingAnswers" : "ready";
+    return getPendingQuestions(chat).length > 0 ? "awaitingAnswers" : "ready";
 }
 
-/** The planner is not working and the session is open, so the plan holds still: it can be applied or changed by hand. */
-export function selectIsPlanSettled(state: PlannerState): boolean {
-    const phase = selectPlannerPhase(state);
-
-    return phase === "ready" || phase === "awaitingAnswers";
-}
-
-/** Questions can only be answered in a turn the planner finished; any other ending leaves nothing to answer. */
-export function selectPendingQuestions(state: PlannerState): PlannerQuestion[] {
-    const latestTurn = state.plannerTurns.at(-1);
+/** Questions can only be answered in a turn the agent finished; any other ending leaves nothing to answer. */
+export function getPendingQuestions(chat: PlannerChat): PlannerQuestion[] {
+    const latestTurn = chat.turns.at(-1);
 
     return latestTurn?.kind === "planner" && latestTurn.status === "done" ? latestTurn.questions : NO_QUESTIONS;
 }
 
-export function isRegistered(collection: PlannerCollection): collection is RegisteredCollection {
-    return collection.outcome === "registered";
+export function selectWorkingChats(state: PlannerState): PlannerChatId[] {
+    const areas = Object.entries(state.plannerAreaChats)
+        .filter(([, chat]) => isChatWorking(chat))
+        .map(([area]) => area);
+
+    return isChatWorking(state.plannerProposalChat) ? [null, ...areas] : areas;
 }
 
-export function selectBuiltCollections(state: Pick<PlannerState, "plannerCollections">): RegisteredCollection[] {
-    return Object.values(state.plannerCollections).filter(isRegistered);
+export function selectIsAnyChatWorking(state: PlannerState): boolean {
+    return selectWorkingChats(state).length > 0;
 }
 
-/** Lets go of the rejected changes the operator chose not to retry, leaving each collection as it is built. */
-export function withoutRejections(state: PlannerState, collections: string[]): Partial<PlannerState> {
-    return {
-        plannerCollections: Object.fromEntries(
-            Object.entries(state.plannerCollections).map(([name, collection]) => [
-                name,
-                collections.includes(name) && isRegistered(collection)
-                    ? { ...collection, rejectionErrors: [] }
-                    : collection,
-            ]),
-        ),
-    };
+export function selectHasSession(state: PlannerState): boolean {
+    return state.plannerProposal !== null || state.plannerProposalChat.turns.length > 0;
 }
 
-/** Takes a collection out of every part of the session that refers to it, however it was removed. */
-export function withoutCollection(state: PlannerState, collection: string): Partial<PlannerState> {
-    return {
-        plannerCollections: omitKey(state.plannerCollections, collection),
-        plannerRemovedCollections: state.plannerRemovedCollections.includes(collection)
-            ? state.plannerRemovedCollections
-            : [...state.plannerRemovedCollections, collection],
-        plannerMentions: state.plannerMentions.filter((name) => name !== collection),
-        plannerDetailsCollection: state.plannerDetailsCollection === collection ? null : state.plannerDetailsCollection,
-    };
+/**
+ * The plan does not say which areas started, so an area also counts as started once something is mapped
+ * there, as after a save moves a collection into it. The area/ask answer for an area that never started
+ * corrects a wrong guess.
+ */
+export function isAreaStarted(
+    state: Pick<PlannerState, "plannerStartedAreas" | "plannerEntries">,
+    area: string,
+): boolean {
+    return (
+        state.plannerStartedAreas.includes(area) ||
+        Object.values(state.plannerEntries).some((entry) => entry.area === area && entry.status !== "Removed")
+    );
 }
 
-function omitKey<Value>(record: Record<string, Value>, key: string): Record<string, Value> {
+export function selectAreConventionsLocked(state: PlannerState): boolean {
+    return (state.plannerProposal?.areas ?? []).some((area) => !!area.area && isAreaStarted(state, area.area));
+}
+
+export function selectUnsavedCount(state: Pick<PlannerState, "plannerEdits">): number {
+    return Object.keys(state.plannerEdits).length;
+}
+
+/** No chat may start a turn meanwhile: what the agents change would go stale under the operator's unsaved edits. */
+export function selectHasUnsavedEdits(state: Pick<PlannerState, "plannerEdits">): boolean {
+    return selectUnsavedCount(state) > 0;
+}
+
+export function selectCanEditPlan(state: PlannerState): boolean {
+    return state.plannerProposal !== null && !state.plannerIsSaving && !selectIsAnyChatWorking(state);
+}
+
+export function updateChat(
+    state: PlannerState,
+    chatId: PlannerChatId,
+    update: (chat: PlannerChat) => PlannerChat,
+): Partial<PlannerState> {
+    if (chatId === null) {
+        return { plannerProposalChat: update(state.plannerProposalChat) };
+    }
+
+    return { plannerAreaChats: { ...state.plannerAreaChats, [chatId]: update(selectChat(state, chatId)) } };
+}
+
+export function omitKey<Value>(record: Record<string, Value>, key: string): Record<string, Value> {
+    if (!(key in record)) {
+        return record;
+    }
+
     return Object.fromEntries(Object.entries(record).filter(([name]) => name !== key));
 }

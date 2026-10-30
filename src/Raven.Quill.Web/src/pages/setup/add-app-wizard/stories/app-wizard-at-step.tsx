@@ -9,6 +9,7 @@ import { getAppFlow, useAppSteps } from "@/pages/setup/add-app-wizard/app-wizard
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { appSchema, type AppFormData, type AppStepId } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { buildSeed } from "@/pages/setup/add-app-wizard/stories/app-wizard-fixtures";
+import { isEditorMapping } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
 
 // Renders the real wizard jumped to a single step. The body components read the discovery
 // result and map-tables selection from the store, so seed both before they first render
@@ -70,14 +71,22 @@ export function AppWizardAtStep({
 // useAppSteps reads the form via context, so it must run inside the provider above.
 function AppWizardStepBody({ initialStep }: { initialStep: AppStepId }) {
     const steps = useAppSteps();
+    const isManualMapping = useSetupWizardStore((state) => isEditorMapping(state.mapOrigin));
+    const flow = getAppFlow({ dataSource: "external", isManualMapping });
 
     return (
         <FormWizard
             steps={steps}
-            flow={getAppFlow({ dataSource: "external" })}
+            // A step the flow leaves out for now, such as Preview, still renders for its own stories.
+            flow={flow.includes(initialStep) ? flow : [...flow, initialStep]}
             initialStep={initialStep}
             cancel={() => {}}
-            completion={{ type: "submit", label: "Create app & continue", busyLabel: "Creating app..." }}
+            completion={{
+                type: "action",
+                label: "Create app & continue",
+                busyLabel: "Creating app...",
+                onComplete: () => {},
+            }}
         />
     );
 }

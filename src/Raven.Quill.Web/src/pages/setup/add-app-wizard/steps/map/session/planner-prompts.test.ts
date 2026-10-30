@@ -3,6 +3,7 @@ import {
     composeAddTablesPrompt,
     composeAnswersPrompt,
     composeBuildCollectionsPrompt,
+    composeFixCollectionPrompt,
     composePlannerPrompt,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-prompts";
 
@@ -25,30 +26,10 @@ describe("composeAnswersPrompt", () => {
     ];
 
     it("repeats each question with its answer, since the planner reads the answers as a fresh message", () => {
-        expect(composeAnswersPrompt({ answers, isSkipped: false, instructions: null })).toBe(
+        expect(composeAnswersPrompt({ answers })).toBe(
             "Answers to your open questions:\n" +
                 "1. Embed order lines?\n   Link\n" +
                 "2. Copy the unit price onto lines?\n   Ignore",
-        );
-    });
-
-    it("tells the planner the questions were skipped, so it can tell a skip from real answers", () => {
-        expect(composeAnswersPrompt({ answers, isSkipped: true, instructions: null })).toMatch(
-            /^I skipped your open questions - go with your recommendations:\n/,
-        );
-    });
-
-    it("adds what the operator wrote for the planner meanwhile", () => {
-        expect(
-            composeAnswersPrompt({
-                answers: answers.slice(0, 1),
-                isSkipped: false,
-                instructions: { text: "Orders are always read with their lines.", mentions: ["Orders"] },
-            }),
-        ).toBe(
-            "Answers to your open questions:\n" +
-                "1. Embed order lines?\n   Link\n\n" +
-                "About the Orders collection: Orders are always read with their lines.",
         );
     });
 });
@@ -66,6 +47,14 @@ describe("composeBuildCollectionsPrompt", () => {
     it("names every collection, so the planner builds exactly those", () => {
         expect(composeBuildCollectionsPrompt(["Orders", "Products", "Customers"])).toBe(
             "Build Orders, Products and Customers.",
+        );
+    });
+});
+
+describe("composeFixCollectionPrompt", () => {
+    it("tells the agent why the collection was rejected", () => {
+        expect(composeFixCollectionPrompt("Products", ["Price is mapped twice."])).toBe(
+            "Fix the Products collection. It was rejected: Price is mapped twice.",
         );
     });
 });

@@ -3,7 +3,6 @@ import {
     answerSchema,
     CUSTOM_ANSWER,
     getInitialAnswers,
-    recommendedAnswers,
     resolveAnswers,
 } from "@/pages/setup/add-app-wizard/steps/map/chat/planner-questions-utils";
 import type { PlannerQuestion } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
@@ -52,15 +51,6 @@ describe("resolveAnswers", () => {
         ).toEqual([
             { question: "Embed order lines?", answer: "Link" },
             { question: "What should the app call a customer?", answer: "Client" },
-        ]);
-    });
-});
-
-describe("recommendedAnswers", () => {
-    it("answers every question with the planner's recommendation, whatever was picked", () => {
-        expect(recommendedAnswers([embedLines, pricing])).toEqual([
-            { question: "Embed order lines?", answer: "Embed" },
-            { question: "Copy the unit price onto lines?", answer: "No preference - use your judgement." },
         ]);
     });
 });

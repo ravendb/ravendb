@@ -321,7 +321,7 @@ export const largePlanOpeningFrames: MigrationFrame[] = [
         reply:
             `I read **200 tables** and grouped 128 of them into **${collections.length} collections**. The other ` +
             `${leftOutTables.length} look like history, staging, log, report or backup tables, or nothing uses them. ` +
-            "They are listed in the plan under Tables.",
+            "They are listed under Not in the plan.",
         gaps: [],
         openQuestions: [],
     },
@@ -359,3 +359,19 @@ export const largePlanBuildFrames: MigrationFrame[] = [
     },
     { type: "done", conversationId: LARGE_PLAN_CONVERSATION_ID, planId: LARGE_PLAN_ID },
 ];
+
+export const LARGE_PLAN_AREAS = AREAS.map(([area]) => area);
+
+/** One area agent's first build: the area's collections, a few of them rejected. */
+export function largePlanAreaBuildFrames(area: string): MigrationFrame[] {
+    const names = new Set(collections.filter((collection) => collection.area === area).map(({ name }) => name));
+
+    return [
+        ...largePlanBuildFrames.filter(
+            (frame) =>
+                (frame.type === "collection" || frame.type === "rejectedCollection") && names.has(frame.collection),
+        ),
+        { type: "reply", reply: `Built the collections of the **${area}**.`, gaps: [], openQuestions: [] },
+        { type: "done", conversationId: LARGE_PLAN_CONVERSATION_ID, planId: LARGE_PLAN_ID },
+    ];
+}

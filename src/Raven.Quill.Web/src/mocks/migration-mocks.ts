@@ -16,6 +16,9 @@ import type {
 import { apiHttp } from "@/mocks/api-http";
 import { discoveredTable } from "@/mocks/discovery-fixtures";
 
+/** The frames to stream, or how to pick them from the request, e.g. by the area it names. */
+type FrameScript = MigrationFrame[] | ((request: { area?: string; prompt?: string }) => MigrationFrame[]);
+
 type StreamOptions = {
     frameDelayMs?: number;
     /** Keeps the stream open after the last frame, so the planner stays at work. */
@@ -25,17 +28,26 @@ type StreamOptions = {
 // The planner streams its frames as NDJSON, so the two streaming endpoints use plain msw instead of
 // `apiHttp` - mirroring assistantMocks.chat.
 export const migrationMocks = {
-    proposalStart: (frames: MigrationFrame[] = plannerOpeningFrames, options?: StreamOptions) =>
+    proposalStart: (frames: FrameScript = plannerOpeningFrames, options?: StreamOptions) =>
         streamFrames("/api/setup/migration/proposal/start", frames, options),
-    proposalAsk: (frames: MigrationFrame[] = plannerOpeningFrames, options?: StreamOptions) =>
+    proposalAsk: (frames: FrameScript = plannerAnswersFrames, options?: StreamOptions) =>
         streamFrames("/api/setup/migration/proposal/ask", frames, options),
-    areaStart: (frames: MigrationFrame[] = plannerBuildFrames, options?: StreamOptions) =>
+    areaStart: (frames: FrameScript = ({ area }) => plannerAreaBuildFrames(area), options?: StreamOptions) =>
         streamFrames("/api/setup/migration/area/start", frames, options),
-    areaAsk: (frames: MigrationFrame[] = plannerRetryFrames, options?: StreamOptions) =>
+    areaAsk: (frames: FrameScript = plannerRetryFrames, options?: StreamOptions) =>
         streamFrames("/api/setup/migration/area/ask", frames, options),
     stop: () => apiHttp.post("/api/setup/migration/stop", ({ response }) => response(204).empty()),
     planGet: (view: MigrationPlanGetResponse = samplePlanView) =>
         apiHttp.post("/api/setup/migration/plan/get", ({ response }) => response(200).json(view)),
+    /** No plan is stored for the slug yet. */
+    planGetMissing: () =>
+        apiHttp.post("/api/setup/migration/plan/get", ({ response }) =>
+            response(400).json({
+                error: "no plan yet; call /api/setup/migration/proposal/start first",
+                errors: null,
+                code: null,
+            }),
+        ),
     planSave: (warnings: string[] = []) =>
         apiHttp.post("/api/setup/migration/plan/save", ({ response }) => response(200).json({ issues: [], warnings })),
     /** The api's mapping validator refused the changes; nothing was saved. */
@@ -50,10 +62,14 @@ export const migrationMocks = {
 
 function streamFrames(
     path: string,
-    frames: MigrationFrame[],
+    script: FrameScript,
     { frameDelayMs = 400, isEndless = false }: StreamOptions = {},
 ) {
-    return http.post(path, () => {
+    return http.post(path, async ({ request }) => {
+        const frames =
+            typeof script === "function"
+                ? script((await request.json()) as { area?: string; prompt?: string })
+                : script;
         const encoder = new TextEncoder();
         const stream = new ReadableStream<Uint8Array>({
             async start(controller) {
@@ -307,6 +323,13 @@ const productsConfig = rootTableConfig({
     columns: [columnMapping("Name", "name"), columnMapping("Price", "price")],
 });
 
+/** What the Sales area's agent generated for Products before it gave up: Price twice, and a key the table lacks. */
+const rejectedProductsConfig = rootTableConfig({
+    ...productsConfig,
+    primaryKeyColumns: ["ProductId"],
+    columns: [columnMapping("Name", "name"), columnMapping("Price", "price"), columnMapping("Price", "unitPrice")],
+});
+
 const TOTAL_PRECISION_WARNING =
     "dbo.Orders.Total is decimal(18,2) and is stored as a number, which can lose precision above 2^53.";
 
@@ -397,9 +420,23 @@ export const plannerAnswers = [
     { question: "Should cancelled orders be migrated at all?", answer: "No, leave them out" },
 ];
 
-/** Building what was proposed: two collections pass, one is rejected. */
-export const plannerBuildFrames: MigrationFrame[] = [
+/** The planner takes the answers into the plan; nothing is built until an area starts. */
+export const plannerAnswersFrames: MigrationFrame[] = [
     { type: "conventions", propertyCase: "CamelCase", propertyLanguage: null, notes: null },
+    {
+        type: "reply",
+        reply:
+            "The plan has your answers now, with **camelCase** properties. Property names lock once the first area " +
+            "starts building.\n\nBuild an area from the plan to map its collections.",
+        gaps: [],
+        openQuestions: [],
+    },
+    { type: "done", conversationId: PLANNER_CONVERSATION_ID, planId: PLANNER_PLAN_ID },
+];
+
+/** The Customers area's agent builds its one collection. */
+export const plannerCustomersBuildFrames: MigrationFrame[] = [
+    { type: "note", text: "Read the DDL of dbo.Customers and dbo.CustomerAddresses." },
     {
         type: "collection",
         status: "registered",
@@ -409,6 +446,13 @@ export const plannerBuildFrames: MigrationFrame[] = [
         config: customersConfig,
         warnings: [],
     },
+    { type: "reply", reply: "Registered **Customers** with camelCase properties.", gaps: [], openQuestions: [] },
+    { type: "done", conversationId: PLANNER_CONVERSATION_ID, planId: PLANNER_PLAN_ID },
+];
+
+/** The Sales area's agent builds its collections: Orders passes, Products is rejected. */
+export const plannerBuildFrames: MigrationFrame[] = [
+    { type: "note", text: "Read the DDL of dbo.Orders, dbo.OrderLines and dbo.Products." },
     {
         type: "collection",
         status: "registered",
@@ -426,7 +470,7 @@ export const plannerBuildFrames: MigrationFrame[] = [
     {
         type: "rejectedCollection",
         collection: "Products",
-        config: null,
+        config: rejectedProductsConfig,
         errors: [
             { message: "Column Price is mapped twice, as price and unitPrice.", path: "columns[2].name" },
             { message: "Primary key column ProductId does not exist on dbo.Products.", path: "primaryKeyColumns[0]" },
@@ -435,13 +479,18 @@ export const plannerBuildFrames: MigrationFrame[] = [
     {
         type: "reply",
         reply:
-            "Registered **Customers** and **Orders** with camelCase properties. **Products** was rejected - the price " +
-            "column was mapped twice. Ask me to retry it, or carry on with the two that passed.",
+            "Registered **Orders** with camelCase properties. **Products** was rejected - the price column was " +
+            "mapped twice. Ask me to retry it, fix it by hand, or carry on without it.",
         gaps: [],
         openQuestions: [],
     },
     { type: "done", conversationId: PLANNER_CONVERSATION_ID, planId: PLANNER_PLAN_ID },
 ];
+
+/** Each area's agent builds what the proposal gave that area. */
+export function plannerAreaBuildFrames(area: string | undefined): MigrationFrame[] {
+    return area === "Customers area" ? plannerCustomersBuildFrames : plannerBuildFrames;
+}
 
 export const PLANNER_RETRY_PROMPT = "Retry Products with a single price property.";
 
@@ -513,19 +562,19 @@ export const samplePlanView: MigrationPlanGetResponse = {
     proposal: plannerProposal,
 };
 
-/** The configuration as the server assembles it on apply: an embedded table without a schema takes its parent's. */
+/** demo_shop is a SQL Server database, where a table named without a schema is read from dbo. */
+export const PLANNER_DEFAULT_SCHEMA = "dbo";
+
+/** The configuration as the server assembles it on apply: a table without a schema is in the default one. */
 function asApplied(config: CdcSinkTableConfig): CdcSinkTableConfig {
-    const inherit = (
-        tables: CdcSinkEmbeddedTableConfig[] | null | undefined,
-        parentSchema: string | null | undefined,
-    ): CdcSinkEmbeddedTableConfig[] =>
-        (tables ?? []).map((table) => {
-            const schema = table.sourceTableSchema || parentSchema;
+    const resolve = (tables: CdcSinkEmbeddedTableConfig[] | null | undefined): CdcSinkEmbeddedTableConfig[] =>
+        (tables ?? []).map((table) => ({
+            ...table,
+            sourceTableSchema: table.sourceTableSchema || PLANNER_DEFAULT_SCHEMA,
+            embeddedTables: resolve(table.embeddedTables),
+        }));
 
-            return { ...table, sourceTableSchema: schema, embeddedTables: inherit(table.embeddedTables, schema) };
-        });
-
-    return { ...config, embeddedTables: inherit(config.embeddedTables, config.sourceTableSchema) };
+    return { ...config, embeddedTables: resolve(config.embeddedTables) };
 }
 
 export const sampleMigrationApply: MigrationApplyResponse = {

@@ -1,230 +1,377 @@
 import { useFormContext } from "react-hook-form";
+import { toast } from "sonner";
 import { api } from "@/api/api";
-import type { MigrationAskRequest, MigrationFrame } from "@/api/generated/server-api";
+import type { MigrationFrame, MigrationPlanSaveOutcome } from "@/api/generated/server-api";
+import { isApiError, type ApiError } from "@/api/http-client";
 import { toError } from "@/components/form/wizard/wizard-step-error";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { haveSameTables } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
-import { createTurnId } from "@/pages/setup/add-app-wizard/steps/map/session/planner-frames";
+import { DEFAULT_PROVIDER, resolveConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
+import { resolveDefaultSchema } from "@/pages/setup/add-app-wizard/discover-utils";
+import {
+    buildPlanChanges,
+    getSavedView,
+    groupSaveIssues,
+} from "@/pages/setup/add-app-wizard/steps/map/session/planner-edits";
+import { createTurnId, isAreaNotStartedError } from "@/pages/setup/add-app-wizard/steps/map/session/planner-frames";
 import {
     composeAnswersPrompt,
+    composeBuildCollectionsPrompt,
     composePlannerPrompt,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-prompts";
 import {
-    isRegistered,
-    selectPlannerPhase,
-    type PlannerState,
+    getChatPhase,
+    getLatestReply,
+    isAreaStarted,
+    selectChat,
+    selectHasUnsavedEdits,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
 import type {
     PlannerAnswer,
     PlannerAnswersTurn,
+    PlannerChatId,
     PlannerPrompt,
     PlannerPromptTurn,
-    SelectedTables,
+    PlannerTurnEnding,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 
-type FrameStream = (signal: AbortSignal) => AsyncGenerator<MigrationFrame>;
+type FrameStream = (slug: string, signal: AbortSignal) => AsyncGenerator<MigrationFrame>;
 
 export type PlannerSessionContext = {
-    getSlug: () => string;
-    getSelectedTables: () => SelectedTables;
+    getConnection: () => AppFormData["externalConnection"];
+    getSelectedTables: () => AppFormData["verifySchema"]["tables"];
 };
 
 export type PlannerSession = ReturnType<typeof createPlannerSession>;
 
-/** Areas and collections the operator picked, sent to the planner as they are, without a message. */
-export type PlannerSelection = { areas: string[]; collections: string[] };
-
-type AskBody = Omit<MigrationAskRequest, "slug" | "conversationId">;
+/** Only the newest plan/get may land: an older answer would roll back what a later frame moved on. */
+let latestPlanRead = 0;
 
 /**
- * Drives one planning conversation. Each turn streams frames into the store, which folds the planner's
- * words into the transcript and everything it registered into the plan. One turn runs at a time, and
- * none starts while the planner waits on its questions.
+ * Drives the proposal agent's chat and one chat per area; different chats run side by side. Requests carry
+ * only the slug, since the server holds the plan and the conversations. A turn's frames move the plan forward.
  */
 export function usePlannerSession(): PlannerSession {
     const { getValues } = useFormContext<AppFormData>();
 
     return createPlannerSession({
-        getSlug: () => getValues("externalConnection").slug,
+        getConnection: () => getValues("externalConnection"),
         getSelectedTables: () => getValues("verifySchema").tables,
     });
 }
 
-export function createPlannerSession({ getSlug, getSelectedTables }: PlannerSessionContext) {
-    const askInConversation = (userTurn: PlannerPromptTurn | PlannerAnswersTurn, body: AskBody) => {
-        const store = useSetupWizardStore.getState();
-        const conversationId = store.plannerConversationId;
+export function createPlannerSession({ getConnection, getSelectedTables }: PlannerSessionContext) {
+    const getStore = () => useSetupWizardStore.getState();
 
-        if (conversationId === null) {
-            return Promise.resolve();
-        }
+    const openSession = () => {
+        const connection = getConnection();
+        const provider = connection.provider || DEFAULT_PROVIDER;
 
-        const controller = new AbortController();
-        store.beginPlannerTurn({ userTurn, controller });
-
-        return streamTurn(controller, (signal) =>
-            api.services.migration.ask({ slug: getSlug(), conversationId, ...body }, signal),
-        );
-    };
-
-    const ask = (prompt: PlannerPrompt) => {
-        if (selectPlannerPhase(useSetupWizardStore.getState()) !== "ready") {
-            return Promise.resolve();
-        }
-
-        const turn: PlannerPromptTurn = { kind: "prompt", id: createTurnId(), ...prompt };
-
-        return askInConversation(
-            turn,
-            prompt.text ? { prompt: composePlannerPrompt(prompt) } : { selectedCollections: prompt.mentions },
-        );
-    };
-
-    /** Asks the planner to build what the operator picked, with nothing written. */
-    const askSelection = ({ areas, collections }: PlannerSelection) => {
-        if (selectPlannerPhase(useSetupWizardStore.getState()) !== "ready" || areas.length + collections.length === 0) {
-            return Promise.resolve();
-        }
-
-        const turn: PlannerPromptTurn = {
-            kind: "prompt",
-            id: createTurnId(),
-            text: "",
-            mentions: [...areas, ...collections],
-        };
-
-        return askInConversation(turn, {
-            ...(areas.length > 0 ? { selectedAreas: areas } : {}),
-            ...(collections.length > 0 ? { selectedCollections: collections } : {}),
+        getStore().openPlannerSession({
+            slug: connection.slug,
+            selectedTables: getSelectedTables(),
+            defaultSchema: resolveDefaultSchema(provider, resolveConnectionString(connection)),
         });
     };
 
-    /** Sends what the composer holds. While the planner works or waits on its questions, it stays there. */
-    const sendDraft = () => {
-        if (selectPlannerPhase(useSetupWizardStore.getState()) !== "ready") {
-            return Promise.resolve();
+    const readPlan = async () => {
+        const slug = getStore().plannerSlug;
+
+        if (!slug) {
+            return;
         }
 
-        const prompt = takeDraft();
+        const readNumber = ++latestPlanRead;
+        const response = await api.services.setup.migrationPlanGet({ slug });
 
-        return prompt ? ask(prompt) : Promise.resolve();
+        if (readNumber === latestPlanRead && getStore().plannerSlug === slug) {
+            getStore().receivePlannerPlan(response);
+        }
     };
 
-    /** The operator may have changed what the session was opened on while it opened, which ends the session. */
-    const isOpenedOnCurrentInputs = (selectedTables: SelectedTables) =>
-        useSetupWizardStore.getState().plannerSelectedTables === selectedTables &&
-        haveSameTables(getSelectedTables(), selectedTables);
+    /** A failed re-read leaves the plan as the frames left it. */
+    const syncPlan = () => readPlan().catch((error) => console.error("Could not read the plan again:", error));
+
+    const isCurrentTurn = (chatId: PlannerChatId, controller: AbortController) =>
+        selectChat(getStore(), chatId).abortController === controller;
+
+    const hasChangedConventions = (chatId: PlannerChatId) =>
+        getLatestReply(selectChat(getStore(), chatId).turns)?.activity.some(
+            (activity) => activity.type === "conventions",
+        ) ?? false;
+
+    /** Resolves to the error that broke the stream, or null once it ran to its end or a newer turn took over. */
+    const receiveFrames = async (
+        chatId: PlannerChatId,
+        controller: AbortController,
+        openStream: () => AsyncGenerator<MigrationFrame>,
+    ): Promise<unknown> => {
+        try {
+            for await (const frame of openStream()) {
+                if (!isCurrentTurn(chatId, controller)) {
+                    break;
+                }
+
+                getStore().receivePlannerFrame(chatId, frame);
+            }
+
+            return null;
+        } catch (error) {
+            return error;
+        }
+    };
+
+    /** Resolves to the API error that refused the turn, if any. */
+    const runTurn = async (
+        chatId: PlannerChatId,
+        { userTurn, isOpening }: { userTurn: PlannerPromptTurn | PlannerAnswersTurn | null; isOpening: boolean },
+        stream: FrameStream,
+    ): Promise<ApiError | null> => {
+        const slug = getStore().plannerSlug;
+
+        if (!slug) {
+            return null;
+        }
+
+        const controller = new AbortController();
+        getStore().beginPlannerTurn({ chatId, userTurn, controller, isOpening });
+
+        const streamError = await receiveFrames(chatId, controller, () => stream(slug, controller.signal));
+
+        if (!isCurrentTurn(chatId, controller)) {
+            return null;
+        }
+
+        getStore().endPlannerTurn(chatId, toTurnEnding(streamError, controller.signal.aborted));
+
+        // The proposal's property names follow the conventions, and no proposal frame comes after a change to them.
+        if (hasChangedConventions(chatId)) {
+            await syncPlan();
+        }
+
+        return isApiError(streamError) ? streamError : null;
+    };
+
+    /** What the operator wrote goes back to the composer when it did not reach the agent, to send again. */
+    const keepDraft = (chatId: PlannerChatId, prompt: PlannerPrompt) => {
+        const store = getStore();
+        const chat = selectChat(store, chatId);
+
+        store.setPlannerDraft(chatId, chat.draft || prompt.text);
+        prompt.mentions.forEach((collection) => store.addPlannerMention(chatId, collection));
+    };
+
+    const canStartTurn = (chatId: PlannerChatId) => {
+        const store = getStore();
+
+        return (
+            !store.plannerIsSaving &&
+            !selectHasUnsavedEdits(store) &&
+            getChatPhase(selectChat(store, chatId)) !== "working"
+        );
+    };
+
+    /** Resolves to whether the prompt reached the agent. */
+    const askProposal = async (prompt: PlannerPrompt): Promise<boolean> => {
+        if (!canStartTurn(null)) {
+            return false;
+        }
+
+        const turn: PlannerPromptTurn = { kind: "prompt", id: createTurnId(), ...prompt };
+        const refusal = await runTurn(null, { userTurn: turn, isOpening: false }, (slug, signal) =>
+            api.services.migration.proposalAsk({ slug, prompt: composePlannerPrompt(prompt) }, signal),
+        );
+
+        return refusal === null;
+    };
+
+    const startArea = async (area: string) => {
+        if (!canStartTurn(area)) {
+            return;
+        }
+
+        getStore().markPlannerAreaStarted(area, true);
+
+        const refusal = await runTurn(area, { userTurn: null, isOpening: true }, (slug, signal) =>
+            api.services.migration.areaStart({ slug, area }, signal),
+        );
+
+        if (refusal) {
+            getStore().markPlannerAreaStarted(area, false);
+        }
+    };
+
+    /** Resolves to whether the prompt reached the agent. */
+    const askArea = async (area: string, prompt: PlannerPrompt): Promise<boolean> => {
+        if (!canStartTurn(area)) {
+            return false;
+        }
+
+        const turn: PlannerPromptTurn = { kind: "prompt", id: createTurnId(), ...prompt };
+        const refusal = await runTurn(area, { userTurn: turn, isOpening: false }, (slug, signal) =>
+            api.services.migration.areaAsk({ slug, area, prompt: composePlannerPrompt(prompt) }, signal),
+        );
+
+        if (refusal) {
+            return false;
+        }
+
+        // Whether an area started is a guess; the agent's answer settles it. The area builds
+        // first, and the prompt, which never reached the agent, can be sent again once it is built.
+        const reply = getLatestReply(selectChat(getStore(), area).turns);
+
+        if (reply?.status === "failed" && reply.error && isAreaNotStartedError(reply.error)) {
+            getStore().markPlannerAreaStarted(area, false);
+            void startArea(area);
+            return false;
+        }
+
+        return true;
+    };
+
+    const takeDraft = (chatId: PlannerChatId): PlannerPrompt | null => {
+        const store = getStore();
+        const chat = selectChat(store, chatId);
+        const text = chat.draft.trim();
+
+        if (!text) {
+            return null;
+        }
+
+        store.clearPlannerComposer(chatId);
+
+        return { text, mentions: chat.mentions };
+    };
 
     return {
-        /** Opens the session on the selected tables. A session that already started is left alone. */
         start: async () => {
-            const store = useSetupWizardStore.getState();
-
-            if (selectPlannerPhase(store) !== "idle") {
+            if (!canStartTurn(null)) {
                 return;
             }
 
             const selectedTables = getSelectedTables();
-            const controller = new AbortController();
-            store.openPlannerSession({ selectedTables, controller });
+            openSession();
 
-            await streamTurn(controller, (signal) =>
-                api.services.migration.start({ slug: getSlug(), selectedTables }, signal),
+            await runTurn(null, { userTurn: null, isOpening: true }, (slug, signal) =>
+                api.services.migration.proposalStart({ slug, selectedTables }, signal),
             );
-
-            // Instructions written during the opening go in once the first plan is ready, or with the
-            // answers when the planner opens with questions. A session about to be started over keeps
-            // them for the next one.
-            if (isOpenedOnCurrentInputs(selectedTables)) {
-                await sendDraft();
-            }
         },
 
-        sendDraft,
+        askProposal,
 
-        ask,
+        answer: async (chatId: PlannerChatId, answers: PlannerAnswer[]) => {
+            const store = getStore();
 
-        askSelection,
-
-        /** Answers the open questions, together with anything the operator wrote for the planner meanwhile. */
-        answer: (answers: PlannerAnswer[], isSkipped: boolean) => {
-            if (selectPlannerPhase(useSetupWizardStore.getState()) !== "awaitingAnswers") {
-                return Promise.resolve();
-            }
-
-            const draft = takeDraft();
-            const picked = draft && !draft.text ? draft.mentions : [];
-            const turn: PlannerAnswersTurn = {
-                kind: "answers",
-                id: createTurnId(),
-                answers,
-                isSkipped,
-                instructions: draft,
-            };
-
-            return askInConversation(turn, {
-                prompt: composeAnswersPrompt(turn),
-                ...(picked.length > 0 ? { selectedCollections: picked } : {}),
-            });
-        },
-
-        stop: () => useSetupWizardStore.getState().stopPlannerTurn(),
-    };
-}
-
-/**
- * Starting over, or leaving the wizard, replaces the session under a running turn; whatever that turn
- * still delivers belongs to a conversation that is gone.
- */
-async function streamTurn(controller: AbortController, stream: FrameStream) {
-    const isCurrent = () => useSetupWizardStore.getState().plannerAbortController === controller;
-
-    try {
-        for await (const frame of stream(controller.signal)) {
-            if (!isCurrent()) {
+            if (
+                store.plannerIsSaving ||
+                selectHasUnsavedEdits(store) ||
+                getChatPhase(selectChat(store, chatId)) !== "awaitingAnswers"
+            ) {
                 return;
             }
 
-            useSetupWizardStore.getState().receivePlannerFrame(frame);
-        }
+            const turn: PlannerAnswersTurn = { kind: "answers", id: createTurnId(), answers };
+            const prompt = composeAnswersPrompt(turn);
 
-        if (isCurrent()) {
-            useSetupWizardStore.getState().endPlannerTurn({ error: null, isStopped: false });
-        }
-    } catch (error) {
-        if (!isCurrent()) {
-            return;
-        }
+            await runTurn(chatId, { userTurn: turn, isOpening: false }, (slug, signal) =>
+                chatId === null
+                    ? api.services.migration.proposalAsk({ slug, prompt }, signal)
+                    : api.services.migration.areaAsk({ slug, area: chatId, prompt }, signal),
+            );
+        },
 
-        const store = useSetupWizardStore.getState();
-        store.endPlannerTurn(
-            controller.signal.aborted
-                ? { error: null, isStopped: true }
-                : { error: toError(error).message, isStopped: false },
-        );
-    }
+        /** Builds an area: its first build starts its agent, later ones ask it for what is still missing. */
+        buildArea: (area: string, pendingCollections: string[]) => {
+            if (!isAreaStarted(getStore(), area)) {
+                return startArea(area);
+            }
+
+            return pendingCollections.length > 0
+                ? askArea(area, { text: composeBuildCollectionsPrompt(pendingCollections), mentions: [] })
+                : Promise.resolve();
+        },
+
+        askArea,
+
+        sendDraft: async (chatId: PlannerChatId) => {
+            if (!canStartTurn(chatId)) {
+                return;
+            }
+
+            const prompt = takeDraft(chatId);
+
+            if (!prompt) {
+                return;
+            }
+
+            const isDelivered = chatId === null ? await askProposal(prompt) : await askArea(chatId, prompt);
+
+            if (!isDelivered) {
+                keepDraft(chatId, prompt);
+            }
+        },
+
+        stop: async (chatId: PlannerChatId) => {
+            try {
+                await getStore().stopPlannerTurn(chatId);
+            } catch (error) {
+                toast.error(toError(error).message || "Could not stop the planner.");
+            }
+        },
+
+        save: async () => {
+            const store = getStore();
+            const slug = store.plannerSlug;
+            const { changes, collections } = buildPlanChanges(store.plannerEdits);
+            const viewedCollection = store.plannerView.collection;
+            const viewedEdit = viewedCollection ? store.plannerEdits[viewedCollection] : undefined;
+
+            if (!slug || changes.length === 0 || store.plannerIsSaving) {
+                return;
+            }
+
+            store.setPlannerSaving(true);
+
+            try {
+                const outcome = await api.services.setup.migrationPlanSave({ slug, changes });
+                // The edits stay until the saved plan is read, so the views never fall back to the plan from before.
+                const isPlanRead = await readPlan().then(
+                    () => true,
+                    () => false,
+                );
+
+                getStore().receivePlannerSave({ issues: {}, warnings: outcome.warnings, isSaved: true });
+
+                if (viewedCollection && viewedEdit) {
+                    getStore().showPlannerView(getSavedView(viewedCollection, viewedEdit));
+                }
+
+                if (isPlanRead) {
+                    toast.success("Saved to the plan.");
+                } else {
+                    toast.warning("Saved to the plan, but it could not be loaded again. Reload the page to see it.");
+                }
+            } catch (error) {
+                if (isApiError<MigrationPlanSaveOutcome>(error) && error.status === 422 && error.details?.issues) {
+                    getStore().receivePlannerSave({
+                        issues: groupSaveIssues(error.details.issues, collections),
+                        warnings: error.details.warnings ?? [],
+                        isSaved: false,
+                    });
+                } else {
+                    toast.error(toError(error).message || "Could not save the plan.");
+                }
+            } finally {
+                getStore().setPlannerSaving(false);
+            }
+        },
+    };
 }
 
-/** Picking only collections that are built already asks for nothing: there is nothing to build. */
-export function hasUnbuiltMention(state: Pick<PlannerState, "plannerMentions" | "plannerCollections">): boolean {
-    return state.plannerMentions.some((name) => {
-        const collection = state.plannerCollections[name];
-        return collection === undefined || !isRegistered(collection);
-    });
-}
-
-/** Picked collections with nothing written are a prompt too: the planner gets them as a selection. */
-function takeDraft(): PlannerPrompt | null {
-    const store = useSetupWizardStore.getState();
-    const text = store.plannerDraft.trim();
-
-    if (!text && !hasUnbuiltMention(store)) {
-        return null;
+function toTurnEnding(streamError: unknown, isAborted: boolean): PlannerTurnEnding {
+    if (streamError === null) {
+        return { error: null, isStopped: false };
     }
 
-    const prompt = { text, mentions: store.plannerMentions };
-    store.clearPlannerComposer();
-
-    return prompt;
+    return isAborted ? { error: null, isStopped: true } : { error: toError(streamError).message, isStopped: false };
 }

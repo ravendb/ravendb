@@ -24,6 +24,8 @@ import {
 } from "@/components/shadcn/ui/dialog";
 import { CdcPerformanceSection } from "@/pages/apps/cdc-performance-section";
 import { VERIFY_CDC_QUERY_KEY } from "@/pages/setup/add-app-wizard/steps/verify/verify-cdc-query";
+import { isEditorMapping } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
+import { WizardHandledError } from "@/components/form/wizard/wizard-step-error";
 
 /** The app the wizard is editing, instead of creating a new one. */
 export type EditedApp = {
@@ -60,7 +62,11 @@ export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
         mode: "onChange",
         defaultValues,
         resolver: async (values, context, options) => {
-            const flow = getAppFlow({ dataSource: values.dataSource?.source, isEditing });
+            const flow = getAppFlow({
+                dataSource: values.dataSource?.source,
+                isEditing,
+                isManualMapping: isEditorMapping(useSetupWizardStore.getState().mapOrigin),
+            });
             return zodResolver(buildAppSchemaForFlow(flow, takenSlugs))(values, context, options);
         },
     });
@@ -114,20 +120,30 @@ export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
         },
     });
 
+    // An action rather than a plain submit: the last step's own work (applying the plan, or the mapping)
+    // has to run before the app is provisioned from it.
+    const completion: WizardCompletion = {
+        ...(isEditing ? EDIT_COMPLETION : CREATE_COMPLETION),
+        type: "action",
+        onComplete: () =>
+            form.handleSubmit(async (values) => {
+                // The mutation reports its own failure, so the wizard does not alert about it again.
+                await provisionMutation.mutateAsync(values).catch((error: unknown) => {
+                    throw new WizardHandledError(error);
+                });
+            })(),
+    };
+
     return (
         <FormProvider {...form}>
-            <form
-                onSubmit={form.handleSubmit(async (values) => await provisionMutation.mutateAsync(values))}
-                onKeyDown={preventEnterKeySubmission}
-                className="h-full"
-            >
+            <form onSubmit={(event) => event.preventDefault()} onKeyDown={preventEnterKeySubmission} className="h-full">
                 <AppWizardBody
                     cancel={() =>
                         navigate(
                             editedAppSeed ? appRoutes.app(editedAppSeed.slug, "data-source") : appRoutes.dashboard(),
                         )
                     }
-                    completion={isEditing ? EDIT_COMPLETION : CREATE_COMPLETION}
+                    completion={completion}
                     isEditing={isEditing}
                     isSaved={isSaved}
                 />
@@ -140,14 +156,12 @@ export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
     );
 }
 
-const CREATE_COMPLETION: WizardCompletion = {
-    type: "submit",
+const CREATE_COMPLETION = {
     label: "Create app & continue",
     busyLabel: "Creating app...",
 };
 
-const EDIT_COMPLETION: WizardCompletion = {
-    type: "submit",
+const EDIT_COMPLETION = {
     label: "Save changes",
     busyLabel: "Saving changes...",
 };
@@ -193,7 +207,8 @@ function AppWizardBody({
         name: "dataSource.source",
     });
 
-    const flow = getAppFlow({ dataSource, isEditing });
+    const isManualMapping = useSetupWizardStore((state) => isEditorMapping(state.mapOrigin));
+    const flow = getAppFlow({ dataSource, isEditing, isManualMapping });
 
     return <FormWizard steps={steps} flow={flow} cancel={cancel} completion={completion} isSaved={isSaved} />;
 }

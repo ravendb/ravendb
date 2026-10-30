@@ -9,6 +9,7 @@ import {
     createEmptyEmbeddedTable,
     createEmptyRootTable,
     addUnmappedSelectedTables,
+    formatTableScripts,
     haveSameTables,
     makeUniquePropertyName,
     propertyNameFromJoinColumn,
@@ -259,7 +260,7 @@ describe("toTakenPropertyNames", () => {
 });
 
 describe("haveSameTables", () => {
-    it("ignores order and name case", () => {
+    it("ignores order", () => {
         expect(
             haveSameTables(
                 [
@@ -267,11 +268,20 @@ describe("haveSameTables", () => {
                     { sourceTableSchema: "public", sourceTableName: "lines" },
                 ],
                 [
-                    { sourceTableSchema: "PUBLIC", sourceTableName: "LINES" },
-                    { sourceTableSchema: "public", sourceTableName: "orders" },
+                    { sourceTableSchema: "public", sourceTableName: "lines" },
+                    { sourceTableSchema: "public", sourceTableName: "Orders" },
                 ],
             ),
         ).toBe(true);
+    });
+
+    it("tells apart tables whose names differ only in case", () => {
+        expect(
+            haveSameTables(
+                [{ sourceTableSchema: "public", sourceTableName: "Orders" }],
+                [{ sourceTableSchema: "public", sourceTableName: "orders" }],
+            ),
+        ).toBe(false);
     });
 
     it("tells a different length or a swapped table apart", () => {
@@ -281,5 +291,37 @@ describe("haveSameTables", () => {
             false,
         );
         expect(haveSameTables([orders], [{ sourceTableSchema: "sales", sourceTableName: "orders" }])).toBe(false);
+    });
+});
+
+describe("formatTableScripts", () => {
+    const COMPACT_SCRIPT = "if (this.Status === 'D') { this.IsDeleted = true; }";
+    const FORMATTED_SCRIPT = "if (this.Status === 'D') {\n    this.IsDeleted = true;\n}";
+
+    it("formats the patch and on-delete scripts of the table and its nested embedded tables", () => {
+        const lines = embeddedTable("lines", {
+            patch: COMPACT_SCRIPT,
+            onDelete: { ignoreDeletes: false, patch: COMPACT_SCRIPT },
+        });
+        const orders = rootTable("orders", {
+            patch: COMPACT_SCRIPT,
+            onDelete: { ignoreDeletes: true, patch: COMPACT_SCRIPT },
+            embeddedTables: [embeddedTable("details", { embeddedTables: [lines] })],
+        });
+
+        const result = formatTableScripts(orders);
+        const formattedLines = result.embeddedTables[0].embeddedTables[0];
+
+        expect(result.patch).toBe(FORMATTED_SCRIPT);
+        expect(result.onDelete).toEqual({ ignoreDeletes: true, patch: FORMATTED_SCRIPT });
+        expect(formattedLines.patch).toBe(FORMATTED_SCRIPT);
+        expect(formattedLines.onDelete?.patch).toBe(FORMATTED_SCRIPT);
+    });
+
+    it("leaves a formatted script, a missing script and a missing on-delete as they are", () => {
+        const orders = rootTable("orders", { patch: FORMATTED_SCRIPT, onDelete: null });
+
+        expect(formatTableScripts(orders)).toEqual(orders);
+        expect(formatTableScripts(rootTable("orders"))).toEqual(rootTable("orders"));
     });
 });

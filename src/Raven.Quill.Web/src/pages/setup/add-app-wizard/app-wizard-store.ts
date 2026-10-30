@@ -55,7 +55,7 @@ export type SetupWizardState = PlannerState &
          * edits made in the editor since.
          */
         mapOrigin: MapOrigin | null;
-        setMapOrigin: (origin: MapOrigin) => void;
+        setMapOrigin: (origin: MapOrigin | null) => void;
         mapTablesKey: string | null;
         setMapTablesKey: (key: string) => void;
         mapActiveTable: MapActiveTable | null;

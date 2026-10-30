@@ -80,7 +80,7 @@ export function PlannerSchemaFigure({ tables }: { tables: AppFormData["verifySch
                 <div className="flex flex-col gap-2.5 px-4 pt-3.5 pb-4.5">
                     <Text as="span" variant="label" className="flex items-center gap-1.5 text-muted-foreground">
                         <Lock className="size-3 shrink-0" aria-hidden="true" />
-                        Never read: the rows stay in your database
+                        Never read: your data stays in your database
                     </Text>
                     <div aria-hidden="true" className="flex flex-col gap-2.5 pt-0.5">
                         {HIDDEN_ROW_WIDTHS.map((widths, rowIndex) => (

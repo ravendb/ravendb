@@ -1,24 +1,21 @@
 import { useState } from "react";
-import { Collapsible, CollapsibleContent } from "@/components/shadcn/ui/collapsible";
-import { Text } from "@/components/typography";
 import { formatCount } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import {
     describeConventions,
     getActivityHeadline,
+    getActivityRows,
+    getRegisteredOutcome,
     type PlanProgress,
 } from "@/pages/setup/add-app-wizard/steps/map/chat/planner-activity";
 import {
+    ActivityGroup,
     ActivityRowLayout,
-    ActivityRowList,
-    CollapsibleHeader,
     DoneIcon,
     FailedIcon,
-    PlannerWorkingCard,
+    PlannerWorkingActivity,
     WarningIcon,
     WorkingIcon,
 } from "@/pages/setup/add-app-wizard/steps/map/chat/planner-activity-parts";
-import { getRegisteredState } from "@/pages/setup/add-app-wizard/steps/map/session/planner-plan";
 import type { PlannerActivity, PlannerReplyTurn } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 
 /** Past this many rows a finished turn's activity starts folded, even as the latest. */
@@ -39,43 +36,34 @@ export function PlannerActivityCard({
 }) {
     const [isOpenByOperator, setIsOpenByOperator] = useState<boolean | null>(null);
     const headline = getActivityHeadline(turn, progress);
-    const rows = turn.activity.filter((activity) => activity.type !== "proposal");
+    const rows = getActivityRows(turn.activity);
 
     if (turn.status === "working") {
         return (
-            <PlannerWorkingCard title={headline.title} detail={headline.detail}>
+            <PlannerWorkingActivity title={headline.title} detail={headline.detail}>
                 {rows.map((activity, index) => (
                     <ActivityRow key={index} activity={activity} />
                 ))}
                 <ActivityRowLayout icon={<WorkingIcon />}>Working…</ActivityRowLayout>
-            </PlannerWorkingCard>
+            </PlannerWorkingActivity>
         );
     }
 
     const isOpen = isOpenByOperator ?? (isLatest && rows.length <= MAX_UNFOLDED_ROWS);
 
     return (
-        <Collapsible open={isOpen} onOpenChange={setIsOpenByOperator} className="rounded-lg border bg-card">
-            <CollapsibleHeader isOpen={isOpen} className="px-3">
-                <Text variant="label" as="span">
-                    {headline.title}
-                </Text>
-                <Text
-                    variant="muted"
-                    as="span"
-                    className={cn("ml-auto", headline.isDetailDestructive && "text-badge-destructive-fg")}
-                >
-                    {headline.detail}
-                </Text>
-            </CollapsibleHeader>
-            <CollapsibleContent>
-                <ActivityRowList>
-                    {rows.map((activity, index) => (
-                        <ActivityRow key={index} activity={activity} />
-                    ))}
-                </ActivityRowList>
-            </CollapsibleContent>
-        </Collapsible>
+        <ActivityGroup
+            icon={headline.isDetailDestructive ? <FailedIcon /> : <DoneIcon />}
+            title={headline.title}
+            detail={headline.detail}
+            isDetailDestructive={headline.isDetailDestructive}
+            isOpen={isOpen}
+            onOpenChange={setIsOpenByOperator}
+        >
+            {rows.map((activity, index) => (
+                <ActivityRow key={index} activity={activity} />
+            ))}
+        </ActivityGroup>
     );
 }
 
@@ -99,7 +87,7 @@ function ActivityRow({ activity }: { activity: PlannerActivity }) {
             );
 
         case "registered": {
-            const verb = getRegisteredState(activity.version);
+            const verb = getRegisteredOutcome(activity.version);
 
             return (
                 <ActivityRowLayout
@@ -127,7 +115,11 @@ function ActivityRow({ activity }: { activity: PlannerActivity }) {
             );
 
         case "removed":
-            return <ActivityRowLayout icon={<DoneIcon />}>{activity.collection} removed</ActivityRowLayout>;
+            return (
+                <ActivityRowLayout icon={<DoneIcon />} detail={activity.reason}>
+                    {activity.collection} removed
+                </ActivityRowLayout>
+            );
 
         case "proposal":
             return null;

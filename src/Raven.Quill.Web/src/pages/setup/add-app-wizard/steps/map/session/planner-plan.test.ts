@@ -4,23 +4,20 @@ import { discoveredTable } from "@/mocks/discovery-fixtures";
 import { droppedTable, proposedCollection } from "@/mocks/migration-mocks";
 import { indexDiscovery } from "@/pages/setup/add-app-wizard/steps/map/session/planner-document";
 import {
-    buildPlanCollections,
-    buildPlanTables,
-    countChangedSince,
-    countUnbuilt,
-    findCollectionsLinkingTo,
-    getPlanRevisions,
-    groupByArea,
+    buildPlan,
     createNameMatcher,
+    getAreaShortName,
+    getCollectionSources,
     toSearchKey,
     type PlanSource,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-plan";
-import { resolveProposalTables } from "@/pages/setup/add-app-wizard/steps/map/session/planner-table-refs";
-import type {
-    ConfigTableRef,
-    PlannerCollection,
-    RegisteredCollection,
-} from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
+import { createReplyTurn } from "@/pages/setup/add-app-wizard/steps/map/session/planner-frames";
+import { EMPTY_CHAT, initialPlannerState } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
+import {
+    resolveConfigTables,
+    resolveProposalTables,
+} from "@/pages/setup/add-app-wizard/steps/map/session/planner-table-refs";
+import type { PlannerEntry } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 
 const discovery: DiscoverResponse = {
     catalogName: "demo_shop",
@@ -39,7 +36,7 @@ const discovery: DiscoverResponse = {
 
 const index = indexDiscovery(discovery);
 
-const selectedTables = ["Customers", "Orders", "OrderLines", "AuditLog"].map((name) => ({
+const selectedTables = ["Customers", "Orders", "OrderLines", "AuditLog", "Archive"].map((name) => ({
     sourceTableSchema: "dbo",
     sourceTableName: name,
 }));
@@ -48,241 +45,202 @@ const proposal = resolveProposalTables(
     {
         areas: [
             {
-                area: "Sales area",
-                why: null,
-                collections: [
-                    proposedCollection(
-                        "Orders",
-                        "dbo.Orders",
-                        [
-                            { table: "dbo.OrderLines", how: "Embed" },
-                            { table: "dbo.Customers", how: "Link" },
-                        ],
-                        "An order with its lines.",
-                    ),
-                ],
+                area: "Customers",
+                why: "Who buys.",
+                collections: [proposedCollection("Customers", "dbo.Customers", [], "One document per customer.")],
             },
             {
-                area: "Customers area",
-                why: null,
-                collections: [proposedCollection("Customers", "dbo.Customers", [], "One per customer.")],
+                area: "Sales",
+                why: "What is sold.",
+                collections: [
+                    {
+                        ...proposedCollection(
+                            "Orders",
+                            "dbo.Orders",
+                            [
+                                { table: "dbo.OrderLines", how: "Embed" },
+                                { table: "dbo.Customers", how: "Link" },
+                            ],
+                            "An order with its lines.",
+                        ),
+                        fields: [{ table: "dbo.Orders", column: "Total", property: "total" }],
+                    },
+                ],
             },
         ],
-        dropped: [droppedTable("dbo.AuditLog", "Nothing in the app reads it.")],
+        dropped: [droppedTable("dbo.AuditLog", "Nothing reads it.")],
         enables: [],
     },
     selectedTables,
 );
 
-const registered = (
-    name: string,
-    version: number,
-    config: CdcSinkTableConfig | null = null,
-    tableRef: ConfigTableRef | null = null,
-): RegisteredCollection => ({
-    name,
-    outcome: "registered",
-    version,
-    registrationNumber: version,
-    rationale: `${name} as registered.`,
-    config,
-    tableRef,
-    previousConfig: null,
-    warnings: [],
-    rejectionErrors: [],
+const config = (collectionName: string, sourceTableName: string): CdcSinkTableConfig => ({
+    collectionName,
+    sourceTableSchema: "dbo",
+    sourceTableName,
+    columns: [{ column: "Id", name: "id" }],
 });
 
-function source(collections: Record<string, PlannerCollection>, removed: string[] = []): PlanSource {
-    return { plannerProposal: proposal, plannerCollections: collections, plannerRemovedCollections: removed };
+const entry = (name: string, area: string, overrides: Partial<PlannerEntry> = {}): PlannerEntry => {
+    const entryConfig = config(name, overrides.config?.sourceTableName ?? name);
+
+    return {
+        name,
+        area,
+        status: "Registered",
+        version: 1,
+        rationale: null,
+        config: entryConfig,
+        tableRef: resolveConfigTables(entryConfig, selectedTables, "dbo"),
+        warnings: [],
+        ...overrides,
+    };
+};
+
+function source(overrides: Partial<PlanSource> = {}): PlanSource {
+    return {
+        ...initialPlannerState,
+        plannerProposal: proposal,
+        plannerSelectedTables: selectedTables,
+        plannerDefaultSchema: "dbo",
+        ...overrides,
+    };
 }
 
-describe("buildPlanCollections", () => {
-    it("lists the proposal in its order, then what the planner registered without proposing it", () => {
-        const collections = buildPlanCollections(
+const stateOf = (plan: ReturnType<typeof buildPlan>, name: string) =>
+    plan.collections.find((collection) => collection.name === name)?.state;
+
+describe("buildPlan", () => {
+    it("lists the proposal's areas in its order, each with its collections, nothing built yet", () => {
+        const plan = buildPlan(source(), index);
+
+        expect(plan.areas.map((area) => [area.name, area.state, area.pendingCollections])).toEqual([
+            ["Customers", "notStarted", ["Customers"]],
+            ["Sales", "notStarted", ["Orders"]],
+        ]);
+        expect(stateOf(plan, "Orders")).toBe("suggested");
+    });
+
+    it("shows the proposal's property names in the document it outlines", () => {
+        const orders = buildPlan(source(), index).collections.find((collection) => collection.name === "Orders");
+
+        expect(orders?.document?.properties.map((property) => property.name)).toEqual([
+            "Id",
+            "total",
+            "CustomerId",
+            "OrderLines",
+        ]);
+    });
+
+    it("builds an area's collections while its agent works, and tells built from updated", () => {
+        const building = buildPlan(
             source({
-                Orders: registered("Orders", 2),
-                Customers: {
-                    name: "Customers",
-                    outcome: "rejected",
-                    errors: ["Id is mapped twice."],
-                    config: null,
-                    issues: [],
-                },
-                Products: registered("Products", 1),
+                plannerAreaChats: { Sales: { ...EMPTY_CHAT, turns: [createReplyTurn(true)] } },
+                plannerStartedAreas: ["Sales"],
             }),
             index,
         );
 
-        expect(collections.map(({ name, state, area }) => ({ name, state, area }))).toEqual([
-            { name: "Orders", state: "updated", area: "Sales area" },
-            { name: "Customers", state: "failed", area: "Customers area" },
-            { name: "Products", state: "built", area: null },
-        ]);
-    });
+        expect(stateOf(building, "Orders")).toBe("building");
+        expect(building.areas[1].state).toBe("building");
 
-    it("explains a suggestion with the proposal and a built collection with what the planner registered", () => {
-        const [orders, customers] = buildPlanCollections(source({ Orders: registered("Orders", 1) }), index);
-
-        expect(customers).toMatchObject({ state: "suggested", why: "One per customer." });
-        expect(orders).toMatchObject({ state: "built", why: "Orders as registered." });
-    });
-
-    it("leaves out a proposed collection that was taken out of the plan", () => {
-        const collections = buildPlanCollections(source({}, ["Customers"]), index);
-
-        expect(collections.map((collection) => collection.name)).toEqual(["Orders"]);
-    });
-
-    it("keeps a built collection built when only a change to it was rejected", () => {
-        const [orders] = buildPlanCollections(
-            source({ Orders: { ...registered("Orders", 1), rejectionErrors: ["Total is mapped twice."] } }),
+        const built = buildPlan(
+            source({
+                plannerEntries: {
+                    Orders: entry("Orders", "Sales", { version: 2 }),
+                    Customers: entry("Customers", "Customers"),
+                },
+            }),
             index,
         );
 
-        expect(orders).toMatchObject({ state: "built", errors: ["Total is mapped twice."] });
+        expect(stateOf(built, "Orders")).toBe("updated");
+        expect(stateOf(built, "Customers")).toBe("built");
+        expect(built.areas.map((area) => area.state)).toEqual(["built", "built"]);
     });
 
-    it("hands back the same collection while nothing it is made of changed", () => {
-        const orders = registered("Orders", 1);
-        const before = buildPlanCollections(source({ Orders: orders }), index);
-        const after = buildPlanCollections(source({ Orders: orders, Products: registered("Products", 1) }), index);
+    it("shows a rejected collection as failed, with why, until an edit fixes it", () => {
+        const rejected = entry("Orders", "Sales", { status: "Rejected", warnings: ["Bad key."] });
+        const failed = buildPlan(source({ plannerEntries: { Orders: rejected } }), index);
 
-        expect(after[0]).toBe(before[0]);
-        expect(after[1]).toBe(before[1]);
-    });
-});
-
-describe("groupByArea", () => {
-    it("follows the proposal's areas and puts collections outside any area last", () => {
-        const collections = buildPlanCollections(source({ Products: registered("Products", 1) }), index);
-
-        expect(
-            groupByArea(collections, proposal).map((area) => ({
-                name: area.name,
-                collections: area.collections.map((collection) => collection.name),
-            })),
-        ).toEqual([
-            { name: "Sales area", collections: ["Orders"] },
-            { name: "Customers area", collections: ["Customers"] },
-            { name: null, collections: ["Products"] },
-        ]);
-    });
-
-    it("places a collection whose area has no name outside any area, rather than nowhere", () => {
-        const unnamed = {
-            ...proposal,
-            areas: [{ area: "", why: null, collections: proposal.areas.flatMap((area) => area.collections) }],
-        };
-        const collections = buildPlanCollections({ ...source({}), plannerProposal: unnamed }, index);
-
-        expect(groupByArea(collections, unnamed)).toEqual([{ name: null, collections }]);
-    });
-});
-
-describe("buildPlanTables", () => {
-    it("says where every table in the database goes", () => {
-        const collections = buildPlanCollections(source({}), index);
-
-        expect(
-            buildPlanTables(index, selectedTables, collections, proposal).map(({ label, group, detail }) => ({
-                label,
-                group,
-                detail,
-            })),
-        ).toEqual([
-            { label: "dbo.Archive", group: "notSelected", detail: "Not selected in Verify your schema." },
-            { label: "dbo.AuditLog", group: "notMigrated", detail: "Nothing in the app reads it." },
-            { label: "dbo.Customers", group: "inCollections", detail: "One Customers document per row" },
-            { label: "dbo.OrderLines", group: "inCollections", detail: "Inside Orders as OrderLines" },
-            { label: "dbo.Orders", group: "inCollections", detail: "One Orders document per row" },
-        ]);
-    });
-
-    describe("a registered configuration", () => {
-        const ordersConfig: CdcSinkTableConfig = {
-            collectionName: "Orders",
-            sourceTableSchema: "dbo",
-            sourceTableName: "orders",
-            columns: [],
-            embeddedTables: [{ sourceTableName: "OrderLines", propertyName: "lines", joinColumns: ["OrderId"] }],
-        };
-
-        const tablesOfOrders = (tableRef: ConfigTableRef) => {
-            const collections = buildPlanCollections(
-                source({ Orders: registered("Orders", 1, ordersConfig, tableRef) }),
-                index,
-            );
-
-            return buildPlanTables(index, selectedTables, collections, proposal)
-                .filter((table) => table.collection?.name === "Orders")
-                .map(({ label, detail }) => ({ label, detail }));
-        };
-
-        it("places its tables where they resolved to", () => {
-            expect(
-                tablesOfOrders({
-                    table: { sourceTableSchema: "dbo", sourceTableName: "Orders" },
-                    embeddedTables: [
-                        { table: { sourceTableSchema: "dbo", sourceTableName: "OrderLines" }, embeddedTables: [] },
-                    ],
-                }),
-            ).toEqual([
-                { label: "dbo.OrderLines", detail: "Inside Orders as lines" },
-                { label: "dbo.Orders", detail: "One Orders document per row" },
-            ]);
+        expect(failed.collections.find((collection) => collection.name === "Orders")).toMatchObject({
+            state: "failed",
+            problems: ["Bad key."],
         });
+        expect(failed.areas[1].state).toBe("failed");
 
-        it("places no table that fits no selected table", () => {
-            expect(tablesOfOrders({ table: null, embeddedTables: [{ table: null, embeddedTables: [] }] })).toEqual([]);
+        const fixed = buildPlan(
+            source({
+                plannerEntries: { Orders: rejected },
+                plannerEdits: {
+                    Orders: { area: "Sales", config: config("Orders", "Orders"), isRemoved: false },
+                },
+            }),
+            index,
+        );
+
+        expect(stateOf(fixed, "Orders")).toBe("built");
+    });
+
+    it("shows a moved collection only in the area it was moved to", () => {
+        const plan = buildPlan(source({ plannerEntries: { Orders: entry("Orders", "Customers") } }), index);
+
+        expect(plan.areas.map((area) => area.collections.map((collection) => collection.name))).toEqual([
+            ["Customers", "Orders"],
+            [],
+        ]);
+    });
+
+    it("shows a renamed collection once, under its new name, and does not offer to build it again", () => {
+        const plan = buildPlan(
+            source({
+                plannerEntries: { Purchases: entry("Purchases", "Sales", { config: config("Purchases", "Orders") }) },
+            }),
+            index,
+        );
+        const sales = plan.areas[1];
+
+        expect(sales.collections.map((collection) => collection.name)).toEqual(["Purchases"]);
+        expect(sales.pendingCollections).toEqual([]);
+    });
+
+    it("lists the selected tables no collection reads, with the planner's reason where it gave one", () => {
+        const plan = buildPlan(source(), index);
+
+        expect(plan.leftOut).toEqual([
+            { table: "dbo.Archive", why: "Not in any collection.", searchKey: "dbo.archive" },
+            { table: "dbo.AuditLog", why: "Nothing reads it.", searchKey: "dbo.auditlog" },
+        ]);
+    });
+});
+
+describe("getCollectionSources", () => {
+    it("lists the table, the embedded tables and the linked collections, with no property names before a build", () => {
+        const orders = buildPlan(source(), index).collections.find((collection) => collection.name === "Orders");
+
+        expect(orders && getCollectionSources(orders)).toEqual({
+            table: { kind: "table", name: "dbo.Orders", as: null },
+            embeds: [{ kind: "embed", name: "dbo.OrderLines", as: null }],
+            links: [{ kind: "link", name: "Customers", as: null }],
         });
     });
 });
 
-describe("countUnbuilt", () => {
-    it("counts suggested and failed collections, which applying leaves out", () => {
-        expect(countUnbuilt(source({}))).toBe(2);
-        expect(
-            countUnbuilt(
-                source({
-                    Orders: registered("Orders", 1),
-                    Customers: { name: "Customers", outcome: "rejected", errors: [], config: null, issues: [] },
-                }),
-            ),
-        ).toBe(1);
-        expect(countUnbuilt(source({ Orders: registered("Orders", 1) }, ["Customers"]))).toBe(0);
-    });
-});
-
-describe("findCollectionsLinkingTo", () => {
-    it("finds the collections that link to the target, ignoring case", () => {
-        const collections = buildPlanCollections(source({}), index);
-
-        expect(findCollectionsLinkingTo(collections, "customers")).toEqual(["Orders"]);
-        expect(findCollectionsLinkingTo(collections, "Orders")).toEqual([]);
-    });
-});
-
-describe("countChangedSince", () => {
-    it("counts the collections that were built, updated or added since the panel was closed", () => {
-        const before = source({});
-        const after = source({ Orders: registered("Orders", 1), Products: registered("Products", 1) });
-
-        expect(countChangedSince(getPlanRevisions(before), after)).toBe(2);
-        expect(countChangedSince(getPlanRevisions(after), after)).toBe(0);
-    });
-
-    it("counts a collection registered again after a removal, although its version started over", () => {
-        const first = source({ Orders: { ...registered("Orders", 1), registrationNumber: 1 } });
-        const again = source({ Orders: { ...registered("Orders", 1), registrationNumber: 3 } });
-
-        expect(countChangedSince(getPlanRevisions(first), again)).toBe(1);
+describe("getAreaShortName", () => {
+    it("drops the word area from the end of the name only", () => {
+        expect(getAreaShortName("Sales area")).toBe("Sales");
+        expect(getAreaShortName("Customers Area")).toBe("Customers");
+        expect(getAreaShortName("Area")).toBe("Area");
+        expect(getAreaShortName("Staging")).toBe("Staging");
     });
 });
 
 describe("createNameMatcher", () => {
-    it("matches any name containing the filter, ignoring case and surrounding spaces", () => {
-        expect(createNameMatcher(" orderl ")(toSearchKey("Orders", "dbo.OrderLines"))).toBe(true);
-        expect(createNameMatcher("order")(toSearchKey("Customers"))).toBe(false);
-        expect(createNameMatcher("  ")(toSearchKey("Customers"))).toBe(true);
+    it("matches the name or a table, ignoring case and surrounding spaces", () => {
+        const matches = createNameMatcher("  orders ");
+
+        expect(matches(toSearchKey("Sales", "dbo.Orders"))).toBe(true);
+        expect(matches(toSearchKey("Customers"))).toBe(false);
+        expect(createNameMatcher(" ")(toSearchKey("Customers"))).toBe(true);
     });
 });

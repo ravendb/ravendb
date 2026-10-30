@@ -1,22 +1,35 @@
-import type { MigrationFrame, MigrationFrameConventionsFrame, OpenQuestion } from "@/api/generated/server-api";
+import type {
+    CdcSinkTableConfig,
+    MigrationFrame,
+    MigrationPlanGetResponse,
+    OpenQuestion,
+} from "@/api/generated/server-api";
 import {
-    isRegistered,
-    withoutCollection,
+    getLatestReply,
+    omitKey,
+    selectChat,
+    selectWorkingChats,
+    updateChat,
     type PlannerState,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
-import { proposedCollections } from "@/pages/setup/add-app-wizard/steps/map/session/planner-plan";
 import {
     resolveConfigTables,
     resolveProposalTables,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-table-refs";
 import type {
     PlannerActivity,
+    PlannerChatId,
+    PlannerEntry,
     PlannerQuestion,
     PlannerReplyTurn,
     PlannerTurn,
+    PlannerTurnEnding,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 
 export const UNSPECIFIED_PROPERTY_CASE = "Unspecified";
+
+/** Quill ends a stream with this error frame after migrationStop. */
+export const STOPPED_TURN_ERROR = "The turn was stopped.";
 
 const INCOMPLETE_TURN_ERROR = "The planner ended its turn without finishing it.";
 
@@ -41,51 +54,67 @@ export function createReplyTurn(isOpening: boolean): PlannerReplyTurn {
     };
 }
 
+export function isAreaNotStartedError(message: string): boolean {
+    return /^The area .+ has not started; start it first\.$/.test(message.trim());
+}
+
 /**
- * Folds one streamed frame into the session. Every frame belongs to the reply turn the stream opened,
- * which is always the last one: the transcript only grows at its end.
+ * A frame belongs to its chat's last turn, the reply its stream opened. What an area agent registers is in
+ * that area.
  */
-export function applyPlannerFrame(state: PlannerState, frame: MigrationFrame): Partial<PlannerState> {
-    const selectedTables = state.plannerSelectedTables ?? [];
+export function applyPlannerFrame(
+    state: PlannerState,
+    chatId: PlannerChatId,
+    frame: MigrationFrame,
+): Partial<PlannerState> {
+    const addActivity = (activity: PlannerActivity) =>
+        updateChat(state, chatId, (chat) => ({
+            ...chat,
+            turns: updateReplyTurn(chat.turns, (turn) => ({ ...turn, activity: [...turn.activity, activity] })),
+        }));
+    const resolveTables = (config: CdcSinkTableConfig) =>
+        resolveConfigTables(config, state.plannerSelectedTables ?? [], state.plannerDefaultSchema);
 
     switch (frame.type) {
         case "proposal":
             return {
-                plannerProposal: resolveProposalTables(frame.proposal, selectedTables),
-                plannerRemovedCollections: [],
-                plannerTurns: addActivity(state.plannerTurns, {
-                    type: "proposal",
-                    collections: proposedCollections(frame.proposal).flatMap((proposed) =>
-                        proposed.collection ? [proposed.collection] : [],
-                    ),
-                    areaCount: frame.proposal.areas.length,
-                    droppedCount: frame.proposal.dropped.length,
+                plannerProposal: resolveProposalTables(frame.proposal, state.plannerSelectedTables ?? []),
+                ...addActivity({ type: "proposal" }),
+            };
+
+        case "conventions":
+            return {
+                plannerConventions: {
+                    propertyCase: frame.propertyCase,
+                    propertyLanguage: frame.propertyLanguage ?? null,
+                    notes: frame.notes ?? null,
+                },
+                ...addActivity({
+                    type: "conventions",
+                    propertyCase: frame.propertyCase,
+                    propertyLanguage: frame.propertyLanguage ?? null,
+                    notes: frame.notes ?? null,
                 }),
             };
 
         case "collection": {
-            const previous = state.plannerCollections[frame.collection];
-            const registrationNumber = state.plannerRegistrationCount + 1;
+            const previous = state.plannerEntries[frame.collection];
+            const entry: PlannerEntry = {
+                name: frame.collection,
+                area: chatId ?? previous?.area ?? null,
+                status: "Registered",
+                version: frame.version,
+                rationale: frame.rationale ?? previous?.rationale ?? null,
+                config: frame.config ?? previous?.config ?? null,
+                tableRef: frame.config ? resolveTables(frame.config) : (previous?.tableRef ?? null),
+                warnings: frame.warnings,
+            };
 
             return {
-                plannerCollections: {
-                    ...state.plannerCollections,
-                    [frame.collection]: {
-                        name: frame.collection,
-                        outcome: "registered",
-                        version: frame.version,
-                        registrationNumber,
-                        rationale: frame.rationale ?? null,
-                        config: frame.config ?? null,
-                        tableRef: frame.config ? resolveConfigTables(frame.config, selectedTables) : null,
-                        previousConfig: previous && isRegistered(previous) ? previous.config : null,
-                        warnings: frame.warnings,
-                        rejectionErrors: [],
-                    },
-                },
-                plannerRegistrationCount: registrationNumber,
-                plannerRemovedCollections: state.plannerRemovedCollections.filter((name) => name !== frame.collection),
-                plannerTurns: addActivity(state.plannerTurns, {
+                plannerEntries: { ...state.plannerEntries, [frame.collection]: entry },
+                plannerRetrying: omitKey(state.plannerRetrying, frame.collection),
+                plannerRejectionIssues: omitKey(state.plannerRejectionIssues, frame.collection),
+                ...addActivity({
                     type: "registered",
                     collection: frame.collection,
                     version: frame.version,
@@ -94,31 +123,45 @@ export function applyPlannerFrame(state: PlannerState, frame: MigrationFrame): P
             };
         }
 
-        // Kept as a collection rather than dropped: a rejection the operator cannot see looks identical
-        // to a collection the planner never attempted. A rejected change leaves the registration in place,
-        // as it does on the server.
+        case "transientCollectionError":
+            return {
+                plannerRetrying: {
+                    ...state.plannerRetrying,
+                    [frame.collection]: frame.errors.map((issue) => issue.message),
+                },
+                ...addActivity({
+                    type: "transientError",
+                    collection: frame.collection,
+                    errors: frame.errors.map((issue) => issue.message),
+                }),
+            };
+
+        // A rejected change leaves a registered collection as it was, as the plan does; a collection that
+        // never registered is kept with the agent's last attempt, to be fixed by hand or retried.
         case "rejectedCollection": {
-            const previous = state.plannerCollections[frame.collection];
-            const isChange = previous !== undefined && isRegistered(previous);
-            const errors = frame.errors.map((issue) => issue.message);
+            const previous = state.plannerEntries[frame.collection];
+            const isChange = previous?.status === "Registered";
+            const config = frame.config ?? previous?.config ?? null;
 
             return {
-                plannerCollections: isChange
-                    ? {
-                          ...state.plannerCollections,
-                          [frame.collection]: { ...previous, rejectionErrors: errors },
-                      }
+                plannerEntries: isChange
+                    ? state.plannerEntries
                     : {
-                          ...state.plannerCollections,
+                          ...state.plannerEntries,
                           [frame.collection]: {
                               name: frame.collection,
-                              outcome: "rejected",
-                              errors,
-                              config: frame.config ?? null,
-                              issues: frame.errors,
+                              area: chatId ?? previous?.area ?? null,
+                              status: "Rejected",
+                              version: previous?.version ?? 0,
+                              rationale: previous?.rationale ?? null,
+                              config,
+                              tableRef: config ? resolveTables(config) : null,
+                              warnings: frame.errors.map((issue) => issue.message),
                           },
                       },
-                plannerTurns: addActivity(state.plannerTurns, {
+                plannerRetrying: omitKey(state.plannerRetrying, frame.collection),
+                plannerRejectionIssues: { ...state.plannerRejectionIssues, [frame.collection]: frame.errors },
+                ...addActivity({
                     type: "rejected",
                     collection: frame.collection,
                     errorCount: frame.errors.length,
@@ -127,69 +170,74 @@ export function applyPlannerFrame(state: PlannerState, frame: MigrationFrame): P
             };
         }
 
-        case "transientCollectionError":
+        case "removed": {
+            const collection = frame.collection;
+            const previous = collection ? state.plannerEntries[collection] : undefined;
+
+            if (!collection) {
+                return {};
+            }
+
             return {
-                plannerTurns: addActivity(state.plannerTurns, {
-                    type: "transientError",
-                    collection: frame.collection,
-                    errors: frame.errors.map((issue) => issue.message),
-                    rejections: frame.rejections,
-                    maxRejections: frame.maxRejections,
-                }),
+                plannerEntries: previous
+                    ? { ...state.plannerEntries, [collection]: { ...previous, status: "Removed" } }
+                    : state.plannerEntries,
+                plannerRetrying: omitKey(state.plannerRetrying, collection),
+                ...addActivity({ type: "removed", collection, reason: frame.reason ?? null }),
             };
-
-        case "removed":
-            return frame.collection
-                ? {
-                      ...withoutCollection(state, frame.collection),
-                      plannerTurns: addActivity(state.plannerTurns, { type: "removed", collection: frame.collection }),
-                  }
-                : {};
-
-        case "conventions":
-            return isUnchangedConventions(frame)
-                ? {}
-                : {
-                      plannerTurns: addActivity(state.plannerTurns, {
-                          type: "conventions",
-                          propertyCase: frame.propertyCase,
-                          propertyLanguage: frame.propertyLanguage ?? null,
-                          notes: frame.notes ?? null,
-                          mustReEmit: frame.mustReEmit,
-                      }),
-                  };
+        }
 
         case "note":
-            return { plannerTurns: addActivity(state.plannerTurns, { type: "note", text: frame.text }) };
+            return addActivity({ type: "note", text: frame.text });
 
         case "reply":
-            return {
-                plannerTurns: updateReplyTurn(state.plannerTurns, (turn) => ({
+            return updateChat(state, chatId, (chat) => ({
+                ...chat,
+                turns: updateReplyTurn(chat.turns, (turn) => ({
                     ...turn,
                     reply: frame.reply?.trim() || null,
                     gaps: frame.gaps ?? [],
                     questions: (frame.openQuestions ?? []).map(toPlannerQuestion),
                 })),
-            };
+            }));
 
         case "done":
-            return {
-                plannerConversationId: frame.conversationId,
-                plannerTurns: updateReplyTurn(state.plannerTurns, (turn) => ({ ...turn, status: "done" })),
-            };
+            return updateChat(state, chatId, (chat) => ({
+                ...chat,
+                turns: updateReplyTurn(chat.turns, (turn) => ({ ...turn, status: "done" })),
+            }));
 
         case "error":
-            return {
-                plannerTurns: updateReplyTurn(state.plannerTurns, (turn) => failTurn(turn, frame.message)),
-            };
+            return updateChat(state, chatId, (chat) => ({
+                ...chat,
+                turns: updateReplyTurn(chat.turns, (turn) => failTurn(turn, frame.message)),
+            }));
     }
 }
 
-/**
- * Settles the reply turn once its stream ends. A stream that ends without the planner saying it is done
- * left the turn unfinished, and the operator stopping it is not a failure.
- */
-export function endReplyTurn(turns: PlannerTurn[], { error, isStopped }: { error: string | null; isStopped: boolean }) {
+/** Whatever the ending, nothing retries the collections the turn was retrying any more. */
+export function endPlannerTurn(
+    state: PlannerState,
+    chatId: PlannerChatId,
+    ending: PlannerTurnEnding,
+): Partial<PlannerState> {
+    const retried =
+        getLatestReply(selectChat(state, chatId).turns)?.activity.flatMap((activity) =>
+            activity.type === "transientError" ? [activity.collection] : [],
+        ) ?? [];
+
+    return {
+        ...updateChat(state, chatId, (chat) => ({
+            ...chat,
+            turns: endReplyTurn(chat.turns, ending),
+            abortController: null,
+        })),
+        plannerRetrying: retried.reduce((retrying, collection) => omitKey(retrying, collection), state.plannerRetrying),
+    };
+}
+
+/** A stream that ends before the agent says it is done left the turn unfinished, unless the operator disconnected it. */
+export function endReplyTurn(turns: PlannerTurn[], { error, isStopped }: PlannerTurnEnding): PlannerTurn[] {
     return updateReplyTurn(turns, (turn): PlannerReplyTurn => {
         if (error !== null) {
             return failTurn(turn, error);
@@ -203,30 +251,65 @@ export function endReplyTurn(turns: PlannerTurn[], { error, isStopped }: { error
     });
 }
 
-/** A turn the planner already finished keeps its outcome: the conversation and the plan are saved by then. */
-function failTurn(turn: PlannerReplyTurn, error: string): PlannerReplyTurn {
-    return turn.status === "done"
-        ? { ...turn, activity: [...turn.activity, { type: "lateError", message: error }] }
-        : { ...turn, status: "failed", error };
+export function applyStoredPlan(
+    state: PlannerState,
+    { plan, proposal }: MigrationPlanGetResponse,
+): Partial<PlannerState> {
+    const selectedTables = state.plannerSelectedTables ?? [];
+    const entries = Object.fromEntries(
+        Object.entries(plan.entries ?? {}).map(([name, entry]): [string, PlannerEntry] => [
+            name,
+            {
+                name,
+                area: entry.area ?? null,
+                status: entry.status ?? "Registered",
+                version: entry.version ?? 1,
+                rationale: entry.rationale ?? null,
+                config: entry.config ?? null,
+                tableRef: entry.config
+                    ? resolveConfigTables(entry.config, selectedTables, state.plannerDefaultSchema)
+                    : null,
+                warnings: entry.warnings ?? [],
+            },
+        ]),
+    );
+    // A read sent before a frame arrived can answer after it; a turn still streaming keeps what it said since.
+    const streamingAreas = new Set(selectWorkingChats(state));
+
+    for (const local of Object.values(state.plannerEntries)) {
+        const stored = entries[local.name];
+        const isStreaming = local.area !== null && streamingAreas.has(local.area);
+
+        if (isStreaming && (!stored || stored.version < local.version)) {
+            entries[local.name] = local;
+        }
+    }
+
+    const isRejected = (name: string) => entries[name]?.status === "Rejected";
+
+    return {
+        plannerProposal: proposal ? resolveProposalTables(proposal, selectedTables) : null,
+        plannerConventions: plan.conventions ?? null,
+        plannerEntries: entries,
+        plannerRejectionIssues: Object.fromEntries(
+            Object.entries(state.plannerRejectionIssues).filter(([name]) => isRejected(name)),
+        ),
+    };
 }
 
-function isUnchangedConventions(frame: MigrationFrameConventionsFrame): boolean {
-    return (
-        frame.propertyCase === UNSPECIFIED_PROPERTY_CASE &&
-        !frame.propertyLanguage &&
-        !frame.notes &&
-        frame.mustReEmit.length === 0
-    );
+/** A turn the agent already finished keeps its outcome: the plan is saved by then. */
+function failTurn(turn: PlannerReplyTurn, error: string): PlannerReplyTurn {
+    if (turn.status === "done") {
+        return { ...turn, activity: [...turn.activity, { type: "lateError", message: error }] };
+    }
+
+    return error === STOPPED_TURN_ERROR ? { ...turn, status: "stopped" } : { ...turn, status: "failed", error };
 }
 
 function toPlannerQuestion({ question, options, recommended }: OpenQuestion): PlannerQuestion {
     const isRecommendationValid = recommended != null && recommended >= 0 && recommended < options.length;
 
     return { question, options, recommended: isRecommendationValid ? recommended : null };
-}
-
-function addActivity(turns: PlannerTurn[], activity: PlannerActivity): PlannerTurn[] {
-    return updateReplyTurn(turns, (turn) => ({ ...turn, activity: [...turn.activity, activity] }));
 }
 
 function updateReplyTurn(turns: PlannerTurn[], update: (turn: PlannerReplyTurn) => PlannerReplyTurn): PlannerTurn[] {

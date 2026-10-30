@@ -79,19 +79,22 @@ describe("resolveProposalTables", () => {
 });
 
 describe("resolveConfigTables", () => {
-    it("resolves every table a configuration reads, an embedded table without a schema in its parent's", () => {
+    it("resolves every table a configuration reads, a table without a schema in the provider's default schema", () => {
         const config: CdcSinkTableConfig = {
             collectionName: "Orders",
-            sourceTableSchema: "public",
+            sourceTableSchema: "sales",
             sourceTableName: "ORDERS",
             embeddedTables: [
                 { sourceTableName: "customers", propertyName: "Customer" },
-                { sourceTableSchema: "public", sourceTableName: "no_such_table", propertyName: "Missing" },
+                { sourceTableSchema: "sales", sourceTableName: "no_such_table", propertyName: "Missing" },
             ],
         };
 
-        expect(resolveConfigTables(config, [ORDERS, CUSTOMERS])).toEqual({
-            table: ORDERS,
+        const salesOrders = { sourceTableSchema: "sales", sourceTableName: "orders" };
+        const salesCustomers = { sourceTableSchema: "sales", sourceTableName: "customers" };
+
+        expect(resolveConfigTables(config, [salesOrders, salesCustomers, CUSTOMERS], "public")).toEqual({
+            table: salesOrders,
             embeddedTables: [
                 { table: CUSTOMERS, embeddedTables: [] },
                 { table: null, embeddedTables: [] },

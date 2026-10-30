@@ -3,12 +3,11 @@ import {
     describeConventions,
     describeWork,
     getActivityHeadline,
-    getCollectionsToBuildFirst,
+    getActivityRows,
     getSuggestedReplies,
     getTurnOutcomes,
 } from "@/pages/setup/add-app-wizard/steps/map/chat/planner-activity";
 import { createReplyTurn } from "@/pages/setup/add-app-wizard/steps/map/session/planner-frames";
-import type { PlanCollection, PlanCollectionState } from "@/pages/setup/add-app-wizard/steps/map/session/planner-plan";
 import type { PlannerActivity, PlannerReplyTurn } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 
 function turn(activity: PlannerActivity[], status: PlannerReplyTurn["status"] = "done") {
@@ -126,52 +125,30 @@ describe("describeWork", () => {
             type: "transientError",
             collection: "Products",
             errors: ["x"],
-            rejections: 1,
-            maxRejections: 2,
         };
 
         expect(describeWork(turn([retrying], "working"))).toBe("Building collections");
     });
 });
 
-describe("getCollectionsToBuildFirst", () => {
-    const planCollection = (name: string, state: PlanCollectionState): PlanCollection => ({
-        name,
-        state,
-        area: null,
-        why: null,
-        rootTable: null,
-        document: null,
-        previousDocument: null,
-        config: null,
-        warnings: [],
-        errors: [],
-        searchKey: name.toLowerCase(),
-    });
+describe("getActivityRows", () => {
+    it("shows each collection once, where it first came up, as its latest frame left it", () => {
+        const note: PlannerActivity = { type: "note", text: "Read the DDL." };
+        const retrying: PlannerActivity = { type: "transientError", collection: "Products", errors: ["x"] };
 
-    it("names every suggested collection", () => {
-        expect(
-            getCollectionsToBuildFirst([
-                planCollection("Orders", "suggested"),
-                planCollection("Customers", "suggested"),
-                planCollection("Invoices", "failed"),
-            ]),
-        ).toEqual(["Orders", "Customers"]);
-    });
-
-    it("offers nothing once a collection is built, or when nothing is suggested", () => {
-        expect(
-            getCollectionsToBuildFirst([planCollection("Orders", "suggested"), planCollection("Customers", "built")]),
-        ).toEqual([]);
-        expect(getCollectionsToBuildFirst([planCollection("Invoices", "failed")])).toEqual([]);
+        expect(getActivityRows([note, retrying, built("Orders"), failed("Products"), { type: "proposal" }])).toEqual([
+            note,
+            failed("Products"),
+            built("Orders"),
+        ]);
     });
 });
 
 describe("getSuggestedReplies", () => {
     it("offers to retry a failed collection, or to carry on without it", () => {
         expect(getSuggestedReplies({ failed: ["Products"], kept: [] })).toEqual([
-            { label: "Retry Products", prompt: "Retry Products.", isRetry: true, keeps: [] },
-            { label: "Carry on without Products", prompt: "Carry on without Products.", isRetry: false, keeps: [] },
+            { label: "Retry Products", prompt: "Retry Products." },
+            { label: "Carry on without Products", prompt: "Carry on without Products." },
         ]);
     });
 
@@ -183,10 +160,10 @@ describe("getSuggestedReplies", () => {
         ).toEqual(["Retry the 3 failed", "Carry on without them"]);
     });
 
-    it("offers to keep a built collection whose change was rejected, never to drop it, and lets go of the rejection", () => {
+    it("offers to keep a built collection whose change was rejected, never to drop it", () => {
         expect(getSuggestedReplies({ failed: [], kept: ["Orders"] })).toEqual([
-            { label: "Retry the change to Orders", prompt: "Retry the change to Orders.", isRetry: true, keeps: [] },
-            { label: "Keep the previous version", prompt: "Keep Orders as it is.", isRetry: false, keeps: ["Orders"] },
+            { label: "Retry the change to Orders", prompt: "Retry the change to Orders." },
+            { label: "Keep the previous version", prompt: "Keep Orders as it is." },
         ]);
     });
 
@@ -200,7 +177,6 @@ describe("describeConventions", () => {
         type: "conventions",
         propertyLanguage: null,
         notes: null,
-        mustReEmit: [],
     };
 
     it("writes the casing the way it looks", () => {
@@ -212,14 +188,13 @@ describe("describeConventions", () => {
         );
     });
 
-    it("says which collections take the new naming, and in what language", () => {
+    it("says in what language the names are", () => {
         expect(
             describeConventions({
                 ...conventions,
                 propertyCase: "Unspecified",
                 propertyLanguage: "Spanish",
-                mustReEmit: ["Orders", "Products"],
             }),
-        ).toBe("Property names in Spanish, re-emitting Orders and Products");
+        ).toBe("Property names in Spanish");
     });
 });

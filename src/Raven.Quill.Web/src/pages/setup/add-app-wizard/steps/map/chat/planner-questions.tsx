@@ -1,44 +1,48 @@
 import { useId, useState, type KeyboardEvent, type Ref } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, type FieldErrors } from "react-hook-form";
-import { ArrowRight, ChevronLeft, ChevronRight, Sparkle } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Sparkle, X } from "lucide-react";
 import { FormRadioList } from "@/components/form/form-radio-list";
 import { FormTextarea } from "@/components/form/form-textarea";
 import { Button } from "@/components/shadcn/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import { Heading, Text } from "@/components/typography";
 import { cn } from "@/lib/utils";
-import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import {
     answersFormSchema,
     CUSTOM_ANSWER,
     getInitialAnswers,
-    recommendedAnswers,
     resolveAnswers,
     type AnswersFormData,
 } from "@/pages/setup/add-app-wizard/steps/map/chat/planner-questions-utils";
-import { useCanAnswerPlanner } from "@/pages/setup/add-app-wizard/steps/map/planner-workspace-context";
-import type { PlannerQuestion } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
+import { useCanSendMessage, useChatPhase } from "@/pages/setup/add-app-wizard/steps/map/planner-workspace-context";
+import type { PlannerChatId, PlannerQuestion } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 import { usePlannerSession } from "@/pages/setup/add-app-wizard/steps/map/session/use-planner-session";
+
+const CLOSE_LABEL = "Close, and write a message instead";
 
 /**
  * The planner's questions, one at a time, in place of the composer. The recommended answer is preselected,
  * number keys pick an option, and a question without options takes an answer in the operator's words.
- * Anything the operator wrote for the planner meanwhile goes along with the answers.
  */
 export function PlannerQuestions({
+    chatId,
     questions,
+    onClose,
     className,
     ref,
 }: {
+    chatId: PlannerChatId;
     questions: PlannerQuestion[];
+    onClose: () => void;
     className?: string;
     ref?: Ref<HTMLElement>;
 }) {
     const session = usePlannerSession();
-    const canAnswer = useCanAnswerPlanner();
+    const canSendMessage = useCanSendMessage(chatId);
+    const canAnswer = useChatPhase(chatId) === "awaitingAnswers" && canSendMessage;
+    const asker = describeAsker(chatId);
     const titleId = useId();
-    const draft = useSetupWizardStore((state) => state.plannerDraft.trim());
-    const clearPlannerComposer = useSetupWizardStore((state) => state.clearPlannerComposer);
     const [index, setIndex] = useState(0);
     const form = useForm<AnswersFormData>({
         defaultValues: getInitialAnswers(questions),
@@ -56,7 +60,7 @@ export function PlannerQuestions({
     };
 
     const send = form.handleSubmit(
-        (values) => void session.answer(resolveAnswers(questions, values.answers), false),
+        (values) => void session.answer(chatId, resolveAnswers(questions, values.answers)),
         showFirstUnanswered,
     );
 
@@ -66,8 +70,6 @@ export function PlannerQuestions({
             setIndex(index + 1);
         }
     };
-
-    const skip = () => void session.answer(recommendedAnswers(questions), true);
 
     const pick = (choice: string) => form.setValue(`answers.${index}.choice`, choice);
 
@@ -96,7 +98,7 @@ export function PlannerQuestions({
             tabIndex={-1}
             aria-labelledby={titleId}
             className={cn(
-                "mx-auto flex w-full flex-col gap-3 rounded-xl border bg-card px-4 pt-3.5 pb-3 shadow-floating outline-none",
+                "mx-auto flex w-full flex-col gap-3 rounded-xl border border-primary/50 bg-card px-4 pt-3.5 pb-3 shadow-floating outline-none",
                 className,
             )}
             onKeyDown={pickByNumber}
@@ -104,9 +106,7 @@ export function PlannerQuestions({
             <div className="flex items-center gap-2">
                 <Sparkle className="size-3 shrink-0 text-primary-strong" aria-hidden="true" />
                 <Text variant="muted" as="span">
-                    {questions.length === 1
-                        ? "The planner has a question"
-                        : `The planner has ${questions.length} questions`}
+                    {questions.length === 1 ? `${asker} has a question` : `${asker} has ${questions.length} questions`}
                 </Text>
                 <Text variant="muted" as="span" className="ml-auto">
                     {index + 1} of {questions.length}
@@ -132,6 +132,20 @@ export function PlannerQuestions({
                     >
                         <ChevronRight aria-hidden="true" />
                     </Button>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                className="text-muted-foreground"
+                                aria-label={CLOSE_LABEL}
+                                onClick={onClose}
+                            >
+                                <X aria-hidden="true" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>{CLOSE_LABEL}</TooltipContent>
+                    </Tooltip>
                 </div>
             </div>
 
@@ -147,7 +161,17 @@ export function PlannerQuestions({
                     aria-labelledby={titleId}
                     options={question.options.map((option, optionIndex) => ({
                         value: String(optionIndex),
-                        label: optionIndex === question.recommended ? `${option} (Recommended)` : option,
+                        label:
+                            optionIndex === question.recommended ? (
+                                <>
+                                    {option}{" "}
+                                    <Text as="span" variant="muted">
+                                        (Recommended)
+                                    </Text>
+                                </>
+                            ) : (
+                                option
+                            ),
                         hint: <OptionKey>{optionIndex + 1}</OptionKey>,
                     }))}
                     other={{
@@ -169,26 +193,54 @@ export function PlannerQuestions({
                 />
             )}
 
-            {draft && (
-                <Text variant="muted">
-                    Your note goes with the answers: &ldquo;{draft}&rdquo;{" "}
-                    <Button variant="link" className="h-auto p-0" onClick={clearPlannerComposer}>
-                        Discard it
-                    </Button>
-                </Text>
-            )}
-
-            <div className="flex flex-wrap items-center gap-2">
-                <Button variant="ghost" className="text-muted-foreground" disabled={!canAnswer} onClick={skip}>
-                    Skip, use recommended answers
-                </Button>
-                <Button className="ml-auto" disabled={isLast && !canAnswer} onClick={isLast ? send : goToNextQuestion}>
+            <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+                {isLast && chatId === null && (
+                    <Text variant="muted" className="min-w-0 flex-[1_1_10rem]">
+                        The planner updates the plan with your answers. The areas build after that.
+                    </Text>
+                )}
+                <Button disabled={isLast && !canAnswer} onClick={isLast ? send : goToNextQuestion}>
                     {isLast ? "Send answers" : "Next"}
                     <ArrowRight data-icon="inline-end" />
                 </Button>
             </div>
         </section>
     );
+}
+
+/** What is left in place of the closed questions, so the operator can still come back to them. */
+export function PlannerQuestionsReminder({
+    chatId,
+    questionCount,
+    onOpen,
+}: {
+    chatId: PlannerChatId;
+    questionCount: number;
+    onOpen: () => void;
+}) {
+    const asker = describeAsker(chatId);
+
+    return (
+        <div className="flex flex-wrap items-center gap-x-2 px-1">
+            <Sparkle className="size-3 shrink-0 text-primary-strong" aria-hidden="true" />
+            <Text variant="muted" as="span">
+                {questionCount === 1
+                    ? `${asker} still has a question.`
+                    : `${asker} still has ${questionCount} questions.`}
+            </Text>
+            <Button
+                variant="link"
+                className="h-auto p-0 text-foreground underline decoration-primary underline-offset-3"
+                onClick={onOpen}
+            >
+                {questionCount === 1 ? "Answer it" : "Answer them"}
+            </Button>
+        </div>
+    );
+}
+
+function describeAsker(chatId: PlannerChatId): string {
+    return chatId === null ? "The planner" : `The ${chatId} agent`;
 }
 
 function OptionKey({ children }: { children: number }) {
