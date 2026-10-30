@@ -318,7 +318,7 @@ internal static partial class QueryPlanBuilder
                     bool mayHaveMissingEntries = p.MayHaveMissingEntries
                         || indexSearcher.GetDistinctTermCountInField(fieldMeta) == 0 // no entries at all
                         || indexSearcher.HasAnyNonExistingEntries(fieldMeta)
-                        || builderParameters.HasDynamics
+                        || indexSearcher.AssumeMultipleTermsInEveryField
                         || indexSearcher.SortFieldTreeCoversAllEntries(fieldMeta, p.FieldType) == false;
                     result[target] = new OrderMetadata(fieldMeta, p.Ascending, p.FieldType, p.NullsSortMode, mayHaveMissingEntries);
                     break;

@@ -723,12 +723,6 @@ internal static partial class QueryPlanBuilder
             return false;
         }
 
-        if (ctx.BuilderParams.HasDynamics)
-        {
-            rejectReason = "the index writes dynamic fields, which can give a document several values of the sort field without marking it multi-valued";
-            return false;
-        }
-
         if (ctx.Exec.Plan.DirectScanResidualSet is null)
         {
             rejectReason = "a filter can't be checked per-document during the scan";
