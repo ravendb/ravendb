@@ -1,4 +1,6 @@
+import { ColumnDef } from "@tanstack/react-table";
 import { virtualTableConstants } from "components/common/virtualTable/utils/virtualTableConstants";
+import { sumBy } from "common/typeUtils";
 
 const {
     defaultRowHeightInPx,
@@ -7,6 +9,7 @@ const {
     scrollbarWidthInPx,
     scrollbarHeightInPx,
     minTableHeightInPx,
+    minRelativeColumnWidthInPx,
 } = virtualTableConstants;
 
 interface TableBodyWidthOptions {
@@ -44,6 +47,29 @@ function getCellSizeProvider(tableWidthInPx = 0) {
     return (percentage: number) => Math.floor((tableWidthInPx * percentage) / 100);
 }
 
+function fitColumnsToWidth<T>(columns: ColumnDef<T>[], containerWidth: number): ColumnDef<T>[] {
+    const isRelative = (column: ColumnDef<T>) => column.meta?.relativeWidth > 0;
+
+    const fixedWidth = sumBy(
+        columns.filter((column) => !isRelative(column)),
+        (column) => column.size ?? 0
+    );
+    const totalRelativeWidth = sumBy(columns.filter(isRelative), (column) => column.meta.relativeWidth);
+    const freeWidth = getTableBodyWidth(containerWidth) - fixedWidth;
+
+    return columns.map((column) =>
+        isRelative(column)
+            ? {
+                  ...column,
+                  size: Math.max(
+                      column.minSize ?? minRelativeColumnWidthInPx,
+                      Math.floor((freeWidth * column.meta.relativeWidth) / totalRelativeWidth)
+                  ),
+              }
+            : column
+    );
+}
+
 function getHeightInPx(rowsCount: number, maxHeightInPx: number, rowHeight = defaultRowHeightInPx): number {
     const calculatedHeightInPx =
         Math.max(rowHeight, rowsCount * rowHeight) + paddingInPx + headerHeightInPx + scrollbarHeightInPx;
@@ -57,6 +83,7 @@ function getTableContainerHeightInPx(heightInPx: number, isPaddingDisabled = fal
 
 export const virtualTableUtils = {
     getCellSizeProvider,
+    fitColumnsToWidth,
     getTableBodyWidth,
     getHeightInPx,
     getTableContainerHeightInPx,

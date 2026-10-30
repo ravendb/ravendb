@@ -24,12 +24,6 @@ import smugglerDatabaseDetails = require("viewmodels/common/notificationCenter/d
 import sqlMigrationDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/sqlMigrationDetails");
 import patchDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/patchDocumentsDetails");
 import reshardingDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/reshardingDetails");
-import virtualBulkInsertDetails = require("viewmodels/common/notificationCenter/detailViewer/virtualOperations/virtualBulkInsertDetails");
-import virtualBulkInsertFailuresDetails = require("viewmodels/common/notificationCenter/detailViewer/virtualOperations/virtualBulkInsertFailuresDetails");
-import virtualUpdateByQueryDetails = require("viewmodels/common/notificationCenter/detailViewer/virtualOperations/virtualUpdateByQueryDetails");
-import virtualUpdateByQueryFailuresDetails = require("viewmodels/common/notificationCenter/detailViewer/virtualOperations/virtualUpdateByQueryFailuresDetails");
-import virtualDeleteByQueryDetails = require("viewmodels/common/notificationCenter/detailViewer/virtualOperations/virtualDeleteByQueryDetails");
-import virtualDeleteByQueryFailuresDetails = require("viewmodels/common/notificationCenter/detailViewer/virtualOperations/virtualDeleteByQueryFailuresDetails");
 import bulkInsertDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/bulkInsertDetails");
 import revertRevisionsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/revertRevisionsDetails");
 import enforceRevisionsConfigurationDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/enforceRevisionsConfigurationDetails");
@@ -38,36 +32,17 @@ import replayTransactionCommandsDetails = require("viewmodels/common/notificatio
 import deleteDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/deleteDocumentsDetails");
 import generateClientCertificateDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/generateClientCertificateDetails");
 import compactDatabaseDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/compactDatabaseDetails");
-import indexingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/indexingDetails");
-import slowSqlDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/slowSqlDetails");
-import indexingReferencesDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/indexingReferencesDetails");
-import slowIoDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/slowIoDetails");
-import pagingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/pagingDetails");
-import hugeDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/hugeDocumentsDetails");
-import newVersionAvailableDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/newVersionAvailableDetails");
-import remoteAttachmentErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/remoteAttachmentErrorDetails");
-import genericAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/genericAlertDetails");
-import recentErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/recentErrorDetails");
+import notificationDetailsProviders = require("components/common/notificationCenter/details/notificationDetailsProviders");
+import NotificationCenterModalHost = require("components/common/notificationCenter/NotificationCenterModalHost");
 import notificationCenterSettings = require("common/notifications/notificationCenterSettings");
 import licenseLimitDetails = require("viewmodels/common/notificationCenter/detailViewer/licenseLimitDetails");
-import requestLatencyDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/requestLatencyDetails");
 import transactionCommandsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/transactionCommandsDetails");
-import dumpRawIndexDataDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/dumpRawIndexDataDetails");
 import validateSchemaDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/validateSchemaDetails");
 
 import studioSettings = require("common/settings/studioSettings");
 import optimizeIndexDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/optimizeIndexDetails");
-import mismatchedReferenceLoadDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/mismatchedReferenceLoadDetails");
-import blockingTombstonesDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/blockingTombstonesDetails");
-import serverLimitsDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/serverLimitsDetails");
-import queueSinkErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/queueSinkErrorDetails");
-import conflictExceededDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/conflictExceededDetails");
-import complexFieldsAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/complexFieldsAlertDetails");
-import cpuCreditsBalanceDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/cpuCreditsBalanceDetails");
 import groupedVirtualNotification = require("common/notifications/models/groupedVirtualNotification");
 import typeUtils = require("common/typeUtils");
-import aiAgentExceededTokenThreshold = require("viewmodels/common/notificationCenter/detailViewer/alerts/aiAgentExceededTokenThreshold");
-import etlTaskHealthChangeDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/etlTaskHealthChangeDetails");
 
 interface detailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
@@ -104,6 +79,13 @@ class notificationCenter {
     includeInDom = ko.observable<boolean>(false); // to avoid RavenDB-10660
 
     reactModalView = ko.observable<ReactInKnockout<any>>(null);
+    private readonly reactModalHostView: ReactInKnockout<typeof NotificationCenterModalHost.default> = ko.pureComputed(() => ({
+        component: NotificationCenterModalHost.default,
+        props: {
+            modalView: this.reactModalView,
+        },
+    }));
+    private reactModalHostElement: HTMLElement = null;
 
     globalNotifications = ko.observableArray<abstractNotification>();
     databaseNotifications = ko.observableArray<abstractNotification>();
@@ -147,6 +129,12 @@ class notificationCenter {
         ko.postbox.subscribe(EVENTS.NotificationCenter.RecentError, (error: recentError) => this.onRecentError(error));
         ko.postbox.subscribe(EVENTS.NotificationCenter.OpenNotification, (error: recentError) => this.openDetails(error));
 
+        this.reactModalView.subscribe((view) => {
+            if (view) {
+                this.mountReactModalHost();
+            }
+        });
+
         _.bindAll(this, "dismiss", "postpone", "killOperation", "openDetails", "killAttachmentUpload");
     }
 
@@ -154,8 +142,6 @@ class notificationCenter {
 
         this.detailsProviders.push(
             licenseLimitDetails,
-            // recent errors: 
-            recentErrorDetails,
 
             // operations:
             smugglerDatabaseDetails,
@@ -171,40 +157,10 @@ class notificationCenter {
             compactDatabaseDetails,
             replayTransactionCommandsDetails,
             transactionCommandsDetails,
-            dumpRawIndexDataDetails,
             optimizeIndexDetails,
             validateSchemaDetails,
-            
-            // virtual operations:
-            virtualBulkInsertDetails,
-            virtualBulkInsertFailuresDetails,
-            virtualUpdateByQueryDetails,
-            virtualUpdateByQueryFailuresDetails,
-            virtualDeleteByQueryDetails,
-            virtualDeleteByQueryFailuresDetails,
 
-            // performance hints:
-            indexingDetails,
-            slowSqlDetails,
-            indexingReferencesDetails,
-            slowIoDetails,
-            pagingDetails,
-            requestLatencyDetails,
-            hugeDocumentsDetails,
-            
-            // alerts:
-            newVersionAvailableDetails,
-            mismatchedReferenceLoadDetails,
-            blockingTombstonesDetails,
-            queueSinkErrorDetails,
-            cpuCreditsBalanceDetails,
-            serverLimitsDetails,
-            conflictExceededDetails,
-            complexFieldsAlertDetails,
-            aiAgentExceededTokenThreshold,
-            remoteAttachmentErrorDetails,
-            etlTaskHealthChangeDetails,
-            genericAlertDetails  // leave it as last item on this list - this is fallback handler for all alert types
+            ...notificationDetailsProviders.default
         );
 
         this.customOperationMerger.push(smugglerDatabaseDetails);
@@ -645,22 +601,34 @@ class notificationCenter {
     }
 
     openDetails(notification: abstractNotification) {
-        for (let i = 0; i < this.detailsProviders.length; i++) {
-            const provider = this.detailsProviders[i];
-            if (provider.supportsDetailsFor(notification)) {
-                provider.showDetailsFor(notification, this);
-                return;
-            }
+        const providers: detailsProvider[] = [
+            ...this.detailsProviders,
+            notificationDetailsProviders.genericAlertDetailsProvider,
+        ];
+        const provider = providers.find((x) => x.supportsDetailsFor(notification));
+
+        if (!provider) {
+            throw new Error("Unsupported notification: " + notification.type);
         }
 
-        throw new Error("Unsupported notification: " + notification.type);
+        provider.showDetailsFor(notification, this);
+    }
+
+    private mountReactModalHost() {
+        if (this.reactModalHostElement) {
+            return;
+        }
+
+        this.reactModalHostElement = document.createElement("div");
+        document.body.appendChild(this.reactModalHostElement);
+        ko.applyBindingsToNode(this.reactModalHostElement, { react: this.reactModalHostView });
     }
 
     private shouldConsumeHideEvent(e: Event) {
         if (!this.pinNotifications()) {
             return $(e.target).closest(".notification-center-container").length === 0
                 && $(e.target).closest("#notification-toggle").length === 0
-                && $(e.target).closest(".modal.in, .modal.show").length === 0;
+                && $(".modal.in, .modal.show").length === 0;
         }
     }
 
