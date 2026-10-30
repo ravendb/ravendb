@@ -93,7 +93,7 @@ public class SnowflakeEtlTable
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(TableName, DocumentIdColumn?.ToLowerInvariant(), InsertOnlyMode);
+        return HashCode.Combine(TableName, DocumentIdColumn == null ? 0 : StringComparer.OrdinalIgnoreCase.GetHashCode(DocumentIdColumn), InsertOnlyMode);
     }
 
     public DynamicJsonValue ToJson()
