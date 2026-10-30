@@ -19,6 +19,8 @@ import type {
  */
 export type PlannerState = {
     plannerSlug: string | null;
+    /** The connect key the plan was made under; the server drops the plan on a connect to another source. */
+    plannerConnectKey: string | null;
     plannerProposal: PlannerProposal | null;
     plannerConventions: NamingConventions | null;
     plannerEntries: Record<string, PlannerEntry>;
@@ -54,6 +56,7 @@ export const PLAN_VIEW: PlannerView = { area: null, collection: null };
 
 export const initialPlannerState: PlannerState = {
     plannerSlug: null,
+    plannerConnectKey: null,
     plannerProposal: null,
     plannerConventions: null,
     plannerEntries: {},

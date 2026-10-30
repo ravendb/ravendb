@@ -128,10 +128,13 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
 export const getAppFlow = ({
     dataSource,
     isEditing,
+    hasAppliedPlan,
     isManualMapping,
 }: {
     dataSource: string;
     isEditing?: boolean;
+    /** The edited app's mapping was applied from its plan, as the plan still stands. */
+    hasAppliedPlan?: boolean;
     isManualMapping?: boolean;
 }): AppStepId[] => {
     // The "Choose data source" step is temporarily dropped from the UI; uncomment the
@@ -142,8 +145,9 @@ export const getAppFlow = ({
 
     // "Preview before full ingest" is left out of these flows for now: it cannot show embedded tables yet.
 
-    // An edited app arrives with its stored mapping, so it goes straight to the editor.
-    if (isEditing) {
+    // An edited app arrives with its stored mapping, so it goes straight to the editor - unless its plan made
+    // that mapping, which then opens in the planner as it does for a new app.
+    if (isEditing && !hasAppliedPlan) {
         return ["externalConnection", "verifySchema", "mapTables"];
     }
 

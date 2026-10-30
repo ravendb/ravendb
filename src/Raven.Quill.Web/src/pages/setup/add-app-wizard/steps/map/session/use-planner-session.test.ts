@@ -96,7 +96,9 @@ describe("createPlannerSession", () => {
         migration.proposalAsk.mockImplementation(() =>
             streamOf({ type: "conventions", propertyCase: "CamelCase", propertyLanguage: null, notes: null }, DONE),
         );
-        useSetupWizardStore.getState().openPlannerSession({ slug: "shop", selectedTables: [], defaultSchema: "dbo" });
+        useSetupWizardStore
+            .getState()
+            .openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
 
         await newSession().askProposal({ text: "Use camelCase.", mentions: [] });
 
@@ -107,7 +109,9 @@ describe("createPlannerSession", () => {
         migration.areaStart.mockImplementation(() => streamOf(DONE));
         migration.areaAsk.mockImplementation(() => streamOf(DONE));
         const session = newSession();
-        useSetupWizardStore.getState().openPlannerSession({ slug: "shop", selectedTables: [], defaultSchema: "dbo" });
+        useSetupWizardStore
+            .getState()
+            .openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
 
         await session.buildArea("Sales", ["Orders"]);
         await session.buildArea("Sales", ["Products"]);
@@ -126,7 +130,7 @@ describe("createPlannerSession", () => {
         );
         migration.areaStart.mockImplementation(() => streamOf(DONE));
         const store = useSetupWizardStore.getState();
-        store.openPlannerSession({ slug: "shop", selectedTables: [], defaultSchema: "dbo" });
+        store.openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
         store.setPlannerDraft("Sales", "Embed the lines.");
         store.addPlannerMention("Sales", "Orders");
 
@@ -145,7 +149,9 @@ describe("createPlannerSession", () => {
             streamOf({ type: "error", message: "The area Sales has not started; start it first." }),
         );
         migration.areaStart.mockImplementation(() => streamOf(DONE));
-        useSetupWizardStore.getState().openPlannerSession({ slug: "shop", selectedTables: [], defaultSchema: "dbo" });
+        useSetupWizardStore
+            .getState()
+            .openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
         useSetupWizardStore.getState().markPlannerAreaStarted("Sales", true);
 
         await newSession().buildArea("Sales", ["Products"]);
@@ -162,7 +168,9 @@ describe("createPlannerSession", () => {
             ),
         );
         migration.areaAsk.mockImplementation(() => streamOf(DONE));
-        useSetupWizardStore.getState().openPlannerSession({ slug: "shop", selectedTables: [], defaultSchema: "dbo" });
+        useSetupWizardStore
+            .getState()
+            .openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
         const session = newSession();
 
         await session.buildArea("Sales", ["Orders"]);
@@ -179,7 +187,9 @@ describe("createPlannerSession", () => {
         const { stream, stop } = stoppableStream();
         migration.areaStart.mockImplementation(stream);
         setup.migrationStop.mockImplementation(async () => stop());
-        useSetupWizardStore.getState().openPlannerSession({ slug: "shop", selectedTables: [], defaultSchema: "dbo" });
+        useSetupWizardStore
+            .getState()
+            .openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
         const session = newSession();
 
         const turn = session.buildArea("Sales", ["Orders"]);
@@ -195,7 +205,7 @@ describe("createPlannerSession", () => {
             throw new ApiError("a planner turn is already running for this conversation", 409, undefined);
         });
         const store = useSetupWizardStore.getState();
-        store.openPlannerSession({ slug: "shop", selectedTables: [], defaultSchema: "dbo" });
+        store.openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
         store.setPlannerDraft(null, "Use camelCase.");
         store.addPlannerMention(null, "Orders");
 
@@ -214,7 +224,7 @@ describe("createPlannerSession", () => {
     it("saves every edit in one batch, each change named by kind, and reads the plan again", async () => {
         setup.migrationPlanSave.mockResolvedValue({ issues: [], warnings: ["Loans links to Orders."] });
         const store = useSetupWizardStore.getState();
-        store.openPlannerSession({ slug: "shop", selectedTables: [], defaultSchema: "dbo" });
+        store.openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
         store.stagePlannerEdit("Orders", {
             area: "Sales",
             config: { ...ordersConfig, collectionName: "Purchases" },
@@ -246,7 +256,7 @@ describe("createPlannerSession", () => {
             return EMPTY_PLAN;
         });
         const store = useSetupWizardStore.getState();
-        store.openPlannerSession({ slug: "shop", selectedTables: [], defaultSchema: "dbo" });
+        store.openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
         store.showPlannerView({ area: "Sales", collection: "Orders" });
         store.stagePlannerEdit("Orders", {
             area: "Sales",
@@ -271,7 +281,7 @@ describe("createPlannerSession", () => {
             }),
         );
         const store = useSetupWizardStore.getState();
-        store.openPlannerSession({ slug: "shop", selectedTables: [], defaultSchema: "dbo" });
+        store.openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
         store.stagePlannerEdit("Orders", { area: "Sales", config: ordersConfig, isRemoved: false });
 
         await newSession().save();
@@ -288,7 +298,7 @@ describe("createPlannerSession", () => {
         migration.proposalAsk.mockImplementation(proposal.stream);
         migration.areaStart.mockImplementation(area.stream);
         const store = useSetupWizardStore.getState();
-        store.openPlannerSession({ slug: "shop", selectedTables: [], defaultSchema: "dbo" });
+        store.openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
         const session = newSession();
 
         void session.askProposal({ text: "Add the audit log.", mentions: [] });

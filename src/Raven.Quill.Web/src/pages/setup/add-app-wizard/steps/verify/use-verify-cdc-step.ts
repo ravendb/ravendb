@@ -9,6 +9,7 @@ import {
     type VerifyCdcInput,
 } from "@/pages/setup/add-app-wizard/steps/verify/verify-cdc-query";
 import type { WizardProgress } from "@/components/form/wizard/form-wizard";
+import { useSaveDraft } from "@/pages/setup/add-app-wizard/use-save-draft";
 
 type SelectedTables = VerifyCdcInput["selectedTables"];
 
@@ -60,6 +61,7 @@ export function useVerifyCdcState(selectedTables: SelectedTables) {
 export function useVerifyCdcStep() {
     const queryClient = useQueryClient();
     const { getValues } = useFormContext<AppFormData>();
+    const saveDraft = useSaveDraft();
 
     return async (progress: WizardProgress) => {
         const { connectKey } = useSetupWizardStore.getState();
@@ -72,5 +74,6 @@ export function useVerifyCdcStep() {
             progress,
             "Verifying schema...",
         );
+        await saveDraft("map");
     };
 }

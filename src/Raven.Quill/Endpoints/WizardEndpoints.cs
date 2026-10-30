@@ -32,6 +32,23 @@ public static class WizardEndpoints
             .Accepts<ConnectRequest>("application/json")
             .Produces<ConnectResult>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+        group.MapPost("/draft", DraftAsync)
+            .WithName("setup.draft")
+            .WithDescription(
+                "What the wizard stored for an app, so a reloaded wizard continues where it was and an edit can reopen " +
+                "the plan the app's mapping was applied from. 404 when nothing is stored for the slug.")
+            .Accepts<WizardDraftRequest>("application/json")
+            .Produces<WizardDraftResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+        group.MapPost("/draft/save", DraftSaveAsync)
+            .WithName("setup.draftSave")
+            .WithDescription(
+                "Keeps what only the wizard knows - the app name, the selected tables and the step it moved on to - " +
+                "for a reloaded wizard to continue from.")
+            .Accepts<WizardDraftSaveRequest>("application/json")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
         group.MapPost("/discover", DiscoverAsync)
             .WithName("setup.discover")
             .Accepts<DiscoverRequest>("application/json")
@@ -178,6 +195,7 @@ public static class WizardEndpoints
                 state.LastMapAt = null;
                 state.PlanId = null;
                 state.PlanSelectedTables = null;
+                state.AppliedPlanVersions = null;
             }
 
             state.Provider = factoryName;
@@ -194,6 +212,57 @@ public static class WizardEndpoints
                 $"WizardSource '{body.Slug}' provider={factoryName} credential stored", ctx);
 
         return Results.Ok(result);
+    }
+
+    private static async Task<IResult> DraftAsync(WizardDraftRequest body, IDocumentStore store, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(body?.Slug))
+            return Results.BadRequest(new ApiErrorResponse("slug is required"));
+
+        WizardState? state;
+        using (var session = store.OpenAsyncSession())
+            state = await session.LoadAsync<WizardState>(WizardState.DocumentIdFor(body.Slug), ct);
+
+        if (state?.Provider is null || string.IsNullOrEmpty(state.SourceConnectionString))
+            return Results.NotFound(new ApiErrorResponse($"no wizard draft found for '{body.Slug}'"));
+
+        // the wizard doc outlives provisioning, so a created app must not be resumed as a new one
+        var isAppCreated = await AppLookup.LoadAppAsync(store, body.Slug, ct) is not null;
+
+        return Results.Ok(new WizardDraftResponse(
+            IsAppCreated: isAppCreated,
+            AppName: state.AppName ?? string.Empty,
+            // the wizard knows the provider by its SqlProvider name, the doc keeps the factory name
+            Provider: SqlProviderParser.GetSupportedProvider(state.Provider).ToString(),
+            ConnectionString: state.SourceConnectionString,
+            IsConnected: state.LastVerifyResult?.Success == true,
+            DiscoverSchemas: state.DiscoverSchemas ?? [],
+            Discovery: state.LastDiscoveredSchema is null ? null : DiscoverResponse.From(state.LastDiscoveredSchema),
+            SelectedTables: state.SelectedTables ?? [],
+            Step: state.Step,
+            HasPlan: state.PlanId is not null,
+            PlanSelectedTables: state.PlanSelectedTables ?? [],
+            AppliedPlanVersions: state.AppliedPlanVersions));
+    }
+
+    private static async Task<IResult> DraftSaveAsync(WizardDraftSaveRequest body, IDocumentStore store, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(body?.Slug))
+            return Results.BadRequest(new ApiErrorResponse("slug is required"));
+
+        var wizardId = WizardState.DocumentIdFor(body.Slug);
+        using var session = store.OpenAsyncSession();
+
+        if (await session.Advanced.ExistsAsync(wizardId, ct) == false)
+            return Results.BadRequest(new ApiErrorResponse($"no slug {body.Slug} found"));
+
+        // patched, so a plan id a running planner turn stores meanwhile is not overwritten
+        session.Advanced.Patch<WizardState, string?>(wizardId, state => state.AppName, body.AppName);
+        session.Advanced.Patch<WizardState, SelectedSourceTable[]?>(wizardId, state => state.SelectedTables, body.SelectedTables);
+        session.Advanced.Patch<WizardState, string?>(wizardId, state => state.Step, body.Step);
+        await session.SaveChangesAsync(ct);
+
+        return Results.NoContent();
     }
 
     private static async Task<IResult> DiscoverAsync(
@@ -241,6 +310,7 @@ public static class WizardEndpoints
         }
 
         state.Provider = factoryName;
+        state.DiscoverSchemas = schemas;
         state.LastDiscoveredSchema = schema;
         state.LastDiscoverAt = DateTime.UtcNow;
         await session.StoreAsync(state, wizardId, ct);
@@ -430,6 +500,7 @@ public static class WizardEndpoints
                 return Results.BadRequest(new ApiErrorResponse($"no slug {body.Slug} found"));
             state.LastMapConfiguration = cdcConfig;
             state.LastMapAt = DateTime.UtcNow;
+            state.AppliedPlanVersions = null;
             await session.StoreAsync(state, wizardId, ct);
             await session.SaveChangesAsync(ct);
         }

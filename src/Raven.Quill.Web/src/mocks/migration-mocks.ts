@@ -12,6 +12,7 @@ import type {
     MigrationProposal,
     ProposedCollection,
     ValidationIssue,
+    WizardDraftResponse,
 } from "@/api/generated/server-api";
 import { apiHttp } from "@/mocks/api-http";
 import { discoveredTable } from "@/mocks/discovery-fixtures";
@@ -560,6 +561,27 @@ export const samplePlanView: MigrationPlanGetResponse = {
         },
     },
     proposal: plannerProposal,
+};
+
+const plannerSelectedTables = plannerDiscovery.tables.map((table) => ({
+    sourceTableSchema: table.sourceTableSchema ?? null,
+    sourceTableName: table.sourceTableName,
+}));
+
+/** What the server keeps for demo_shop once its plan was applied, which a reload or an edit reopens. */
+export const plannerDraft: WizardDraftResponse = {
+    isAppCreated: false,
+    appName: "Demo shop",
+    provider: "SqlClient",
+    connectionString: "Server=localhost,1433;Database=demo_shop;User ID=sa;Password=secret",
+    isConnected: true,
+    discoverSchemas: [],
+    discovery: plannerDiscovery,
+    selectedTables: plannerSelectedTables,
+    step: "map",
+    hasPlan: true,
+    planSelectedTables: plannerSelectedTables,
+    appliedPlanVersions: { Customers: 1, Orders: 2, Products: 1 },
 };
 
 /** demo_shop is a SQL Server database, where a table named without a schema is read from dbo. */

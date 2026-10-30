@@ -5,7 +5,11 @@ import {
     type MapActiveTable,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
 import type { MapOrigin } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
-import { createPlannerSlice, type PlannerActions } from "@/pages/setup/add-app-wizard/steps/map/session/planner-slice";
+import {
+    createPlannerSlice,
+    type PlannerActions,
+    type RestoredPlannerSession,
+} from "@/pages/setup/add-app-wizard/steps/map/session/planner-slice";
 import { initialPlannerState, type PlannerState } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
 
 /** Outcome of a connect attempt together with the connect key it ran with. */
@@ -13,6 +17,14 @@ export type ConnectionAttempt = { key: string; error: Error | null };
 
 /** Identity of a selected source table, as the verify step's form rows carry it. */
 export type SelectedSourceTable = { sourceTableSchema: string | null; sourceTableName: string };
+
+/** What a reloaded wizard takes back from the draft the server stored for its slug. */
+export type DraftStoreState = Pick<
+    SetupWizardState,
+    "discoverResult" | "discoverSchemas" | "hasEditedSlug" | "connectKey" | "connectionAttempt"
+> & {
+    planner: RestoredPlannerSession | null;
+};
 
 export type SetupWizardState = PlannerState &
     PlannerActions & {
@@ -36,6 +48,7 @@ export type SetupWizardState = PlannerState &
          */
         initialSelectedTables: SelectedSourceTable[] | null;
         setInitialSelectedTables: (tables: SelectedSourceTable[]) => void;
+        resumeDraft: (draft: DraftStoreState) => void;
         /**
          * Last connect attempt made via "Test connection" (or a previous Next). Both the verified state and
          * the failure alert are derived from it, so neither survives an edit to the connection inputs.
@@ -137,6 +150,13 @@ export const useSetupWizardStore = create<SetupWizardState>((set, get, store) =>
         set({ editedAppSlug: slug, discoverSchemas, initialSelectedTables }),
     setHasEditedSlug: (hasEditedSlug) => set({ hasEditedSlug }),
     setInitialSelectedTables: (tables) => set({ initialSelectedTables: tables }),
+    resumeDraft: ({ planner, ...draft }) => {
+        set(draft);
+
+        if (planner) {
+            get().restorePlannerSession(planner);
+        }
+    },
     setConnectKey: (key) => set({ connectKey: key }),
     // The server takes on the source of every connect call, failed ones too, so what the wizard did for
     // another source has to run again before it can be relied on.

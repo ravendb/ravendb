@@ -126,6 +126,12 @@ public sealed class QuillHost : IAsyncDisposable
     public Task<DiscoverResponse> SetupDiscoverAsync(DiscoverRequest body, string slug = DefaultWizardSlug) =>
         QuillHttp.PostAsync<DiscoverResponse>(Client, QuillRoutes.SetupDiscover, body with { Slug = slug });
 
+    public Task<WizardDraftResponse> SetupDraftAsync(string slug = DefaultWizardSlug) =>
+        QuillHttp.PostAsync<WizardDraftResponse>(Client, QuillRoutes.SetupDraft, new WizardDraftRequest(slug));
+
+    public Task SetupDraftSaveAsync(WizardDraftSaveRequest body, string slug = DefaultWizardSlug) =>
+        QuillHttp.PostAsync(Client, QuillRoutes.SetupDraftSave, body with { Slug = slug });
+
     public Task<CdcSinkConfiguration> SetupMapAsync(MapRequest body) =>
         QuillHttp.PostAsync<CdcSinkConfiguration>(Client, QuillRoutes.SetupMap, body);
 

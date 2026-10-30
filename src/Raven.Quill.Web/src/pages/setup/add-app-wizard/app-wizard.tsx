@@ -1,8 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
-import { useSetupWizardStore, type SelectedSourceTable } from "@/pages/setup/add-app-wizard/app-wizard-store";
-import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import {
+    useSetupWizardStore,
+    type DraftStoreState,
+    type SelectedSourceTable,
+} from "@/pages/setup/add-app-wizard/app-wizard-store";
+import { type AppFormData, type AppStepId } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { FormWizard, type WizardCompletion } from "@/components/form/wizard/form-wizard";
 import { buildAppSchemaForFlow, getAppFlow, useAppSteps } from "@/pages/setup/add-app-wizard/app-wizard-flow";
 import { useNavigate } from "react-router";
@@ -26,6 +30,7 @@ import { CdcPerformanceSection } from "@/pages/apps/cdc-performance-section";
 import { VERIFY_CDC_QUERY_KEY } from "@/pages/setup/add-app-wizard/steps/verify/verify-cdc-query";
 import { isEditorMapping } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
 import { WizardHandledError } from "@/components/form/wizard/wizard-step-error";
+import type { RestoredPlannerSession } from "@/pages/setup/add-app-wizard/steps/map/session/planner-slice";
 
 /** The app the wizard is editing, instead of creating a new one. */
 export type EditedApp = {
@@ -34,18 +39,29 @@ export type EditedApp = {
     discoverSchemas: string[];
     /** Tables the stored mapping covers, the baseline for the "Selection changed" stepper badge. */
     initialSelectedTables: SelectedSourceTable[];
+    /** The plan the stored mapping was applied from, when the plan still stands as it was applied. */
+    planner: RestoredPlannerSession | null;
+};
+
+/** A new app's wizard continued from the draft the server stored, after the page reloaded. */
+export type ResumedDraft = {
+    initialStep: AppStepId;
+    storeState: DraftStoreState;
 };
 
 type AppWizardProps = {
     defaultValues: AppFormData;
     editedApp?: EditedApp;
+    resumedDraft?: ResumedDraft;
 };
 
 type CreatedApp = { slug: string; name: string };
 
-export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
+export function AppWizard({ defaultValues, editedApp, resumedDraft }: AppWizardProps) {
     const resetStore = useSetupWizardStore((state) => state.reset);
     const startEditingApp = useSetupWizardStore((state) => state.startEditingApp);
+    const resumeDraft = useSetupWizardStore((state) => state.resumeDraft);
+    const restorePlannerSession = useSetupWizardStore((state) => state.restorePlannerSession);
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const [createdApp, setCreatedApp] = useState<CreatedApp | null>(null);
@@ -53,7 +69,9 @@ export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
     const [isSaved, setIsSaved] = useState(false);
     // Seeded once: a later prop identity change must not discard the operator's work.
     const [editedAppSeed] = useState(() => editedApp);
+    const [resumedDraftSeed] = useState(() => resumedDraft);
     const isEditing = editedAppSeed !== undefined;
+    const hasAppliedPlan = !!editedAppSeed?.planner;
 
     const appsQuery = useQuery(api.queries.apps.list());
     const takenSlugs = (appsQuery.data ?? []).map((app) => app.slug).filter((slug) => slug !== editedAppSeed?.slug);
@@ -65,6 +83,7 @@ export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
             const flow = getAppFlow({
                 dataSource: values.dataSource?.source,
                 isEditing,
+                hasAppliedPlan,
                 isManualMapping: isEditorMapping(useSetupWizardStore.getState().mapOrigin),
             });
             return zodResolver(buildAppSchemaForFlow(flow, takenSlugs))(values, context, options);
@@ -81,11 +100,19 @@ export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
             startEditingApp(editedAppSeed.slug, editedAppSeed.discoverSchemas, editedAppSeed.initialSelectedTables);
         }
 
+        if (editedAppSeed?.planner) {
+            restorePlannerSession(editedAppSeed.planner);
+        }
+
+        if (resumedDraftSeed) {
+            resumeDraft(resumedDraftSeed.storeState);
+        }
+
         return () => {
             queryClient.removeQueries({ queryKey: VERIFY_CDC_QUERY_KEY });
             resetStore();
         };
-    }, [editedAppSeed, queryClient, resetStore, startEditingApp]);
+    }, [editedAppSeed, resumedDraftSeed, queryClient, resetStore, restorePlannerSession, resumeDraft, startEditingApp]);
 
     const provisionMutation = useMutation({
         mutationFn: async (formValues: AppFormData) => {
@@ -144,7 +171,9 @@ export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
                         )
                     }
                     completion={completion}
+                    initialStep={resumedDraftSeed?.initialStep}
                     isEditing={isEditing}
+                    hasAppliedPlan={hasAppliedPlan}
                     isSaved={isSaved}
                 />
             </form>
@@ -191,12 +220,16 @@ function AppCreatedDialog({ app, onContinue }: { app: CreatedApp | null; onConti
 function AppWizardBody({
     cancel,
     completion,
+    initialStep,
     isEditing,
+    hasAppliedPlan,
     isSaved,
 }: {
     cancel: () => void;
     completion: WizardCompletion;
+    initialStep?: AppStepId;
     isEditing: boolean;
+    hasAppliedPlan: boolean;
     isSaved: boolean;
 }) {
     const steps = useAppSteps();
@@ -208,7 +241,16 @@ function AppWizardBody({
     });
 
     const isManualMapping = useSetupWizardStore((state) => isEditorMapping(state.mapOrigin));
-    const flow = getAppFlow({ dataSource, isEditing, isManualMapping });
+    const flow = getAppFlow({ dataSource, isEditing, hasAppliedPlan, isManualMapping });
 
-    return <FormWizard steps={steps} flow={flow} cancel={cancel} completion={completion} isSaved={isSaved} />;
+    return (
+        <FormWizard
+            steps={steps}
+            flow={flow}
+            initialStep={initialStep}
+            cancel={cancel}
+            completion={completion}
+            isSaved={isSaved}
+        />
+    );
 }

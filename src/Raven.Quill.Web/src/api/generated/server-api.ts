@@ -847,6 +847,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/setup/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description What the wizard stored for an app, so a reloaded wizard continues where it was and an edit can reopen the plan the app's mapping was applied from. 404 when nothing is stored for the slug. */
+        post: operations["setup.draft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/draft/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Keeps what only the wizard knows - the app name, the selected tables and the step it moved on to - for a reloaded wizard to continue from. */
+        post: operations["setup.draftSave"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/setup/discover": {
         parameters: {
             query?: never;
@@ -2340,6 +2374,32 @@ export interface components {
             theme: null | components["schemas"]["WidgetTheme"];
             defaultTheme: components["schemas"]["WidgetTheme"];
             fontOptions: components["schemas"]["WidgetFontOption"][];
+        };
+        WizardDraftRequest: {
+            slug: string;
+        };
+        WizardDraftResponse: {
+            isAppCreated: boolean;
+            appName: string;
+            provider: string;
+            connectionString: string;
+            isConnected: boolean;
+            discoverSchemas: string[];
+            discovery: null | components["schemas"]["DiscoverResponse"];
+            selectedTables: components["schemas"]["SelectedSourceTable"][];
+            step: null | string;
+            hasPlan: boolean;
+            planSelectedTables: components["schemas"]["SelectedSourceTable"][];
+            appliedPlanVersions: null | {
+                [key: string]: number;
+            };
+        };
+        WizardDraftSaveRequest: {
+            appName: string;
+            selectedTables: components["schemas"]["SelectedSourceTable"][];
+            step: string;
+            /** @default  */
+            slug: string;
         };
         WizardError: {
             message: string;
@@ -4452,6 +4512,79 @@ export interface operations {
             };
         };
     };
+    "setup.draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WizardDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WizardDraftResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "setup.draftSave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WizardDraftSaveRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     "setup.discover": {
         parameters: {
             query?: never;
@@ -5141,6 +5274,9 @@ export type WidgetRadius = components["schemas"]["WidgetRadius"];
 export type WidgetTheme = components["schemas"]["WidgetTheme"];
 export type WidgetThemeColors = components["schemas"]["WidgetThemeColors"];
 export type WidgetThemeResponse = components["schemas"]["WidgetThemeResponse"];
+export type WizardDraftRequest = components["schemas"]["WizardDraftRequest"];
+export type WizardDraftResponse = components["schemas"]["WizardDraftResponse"];
+export type WizardDraftSaveRequest = components["schemas"]["WizardDraftSaveRequest"];
 export type WizardError = components["schemas"]["WizardError"];
 
 export const API_ENDPOINTS = {
@@ -5223,6 +5359,8 @@ export const API_ENDPOINTS = {
     setup: {
         connect: "/setup/connect",
         discover: "/setup/discover",
+        draft: "/setup/draft",
+        draftSave: "/setup/draft/save",
         map: "/setup/map",
         migrationApply: "/setup/migration/apply",
         migrationAreaAsk: "/setup/migration/area/ask",
@@ -5336,6 +5474,8 @@ export function createServerApi(client: ApiClient) {
         setup: {
             connect: (request: ConnectRequest) => client.post<ConnectResult, ApiErrorResponse>(API_ENDPOINTS.setup.connect, request),
             discover: (request: DiscoverRequest) => client.post<DiscoverResponse, ApiErrorResponse>(API_ENDPOINTS.setup.discover, request),
+            draft: (request: WizardDraftRequest) => client.post<WizardDraftResponse, ApiErrorResponse>(API_ENDPOINTS.setup.draft, request),
+            draftSave: (request: WizardDraftSaveRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.setup.draftSave, request),
             map: (request: MapRequest) => client.post<CdcSinkConfiguration, ApiErrorResponse>(API_ENDPOINTS.setup.map, request),
             migrationApply: (request: MigrationApplyRequest) => client.post<MigrationApplyResponse, ApiErrorResponse>(API_ENDPOINTS.setup.migrationApply, request),
             migrationAreaAsk: (request: MigrationAreaAskRequest) => client.post<Response>(API_ENDPOINTS.setup.migrationAreaAsk, request, { responseType: "response" }),
