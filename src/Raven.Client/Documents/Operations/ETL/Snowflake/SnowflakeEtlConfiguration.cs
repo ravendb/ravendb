@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Extensions;
 using Sparrow.Json.Parsing;
-using Raven.Client.Documents.Operations.ETL.SQL;
 
 namespace Raven.Client.Documents.Operations.ETL.Snowflake;
 
@@ -39,6 +39,20 @@ public sealed class SnowflakeEtlConfiguration : EtlConfiguration<SnowflakeConnec
 
     public override bool UsingEncryptedCommunicationChannel() => true;
 
+    internal override EtlConfigurationCompareDifferences Compare(EtlConfiguration<SnowflakeConnectionString> config, Dictionary<string, SnowflakeConnectionString> connectionStrings, List<(string TransformationName, EtlConfigurationCompareDifferences Difference)> transformationDiffs = null)
+    {
+        var diff = base.Compare(config, connectionStrings, transformationDiffs);
+
+        if (config is SnowflakeEtlConfiguration snowflakeConfig)
+        {
+            if (snowflakeConfig.CommandTimeout != CommandTimeout ||
+                EnumerableExtension.ContentEqualsIgnoringOrder(snowflakeConfig.SnowflakeTables, SnowflakeTables) == false)
+                diff |= EtlConfigurationCompareDifferences.ConfigurationOptions;
+        }
+
+        return diff;
+    }
+
     public override string GetDefaultTaskName()
     {
         return $"Snowflake ETL to {ConnectionStringName}";
@@ -66,10 +80,20 @@ public class SnowflakeEtlTable
     public string DocumentIdColumn { get; set; }
     public bool InsertOnlyMode { get; set; }
 
-    protected bool Equals(SqlEtlTable other)
+    private bool Equals(SnowflakeEtlTable other)
     {
         return string.Equals(TableName, other.TableName) && string.Equals(DocumentIdColumn, other.DocumentIdColumn, StringComparison.OrdinalIgnoreCase) &&
                InsertOnlyMode == other.InsertOnlyMode;
+    }
+
+    public override bool Equals(object obj)
+    {
+        return ReferenceEquals(this, obj) || obj is SnowflakeEtlTable other && Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(TableName, DocumentIdColumn == null ? 0 : StringComparer.OrdinalIgnoreCase.GetHashCode(DocumentIdColumn), InsertOnlyMode);
     }
 
     public DynamicJsonValue ToJson()

@@ -66,14 +66,20 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
             return ToJson();
         }
 
-        internal bool Equals(OlapEtlConfiguration other)
+        internal override EtlConfigurationCompareDifferences Compare(EtlConfiguration<OlapConnectionString> config, Dictionary<string, OlapConnectionString> connectionStrings, List<(string TransformationName, EtlConfigurationCompareDifferences Difference)> transformationDiffs = null)
         {
-            if (other == null || 
-                RunFrequency != other.RunFrequency ||
-                CustomPartitionValue != other.CustomPartitionValue)
-                return false;
+            var diff = base.Compare(config, connectionStrings, transformationDiffs);
 
-            return EnumerableExtension.ContentEquals(OlapTables, other.OlapTables);
+            if (config is OlapEtlConfiguration olapConfig)
+            {
+                if (olapConfig.RunFrequency != RunFrequency ||
+                    olapConfig.Format != Format ||
+                    olapConfig.CustomPartitionValue != CustomPartitionValue ||
+                    EnumerableExtension.ContentEqualsIgnoringOrder(olapConfig.OlapTables, OlapTables) == false)
+                    diff |= EtlConfigurationCompareDifferences.ConfigurationOptions;
+            }
+
+            return diff;
         }
     }
 
@@ -85,8 +91,18 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         private bool Equals(OlapEtlTable other)
         {
-            return string.Equals(TableName, other.TableName) && 
+            return string.Equals(TableName, other.TableName) &&
                    string.Equals(DocumentIdColumn, other.DocumentIdColumn, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return ReferenceEquals(this, obj) || obj is OlapEtlTable other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(TableName, DocumentIdColumn == null ? 0 : StringComparer.OrdinalIgnoreCase.GetHashCode(DocumentIdColumn));
         }
 
         public DynamicJsonValue ToJson()

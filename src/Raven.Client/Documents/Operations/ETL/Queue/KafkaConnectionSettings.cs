@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client.Extensions;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.Queue;
@@ -41,7 +42,7 @@ public sealed class KafkaConnectionSettings
 
     private bool Equals(KafkaConnectionSettings other)
     {
-        return string.Equals(BootstrapServers, other.BootstrapServers, StringComparison.OrdinalIgnoreCase) && Equals(ConnectionOptions, other.ConnectionOptions) && UseRavenCertificate == other.UseRavenCertificate;
+        return string.Equals(BootstrapServers, other.BootstrapServers, StringComparison.OrdinalIgnoreCase) && DictionaryExtensions.ContentEquals(ConnectionOptions, other.ConnectionOptions) && UseRavenCertificate == other.UseRavenCertificate;
     }
 
     public override bool Equals(object obj)
@@ -51,9 +52,16 @@ public sealed class KafkaConnectionSettings
 
     public override int GetHashCode()
     {
+        var optionsHash = 0;
+        if (ConnectionOptions != null)
+        {
+            foreach (var option in ConnectionOptions)
+                optionsHash += HashCode.Combine(option.Key, option.Value);
+        }
+
         var hashCode = new HashCode();
-        hashCode.Add(BootstrapServers);
-        hashCode.Add(ConnectionOptions);
+        hashCode.Add(BootstrapServers, StringComparer.OrdinalIgnoreCase);
+        hashCode.Add(optionsHash);
         hashCode.Add(UseRavenCertificate);
         return hashCode.ToHashCode();
     }

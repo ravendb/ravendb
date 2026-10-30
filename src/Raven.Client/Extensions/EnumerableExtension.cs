@@ -28,6 +28,48 @@ namespace Raven.Client.Extensions
             return x.SequenceEqual(y);
         }
 
+        public static bool ContentEqualsIgnoringOrder<TValue>(IReadOnlyCollection<TValue> x, IReadOnlyCollection<TValue> y)
+        {
+            if (x == null || y == null)
+                return x == null && y == null;
+
+            if (x.Count != y.Count)
+                return false;
+
+            var nullCount = 0;
+            var counts = new Dictionary<TValue, int>();
+            foreach (var item in x)
+            {
+                if (item == null)
+                {
+                    nullCount++;
+                    continue;
+                }
+
+                counts.TryGetValue(item, out var count);
+                counts[item] = count + 1;
+            }
+
+            foreach (var item in y)
+            {
+                if (item == null)
+                {
+                    if (nullCount == 0)
+                        return false;
+
+                    nullCount--;
+                    continue;
+                }
+
+                if (counts.TryGetValue(item, out var count) == false || count == 0)
+                    return false;
+
+                counts[item] = count - 1;
+            }
+
+            return true;
+        }
+
         public static IEnumerable<T> EmptyIfNull<T>(this IEnumerable<T> self)
         {
             if (self == null)
