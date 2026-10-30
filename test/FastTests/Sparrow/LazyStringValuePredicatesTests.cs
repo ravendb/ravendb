@@ -100,6 +100,35 @@ namespace FastTests.Sparrow
             }
         }
 
+        [RavenTheory(RavenTestCategory.Core)]
+        [InlineData("­abc", "abc")] // soft hyphen is ignored by a linguistic comparison
+        [InlineData("abc­", "abc")]
+        [InlineData("café", "cafe")] // combining acute accent
+        [InlineData("café", "é")]
+        [InlineData("London", "Lon")]
+        [InlineData("London", "don")]
+        public void StartsWithAndEndsWithAreOrdinalWhetherOrNotTheStringIsMaterialized(string value, string needle)
+        {
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            using (var doc = ctx.ReadObject(new DynamicJsonValue { ["Value"] = value }, "doc"))
+            {
+                Assert.True(doc.TryGet("Value", out LazyStringValue lazy));
+
+                var expectedStartsWith = value.StartsWith(needle, StringComparison.Ordinal);
+                var expectedEndsWith = value.EndsWith(needle, StringComparison.Ordinal);
+
+                Assert.Equal(expectedStartsWith, lazy.StartsWith(needle));
+                Assert.Equal(expectedEndsWith, lazy.EndsWith(needle));
+
+                // materialize and cache the string value
+                Assert.Equal(value, lazy.ToString());
+                Assert.True(lazy.HasStringValue);
+
+                Assert.Equal(expectedStartsWith, lazy.StartsWith(needle));
+                Assert.Equal(expectedEndsWith, lazy.EndsWith(needle));
+            }
+        }
+
         [RavenFact(RavenTestCategory.Core)]
         public void InvalidArgumentsThrowTheSameExceptionsAsString()
         {

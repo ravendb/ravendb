@@ -670,7 +670,7 @@ namespace Sparrow.Json
                 ThrowAlreadyDisposed();
 
             if (_string != null)
-                return _string.EndsWith(value);
+                return _string.EndsWith(value, StringComparison.Ordinal);
 
             if (value == null)
                 throw new ArgumentNullException(nameof(value));
@@ -1155,7 +1155,7 @@ namespace Sparrow.Json
                 ThrowAlreadyDisposed();
 
             if (_string != null)
-                return _string.StartsWith(value);
+                return _string.StartsWith(value, StringComparison.Ordinal);
 
             if (value == null)
                 throw new ArgumentNullException(nameof(value));
