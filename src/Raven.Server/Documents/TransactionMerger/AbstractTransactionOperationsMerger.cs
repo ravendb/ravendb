@@ -308,7 +308,7 @@ namespace Raven.Server.Documents.TransactionMerger
                     {
                         _recording.State?.Prepare(ref _recording.State);
 
-                        if (_operations.IsEmpty && _env.Journal.HasBranchCommits is false)
+                        if (_operations.IsEmpty)
                         {
                             if (_isEncrypted)
                             {
