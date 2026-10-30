@@ -65,16 +65,17 @@ namespace Raven.Server.Documents.Indexes.Static
 
         /// <summary>
         /// The budget for the nesting of the method calls of a whole map or reduce function: the cost of a single chain of
-        /// <see cref="MaxAllowedInvocationChainDepth"/> calls, as computed by <see cref="StackDepthRetriever.GetMaxInvocationNestingCost"/>.
-        /// All the calls of a function are compiled into the same method, so their costs add up: two chains of 90 calls or four chains of 64 fit, two chains of 128 do not.
-        /// Measured on x64 with the default 1.5 MB stack of the indexing thread (Release build, one document indexed), the cost at which the server dies:
-        /// a plain chain 'x.Concat(a).Concat(b)...' survives 44,850 (300 calls, and 32,220 as 2 x 180) and dies at 62,250 (2 x 250),
-        /// the same chain with a '?? Enumerable.Empty()' argument per call survives 22,649 (150 calls) and dies at 24,567 (3 x 90), since the dynamic
-        /// '!= null' checks that the rewriters generate for '??' cost stack that is not counted, and a chain of '?.' calls, which the rewriters expand by
-        /// copying the chain before every link, survives 16,872 (36 links) and dies at 22,960 (40 links).
-        /// The budget keeps every measured shape at less than half of its crash point. The 512 KB stack of the indexing threads on 32-bit (see PoolOfThreads) was not measured.
+        /// <see cref="MaxAllowedInvocationChainDepth"/> calls, as computed by <see cref="GetMaxInvocationNestingCost"/>. Measured on x64 with the default
+        /// stack of the indexing thread, the server dies at more than twice this cost for every shape tried (see the pull request of RavenDB-26440 for the numbers).
         /// </summary>
         internal const int MaxAllowedInvocationNestingCost = MaxAllowedInvocationChainDepth * (MaxAllowedInvocationChainDepth - 1) / 2;
+
+        /// <summary>
+        /// NormalizeWhitespace() recurses over the syntax tree without Roslyn's stack guard (SyntaxNormalizer.GetDeclarationDepth), so an extremely deep
+        /// expression, e.g. 'a + a + a + ...' with thousands of terms, overflows the stack of the thread that compiles the index and kills the process.
+        /// Nothing real is lost by capping the depth: 300 terms index fine and 1000 already fail to compile.
+        /// </summary>
+        internal const int MaxAllowedSyntaxTreeDepth = 1000;
 
         static IndexCompiler()
         {
@@ -666,9 +667,10 @@ namespace Raven.Server.Documents.Indexes.Static
                 map = NormalizeFunction(map);
                 var parsedExpression = SyntaxFactory.ParseExpression(map);
 
-                // a first gate on the parsed tree, before NormalizeWhitespace() and the rewriters recurse over it: Roslyn guards that recursion,
-                // but an extremely deep chain would then fail with its generic 'insufficient stack' message instead of this one
+                // a first gate on the parsed tree, before NormalizeWhitespace() and the rewriters recurse over it: NormalizeWhitespace() has no stack guard,
+                // and the nesting check comes first so that a chain of thousands of calls is reported as such
                 ThrowIfInvocationNestingIsTooDeep(parsedExpression, "map");
+                ThrowIfSyntaxTreeIsTooDeep(parsedExpression, "map");
 
                 var expression = parsedExpression.NormalizeWhitespace();
 
@@ -731,19 +733,88 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static void ThrowIfInvocationNestingIsTooDeep(SyntaxNode function, string functionName)
         {
-            var cost = StackDepthRetriever.GetMaxInvocationNestingCost(function);
+            var cost = GetMaxInvocationNestingCost(function);
             if (cost <= MaxAllowedInvocationNestingCost)
                 return;
 
             // wrapped by the caller into an IndexCompilationException that points at the map or reduce text
             throw new InvalidOperationException(
-                $"The {functionName} function nests its method calls too deeply: their combined nesting cost is {cost}, while the maximum is {MaxAllowedInvocationNestingCost}, " +
-                $"the cost of a single chain of {MaxAllowedInvocationChainDepth} calls such as 'x.Concat(a).Concat(b).Concat(c)...'. Every call costs the number of calls it is nested in, " +
-                "as their receiver or as an argument, and the calls of the whole function add up, since they are all compiled into one method. " +
-                "The generated index code invokes these calls dynamically and the stack frame of that method grows quadratically with the nesting of the calls, " +
-                "so this function would overflow the stack of the indexing thread and crash the server with a StackOverflowException. " +
+                $"The {functionName} function nests its method calls too deeply: their combined nesting cost is {cost}, while the maximum is {MaxAllowedInvocationNestingCost} " +
+                $"(a single chain of {MaxAllowedInvocationChainDepth} calls), so it would overflow the stack of the indexing thread and crash the server. " +
                 "Split the expression into shorter parts, for example collect the values into an array and flatten it: " +
                 "new[] { col1, col2, col3 }.Where(x => x != null).SelectMany(x => x).ToArray()");
+        }
+
+        /// <summary>
+        /// Estimates how much stack the method calls of an index function need in the generated code (RavenDB-26440).
+        /// Every call adds the number of calls it is nested in, whether as their receiver or as an argument and whatever sits in between
+        /// (parentheses, casts, conditionals, ...): 'x.A().B().C()' costs 0 + 1 + 2 = 3 and so does 'A(B(C(x)))', a chain of n calls costs n * (n - 1) / 2.
+        /// This follows the quadratic growth of the stack frame of the generated method, which keeps the intermediate values of every pending call,
+        /// and it adds up the chains of the whole function, since all of them end up in the same frame.
+        /// A lambda is compiled into a method of its own, but it runs on top of the frames of the function and of every lambda enclosing it,
+        /// so its body is costed as a scope of its own and the costs are added up along the nesting of the scopes; the largest such sum is returned.
+        /// The tree is walked iteratively, so this can run on an arbitrarily deep expression.
+        /// </summary>
+        private static int GetMaxInvocationNestingCost(SyntaxNode function)
+        {
+            var scopeCosts = new List<int> { 0 };
+            var scopeParents = new List<int> { -1 };
+            var pending = new Stack<(SyntaxNode Node, int EnclosingCalls, int Scope)>();
+            pending.Push((function, 0, 0));
+
+            while (pending.Count > 0)
+            {
+                var (node, enclosingCalls, scope) = pending.Pop();
+
+                switch (node)
+                {
+                    case InvocationExpressionSyntax:
+                        scopeCosts[scope] += enclosingCalls;
+                        enclosingCalls++;
+                        break;
+
+                    case AnonymousFunctionExpressionSyntax:
+                        scopeCosts.Add(0);
+                        scopeParents.Add(scope);
+                        scope = scopeCosts.Count - 1;
+                        enclosingCalls = 0;
+                        break;
+                }
+
+                foreach (var child in node.ChildNodes())
+                    pending.Push((child, enclosingCalls, scope));
+            }
+
+            // a parent scope is always created before its children, so a single pass adds up the costs along the nesting
+            var pathCosts = new int[scopeCosts.Count];
+            for (var i = 0; i < scopeCosts.Count; i++)
+                pathCosts[i] = scopeCosts[i] + (scopeParents[i] < 0 ? 0 : pathCosts[scopeParents[i]]);
+
+            return pathCosts.Max();
+        }
+
+        private static void ThrowIfSyntaxTreeIsTooDeep(SyntaxNode function, string functionName)
+        {
+            var maxDepth = 0;
+            var pending = new Stack<(SyntaxNode Node, int Depth)>();
+            pending.Push((function, 1));
+
+            while (pending.Count > 0)
+            {
+                var (node, depth) = pending.Pop();
+                maxDepth = Math.Max(maxDepth, depth);
+
+                foreach (var child in node.ChildNodes())
+                    pending.Push((child, depth + 1));
+            }
+
+            if (maxDepth <= MaxAllowedSyntaxTreeDepth)
+                return;
+
+            // wrapped by the caller into an IndexCompilationException that points at the map or reduce text
+            throw new InvalidOperationException(
+                $"The {functionName} function is nested too deeply: its syntax tree is {maxDepth} levels deep, while the maximum is {MaxAllowedSyntaxTreeDepth}. " +
+                "Split the expression into shorter parts.");
         }
 
         private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, StackDepthRetriever stackDepthRetriever, out CompiledIndexField[] groupByFields)
@@ -755,6 +826,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 // a first gate on the parsed tree, see HandleMap()
                 ThrowIfInvocationNestingIsTooDeep(parsedExpression, "reduce");
+                ThrowIfSyntaxTreeIsTooDeep(parsedExpression, "reduce");
 
                 var expression = parsedExpression.NormalizeWhitespace();
                 fieldNamesValidator?.Validate(reduce, expression);
@@ -950,8 +1022,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 // there are certain patterns we aren't optimizing, that is fine
             }
 
-            // the rewritten function is what gets compiled: the rewriters expand '?.' and '??' by copying the expression before them, which can turn
-            // a short chain of '?.' calls into a very deep one, so the parsed tree the first gate in HandleMap() looked at is only a lower bound
+            // the rewritten function is what gets compiled: the rewriters expand '?.' and '??' by writing the operand before them out twice, so a short chain
+            // of '?.' calls becomes a very deep one (and a parenthesized one grows exponentially), the parsed tree the first gate looked at is only a lower bound
             ThrowIfInvocationNestingIsTooDeep(optimized ?? rewrittenExpression, "map");
 
             var results = new List<StatementSyntax>();
