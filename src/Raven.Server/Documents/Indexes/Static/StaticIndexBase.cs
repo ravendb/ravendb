@@ -394,7 +394,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (keyOrEnumerable is IEnumerable enumerable)
             {
                 var enumerator = enumerable.GetEnumerator();
-                using (enumerable as IDisposable)
+                using (enumerator as IDisposable)
                 {
                     var items = new List<dynamic>();
                     while (enumerator.MoveNext())
@@ -436,7 +436,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (keyOrEnumerable is IEnumerable enumerable)
             {
                 var enumerator = enumerable.GetEnumerator();
-                using (enumerable as IDisposable)
+                using (enumerator as IDisposable)
                 {
                     var items = new List<dynamic>();
                     while (enumerator.MoveNext())
