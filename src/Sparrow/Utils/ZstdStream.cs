@@ -27,10 +27,10 @@ namespace Sparrow.Utils
 
         internal static readonly AsyncLocal<bool> CaptureContextOnAwait = new();
 
-        private ZstdStream(Stream inner, bool compression, int level, bool leaveOpen, int workers)
+        private ZstdStream(Stream inner, bool compression, int level, bool leaveOpen, int workers, int srcSizeHint = 0)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-            _compressContext = new ZstdLib.CompressContext(level, workers, pooled: true);
+            _compressContext = new ZstdLib.CompressContext(level, workers, pooled: true, srcSizeHint);
             _compression = compression;
             _leaveOpen = leaveOpen;
 
@@ -42,6 +42,10 @@ namespace Sparrow.Utils
         /// <param name="workers">Threads compressing in parallel with the writer. Uses more CPU and memory, worth it for long streams only.
         /// Falls back to compressing on the calling thread when the native library is single threaded.</param>
         public static ZstdStream Compress(Stream stream, CompressionLevel compressionLevel, bool leaveOpen, int workers) => new(stream, compression: true, ToZstdLevel(compressionLevel), leaveOpen, workers);
+
+        /// <param name="srcSizeHint">Expected size of everything that will be written, doesn't have to be exact.</param>
+        public static ZstdStream CompressWithSizeHint(Stream stream, CompressionLevel compressionLevel, long srcSizeHint) =>
+            new(stream, compression: true, ToZstdLevel(compressionLevel), leaveOpen: false, workers: 0, (int)Math.Min(srcSizeHint, int.MaxValue));
 
         public static ZstdStream Decompress(Stream stream, bool leaveOpen = false) => new(stream, compression: false, 0, leaveOpen, workers: 0);
 
