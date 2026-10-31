@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Threading;
 
@@ -27,7 +27,7 @@ namespace Raven.Server.ServerWide
             Token = _cts.Token;
 
             _minimumDelayTimeInMs = GetMinimumDelayTime(cancelAfter);
-            _cts.CancelAfter(cancelAfter);
+            CancelAfterIfNeeded(cancelAfter);
         }
 
         public OperationCancelToken(TimeSpan cancelAfter, CancellationToken token1, CancellationToken token2)
@@ -39,7 +39,7 @@ namespace Raven.Server.ServerWide
             Token = _cts.Token;
 
             _minimumDelayTimeInMs = GetMinimumDelayTime(cancelAfter);
-            _cts.CancelAfter(cancelAfter);
+            CancelAfterIfNeeded(cancelAfter);
         }
 
         public OperationCancelToken(TimeSpan cancelAfter, CancellationToken token1, CancellationToken token2, CancellationToken token3)
@@ -49,7 +49,13 @@ namespace Raven.Server.ServerWide
             _cts = CancellationTokenSource.CreateLinkedTokenSource(token1, token2, token3);
             _cancelAfter = cancelAfter;
             Token = _cts.Token;
-            _cts.CancelAfter(cancelAfter);
+            CancelAfterIfNeeded(cancelAfter);
+        }
+
+        private void CancelAfterIfNeeded(TimeSpan cancelAfter)
+        {
+            if (cancelAfter != Timeout.InfiniteTimeSpan)
+                _cts.CancelAfter(cancelAfter);
         }
 
         public OperationCancelToken(CancellationToken token)
