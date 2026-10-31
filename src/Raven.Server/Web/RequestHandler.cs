@@ -120,7 +120,7 @@ namespace Raven.Server.Web
         private Stream _requestBodyStream;
 
         // a timeout of the request or response stream aborts the connection, which fails the operation that waits on it
-        private static readonly Action<object> AbortConnection = static state => ((HttpContext)state).Abort();
+        internal static readonly Action<object> AbortConnection = static state => ((HttpContext)state).Abort();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal Stream RequestBodyStream()
@@ -264,7 +264,7 @@ namespace Raven.Server.Web
             if (_responseStream != null)
                 return _responseStream;
 
-            _responseStream = new StreamWithTimeout(HttpContext.Response.Body, AbortConnection, HttpContext);
+            _responseStream = new HttpResponseBodyStream(HttpContext, Server.MinResponseSizeToCompressInBytes);
 
             _context.HttpContext.Response.RegisterForDispose(_responseStream);
 
