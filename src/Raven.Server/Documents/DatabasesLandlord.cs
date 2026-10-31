@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -29,6 +29,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Threading;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Sparrow.Server.Utils;
 using Voron.Exceptions;
@@ -41,7 +42,7 @@ namespace Raven.Server.Documents
         public const string Init = "Init";
         public const string DoNotRemove = "DoNotRemove";
 
-        private readonly AsyncGuard _disposing;
+        private readonly InFlightGuard<PerCoreSlots> _disposing;
 
         public readonly ConcurrentDictionary<StringSegment, DateTime> LastRecentlyUsed =
             new ConcurrentDictionary<StringSegment, DateTime>(StringSegmentComparer.OrdinalIgnoreCase);
@@ -74,7 +75,7 @@ namespace Raven.Server.Documents
 
         public DatabasesLandlord(ServerStore serverStore)
         {
-            _disposing = new AsyncGuard();
+            _disposing = new InFlightGuard<PerCoreSlots>();
 
             _serverStore = serverStore;
             _databaseSemaphore = new SemaphoreSlim(_serverStore.Configuration.Databases.MaxConcurrentLoads);
@@ -128,7 +129,7 @@ namespace Raven.Server.Documents
             if (PreventWakeUpIdleDatabase(databaseName, type))
                 return;
 
-            if (_disposing.TryEnter(out var idx) == false)
+            if (_disposing.TryEnter(out var inFlight) == false)
                 ThrowServerIsBeingDisposed(databaseName);
             try
             {
@@ -242,7 +243,7 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                _disposing.Exit(idx);
+                inFlight.Dispose();
             }
         }
 
@@ -571,7 +572,10 @@ namespace Raven.Server.Documents
         public void Dispose()
         {
             using (DisposeAudit.Step("close the `_disposing` guard"))
-                _disposing.CloseAndLock();
+            {
+                _disposing.TryClose();
+                _disposing.WaitForDrain(Timeout.InfiniteTimeSpan);
+            }
 
             var exceptionAggregator = new ExceptionAggregator(_logger, "Failure to dispose landlord");
             try
@@ -662,8 +666,6 @@ namespace Raven.Server.Documents
             });
             exceptionAggregator.Execute(ShardedDatabasesCache.Clear);
 
-            exceptionAggregator.Execute(_disposing.Dispose);
-
             exceptionAggregator.ThrowIfNeeded();
         }
 
@@ -701,7 +703,7 @@ namespace Raven.Server.Documents
 
         public DatabaseSearchResult TryGetOrCreateDatabase(StringSegment databaseName)
         {
-            if (_disposing.TryEnter(out var idx) == false)
+            if (_disposing.TryEnter(out var inFlight) == false)
                 ThrowServerIsBeingDisposed(databaseName);
             try
             {
@@ -736,7 +738,7 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                _disposing.Exit(idx);
+                inFlight.Dispose();
             }
         }
 
@@ -805,7 +807,7 @@ namespace Raven.Server.Documents
             {
                 timer.Value.Dispose();
             }
-            if (_disposing.TryEnter(out var idx) == false)
+            if (_disposing.TryEnter(out var inFlight) == false)
                 ThrowServerIsBeingDisposed(databaseName);
             try
             {
@@ -816,7 +818,7 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                _disposing.Exit(idx);
+                inFlight.Dispose();
             }
         }
 
@@ -851,7 +853,7 @@ namespace Raven.Server.Documents
 
         public async Task RestartDatabaseAsync(string databaseName)
         {
-            if (_disposing.TryEnter(out var idx) == false)
+            if (_disposing.TryEnter(out var inFlight) == false)
                 ThrowServerIsBeingDisposed(databaseName);
             try
             {
@@ -859,7 +861,7 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                _disposing.Exit(idx);
+                inFlight.Dispose();
             }
 
             var result = TryGetOrCreateDatabase(databaseName);
@@ -947,7 +949,7 @@ namespace Raven.Server.Documents
                 if (_serverStore.Disposed)
                     ThrowServerIsBeingDisposed(databaseName);
 
-                if (_disposing.TryEnter(out var idx) == false)
+                if (_disposing.TryEnter(out var inFlight) == false)
                     ThrowServerIsBeingDisposed(databaseName);
                 try
                 {
@@ -959,7 +961,7 @@ namespace Raven.Server.Documents
                 }
                 finally
                 {
-                    _disposing.Exit(idx);
+                    inFlight.Dispose();
                 }
             }
             catch (Exception e)
@@ -988,7 +990,7 @@ namespace Raven.Server.Documents
         {
             try
             {
-                if (_disposing.TryEnter(out var idx) == false)
+                if (_disposing.TryEnter(out var inFlight) == false)
                     ThrowServerIsBeingDisposed(databaseName);
                 try
                 {
@@ -1007,7 +1009,7 @@ namespace Raven.Server.Documents
                 }
                 finally
                 {
-                    _disposing.Exit(idx);
+                    inFlight.Dispose();
                 }
             }
             catch
@@ -1419,7 +1421,7 @@ namespace Raven.Server.Documents
         {
             try
             {
-                if (_disposing.TryEnter(out var idx) == false)
+                if (_disposing.TryEnter(out var inFlight) == false)
                     ThrowServerIsBeingDisposed(databaseName);
                 try
                 {
@@ -1515,7 +1517,7 @@ namespace Raven.Server.Documents
                 }
                 finally
                 {
-                    _disposing.Exit(idx);
+                    inFlight.Dispose();
                 }
             }
             catch (Exception e)

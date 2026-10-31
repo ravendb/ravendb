@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Threading;
 using Sparrow.Utils;
 
 namespace Raven.Server.Utils
@@ -52,7 +53,10 @@ namespace Raven.Server.Utils
         {
             public MeterMetric RequestsPerSec { get; internal set; }
 
-            public long ConcurrentRequestsCount;
+            // PERF: every request updates it twice, avoiding cross core contention
+            public readonly PerCoreCounter ConcurrentRequests = new();
+
+            public long ConcurrentRequestsCount => ConcurrentRequests.Value;
 
             public void RecordRequest(long durationMilliseconds)
             {
