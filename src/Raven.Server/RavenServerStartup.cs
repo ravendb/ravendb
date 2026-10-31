@@ -41,6 +41,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.Logging;
+using Sparrow.Utils;
 using Voron.Exceptions;
 
 namespace Raven.Server
@@ -180,7 +181,10 @@ namespace Raven.Server
                 HttpContext = context
             };
             Exception exception = null;
-            Stopwatch sp = null;
+
+            // PERF: only TrafficWatch and debug logging need the duration here (the router measures requests for the metrics),
+            // so we read the clock only when one of them is on
+            long startNanoseconds = 0, endNanoseconds = 0;
 
             try
             {
@@ -190,15 +194,20 @@ namespace Raven.Server
                 if (_server.ServerStore.Initialized == false)
                     await _server.ServerStore.InitializationCompleted.WaitAsync();
 
-                sp = Stopwatch.StartNew();
+                if (TrafficWatchManager.HasRegisteredClients || (_logger.IsDebugEnabled && SkipHttpLogging == false))
+                    startNanoseconds = Clock.Nanoseconds;
+
                 await _router.HandlePath(requestHandlerContext);
-                sp.Stop();
+
+                if (startNanoseconds != 0)
+                    endNanoseconds = Clock.Nanoseconds;
             }
             catch (Exception e)
             {
                 try
                 {
-                    sp?.Stop();
+                    if (startNanoseconds != 0 && endNanoseconds == 0)
+                        endNanoseconds = Clock.Nanoseconds;
                     exception = e;
 
                     CheckDatabaseShutdownAndThrowIfNeeded(requestHandlerContext, ref e);
@@ -251,16 +260,18 @@ namespace Raven.Server
             }
             finally
             {
+                var elapsedMilliseconds = endNanoseconds == 0 ? 0 : (endNanoseconds - startNanoseconds) / Clock.NanosecondsInMillisecond;
+
                 // check if TW has clients
                 if (TrafficWatchManager.HasRegisteredClients)
                 {
                     var database = requestHandlerContext.DatabaseName;
-                    LogTrafficWatch(context, sp?.ElapsedMilliseconds ?? 0, database);
+                    LogTrafficWatch(context, elapsedMilliseconds, database);
                 }
 
                 if (_logger.IsDebugEnabled && SkipHttpLogging == false)
                 {
-                    _logger.Debug($"{context.Request.Method} {context.Request.Path.Value}{context.Request.QueryString.Value} - {context.Response.StatusCode} - {(sp?.ElapsedMilliseconds ?? 0):#,#;;0} ms", exception);
+                    _logger.Debug($"{context.Request.Method} {context.Request.Path.Value}{context.Request.QueryString.Value} - {context.Response.StatusCode} - {elapsedMilliseconds:#,#;;0} ms", exception);
                 }
             }
         }

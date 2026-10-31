@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Utils;
 using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -42,8 +43,11 @@ namespace Raven.Server.Routing
         private readonly RavenServer _ravenServer;
         private readonly MetricCounters _serverMetrics;
         private readonly Trie<RouteInformation> _trie;
-        private DateTime _lastAuthorizedNonClusterAdminRequestTime;
-        private DateTime _lastRequestTimeUpdated;
+        private static readonly long LastRequestTimeUpdateFrequencyInNanoseconds = (long)LastRequestTimeUpdateFrequency.TotalMilliseconds * Clock.NanosecondsInMillisecond;
+
+        // Clock.Nanoseconds of the last update, far enough in the past for the first request to update
+        private long _lastAuthorizedNonClusterAdminRequestTimeNanoseconds = long.MinValue / 2;
+        private long _lastRequestTimeUpdatedNanoseconds = long.MinValue / 2;
         private static readonly RavenLogger RequestLogger = RavenLogManager.Instance.GetLoggerForServer<RequestRouter>();
 
         public RequestRouter(Dictionary<string, RouteInformation> routes, RavenServer ravenServer)
@@ -286,6 +290,7 @@ namespace Raven.Server.Routing
             // We defer all throughput accounting until the request actually completes so the
             // reported rates track true throughput rather than arrival pressure.
             var requestStartNs = Clock.Nanoseconds;
+            reqCtx.RequestStartNanoseconds = requestStartNs;
 
             var concurrentRequest = _serverMetrics.Requests.ConcurrentRequests.Increment();
 
@@ -351,18 +356,25 @@ namespace Raven.Server.Routing
                 {
                     if (tryMatch.Value.SkipLastRequestTimeUpdate == false)
                     {
-                        var now = SystemTime.UtcNow;
+                        // PERF: these statistics move only every LastRequestTimeUpdateFrequency, so instead of reading the wall clock
+                        // on every request, we read it when an update is due (or when there is a certificate to track)
+                        var lastRequestTimeDue = requestStartNs - _lastRequestTimeUpdatedNanoseconds >= LastRequestTimeUpdateFrequencyInNanoseconds;
+                        var lastAuthorizedNonClusterAdminRequestTimeDue = skipAuthorization == false &&
+                                                                          requestStartNs - _lastAuthorizedNonClusterAdminRequestTimeNanoseconds >= LastRequestTimeUpdateFrequencyInNanoseconds;
 
-                        if (now - _lastRequestTimeUpdated >= LastRequestTimeUpdateFrequency)
+                        DateTime now = default;
+                        if (lastRequestTimeDue || lastAuthorizedNonClusterAdminRequestTimeDue || certificateThumbprint != null)
+                            now = SystemTime.UtcNow;
+
+                        if (lastRequestTimeDue)
                         {
                             _ravenServer.Statistics.LastRequestTime = now;
-                            _lastRequestTimeUpdated = now;
+                            _lastRequestTimeUpdatedNanoseconds = requestStartNs;
                         }
 
                         _ravenServer.Statistics.UpdateLastCertificateRequestTime(certificateThumbprint, now);
 
-                        if (now - _lastAuthorizedNonClusterAdminRequestTime >= LastRequestTimeUpdateFrequency &&
-                            skipAuthorization == false)
+                        if (lastAuthorizedNonClusterAdminRequestTimeDue)
                         {
                             switch (status)
                             {
@@ -370,7 +382,7 @@ namespace Raven.Server.Routing
                                 case AuthenticationStatus.Operator:
                                     {
                                         _ravenServer.Statistics.LastAuthorizedNonClusterAdminRequestTime = now;
-                                        _lastAuthorizedNonClusterAdminRequestTime = now;
+                                        _lastAuthorizedNonClusterAdminRequestTimeNanoseconds = requestStartNs;
                                         break;
                                     }
                                 case AuthenticationStatus.None:
@@ -436,15 +448,17 @@ namespace Raven.Server.Routing
             {
                 concurrentRequest.Decrement();
 
-                var elapsedNs = Clock.Nanoseconds - requestStartNs;
+                // PERF: a single clock read for the duration and for both meters
+                var requestEndNs = Clock.Nanoseconds;
+                var elapsedNs = requestEndNs - requestStartNs;
                 if (elapsedNs < 0)
                     elapsedNs = 0;
 
                 var elapsedMilliseconds = elapsedNs / (double)Clock.NanosecondsInMillisecond;
 
                 var duration = reqCtx.HttpContext.WebSockets.IsWebSocketRequest ? 0L : (long)elapsedMilliseconds;
-                _serverMetrics.Requests.RecordRequest(duration);
-                reqCtx.DatabaseMetrics?.Requests.RecordRequest(duration);
+                _serverMetrics.Requests.RecordRequest(duration, requestEndNs);
+                reqCtx.DatabaseMetrics?.Requests.RecordRequest(duration, requestEndNs);
             }
         }
 
