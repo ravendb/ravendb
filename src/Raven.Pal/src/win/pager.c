@@ -861,6 +861,33 @@ rvn_writer rvn_get_writer(void *handle)
 }
 
 EXPORT int32_t
+rvn_prefetch_ring_create(int32_t ring_entries, int32_t max_files, int32_t queue_size, void **ring, int32_t *detailed_error_code)
+{
+    (void)ring_entries;
+    (void)max_files;
+    (void)queue_size;
+    *ring = NULL;
+    *detailed_error_code = 0;
+    return FAIL_CREATE_IO_RING; // no prefetch ring on Windows
+}
+
+EXPORT int32_t
+rvn_prefetch_ring_destroy(void *ring, int32_t *detailed_error_code)
+{
+    (void)ring;
+    *detailed_error_code = 0;
+    return FAIL_INVALID_HANDLE;
+}
+
+EXPORT int32_t
+rvn_prefetch_ring_stats(void *ring, int64_t *submitted, int64_t *dropped_full, int64_t *dropped_stale, int64_t *failed)
+{
+    (void)ring;
+    *submitted = *dropped_full = *dropped_stale = *failed = 0;
+    return FAIL_INVALID_HANDLE;
+}
+
+EXPORT int32_t
 rvn_pager_get_prefetch_request_size(void *handle, int64_t *request_size)
 {
     (void)handle;

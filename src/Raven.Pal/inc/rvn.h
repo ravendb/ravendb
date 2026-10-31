@@ -165,6 +165,15 @@ rvn_pager_get_prefetch_request_size(void *handle,
     int64_t *request_size);
 
 EXPORT int32_t
+rvn_prefetch_ring_create(int32_t ring_entries, int32_t max_files, int32_t queue_size, void **ring, int32_t *detailed_error_code);
+
+EXPORT int32_t
+rvn_prefetch_ring_destroy(void *ring, int32_t *detailed_error_code);
+
+EXPORT int32_t
+rvn_prefetch_ring_stats(void *ring, int64_t *submitted, int64_t *dropped_full, int64_t *dropped_stale, int64_t *failed);
+
+EXPORT int32_t
 rvn_close_pager(
     void *handle,
     int32_t* detailed_error_code);

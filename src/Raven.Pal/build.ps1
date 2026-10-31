@@ -51,7 +51,8 @@ $posix_files = `
 
 $linux_only = `
     "src/posix/linuxonly.c",
-    "src/posix/ioring.c"
+    "src/posix/ioring.c",
+    "src/posix/prefetch.c"
 
 Remove-Item .\runtimes -Force -Recurse -ErrorAction Ignore
 Remove-Item .\artifacts -Force -Recurse -ErrorAction Ignore
