@@ -78,6 +78,8 @@ namespace Raven.Server.Web
 
         public void RegisterForDisposal(IDisposable disposable) => _context.RegisterForDisposal(disposable);
 
+        internal long RequestStartNanoseconds => _context.RequestStartNanoseconds;
+
         public X509Certificate2 GetCurrentCertificate()
         {
             return GetCurrentCertificate(HttpContext);

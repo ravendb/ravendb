@@ -21,6 +21,12 @@ namespace Raven.Server.Web
         public RouteMatch RouteMatch;
         public DocumentDatabase Database;
         public bool CheckForChanges = true;
+
+        /// <summary>
+        /// <see cref="Sparrow.Utils.Clock.Nanoseconds"/> when the router started handling the request, 0 when the router didn't.
+        /// </summary>
+        public long RequestStartNanoseconds;
+
         public ShardedDatabaseContext DatabaseContext;
 
         public string DatabaseName => Database?.Name ?? DatabaseContext?.DatabaseName;

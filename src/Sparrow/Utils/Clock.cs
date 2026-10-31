@@ -1,6 +1,6 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 
-namespace Raven.Server.Utils.Metrics
+namespace Sparrow.Utils
 {
     public sealed class Clock
     {
