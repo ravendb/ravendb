@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
@@ -42,7 +43,7 @@ namespace Raven.Server.Routing
         public static readonly TimeSpan LastRequestTimeUpdateFrequency = TimeSpan.FromSeconds(15);
         private readonly RavenServer _ravenServer;
         private readonly MetricCounters _serverMetrics;
-        private readonly Trie<RouteInformation> _trie;
+        private readonly RouteMatcher<RouteInformation> _routes;
         private static readonly long LastRequestTimeUpdateFrequencyInNanoseconds = (long)LastRequestTimeUpdateFrequency.TotalMilliseconds * Clock.NanosecondsInMillisecond;
 
         // Clock.Nanoseconds of the last update, far enough in the past for the first request to update
@@ -52,7 +53,7 @@ namespace Raven.Server.Routing
 
         public RequestRouter(Dictionary<string, RouteInformation> routes, RavenServer ravenServer)
         {
-            _trie = Trie<RouteInformation>.Build(routes);
+            _routes = new RouteMatcher<RouteInformation>(routes.Values.Select(x => (x.Method, x.Path, x)));
             _ravenServer = ravenServer;
             _serverMetrics = ravenServer.Metrics;
             AllRoutes = new List<RouteInformation>(routes.Values);
@@ -96,9 +97,8 @@ namespace Raven.Server.Routing
 
         public RouteInformation GetRoute(string method, string path, out RouteMatch match)
         {
-            var tryMatch = _trie.TryMatch(method, path);
-            match = tryMatch.Match;
-            return tryMatch.Value;
+            _routes.TryMatch(method, path, out match, out RouteInformation route);
+            return route;
         }
 
         internal async ValueTask<(bool Authorized, AuthenticationStatus Status, string CertificateThumbprint)> TryAuthorizeAsync(RouteInformation route, HttpContext context, string databaseName)
@@ -264,15 +264,12 @@ namespace Raven.Server.Routing
         public async ValueTask HandlePath(RequestHandlerContext reqCtx)
         {
             var context = reqCtx.HttpContext;
-            var tryMatch = _trie.TryMatch(context.Request.Method, context.Request.Path.Value);
-            if (tryMatch.Value == null)
+            if (_routes.TryMatch(context.Request.Method, context.Request.Path.Value, out RouteMatch match, out RouteInformation route) == false)
             {
                 // CONNECT (https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/CONNECT)
                 // starting from .NET 7 can be used by WS connections to establish a communication
-                if (string.Equals(context.Request.Method, HttpMethods.Connect.Method, StringComparison.OrdinalIgnoreCase))
-                    tryMatch = _trie.TryMatch(HttpMethods.Get.Method, context.Request.Path.Value);
-
-                if (tryMatch.Value == null)
+                if (string.Equals(context.Request.Method, HttpMethods.Connect.Method, StringComparison.OrdinalIgnoreCase) == false ||
+                    _routes.TryMatch(HttpMethods.Get.Method, context.Request.Path.Value, out match, out route) == false)
                 {
                     var exception = new RouteNotFoundException($"There is no handler for path: {context.Request.Method} {context.Request.Path.Value}{context.Request.QueryString}");
                     AssertClientVersion(context, exception);
@@ -281,10 +278,10 @@ namespace Raven.Server.Routing
             }
 
             reqCtx.RavenServer = _ravenServer;
-            reqCtx.RouteMatch = tryMatch.Match;
-            reqCtx.CheckForChanges = tryMatch.Value.CheckForChanges;
+            reqCtx.RouteMatch = match;
+            reqCtx.CheckForChanges = route.CheckForChanges;
 
-            var (handler, pendingHandler) = tryMatch.Value.TryGetHandler(reqCtx);
+            var (handler, pendingHandler) = route.TryGetHandler(reqCtx);
             handler ??= await pendingHandler;
 
             // We defer all throughput accounting until the request actually completes so the
@@ -323,9 +320,9 @@ namespace Raven.Server.Routing
 
                 var skipAuthorization = false;
 
-                if (tryMatch.Value.CorsMode != CorsMode.None)
+                if (route.CorsMode != CorsMode.None)
                 {
-                    RequestHandler.SetupCORSHeaders(context, reqCtx.RavenServer.ServerStore, tryMatch.Value.CorsMode);
+                    RequestHandler.SetupCORSHeaders(context, reqCtx.RavenServer.ServerStore, route.CorsMode);
 
                     // don't authorize preflight requests: https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html
                     skipAuthorization = context.Request.Method == "OPTIONS";
@@ -344,7 +341,7 @@ namespace Raven.Server.Routing
                 {
                     if (_ravenServer.Configuration.Security.AuthenticationEnabled && skipAuthorization == false)
                     {
-                        var (authorized, authorizationStatus, thumbprint) = await TryAuthorizeAsync(tryMatch.Value, context, reqCtx.DatabaseName);
+                        var (authorized, authorizationStatus, thumbprint) = await TryAuthorizeAsync(route, context, reqCtx.DatabaseName);
                         status = authorizationStatus;
                         certificateThumbprint = thumbprint;
 
@@ -354,7 +351,7 @@ namespace Raven.Server.Routing
                 }
                 finally
                 {
-                    if (tryMatch.Value.SkipLastRequestTimeUpdate == false)
+                    if (route.SkipLastRequestTimeUpdate == false)
                     {
                         // PERF: these statistics move only every LastRequestTimeUpdateFrequency, so instead of reading the wall clock
                         // on every request, we read it when an update is due (or when there is a certificate to track)
@@ -409,14 +406,14 @@ namespace Raven.Server.Routing
 
                 if (reqCtx.Database != null)
                 {
-                    if (tryMatch.Value.DisableOnCpuCreditsExhaustion &&
+                    if (route.DisableOnCpuCreditsExhaustion &&
                         _ravenServer.CpuCreditsBalance.FailoverAlertRaised.IsRaised())
                     {
                         await RejectRequestBecauseOfCpuThresholdAsync(context);
                         return;
                     }
 
-                    using (reqCtx.Database.DatabaseInUse(tryMatch.Value.SkipUsagesCount))
+                    using (reqCtx.Database.DatabaseInUse(route.SkipUsagesCount))
                     {
                         if (context.Request.Headers.TryGetValue(Constants.Headers.LastKnownClusterTransactionIndex, out var value)
                             && long.TryParse(value, out var index)
