@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Sharding
                 if (changeType == ClusterDatabaseChangeType.ValueChanged)
                 {
                     // value changes aren't reflected in the database record, only the subscriptions might need to be updated
-                    if ((DatabaseValueChangeConsumersExtensions.ForType(type) & DatabaseValueChangeConsumers.Subscriptions) != DatabaseValueChangeConsumers.None)
+                    if (DatabaseValueChangeConsumersExtensions.ForType(type).Contain(DatabaseValueChangeConsumers.Subscriptions))
                         await UpdateSubscriptionsOnValueChangeAsync(index);
                 }
                 else

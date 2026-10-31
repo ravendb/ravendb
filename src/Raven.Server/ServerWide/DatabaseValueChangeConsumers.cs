@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.CdcSink;
 using Raven.Server.ServerWide.Commands.ETL;
@@ -25,6 +26,12 @@ namespace Raven.Server.ServerWide
 
     public static class DatabaseValueChangeConsumersExtensions
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool Contain(this DatabaseValueChangeConsumers current, DatabaseValueChangeConsumers flag)
+        {
+            return (current & flag) == flag;
+        }
+
         public static DatabaseValueChangeConsumers ForType(string type)
         {
             switch (type)

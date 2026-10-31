@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide;
 
@@ -117,7 +118,7 @@ namespace Raven.Server.ServerWide
             if (SectionByField.TryGetValue(field, out var section) == false)
                 return true;
 
-            return (section & ~HandledOnEveryChange) == DatabaseRecordSections.None;
+            return HandledOnEveryChange.Contain(section);
         }
 
         public static DatabaseRecordSections ForTaskType(OngoingTaskType taskType)
@@ -155,29 +156,35 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool Contain(this DatabaseRecordSections current, DatabaseRecordSections flag)
+        {
+            return (current & flag) == flag;
+        }
+
         public static void Stamp(this DatabaseRecordClusterState state, DatabaseRecordSections sections, long index)
         {
-            if (sections.HasFlag(DatabaseRecordSections.Topology))
+            if (sections.Contain(DatabaseRecordSections.Topology))
                 state.LastTopologyIndex = index;
-            if (sections.HasFlag(DatabaseRecordSections.Indexes))
+            if (sections.Contain(DatabaseRecordSections.Indexes))
                 state.LastIndexesIndex = index;
-            if (sections.HasFlag(DatabaseRecordSections.Sorters))
+            if (sections.Contain(DatabaseRecordSections.Sorters))
                 state.LastSortersIndex = index;
-            if (sections.HasFlag(DatabaseRecordSections.Analyzers))
+            if (sections.Contain(DatabaseRecordSections.Analyzers))
                 state.LastAnalyzersIndex = index;
-            if (sections.HasFlag(DatabaseRecordSections.Replication))
+            if (sections.Contain(DatabaseRecordSections.Replication))
                 state.LastReplicationIndex = index;
-            if (sections.HasFlag(DatabaseRecordSections.ConnectionStrings))
+            if (sections.Contain(DatabaseRecordSections.ConnectionStrings))
                 state.LastConnectionStringsIndex = index;
-            if (sections.HasFlag(DatabaseRecordSections.Etls))
+            if (sections.Contain(DatabaseRecordSections.Etls))
                 state.LastEtlsIndex = index;
-            if (sections.HasFlag(DatabaseRecordSections.EmbeddingsGenerations))
+            if (sections.Contain(DatabaseRecordSections.EmbeddingsGenerations))
                 state.LastEmbeddingsGenerationsIndex = index;
-            if (sections.HasFlag(DatabaseRecordSections.PeriodicBackups))
+            if (sections.Contain(DatabaseRecordSections.PeriodicBackups))
                 state.LastPeriodicBackupsIndex = index;
-            if (sections.HasFlag(DatabaseRecordSections.QueueSinks))
+            if (sections.Contain(DatabaseRecordSections.QueueSinks))
                 state.LastQueueSinksIndex = index;
-            if (sections.HasFlag(DatabaseRecordSections.CdcSinks))
+            if (sections.Contain(DatabaseRecordSections.CdcSinks))
                 state.LastCdcSinksIndex = index;
         }
 
@@ -191,27 +198,27 @@ namespace Raven.Server.ServerWide
 
             long version = 0;
 
-            if (sections.HasFlag(DatabaseRecordSections.Topology))
+            if (sections.Contain(DatabaseRecordSections.Topology))
                 version = Math.Max(version, state.LastTopologyIndex ?? 0);
-            if (sections.HasFlag(DatabaseRecordSections.Indexes))
+            if (sections.Contain(DatabaseRecordSections.Indexes))
                 version = Math.Max(version, state.LastIndexesIndex ?? 0);
-            if (sections.HasFlag(DatabaseRecordSections.Sorters))
+            if (sections.Contain(DatabaseRecordSections.Sorters))
                 version = Math.Max(version, state.LastSortersIndex ?? 0);
-            if (sections.HasFlag(DatabaseRecordSections.Analyzers))
+            if (sections.Contain(DatabaseRecordSections.Analyzers))
                 version = Math.Max(version, state.LastAnalyzersIndex ?? 0);
-            if (sections.HasFlag(DatabaseRecordSections.Replication))
+            if (sections.Contain(DatabaseRecordSections.Replication))
                 version = Math.Max(version, state.LastReplicationIndex ?? 0);
-            if (sections.HasFlag(DatabaseRecordSections.ConnectionStrings))
+            if (sections.Contain(DatabaseRecordSections.ConnectionStrings))
                 version = Math.Max(version, state.LastConnectionStringsIndex ?? 0);
-            if (sections.HasFlag(DatabaseRecordSections.Etls))
+            if (sections.Contain(DatabaseRecordSections.Etls))
                 version = Math.Max(version, state.LastEtlsIndex ?? 0);
-            if (sections.HasFlag(DatabaseRecordSections.EmbeddingsGenerations))
+            if (sections.Contain(DatabaseRecordSections.EmbeddingsGenerations))
                 version = Math.Max(version, state.LastEmbeddingsGenerationsIndex ?? 0);
-            if (sections.HasFlag(DatabaseRecordSections.PeriodicBackups))
+            if (sections.Contain(DatabaseRecordSections.PeriodicBackups))
                 version = Math.Max(version, state.LastPeriodicBackupsIndex ?? 0);
-            if (sections.HasFlag(DatabaseRecordSections.QueueSinks))
+            if (sections.Contain(DatabaseRecordSections.QueueSinks))
                 version = Math.Max(version, state.LastQueueSinksIndex ?? 0);
-            if (sections.HasFlag(DatabaseRecordSections.CdcSinks))
+            if (sections.Contain(DatabaseRecordSections.CdcSinks))
                 version = Math.Max(version, state.LastCdcSinksIndex ?? 0);
 
             return version;

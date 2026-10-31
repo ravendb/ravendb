@@ -1976,7 +1976,7 @@ namespace Raven.Server.Documents
         private static bool ShouldNotify(DatabaseValueChangeConsumers consumers, DatabaseValueChangeConsumers consumer, long lastIndex, long index)
         {
             // index and the last index could have equal values when we transit from/to passive and want to update the tasks.
-            return (consumers & consumer) != DatabaseValueChangeConsumers.None && lastIndex <= index;
+            return consumers.Contain(consumer) && lastIndex <= index;
         }
 
         private async ValueTask NotifyFeaturesAboutValueChangeAsync(long index, string type, object changeState)

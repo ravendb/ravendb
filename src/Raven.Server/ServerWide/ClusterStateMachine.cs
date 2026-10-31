@@ -2850,7 +2850,7 @@ namespace Raven.Server.ServerWide
                 if (DatabaseRecordSectionsExtensions.SectionByField.TryGetValue(field, out var section) == false)
                     section = DatabaseRecordSections.All;
 
-                Debug.Assert((changedSections & section) == section,
+                Debug.Assert(changedSections.Contain(section),
                     $"Command '{type}' modified '{field}' of the database record which belongs to '{section}', but it declares only '{changedSections}' in {nameof(UpdateDatabaseCommand.GetChangedSections)}");
             }
         }
