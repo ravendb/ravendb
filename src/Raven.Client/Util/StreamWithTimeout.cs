@@ -16,7 +16,7 @@ namespace Raven.Client.Util
     /// aborts the transport (when we know how, the server aborts the connection) or cancels a token linked to the caller's one.
     /// Either way the operation completes before we do, so its buffer is never in use after it failed.
     /// </remarks>
-    internal sealed class StreamWithTimeout : Stream, IAsyncDisposable
+    internal class StreamWithTimeout : Stream, IAsyncDisposable
     {
         private static readonly TimeSpan DefaultWriteTimeout = TimeSpan.FromSeconds(120);
         internal static TimeSpan DefaultReadTimeout { get; } = TimeSpan.FromSeconds(120);

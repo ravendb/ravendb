@@ -108,6 +108,8 @@ namespace Raven.Server
 
         public readonly RavenConfiguration Configuration;
 
+        internal readonly long MinResponseSizeToCompressInBytes;
+
         public Timer ServerMaintenanceTimer;
 
         public SystemTime Time = new SystemTime();
@@ -162,6 +164,8 @@ namespace Raven.Server
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             if (Configuration.Initialized == false)
                 throw new InvalidOperationException("Configuration must be initialized");
+
+            MinResponseSizeToCompressInBytes = Configuration.Http.MinResponseSizeToCompress.GetValue(SizeUnit.Bytes);
 
             Statistics = new ServerStatistics();
 
@@ -381,6 +385,7 @@ namespace Raven.Server
 
                             services.Configure<DeflateCompressionProviderOptions>(options => { options.Level = Configuration.Http.DeflateResponseCompressionLevel; });
 
+                            services.AddSingleton<IResponseCompressionProvider, RavenResponseCompressionProvider>();
                             services.AddResponseCompression();
                         }
 

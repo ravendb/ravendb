@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -95,6 +95,11 @@ namespace Sparrow.Json
         {
             DisposeInternal();
 
+            // nothing was sent yet, so the whole content is in our buffer and the output stream can learn its size before the first byte
+            var flushOutputStream = true;
+            if (_wroteToOutputStream == false && _outputStream is IContentLengthHint contentLengthHint)
+                flushOutputStream = contentLengthHint.OnContentLength(_innerStream.Length) == false;
+
             try
             {
                 // PERF: Check if flush completed synchronously to avoid async state machine
@@ -106,9 +111,10 @@ namespace Sparrow.Json
                 }
                 else
                 {
-                    return DisposeAsyncSlow(flushTask);
+                    return DisposeAsyncSlow(flushTask, flushOutputStream);
                 }
-                if (_wroteToOutputStream)
+                // PERF: an explicit flush is a second trip into the transport (and with response compression, an extra compressed block)
+                if (_wroteToOutputStream && flushOutputStream)
                 {
                     var outputFlushTask = _outputStream.FlushAsync(_cancellationToken);
                     if (outputFlushTask.IsCompleted == false)
@@ -126,12 +132,12 @@ namespace Sparrow.Json
             return DisposeStreamAsync();
         }
 
-        private async ValueTask DisposeAsyncSlow(ValueTask<long> flushTask)
+        private async ValueTask DisposeAsyncSlow(ValueTask<long> flushTask, bool flushOutputStream)
         {
             try
             {
                 await flushTask.ConfigureAwait(_continueOnCapturedContext);
-                if (_wroteToOutputStream)
+                if (_wroteToOutputStream && flushOutputStream)
                     await _outputStream.FlushAsync(_cancellationToken).ConfigureAwait(_continueOnCapturedContext);
             }
             finally
