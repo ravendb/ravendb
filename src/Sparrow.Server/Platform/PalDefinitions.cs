@@ -18,6 +18,13 @@ namespace Sparrow.Server.Platform
             public bool CanPrefetch => PrefetchOption == 1;
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        public struct PagerPrefetchInfo
+        {
+            public Int64 RequestSize;
+            public Int64 Ticket;
+        }
+
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct PrefetchRanges
         {
