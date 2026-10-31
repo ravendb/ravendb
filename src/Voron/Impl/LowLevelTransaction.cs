@@ -990,6 +990,8 @@ namespace Voron.Impl
                 // transaction. First the pagers and internal resources, then registered ones by external parties.
                 _env.TransactionCompleted(this);
 
+                PersistentContext.FreeRecentlyFoundPages(this);
+
                 _disposableScope.Dispose();
 
                 if (_disposeAllocator)
@@ -1608,6 +1610,7 @@ namespace Voron.Impl
         internal RacyConcurrentBag.Node ActiveTransactionNode;
 
         internal InFlightGuard<PerCoreSlots>.Scope EnvironmentUsage;
+
         public Transaction Transaction;
 
         /// <summary>

@@ -33,8 +33,6 @@ namespace Voron.Data.BTrees
         // Allow detecting if a value moved in the page, in-place same-size update does *not* bump it (no value moved)
         internal long StructureVersion;
 
-        private static readonly ObjectPool<RecentlyFoundTreePages> FoundPagesPool = new(() => new RecentlyFoundTreePages(), 128);
-
         private RecentlyFoundTreePages _recentlyFoundPages;
 
         private Dictionary<Slice, FixedSizeTree> _fixedSizeTrees;
@@ -80,11 +78,7 @@ namespace Voron.Data.BTrees
                 SetNewPageAllocator(newPageAllocator);
             }
 
-            _recentlyFoundPages = FoundPagesPool.Allocate();
-
             _header = header;
-
-            llt.RegisterDisposable(new TreeDisposable(this));
         }
 
         private Tree(LowLevelTransaction llt, Transaction tx, Slice name, bool isIndexTree, NewPageAllocator newPageAllocator)
@@ -99,10 +93,6 @@ namespace Voron.Data.BTrees
                 ThrowIfNullOnDebug(isIndexTree, "If newPageAllocator is set, we must be in a isIndexTree = true");
                 SetNewPageAllocator(newPageAllocator);
             }
-
-            _recentlyFoundPages = FoundPagesPool.Allocate();
-
-            llt.RegisterDisposable(new TreeDisposable(this));
         }
 
         private Tree(LowLevelTransaction llt, Slice name, in TreeRootHeader header)
@@ -110,20 +100,12 @@ namespace Voron.Data.BTrees
             _llt = llt;
             Name = name;
 
-            _recentlyFoundPages = FoundPagesPool.Allocate();
             _header = header;
-
-            llt.RegisterDisposable(new TreeDisposable(this));
         }
 
-        private class TreeDisposable(Tree tree) : IDisposable
+        internal void DetachRecentlyFoundPages()
         {
-            void IDisposable.Dispose()
-            {
-                tree._recentlyFoundPages.Clear();
-                FoundPagesPool.Free(tree._recentlyFoundPages);
-                tree._recentlyFoundPages = null;
-            }
+            _recentlyFoundPages = null;
         }
 
         public bool IsLeafCompressionSupported
@@ -895,8 +877,7 @@ namespace Voron.Data.BTrees
 
         private void AddToRecentlyFoundPages(FastList<long> c, TreePage p, bool leftmostPage, bool rightmostPage)
         {
-            if (_recentlyFoundPages == null)
-                return;
+            _recentlyFoundPages ??= _llt.PersistentContext.AllocateRecentlyFoundPages(this);
 
             Debug.Assert(p.IsCompressed == false);
 
