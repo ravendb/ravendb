@@ -86,6 +86,7 @@
       <BuildType Solution="Validate|x86" Project="Debug" />
     </Project>
     <Project Path="src/Raven.Server/Raven.Server.csproj" />
+    <Project Path="src/Raven.Server.SourceGenerators/Raven.Server.SourceGenerators.csproj" />
     <Project Path="src/Raven.Studio/Raven.Studio.csproj">
       <BuildType Solution="Validate|*" Project="Release" />
     </Project>
