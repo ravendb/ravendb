@@ -227,8 +227,11 @@ namespace Raven.Server.Documents.Sharding
 
             if (_indexesRecordConsumer.ShouldProcess(record, forced, out var version))
             {
-                Indexes.Update(record, index);
-                MarkHandled(_indexesRecordConsumer, version);
+                Indexes.Update(record, index, out var anyErrors);
+
+                // the changes that failed (e.g. an analyzer that couldn't be compiled) are applied again on the next record change
+                if (anyErrors == false)
+                    MarkHandled(_indexesRecordConsumer, version);
             }
 
             if (_subscriptionsRecordConsumer.ShouldProcess(record, forced, out version))

@@ -1828,8 +1828,11 @@ namespace Raven.Server.Documents
 
             if (ShouldHandle(_indexStoreRecordConsumer, out var version))
             {
-                IndexStore.HandleDatabaseRecordChange(record, index);
-                MarkHandled(_indexStoreRecordConsumer, version);
+                IndexStore.HandleDatabaseRecordChange(record, index, startIndexes: true, out var anyErrors);
+
+                // the changes that failed (e.g. an index that couldn't be started) are applied again on the next record change
+                if (anyErrors == false)
+                    MarkHandled(_indexStoreRecordConsumer, version);
             }
 
             if (ShouldHandle(_replicationRecordConsumer, out version))

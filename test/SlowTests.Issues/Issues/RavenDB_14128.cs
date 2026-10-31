@@ -141,6 +141,45 @@ namespace SlowTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
+        public async Task ShouldApplyIndexChangesThatFailedOnNextDatabaseRecordChange()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var database = await GetDatabase(store.Database);
+
+                var failIndexStart = 1;
+                database.IndexStore.ForTestingPurposesOnly().BeforeIndexStart = index =>
+                {
+                    if (index.Name == IndexName && Interlocked.Exchange(ref failIndexStart, 0) == 1)
+                        throw new InvalidOperationException("Simulated failure of the index start");
+                };
+
+                var e = await Assert.ThrowsAnyAsync<Exception>(() => store.Maintenance.SendAsync(new PutIndexesOperation(CreateUsersByNameIndex())));
+                Assert.Contains("Simulated failure of the index start", e.ToString());
+                Assert.Null(database.IndexStore.GetIndex(IndexName));
+
+                var handled = new ConcurrentQueue<(string Feature, long Index)>();
+                database.ForTestingPurposesOnly().OnDatabaseRecordChangeHandled = (feature, index) => handled.Enqueue((feature, index));
+
+                // the index store didn't apply all the changes it was notified about, so it handles the next change of the record, even an unrelated one
+                var expirationResult = await store.Maintenance.SendAsync(new ConfigureExpirationOperation(new ExpirationConfiguration { Disabled = false, DeleteFrequencyInSec = 100 }));
+                var raftIndex = expirationResult.RaftCommandIndex.Value;
+                await database.RachisLogIndexNotifications.WaitForIndexNotification(raftIndex, Timeout);
+
+                Assert.Contains((nameof(DocumentDatabase.IndexStore), raftIndex), handled);
+                Assert.NotNull(database.IndexStore.GetIndex(IndexName));
+
+                // once it applied them, the unrelated changes are skipped again
+                handled.Clear();
+                expirationResult = await store.Maintenance.SendAsync(new ConfigureExpirationOperation(new ExpirationConfiguration { Disabled = false, DeleteFrequencyInSec = 200 }));
+                raftIndex = expirationResult.RaftCommandIndex.Value;
+                await database.RachisLogIndexNotifications.WaitForIndexNotification(raftIndex, Timeout);
+
+                AssertHandledOnly(handled, raftIndex);
+            }
+        }
+
         [RavenFact(RavenTestCategory.Cluster)]
         public async Task ShouldHandleChangeOfNotificationThatWasSkipped()
         {
