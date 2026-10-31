@@ -54,7 +54,7 @@ namespace Raven.Server.Utils
             public MeterMetric RequestsPerSec { get; internal set; }
 
             // PERF: every request updates it twice, avoiding cross core contention
-            public readonly PerCoreCounter ConcurrentRequests = new();
+            public readonly PerCoreValue<PerCoreSum> ConcurrentRequests = new();
 
             public long ConcurrentRequestsCount => ConcurrentRequests.Value;
 
