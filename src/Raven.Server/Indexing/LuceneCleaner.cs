@@ -1,12 +1,12 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Threading;
 using Lucene.Net.Search;
-using Nito.AsyncEx;
 using Raven.Server.Logging;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server;
 using Sparrow.Server.Logging;
 using Sparrow.Utils;
 
@@ -14,7 +14,7 @@ namespace Raven.Server.Indexing;
 
 public sealed class LuceneCleaner : ILowMemoryHandler
 {
-    private readonly AsyncReaderWriterLock _runningQueryLock = new();
+    private readonly ReaderDrainLock _runningQueryLock = new();
     private long _lowMemoryOverGeneration;
     private long _lowMemoryGeneration = -1;
     private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<LuceneCleaner>();
@@ -39,7 +39,7 @@ public sealed class LuceneCleaner : ILowMemoryHandler
             cts.CancelAfter(10);
             try
             {
-                writeLock = _runningQueryLock.WriterLock(cts.Token);
+                writeLock = _runningQueryLock.EnterWrite(cts.Token);
             }
             catch
             {
@@ -81,8 +81,13 @@ public sealed class LuceneCleaner : ILowMemoryHandler
         _lowMemoryOverGeneration++;
     }
 
-    public IDisposable EnterRunningQueryReadLock()
+    public void EnterRunningQueryReadLock()
     {
-        return _runningQueryLock.ReaderLock();
+        _runningQueryLock.AcquireRead(CancellationToken.None);
+    }
+
+    public void ExitRunningQueryReadLock()
+    {
+        _runningQueryLock.ReleaseRead();
     }
 }

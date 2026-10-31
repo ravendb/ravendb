@@ -8,7 +8,6 @@ using Corax.Mappings;
 using Corax.Querying;
 using Corax.Utils;
 using FastTests.Voron;
-using Nito.Disposables;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -354,7 +353,7 @@ public class VectorSearchWithHnswIndexCache(ITestOutputHelper output) : StorageT
         bsc = bscLocal;
         mapping = mappingLocal;
 
-        return Disposable.Create(() =>
+        return new global::Voron.Util.DisposableAction(() =>
         {
             bscLocal.Dispose();
             mappingLocal.Dispose();

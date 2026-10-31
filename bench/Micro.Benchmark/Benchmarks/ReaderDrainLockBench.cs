@@ -9,18 +9,16 @@ using BenchmarkDotNet.Environments;
 using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
-using Nito.AsyncEx;
 using Sparrow.Server;
 
 namespace Micro.Benchmark.Benchmarks
 {
     /// <summary>
-    /// Compares the production reader-acquire path against ReaderDrainLock.
-    /// The "Token" variants mirror the Index.cs idiom: allocate a per-call
+    /// Measures the ReaderDrainLock reader-acquire paths.
+    /// The "Token" variant mirrors the Index.cs idiom: allocate a per-call
     /// CancellationTokenSource(timeout) and pass its token to the lock.
-    /// The "Try" variant uses the non-blocking entry on the new primitive
-    /// (no CTS allocation) - this is what the swap will move to where a
-    /// synchronous "fail-if-busy" semantic suffices.
+    /// The "Try" variant uses the non-blocking entry (no CTS allocation),
+    /// for where a synchronous "fail-if-busy" semantic suffices.
     /// </summary>
     [MemoryDiagnoser]
     [Config(typeof(ReaderDrainLockBench.Config))]
@@ -48,7 +46,6 @@ namespace Micro.Benchmark.Benchmarks
 
         private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(3);
 
-        private AsyncReaderWriterLock _nito;
         private ReaderDrainLock _new;
 
         [Params(1, 4, 16)]
@@ -57,7 +54,6 @@ namespace Micro.Benchmark.Benchmarks
         [GlobalSetup]
         public void Setup()
         {
-            _nito = new AsyncReaderWriterLock();
             _new = new ReaderDrainLock();
         }
 
@@ -68,24 +64,6 @@ namespace Micro.Benchmark.Benchmarks
         }
 
         [Benchmark(Baseline = true)]
-        public void Nito_ReaderLock_WithToken()
-        {
-            if (Threads == 1)
-            {
-                NitoOnce();
-                return;
-            }
-
-            Parallel.For(0, Threads, _ => NitoOnce());
-        }
-
-        private void NitoOnce()
-        {
-            using CancellationTokenSource cts = new CancellationTokenSource(Timeout);
-            using IDisposable _ = _nito.ReaderLock(cts.Token);
-        }
-
-        [Benchmark]
         public void New_EnterRead_WithToken()
         {
             if (Threads == 1)
