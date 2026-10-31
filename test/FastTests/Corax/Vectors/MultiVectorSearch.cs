@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Corax;
@@ -7,7 +7,6 @@ using Corax.Mappings;
 using Corax.Querying;
 using Corax.Utils;
 using FastTests.Voron;
-using Nito.Disposables;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Sparrow;
 using Sparrow.Server;
@@ -272,7 +271,7 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
             return GenerateEmbeddings.FromArray(bscLocal, scope, vec, Raven.Client.Documents.Indexes.Vector.VectorOptions.Default, sizeof(float) * vector.Length);
         };
 
-        return Disposable.Create(() =>
+        return new global::Voron.Util.DisposableAction(() =>
         {
             bscLocal.Dispose();
             mappingLocal.Dispose();
