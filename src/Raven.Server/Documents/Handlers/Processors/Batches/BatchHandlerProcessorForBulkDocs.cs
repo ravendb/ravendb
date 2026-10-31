@@ -35,6 +35,7 @@ internal sealed class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
     {
         try
         {
+            await PrefetchDocumentsAsync(command);
             await RequestHandler.Database.TxMerger.Enqueue(command);
         }
         catch (ConcurrencyException)
@@ -44,6 +45,29 @@ internal sealed class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
         }
 
         return command.Reply;
+    }
+
+    // The merger is a single thread: the pages that putting, patching or deleting existing documents modifies are read here,
+    // so it does not stall on them. A new document (an id the server completes, or a prefix) has none to read.
+    private ValueTask PrefetchDocumentsAsync(MergedBatchCommand command)
+    {
+        var database = RequestHandler.Database;
+        List<string> ids = null;
+        foreach (var cmd in command.ParsedCommands)
+        {
+            if (cmd.Type is not (CommandType.PUT or CommandType.PATCH or CommandType.DELETE) || cmd.IdPrefixed || string.IsNullOrEmpty(cmd.Id))
+                continue;
+            var last = cmd.Id[^1];
+            if (last == '/' || last == database.IdentityPartsSeparator)
+                continue;
+            (ids ??= new List<string>()).Add(cmd.Id);
+        }
+        if (ids == null)
+            return ValueTask.CompletedTask;
+
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
+        using (documentsContext.OpenReadTransaction())
+            return database.DocumentsStorage.PrefetchDocumentsAsync(documentsContext, ids);
     }
 
     protected override async ValueTask WaitForIndexesAsync(IndexBatchOptions options, ChangeVector lastChangeVector, long lastTombstoneEtag,
