@@ -63,6 +63,12 @@ namespace Raven.Server.Utils
                 RequestsPerSec.Mark(1, durationMilliseconds);
             }
 
+            /// <param name="nowNanoseconds">The current <see cref="Clock.Nanoseconds"/>, when the caller already read it.</param>
+            public void RecordRequest(long durationMilliseconds, long nowNanoseconds)
+            {
+                RequestsPerSec.Mark(1, durationMilliseconds, nowNanoseconds);
+            }
+
             public double AverageDuration => RequestsPerSec.GetAverageDuration();
 
             public double GetAverageDuration(TimeSpan window) => RequestsPerSec.GetAverageDuration(window);
