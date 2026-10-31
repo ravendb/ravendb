@@ -22,7 +22,7 @@ int main()
     int32_t ec;
     int32_t rc = rvn_startup_configure(&cfg, &ec);
 
-    rc = rvn_init_pager("/home/ayende/work/ravendb/8.0/src/Raven.Server/bin/release/net10.0/Databases/t/Raven.voron", 1024 * 64, OPEN_FILE_WRITABLE_MAP, &handle, &mem, &wmem, &size, &err);
+    rc = rvn_init_pager("/home/ayende/work/ravendb/8.0/src/Raven.Server/bin/release/net10.0/Databases/t/Raven.voron", 1024 * 64, OPEN_FILE_WRITABLE_MAP, NULL, &handle, &mem, &wmem, &size, &err);
     
     while(1){
         rc = rvn_pager_get_next_sparse_region(handle, start, &offset, &size, &err);

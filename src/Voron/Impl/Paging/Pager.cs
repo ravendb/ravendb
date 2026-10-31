@@ -55,8 +55,13 @@ public unsafe partial class Pager : IDisposable
             throw new InvalidOperationException($"Expected the PAL to have page size matching Voron but was: {Pal.PalVoronPageSize}");
         
         var pager = new Pager(options, filename, flags, GetFunctions(options, flags));
-        var result = Pal.rvn_init_pager(filename, initialFileSize, flags, 
+        var ring = flags.HasFlag(Pal.OpenFileFlags.Prefetch) ? options.PrefetchRing ?? PrefetchRing.Default : null;
+        var result = Pal.rvn_init_pager(filename, initialFileSize, flags, ring != null ? ring.Handle : null,
             out var handle, out var readOnlyMemory, out var writeMemory, out var memorySize, out var error);
+        if (result == PalFlags.FailCodes.FailPrefetchFilesExhausted)
+            throw new InvalidOperationException(
+                $"Cannot open '{filename}': {ring!.MaxFiles} data files are already open with the prefetch I/O ring, which is its limit. " +
+                "Raise the 'Storage.PrefetchRingMaxFiles' configuration option (a server restart is needed) to open more databases and indexes.");
         if (result != PalFlags.FailCodes.Success)
             RaiseError(filename, error, result, initialFileSize);
 

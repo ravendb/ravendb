@@ -215,6 +215,9 @@ namespace Voron
 
         public bool ManualFlushing { get; set; }
 
+        /// <summary>The ring for data file prefetches; null uses <see cref="PrefetchRing.Default"/>.</summary>
+        public PrefetchRing PrefetchRing { get; set; }
+
         public bool IncrementalBackupEnabled { get; set; }
 
         public long MaxNumberOfPagesInJournalBeforeFlush { get; set; }
@@ -505,7 +508,7 @@ namespace Voron
 
             public override (Pager Pager, Pager.State State) InitializeDataPager()
             {
-                // page-sized point lookups: a fault reads only the pages it touches
+                // page-sized point lookups: a fault reads only the pages it touches, and pages are prefetched through the ring
                 var flags = Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch;
                 if(Encryption.IsEnabled)
                     flags |= Pal.OpenFileFlags.Encrypted;

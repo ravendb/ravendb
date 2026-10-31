@@ -587,12 +587,14 @@ EXPORT int32_t
 rvn_init_pager(const char *filename,
                int64_t initial_file_size,
                int32_t open_flags,
+               void *prefetch_ring,
                void **handle,
                void **memory,
                void **writable_memory,
                int64_t *memory_size,
                int32_t *detailed_error_code)
 {
+    (void)prefetch_ring; // no prefetch ring on Windows
     *memory_size = 0;
     *memory = NULL;
     *handle = NULL;
@@ -858,6 +860,16 @@ rvn_writer rvn_get_writer(void *handle)
     default:
         return io_ring_setup_successful() ? rvn_write_io_ring : rvn_write_file_io;
     }
+}
+
+EXPORT int32_t
+rvn_pager_prefetch(void *handle, int64_t offset, int64_t length)
+{
+    // no prefetch ring on Windows: the data file is opened with FILE_FLAG_RANDOM_ACCESS and the memory manager pages it in
+    (void)handle;
+    (void)offset;
+    (void)length;
+    return 0;
 }
 
 EXPORT int32_t
