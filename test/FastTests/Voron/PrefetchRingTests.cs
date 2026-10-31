@@ -126,6 +126,56 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
         }
     }
 
+    [RavenFact(RavenTestCategory.Voron)]
+    public void ThePrefetchRequestSizeComesFromTheDevice()
+    {
+        var path = RavenTestHelper.NewDataPath(nameof(ThePrefetchRequestSizeComesFromTheDevice), 0, forceCreateDir: true);
+        try
+        {
+            using (var options = StorageEnvironmentOptions.ForPathForTests(path))
+            {
+                var (pager, state) = options.InitializeDataPager();
+                using (pager)
+                using (state)
+                {
+                    Assert.Equal(PalFlags.FailCodes.Success, Pal.rvn_pager_get_prefetch_request_size(state.Handle, out var requestSize));
+                    var expected = PlatformDetails.RunningOnLinux ? ExpectedRequestSize(state) : PlatformDetails.RunningOnWindows ? 0 : 128 * 1024;
+                    Output.WriteLine($"prefetch request size: {requestSize / 1024} KB (expected {expected / 1024} KB)");
+                    Assert.Equal(expected, requestSize);
+                }
+            }
+        }
+        finally
+        {
+            IOExtensions.DeleteDirectory(path);
+        }
+
+        // max(read_ahead_kb, max_sectors_kb) of the file's device (a partition keeps them on its parent), else 128 KB
+        static long ExpectedRequestSize(Pager.State state)
+        {
+            Assert.Equal(PalFlags.FailCodes.Success, Pal.rvn_pager_get_device_id(state.Handle, out var deviceId, out _));
+            var major = ((deviceId & 0x00000000000fff00UL) >> 8) | ((deviceId & 0xfffff00000000000UL) >> 32);
+            var minor = (deviceId & 0x00000000000000ffUL) | ((deviceId & 0x00000ffffff00000UL) >> 12);
+            // /sys/dev/block/major:minor is a link; resolve it before going up to a partition's parent (.NET collapses '..' by text)
+            var link = $"/sys/dev/block/{major}:{minor}";
+            var device = Directory.Exists(link) ? Path.GetFullPath(new DirectoryInfo(link).LinkTarget ?? link, "/sys/dev/block") : null;
+            long Limit(string name)
+            {
+                if (device == null)
+                    return 0;
+                foreach (var dir in new[] { device, Path.GetDirectoryName(device) })
+                {
+                    var file = Path.Combine(dir, "queue", name);
+                    if (File.Exists(file) && long.TryParse(File.ReadAllText(file).Trim(), out var kb))
+                        return kb;
+                }
+                return 0;
+            }
+            var limit = Math.Max(Limit("read_ahead_kb"), Limit("max_sectors_kb"));
+            return limit > 0 ? limit * 1024 : 128 * 1024;
+        }
+    }
+
     private static void DropFromPageCache(string file)
     {
         using var stream = new FileStream(file, FileMode.Open, FileAccess.ReadWrite);

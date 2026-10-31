@@ -38,7 +38,7 @@ public unsafe partial class Pager
     private static bool StartRead(State state, long pageNumber, int numberOfPages)
     {
         var range = new PalDefinitions.PrefetchRanges(state.ReadAddress + pageNumber * Constants.Storage.PageSize,
-            (long)numberOfPages * Constants.Storage.PageSize);
+            (long)numberOfPages * Constants.Storage.PageSize, state.Pager._prefetchRequestSize);
         return Pal.rvn_prefetch_ranges(&range, 1, out _) == PalFlags.FailCodes.Success;
     }
 }

@@ -42,6 +42,7 @@ public unsafe partial class Pager : IDisposable
     private readonly EncryptionBuffersPool _encryptionBuffersPool;
     private readonly byte[] _masterKey;
     private PrefetchTableHint _prefetchState;
+    private long _prefetchRequestSize;
     private DateTime _lastIncrease;
     private long _increaseSize;
 
@@ -64,6 +65,7 @@ public unsafe partial class Pager : IDisposable
         (state.TotalAllocatedSize, state.TotalPhysicalSpace) = pager.GetFileSize(state);
         pager.InstallState(state);
         pager.Initialize(memorySize);
+        Pal.rvn_pager_get_prefetch_request_size(handle, out pager._prefetchRequestSize);
         return (pager, state);
     }
 
