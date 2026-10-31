@@ -79,6 +79,9 @@ struct handle_global_state
     struct arena fsync_dir_arena;
 
     struct dirty_bitmap *dirty_bitmap;
+
+    // the largest WILLNEED request the file's device reads whole
+    int64_t prefetch_request_size;
 };
 
 struct handle

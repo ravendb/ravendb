@@ -859,3 +859,11 @@ rvn_writer rvn_get_writer(void *handle)
         return io_ring_setup_successful() ? rvn_write_io_ring : rvn_write_file_io;
     }
 }
+
+EXPORT int32_t
+rvn_pager_get_prefetch_request_size(void *handle, int64_t *request_size)
+{
+    (void)handle;
+    *request_size = 0; // PrefetchVirtualMemory takes a whole range
+    return SUCCESS;
+}

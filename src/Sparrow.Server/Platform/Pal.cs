@@ -105,6 +105,7 @@ namespace Sparrow.Server.Platform
             CopyOnWrite = 1 << 8,
             DoNotMap = 1 << 9,
             RandomAccess = 1 << 10,
+            Prefetch = 1 << 11,
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -166,6 +167,11 @@ namespace Sparrow.Server.Platform
             out void* mem,
             out Int32 errorCode);
             
+        /// <summary>The largest WILLNEED request the data file's device reads whole (the kernel drops the rest of a larger one).</summary>
+        [DllImport(LIBRVNPAL)]
+        public static extern PalFlags.FailCodes rvn_pager_get_prefetch_request_size(
+            void* handle, out Int64 requestSize);
+
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_close_pager(
             void* handle, out Int32 errorCode);
