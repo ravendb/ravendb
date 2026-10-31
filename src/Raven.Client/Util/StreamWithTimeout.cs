@@ -1,140 +1,61 @@
-﻿using System;
-using System.Diagnostics;
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Utils;
 
 namespace Raven.Client.Util
 {
+    /// <summary>
+    /// Fails a read or a write that doesn't complete within the timeout of the stream.
+    /// </summary>
+    /// <remarks>
+    /// PERF: an operation that completes synchronously (most of them, the transport buffers them) costs no timer and no allocation.
+    /// Without a token of the caller, the operation gets a <see cref="CoarseTimeout"/> token. With one, the operation gets the
+    /// caller's token and only an operation that has to wait registers to a <see cref="CoarseTimeout"/> token, which, when it fires,
+    /// aborts the transport (when we know how, the server aborts the connection) or cancels a token linked to the caller's one.
+    /// Either way the operation completes before we do, so its buffer is never in use after it failed.
+    /// </remarks>
     internal sealed class StreamWithTimeout : Stream, IAsyncDisposable
     {
         private static readonly TimeSpan DefaultWriteTimeout = TimeSpan.FromSeconds(120);
         internal static TimeSpan DefaultReadTimeout { get; } = TimeSpan.FromSeconds(120);
 
-        private static readonly int DefaultMinimumWriteDelayTimeInMs = (int)(DefaultWriteTimeout.TotalMilliseconds / 3);
-        private static readonly int DefaultMinimumReadDelayTimeInMs = (int)(DefaultReadTimeout.TotalMilliseconds / 3);
-
-        private Stopwatch _writeSw;
-        private Stopwatch _readSw;
-
         internal readonly Stream _stream;
-        private int _writeTimeout;
-        private int _readTimeout;
-        private int _minimumWriteDelayTimeInMs = DefaultMinimumWriteDelayTimeInMs;
-        private int _minimumReadDelayTimeInMs = DefaultMinimumReadDelayTimeInMs;
-        private bool _canBaseStreamTimeoutOnWrite;
-        private bool _canBaseStreamTimeoutOnRead;
-        private CancellationTokenSource _writeCts;
-        private CancellationTokenSource _readCts;
+        private readonly Action<object> _abort;
+        private readonly object _abortState;
+        private int _writeTimeout = (int)DefaultWriteTimeout.TotalMilliseconds;
+        private int _readTimeout = (int)DefaultReadTimeout.TotalMilliseconds;
+
+        // linked to the token of the caller, so a timeout can cancel an operation when we can't abort the transport
+        private CancellationTokenSource _linked;
+        private bool _timedOut;
 
 #if DEBUG
-        private CancellationToken _requestReadCts;
-        private CancellationToken _requestWriteCts;
+        private CancellationToken _callerToken;
 #endif
 
         private long _totalRead = 0;
         private long _totalWritten = 0;
 
-        public StreamWithTimeout(Stream stream)
+        /// <param name="abort">Aborts the transport under the stream, so an operation that waits fails when it times out.</param>
+        public StreamWithTimeout(Stream stream, Action<object> abort = null, object abortState = null)
         {
             _stream = stream;
-            SetWriteTimeoutIfNeeded(DefaultWriteTimeout);
-            SetReadTimeoutIfNeeded(DefaultReadTimeout);
-        }
-
-        private void SetReadTimeoutIfNeeded(TimeSpan readTimeout)
-        {
-            try
-            {
-                _readTimeout = (int)readTimeout.TotalMilliseconds;
-                _canBaseStreamTimeoutOnRead = _stream.CanRead && _stream.CanTimeout;
-
-                if (_canBaseStreamTimeoutOnRead)
-                {
-                    var streamReadTimeout = _stream.ReadTimeout;
-                    if (streamReadTimeout > 0)
-                    {
-                        ReadTimeout = streamReadTimeout;
-                        return;
-                    }
-
-                    try
-                    {
-                        _stream.ReadTimeout = _readTimeout;
-                    }
-                    catch
-                    {
-                        if (streamReadTimeout <= _readTimeout)
-                            ReadTimeout = streamReadTimeout;
-                        else
-                            _canBaseStreamTimeoutOnRead = false;
-                    }
-                }
-            }
-            catch
-            {
-                _canBaseStreamTimeoutOnRead = false;
-            }
-        }
-
-        private void SetWriteTimeoutIfNeeded(TimeSpan writeTimeout)
-        {
-            try
-            {
-                _writeTimeout = (int)writeTimeout.TotalMilliseconds;
-                _canBaseStreamTimeoutOnWrite = _stream.CanWrite && _stream.CanTimeout;
-
-                if (_canBaseStreamTimeoutOnWrite)
-                {
-                    var streamWriteTimeout = _stream.WriteTimeout;
-                    if (streamWriteTimeout > 0)
-                    {
-                        WriteTimeout = streamWriteTimeout;
-                        return;
-                    }
-                    try
-                    {
-                        _stream.WriteTimeout = _writeTimeout;
-                    }
-                    catch
-                    {
-                        if (streamWriteTimeout <= _writeTimeout)
-                            WriteTimeout = streamWriteTimeout;
-                        else
-                            _canBaseStreamTimeoutOnWrite = false;
-                    }
-                }
-            }
-            catch
-            {
-                _canBaseStreamTimeoutOnWrite = false;
-            }
+            _abort = abort;
+            _abortState = abortState;
         }
 
         public override int ReadTimeout
         {
             get => _readTimeout;
-            set
-            {
-                if (_canBaseStreamTimeoutOnRead)
-                    _stream.ReadTimeout = value; // we only need to set it when base stream supports that, if not we are handling that ourselves
-
-                _readTimeout = value;
-                _minimumReadDelayTimeInMs = value / 3;
-            }
+            set => _readTimeout = value;
         }
 
         public override int WriteTimeout
         {
             get => _writeTimeout;
-            set
-            {
-                if (_canBaseStreamTimeoutOnWrite)
-                    _stream.WriteTimeout = value;  // we only need to set it when base stream supports that, if not we are handling that ourselves
-
-                _writeTimeout = value;
-                _minimumWriteDelayTimeInMs = value / 3;
-            }
+            set => _writeTimeout = value;
         }
 
         public override bool CanTimeout => true;
@@ -151,52 +72,70 @@ namespace Raven.Client.Util
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            if (_canBaseStreamTimeoutOnRead)
-            {
-                var read = _stream.Read(buffer, offset, count);
-                _totalRead += read;
-                return read;
-            }
-
             // _totalRead is counted in ReadAsyncWithTimeout
             return AsyncHelpers.RunSync(() => ReadAsyncWithTimeout(buffer, offset, count, CancellationToken.None));
         }
 
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
+#if NETSTANDARD2_0
             // _totalRead is counted in ReadAsyncWithTimeout
             return ReadAsyncWithTimeout(buffer, offset, count, cancellationToken);
+#else
+            return ReadAsync(new Memory<byte>(buffer, offset, count), cancellationToken).AsTask();
+#endif
         }
+
+#if !NETSTANDARD2_0
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (cancellationToken.CanBeCanceled == false)
+            {
+                var timeout = CoarseTimeout.After(_readTimeout);
+                var readWithTimeout = _stream.ReadAsync(buffer, timeout.Token);
+                if (timeout.IsShared && readWithTimeout.IsCompletedSuccessfully)
+                    return new ValueTask<int>(CountRead(readWithTimeout.Result));
+
+                return CompleteReadAsync(readWithTimeout, timeout);
+            }
+
+            var readTask = _stream.ReadAsync(buffer, GetOperationToken(cancellationToken));
+            if (readTask.IsCompletedSuccessfully)
+                return new ValueTask<int>(CountRead(readTask.Result));
+
+            return WaitForReadAsync(readTask.AsTask());
+        }
+
+        private async ValueTask<int> CompleteReadAsync(ValueTask<int> readTask, CoarseTimeout.TimeoutToken timeout)
+        {
+            using (timeout)
+                return CountRead(await readTask.ConfigureAwait(false));
+        }
+#endif
 
         private async Task<int> ReadAsyncWithTimeout(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            if (_readCts == null)
+            if (cancellationToken.CanBeCanceled == false)
             {
-                _readCts = GenerateCancellationTokenWithTimeout(_readTimeout, cancellationToken);
-                _readSw = Stopwatch.StartNew();
-
-#if DEBUG
-                _requestReadCts = cancellationToken;
-#endif
-            }
-            else if (_readSw.ElapsedMilliseconds > _minimumReadDelayTimeInMs)
-            {
-                _readSw.Restart();
-                _readCts.CancelAfter(_readTimeout);
-
-                if (_readCts.IsCancellationRequested)
-                {
-                    _readCts?.Dispose();
-                    _readCts = GenerateCancellationTokenWithTimeout(_readTimeout, cancellationToken);
-                }
-
-#if DEBUG
-                if (_requestReadCts != cancellationToken)
-                    throw new InvalidOperationException("The cancellation token was changed during the request");
-#endif
+                using (var timeout = CoarseTimeout.After(_readTimeout))
+                    return CountRead(await _stream.ReadAsync(buffer, offset, count, timeout.Token).ConfigureAwait(false));
             }
 
-            var read = await _stream.ReadAsync(buffer, offset, count, _readCts.Token).ConfigureAwait(false);
+            var readTask = _stream.ReadAsync(buffer, offset, count, GetOperationToken(cancellationToken));
+            if (readTask.IsCompleted)
+                return CountRead(await readTask.ConfigureAwait(false));
+
+            return await WaitForReadAsync(readTask).ConfigureAwait(false);
+        }
+
+        private async ValueTask<int> WaitForReadAsync(Task<int> readTask)
+        {
+            await WaitWithTimeoutAsync(readTask, _readTimeout, "read").ConfigureAwait(false);
+            return CountRead(await readTask.ConfigureAwait(false));
+        }
+
+        private int CountRead(int read)
+        {
             _totalRead += read;
             return read;
         }
@@ -215,12 +154,6 @@ namespace Raven.Client.Util
         {
             _totalWritten += count;
 
-            if (_canBaseStreamTimeoutOnWrite)
-            {
-                _stream.Write(buffer, offset, count);
-                return;
-            }
-
             AsyncHelpers.RunSync(() => WriteAsyncWithTimeout(buffer, offset, count, CancellationToken.None));
         }
 
@@ -233,40 +166,100 @@ namespace Raven.Client.Util
 
         private Task WriteAsyncWithTimeout(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            if (_writeCts == null)
+            if (cancellationToken.CanBeCanceled == false)
             {
-                _writeCts = GenerateCancellationTokenWithTimeout(_writeTimeout, cancellationToken);
-                _writeSw = Stopwatch.StartNew();
+                var timeout = CoarseTimeout.After(_writeTimeout);
+                var writeWithTimeout = _stream.WriteAsync(buffer, offset, count, timeout.Token);
+                if (timeout.IsShared)
+                    return writeWithTimeout;
 
-#if DEBUG
-                _requestWriteCts = cancellationToken;
-#endif
-            }
-            else if (_writeSw.ElapsedMilliseconds > _minimumWriteDelayTimeInMs)
-            {
-                _writeSw.Restart();
-                _writeCts.CancelAfter(_writeTimeout);
-
-                if (_writeCts.IsCancellationRequested)
-                {
-                    _writeCts.Dispose();
-                    _writeCts = GenerateCancellationTokenWithTimeout(_writeTimeout, cancellationToken);
-                }
-
-#if DEBUG
-                if (_requestWriteCts != cancellationToken)
-                    throw new InvalidOperationException("The cancellation token was changed during the request");
-#endif
+                return CompleteWriteAsync(writeWithTimeout, timeout);
             }
 
-            return _stream.WriteAsync(buffer, offset, count, _writeCts.Token);
+            var writeTask = _stream.WriteAsync(buffer, offset, count, GetOperationToken(cancellationToken));
+            if (writeTask.IsCompleted)
+                return writeTask;
+
+            return WaitWithTimeoutAsync(writeTask, _writeTimeout, "write");
         }
 
-        private static CancellationTokenSource GenerateCancellationTokenWithTimeout(int timeout, CancellationToken ct)
+        private static async Task CompleteWriteAsync(Task writeTask, CoarseTimeout.TimeoutToken timeout)
         {
-            var cts = ct == default ? new CancellationTokenSource() : CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts.CancelAfter(timeout);
-            return cts;
+            using (timeout)
+                await writeTask.ConfigureAwait(false);
+        }
+
+        private CancellationToken GetOperationToken(CancellationToken cancellationToken)
+        {
+            // PERF: when we can abort the transport, the operation gets the caller's token as is, no linking
+            if (_abort != null)
+                return cancellationToken;
+
+            var linked = Volatile.Read(ref _linked);
+            if (linked == null)
+            {
+                linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                var existing = Interlocked.CompareExchange(ref _linked, linked, null);
+                if (existing != null)
+                {
+                    linked.Dispose();
+                    linked = existing;
+                }
+#if DEBUG
+                else
+                {
+                    _callerToken = cancellationToken;
+                }
+#endif
+            }
+#if DEBUG
+            else if (_callerToken != cancellationToken)
+            {
+                throw new InvalidOperationException("The cancellation token was changed during the request");
+            }
+#endif
+
+            return linked.Token;
+        }
+
+        private async Task WaitWithTimeoutAsync(Task operation, int timeoutInMs, string operationName)
+        {
+            using (var timeout = CoarseTimeout.After(timeoutInMs))
+            using (timeout.Token.Register(static state => ((StreamWithTimeout)state).OnTimeout(), this))
+            {
+                try
+                {
+                    await operation.ConfigureAwait(false);
+                }
+                catch (Exception e) when (Volatile.Read(ref _timedOut) && e is not OperationCanceledException)
+                {
+                    // aborting the transport fails the operation with an I/O error, a timeout is reported as a cancellation
+                    throw new OperationCanceledException($"The {operationName} didn't complete within {timeoutInMs} ms", e);
+                }
+            }
+        }
+
+        private void OnTimeout()
+        {
+            Volatile.Write(ref _timedOut, true);
+
+            // not on the timer's thread, aborting can run the continuations of the operation
+            ThreadPool.QueueUserWorkItem(static state => ((StreamWithTimeout)state).Abort(), this);
+        }
+
+        private void Abort()
+        {
+            try
+            {
+                if (_abort != null)
+                    _abort(_abortState);
+                else
+                    Volatile.Read(ref _linked)?.Cancel();
+            }
+            catch
+            {
+                // the operation fails (or completes) on its own
+            }
         }
 
         public override bool CanRead => _stream.CanRead;
@@ -283,21 +276,12 @@ namespace Raven.Client.Util
             set => _stream.Position = value;
         }
 
-        ~StreamWithTimeout()
-        {
-            _readCts?.Dispose();
-            _writeCts?.Dispose();
-        }
-
         protected override void Dispose(bool disposing)
         {
-            GC.SuppressFinalize(this);
-
             base.Dispose(disposing);
             _stream.Dispose();
 
-            _readCts?.Dispose();
-            _writeCts?.Dispose();
+            _linked?.Dispose();
         }
 
 #if NETSTANDARD2_0
@@ -310,13 +294,10 @@ namespace Raven.Client.Util
             Dispose();
             return new ValueTask();
 #else
-            GC.SuppressFinalize(this);
-
             await base.DisposeAsync().ConfigureAwait(false);
             await _stream.DisposeAsync().ConfigureAwait(false);
 
-            _readCts?.Dispose();
-            _writeCts?.Dispose();
+            _linked?.Dispose();
 #endif
         }
     }
