@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -622,7 +622,7 @@ namespace Sparrow.Server
             if (memory.InUse.Lower() == false)
                 ThrowSegmentStillInUse();
 
-            memory.InPoolSince = DateTime.UtcNow;
+            memory.InPoolSinceMilliseconds = Clock.Milliseconds;
 
             var pool = SegmentsPool;
 
