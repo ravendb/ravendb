@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -692,126 +692,128 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private DisposeLock _disposerLock = new DisposeLock("Leader");
+        private readonly InFlightGuard<SingleSlot> _inFlight = new();
 
         public void Dispose()
         {
-            using (_disposerLock.StartDisposing())
-            {
-                bool lockTaken = false;
-                Monitor.TryEnter(this, TimeSpan.FromSeconds(15), ref lockTaken);
-                try
-                {
-                    _engine.ForTestingPurposes?.LeaderLock?.HangThreadIfLocked();
+            if (_inFlight.TryClose() == false)
+                return;
 
-                    if (lockTaken == false)
-                    {
-                        var message = $"{ToString()}: Refresh ambassador is taking the lock for 15 sec giving up on leader dispose";
-                        if (_engine.Log.IsInfoEnabled)
-                        {
-                            _engine.Log.Info(message);
-                        }
-                        throw new TimeoutException(message);
-                    }
+            _inFlight.WaitForDrain(Timeout.InfiniteTimeSpan);
+
+            bool lockTaken = false;
+            Monitor.TryEnter(this, TimeSpan.FromSeconds(15), ref lockTaken);
+            try
+            {
+                _engine.ForTestingPurposes?.LeaderLock?.HangThreadIfLocked();
+
+                if (lockTaken == false)
+                {
+                    var message = $"{ToString()}: Refresh ambassador is taking the lock for 15 sec giving up on leader dispose";
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info($"Start disposing leader {_engine.Tag} of term {Term}.");
+                        _engine.Log.Info(message);
                     }
-                    _running.Lower();
-                    _shutdownRequested.Set();
-                    var lastStateChangeReason = _engine.LastStateChangeReason;
-                    NotLeadingException te = null;
-                    if (string.IsNullOrEmpty(lastStateChangeReason) == false)
-                        te = new NotLeadingException(lastStateChangeReason);
+                    throw new TimeoutException(message);
+                }
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"Start disposing leader {_engine.Tag} of term {Term}.");
+                }
+                _running.Lower();
+                _shutdownRequested.Set();
+                var lastStateChangeReason = _engine.LastStateChangeReason;
+                NotLeadingException te = null;
+                if (string.IsNullOrEmpty(lastStateChangeReason) == false)
+                    te = new NotLeadingException(lastStateChangeReason);
 
-                    TaskExecutor.Execute(_ =>
+                TaskExecutor.Execute(_ =>
+                {
+                    _newEntriesArrived.TrySetCanceled();
+                    _errorOccurred.TrySetCanceled();
+                   
+                    foreach (var entry in _entries)
                     {
-                        _newEntriesArrived.TrySetCanceled();
-                        _errorOccurred.TrySetCanceled();
-                       
-                        foreach (var entry in _entries)
+                        if (entry.Key <= _lastCommit)
                         {
-                            if (entry.Key <= _lastCommit)
+                            if (entry.Value.OnNotify != null)
                             {
-                                if (entry.Value.OnNotify != null)
+                                try
                                 {
-                                    try
-                                    {
-                                        entry.Value.OnNotify(entry.Value.TaskCompletionSource);
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        entry.Value.TaskCompletionSource.TrySetException(e);
-                                    }
+                                    entry.Value.OnNotify(entry.Value.TaskCompletionSource);
                                 }
-                                else
+                                catch (Exception e)
                                 {
-                                    entry.Value.TaskCompletionSource.TrySetResult((entry.Value.CommandIndex, entry.Value.Result));
+                                    entry.Value.TaskCompletionSource.TrySetException(e);
                                 }
-                                continue;
-                            }
-                            
-                            if (te == null)
-                            {
-                                entry.Value.TaskCompletionSource.TrySetCanceled();
                             }
                             else
                             {
-                                entry.Value.TaskCompletionSource.TrySetException(te);
+                                entry.Value.TaskCompletionSource.TrySetResult((entry.Value.CommandIndex, entry.Value.Result));
                             }
+                            continue;
                         }
-                    }, null);
-
-                    if (_leaderLongRunningWork != null && _leaderLongRunningWork.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
-                        _leaderLongRunningWork.Join(int.MaxValue);
-
-                    _engine.ForTestingPurposes?.HoldOnLeaderElect?.ReleaseOnLeaderElect();
-
-                    var ae = new ExceptionAggregator("Could not properly dispose Leader");
-                    foreach (var ambassador in _nonVoters)
-                    {
-                        ae.Execute(ambassador.Value.Dispose);
+                        
+                        if (te == null)
+                        {
+                            entry.Value.TaskCompletionSource.TrySetCanceled();
+                        }
+                        else
+                        {
+                            entry.Value.TaskCompletionSource.TrySetException(te);
+                        }
                     }
+                }, null);
 
-                    foreach (var ambassador in _promotables)
-                    {
-                        ae.Execute(ambassador.Value.Dispose);
-                    }
-                    foreach (var ambassador in _voters)
-                    {
-                        ae.Execute(ambassador.Value.Dispose);
-                    }
+                if (_leaderLongRunningWork != null && _leaderLongRunningWork.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+                    _leaderLongRunningWork.Join(int.MaxValue);
 
-                    var faulted = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    faulted.SetException(new ObjectDisposedException(ToString()));
-                    var existing = Interlocked.Exchange(ref _topologyModification, faulted);
-                    
-                    if (te == null)
-                    {
-                        existing?.TrySetCanceled();
-                    }
-                    else
-                    {
-                        existing?.TrySetException(te);
-                    }
+                _engine.ForTestingPurposes?.HoldOnLeaderElect?.ReleaseOnLeaderElect();
 
-                    faulted.Task.IgnoreUnobservedExceptions();
-
-                    _newEntry.Dispose();
-                    _voterResponded.Dispose();
-                    _promotableUpdated.Dispose();
-                    _shutdownRequested.Dispose();
-                    _noop.Dispose();
-                    if (_engine.Log.IsDebugEnabled)
-                    {
-                        _engine.Log.Debug($"Leader {_engine.Tag} of term {Term} was disposed");
-                    }
-                }
-                finally
+                var ae = new ExceptionAggregator("Could not properly dispose Leader");
+                foreach (var ambassador in _nonVoters)
                 {
-                    if (lockTaken)
-                        Monitor.Exit(this);
+                    ae.Execute(ambassador.Value.Dispose);
                 }
+
+                foreach (var ambassador in _promotables)
+                {
+                    ae.Execute(ambassador.Value.Dispose);
+                }
+                foreach (var ambassador in _voters)
+                {
+                    ae.Execute(ambassador.Value.Dispose);
+                }
+
+                var faulted = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                faulted.SetException(new ObjectDisposedException(ToString()));
+                var existing = Interlocked.Exchange(ref _topologyModification, faulted);
+                
+                if (te == null)
+                {
+                    existing?.TrySetCanceled();
+                }
+                else
+                {
+                    existing?.TrySetException(te);
+                }
+
+                faulted.Task.IgnoreUnobservedExceptions();
+
+                _newEntry.Dispose();
+                _voterResponded.Dispose();
+                _promotableUpdated.Dispose();
+                _shutdownRequested.Dispose();
+                _noop.Dispose();
+                if (_engine.Log.IsDebugEnabled)
+                {
+                    _engine.Log.Debug($"Leader {_engine.Tag} of term {Term} was disposed");
+                }
+            }
+            finally
+            {
+                if (lockTaken)
+                    Monitor.Exit(this);
             }
         }
 
@@ -843,7 +845,7 @@ namespace Raven.Server.Rachis
                 RachisConsensus.ValidateNodeTag(nodeTag);
             }
 
-            using (await _disposerLock.EnsureNotDisposedAsync(continueOnCapturedContext: true))
+            using (_inFlight.Enter("Leader"))
             {
                 var topologyModification = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var existing = Interlocked.CompareExchange(ref _topologyModification, topologyModification, null);
