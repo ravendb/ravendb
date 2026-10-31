@@ -92,7 +92,6 @@
     <PackageVersion Include="MySqlConnector" Version="2.6.2" />
     <PackageVersion Include="NCrontab.Advanced" Version="1.3.28" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageVersion Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
     <PackageVersion Include="NJsonSchema" Version="11.6.1" />
     <PackageVersion Include="NLog" Version="5.5.1" />
     <PackageVersion Include="NLog.Web.AspNetCore" Version="5.5.0" />

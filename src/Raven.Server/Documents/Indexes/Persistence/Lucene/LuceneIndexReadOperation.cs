@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly int _maxNumberOfOutputsPerDocument;
 
         protected readonly IState _state;
-        private readonly IDisposable _readLock;
+        private bool _holdsRunningQueryReadLock;
 
         private FastVectorHighlighter _highlighter;
         private FieldQuery _highlighterQuery;
@@ -90,7 +90,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexHasBoostedFields = index.HasBoostedFields;
             _releaseReadTransaction = directory.SetTransaction(readTransaction, out _state);
             _searcher = ((LuceneIndexPersistence)_index.IndexPersistence).GetSearcher(readTransaction, _state);
-            _readLock = _luceneCleaner.EnterRunningQueryReadLock();
+            _luceneCleaner.EnterRunningQueryReadLock();
+            _holdsRunningQueryReadLock = true;
         }
 
         public override long EntriesCount()
@@ -1023,11 +1024,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public override void Dispose()
         {
-            using (_readLock)
+            try
             {
                 base.Dispose();
                 _analyzer?.Dispose();
                 _releaseReadTransaction?.Dispose();
+            }
+            finally
+            {
+                if (_holdsRunningQueryReadLock)
+                {
+                    _holdsRunningQueryReadLock = false;
+                    _luceneCleaner.ExitRunningQueryReadLock();
+                }
             }
         }
 

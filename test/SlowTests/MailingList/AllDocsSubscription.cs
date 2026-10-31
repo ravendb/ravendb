@@ -1,10 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Nito.AsyncEx;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Subscriptions;
@@ -42,7 +41,7 @@ namespace SlowTests.MailingList
 
             var subscription = store.Subscriptions.GetSubscriptionWorker<Animal>(new SubscriptionWorkerOptions("Test"));
             var names = new BlockingCollection<string>();
-            var cde = new AsyncCountdownEvent(4);
+            var cde = new AsyncCountdown(4);
             var t = subscription.Run(batch =>
             {
                 foreach (var item in batch.Items)
@@ -59,7 +58,7 @@ namespace SlowTests.MailingList
                 await cde.WaitAsync(cte.Token);
             }
 
-            cde = new AsyncCountdownEvent(2);
+            cde = new AsyncCountdown(2);
 
             using (var s = store.OpenAsyncSession())
             {
@@ -142,7 +141,7 @@ namespace SlowTests.MailingList
 
             var subscription = store.Subscriptions.GetSubscriptionWorker<Revision<Animal>>(new SubscriptionWorkerOptions("Test"));
             var names = new BlockingCollection<string>();
-            var cde = new AsyncCountdownEvent(50);
+            var cde = new AsyncCountdown(50);
             var t = subscription.Run(batch =>
             {
                 foreach (var item in batch.Items)
@@ -168,6 +167,20 @@ namespace SlowTests.MailingList
         }
         public AllDocsSubscription(ITestOutputHelper output) : base(output)
         {
+        }
+
+        private sealed class AsyncCountdown(int count)
+        {
+            private int _remaining = count;
+            private readonly TaskCompletionSource _done = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            public void Signal()
+            {
+                if (Interlocked.Decrement(ref _remaining) == 0)
+                    _done.TrySetResult();
+            }
+
+            public Task WaitAsync(CancellationToken token) => _done.Task.WaitAsync(token);
         }
     }
 }
