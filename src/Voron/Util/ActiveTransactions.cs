@@ -1,10 +1,12 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
+using Sparrow.Server.Threading;
 using Sparrow.Threading;
 using Voron.Debugging;
 using Voron.Impl;
@@ -125,11 +127,27 @@ namespace Voron.Util
         public sealed class Node
         {
             public LowLevelTransaction Value;
+
+            // decrements the slot of _inUse that the transaction in Value incremented
+            internal PerCoreCounter.Decrementor InUse;
+
+#pragma warning disable CS0169 // never read, it only takes space
+            // PERF: nodes are allocated together, the padding keeps each one on its own cache lines, so transactions
+            // on different cores don't invalidate each other's slots
+            private CacheLinePadding _padding;
+#pragma warning restore CS0169
+        }
+
+        [StructLayout(LayoutKind.Sequential, Size = 64)]
+        private struct CacheLinePadding
+        {
         }
 
         private Node[] _array = [];
 
-        private int _inUse;
+        // PERF: every transaction adds and removes itself, a single shared counter would bounce between all the cores.
+        // Each slot pairs an increment with its decrement, so a transaction that is active during a read of Value is always counted.
+        private readonly PerCoreCounter _inUse = new(maxSlots: 16);
 
         private readonly int _growthFactor;
 
@@ -175,12 +193,14 @@ namespace Voron.Util
         {
             var copy = _array;
             var node = tx.ActiveTransactionNode;
+            // read before releasing the node, another transaction can take it right after
+            var inUse = node.InUse;
             if (Interlocked.CompareExchange(ref node.Value, null, tx) != tx)
                 return false;
 
-            var result = Interlocked.Decrement(ref _inUse);
-            if (result > 0 ||
-                copy.Length < _growthFactor * 4)
+            inUse.Decrement();
+            if (copy.Length < _growthFactor * 4 ||
+                _inUse.Value > 0)
                 return true;
 
             if (_compactionInProgress.Raise() == false)
@@ -226,20 +246,27 @@ namespace Voron.Util
 
         public void Add(LowLevelTransaction item)
         {
-            Interlocked.Increment(ref _inUse);
+            var inUse = _inUse.Increment();
             var copy = _array;
             while (true)
             {
                 bool compactionInProgress = false;
-                for (int i = 0; i < copy.Length; i++)
+
+                // PERF: each core starts looking from its own position, instead of all of them racing for the first slots
+                int position = copy.Length == 0 ? 0 : (int)((uint)Thread.GetCurrentProcessorId() % (uint)copy.Length);
+                for (int scanned = 0; scanned < copy.Length; scanned++, position++)
                 {
-                    var node = copy[i];
+                    if (position == copy.Length)
+                        position = 0;
+
+                    var node = copy[position];
                     var value = node.Value;
                     if (value == null)
                     {
                         value = Interlocked.CompareExchange(ref node.Value, item, null);
                         if (value == null)
                         {
+                            node.InUse = inUse;
                             item.ActiveTransactionNode = node;
                             return;
                         }
@@ -268,6 +295,7 @@ namespace Voron.Util
                 }
 
                 newArray[copy.Length].Value = item;
+                newArray[copy.Length].InUse = inUse;
                 var result = Interlocked.CompareExchange(ref _array, newArray, copy);
                 if (result == copy)
                 {
@@ -279,7 +307,7 @@ namespace Voron.Util
             }
         }
 
-        public bool HasTransactions => _inUse != 0;
+        public bool HasTransactions => _inUse.Value != 0;
 
         public long ScanOldest()
         {
