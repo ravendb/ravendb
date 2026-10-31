@@ -22,14 +22,15 @@ public sealed class PerCoreCounter
     }
 
     // bounds the memory of a counter on large machines, a few cores sharing a slot still contend far less than all of them
-    private const int MaxSlots = 32;
+    private const int DefaultMaxSlots = 32;
 
     private readonly Slot[] _slots;
     private readonly int _mask;
 
-    public PerCoreCounter()
+    /// <param name="maxSlots">Upper bound on the slots, <see cref="Value"/> reads all of them.</param>
+    public PerCoreCounter(int maxSlots = DefaultMaxSlots)
     {
-        int count = Math.Min(Bits.PowerOf2(Environment.ProcessorCount), MaxSlots);
+        int count = Math.Min(Bits.PowerOf2(Environment.ProcessorCount), Bits.PowerOf2(maxSlots));
         _mask = count - 1;
         _slots = new Slot[count];
     }
