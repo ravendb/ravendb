@@ -253,11 +253,11 @@ namespace Raven.Server.Routing
             throw new DatabaseLoadTimeoutException($"Database {databaseName} after {timeout} is still loading, try again later. Database initialization log: " + Environment.NewLine + log);
         }
 
-        public Tuple<HandleRequest, Task<HandleRequest>> TryGetHandler(RequestHandlerContext context)
+        public (HandleRequest Handler, Task<HandleRequest> PendingHandler) TryGetHandler(RequestHandlerContext context)
         {
             if (_typeOfRoute == RouteType.None)
             {
-                return Tuple.Create<HandleRequest, Task<HandleRequest>>(_request, null);
+                return (_request, null);
             }
             var database = CreateDatabase(context);
             if (database == null)
@@ -268,14 +268,14 @@ namespace Raven.Server.Routing
                     throw new InvalidOperationException($"Unable to run request {context.HttpContext.Request.GetFullUrl()}, the database is sharded, but no sharded route is defined for this operation!");
                 }
 
-                return Tuple.Create<HandleRequest, Task<HandleRequest>>(_shardedRequest, null);
+                return (_shardedRequest, null);
             }
 
             if (database.Status == TaskStatus.RanToCompletion)
             {
-                return Tuple.Create<HandleRequest, Task<HandleRequest>>(_request, null);
+                return (_request, null);
             }
-            return Tuple.Create<HandleRequest, Task<HandleRequest>>(null, WaitForDb(database));
+            return (null, WaitForDb(database));
         }
 
         private async Task<HandleRequest> WaitForDb(Task databaseLoading)

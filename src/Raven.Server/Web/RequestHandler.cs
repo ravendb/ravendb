@@ -98,7 +98,9 @@ namespace Raven.Server.Web
         public virtual void Init(RequestHandlerContext context)
         {
             _context = context;
-            context.HttpContext.Response.OnStarting(() => CheckForChanges(context));
+
+            if (context.CheckForChanges)
+                context.HttpContext.Response.OnStarting(static state => ((RequestHandler)state).CheckForChanges(((RequestHandler)state)._context), this);
         }
 
         public abstract Task CheckForChanges(RequestHandlerContext context);
