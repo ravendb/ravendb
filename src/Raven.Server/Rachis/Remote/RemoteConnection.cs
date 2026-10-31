@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -31,7 +31,7 @@ namespace Raven.Server.Rachis.Remote
         private readonly IDisposable _releaseBuffer;
         private RavenLogger _log;
         private readonly Action _disconnect;
-        private readonly DisposeLock _disposerLock = new DisposeLock(nameof(RemoteConnection));
+        private readonly InFlightGuard<SingleSlot> _inFlight = new();
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
 
         public string Source => _src;
@@ -106,7 +106,7 @@ namespace Raven.Server.Rachis.Remote
 
         private void Send(JsonOperationContext context, BlittableJsonReaderObject msg, Action afterFlush = null)
         {
-            using (_disposerLock.EnsureNotDisposed())
+            using (_inFlight.Enter(nameof(RemoteConnection)))
             using (var writer = new RachisBlittableJsonTextWriter(context, _stream, afterFlush))
             {
                 context.Write(writer, msg);
@@ -275,7 +275,7 @@ namespace Raven.Server.Rachis.Remote
 
         internal int Read(byte[] buffer, int offset, int count)
         {
-            using (_disposerLock.EnsureNotDisposed())
+            using (_inFlight.Enter(nameof(RemoteConnection)))
             {
                 if (_buffer.Used < _buffer.Valid)
                     return ReadFromBuffer(buffer, offset, count);
@@ -308,7 +308,7 @@ namespace Raven.Server.Rachis.Remote
         public T Read<T>(JsonOperationContext context)
             where T : class
         {
-            using (_disposerLock.EnsureNotDisposed())
+            using (_inFlight.Enter(nameof(RemoteConnection)))
             using (
                 var json = context.Sync.ParseToMemory(_stream, "rachis-item",
                     BlittableJsonDocumentBuilder.UsageMode.None, _buffer))
@@ -328,7 +328,7 @@ namespace Raven.Server.Rachis.Remote
 
             try
             {
-                using (_disposerLock.EnsureNotDisposed())
+                using (_inFlight.Enter(nameof(RemoteConnection)))
                 {
                     json = context.Sync.ParseToMemory(_stream, "rachis-snapshot",
                         BlittableJsonDocumentBuilder.UsageMode.None, _buffer);
@@ -351,7 +351,7 @@ namespace Raven.Server.Rachis.Remote
 
             try
             {
-                using (_disposerLock.EnsureNotDisposed())
+                using (_inFlight.Enter(nameof(RemoteConnection)))
                 {
                     json = context.Sync.ParseToMemory(_stream, "rachis-entry",
                     BlittableJsonDocumentBuilder.UsageMode.None, _buffer);
@@ -398,7 +398,7 @@ namespace Raven.Server.Rachis.Remote
             try
             {
                 //  we dispose here the stream explicitly to avoid waiting indefinitely on the stream.Read method
-                // which will prevent us continue the dispose, since the Read is wrapped with _disposerLock.EnsureNotDisposed()
+                // which will prevent us continue the dispose, since the Read is wrapped with _inFlight.Enter(nameof(RemoteConnection))
                 _stream?.Dispose();
             }
             catch
@@ -406,27 +406,30 @@ namespace Raven.Server.Rachis.Remote
                 // don't care
             }
 
-            using (_disposerLock.StartDisposing())
+            if (_inFlight.TryClose() == false)
+                return;
+
+
+            _inFlight.WaitForDrain(Timeout.InfiniteTimeSpan);
+
+            RemoteConnectionsList.TryRemove(_info);
+
+            try
             {
-                RemoteConnectionsList.TryRemove(_info);
-
-                try
-                {
-                    _disconnect(); // force disconnection, to abort read/write
-                }
-                catch (Exception)
-                {
-                    // even if we get an error , we must continue to the actual disposal
-                }
-
-                _releaseBuffer?.Dispose();
-                _context?.Dispose();
+                _disconnect(); // force disconnection, to abort read/write
             }
+            catch (Exception)
+            {
+                // even if we get an error , we must continue to the actual disposal
+            }
+
+            _releaseBuffer?.Dispose();
+            _context?.Dispose();
         }
 
         public RachisHello InitFollower(JsonOperationContext context)
         {
-            using (_disposerLock.EnsureNotDisposed())
+            using (_inFlight.Enter(nameof(RemoteConnection)))
             using (
                 var json = context.Sync.ParseToMemory(_stream, "rachis-initial-msg",
                     BlittableJsonDocumentBuilder.UsageMode.None, _buffer))
