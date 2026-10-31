@@ -80,6 +80,9 @@ struct handle_global_state
 
     struct dirty_bitmap *dirty_bitmap;
 
+    // the prefetch ring the file is registered with, and its ticket there (NULL / -1 = not registered)
+    void *prefetch_ring;
+    int64_t prefetch_ticket;
     // the largest WILLNEED request the file's device reads whole
     int64_t prefetch_request_size;
 };

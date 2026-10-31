@@ -281,6 +281,21 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.WriteMode", ConfigurationEntryScope.ServerWideOnly)]
         public Pal.RvnWriteMode WriteMode { get; set; }
 
+        [Description("EXPERT: The number of data files that can be registered with the prefetch I/O ring (Linux). Opening a data file beyond this number fails.")]
+        [DefaultValue(4096)]
+        [ConfigurationEntry("Storage.PrefetchRingMaxFiles", ConfigurationEntryScope.ServerWideOnly)]
+        public int PrefetchRingMaxFiles { get; set; }
+
+        [Description("EXPERT: The number of prefetch requests the prefetch I/O ring (Linux) keeps in flight.")]
+        [DefaultValue(256)]
+        [ConfigurationEntry("Storage.PrefetchRingEntries", ConfigurationEntryScope.ServerWideOnly)]
+        public int PrefetchRingEntries { get; set; }
+
+        [Description("EXPERT: The number of prefetch requests waiting for the prefetch I/O ring (Linux), rounded up to a power of two; further requests are dropped.")]
+        [DefaultValue(8192)]
+        [ConfigurationEntry("Storage.PrefetchRingQueueSize", ConfigurationEntryScope.ServerWideOnly)]
+        public int PrefetchRingQueueSize { get; set; }
+
         [Description("Threshold (in KB) for the block device read_ahead_kb alert raised on server startup on Linux. If any block device's read_ahead_kb exceeds this value, a warning alert is raised. Set to null to disable the check.")]
         [DefaultValue(128)]
         [MinValue(0)]

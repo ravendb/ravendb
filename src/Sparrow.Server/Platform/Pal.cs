@@ -167,10 +167,28 @@ namespace Sparrow.Server.Platform
             out void* mem,
             out Int32 errorCode);
             
+        /// <summary>Starts reading the range into the page cache (prefetch ring, or posix_fadvise without io_uring). Returns 1 when requested, 0 when dropped.</summary>
+        [DllImport(LIBRVNPAL)]
+        [SuppressGCTransition]
+        public static extern Int32 rvn_pager_prefetch(
+            void* handle, Int64 offset, Int64 length);
+
         /// <summary>The largest WILLNEED request the data file's device reads whole (the kernel drops the rest of a larger one).</summary>
         [DllImport(LIBRVNPAL)]
         public static extern PalFlags.FailCodes rvn_pager_get_prefetch_request_size(
             void* handle, out Int64 requestSize);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_prefetch_ring_create(
+            Int32 ringEntries, Int32 maxFiles, Int32 queueSize, out void* ring, out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_prefetch_ring_destroy(
+            void* ring, out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL)]
+        public static extern PalFlags.FailCodes rvn_prefetch_ring_stats(
+            void* ring, out Int64 submitted, out Int64 droppedFull, out Int64 droppedStale, out Int64 failed);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_close_pager(
@@ -203,6 +221,7 @@ namespace Sparrow.Server.Platform
             string filename,
             Int64 initialFileSize,
             OpenFileFlags flags,
+            void* prefetchRing,
             out void* handle,
             out byte* readAddress,
             out byte* writeAddress,
@@ -210,7 +229,7 @@ namespace Sparrow.Server.Platform
             out Int32 errorCode)
         {
             using var convert = new Converter(filename);
-            return rvn_init_pager(convert.Pointer, initialFileSize, flags,
+            return rvn_init_pager(convert.Pointer, initialFileSize, flags, prefetchRing,
                 out handle, out readAddress, out writeAddress, out memorySize, out errorCode);
         }
 
@@ -237,6 +256,7 @@ namespace Sparrow.Server.Platform
             byte* filename,
             Int64 initialFileSize,
             OpenFileFlags flags,
+            void* prefetchRing,
             out void* handle,
             out byte* readAddress,
             out byte* writeAddress,

@@ -145,6 +145,7 @@ EXPORT int32_t
 rvn_init_pager(const char* filename,
     int64_t initial_file_size,
     int32_t open_flags,
+    void* prefetch_ring,
     void** handle,
     void** memory,
     void** writable_memory,
@@ -159,6 +160,11 @@ rvn_increase_pager_size(void* handle,
     void **writable_memory,
     int64_t* memory_size,
     int32_t* detailed_error_code);
+
+EXPORT int32_t
+rvn_pager_prefetch(void *handle,
+    int64_t offset,
+    int64_t length);
 
 EXPORT int32_t
 rvn_pager_get_prefetch_request_size(void *handle,
