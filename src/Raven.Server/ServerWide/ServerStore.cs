@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -140,7 +140,10 @@ namespace Raven.Server.ServerWide
 
         private readonly NotificationsStorage _notificationsStorage;
         private readonly OperationsStorage _operationsStorage;
-        public ConcurrentDictionary<string, Dictionary<string, long>> IdleDatabases;
+        public readonly ConcurrentDictionary<string, Dictionary<string, long>> IdleDatabases;
+
+        // PERF: looks up an idle database by the name in the request path, without allocating a string for it
+        internal readonly ConcurrentDictionary<string, Dictionary<string, long>>.AlternateLookup<ReadOnlySpan<char>> IdleDatabasesByName;
 
         private RequestExecutor _leaderRequestExecutor;
         internal long _lastClusterTopologyIndex = -1;
@@ -202,6 +205,7 @@ namespace Raven.Server.ServerWide
             _clusterRequestExecutor = CreateClusterRequestExecutor();
 
             IdleDatabases = new ConcurrentDictionary<string, Dictionary<string, long>>(StringComparer.OrdinalIgnoreCase);
+            IdleDatabasesByName = IdleDatabases.GetAlternateLookup<ReadOnlySpan<char>>();
 
             DatabasesLandlord = new DatabasesLandlord(this);
 
