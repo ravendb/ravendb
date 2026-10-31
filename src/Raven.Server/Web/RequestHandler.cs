@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -119,12 +119,15 @@ namespace Raven.Server.Web
 
         private Stream _requestBodyStream;
 
+        // a timeout of the request or response stream aborts the connection, which fails the operation that waits on it
+        private static readonly Action<object> AbortConnection = static state => ((HttpContext)state).Abort();
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal Stream RequestBodyStream()
         {
             if (_requestBodyStream != null)
                 return _requestBodyStream;
-            _requestBodyStream = new StreamWithTimeout(GetDecompressedStream(HttpContext.Request.Body, HttpContext.Request.Headers));
+            _requestBodyStream = new StreamWithTimeout(GetDecompressedStream(HttpContext.Request.Body, HttpContext.Request.Headers), AbortConnection, HttpContext);
 
             if (TrafficWatchManager.HasRegisteredClients)
             {
@@ -261,7 +264,7 @@ namespace Raven.Server.Web
             if (_responseStream != null)
                 return _responseStream;
 
-            _responseStream = new StreamWithTimeout(HttpContext.Response.Body);
+            _responseStream = new StreamWithTimeout(HttpContext.Response.Body, AbortConnection, HttpContext);
 
             _context.HttpContext.Response.RegisterForDispose(_responseStream);
 
