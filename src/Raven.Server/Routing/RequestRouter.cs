@@ -289,7 +289,7 @@ namespace Raven.Server.Routing
             var requestStartNs = Clock.Nanoseconds;
             reqCtx.RequestStartNanoseconds = requestStartNs;
 
-            var concurrentRequest = _serverMetrics.Requests.ConcurrentRequests.Increment();
+            var concurrentRequest = _serverMetrics.Requests.ConcurrentRequests.Apply(1);
 
             try
             {
@@ -443,7 +443,7 @@ namespace Raven.Server.Routing
             }
             finally
             {
-                concurrentRequest.Decrement();
+                concurrentRequest.Apply(-1);
 
                 // PERF: a single clock read for the duration and for both meters
                 var requestEndNs = Clock.Nanoseconds;

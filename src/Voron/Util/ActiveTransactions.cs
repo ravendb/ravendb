@@ -128,8 +128,8 @@ namespace Voron.Util
         {
             public LowLevelTransaction Value;
 
-            // decrements the slot of _inUse that the transaction in Value incremented
-            internal PerCoreCounter.Decrementor InUse;
+            // the slot of _inUse that the transaction in Value incremented, to decrement it
+            internal PerCoreValue<PerCoreSum>.Slot InUse;
 
 #pragma warning disable CS0169 // never read, it only takes space
             // PERF: nodes are allocated together, the padding keeps each one on its own cache lines, so transactions
@@ -146,8 +146,9 @@ namespace Voron.Util
         private Node[] _array = [];
 
         // PERF: every transaction adds and removes itself, a single shared counter would bounce between all the cores.
-        // Each slot pairs an increment with its decrement, so a transaction that is active during a read of Value is always counted.
-        private readonly PerCoreCounter _inUse = new(maxSlots: 16);
+        // Each slot pairs an increment with its decrement, so a slot is never negative, and a transaction that is active during
+        // a read of IsZero is always counted.
+        private readonly PerCoreValue<PerCoreSum> _inUse = new();
 
         private readonly int _growthFactor;
 
@@ -198,9 +199,9 @@ namespace Voron.Util
             if (Interlocked.CompareExchange(ref node.Value, null, tx) != tx)
                 return false;
 
-            inUse.Decrement();
+            inUse.Apply(-1);
             if (copy.Length < _growthFactor * 4 ||
-                _inUse.Value > 0)
+                _inUse.IsZero == false)
                 return true;
 
             if (_compactionInProgress.Raise() == false)
@@ -246,7 +247,7 @@ namespace Voron.Util
 
         public void Add(LowLevelTransaction item)
         {
-            var inUse = _inUse.Increment();
+            var inUse = _inUse.Apply(1);
             var copy = _array;
             while (true)
             {
@@ -307,7 +308,7 @@ namespace Voron.Util
             }
         }
 
-        public bool HasTransactions => _inUse.Value != 0;
+        public bool HasTransactions => _inUse.IsZero == false;
 
         public long ScanOldest()
         {

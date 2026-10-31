@@ -842,7 +842,7 @@ namespace Raven.Server.Documents
                 else
                 {
                     if (database.IsCompletedSuccessfully)
-                        database.Result.LastAccessTime = database.Result.Time.GetUtcNow();
+                        database.Result.UpdateLastAccessTime();
 
                     return true;
                 }
