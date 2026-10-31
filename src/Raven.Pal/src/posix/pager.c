@@ -172,6 +172,12 @@ int32_t _open_pager_file(int fd,
         rc = FAIL_MAP_VIEW_OF_FILE;
         goto Error;
     }
+    if (global_state->open_flags & OPEN_FILE_RANDOM_ACCESS)
+    {
+        // a fault reads only the pages it touches, instead of the device's read-ahead window
+        // (advisory: a failure leaves the default read-around)
+        (void)madvise(mem, st.st_size, MADV_RANDOM);
+    }
 
     if (global_state->open_flags & OPEN_FILE_WRITABLE_MAP)
     {

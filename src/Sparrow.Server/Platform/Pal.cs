@@ -104,6 +104,7 @@ namespace Sparrow.Server.Platform
             DoNotConsiderMemoryLockFailureAsCatastrophicError = 1 << 7,
             CopyOnWrite = 1 << 8,
             DoNotMap = 1 << 9,
+            RandomAccess = 1 << 10,
         }
 
         [StructLayout(LayoutKind.Sequential)]
