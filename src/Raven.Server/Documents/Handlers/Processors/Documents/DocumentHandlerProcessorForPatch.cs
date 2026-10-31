@@ -21,6 +21,26 @@ internal sealed class DocumentHandlerProcessorForPatch : AbstractDocumentHandler
     {
     }
 
+    // The merger is a single thread: patch work done here does not stall the writes queued behind this one.
+    private void PrepareOutsideOfMerger(DocumentsOperationContext context, string id, PatchDocumentCommand command, SimpleAssignmentPatch simplePatch, BlittableJsonReaderObject args)
+    {
+        var storage = RequestHandler.Database.DocumentsStorage;
+        using (context.OpenReadTransaction())
+        using (var document = storage.Get(context, id, DocumentFields.All, throwOnConflict: false))
+        {
+            if (document == null)
+                return;
+
+            if (simplePatch.TryApply(context, document.Id, document.Data, args, out var modified) == false)
+                return;
+
+            if (modified == null)
+                command.CompleteAsNotModified(context, document.Data);
+            else
+                command.SetPrepared(document.Id, document.ChangeVector, document.Flags, modified);
+        }
+    }
+
     [AsyncMethodBuilder(typeof(PoolingAsyncValueTaskMethodBuilder))]
     protected override async ValueTask HandleDocumentPatchAsync(string id, string cv, BlittableJsonReaderObject patchRequest, bool skipPatchIfChangeVectorMismatch, bool debugMode,
         bool isTest, DocumentsOperationContext context)
@@ -55,7 +75,18 @@ internal sealed class DocumentHandlerProcessorForPatch : AbstractDocumentHandler
 
         if (isTest == false)
         {
-            await RequestHandler.Database.TxMerger.Enqueue(command);
+            var simplePatch = debugMode == false && changeVector == null && patchIfMissing == null && createIfMissingCmd == null
+                ? SimpleAssignmentPatch.TryGet(patch)
+                : null;
+
+            if (simplePatch != null)
+            {
+                command.SetSimplePatch(simplePatch);
+                PrepareOutsideOfMerger(context, id, command, simplePatch, patchArgs);
+            }
+
+            if (command.PatchResult == null)
+                await RequestHandler.Database.TxMerger.Enqueue(command);
         }
         else
         {
