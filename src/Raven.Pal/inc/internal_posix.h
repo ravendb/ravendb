@@ -93,6 +93,15 @@ struct handle
     int file_fd;
 };
 
+PRIVATE int32_t
+rvn_prefetch_register(void *ring, int fd, int64_t *ticket, int32_t *detailed_error_code);
+
+PRIVATE void
+rvn_prefetch_unregister(void *ring, int64_t ticket);
+
+PRIVATE int32_t
+rvn_prefetch_enqueue(void *ring, int64_t ticket, int64_t offset, int64_t length);
+
 PRIVATE
 int32_t _setup_io_ring(struct handle_global_state *global_state, int32_t *detailed_error_code);
 

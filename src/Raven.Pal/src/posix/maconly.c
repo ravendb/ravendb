@@ -249,3 +249,57 @@ rvn_pager_get_next_sparse_region(void* handle,
 }
 
 #endif
+
+PRIVATE int32_t
+rvn_prefetch_register(void *ring, int fd, int64_t *ticket, int32_t *detailed_error_code)
+{
+    (void)ring;
+    (void)fd;
+    (void)detailed_error_code;
+    *ticket = -1;
+    return SUCCESS;
+}
+
+PRIVATE void
+rvn_prefetch_unregister(void *ring, int64_t ticket)
+{
+    (void)ring;
+    (void)ticket;
+}
+
+PRIVATE int32_t
+rvn_prefetch_enqueue(void *ring, int64_t ticket, int64_t offset, int64_t length)
+{
+    (void)ring;
+    (void)ticket;
+    (void)offset;
+    (void)length;
+    return 0;
+}
+
+EXPORT int32_t
+rvn_prefetch_ring_create(int32_t ring_entries, int32_t max_files, int32_t queue_size, void **ring, int32_t *detailed_error_code)
+{
+    (void)ring_entries;
+    (void)max_files;
+    (void)queue_size;
+    *ring = NULL;
+    *detailed_error_code = ENOTSUP;
+    return FAIL_CREATE_IO_RING; // no io_uring
+}
+
+EXPORT int32_t
+rvn_prefetch_ring_destroy(void *ring, int32_t *detailed_error_code)
+{
+    (void)ring;
+    *detailed_error_code = 0;
+    return FAIL_INVALID_HANDLE;
+}
+
+EXPORT int32_t
+rvn_prefetch_ring_stats(void *ring, int64_t *submitted, int64_t *dropped_full, int64_t *dropped_stale, int64_t *failed)
+{
+    (void)ring;
+    *submitted = *dropped_full = *dropped_stale = *failed = 0;
+    return FAIL_INVALID_HANDLE;
+}
