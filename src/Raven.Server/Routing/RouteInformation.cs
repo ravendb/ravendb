@@ -93,7 +93,7 @@ namespace Raven.Server.Routing
                 throw new NodeIsPassiveException($"Can't perform actions on the database '{databaseName}' while the node is passive.");
             }
 
-            if (context.RavenServer.ServerStore.IdleDatabases.TryGetValue(databaseName.Value, out var replicationsDictionary))
+            if (context.RavenServer.ServerStore.IdleDatabasesByName.TryGetValue(databaseName.AsSpan(), out var replicationsDictionary))
             {
                 if (context.HttpContext.Request.Query.TryGetValue("from-outgoing", out var dbId) && context.HttpContext.Request.Query.TryGetValue("etag", out var replicationEtag))
                 {
