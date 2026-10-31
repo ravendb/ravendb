@@ -158,12 +158,12 @@ namespace Raven.Server.Routing
                     context.Features.Set<IHttpAuthenticationFeature>(feature);
 
                     if (CanAccessRoute(route, context, databaseName, feature))
-                        return (true, feature.Status, feature.Certificate?.Thumbprint);
+                        return (true, feature.Status, feature.CertificateThumbprint);
                 }
 
 
                 await UnlikelyFailAuthorizationAsync(context, databaseName, feature, route.AuthorizationStatus);
-                return (false, feature.Status, feature.Certificate?.Thumbprint);
+                return (false, feature.Status, feature.CertificateThumbprint);
             }
 
             if (feature.RequiresTwoFactor && _ravenServer.TwoFactor.ValidateTwoFactorRequestLimits(route, context, feature.TwoFactorAuthRegistration, out var twoFactorMsg) == false)
@@ -177,10 +177,10 @@ namespace Raven.Server.Routing
 
                 await UnlikelyFailAuthorizationAsync(context, databaseName, feature, route.AuthorizationStatus);
 
-                return (false, AuthenticationStatus.TwoFactorAuthFromInvalidLimit, feature.Certificate?.Thumbprint);
+                return (false, AuthenticationStatus.TwoFactorAuthFromInvalidLimit, feature.CertificateThumbprint);
             }
 
-            return (true, feature.Status, feature.Certificate?.Thumbprint);
+            return (true, feature.Status, feature.CertificateThumbprint);
         }
 
 
@@ -280,8 +280,8 @@ namespace Raven.Server.Routing
             reqCtx.RouteMatch = tryMatch.Match;
             reqCtx.CheckForChanges = tryMatch.Value.CheckForChanges;
 
-            var tuple = tryMatch.Value.TryGetHandler(reqCtx);
-            var handler = tuple.Item1 ?? await tuple.Item2;
+            var (handler, pendingHandler) = tryMatch.Value.TryGetHandler(reqCtx);
+            handler ??= await pendingHandler;
 
             // We defer all throughput accounting until the request actually completes so the
             // reported rates track true throughput rather than arrival pressure.

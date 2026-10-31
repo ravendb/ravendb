@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
@@ -53,10 +54,11 @@ namespace Raven.Server
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerFactory)
         {
-            app.UseWebSockets(new WebSocketOptions
+            // PERF: the web sockets middleware allocates a handshake feature for every request it sees, so we only route upgrade requests through it
+            app.UseWhen(IsWebSocketUpgradeCandidate, appBuilder => appBuilder.UseWebSockets(new WebSocketOptions
             {
                 KeepAliveInterval = TimeSpan.FromHours(24)
-            });
+            }));
 
             _router = app.ApplicationServices.GetService<RequestRouter>();
             _server = app.ApplicationServices.GetService<RavenServer>();
@@ -78,6 +80,13 @@ namespace Raven.Server
             }
 
             app.Use(_ => RequestHandler);
+        }
+
+        private static bool IsWebSocketUpgradeCandidate(HttpContext context)
+        {
+            // HTTP/1.1 upgrade, or HTTP/2 extended CONNECT (RFC 8441)
+            return context.Features.Get<IHttpUpgradeFeature>()?.IsUpgradableRequest == true ||
+                   context.Features.Get<IHttpExtendedConnectFeature>()?.IsExtendedConnect == true;
         }
 
         private bool IsServerRunningInASafeManner()
