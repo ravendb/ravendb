@@ -1,5 +1,8 @@
 using System;
+using System.Buffers;
+using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Sparrow.Platform;
 using Sparrow.Server.Platform;
 using Voron.Global;
@@ -17,6 +20,69 @@ public unsafe partial class Pager
     private const int RecentHintsBits = 12;
     private int[] _recentHints;
 
+    // above this, one wait on the ring costs less than a non-blocking read of each page on the caller's thread
+    private const int CheckedReadAheadLimit = 16;
+
+    /// <summary>Completes once the pages are in the page cache. Recently requested pages are skipped.</summary>
+    [SkipLocalsInit]
+    public static ValueTask ReadPagesAhead(State state, ReadOnlySpan<long> pageNumbers)
+    {
+        if (WillNeedSupported == false || state.Pager.Options.RunningOn32Bits)
+            return ValueTask.CompletedTask;
+
+        var recent = state.Pager._recentHints ??= new int[1 << RecentHintsBits];
+        long[] rented = null;
+        Span<long> offsets = pageNumbers.Length <= 64 ? stackalloc long[pageNumbers.Length] : (rented = ArrayPool<long>.Shared.Rent(pageNumbers.Length));
+        try
+        {
+            var count = 0;
+            foreach (var pageNumber in pageNumbers)
+            {
+                ref var slot = ref RecentSlot(recent, pageNumber);
+                var key = (int)(pageNumber + 1);
+                if (Volatile.Read(ref slot) == key)
+                    continue; // asked for a moment ago, or earlier in this group
+                Volatile.Write(ref slot, key);
+                offsets[count++] = pageNumber * Constants.Storage.PageSize;
+            }
+            if (count == 0)
+                return ValueTask.CompletedTask;
+
+            var ring = state.Pager._prefetchRing;
+            if (count > CheckedReadAheadLimit)
+            {
+                if (ring is { CanWaitForPages: true })
+                    return WaitForPages(state.Pager, ring, offsets[..count]);
+                foreach (var offset in offsets[..count]) // nothing started these reads yet
+                    Pal.rvn_pager_will_need(state.Handle, offset, Constants.Storage.PageSize);
+                return ValueTask.CompletedTask;
+            }
+
+            int missing;
+            fixed (long* p = offsets)
+                missing = Pal.rvn_pager_start_reads(state.Handle, p, count);
+            if (missing == 0 || ring is not { CanWaitForPages: true })
+                return ValueTask.CompletedTask;
+            return WaitForPages(state.Pager, ring, offsets[..missing]);
+        }
+        finally
+        {
+            if (rented != null)
+                ArrayPool<long>.Shared.Return(rented);
+        }
+    }
+
+    private static ValueTask WaitForPages(Pager pager, PrefetchRing ring, ReadOnlySpan<long> offsets)
+    {
+        var ticket = pager._prefetchTicket;
+        if (ring.TryRentSlot(out var slot))
+            return ring.WaitForPages(slot, ticket, offsets);
+        var copy = offsets.ToArray(); // every wait slot is taken: rare
+        return new ValueTask(ring.RentSlotAsync()
+            .ContinueWith(rented => ring.WaitForPages(rented.Result, ticket, copy).AsTask(), TaskScheduler.Default)
+            .Unwrap());
+    }
+
     private static ref int RecentSlot(int[] recent, long pageNumber) =>
         ref recent[(int)(((ulong)pageNumber * 0x9E3779B97F4A7C15UL) >> (64 - RecentHintsBits))]; // Fibonacci hashing
 
@@ -30,15 +96,8 @@ public unsafe partial class Pager
         var key = (int)(pageNumber + 1);
         if (Volatile.Read(ref slot) == key)
             return;
+        Volatile.Write(ref slot, key);
 
-        if (StartRead(state, pageNumber, numberOfPages))
-            Volatile.Write(ref slot, key);
-    }
-
-    private static bool StartRead(State state, long pageNumber, int numberOfPages)
-    {
-        var range = new PalDefinitions.PrefetchRanges(state.ReadAddress + pageNumber * Constants.Storage.PageSize,
-            (long)numberOfPages * Constants.Storage.PageSize, state.Pager._prefetchRequestSize);
-        return Pal.rvn_prefetch_ranges(&range, 1, out _) == PalFlags.FailCodes.Success;
+        Pal.rvn_pager_will_need(state.Handle, pageNumber * Constants.Storage.PageSize, (long)numberOfPages * Constants.Storage.PageSize);
     }
 }

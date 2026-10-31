@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Server.Utils;
 using Sparrow.Platform;
 using Sparrow.Server.Platform;
@@ -78,6 +79,149 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
     }
 
     [RavenFact(RavenTestCategory.Voron)]
+    public void ReadPagesAheadCompletesOnceThePagesAreRead()
+    {
+        using var ring = new PrefetchRing(ringEntries: 8, maxFiles: 4, queueSize: 64);
+        if (ring.IsAvailable == false)
+            return; // Windows / macOS
+
+        const int pages = 32;
+        var path = RavenTestHelper.NewDataPath(nameof(ReadPagesAheadCompletesOnceThePagesAreRead), 0, forceCreateDir: true);
+        try
+        {
+            var file = Path.Combine(path, Constants.DatabaseFilename);
+            var content = new byte[pages * Constants.Storage.PageSize];
+            Random.Shared.NextBytes(content);
+            File.WriteAllBytes(file, content);
+
+            using (var options = StorageEnvironmentOptions.ForPathForTests(path))
+            {
+                options.PrefetchRing = ring;
+                var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
+                using (pager)
+                using (state)
+                {
+                    DropFromPageCache(file);
+                    var usesIoUring = ring.GetStats()!.Value.UsesIoUring;
+                    Output.WriteLine($"io_uring: {usesIoUring}");
+
+                    var read = Pager.ReadPagesAhead(state, [3, 9, 17, 9]);
+                    Assert.True(read.AsTask().Wait(TimeSpan.FromSeconds(10)));
+                    var stats = ring.GetStats()!.Value;
+                    Assert.Equal(usesIoUring ? 1 : 0, stats.ReadGroups); // without io_uring nothing waits for the reads
+                    if (usesIoUring)
+                    {
+                        // completed means read: every 4 KB of each page is in memory now
+                        Assert.Equal(3, stats.Reads);
+                        foreach (var page in new long[] { 3, 9, 17 })
+                            Assert.Equal(Constants.Storage.PageSize / Environment.SystemPageSize, ResidentPages(state.ReadAddress + page * Constants.Storage.PageSize, Constants.Storage.PageSize));
+                    }
+
+                    // read a moment ago: no group and no wait
+                    Assert.True(Pager.ReadPagesAhead(state, [3, 17]).IsCompletedSuccessfully);
+                    Assert.Equal(usesIoUring ? 1 : 0, ring.GetStats()!.Value.ReadGroups);
+
+                    // only the new pages are read, in one group
+                    Assert.True(Pager.ReadPagesAhead(state, [3, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]).AsTask().Wait(TimeSpan.FromSeconds(10)));
+                    stats = ring.GetStats()!.Value;
+                    if (usesIoUring)
+                    {
+                        Assert.Equal(2, stats.ReadGroups);
+                        Assert.Equal(3 + 10, stats.Reads);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            IOExtensions.DeleteDirectory(path);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void AGroupLargerThanTheRingIsReadWhole()
+    {
+        using var ring = new PrefetchRing(ringEntries: 8, maxFiles: 4, queueSize: 64);
+        if (ring.IsAvailable == false)
+            return;
+
+        const int pages = 256; // 32 times the ring's 8 entries
+        var path = RavenTestHelper.NewDataPath(nameof(AGroupLargerThanTheRingIsReadWhole), 0, forceCreateDir: true);
+        try
+        {
+            var file = Path.Combine(path, Constants.DatabaseFilename);
+            var content = new byte[pages * Constants.Storage.PageSize];
+            Random.Shared.NextBytes(content);
+            File.WriteAllBytes(file, content);
+
+            using (var options = StorageEnvironmentOptions.ForPathForTests(path))
+            {
+                options.PrefetchRing = ring;
+                var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
+                using (pager)
+                using (state)
+                {
+                    DropFromPageCache(file);
+                    var pageNumbers = Enumerable.Range(0, pages).Select(x => (long)x).ToArray();
+                    Assert.True(Pager.ReadPagesAhead(state, pageNumbers).AsTask().Wait(TimeSpan.FromSeconds(10)));
+                    var stats = ring.GetStats()!.Value;
+                    var expected = content.Length / Environment.SystemPageSize;
+                    if (stats.UsesIoUring)
+                    {
+                        Assert.Equal(1, stats.ReadGroups);
+                        Assert.Equal(pages, stats.Reads);
+                        Assert.Equal(expected, ResidentPages(state.ReadAddress, content.Length));
+                    }
+                    else
+                    {
+                        // nothing waits for the reads, but they were started
+                        Assert.Equal(0, stats.ReadGroups);
+                        var sw = Stopwatch.StartNew();
+                        int resident;
+                        while ((resident = ResidentPages(state.ReadAddress, content.Length)) < expected && sw.Elapsed < TimeSpan.FromSeconds(5))
+                            Thread.Sleep(10);
+                        Assert.Equal(expected, resident);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            IOExtensions.DeleteDirectory(path);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void ReadPagesAheadCompletesWhenTheFileIsClosed()
+    {
+        using var ring = new PrefetchRing(ringEntries: 8, maxFiles: 4, queueSize: 64);
+        if (ring.IsAvailable == false)
+            return;
+
+        var path = RavenTestHelper.NewDataPath(nameof(ReadPagesAheadCompletesWhenTheFileIsClosed), 0, forceCreateDir: true);
+        try
+        {
+            using (var options = StorageEnvironmentOptions.ForPathForTests(path))
+            {
+                options.PrefetchRing = ring;
+                var reads = new List<Task>();
+                for (var i = 0; i < 20; i++)
+                {
+                    var (pager, state) = Pager.Create(options, Path.Combine(path, $"{i}.voron"), 64 * 1024, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
+                    reads.Add(Pager.ReadPagesAhead(state, [1, 2, 3]).AsTask());
+                    state.Dispose();
+                    pager.Dispose(); // racing the submitter: the group is read, or dropped as stale, but always completes
+                }
+                Assert.True(Task.WaitAll(reads.ToArray(), TimeSpan.FromSeconds(10)));
+            }
+        }
+        finally
+        {
+            IOExtensions.DeleteDirectory(path);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
     public void APageAskedForAMomentAgoIsSkipped()
     {
         if (PlatformDetails.RunningOnLinux == false)
@@ -127,14 +271,6 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
             IOExtensions.DeleteDirectory(path);
         }
 
-        static int WaitForResident(byte* address, int expected)
-        {
-            var sw = Stopwatch.StartNew();
-            int resident;
-            while ((resident = ResidentPages(address, Constants.Storage.PageSize)) < expected && sw.Elapsed < TimeSpan.FromSeconds(5))
-                Thread.Sleep(5);
-            return resident;
-        }
     }
 
     [RavenFact(RavenTestCategory.Voron)]
@@ -257,7 +393,8 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
                 using (pager)
                 using (state)
                 {
-                    Assert.Equal(PalFlags.FailCodes.Success, Pal.rvn_pager_get_prefetch_request_size(state.Handle, out var requestSize));
+                    Assert.Equal(PalFlags.FailCodes.Success, Pal.rvn_pager_get_prefetch_info(state.Handle, out var info));
+                    var requestSize = info.RequestSize;
                     var expected = PlatformDetails.RunningOnLinux ? ExpectedRequestSize(state) : PlatformDetails.RunningOnWindows ? 0 : 128 * 1024;
                     Output.WriteLine($"prefetch request size: {requestSize / 1024} KB (expected {expected / 1024} KB)");
                     Assert.Equal(expected, requestSize);
@@ -293,6 +430,306 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
             var limit = Math.Max(Limit("read_ahead_kb"), Limit("max_sectors_kb"));
             return limit > 0 ? limit * 1024 : 128 * 1024;
         }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void StartReadsReportsAndReadsOnlyThePagesNotInMemory()
+    {
+        if (PlatformDetails.RunningOnLinux == false)
+            return;
+
+        const int pages = 16;
+        var path = RavenTestHelper.NewDataPath(nameof(StartReadsReportsAndReadsOnlyThePagesNotInMemory), 0, forceCreateDir: true);
+        try
+        {
+            var file = Path.Combine(path, Constants.DatabaseFilename);
+            var content = new byte[pages * Constants.Storage.PageSize];
+            Random.Shared.NextBytes(content);
+            File.WriteAllBytes(file, content);
+
+            using (var options = StorageEnvironmentOptions.ForPathForTests(path))
+            {
+                var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
+                using (pager)
+                using (state)
+                {
+                    var expected = Constants.Storage.PageSize / Environment.SystemPageSize;
+                    byte* Page(long n) => state.ReadAddress + n * Constants.Storage.PageSize;
+                    DropFromPageCache(file);
+                    if (ResidentPages(Page(5), Constants.Storage.PageSize) == expected)
+                    {
+                        Output.WriteLine("this file system keeps the pages in memory (tmpfs?): nothing to check");
+                        return;
+                    }
+                    TouchPage(Page(5));
+
+                    var offsets = stackalloc long[] { 3 * Constants.Storage.PageSize, 5 * Constants.Storage.PageSize, 7 * Constants.Storage.PageSize };
+                    var missing = Pal.rvn_pager_start_reads(state.Handle, offsets, 3);
+                    if (missing == 3)
+                    {
+                        Output.WriteLine("this file system has no RWF_NOWAIT: every page counts as missing");
+                    }
+                    else
+                    {
+                        Assert.Equal(2, missing);
+                        Assert.Equal(3 * Constants.Storage.PageSize, offsets[0]);
+                        Assert.Equal(7 * Constants.Storage.PageSize, offsets[1]);
+                    }
+
+                    // the reads were started: whole pages, and nothing around them
+                    Assert.Equal(expected, WaitForResident(Page(3), expected));
+                    Assert.Equal(expected, WaitForResident(Page(7), expected));
+                    Assert.Equal(0, ResidentPages(Page(4), Constants.Storage.PageSize));
+                    Assert.Equal(0, ResidentPages(Page(6), Constants.Storage.PageSize));
+                }
+            }
+        }
+        finally
+        {
+            IOExtensions.DeleteDirectory(path);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void ReadPagesAheadDoesNotWaitForPagesInMemory()
+    {
+        using var ring = new PrefetchRing(ringEntries: 8, maxFiles: 4, queueSize: 64);
+        if (ring.IsAvailable == false)
+            return;
+
+        const int pages = 16;
+        var path = RavenTestHelper.NewDataPath(nameof(ReadPagesAheadDoesNotWaitForPagesInMemory), 0, forceCreateDir: true);
+        try
+        {
+            var file = Path.Combine(path, Constants.DatabaseFilename);
+            var content = new byte[pages * Constants.Storage.PageSize];
+            Random.Shared.NextBytes(content);
+            File.WriteAllBytes(file, content);
+
+            using (var options = StorageEnvironmentOptions.ForPathForTests(path))
+            {
+                options.PrefetchRing = ring;
+                var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
+                using (pager)
+                using (state)
+                {
+                    for (var page = 0; page < pages; page++)
+                        TouchPage(state.ReadAddress + page * Constants.Storage.PageSize);
+
+                    var probe = stackalloc long[] { 0 };
+                    if (Pal.rvn_pager_start_reads(state.Handle, probe, 1) != 0)
+                    {
+                        Output.WriteLine("this file system has no RWF_NOWAIT: pages in memory still count as missing");
+                        return;
+                    }
+
+                    Assert.True(Pager.ReadPagesAhead(state, [2, 4, 8]).IsCompletedSuccessfully);
+                    Assert.Equal(0, ring.GetStats()!.Value.ReadGroups);
+                }
+            }
+        }
+        finally
+        {
+            IOExtensions.DeleteDirectory(path);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void ALargeGroupInMemoryCompletes()
+    {
+        using var ring = new PrefetchRing(ringEntries: 8, maxFiles: 4, queueSize: 64);
+        if (ring.IsAvailable == false)
+            return;
+
+        const int pages = 64; // above the limit: no check on the caller's thread
+        var path = RavenTestHelper.NewDataPath(nameof(ALargeGroupInMemoryCompletes), 0, forceCreateDir: true);
+        try
+        {
+            var file = Path.Combine(path, Constants.DatabaseFilename);
+            var content = new byte[pages * Constants.Storage.PageSize];
+            Random.Shared.NextBytes(content);
+            File.WriteAllBytes(file, content);
+
+            using (var options = StorageEnvironmentOptions.ForPathForTests(path))
+            {
+                options.PrefetchRing = ring;
+                var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
+                using (pager)
+                using (state)
+                {
+                    for (var page = 0; page < pages; page++)
+                        TouchPage(state.ReadAddress + page * Constants.Storage.PageSize);
+
+                    var read = Pager.ReadPagesAhead(state, Enumerable.Range(0, pages).Select(x => (long)x).ToArray());
+                    var stats = ring.GetStats()!.Value;
+                    if (stats.UsesIoUring)
+                    {
+                        Assert.True(read.AsTask().Wait(TimeSpan.FromSeconds(10)));
+                        stats = ring.GetStats()!.Value;
+                        Assert.Equal(1, stats.ReadGroups);
+                        Assert.Equal(pages, stats.Reads);
+                    }
+                    else
+                    {
+                        Assert.True(read.IsCompletedSuccessfully);
+                        Assert.Equal(0, stats.ReadGroups);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            IOExtensions.DeleteDirectory(path);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void AGroupLargerThanTheFreeQueueWaitsForRoom()
+    {
+        using var ring = new PrefetchRing(ringEntries: 8, maxFiles: 4, queueSize: 2); // two cells, 12 pages each
+        if (ring.IsAvailable == false)
+            return;
+
+        const int pages = 100;
+        var path = RavenTestHelper.NewDataPath(nameof(AGroupLargerThanTheFreeQueueWaitsForRoom), 0, forceCreateDir: true);
+        try
+        {
+            var file = Path.Combine(path, Constants.DatabaseFilename);
+            var content = new byte[pages * Constants.Storage.PageSize];
+            Random.Shared.NextBytes(content);
+            File.WriteAllBytes(file, content);
+
+            using (var options = StorageEnvironmentOptions.ForPathForTests(path))
+            {
+                options.PrefetchRing = ring;
+                var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
+                using (pager)
+                using (state)
+                {
+                    var offsets = Enumerable.Range(0, pages).Select(x => (long)x * Constants.Storage.PageSize).ToArray();
+                    Assert.Equal(PalFlags.FailCodes.Success, Pal.rvn_pager_get_prefetch_info(state.Handle, out var info));
+                    Assert.NotEqual(-1, info.Ticket);
+                    if (ring.CanWaitForPages)
+                    {
+                        Assert.True(ring.TryRentSlot(out var slot));
+                        Assert.True(ring.WaitForPages(slot, info.Ticket, offsets).AsTask().Wait(TimeSpan.FromSeconds(10)));
+                        Assert.Equal(pages, ring.GetStats()!.Value.Reads);
+                    }
+                    else
+                    {
+                        fixed (long* p = offsets)
+                            Assert.Equal(1, Pal.rvn_prefetch_ring_read_pages(ring.Handle, info.Ticket, p, pages, 0)); // waits for the submitter to free cells
+                        var sw = Stopwatch.StartNew();
+                        while (ring.GetStats()!.Value.ReadGroups == 0 && sw.Elapsed < TimeSpan.FromSeconds(5))
+                            Thread.Sleep(5);
+                    }
+                    var stats = ring.GetStats()!.Value;
+                    Assert.Equal(1, stats.ReadGroups);
+                    Assert.Equal(0, stats.DroppedFull);
+                }
+            }
+        }
+        finally
+        {
+            IOExtensions.DeleteDirectory(path);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void ReadPagesAheadWaitsForAFreeSlot()
+    {
+        using var ring = new PrefetchRing(ringEntries: 8, maxFiles: 4, queueSize: 64);
+        if (ring.IsAvailable == false || ring.CanWaitForPages == false)
+            return; // only io_uring waits for the reads
+
+        const int pages = 16;
+        var path = RavenTestHelper.NewDataPath(nameof(ReadPagesAheadWaitsForAFreeSlot), 0, forceCreateDir: true);
+        var taken = new List<int>();
+        try
+        {
+            var file = Path.Combine(path, Constants.DatabaseFilename);
+            var content = new byte[pages * Constants.Storage.PageSize];
+            Random.Shared.NextBytes(content);
+            File.WriteAllBytes(file, content);
+
+            using (var options = StorageEnvironmentOptions.ForPathForTests(path))
+            {
+                options.PrefetchRing = ring;
+                var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
+                using (pager)
+                using (state)
+                {
+                    DropFromPageCache(file);
+                    while (ring.TryRentSlot(out var slot))
+                        taken.Add(slot);
+
+                    var read = Pager.ReadPagesAhead(state, [3, 5]).AsTask();
+                    Assert.False(read.Wait(TimeSpan.FromMilliseconds(200))); // no slot: it waits
+
+                    ring.ReturnSlot(taken[^1]);
+                    taken.RemoveAt(taken.Count - 1);
+                    Assert.True(read.Wait(TimeSpan.FromSeconds(10)));
+                    Assert.Equal(1, ring.GetStats()!.Value.ReadGroups);
+                }
+            }
+        }
+        finally
+        {
+            foreach (var slot in taken)
+                ring.ReturnSlot(slot);
+            IOExtensions.DeleteDirectory(path);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void WaitSlotsAreReused()
+    {
+        using var ring = new PrefetchRing(ringEntries: 8, maxFiles: 4, queueSize: 64);
+        if (ring.IsAvailable == false || ring.GetStats()!.Value.UsesIoUring == false)
+            return; // only io_uring waits for the reads
+
+        const int pages = 2048 + 64; // more groups than the ring has wait slots, one after the other
+        var path = RavenTestHelper.NewDataPath(nameof(WaitSlotsAreReused), 0, forceCreateDir: true);
+        try
+        {
+            var file = Path.Combine(path, Constants.DatabaseFilename);
+            var content = new byte[pages * Constants.Storage.PageSize];
+            Random.Shared.NextBytes(content);
+            File.WriteAllBytes(file, content);
+
+            using (var options = StorageEnvironmentOptions.ForPathForTests(path))
+            {
+                options.PrefetchRing = ring;
+                var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
+                using (pager)
+                using (state)
+                {
+                    DropFromPageCache(file);
+                    for (long page = 0; page < pages; page++)
+                        Assert.True(Pager.ReadPagesAhead(state, [page]).AsTask().Wait(TimeSpan.FromSeconds(10)));
+                    Assert.Equal(pages, ring.GetStats()!.Value.ReadGroups);
+                }
+            }
+        }
+        finally
+        {
+            IOExtensions.DeleteDirectory(path);
+        }
+    }
+
+    private static void TouchPage(byte* page)
+    {
+        for (var offset = 0; offset < Constants.Storage.PageSize; offset += Environment.SystemPageSize)
+            _ = Volatile.Read(ref page[offset]);
+    }
+
+    private static int WaitForResident(byte* address, int expected)
+    {
+        var sw = Stopwatch.StartNew();
+        int resident;
+        while ((resident = ResidentPages(address, Constants.Storage.PageSize)) < expected && sw.Elapsed < TimeSpan.FromSeconds(5))
+            Thread.Sleep(5);
+        return resident;
     }
 
     private static void DropFromPageCache(string file)
