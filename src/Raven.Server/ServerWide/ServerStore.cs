@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -2142,8 +2142,13 @@ namespace Raven.Server.ServerWide
         public Task<(long Index, object Result)> ModifySchemaValidation(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
         {
             var schemaValidationConfiguration = JsonDeserializationCluster.SchemaValidationConfiguration(configurationJson);
-            ValidateSchemaConfiguration(context, schemaValidationConfiguration);            
-            
+            ValidateSchemaConfiguration(context, schemaValidationConfiguration);
+
+            // the command keeps the stored time of the definitions that did not change
+            var now = DateTime.UtcNow;
+            foreach (var definition in schemaValidationConfiguration.ValidatorsPerCollection.Values)
+                definition.LastModifiedTime = now;
+
             var editSchemaValidation = new EditSchemaValidationConfigurationCommand(schemaValidationConfiguration, databaseName, raftRequestId);
             return SendToLeaderAsync(editSchemaValidation);
         }

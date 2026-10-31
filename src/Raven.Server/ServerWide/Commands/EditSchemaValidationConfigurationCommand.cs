@@ -1,4 +1,4 @@
-﻿using Raven.Client;
+using Raven.Client;
 using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
@@ -27,6 +27,7 @@ public class EditSchemaValidationConfigurationCommand : UpdateDatabaseCommand
 
     public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
     {
+        KeepLastModifiedTimeOfUnchangedDefinitions(record.SchemaValidation);
         record.SchemaValidation = Configuration;
 
         if (Configuration == null || Configuration.ValidatorsPerCollection == null)
@@ -58,6 +59,22 @@ public class EditSchemaValidationConfigurationCommand : UpdateDatabaseCommand
             {
                 throw new RachisApplyException($"Cannot have an index that uses the pattern for outputs the pattern to collection '{index.PatternReferencesCollectionName}' which has an active schema validation defined.");
             }
+        }
+    }
+
+    private void KeepLastModifiedTimeOfUnchangedDefinitions(SchemaValidationConfiguration current)
+    {
+        // done against the record the command is applied to, so every node stores the same value
+        if (Configuration?.ValidatorsPerCollection == null || current?.ValidatorsPerCollection == null)
+            return;
+
+        foreach ((string collection, SchemaDefinition definition) in Configuration.ValidatorsPerCollection)
+        {
+            if (current.ValidatorsPerCollection.TryGetValue(collection, out SchemaDefinition existing) == false)
+                continue;
+
+            if (definition.IsSameAs(existing))
+                definition.LastModifiedTime = existing.LastModifiedTime;
         }
     }
 
