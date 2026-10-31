@@ -47,19 +47,5 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new NotSupportedInShardingProcessor(this, $"Database '{DatabaseName}' is a sharded database and does not support LegacyReplication."))
                 await processor.ExecuteAsync();
         }
-
-        [RavenShardedAction("/databases/*/transformers/$", "PUT")]
-        public async Task PutTransformer()
-        {
-            using (var processor = new NotSupportedInShardingProcessor(this, $"Database '{DatabaseName}' is a sharded database and does not support LegacyReplication."))
-                await processor.ExecuteAsync();
-        }
-
-        [RavenShardedAction("/databases/*/transformers/$", "DELETE")]
-        public async Task DeleteTransformer()
-        {
-            using (var processor = new NotSupportedInShardingProcessor(this, $"Database '{DatabaseName}' is a sharded database and does not support LegacyReplication."))
-                await processor.ExecuteAsync();
-        }
     }
 }
