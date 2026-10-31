@@ -99,6 +99,9 @@ namespace Voron.Data.BTrees
 
         private readonly FoundTreePageDescriptor[] _pageDescriptors = new FoundTreePageDescriptor[CacheSize];
 
+        // the tree that took it from its transaction's persistent context
+        internal Tree Owner;
+
         public bool TryFind(Slice key, out FoundTreePageDescriptor foundPage)
         {
             Debug.Assert(_currentGeneration > 0);
