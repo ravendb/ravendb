@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.Binary;
 using Sparrow.Utils;
@@ -41,18 +40,8 @@ namespace Sparrow.Threading
         private const long Closed = 1;
         private const long Operation = 2;
 
-        [StructLayout(LayoutKind.Explicit, Size = 64)]
-        private struct Slot
-        {
-            // at the end of the 64 bytes: every indexing reads the array's length (bounds check), which is 8 bytes before
-            // the first element, so a value at the start of the first slot would share that line and each write to it
-            // would invalidate the line on all the cores
-            [FieldOffset(56)]
-            public long Value;
-        }
-
         // PERF: the JIT compiles the guard for each TSlots, so the slot count is a constant and a single slot has no index to compute
-        private readonly Slot[] _slots = new Slot[default(TSlots).Count];
+        private readonly PaddedLong[] _slots = new PaddedLong[default(TSlots).Count];
 
         // created by the one who waits, only when operations are still in flight
         private ManualResetEventSlim _drained;
