@@ -16,13 +16,17 @@ const defaultDocumentsConfig = (store: RootState) =>
 const defaultConflictsConfig = (store: RootState) =>
     configsSelectors.selectById(store.documentRevisions.configs, documentRevisionsConfigNames.defaultConflicts);
 
+const conversationsConfig = (store: RootState) =>
+    configsSelectors.selectById(store.documentRevisions.configs, documentRevisionsConfigNames.conversations);
+
 const collectionConfigs = createSelector(
     (store: RootState) => configsSelectors.selectAll(store.documentRevisions.configs),
     (configs) =>
         configs.filter(
             (x) =>
                 x.Name !== documentRevisionsConfigNames.defaultConflicts &&
-                x.Name !== documentRevisionsConfigNames.defaultDocument
+                x.Name !== documentRevisionsConfigNames.defaultDocument &&
+                x.Name !== documentRevisionsConfigNames.conversations
         )
 );
 
@@ -44,6 +48,7 @@ export const documentRevisionsSelectors = {
     loadStatus,
     defaultDocumentsConfig,
     defaultConflictsConfig,
+    conversationsConfig,
     collectionConfigs,
     allConfigsNames,
     selectedConfigNames,
