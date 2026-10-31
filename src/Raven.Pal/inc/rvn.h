@@ -166,18 +166,51 @@ rvn_pager_prefetch(void *handle,
     int64_t offset,
     int64_t length);
 
-EXPORT int32_t
-rvn_pager_get_prefetch_request_size(void *handle,
-    int64_t *request_size);
+struct rvn_pager_prefetch_info
+{
+    int64_t request_size;
+    int64_t ticket;
+};
 
 EXPORT int32_t
-rvn_prefetch_ring_create(int32_t ring_entries, int32_t max_files, int32_t queue_size, void **ring, int32_t *detailed_error_code);
+rvn_pager_get_prefetch_info(void *handle,
+    struct rvn_pager_prefetch_info *info);
+
+EXPORT int32_t
+rvn_pager_will_need(void *handle,
+    int64_t offset,
+    int64_t length);
+
+EXPORT int32_t
+rvn_pager_start_reads(void *handle,
+    int64_t *offsets,
+    int32_t count);
+
+typedef void (*rvn_reads_done)(void *context, const uint32_t *groups, int32_t count);
+
+EXPORT int32_t
+rvn_prefetch_ring_create(int32_t ring_entries, int32_t max_files, int32_t queue_size, int32_t max_groups,
+    rvn_reads_done on_reads_done, void *on_reads_done_context, void **ring, int32_t *detailed_error_code);
 
 EXPORT int32_t
 rvn_prefetch_ring_destroy(void *ring, int32_t *detailed_error_code);
 
 EXPORT int32_t
-rvn_prefetch_ring_stats(void *ring, int64_t *submitted, int64_t *dropped_full, int64_t *dropped_stale, int64_t *failed);
+rvn_prefetch_ring_read_pages(void *ring, int64_t ticket, const int64_t *offsets, int32_t count, uint32_t group);
+
+struct rvn_prefetch_ring_stats
+{
+    int64_t submitted;
+    int64_t dropped_full;
+    int64_t dropped_stale;
+    int64_t failed;
+    int64_t read_groups;
+    int64_t reads;
+    int64_t uses_io_uring;
+};
+
+EXPORT int32_t
+rvn_prefetch_ring_stats(void *ring, struct rvn_prefetch_ring_stats *stats);
 
 EXPORT int32_t
 rvn_close_pager(

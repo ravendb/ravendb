@@ -180,6 +180,10 @@ int32_t _open_pager_file(int fd,
         // a fault reads only the pages it touches, instead of the device's read-ahead window
         // (advisory: a failure leaves the default read-around)
         (void)madvise(mem, st.st_size, MADV_RANDOM);
+#if !__APPLE__
+        // the same for reads through the descriptor (the prefetch ring, rvn_pager_start_reads): madvise covers only the mapping
+        (void)posix_fadvise(fd, 0, 0, POSIX_FADV_RANDOM);
+#endif
     }
 
     if (global_state->open_flags & OPEN_FILE_WRITABLE_MAP)
@@ -728,10 +732,42 @@ rvn_pager_prefetch(void *handle, int64_t offset, int64_t length)
 #endif
 }
 
+/* Starts reading the pages not in the page cache, without waiting; returns them at the front of offsets */
 EXPORT int32_t
-rvn_pager_get_prefetch_request_size(void *handle, int64_t *request_size)
+rvn_pager_start_reads(void *handle, int64_t *offsets, int32_t count)
 {
     struct handle *handle_ptr = handle;
-    *request_size = handle_ptr == NULL ? DEFAULT_PREFETCH_REQUEST_SIZE : handle_ptr->global_state->prefetch_request_size;
+    if (handle_ptr == NULL || offsets == NULL || count <= 0)
+        return 0;
+#if __APPLE__
+    return 0;
+#else
+    return rvn_prefetch_start_reads(handle_ptr->file_fd, offsets, count);
+#endif
+}
+
+/* Starts reading the range into the page cache, without waiting, in requests of the device's size */
+EXPORT int32_t
+rvn_pager_will_need(void *handle, int64_t offset, int64_t length)
+{
+    struct handle *handle_ptr = handle;
+    if (handle_ptr == NULL || length <= 0)
+        return 0;
+#if __APPLE__
+    return 0;
+#else
+    int64_t request_size = handle_ptr->global_state->prefetch_request_size;
+    for (int64_t end = offset + length; offset < end; offset += request_size)
+        (void)posix_fadvise(handle_ptr->file_fd, (off_t)offset, (off_t)rvn_min(request_size, end - offset), POSIX_FADV_WILLNEED);
+    return 1;
+#endif
+}
+
+EXPORT int32_t
+rvn_pager_get_prefetch_info(void *handle, struct rvn_pager_prefetch_info *info)
+{
+    struct handle *handle_ptr = handle;
+    info->request_size = handle_ptr == NULL ? DEFAULT_PREFETCH_REQUEST_SIZE : handle_ptr->global_state->prefetch_request_size;
+    info->ticket = handle_ptr == NULL ? -1 : handle_ptr->global_state->prefetch_ticket;
     return SUCCESS;
 }

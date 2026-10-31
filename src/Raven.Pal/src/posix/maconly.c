@@ -278,8 +278,23 @@ rvn_prefetch_enqueue(void *ring, int64_t ticket, int64_t offset, int64_t length)
 }
 
 EXPORT int32_t
-rvn_prefetch_ring_create(int32_t ring_entries, int32_t max_files, int32_t queue_size, void **ring, int32_t *detailed_error_code)
+rvn_prefetch_ring_read_pages(void *ring, int64_t ticket, const int64_t *offsets, int32_t count, uint32_t group)
 {
+    (void)ring;
+    (void)ticket;
+    (void)offsets;
+    (void)count;
+    (void)group;
+    return 0;
+}
+
+EXPORT int32_t
+rvn_prefetch_ring_create(int32_t ring_entries, int32_t max_files, int32_t queue_size, int32_t max_groups,
+    rvn_reads_done on_reads_done, void *on_reads_done_context, void **ring, int32_t *detailed_error_code)
+{
+    (void)max_groups;
+    (void)on_reads_done;
+    (void)on_reads_done_context;
     (void)ring_entries;
     (void)max_files;
     (void)queue_size;
@@ -297,9 +312,9 @@ rvn_prefetch_ring_destroy(void *ring, int32_t *detailed_error_code)
 }
 
 EXPORT int32_t
-rvn_prefetch_ring_stats(void *ring, int64_t *submitted, int64_t *dropped_full, int64_t *dropped_stale, int64_t *failed)
+rvn_prefetch_ring_stats(void *ring, struct rvn_prefetch_ring_stats *stats)
 {
     (void)ring;
-    *submitted = *dropped_full = *dropped_stale = *failed = 0;
+    memset(stats, 0, sizeof(*stats));
     return FAIL_INVALID_HANDLE;
 }
