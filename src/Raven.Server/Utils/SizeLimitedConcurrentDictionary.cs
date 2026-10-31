@@ -5,7 +5,6 @@ using System.Collections.Generic;
 namespace Raven.Server.Utils
 {
     public sealed class SizeLimitedConcurrentDictionary<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>>
-        where TValue : new()
     {
         private readonly ConcurrentDictionary<TKey, TValue> _dic;
         private readonly ConcurrentQueue<TKey> _queue = new ConcurrentQueue<TKey>();
@@ -64,15 +63,19 @@ namespace Raven.Server.Utils
         {
             return GetEnumerator();
         }
+    }
 
-        public TValue GetOrCreate(TKey key)
+    public static class SizeLimitedConcurrentDictionaryExtensions
+    {
+        public static TValue GetOrCreate<TKey, TValue>(this SizeLimitedConcurrentDictionary<TKey, TValue> dictionary, TKey key)
+            where TValue : new()
         {
             while (true)
             {
-                if (TryGetValue(key, out var val))
+                if (dictionary.TryGetValue(key, out var val))
                     return val;
 
-                Set(key, new TValue());
+                dictionary.Set(key, new TValue());
             }
         }
     }
