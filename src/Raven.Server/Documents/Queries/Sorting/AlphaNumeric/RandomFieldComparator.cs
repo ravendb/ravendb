@@ -1,20 +1,22 @@
+using System.Buffers;
 using System;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using Lucene.Net.Util;
 
 namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 {
     public sealed class RandomFieldComparator : FieldComparator
     {
         private readonly Random _random;
-        private readonly int[] _values;
+        private int[] _values;
         private int _bottom; // Value of bottom of queue
         private int[] _currentReaderValues;
 
         internal RandomFieldComparator(string field, int numHits)
         {
-            _values = new int[numHits];
+            _values = ArrayPool<int>.Shared.Rent(numHits);
             _random =
                 field == null ?
                 new Random() : 
@@ -54,6 +56,15 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
             {
                 _currentReaderValues[i] = _random.Next();
             }
+        }
+
+        public override void Dispose()
+        {
+            if (_values == null)
+                return;
+
+            ArrayPool<int>.Shared.Return(_values);
+            _values = null;
         }
 
         public override IComparable this[int slot] => _values[slot];
