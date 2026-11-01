@@ -45,6 +45,15 @@ public class AiUsage : IDynamicJson
         }
     }
 
+    internal void Add(AiUsage other)
+    {
+        PromptTokens += other.PromptTokens;
+        CompletionTokens += other.CompletionTokens;
+        TotalTokens += other.TotalTokens;
+        CachedTokens += other.CachedTokens;
+        ReasoningTokens += other.ReasoningTokens;
+    }
+
     /// <summary>
     /// Serializes the usage counters to JSON structure.
     /// </summary>

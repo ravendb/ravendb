@@ -319,9 +319,7 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
 
         content.TryGet(Wire.StopReason, out string stopReason);
 
-        // Partial plain text is still an answer; a cut structured object or a cut tool call is not.
-        var lengthTruncated = stopReason is Wire.StopReasonMaxTokens or Wire.StopReasonModelContextWindowExceeded;
-        if (lengthTruncated && structuredOutput)
+        if (stopReason is Wire.StopReasonMaxTokens or Wire.StopReasonModelContextWindowExceeded)
             throw OutOfRoom(stopReason, response, content);
 
         if (content.TryGet(Wire.Content, out BlittableJsonReaderArray contentArray) == false || contentArray == null)
@@ -355,9 +353,6 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
 
         if (stopReason == Wire.StopReasonRefusal)
             RefusedToAnswerException.Throw(RefusalText(text.ToString()), content.ToString(), stopReason, GetRequestId(response.Headers));
-
-        if (lengthTruncated && (toolCalls != null || text.Length == 0))
-            throw OutOfRoom(stopReason, response, content);
 
         if (toolCalls != null)
         {
@@ -527,7 +522,9 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
 
     // A streamed response has no single body to include.
     private TooManyTokensException OutOfRoom(string stopReason, HttpResponseMessage response, BlittableJsonReaderObject content = null) =>
-        new($"The model stopped because it ran out of room (stop_reason='{stopReason}')." + (content == null ? null : $" Response: {content}"))
+        new($"The model stopped because it ran out of room (stop_reason='{stopReason}')." +
+            (stopReason == Wire.StopReasonMaxTokens ? $" Increase {nameof(AnthropicSettings.MaxOutputTokens)} in the connection string." : null) +
+            (content == null ? null : $" Response: {content}"))
         {
             RequestId = GetRequestId(response.Headers)
         };

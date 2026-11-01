@@ -121,7 +121,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 };
 
                 var usage = new AiUsage();
-                var response = await client.CompleteAsync(ctx, request, usage, trace: null, CancellationToken.None);
+                var response = await client.CompleteAsync(ctx, request, usage, traces: null, CancellationToken.None);
 
                 var body = JObject.Parse(client.LastRequestBody);
                 Assert.Equal("You are helpful.", (string)body["system"]);
@@ -789,11 +789,14 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [InlineData("max_tokens", false)]
-        [InlineData("max_tokens", true)]
-        [InlineData("model_context_window_exceeded", false)]
-        [InlineData("model_context_window_exceeded", true)]
-        public async Task Error_OutOfRoomStopReason_MapsToTooManyTokens(string stopReason, bool streaming)
+        [InlineData("max_tokens", false, true)]
+        [InlineData("max_tokens", true, true)]
+        [InlineData("model_context_window_exceeded", false, true)]
+        [InlineData("model_context_window_exceeded", true, true)]
+        // a cut plain-text answer isn't an answer either
+        [InlineData("max_tokens", false, false)]
+        [InlineData("max_tokens", true, false)]
+        public async Task Error_OutOfRoomStopReason_MapsToTooManyTokens(string stopReason, bool streaming, bool structured)
         {
             var truncated = (streaming
                 ? Event("message_start", """{"type":"message_start","message":{"usage":{"input_tokens":3}}}""") +
@@ -805,28 +808,12 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 .Replace("STOP_REASON", stopReason);
 
             await WithClient(_ => streaming ? Sse(truncated) : Ok(truncated), async (client, ctx) =>
-                await Assert.ThrowsAsync<TooManyTokensException>(() => RunAsync(client, ctx, Simple(ctx), streaming)));
-        }
-
-        [RavenTheory(RavenTestCategory.Ai)]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task PlainText_CutAtMaxTokens_ReturnsThePartialText(bool streaming)
-        {
-            var cut = streaming
-                ? Event("message_start", """{"type":"message_start","message":{"usage":{"input_tokens":3}}}""") +
-                  Event("content_block_start", """{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}""") +
-                  Event("content_block_delta", """{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Once upon a"}}""") +
-                  Event("message_delta", """{"type":"message_delta","delta":{"stop_reason":"max_tokens"},"usage":{"output_tokens":3}}""") +
-                  Event("message_stop", """{"type":"message_stop"}""")
-                : """{"id":"m","type":"message","role":"assistant","content":[{"type":"text","text":"Once upon a"}],"stop_reason":"max_tokens","usage":{"input_tokens":1,"output_tokens":3}}""";
-
-            await WithClient(_ => streaming ? Sse(cut) : Ok(cut), async (client, ctx) =>
             {
-                var response = await RunAsync(client, ctx, new AiChatRequest { Messages = [Msg(ctx, "user", "hi")], Schema = null }, streaming);
-
-                Assert.Equal(AiResponseType.Result, response.Type);
-                Assert.Equal("Once upon a", response.Result.ToString());
+                var request = structured ? Simple(ctx) : new AiChatRequest { Messages = [Msg(ctx, "user", "hi")], Schema = null };
+                var e = await Assert.ThrowsAsync<TooManyTokensException>(() => RunAsync(client, ctx, request, streaming));
+                Assert.Contains($"stop_reason='{stopReason}'", e.Message);
+                if (stopReason == "max_tokens")
+                    Assert.Contains(nameof(AnthropicSettings.MaxOutputTokens), e.Message);
             });
         }
 

@@ -46,7 +46,7 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
         };
     }
 
-    public async Task<AiResponse> RunAsync(IMemoryContextPool contextPool, AiChatRequest request, AiDebugTrace trace, CancellationToken token)
+    public async Task<AiResponse> RunAsync(IMemoryContextPool contextPool, AiChatRequest request, AiDebugTraceCollector traces, CancellationToken token)
     {
         if (streaming is null)
         {
@@ -54,7 +54,7 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
                 context,
                 request,
                 AiUsage,
-                trace,
+                traces,
                 token
             );
         }
@@ -66,7 +66,7 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
             request,
             streaming,
             AiUsage,
-            trace,
+            traces,
             token
         );
     }

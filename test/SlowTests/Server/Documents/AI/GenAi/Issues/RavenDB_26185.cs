@@ -117,11 +117,11 @@ public class RavenDB_26185(ITestOutputHelper output) : RavenTestBase(output)
                 if (streaming)
                 {
                     await client.StreamingCompleteAsync(ctx, pool, StreamProperty, request,
-                        _ => Task.CompletedTask, usage, trace: null, token: timeout.Token);
+                        _ => Task.CompletedTask, usage, traces: null, token: timeout.Token);
                 }
                 else
                 {
-                    await client.CompleteAsync(ctx, request, usage, trace: null, token: timeout.Token);
+                    await client.CompleteAsync(ctx, request, usage, traces: null, token: timeout.Token);
                 }
             });
 
@@ -191,11 +191,11 @@ public class RavenDB_26185(ITestOutputHelper output) : RavenTestBase(output)
                 if (streaming)
                 {
                     await client.StreamingCompleteAsync(ctx, pool, StreamProperty, request,
-                        _ => Task.CompletedTask, usage, trace: null, token: timeout.Token);
+                        _ => Task.CompletedTask, usage, traces: null, token: timeout.Token);
                 }
                 else
                 {
-                    await client.CompleteAsync(ctx, request, usage, trace: null, token: timeout.Token);
+                    await client.CompleteAsync(ctx, request, usage, traces: null, token: timeout.Token);
                 }
             });
 
