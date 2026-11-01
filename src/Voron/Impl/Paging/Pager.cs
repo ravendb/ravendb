@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections.Concurrent;
@@ -19,6 +19,7 @@ using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Utils;
 using Voron.Exceptions;
 using Voron.Global;
+using Voron.Impl.Journal;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Voron.Impl.Paging;
@@ -41,6 +42,7 @@ public unsafe partial class Pager : IDisposable
     private readonly EncryptionBuffersPool _encryptionBuffersPool;
     private readonly byte[] _masterKey;
     private SegmentPrefetchTable _prefetchTable;
+    internal DeviceWriteBudget? DeviceBudget { get; private set; }
     private long _prefetchRequestSize;
     private PrefetchRing? _prefetchRing;
     private long _prefetchTicket;
@@ -70,6 +72,9 @@ public unsafe partial class Pager : IDisposable
         var state = new State(pager, readOnlyMemory, writeMemory, memorySize, handle, pageSize ?? options.PageSize);
         (state.TotalAllocatedSize, state.TotalPhysicalSpace) = pager.GetFileSize(state);
         pager.InstallState(state);
+        if (Pal.rvn_pager_get_device_id(handle, out var deviceId, out _) == PalFlags.FailCodes.Success)
+            pager.DeviceBudget = DeviceWriteBudget.GetForDevice(deviceId, filename, options.SyncWritebackBarrierCostThresholdTicks,
+                options.SyncWritebackDrainQueueDepthThreshold, options.PipelineJournalWritesAboveLatencyInTicks);
         pager.Initialize(memorySize);
         pager._prefetchRing = ring is { IsAvailable: true } ? ring : null;
         Pal.rvn_pager_get_prefetch_info(handle, out var prefetchInfo);
@@ -152,7 +157,7 @@ public unsafe partial class Pager : IDisposable
 
     private void Initialize(long initialSize)
     {
-        _prefetchTable = new SegmentPrefetchTable(PrefetchPolicy.Global, Options.PrefetchSegmentSize, initialSize);
+        _prefetchTable = new SegmentPrefetchTable(PrefetchPolicy.Global, DeviceBudget, Options.PrefetchSegmentSize, initialSize);
     }
 
     public void DiscardWholeFile(State state)

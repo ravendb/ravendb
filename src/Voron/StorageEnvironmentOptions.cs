@@ -517,7 +517,7 @@ namespace Voron
                 var result = Pager.Create(this, FilePath.FullPath,
                     InitialFileSize ?? 0,
                     flags);
-                InitializeWritebackGate(result.State, FilePath.FullPath);
+                DeviceWriteBudget = result.Pager.DeviceBudget;
                 return result;
             }
 
@@ -1898,15 +1898,6 @@ namespace Voron
         }
 
         internal DeviceWriteBudget DeviceWriteBudget { get; private set; } 
-
-        private protected unsafe void InitializeWritebackGate(Pager.State state, string dataFilePath)
-        {
-            if (Pal.rvn_pager_get_device_id(state.Handle, out var deviceId, out _) != PalFlags.FailCodes.Success)
-                return;
-                
-            DeviceWriteBudget = DeviceWriteBudget.GetForDevice(deviceId, dataFilePath,
-                SyncWritebackBarrierCostThresholdTicks, SyncWritebackDrainQueueDepthThreshold, PipelineJournalWritesAboveLatencyInTicks);
-        }
 
         internal bool SimulateFailureOnDbCreation { get; set; }
         internal bool ManualSyncing { get; set; } = false;
