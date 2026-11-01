@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Tests.Infrastructure;
+using Sparrow.Server.Utils;
 using Voron.Global;
+using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Xunit;
 
@@ -23,9 +25,9 @@ public class SegmentPrefetchPolicyTests(ITestOutputHelper output) : NoDisposalNe
         public readonly SegmentPrefetchTable Table;
         public readonly List<long> Prefetches = new(); // segment numbers, in the order they were read ahead
 
-        public Harness(long fileSegments)
+        public Harness(long fileSegments, DeviceWriteBudget device = null)
         {
-            Table = new SegmentPrefetchTable(Policy, SegmentSize, fileSegments * SegmentSize);
+            Table = new SegmentPrefetchTable(Policy, device, SegmentSize, fileSegments * SegmentSize);
         }
 
         public void Memory(long freeBytes) => Policy.Tick(freeBytes);
@@ -134,6 +136,86 @@ public class SegmentPrefetchPolicyTests(ITestOutputHelper output) : NoDisposalNe
             h.Memory(FullMemory);
             Assert.Equal(0, h.Policy.Generation);
         }
+    }
+
+    private sealed class FixedQueueDepth : DeviceQueueDepthReader
+    {
+        public override double Read() => 0;
+        public override void Dispose() { }
+    }
+
+    // queue depth threshold 5, as Storage.SyncWritebackDrainQueueDepthThreshold
+    private static DeviceWriteBudget Device() =>
+        new(new FixedQueueDepth(), "test", syncCostThresholdTicks: long.MaxValue, queueDepthThreshold: 5, classifyAboveLatencyTicks: 0);
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void ReadAheadThatUsesItsWholeBudgetGetsTwiceAsMuchWhileTheQueueIsShort()
+    {
+        var device = Device();
+        Assert.Equal(DeviceWriteBudget.MinReadAheadBytesPerInterval, device.ReadAheadBytesPerInterval);
+        Assert.True(device.TryStartReadAhead(SegmentSize));
+        Assert.False(device.TryStartReadAhead(SegmentSize));
+
+        device.AdjustReadAhead(queueDepth: 1);
+        Assert.Equal(2 * DeviceWriteBudget.MinReadAheadBytesPerInterval, device.ReadAheadBytesPerInterval);
+
+        device.AdjustReadAhead(queueDepth: 1); // nothing was refused since: unchanged
+        Assert.Equal(2 * DeviceWriteBudget.MinReadAheadBytesPerInterval, device.ReadAheadBytesPerInterval);
+
+        for (var i = 0; i < 20; i++)
+        {
+            Assert.False(device.TryStartReadAhead(DeviceWriteBudget.MaxReadAheadBytesPerInterval + 1));
+            device.AdjustReadAhead(queueDepth: 1);
+        }
+        Assert.Equal(DeviceWriteBudget.MaxReadAheadBytesPerInterval, device.ReadAheadBytesPerInterval);
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void ALongQueueHalvesTheReadAheadBudget()
+    {
+        var device = Device();
+        for (var i = 0; i < 5; i++)
+        {
+            Assert.False(device.TryStartReadAhead(DeviceWriteBudget.MaxReadAheadBytesPerInterval + 1));
+            device.AdjustReadAhead(queueDepth: 1);
+        }
+        Assert.Equal(32 * DeviceWriteBudget.MinReadAheadBytesPerInterval, device.ReadAheadBytesPerInterval);
+
+        device.AdjustReadAhead(queueDepth: 6);
+        Assert.Equal(16 * DeviceWriteBudget.MinReadAheadBytesPerInterval, device.ReadAheadBytesPerInterval);
+
+        for (var i = 0; i < 10; i++)
+            device.AdjustReadAhead(queueDepth: 50);
+        Assert.Equal(DeviceWriteBudget.MinReadAheadBytesPerInterval, device.ReadAheadBytesPerInterval);
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void WithoutAQueueSignalReadAheadIsNotLimited()
+    {
+        var device = new DeviceWriteBudget(queueReader: null, "test", syncCostThresholdTicks: long.MaxValue, queueDepthThreshold: 5, classifyAboveLatencyTicks: 0);
+        for (var i = 0; i < 1_000; i++)
+            Assert.True(device.TryStartReadAhead(SegmentSize));
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void ASegmentTheBudgetRefusedIsReadAheadOnALaterTouch()
+    {
+        var device = Device();
+        using var h = new Harness(fileSegments: 640, device);
+        h.Memory(FreeMemory);
+
+        h.Access(FirstPageOf(0, 10));
+        Assert.Equal([0L], h.Prefetches); // the first interval's budget is one segment
+
+        device.AdjustReadAhead(queueDepth: 1); // 2 segments
+        h.Access(FirstPageOf(0, 10));
+        Assert.Equal([0L, 1L, 2L], h.Prefetches);
+
+        device.AdjustReadAhead(queueDepth: 1); // 4 segments
+        h.Access(FirstPageOf(0, 10));
+        device.AdjustReadAhead(queueDepth: 1); // 8 segments
+        h.Access(FirstPageOf(0, 10));
+        Assert.Equal(Enumerable.Range(0, 10).Select(x => (long)x), h.Prefetches);
     }
 
     [RavenFact(RavenTestCategory.Voron)]
