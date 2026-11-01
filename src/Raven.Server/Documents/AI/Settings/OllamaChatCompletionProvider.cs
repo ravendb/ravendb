@@ -20,6 +20,10 @@ internal class OllamaChatCompletionProvider : AbstractOpenAiCompatibleChatComple
     // Instead, the tools array is omitted entirely once tools are disabled.
     public override bool SupportsToolChoiceNone => false;
 
+    // with response_format Ollama constrains the whole output to the schema, so the model can't call tools (ollama#18479, #8095).
+    // Keep it after a fix like ollama#18975 ships: older Ollama versions still need the split, and it only costs a fixed one an extra request
+    public override bool SupportsToolsWithStructuredOutput => false;
+
     public override string GetRelativeCompletionUri() => "v1/" + base.GetRelativeCompletionUri();
 
     public override string GetRelativeModelsUri() => "v1/" + base.GetRelativeModelsUri();

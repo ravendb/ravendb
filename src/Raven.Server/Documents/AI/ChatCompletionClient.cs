@@ -49,6 +49,8 @@ public class ChatCompletionClient : IDisposable
     private readonly HttpClient _client;
     private readonly IMemoryContextPool _contextPool;
 
+    internal bool SupportsToolsWithStructuredOutput => _provider.SupportsToolsWithStructuredOutput;
+
     public static readonly DocumentConventions ConventionsToUse = new DocumentConventions
     {
         SendApplicationIdentifier = DocumentConventions.DefaultForServer.SendApplicationIdentifier,
@@ -336,7 +338,7 @@ public class ChatCompletionClient : IDisposable
             Debug.Assert(false, "we should never get here");
         }
 
-        return _provider.ParseResponse(context, response, responseContent, usage, structuredOutput: request.Schema != null);
+        return _provider.ParseResponse(context, response, responseContent, usage, structuredOutput: request.Schema != null, allowEmptyAnswer: request.AnswerIsDropped);
     }
 
     protected virtual Task<HttpResponseMessage> SendRequestAsync(HttpRequestMessage request, CancellationToken token) => _client.SendAsync(request, token);

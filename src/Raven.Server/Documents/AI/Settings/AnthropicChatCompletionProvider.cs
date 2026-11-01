@@ -313,7 +313,7 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
         };
     }
 
-    public override AiResponse ParseResponse(JsonOperationContext ctx, HttpResponseMessage response, BlittableJsonReaderObject content, AiUsage usage, bool structuredOutput)
+    public override AiResponse ParseResponse(JsonOperationContext ctx, HttpResponseMessage response, BlittableJsonReaderObject content, AiUsage usage, bool structuredOutput, bool allowEmptyAnswer)
     {
         UpdateUsage(content, usage);
 

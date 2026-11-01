@@ -42,6 +42,8 @@ internal abstract class AbstractChatCompletionProvider
 
     public virtual bool ShouldCachePrompt(AiChatRequest request) => _settings.EnablePromptCache ?? request.MayRepeatPrompt;
 
+    public virtual bool SupportsToolsWithStructuredOutput => true;
+
     internal static bool TryGetParameters(AiConnectionString connectionString, out AbstractChatCompletionProvider provider)
     {
         provider = null;
@@ -109,7 +111,7 @@ internal abstract class AbstractChatCompletionProvider
         public string System;
     }
 
-    public abstract AiResponse ParseResponse(JsonOperationContext ctx, HttpResponseMessage response, BlittableJsonReaderObject content, AiUsage usage, bool structuredOutput);
+    public abstract AiResponse ParseResponse(JsonOperationContext ctx, HttpResponseMessage response, BlittableJsonReaderObject content, AiUsage usage, bool structuredOutput, bool allowEmptyAnswer);
 
     // A new state for one streamed response; ProcessStreamEvent and BuildStreamedResponse receive the instance created here.
     public abstract ChatStreamState CreateStreamState();

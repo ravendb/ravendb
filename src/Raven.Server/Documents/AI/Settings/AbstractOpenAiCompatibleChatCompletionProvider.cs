@@ -249,7 +249,7 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
             yield return context.ReadObject(BuildAttachmentsMessage(attachments), "write-ai-attachments");
     }
 
-    public override AiResponse ParseResponse(JsonOperationContext ctx, HttpResponseMessage response, BlittableJsonReaderObject content, AiUsage usage, bool structuredOutput)
+    public override AiResponse ParseResponse(JsonOperationContext ctx, HttpResponseMessage response, BlittableJsonReaderObject content, AiUsage usage, bool structuredOutput, bool allowEmptyAnswer)
     {
         if (content.TryGet(ChatCompletionClient.Constants.ResponseFields.Choices, out BlittableJsonReaderArray choices) == false || choices.Length == 0)
             throw UnexpectedResponseException.Create(message: "No choices in response", response, content, GetRequestId(response.Headers));
@@ -310,7 +310,7 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
 
         var result = structuredOutput
             ? GetStructuredContent(ctx, response, content, choice0, message, contentStr, hasContent, finishReason, lengthTruncated)
-            : GetPlainTextContent(response, content, choice0, message, contentStr, hasContent, finishReason, lengthTruncated);
+            : GetPlainTextContent(response, content, choice0, message, contentStr, hasContent, finishReason, lengthTruncated, allowEmptyAnswer);
 
         message.Modifications ??= new DynamicJsonValue(message);
         message.Modifications[ChatCompletionClient.Constants.ResponseFields.Content] = result;
@@ -334,7 +334,7 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
     }
 
     private object GetPlainTextContent(HttpResponseMessage response, BlittableJsonReaderObject responseContent,
-        BlittableJsonReaderObject choice0, BlittableJsonReaderObject message, LazyStringValue content, bool hasContent, string finishReason, bool lengthTruncated)
+        BlittableJsonReaderObject choice0, BlittableJsonReaderObject message, LazyStringValue content, bool hasContent, string finishReason, bool lengthTruncated, bool allowEmptyAnswer)
     {
         if (hasContent == false)
         {
@@ -342,7 +342,12 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
                 throw Truncated(response, responseContent);
 
             if (TryGetDeltaContent(message, out content) == false)
+            {
+                if (allowEmptyAnswer)
+                    return string.Empty;
+
                 throw NoUsableAnswer(response, responseContent, choice0, message, finishReason);
+            }
         }
 
         return content.ToString();
