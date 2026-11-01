@@ -510,6 +510,22 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
         Assert.Contains(answer, doc.ToString());
     }
 
+    [RavenTheory(RavenTestCategory.Ai)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Unstructured_LengthTruncated_ThrowsTooManyTokens(bool streaming)
+    {
+        // a plain-text answer cut by the token limit isn't an answer, the same as a structured one
+        using var store = GetDocumentStore();
+        var conversationId = $"chats/unstructured-length-{streaming}";
+        var error = streaming
+            ? (await StreamAsync(store, conversationId, InjectedResponse.Sse(Wire.Stream(Wire.ContentDelta("Once upon a"), Wire.FinishChunk("length"))), noSchema: true)).error
+            : await RunAsync(store, conversationId, InjectedResponse.Json(Wire.Completion("Once upon a", finishReason: "length")),
+                maxModelIterationsPerCall: 16, noSchema: true);
+
+        Assert.True(HasException<TooManyTokensException>(error), $"expected TooManyTokensException, got: {error}");
+    }
+
     #endregion
 
 

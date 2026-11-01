@@ -268,30 +268,22 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
 
         // Same order as the streaming path: refusal, then length, then tool calls / content.
         var finishReason = GetFinishReason(choice0);
-        var lengthTruncated = string.Equals(finishReason, ChatCompletionClient.Constants.ResponseFields.FinishReasonLength, StringComparison.OrdinalIgnoreCase);
 
         var refusal = GetRefusal(choice0, message);
         if (string.IsNullOrEmpty(refusal) == false)
             RefusedToAnswerException.Throw(refusal, content.ToString(), finishReason, GetRequestId(response.Headers));
 
-        if (message == null)
-        {
-            // A token-limit stop that produced no message at all is still a cut, not a malformed response.
-            if (lengthTruncated)
-                throw Truncated(response, content);
+        if (string.Equals(finishReason, ChatCompletionClient.Constants.ResponseFields.FinishReasonLength, StringComparison.OrdinalIgnoreCase))
+            throw Truncated(response, content);
 
+        if (message == null)
             throw UnexpectedResponseException.Create(message: "No message property in choice", response, content, GetRequestId(response.Headers));
-        }
 
         if (hasUsage == false)
             throw UnexpectedResponseException.Create(message: "No usage in response content", response, content, GetRequestId(response.Headers));
 
         if (message.TryGet(ChatCompletionClient.Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray calls) && calls.Length > 0)
         {
-            // A token-limit cut inside the tool call (even a partial call) must not reach the agent loop.
-            if (lengthTruncated)
-                throw Truncated(response, content);
-
             var toolCalls = new List<AiToolCall>();
             foreach (BlittableJsonReaderObject call in calls)
             {
@@ -309,8 +301,8 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
         var hasContent = message.TryGet(ChatCompletionClient.Constants.ResponseFields.Content, out LazyStringValue contentStr) && contentStr?.Length > 0;
 
         var result = structuredOutput
-            ? GetStructuredContent(ctx, response, content, choice0, message, contentStr, hasContent, finishReason, lengthTruncated)
-            : GetPlainTextContent(response, content, choice0, message, contentStr, hasContent, finishReason, lengthTruncated);
+            ? GetStructuredContent(ctx, response, content, choice0, message, contentStr, hasContent, finishReason)
+            : GetPlainTextContent(response, content, choice0, message, contentStr, hasContent, finishReason);
 
         message.Modifications ??= new DynamicJsonValue(message);
         message.Modifications[ChatCompletionClient.Constants.ResponseFields.Content] = result;
@@ -319,12 +311,8 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
     }
 
     private object GetStructuredContent(JsonOperationContext ctx, HttpResponseMessage response, BlittableJsonReaderObject responseContent,
-        BlittableJsonReaderObject choice0, BlittableJsonReaderObject message, LazyStringValue content, bool hasContent, string finishReason, bool lengthTruncated)
+        BlittableJsonReaderObject choice0, BlittableJsonReaderObject message, LazyStringValue content, bool hasContent, string finishReason)
     {
-        // a truncated response is incomplete even if its content is valid JSON
-        if (lengthTruncated)
-            throw Truncated(response, responseContent);
-
         // content -> reasoning_content -> reasoning: reasoning is only a fallback when no 'content' was
         // produced at all (RavenDB-25681)
         if (hasContent == false && TryGetDeltaReasoning(message, out content) == false)
@@ -334,16 +322,10 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
     }
 
     private object GetPlainTextContent(HttpResponseMessage response, BlittableJsonReaderObject responseContent,
-        BlittableJsonReaderObject choice0, BlittableJsonReaderObject message, LazyStringValue content, bool hasContent, string finishReason, bool lengthTruncated)
+        BlittableJsonReaderObject choice0, BlittableJsonReaderObject message, LazyStringValue content, bool hasContent, string finishReason)
     {
-        if (hasContent == false)
-        {
-            if (lengthTruncated)
-                throw Truncated(response, responseContent);
-
-            if (TryGetDeltaContent(message, out content) == false)
-                throw NoUsableAnswer(response, responseContent, choice0, message, finishReason);
-        }
+        if (hasContent == false && TryGetDeltaContent(message, out content) == false)
+            throw NoUsableAnswer(response, responseContent, choice0, message, finishReason);
 
         return content.ToString();
     }

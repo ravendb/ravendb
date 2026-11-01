@@ -42,6 +42,8 @@ internal abstract class AbstractChatCompletionProvider
 
     public virtual bool ShouldCachePrompt(AiChatRequest request) => _settings.EnablePromptCache ?? request.MayRepeatPrompt;
 
+    public virtual bool SupportsToolsWithStructuredOutput => true;
+
     internal static bool TryGetParameters(AiConnectionString connectionString, out AbstractChatCompletionProvider provider)
     {
         provider = null;

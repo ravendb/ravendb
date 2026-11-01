@@ -5,7 +5,7 @@ using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
-internal sealed class AiDebugTraceCollector
+public sealed class AiDebugTraceCollector
 {
     private readonly List<AiDebugTrace> _traces;
     private readonly DocumentDatabase _database;
