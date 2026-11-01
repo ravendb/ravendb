@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -12,6 +13,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Platform;
 using Voron;
+using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 
 namespace Raven.Server.Web.System
@@ -49,7 +51,13 @@ namespace Raven.Server.Web.System
                     [nameof(PrefetchRingStats.ReadGroups)] = stats?.ReadGroups,
                     [nameof(PrefetchRingStats.Reads)] = stats?.Reads,
                     [nameof(PrefetchRingStats.UsesIoUring)] = stats?.UsesIoUring,
-                    ["SegmentReadAheadWarmUp"] = PrefetchPolicy.Global.Generation
+                    ["SegmentReadAheadWarmUp"] = PrefetchPolicy.Global.Generation,
+                    ["Devices"] = new DynamicJsonArray(DeviceWriteBudget.Devices.Select(d => new DynamicJsonValue
+                    {
+                        [nameof(DeviceWriteBudget.PathOnDevice)] = d.PathOnDevice,
+                        [nameof(DeviceWriteBudget.QueueDepth)] = d.QueueDepth,
+                        [nameof(DeviceWriteBudget.ReadAheadBytesPerInterval)] = d.ReadAheadBytesPerInterval
+                    }))
                 });
             }
         }
