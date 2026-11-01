@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
@@ -37,7 +38,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
         public sealed class SpatialDistanceFieldComparator : FieldComparator
         {
             private readonly SpatialField _spatialField;
-            private readonly DistanceValue[] _values;
+            private DistanceValue[] _values;
             private DistanceValue _bottom;
             private readonly IPoint _originPt;
             private bool _isGeo;
@@ -59,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             public SpatialDistanceFieldComparator(SpatialField spatialField, IPoint origin, int numHits, double roundFactor)
             {
                 _spatialField = spatialField;
-                _values = new DistanceValue[numHits];
+                _values = ArrayPool<DistanceValue>.Shared.Rent(numHits);
                 _originPt = origin;
                 _isGeo = _spatialField.GetContext().IsGeo;
                 _roundFactor = roundFactor;
@@ -221,6 +222,15 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             {
                 _currentIndexReader = reader;
                 _currentDocBase = docBase;
+            }
+
+            public override void Dispose()
+            {
+                if (_values == null)
+                    return;
+
+                ArrayPool<DistanceValue>.Shared.Return(_values);
+                _values = null;
             }
 
             public override IComparable this[int slot] => _values[slot];
