@@ -283,6 +283,63 @@ namespace SlowTests.Issues
             }
         }
 
+        // The upgrade path, as opposed to CanCreateAPrefixedShardedDatabaseOverShardDataFrom62 above: here the
+        // record is already in the cluster when From62000 runs, which is what a binary upgrade looks like.
+        [RavenFact(RavenTestCategory.Sharding)]
+        public async Task CanUpgradeAShardOfAPrefixedShardedDatabaseFrom62()
+        {
+            const string id = "eu/1";
+
+            var zipPath = new PathSetting("SchemaUpgrade/Issues/DocumentsVersion/RavenDB_22932_PrefixedShard_62.zip");
+            Assert.True(File.Exists(zipPath.FullPath));
+
+            using (var store = Sharding.GetDocumentStore(new Options
+            {
+                RunInMemory = false,
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Sharding ??= new ShardingConfiguration();
+                    record.Sharding.Prefixed = [new PrefixedShardingSetting { Prefix = "eu/", Shards = [0] }];
+                }
+            }))
+            {
+                var bucket = await Sharding.GetBucketAsync(store, id);
+                Assert.True(bucket >= ShardHelper.NumberOfBuckets, $"'{id}' landed in bucket {bucket}, so the prefix was not applied and the test proves nothing");
+
+                var shardName = ShardHelper.ToShardName(store.Database, 0);
+                var shardDirectory = (await Sharding.GetAnyShardDocumentDatabaseInstanceFor(shardName))
+                    .Configuration.Core.DataDirectory.FullPath;
+
+                var shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
+                foreach (var shardNumber in shardingConfiguration.Shards.Keys)
+                {
+                    Server.ServerStore.DatabasesLandlord.UnloadDirectly(ShardHelper.ToShardName(store.Database, shardNumber));
+                }
+
+                Directory.Delete(shardDirectory, recursive: true);
+                ZipFile.ExtractToDirectory(zipPath.FullPath, shardDirectory);
+
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.NotNull(await session.LoadAsync<object>(id));
+                }
+
+                var shard = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(shardName);
+
+                using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var documents = shard.ShardedDocumentsStorage.GetDocumentsByBucketFrom(ctx, bucket, etag: 0).ToList();
+                    Assert.Equal(id, Assert.Single(documents).Id);
+
+                    var attachments = shard.DocumentsStorage.AttachmentsStorage
+                        .GetAttachmentsByBucketFrom(ctx, bucket, etag: 0, remoteAttachments: false).ToList();
+                    Assert.Equal("file.bin", Assert.Single(attachments).Name);
+                }
+            }
+        }
+
         private class User
         {
             public string Name { get; set; }
