@@ -1145,7 +1145,10 @@ namespace Raven.Server.Documents.Revisions
 
             result.HasMore = false;
 
-            return GetRevisionsToDeleteByIdAndEtag(context, table, prefixSlice, state, result);
+            if (handlingFlags.HasFlag(HandleConflictRevisionsFlags.Regular))
+                return GetRevisionsToDeleteByIdAndEtag(context, table, prefixSlice, state, result);
+
+            return GetConflictRevisionsToDelete(context, prefixSlice, state, result);
         }
 
         // Regular revisions are candidates here too, so every revision of the document has to be examined.
@@ -1181,6 +1184,71 @@ namespace Raven.Server.Documents.Revisions
                     yield return revision;
                     ended = false;
                     break;
+                }
+
+                if (ended)
+                {
+                    yield break;
+                }
+            }
+        }
+
+        // Seeking IdAndEtag would decompress every regular revision passed over, into tx-lifetime buffers.
+        private IEnumerable<Document> GetConflictRevisionsToDelete(DocumentsOperationContext context, Slice prefixSlice,
+            ConflictedRevisionsDeletionState state, DeleteOldRevisionsResult result)
+        {
+            // the etags are listed under the document's key, but the index they are looked up in is global,
+            // so a revision whose collection has changed is reached here as well
+            var allRevisionsTable = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var etagsIndex = RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice];
+            var tree = context.Transaction.InnerTransaction.ReadTree(ConflictRevisionsSlice);
+
+            while (true)
+            {
+                var ended = true;
+
+                using (var it = tree.MultiRead(prefixSlice))
+                {
+                    if (it.Seek(Slices.BeforeAllKeys) == false)
+                        yield break;
+
+                    if (it.Skip(result.Skip) == false)
+                        yield break;
+
+                    do
+                    {
+                        if (state.ReachedMaximumRevisionsToDeleteUponDocumentUpdate())
+                        {
+                            result.HasMore = true;
+                            yield break;
+                        }
+
+                        if (state.FinishedConflicted)
+                            yield break;
+
+                        var etag = it.CurrentKey.CreateReader().ReadBigEndianInt64();
+                        if (etag == ListedMarkerEtag) // the marker sorts last, so no revision follows it
+                            yield break;
+
+                        if (allRevisionsTable.FindByIndex(etagsIndex, etag, out var tvr) == false)
+                        {
+                            result.Skip++;
+                            continue;
+                        }
+
+                        var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
+
+                        if (state.ShouldDelete(revision) == false)
+                        {
+                            revision.Dispose();
+                            result.Skip++;
+                            continue;
+                        }
+
+                        yield return revision;
+                        ended = false;
+                        break;
+                    } while (it.MoveNext());
                 }
 
                 if (ended)
