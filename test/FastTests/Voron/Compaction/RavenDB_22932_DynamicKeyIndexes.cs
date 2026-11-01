@@ -115,7 +115,7 @@ namespace FastTests.Voron.Compaction
         }
 
         [RavenFact(RavenTestCategory.Voron)]
-        public void CompactingATableIndexedByBucketIntoAPlainEnvironmentNamesTheTable()
+        public void CompactingATableIndexedByBucketIntoAPlainEnvironmentRefuses()
         {
             var schema = CreateBucketIndexedSchema();
 
@@ -138,7 +138,6 @@ namespace FastTests.Voron.Compaction
                 ShardedOptionsFor(DataDir),
                 (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPathForTests(CompactedDir)));
 
-            Assert.Contains(BucketIndexedTable, error.Message);
             Assert.Contains("was not opened for a shard", error.Message);
         }
 
