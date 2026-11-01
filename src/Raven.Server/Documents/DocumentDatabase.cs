@@ -1805,7 +1805,7 @@ namespace Raven.Server.Documents
                     return null;
 
                 // called under the lock, so the features will make the same decision in UpdateOnStateChange
-                var withFeatureSections = forced || _recordChangeConsumers.Any(c => c.ShouldProcess(rawRecord.ClusterState, forced: false, out _));
+                var withFeatureSections = _recordChangeConsumers.Any(c => c.ShouldProcess(rawRecord.ClusterState, forced, out _));
 
                 ForTestingPurposes?.OnDatabaseRecordReadForStateChange?.Invoke(withFeatureSections);
 
@@ -1835,11 +1835,7 @@ namespace Raven.Server.Documents
                     MarkHandled(_indexStoreRecordConsumer, version);
             }
 
-            if (ShouldHandle(_replicationRecordConsumer, out version))
-            {
-                ReplicationLoader?.HandleDatabaseRecordChange(record, index);
-                MarkHandled(_replicationRecordConsumer, version);
-            }
+            Handle(_replicationRecordConsumer, () => ReplicationLoader?.HandleDatabaseRecordChange(record, index));
 
             // We've already begun executing the operation and aim to see it through without interruption,
             // hence we won't be passing the cancellation token.
@@ -1850,54 +1846,30 @@ namespace Raven.Server.Documents
             {
                 UpdateSchemaValidation(record.SchemaValidation);
 
-                if (ShouldHandle(_periodicBackupRecordConsumer, out version))
-                {
-                    PeriodicBackupRunner?.UpdateConfigurations(record.PeriodicBackups);
-                    MarkHandled(_periodicBackupRecordConsumer, version);
-                }
-
-                if (ShouldHandle(_embeddingsGeneratorQueriesRecordConsumer, out version))
-                {
-                    EmbeddingsGeneratorQueries?.HandleDatabaseRecordChange(record);
-                    MarkHandled(_embeddingsGeneratorQueriesRecordConsumer, version);
-                }
-
-                if (ShouldHandle(_embeddingsGeneratorEtlRecordConsumer, out version))
-                {
-                    EmbeddingsGeneratorEtl?.HandleDatabaseRecordChange(record);
-                    MarkHandled(_embeddingsGeneratorEtlRecordConsumer, version);
-                }
-
-                if (ShouldHandle(_etlRecordConsumer, out version))
-                {
-                    EtlLoader?.HandleDatabaseRecordChange(record);
-                    MarkHandled(_etlRecordConsumer, version);
-                }
-
-                if (ShouldHandle(_subscriptionsRecordConsumer, out version))
-                {
-                    SubscriptionStorage?.HandleDatabaseRecordChange();
-                    MarkHandled(_subscriptionsRecordConsumer, version);
-                }
+                Handle(_periodicBackupRecordConsumer, () => PeriodicBackupRunner?.UpdateConfigurations(record.PeriodicBackups));
+                Handle(_embeddingsGeneratorQueriesRecordConsumer, () => EmbeddingsGeneratorQueries?.HandleDatabaseRecordChange(record));
+                Handle(_embeddingsGeneratorEtlRecordConsumer, () => EmbeddingsGeneratorEtl?.HandleDatabaseRecordChange(record));
+                Handle(_etlRecordConsumer, () => EtlLoader?.HandleDatabaseRecordChange(record));
+                Handle(_subscriptionsRecordConsumer, () => SubscriptionStorage?.HandleDatabaseRecordChange());
             }
             finally
             {
                 _updateValuesLocker.Release();
             }
 
-            if (ShouldHandle(_queueSinkRecordConsumer, out version))
-            {
-                QueueSinkLoader?.HandleDatabaseRecordChange(record);
-                MarkHandled(_queueSinkRecordConsumer, version);
-            }
-
-            if (ShouldHandle(_cdcSinkRecordConsumer, out version))
-            {
-                CdcSinkLoader?.HandleDatabaseRecordChange(record);
-                MarkHandled(_cdcSinkRecordConsumer, version);
-            }
+            Handle(_queueSinkRecordConsumer, () => QueueSinkLoader?.HandleDatabaseRecordChange(record));
+            Handle(_cdcSinkRecordConsumer, () => CdcSinkLoader?.HandleDatabaseRecordChange(record));
 
             OnDatabaseRecordChanged(record);
+
+            void Handle(DatabaseRecordChangeConsumer consumer, Action handle)
+            {
+                if (ShouldHandle(consumer, out var v) == false)
+                    return;
+
+                handle();
+                MarkHandled(consumer, v);
+            }
 
             bool ShouldHandle(DatabaseRecordChangeConsumer consumer, out long v)
             {
