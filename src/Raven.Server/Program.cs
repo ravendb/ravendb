@@ -175,6 +175,9 @@ namespace Raven.Server
             PalConfiguration.LowPriorityIo = configuration.Storage.LowPriorityFlushAndSync;
             PalConfiguration.WriteMode = configuration.Storage.WriteMode;
             PalConfiguration.IoRingQueueSize = configuration.Storage.IoRingQueueSize;
+            PalConfiguration.PrefetchMaxFiles = configuration.Storage.PrefetchRingMaxFiles;
+            PalConfiguration.PrefetchRingEntries = configuration.Storage.PrefetchRingEntries;
+            PalConfiguration.PrefetchQueueSize = configuration.Storage.PrefetchRingQueueSize;
 
             GlobalFlushingBehavior.NumberOfConcurrentSyncs = configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
 

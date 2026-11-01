@@ -205,6 +205,9 @@ namespace Sparrow.LowMemory
 
         public bool LowMemoryState { get; private set; }
 
+        /// <summary>The memory reading of the last check (every 1-5 seconds while the monitor runs).</summary>
+        public MemoryInfoResult LastMemoryInfo { get; private set; }
+
         public bool IsEarlyOutOfMemory { get; private set; }
 
         public DirtyMemoryState DirtyMemoryState { get; private set; } = new DirtyMemoryState { IsHighDirty = false };
@@ -428,6 +431,7 @@ namespace Sparrow.LowMemory
 
             memoryInfo = monitor.GetMemoryInfo();
             var isLowMemory = IsLowMemory(memoryInfo, monitor, out _);
+            LastMemoryInfo = memoryInfo;
 
             // memInfo.AvailableMemory is updated in IsLowMemory for Linux (adding shared clean)
             return isLowMemory;

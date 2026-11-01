@@ -5,12 +5,13 @@ using System.Text;
 using Microsoft.Win32.SafeHandles;
 using Sparrow.Platform;
 using Sparrow.Utils;
+using unsafe ReadsDoneCallback = delegate* unmanaged<void*, uint*, int, void>;
 
 namespace Sparrow.Server.Platform
 {
     public static unsafe class Pal
     {
-        public const int PAL_VER = 70902; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 70913; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
@@ -103,6 +104,8 @@ namespace Sparrow.Server.Platform
             DoNotConsiderMemoryLockFailureAsCatastrophicError = 1 << 7,
             CopyOnWrite = 1 << 8,
             DoNotMap = 1 << 9,
+            RandomAccess = 1 << 10,
+            Prefetch = 1 << 11,
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -164,6 +167,51 @@ namespace Sparrow.Server.Platform
             out void* mem,
             out Int32 errorCode);
             
+        /// <summary>Starts reading the range into the page cache (prefetch ring, or posix_fadvise without io_uring). Returns 1 when requested, 0 when dropped.</summary>
+        [DllImport(LIBRVNPAL)]
+        [SuppressGCTransition]
+        public static extern Int32 rvn_pager_prefetch(
+            void* handle, Int64 offset, Int64 length);
+
+        /// <summary>Starts reading the range into the page cache, without waiting.</summary>
+        [DllImport(LIBRVNPAL)]
+        public static extern Int32 rvn_pager_will_need(
+            void* handle, Int64 offset, Int64 length);
+
+        /// <summary>
+        /// Starts reading the 8 KB pages at the offsets into the page cache, without waiting. Moves the offsets of the pages that
+        /// were not in the page cache to the front and returns their number.
+        /// </summary>
+        [DllImport(LIBRVNPAL)]
+        public static extern Int32 rvn_pager_start_reads(
+            void* handle, Int64* offsets, Int32 count);
+
+        /// <summary>
+        /// The largest WILLNEED request the data file's device reads whole, and the file's ticket on its prefetch ring (-1 when
+        /// not registered).
+        /// </summary>
+        [DllImport(LIBRVNPAL)]
+        public static extern PalFlags.FailCodes rvn_pager_get_prefetch_info(
+            void* handle, out PalDefinitions.PagerPrefetchInfo info);
+
+        /// <summary>The ring reads the 8 KB pages at the offsets and passes the group to its callback once</summary>
+        [DllImport(LIBRVNPAL)]
+        public static extern Int32 rvn_prefetch_ring_read_pages(
+            void* ring, Int64 ticket, Int64* offsets, Int32 count, UInt32 group);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_prefetch_ring_create(
+            Int32 ringEntries, Int32 maxFiles, Int32 queueSize, Int32 maxGroups, ReadsDoneCallback onReadsDone, void* onReadsDoneContext,
+            out void* ring, out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_prefetch_ring_destroy(
+            void* ring, out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL)]
+        public static extern PalFlags.FailCodes rvn_prefetch_ring_stats(
+            void* ring, out PrefetchRingStats stats);
+
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_close_pager(
             void* handle, out Int32 errorCode);
@@ -195,6 +243,7 @@ namespace Sparrow.Server.Platform
             string filename,
             Int64 initialFileSize,
             OpenFileFlags flags,
+            void* prefetchRing,
             out void* handle,
             out byte* readAddress,
             out byte* writeAddress,
@@ -202,7 +251,7 @@ namespace Sparrow.Server.Platform
             out Int32 errorCode)
         {
             using var convert = new Converter(filename);
-            return rvn_init_pager(convert.Pointer, initialFileSize, flags,
+            return rvn_init_pager(convert.Pointer, initialFileSize, flags, prefetchRing,
                 out handle, out readAddress, out writeAddress, out memorySize, out errorCode);
         }
 
@@ -229,6 +278,7 @@ namespace Sparrow.Server.Platform
             byte* filename,
             Int64 initialFileSize,
             OpenFileFlags flags,
+            void* prefetchRing,
             out void* handle,
             out byte* readAddress,
             out byte* writeAddress,

@@ -215,6 +215,9 @@ namespace Voron
 
         public bool ManualFlushing { get; set; }
 
+        /// <summary>The ring for data file prefetches; null uses <see cref="PrefetchRing.Default"/>.</summary>
+        public PrefetchRing PrefetchRing { get; set; }
+
         public bool IncrementalBackupEnabled { get; set; }
 
         public long MaxNumberOfPagesInJournalBeforeFlush { get; set; }
@@ -505,7 +508,8 @@ namespace Voron
 
             public override (Pager Pager, Pager.State State) InitializeDataPager()
             {
-                var flags = Pal.OpenFileFlags.None;
+                // page-sized point lookups: a fault reads only the pages it touches, and pages are prefetched through the ring
+                var flags = Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch;
                 if(Encryption.IsEnabled)
                     flags |= Pal.OpenFileFlags.Encrypted;
                 if (ForceUsing32BitsPager || PlatformDetails.Is32Bits)
@@ -513,7 +517,7 @@ namespace Voron
                 var result = Pager.Create(this, FilePath.FullPath,
                     InitialFileSize ?? 0,
                     flags);
-                InitializeWritebackGate(result.State, FilePath.FullPath);
+                DeviceWriteBudget = result.Pager.DeviceBudget;
                 return result;
             }
 
@@ -1894,15 +1898,6 @@ namespace Voron
         }
 
         internal DeviceWriteBudget DeviceWriteBudget { get; private set; } 
-
-        private protected unsafe void InitializeWritebackGate(Pager.State state, string dataFilePath)
-        {
-            if (Pal.rvn_pager_get_device_id(state.Handle, out var deviceId, out _) != PalFlags.FailCodes.Success)
-                return;
-                
-            DeviceWriteBudget = DeviceWriteBudget.GetForDevice(deviceId, dataFilePath,
-                SyncWritebackBarrierCostThresholdTicks, SyncWritebackDrainQueueDepthThreshold, PipelineJournalWritesAboveLatencyInTicks);
-        }
 
         internal bool SimulateFailureOnDbCreation { get; set; }
         internal bool ManualSyncing { get; set; } = false;

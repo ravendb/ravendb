@@ -48,11 +48,8 @@ public unsafe partial class Pager
             if (state.Disposed)
                 goto AlreadyDisposed;
 
-            if (pager._canPrefetch && pager._prefetchState.ShouldPrefetchSegment(pageNumber, out long offsetFromFileBase, out long bytes))
-            {
-                var command = new PalDefinitions.PrefetchRanges(state.ReadAddress + offsetFromFileBase, bytes);
-                GlobalPrefetchingBehavior.GlobalPrefetcher.Value.CommandQueue.TryAdd(command, 0);
-            }
+            if (pager._canPrefetch && pager._prefetchTable.ShouldPrefetchSegment(pageNumber, out long offsetFromFileBase, out long bytes))
+                pager.PrefetchSegment(state, offsetFromFileBase, bytes);
 
             return state.ReadAddress + pageNumber * Constants.Storage.PageSize;
 

@@ -7,6 +7,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Extensions;
@@ -15,6 +16,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
+using Voron.Data.Tables;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -30,6 +32,10 @@ namespace Raven.Server.Documents.Patch
         protected readonly bool _returnDocument;
 
         private bool ModifiedDocumentRequired => _externalContext != null || _returnDocument || _isTest || _debugMode;
+
+        // the patched document goes back to the caller like the script runner's (ExecuteOnDocument)
+        protected BlittableJsonReaderObject CloneForResult(BlittableJsonReaderObject document, JsonOperationContext context) =>
+            ModifiedDocumentRequired ? document.Clone(_externalContext ?? context) : null;
 
         protected readonly (PatchRequest Run, BlittableJsonReaderObject Args) _patchIfMissing;
         private readonly BlittableJsonReaderObject _createIfMissing;
@@ -455,8 +461,118 @@ namespace Raven.Server.Documents.Patch
         private IDisposable _disposableStatement;
         private IDisposable _disposableScriptRunner;
         private bool _isInitialized;
+        private PreparedPatch? _prepared;
+        private SimpleAssignmentPatch _simplePatch;
+
+        private readonly record struct PreparedPatch(string Id, string ChangeVector, DocumentFlags Flags, BlittableJsonReaderObject Document, string Collection, BlittableJsonReaderObject Metadata);
 
         public PatchResult PatchResult { get; private set; }
+
+        /// <summary>
+        /// Written only if the document's change vector is still <paramref name="changeVector"/>; otherwise the patch runs on the current document.
+        /// </summary>
+        internal void SetPrepared(string id, string changeVector, DocumentFlags flags, BlittableJsonReaderObject document)
+        {
+            document.TryGetMetadata(out var metadata);
+            _prepared = new PreparedPatch(id, changeVector, flags, document, CollectionName.GetCollectionName(document), metadata);
+        }
+
+        internal void SetSimplePatch(SimpleAssignmentPatch simplePatch)
+        {
+            _simplePatch = simplePatch;
+        }
+
+        /// <summary>
+        /// Completes the command without the merger: the patch did not change the document.
+        /// </summary>
+        internal void CompleteAsNotModified(JsonOperationContext context, BlittableJsonReaderObject document)
+        {
+            PatchResult = new PatchResult { Status = PatchStatus.NotModified, ModifiedDocument = CloneForResult(document, context) };
+            ReleaseScriptRunners();
+        }
+
+        private bool TryWritePrepared(DocumentsOperationContext context, in PreparedPatch prepared)
+        {
+            var storage = context.DocumentDatabase.DocumentsStorage;
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, prepared.Id, out Slice lowerId))
+            {
+                // conflicts throw like the script runner's lookup does
+                if (storage.GetTableValueReaderForDocument(context, lowerId, throwOnConflict: true, out TableValueReader current) == false)
+                {
+                    PatchResult = new PatchResult { Status = PatchStatus.DocumentDoesNotExist };
+                    return true;
+                }
+                var currentChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)Schemas.Documents.DocumentsTable.ChangeVector, current);
+                if (ChangeVector.CompareVersion(currentChangeVector, prepared.ChangeVector, context) != 0)
+                    return false;
+            }
+
+            // checked above in this write transaction: no other write can change the document until it commits, so this put's
+            // own change vector check passes
+            var putResult = storage.Put(context, prepared.Id, prepared.ChangeVector, prepared.Document,
+                flags: prepared.Flags.Strip(DocumentFlags.FromClusterTransaction),
+                knownCollectionName: prepared.Collection, knownMetadata: prepared.Metadata);
+
+            PatchResult = new PatchResult
+            {
+                Status = PatchStatus.Patched,
+                ModifiedDocument = CloneForResult(prepared.Document, context),
+                ChangeVector = putResult.ChangeVector,
+                Collection = putResult.Collection.Name,
+                LastModified = putResult.LastModified,
+                Etag = putResult.Etag
+            };
+            return true;
+        }
+
+        private bool TryApplySimplePatch(DocumentsOperationContext context)
+        {
+            // the fast path is only used without an expected change vector, so the document's own one is the only check
+            Debug.Assert(_expectedChangeVector == null, "a simple patch with an expected change vector");
+            var storage = context.DocumentDatabase.DocumentsStorage;
+            using (var current = storage.Get(context, _id))
+            {
+                if (current == null)
+                {
+                    PatchResult = new PatchResult { Status = PatchStatus.DocumentDoesNotExist };
+                    return true;
+                }
+
+                if (_simplePatch.TryApply(context, current.Id, current.Data, _patch.Args, out var modified) == false)
+                    return false;
+
+                if (modified == null)
+                {
+                    PatchResult = new PatchResult { Status = PatchStatus.NotModified, ModifiedDocument = CloneForResult(current.Data, context) };
+                    return true;
+                }
+
+                var putResult = storage.Put(context, current.Id, current.ChangeVector, modified,
+                    flags: current.Flags.Strip(DocumentFlags.FromClusterTransaction));
+                PatchResult = new PatchResult
+                {
+                    Status = PatchStatus.Patched,
+                    ModifiedDocument = CloneForResult(modified, context),
+                    ChangeVector = putResult.ChangeVector,
+                    Collection = putResult.Collection.Name,
+                    LastModified = putResult.LastModified,
+                    Etag = putResult.Etag
+                };
+                return true;
+            }
+        }
+
+        private void ReleaseScriptRunners()
+        {
+            _returnRun.Dispose();
+            _returnRun = default;
+
+            _disposableStatement?.Dispose();
+            _disposableStatement = null;
+
+            _disposableScriptRunner?.Dispose();
+            _disposableScriptRunner = null;
+        }
 
         public PatchDocumentCommand(
             JsonOperationContext context,
@@ -503,16 +619,13 @@ namespace Raven.Server.Documents.Patch
 
             Debug.Assert(context.DocumentDatabase == _database);
 
-            PatchResult = ExecuteOnDocument(context, _id, _expectedChangeVector, _run, _runIfMissing);
+            if (_prepared is not { } prepared || TryWritePrepared(context, prepared) == false)
+            {
+                if (_simplePatch == null || TryApplySimplePatch(context) == false)
+                    PatchResult = ExecuteOnDocument(context, _id, _expectedChangeVector, _run, _runIfMissing);
+            }
 
-            _returnRun.Dispose();
-            _returnRun = default;
-
-            _disposableStatement?.Dispose();
-            _disposableStatement = null;
-
-            _disposableScriptRunner?.Dispose();
-            _disposableScriptRunner = null;
+            ReleaseScriptRunners();
 
             return 1;
         }
