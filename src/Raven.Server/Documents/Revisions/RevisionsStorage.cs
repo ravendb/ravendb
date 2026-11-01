@@ -1145,6 +1145,13 @@ namespace Raven.Server.Documents.Revisions
 
             result.HasMore = false;
 
+            return GetRevisionsToDeleteByIdAndEtag(context, table, prefixSlice, state, result);
+        }
+
+        // Regular revisions are candidates here too, so every revision of the document has to be examined.
+        private IEnumerable<Document> GetRevisionsToDeleteByIdAndEtag(DocumentsOperationContext context, Table table, Slice prefixSlice,
+            ConflictedRevisionsDeletionState state, DeleteOldRevisionsResult result)
+        {
             while (true)
             {
                 var ended = true;
