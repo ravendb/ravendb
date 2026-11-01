@@ -897,7 +897,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     mltQuery = mlt.Like(blittableJson);
             }
 
-            var tsdc = TopScoreDocCollector.Create(pageSize, true);
+            using var tsdc = TopScoreDocCollector.Create(pageSize, true);
 
             if (moreLikeThisQuery.FilterQuery != null && moreLikeThisQuery.FilterQuery is MatchAllDocsQuery == false)
             {
