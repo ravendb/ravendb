@@ -159,6 +159,86 @@ namespace SlowTests.Issues
             Assert.Equal(expectedTotal, revisionsCount);
         }
 
+        // Conflict revisions are deleted by walking ConflictRevisions, which lists only them. Pruning has to
+        // stop at the configured minimum and leave the document's regular revisions where they are.
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
+        public async Task PruningConflictRevisions_LeavesTheRegularRevisions()
+        {
+            const int minimumConflictRevisionsToKeep = 2;
+            const int regularRevisions = 4;
+            const int rounds = 4;
+
+            using var store1 = GetDocumentStore();
+            using var store2 = GetDocumentStore();
+
+            const string id = "users/1";
+
+            // A default configuration rather than a per-collection one: a Conflicted/Resolved write is then
+            // governed by the conflict configuration, which is the path that reads the tree.
+            await SetupKeepEverythingByDefaultAsync(store1);
+            await SetupKeepEverythingByDefaultAsync(store2);
+            await RevisionsHelper.SetupConflictedRevisionsAsync(store2,
+                new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = minimumConflictRevisionsToKeep });
+
+            for (var i = 0; i < regularRevisions; i++)
+            {
+                using var session = store2.OpenAsyncSession();
+                await session.StoreAsync(new User { Name = "v" + i }, id);
+                await session.SaveChangesAsync();
+            }
+
+            await SetupReplicationAsync(store1, store2);
+
+            // Every round is a fresh conflict that store2 resolves, so conflict revisions accumulate and get
+            // pruned back to the minimum on each resolution.
+            for (var i = 0; i < rounds; i++)
+            {
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "local-" + i }, id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "remote-" + i }, id);
+                    await session.SaveChangesAsync();
+                }
+
+                await EnsureReplicatingAsync(store1, store2);
+            }
+
+            var (expectedConflict, expectedTotal) = await GetRevisionFlagCountsAsync(store2, id);
+
+            Assert.True(expectedConflict > 0 && expectedConflict <= minimumConflictRevisionsToKeep,
+                $"expected at most {minimumConflictRevisionsToKeep} conflict revisions to be left, but got {expectedConflict}");
+
+            // The regular revisions are not candidates for this walk at all. Only the newest one at the time of
+            // the first conflict was re-flagged as Conflicted; the ones before it have to be untouched.
+            using (var session = store2.OpenAsyncSession())
+            {
+                var revisions = await session.Advanced.Revisions.GetForAsync<User>(id, pageSize: int.MaxValue);
+                var names = revisions.Select(r => r.Name).ToList();
+
+                for (var i = 0; i < regularRevisions - 1; i++)
+                    Assert.Contains("v" + i, names);
+            }
+
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store2);
+            var (conflictCount, revisionsCount) = ReadCountsFromTrees(database, id);
+
+            Assert.Equal(expectedConflict, conflictCount);
+            Assert.Equal(expectedTotal, revisionsCount);
+        }
+
+        private static Task SetupKeepEverythingByDefaultAsync(IDocumentStore store)
+        {
+            return RevisionsHelper.SetupRevisionsAsync(store, configuration: new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = 1000 }
+            });
+        }
+
         // Builds a document on store2 that has BOTH regular revisions (from normal updates) and Conflicted/
         // Resolved revisions (from resolving a replication conflict), under a keep-everything collection config.
         private async Task SetupRegularAndConflictRevisionsAsync(DocumentStore store1, DocumentStore store2, string id)
