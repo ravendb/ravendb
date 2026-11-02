@@ -405,16 +405,19 @@ namespace FastTests.Corax
             }
         }
 
-        // RQL has no exclusive between, so a folded one prints as the comparisons it came from. A sharded query is
-        // re-rendered from the cached tree before it goes to the shards, each of which parses and folds it again.
+        // A folded between prints as the comparisons it came from: RQL has no exclusive between, and a hand-written between
+        // may not pair the value kinds a folded one may. A sharded query is re-rendered from the cached tree before it goes
+        // to the shards, each of which parses what the user wrote and folds it again.
         [RavenTheory(RavenTestCategory.Querying)]
-        [InlineData("CreatedAt >= $p1 and CreatedAt <= $p2", "CreatedAt BETWEEN $p1 AND $p2")]
+        [InlineData("CreatedAt between $p1 and $p2", "CreatedAt BETWEEN $p1 AND $p2")]
+        [InlineData("CreatedAt >= $p1 and CreatedAt <= $p2", "(CreatedAt >= $p1 AND CreatedAt <= $p2)")]
+        [InlineData("Amount >= 1 and Amount <= 2.5", "(Amount >= 1 AND Amount <= 2.5)")]
         [InlineData("CreatedAt >= $p1 and CreatedAt < $p2", "(CreatedAt >= $p1 AND CreatedAt < $p2)")]
         [InlineData("CreatedAt > $p1 and CreatedAt <= $p2", "(CreatedAt > $p1 AND CreatedAt <= $p2)")]
         [InlineData("CustomerId = 'x' and CreatedAt > $p1 and CreatedAt < $p2", "(CustomerId = 'x' AND (CreatedAt > $p1 AND CreatedAt < $p2))")]
         [InlineData("CustomerId = 'x' or (Amount > 1 and Amount < 5)", "(CustomerId = 'x' OR (Amount > 1 AND Amount < 5))")]
         [InlineData("CustomerId = 'x' and not (Amount > 1 and Amount < 5)", "(CustomerId = 'x' AND NOT ((Amount > 1 AND Amount < 5)))")]
-        public void FoldedBetweenPrintsWithItsInclusivity(string where, string expectedText)
+        public void FoldedBetweenPrintsAsTheComparisonsItCameFrom(string where, string expectedText)
         {
             var normalized = WhereClauseNormalizer.Normalize(Parse(where).Where);
 
@@ -445,6 +448,7 @@ namespace FastTests.Corax
             Assert.True(WhereClauseNormalizer.TryNormalize(query.Where, out var rewritten));
 
             var between = Assert.IsType<BetweenExpression>(rewritten);
+            Assert.True(between.Folded);
             Assert.Equal("p1", between.Min.Token.Value);
             Assert.Equal("p2", between.Max.Token.Value);
             Assert.Equal(minInclusive, between.MinInclusive);

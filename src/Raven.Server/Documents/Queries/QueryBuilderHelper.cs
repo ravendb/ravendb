@@ -42,16 +42,20 @@ public static class QueryBuilderHelper
     }
 
     // the builders translate a between as a single kind; one the metadata folded from 'Foo > 1 and Foo < 2.5' mixes kinds,
-    // which a hand-written between cannot, so it is translated back as the two comparisons it came from
+    // which a hand-written between cannot, so it is translated back as the two comparisons it came from. A hand-written
+    // between is left alone, and so is a null side, which the between translation reads as an open end
     internal static bool TryUnfoldBetweenOfMixedKinds(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, BetweenExpression between,
         out BinaryExpression lower, out BinaryExpression upper)
     {
         lower = null;
         upper = null;
 
+        if (between.Folded == false)
+            return false;
+
         var (_, minType) = GetValue(query, metadata, parameters, between.Min);
         var (_, maxType) = GetValue(query, metadata, parameters, between.Max);
-        if (minType == maxType)
+        if (minType == maxType || minType == ValueTokenType.Null || maxType == ValueTokenType.Null)
             return false;
 
         lower = between.LowerBound();

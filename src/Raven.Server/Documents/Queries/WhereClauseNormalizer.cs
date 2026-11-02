@@ -180,7 +180,8 @@ public static class WhereClauseNormalizer
                 operands[i] = new BetweenExpression(first.Left, (ValueExpression)greater.Right, (ValueExpression)less.Right)
                 {
                     MinInclusive = greater.Operator == OperatorType.GreaterThanEqual,
-                    MaxInclusive = less.Operator == OperatorType.LessThanEqual
+                    MaxInclusive = less.Operator == OperatorType.LessThanEqual,
+                    Folded = true
                 };
                 operands.RemoveAt(j);
                 changed = true;

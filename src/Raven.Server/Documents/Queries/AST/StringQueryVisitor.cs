@@ -249,9 +249,10 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override void VisitBetween(BetweenExpression expr)
         {
-            // RQL has no exclusive between, so one folded from two comparisons is printed as those comparisons and means
-            // the same once parsed again, as a sharded query is on every shard
-            if (expr.MinInclusive == false || expr.MaxInclusive == false)
+            // a folded between prints as the comparisons it came from: RQL has no exclusive between, and a hand-written
+            // between may not pair the value kinds a folded one may. Parsed again, as a sharded query is on every shard,
+            // the comparisons pass validation the way the user wrote them and fold again there
+            if (expr.Folded || expr.MinInclusive == false || expr.MaxInclusive == false)
             {
                 VisitCompoundWhereExpression(new BinaryExpression(expr.LowerBound(), expr.UpperBound(), OperatorType.And));
                 return;
