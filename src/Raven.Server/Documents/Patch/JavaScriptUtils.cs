@@ -378,12 +378,12 @@ namespace Raven.Server.Documents.Patch
                     [nameof(TimeSeriesAggregationResult.Count)] = results.Count,
                     [nameof(TimeSeriesAggregationResult.Results)] = results
                 };
-                return new BlittableObjectInstance(engine, null, context.ReadObject(djv, "MaterializedStreamResults"), null, null, null);
+                return new BlittableObjectInstance(engine, null, context.ReadObject(djv, "MaterializedStreamResults"), null, null, null, ownsBlittable: true);
             }
             if (o is Tuple<Document, RetrieverInput, Dictionary<string, IndexField>, bool?, ProjectionOptions> t)
             {
                 var d = t.Item1;
-                return new BlittableObjectInstance(engine, null, Clone(d.Data, context), d)
+                return new BlittableObjectInstance(engine, null, Clone(d.Data, context), d, ownsBlittable: true)
                 {
                     IndexRetriever = t.Item2,
                     IndexFields = t.Item3,
@@ -393,18 +393,18 @@ namespace Raven.Server.Documents.Patch
             }
             if (o is Document doc)
             {
-                return new BlittableObjectInstance(engine, null, Clone(doc.Data, context), doc);
+                return new BlittableObjectInstance(engine, null, Clone(doc.Data, context), doc, ownsBlittable: true);
             }
             if (o is DocumentConflict dc)
             {
-                return new BlittableObjectInstance(engine, null, Clone(dc.Doc, context), dc.Id, dc.LastModified, dc.ChangeVector);
+                return new BlittableObjectInstance(engine, null, Clone(dc.Doc, context), dc.Id, dc.LastModified, dc.ChangeVector, ownsBlittable: true);
             }
 
             if (o is BlittableJsonReaderObject json)
             {
                 // check if clone is really required, we don't want to clone patch arguments
                 BlittableJsonReaderObject blittable = needsClone ? Clone(json, context) : json;
-                return new BlittableObjectInstance(engine, null, blittable, null, null, null);
+                return new BlittableObjectInstance(engine, null, blittable, null, null, null, ownsBlittable: needsClone);
             }
 
             if (o == null)
@@ -436,7 +436,7 @@ namespace Raven.Server.Documents.Patch
                 var args = new JsValue[docList.Count];
                 for (var i = 0; i < docList.Count; i++)
                 {
-                    args[i] = new BlittableObjectInstance(engine, null, Clone(docList[i].Data, context), docList[i]);
+                    args[i] = new BlittableObjectInstance(engine, null, Clone(docList[i].Data, context), docList[i], ownsBlittable: true);
                 }
                 var jsArray = new JsArray(engine, args);
                 return jsArray;
