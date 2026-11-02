@@ -1987,6 +1987,22 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
             Assert.Equal(Version.Parse(expected), SystemTextJson.Serialization.DefaultConverter.FromBlittable<HoldsVersion>(json).Value);
     }
 
+    private class HoldsUIntPtr
+    {
+        public UIntPtr Handle { get; set; } = new UIntPtr(5);
+
+        public string Name { get; set; } = "name";
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonWritesAndReadsUIntPtrLikeNewtonsoft()
+    {
+        var read = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new HoldsUIntPtr());
+
+        Assert.Equal(UIntPtr.Zero, read.Handle);
+        Assert.Equal("name", read.Name);
+    }
+
     private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())
