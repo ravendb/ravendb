@@ -129,6 +129,7 @@ builder.Services.AddOptions<ApplianceOptions>()
                    (idleWindow > TimeSpan.Zero && idleWindow.TotalSeconds <= int.MaxValue),
         "ChannelConversationIdleWindow must be positive and at most int.MaxValue seconds; " +
         "leave it unset to keep channel conversations forever")
+    .Validate(o => o.ApiKeyCacheDuration >= TimeSpan.Zero, "ApiKeyCacheDuration must not be negative")
     .ValidateOnStart();
 
 builder.Services.AddSingleton<IDocumentStore>(sp =>

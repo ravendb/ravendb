@@ -21,6 +21,7 @@ public struct PatternTermProvider<TLookupIterator> : ITermProvider
     private readonly CompactKey _seekLimitForBackward;
     private readonly int _seekPrefixLength;
     private readonly CancellationToken _token;
+    private readonly double _averageTermLength;
     private CompactTree.Iterator<TLookupIterator> _iterator;
     private bool _firstRun;
 
@@ -36,6 +37,7 @@ public struct PatternTermProvider<TLookupIterator> : ITermProvider
         _seekLimitForBackward = seekLimitForBackward;
         _token = token;
         _tree = tree;
+        _averageTermLength = field.HasBoost ? searcher.GetAverageTermLength(field, tree) : 0;
 
         var patternSpan = pattern.Decoded();
 
@@ -95,12 +97,13 @@ public struct PatternTermProvider<TLookupIterator> : ITermProvider
         _iterator.Seek(_seekLimitForBackward);
     }
 
-    public bool Next(out TermMatch term)
+    public bool Next(out long termId, out double termRatioToWholeCollection)
     {
         var pattern = _pattern.Decoded();
         var prefix = IsBoundedByPrefix ? pattern[.._seekPrefixLength] : default;
+        termRatioToWholeCollection = 1;
 
-        while (_iterator.MoveNext(_compactKey, out _, out _))
+        while (_iterator.MoveNext(_compactKey, out termId, out _))
         {
             _token.ThrowIfCancellationRequested();
 
@@ -128,11 +131,10 @@ public struct PatternTermProvider<TLookupIterator> : ITermProvider
             if (isMatch == false)
                 continue;
 
-            term = _searcher.TermQuery(_field, _compactKey, _tree);
+            termRatioToWholeCollection = IndexSearcher.GetTermRatioToWholeCollection(_compactKey, _averageTermLength);
             return true;
         }
 
-        term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
         return false;
     }
 

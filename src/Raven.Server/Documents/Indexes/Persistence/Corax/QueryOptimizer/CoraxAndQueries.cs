@@ -177,6 +177,10 @@ public sealed class CoraxAndQueries : CoraxBooleanQueryBase
                 if (query.Operation is UnaryMatchOperation.NotEquals)
                     continue;
 
+                // MultiUnaryMatch scores only its anchor, so a scored clause cannot become a filter.
+                if (query.Field.HasBoost)
+                    return false;
+
                 if (query.Operation is UnaryMatchOperation.Equals && query.Count < minimumCount)
                 {
                     pos = idX;

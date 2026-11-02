@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Raven.Client.Documents.Session;
 using Raven.Server.Web;
 
-namespace RequestHandler.Benchmark;
+namespace Integration.Benchmark.Requests;
 
 [MemoryDiagnoser]
 public class RequestContextQueryScopingBenchmark

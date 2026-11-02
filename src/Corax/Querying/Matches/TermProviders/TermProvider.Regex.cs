@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Text;
@@ -17,6 +17,7 @@ public struct RegexTermProvider<TLookupIterator> : ITermProvider
     private readonly Querying.IndexSearcher _searcher;
     private readonly FieldMetadata _field;
     private readonly Regex _regex;
+    private readonly double _averageTermLength;
 
     private CompactTree.Iterator<TLookupIterator> _iterator;
 
@@ -28,6 +29,7 @@ public struct RegexTermProvider<TLookupIterator> : ITermProvider
         _iterator = tree.Iterate<TLookupIterator>();
         _iterator.Reset();
         _field = field;
+        _averageTermLength = field.HasBoost ? searcher.GetAverageTermLength(field, tree) : 0;
     }
 
 
@@ -44,20 +46,20 @@ public struct RegexTermProvider<TLookupIterator> : ITermProvider
         _iterator.Reset();
     }
 
-    public bool Next(out TermMatch term)
+    public bool Next(out long termId, out double termRatioToWholeCollection)
     {
         char[] buffer = null;
         using var scope = new CompactKeyCacheScope(_searcher._transaction.LowLevelTransaction);
         var compactKey = scope.Key;
         try
         {
-            while (_iterator.MoveNext(compactKey, out _, out _))
+            while (_iterator.MoveNext(compactKey, out termId, out _))
             {
                 var key = compactKey.Decoded();
                 if (_regex.IsMatch(ToChars(key, ref buffer)) == false)
                     continue;
 
-                term = _searcher.TermQuery(_field, compactKey, _tree);
+                termRatioToWholeCollection = Querying.IndexSearcher.GetTermRatioToWholeCollection(compactKey, _averageTermLength);
                 return true;
             }
         }
@@ -67,7 +69,7 @@ public struct RegexTermProvider<TLookupIterator> : ITermProvider
                 ArrayPool<char>.Shared.Return(buffer);
         }
 
-        term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
+        termRatioToWholeCollection = 1;
         return false;
     }
 

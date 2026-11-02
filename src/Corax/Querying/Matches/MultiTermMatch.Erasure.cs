@@ -147,9 +147,10 @@ namespace Corax.Querying.Matches
         {
             public int TermsCount => 0;
 
-            public bool Next(out TermMatch term)
+            public bool Next(out long termId, out double termRatioToWholeCollection)
             {
-                Unsafe.SkipInit(out term);
+                termId = -1;
+                termRatioToWholeCollection = 1;
                 return false;
             }
 
@@ -175,7 +176,7 @@ namespace Corax.Querying.Matches
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static MultiTermMatch CreateEmpty(ByteStringContext context)
         {
-            return new MultiTermMatch(new MultiTermMatch<EmptyTermProvider>(null, default, context, new EmptyTermProvider(), streamingEnabled: false), StaticFunctionCache<MultiTermMatch<EmptyTermProvider>>.FunctionTable);
+            return new MultiTermMatch(new MultiTermMatch<EmptyTermProvider>(null, default, context, new EmptyTermProvider(), streamingEnabled: false, confidence: QueryCountConfidence.High), StaticFunctionCache<MultiTermMatch<EmptyTermProvider>>.FunctionTable);
         }
     }
 }

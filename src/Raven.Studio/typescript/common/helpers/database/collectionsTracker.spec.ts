@@ -4,12 +4,12 @@ import getRevisionsPreviewCommand from "commands/database/documents/getRevisions
 import collectionsStats from "models/database/documents/collectionsStats";
 import database from "models/resources/database";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
-import { createStoreConfiguration } from "components/store";
+import { createTestStore } from "test/createTestStore";
 import { setEffectiveTestStore } from "components/storeCompat";
 import CollectionStatistics = Raven.Client.Documents.Operations.CollectionStatistics;
 
 function createTracker() {
-    const store = createStoreConfiguration();
+    const store = createTestStore();
     setEffectiveTestStore(store);
 
     const statsTasks: JQueryDeferred<collectionsStats>[] = [];

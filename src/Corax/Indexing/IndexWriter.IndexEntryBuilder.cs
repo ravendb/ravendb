@@ -36,6 +36,9 @@ public partial class IndexWriter
 
         public void Boost(float boost)
         {
+            if (float.IsNaN(boost) || float.IsPositiveInfinity(boost))
+                throw new ArgumentOutOfRangeException(nameof(boost), boost, "Document boost cannot be NaN or positive infinity.");
+
             _parent.BoostEntry(_entryId, boost);
         }
 
