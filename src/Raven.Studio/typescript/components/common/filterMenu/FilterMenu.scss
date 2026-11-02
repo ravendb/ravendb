@@ -106,7 +106,22 @@
     }
 
     .filter-menu-checkbox {
+        position: relative;
         padding: var(--bs-dropdown-item-padding-y) var(--bs-dropdown-item-padding-x);
+
+        &:hover {
+            background-color: var(--bs-dropdown-link-hover-bg);
+        }
+
+        .form-check-label {
+            cursor: pointer;
+
+            &::after {
+                content: "";
+                position: absolute;
+                inset: 0;
+            }
+        }
     }
 
     .filter-menu-category-item,
