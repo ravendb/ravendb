@@ -340,6 +340,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             options.Converters.Add(FloatingPointConverters.Single);
             options.Converters.Add(FloatingPointConverters.Decimal);
             options.Converters.Add(DateTimeISO8601Converter.Instance);
+            options.Converters.Add(GuidConverter.Instance);
             options.Converters.Add(DictionaryDateTimeKeysConverter.Instance);
             options.Converters.Add(new ParametersConverter(() => GetOptions(TypeNameHandling.None)));
             options.Converters.Add(LinqEnumerableConverter.Instance);

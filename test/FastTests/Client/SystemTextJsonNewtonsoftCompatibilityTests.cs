@@ -1932,6 +1932,41 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class HoldsGuids
+    {
+        public Guid Id { get; set; }
+
+        public Guid? MaybeId { get; set; }
+
+        public Dictionary<Guid, string> ById { get; set; }
+    }
+
+    [RavenTheory(RavenTestCategory.ClientApi)]
+    [InlineData("N")]
+    [InlineData("D")]
+    [InlineData("B")]
+    [InlineData("P")]
+    public void SystemTextJsonReadsGuidsInAnyFormatLikeNewtonsoft(string format)
+    {
+        var guid = Guid.Parse("0f8fad5b-d9cb-469f-a165-70867728950e");
+        string text = guid.ToString(format);
+
+        var written = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new HoldsGuids { Id = guid, MaybeId = guid, ById = new Dictionary<Guid, string> { [guid] = "value" } });
+        Assert.Equal(guid, written.Id);
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory($"{{\"Id\":\"{text}\",\"MaybeId\":\"{text}\",\"ById\":{{\"{text}\":\"value\"}}}}", "guids"))
+        {
+            var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<HoldsGuids>(json);
+            var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<HoldsGuids>(json);
+
+            Assert.Equal(guid, expected.Id);
+            Assert.Equal(expected.Id, actual.Id);
+            Assert.Equal(expected.MaybeId, actual.MaybeId);
+            Assert.Equal(expected.ById.Keys, actual.ById.Keys);
+        }
+    }
+
     private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())
