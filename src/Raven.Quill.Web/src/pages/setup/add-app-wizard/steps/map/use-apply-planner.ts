@@ -7,19 +7,24 @@ import { WizardStepError } from "@/components/form/wizard/wizard-step-error";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { mapDtoTablesToForm } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
+import { useApplyMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-apply-map-tables";
 import { formatTableScripts } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import { isEditorMapping, type MapOrigin } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
 import type { PlannerState } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
-import { parsePlannerTables, useAdoptMapTables } from "@/pages/setup/add-app-wizard/steps/map/use-adopt-map-tables";
+import { parsePlannerTables } from "@/pages/setup/add-app-wizard/steps/map/use-adopt-map-tables";
 
 /**
  * Runs before the app is created from the plan: the server turns the plan's registered collections into
  * the app's mapping, validated as a whole. Throwing keeps the wizard on this step - a plan that does not
  * assemble must not quietly become an app. A mapping made in the editor goes on to it untouched.
+ *
+ * The Map schema editor's UI state is left as it is: while the planner shows, a collection page uses it
+ * for its selected table, and every way into the Map schema step resets it on its own.
  */
 export function useApplyPlanner() {
     const { getValues } = useFormContext<AppFormData>();
-    const adoptTables = useAdoptMapTables();
+    const applyMapTables = useApplyMapTables();
+    const setMapOrigin = useSetupWizardStore((state) => state.setMapOrigin);
 
     return async (progress: WizardProgress) => {
         const store = useSetupWizardStore.getState();
@@ -42,10 +47,8 @@ export function useApplyPlanner() {
         progress.report("Applying the plan...");
         const configuration = await applyPlan(slug);
 
-        adoptTables(parsePlannerTables(mapDtoTablesToForm(configuration.tables ?? []).map(formatTableScripts)), {
-            source: "planner",
-            planKey,
-        });
+        applyMapTables(parsePlannerTables(mapDtoTablesToForm(configuration.tables ?? []).map(formatTableScripts)));
+        setMapOrigin({ source: "planner", planKey });
     };
 }
 

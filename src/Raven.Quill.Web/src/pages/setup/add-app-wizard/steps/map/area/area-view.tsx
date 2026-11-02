@@ -8,7 +8,7 @@ import {
     EditsDisabledNote,
     PlannerUnsavedChanges,
 } from "@/pages/setup/add-app-wizard/steps/map/planner-unsaved-changes";
-import type { Plan, PlanArea } from "@/pages/setup/add-app-wizard/steps/map/session/planner-plan";
+import { getBuildLabel, type Plan, type PlanArea } from "@/pages/setup/add-app-wizard/steps/map/session/planner-plan";
 import { useBuildBlockReason, usePlannerActions } from "@/pages/setup/add-app-wizard/steps/map/use-planner-actions";
 
 export function AreaView({ plan, area }: { plan: Plan; area: PlanArea }) {
@@ -32,7 +32,7 @@ export function AreaView({ plan, area }: { plan: Plan; area: PlanArea }) {
                 {canBuild && (
                     <span className="ml-auto">
                         <BuildButton
-                            label={area.isStarted ? "Build the rest" : "Build"}
+                            label={getBuildLabel(area)}
                             blockReason={buildBlockReason}
                             isPrimary
                             onBuild={() => actions.buildArea(area)}

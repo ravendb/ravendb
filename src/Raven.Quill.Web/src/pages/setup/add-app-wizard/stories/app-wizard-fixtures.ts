@@ -52,6 +52,8 @@ export type PlannerScriptTurn = {
     frames: MigrationFrame[];
     /** Leaves the turn running, as if its stream were still open. */
     isWorking?: boolean;
+    /** Ends the turn as if the operator stopped it, after its last frame. */
+    isStopped?: boolean;
 };
 
 /** Plays recorded turns through the store, so a story starts from a session the planner really produced. */
@@ -83,7 +85,7 @@ export function replayPlannerTurns(
         }
 
         if (!turn.isWorking) {
-            store.endPlannerTurn(chatId, { error: null, isStopped: false });
+            store.endPlannerTurn(chatId, { error: null, isStopped: !!turn.isStopped });
         }
     }
 }

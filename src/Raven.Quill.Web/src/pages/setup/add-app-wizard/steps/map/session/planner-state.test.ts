@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createReplyTurn } from "@/pages/setup/add-app-wizard/steps/map/session/planner-frames";
 import {
+    canRunSideBySide,
     EMPTY_CHAT,
     getChatPhase,
     initialPlannerState,
@@ -55,6 +56,15 @@ describe("selectWorkingChats", () => {
 
         expect(selectWorkingChats(state)).toEqual([null, "Sales"]);
         expect(selectCanEditPlan({ ...state, plannerProposal: proposal })).toBe(false);
+    });
+});
+
+describe("canRunSideBySide", () => {
+    it("lets different areas run together, but never the planner beside another turn", () => {
+        expect(canRunSideBySide("Sales", "Billing")).toBe(true);
+        expect(canRunSideBySide("Sales", "Sales")).toBe(false);
+        expect(canRunSideBySide(null, "Sales")).toBe(false);
+        expect(canRunSideBySide("Sales", null)).toBe(false);
     });
 });
 

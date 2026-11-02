@@ -14,6 +14,7 @@ import {
 import {
     countBuilt,
     getAreaShortName,
+    getBuildLabel,
     isMapped,
     type PlanArea,
     type PlanCollection,
@@ -41,8 +42,8 @@ const SQUARE_LABELS: Record<SquareKind, (count: number) => string> = {
 };
 
 /**
- * One area of the plan. Until it starts building, its header folds its collections open; once it has
- * started, the header opens the area itself, where its agent works.
+ * One area of the plan. While it has collections left to build, its header folds them open; otherwise the
+ * header opens the area itself, where its agent works. Once its agent started, Open always leads there too.
  */
 export function PlanAreaCard({ area, isFiltering }: { area: PlanArea; isFiltering: boolean }) {
     const actions = usePlannerActions();
@@ -52,8 +53,10 @@ export function PlanAreaCard({ area, isFiltering }: { area: PlanArea; isFilterin
     const collections = area.collections.filter((collection) => collection.state !== "removed");
     const builtCount = countBuilt(collections);
     const failedCount = collections.filter((collection) => collection.state === "failed").length;
-    const isOpen = !area.isStarted && (isExpanded || isFiltering);
     const canBuild = area.pendingCollections.length > 0 && !area.isBuilding;
+    const canFold = !area.isStarted || canBuild;
+    const canOpen = area.isStarted || !canBuild;
+    const isOpen = canFold && (isExpanded || isFiltering);
     const rowsId = `plan-area-${area.name}`;
 
     return (
@@ -63,11 +66,11 @@ export function PlanAreaCard({ area, isFiltering }: { area: PlanArea; isFilterin
                     <button
                         type="button"
                         className="flex w-full items-center gap-2.5 text-left"
-                        aria-expanded={area.isStarted ? undefined : isOpen}
-                        aria-controls={area.isStarted ? undefined : rowsId}
-                        onClick={() => (area.isStarted ? actions.openArea(area.name) : togglePlannerArea(area.name))}
+                        aria-expanded={canFold ? isOpen : undefined}
+                        aria-controls={canFold ? rowsId : undefined}
+                        onClick={() => (canFold ? togglePlannerArea(area.name) : actions.openArea(area.name))}
                     >
-                        {!area.isStarted && (
+                        {canFold && (
                             <ChevronRight
                                 className={cn(
                                     "size-3.5 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none",
@@ -87,17 +90,18 @@ export function PlanAreaCard({ area, isFiltering }: { area: PlanArea; isFilterin
                         </Text>
                     </button>
                 </Heading>
-                {canBuild ? (
-                    <BuildButton
-                        label={area.isStarted ? "Build the rest" : "Build"}
-                        blockReason={buildBlockReason}
-                        onBuild={() => actions.buildAndOpenArea(area)}
-                    />
-                ) : (
+                {canOpen && (
                     <Button variant="outline" size="sm" onClick={() => actions.openArea(area.name)}>
                         Open
                         <ArrowRight data-icon="inline-end" />
                     </Button>
+                )}
+                {canBuild && (
+                    <BuildButton
+                        label={getBuildLabel(area)}
+                        blockReason={buildBlockReason}
+                        onBuild={() => actions.buildAndOpenArea(area)}
+                    />
                 )}
             </div>
             {isOpen && (

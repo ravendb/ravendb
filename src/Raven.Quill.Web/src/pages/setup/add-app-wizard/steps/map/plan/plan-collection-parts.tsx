@@ -101,11 +101,7 @@ export function PlanCollectionSources({ collection, className }: { collection: P
             {embeds.length > 0 && (
                 <SourceSlot
                     sources={embeds}
-                    title={embeds
-                        .map(
-                            (embed) => `${embed.name} is embedded in each document${embed.as ? ` as ${embed.as}` : ""}`,
-                        )
-                        .join(". ")}
+                    title={<SourceTooltipList heading="Embedded in each document" sources={embeds} />}
                 />
             )}
             {links.length > 0 && (
@@ -137,7 +133,7 @@ export function PlanSourceList({ sources }: { sources: CollectionSource[] }) {
     );
 }
 
-function SourceSlot({ sources, title }: { sources: CollectionSource[]; title: string }) {
+function SourceSlot({ sources, title }: { sources: CollectionSource[]; title: ReactNode }) {
     const [first, ...rest] = sources;
     const { icon: Icon, label } = SOURCE_KINDS[first.kind];
 
@@ -165,17 +161,30 @@ function SourceSlot({ sources, title }: { sources: CollectionSource[]; title: st
                             +{rest.length}
                         </span>
                     </TooltipTrigger>
-                    <TooltipContent className="flex-col items-start gap-1">
-                        <span className="font-semibold">{first.kind === "link" ? "Also links to" : "Also embeds"}</span>
-                        {rest.map((source) => (
-                            <span key={`${source.name}-${source.as}`}>
-                                <SourceName source={source} />
-                            </span>
-                        ))}
+                    <TooltipContent className="max-w-80">
+                        <SourceTooltipList
+                            heading={first.kind === "link" ? "Also links to" : "Also embeds"}
+                            sources={rest}
+                        />
                     </TooltipContent>
                 </Tooltip>
             )}
         </span>
+    );
+}
+
+function SourceTooltipList({ heading, sources }: { heading: string; sources: CollectionSource[] }) {
+    return (
+        <div className="flex flex-col gap-1">
+            <span className="font-semibold">{heading}</span>
+            <ul className="flex list-disc flex-col gap-0.5 pl-4">
+                {sources.map((source) => (
+                    <li key={`${source.name}-${source.as}`} className="wrap-break-word">
+                        <SourceName source={source} />
+                    </li>
+                ))}
+            </ul>
+        </div>
     );
 }
 

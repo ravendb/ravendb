@@ -30,6 +30,10 @@ export function composeBuildCollectionsPrompt(collections: string[]): string {
     return `Build ${joinList(collections)}.`;
 }
 
+export function composeContinuePrompt(): string {
+    return "Your last turn failed before it finished. Carry on from where it stopped.";
+}
+
 export function composeFixCollectionPrompt(collection: string, problems: string[]): string {
     return problems.length > 0
         ? `Fix the ${collection} collection. It was rejected: ${problems.join(" ")}`

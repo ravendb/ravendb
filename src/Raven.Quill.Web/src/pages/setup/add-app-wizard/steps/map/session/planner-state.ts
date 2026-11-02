@@ -1,9 +1,11 @@
 import type { NamingConventions, ValidationIssue } from "@/api/generated/server-api";
 import type {
+    PlannerAnswersTurn,
     PlannerChat,
     PlannerChatId,
     PlannerEdit,
     PlannerEntry,
+    PlannerPromptTurn,
     PlannerProposal,
     PlannerQuestion,
     PlannerReplyTurn,
@@ -122,6 +124,41 @@ export function selectWorkingChats(state: PlannerState): PlannerChatId[] {
         .map(([area]) => area);
 
     return isChatWorking(state.plannerProposalChat) ? [null, ...areas] : areas;
+}
+
+/**
+ * Area agents write only their own area's collections and retry when another write got in first, so different
+ * areas run side by side. The planner's turn can replace the proposal they build from, so it runs alone.
+ */
+export function canRunSideBySide(first: PlannerChatId, second: PlannerChatId): boolean {
+    return first !== null && second !== null && first !== second;
+}
+
+/** The working chat a new turn in this chat must wait for, the chat itself included; undefined when there is none. */
+export function selectBlockingChat(state: PlannerState, chatId: PlannerChatId): PlannerChatId | undefined {
+    return selectWorkingChats(state).find((workingChatId) => !canRunSideBySide(workingChatId, chatId));
+}
+
+/** The prompt or answers the chat's latest turn replied to. An opening turn replies to none. */
+export function getLatestUserTurn(chat: PlannerChat): PlannerPromptTurn | PlannerAnswersTurn | undefined {
+    const latestReply = getLatestReply(chat.turns);
+
+    if (!latestReply || latestReply.isOpening) {
+        return undefined;
+    }
+
+    return chat.turns.findLast((turn) => turn.kind !== "planner");
+}
+
+/** Whether an area chat's latest turn built the area, as its first build or a later Build the rest. */
+export function isBuildTurn(areaChat: PlannerChat): boolean {
+    if (getLatestReply(areaChat.turns)?.isOpening) {
+        return true;
+    }
+
+    const userTurn = getLatestUserTurn(areaChat);
+
+    return userTurn?.kind === "prompt" && userTurn.isBuildRequest;
 }
 
 export function selectIsAnyChatWorking(state: PlannerState): boolean {

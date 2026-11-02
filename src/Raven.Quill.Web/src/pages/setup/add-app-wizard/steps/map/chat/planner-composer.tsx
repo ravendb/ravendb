@@ -21,13 +21,16 @@ import {
 } from "@/pages/setup/add-app-wizard/steps/map/planner-workspace-context";
 import type { PlanCollection } from "@/pages/setup/add-app-wizard/steps/map/session/planner-plan";
 import { describeMentionPlaceholder } from "@/pages/setup/add-app-wizard/steps/map/session/planner-prompts";
-import { selectChat } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
+import { selectBlockingChat, selectChat } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
 import type { PlannerChatId } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 import { usePlannerSession } from "@/pages/setup/add-app-wizard/steps/map/session/use-planner-session";
 
 const MENTION_TRIGGER = "@";
 
-/** While the agent works, what the operator writes waits here, to be sent once it is done or stopped. */
+/**
+ * While the agent works, what the operator writes waits here, to be sent once it is done or stopped. While another
+ * chat's agent works, nothing here can stop it, so the composer waits too.
+ */
 export function PlannerComposer({ chatId, collections }: { chatId: PlannerChatId; collections: PlanCollection[] }) {
     const { composerRef, isBusy } = usePlannerWorkspace();
     const session = usePlannerSession();
@@ -44,7 +47,10 @@ export function PlannerComposer({ chatId, collections }: { chatId: PlannerChatId
     const mentionTriggerIndexRef = useRef<number | null>(null);
     const caretAfterPickerRef = useRef<number | null>(null);
 
+    const blockingChatId = useSetupWizardStore((state) => selectBlockingChat(state, chatId));
+
     const isWorking = phase === "working";
+    const isWaitingForOtherChat = !isWorking && blockingChatId !== undefined;
     // Until the first plan is there, there is nothing yet to ask the planner about.
     const isReadingSchema = isWorking && chatId === null && !hasProposal;
     const canSend = canSendMessage && draft.trim() !== "";
@@ -60,7 +66,8 @@ export function PlannerComposer({ chatId, collections }: { chatId: PlannerChatId
 
         setDraft(value);
 
-        if (!isBusy && isTriggerTyped && isWordStart) {
+        // The picker is only there while a message can be sent; opened before that, it would pop up later by itself.
+        if (canSendMessage && isTriggerTyped && isWordStart) {
             mentionTriggerIndexRef.current = selectionStart - 1;
             setIsMentionPickerOpen(true);
         }
@@ -121,9 +128,9 @@ export function PlannerComposer({ chatId, collections }: { chatId: PlannerChatId
                 ref={composerRef}
                 rows={1}
                 aria-label={chatId === null ? "Message for the planner" : `Message for the ${chatId} agent`}
-                placeholder={describePlaceholder({ chatId, isWorking, isReadingSchema, mentions })}
+                placeholder={describePlaceholder({ chatId, isWorking, isReadingSchema, blockingChatId, mentions })}
                 value={draft}
-                disabled={isBusy || isReadingSchema}
+                disabled={isBusy || isReadingSchema || isWaitingForOtherChat}
                 className="max-h-48 min-h-10 px-3.5"
                 onChange={changeDraft}
                 onKeyDown={(event) => {
@@ -252,11 +259,13 @@ function describePlaceholder({
     chatId,
     isWorking,
     isReadingSchema,
+    blockingChatId,
     mentions,
 }: {
     chatId: PlannerChatId;
     isWorking: boolean;
     isReadingSchema: boolean;
+    blockingChatId: PlannerChatId | undefined;
     mentions: string[];
 }): string {
     if (isReadingSchema) {
@@ -265,6 +274,14 @@ function describePlaceholder({
 
     if (isWorking) {
         return `${chatId === null ? "The planner" : "The area agent"} is working. Stop it to send a new message.`;
+    }
+
+    if (blockingChatId === null) {
+        return "The planner is working. Wait for it to finish, or stop it from the plan, to send a message.";
+    }
+
+    if (blockingChatId !== undefined) {
+        return `The ${blockingChatId} agent is working. Wait for it to finish, or stop it from its area, to send a message.`;
     }
 
     if (mentions.length > 0) {

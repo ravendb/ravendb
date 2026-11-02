@@ -77,7 +77,12 @@ export type PlannerTurnEnding = { error: string | null; isStopped: boolean };
 
 export type PlannerPrompt = { text: string; mentions: string[] };
 
-export type PlannerPromptTurn = { kind: "prompt"; id: string } & PlannerPrompt;
+export type PlannerPromptTurn = {
+    kind: "prompt";
+    id: string;
+    /** Build asked for the collections left at the time; running it again asks for those left by then. */
+    isBuildRequest: boolean;
+} & PlannerPrompt;
 
 export type PlannerAnswersTurn = {
     kind: "answers";

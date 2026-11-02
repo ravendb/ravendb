@@ -60,12 +60,41 @@ const ANSWERED: PlannerScriptTurn[] = [
 
 const SALES_BUILT: PlannerScriptTurn[] = [...ANSWERED, { area: SALES, frames: plannerBuildFrames }];
 
+const FAILED_PROMPT: PlannerScriptTurn[] = [
+    ...ANSWERED,
+    {
+        userTurn: {
+            kind: "prompt",
+            id: "link",
+            isBuildRequest: false,
+            text: "Link every order line to its product.",
+            mentions: [],
+        },
+        frames: [
+            {
+                type: "error",
+                message:
+                    "Raven.Client.Exceptions.AiException: Failed to communicate with the agent. Unexpected Status Code: GatewayTimeout\n" +
+                    "   at Raven.Server.Documents.AI.ChatCompletionClient.GetResponseContentAsync(CancellationToken token)\n" +
+                    "   at Raven.Server.Documents.AI.ChatCompletionClient.CompleteAsync(CancellationToken token)\n" +
+                    "   at Raven.Server.Documents.Handlers.AI.Agents.ConversationHandler.RunAsync(CancellationToken token)",
+            },
+        ],
+    },
+];
+
+// Stopped once Orders was registered, before the agent got to Products.
+const SALES_STOPPED: PlannerScriptTurn[] = [
+    ...ANSWERED,
+    { area: SALES, frames: plannerBuildFrames.slice(0, 2), isStopped: true },
+];
+
 const ALL_BUILT: PlannerScriptTurn[] = [
     ...SALES_BUILT,
     { area: CUSTOMERS, frames: plannerCustomersBuildFrames },
     {
         area: SALES,
-        userTurn: { kind: "prompt", id: "retry", text: PLANNER_RETRY_PROMPT, mentions: [] },
+        userTurn: { kind: "prompt", id: "retry", isBuildRequest: false, text: PLANNER_RETRY_PROMPT, mentions: [] },
         frames: plannerRetryFrames,
     },
 ];
@@ -173,6 +202,35 @@ export const AreaBuilding: Story = {
     ),
 };
 
+// While an area builds, other areas' chats stay open, but the planner waits: it could change what the area builds from.
+export const ChatsWhileAreaBuilds: Story = {
+    tags: ["test-only"],
+    render: () => (
+        <PlannerAtStep
+            turns={[
+                ...ANSWERED,
+                { area: CUSTOMERS, frames: plannerCustomersBuildFrames },
+                { area: SALES, frames: plannerBuildFrames.slice(0, 3), isWorking: true },
+            ]}
+            view={{ area: CUSTOMERS, collection: null }}
+        />
+    ),
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        expect(canvas.getByRole("textbox", { name: `Message for the ${CUSTOMERS} agent` })).toBeEnabled();
+
+        await userEvent.click(canvas.getByRole("button", { name: "Back to plan" }));
+
+        const plannerComposer = await canvas.findByRole("textbox", { name: "Message for the planner" });
+        expect(plannerComposer).toBeDisabled();
+        expect(plannerComposer).toHaveAttribute(
+            "placeholder",
+            `The ${SALES} agent is working. Wait for it to finish, or stop it from its area, to send a message.`,
+        );
+    },
+};
+
 // What the area's agent built, what it rejected and why, and one-click replies to carry on.
 export const AreaReview: Story = {
     render: () => <PlannerAtStep turns={SALES_BUILT} view={{ area: SALES, collection: null }} />,
@@ -181,6 +239,21 @@ export const AreaReview: Story = {
 // The plan once an area started: the property names are locked, and the strips map the migration.
 export const PlanInProgress: Story = {
     render: () => <PlannerAtStep turns={SALES_BUILT} />,
+};
+
+// An area stopped before it built everything: Build the rest picks up what is left, and the header folds it open.
+export const AreaStoppedEarly: Story = {
+    render: () => (
+        <PlannerAtStep
+            turns={SALES_STOPPED}
+            seedStore={() => useSetupWizardStore.getState().setPlannerExpandedAreas([SALES])}
+        />
+    ),
+};
+
+// A turn that failed shows the first line of its error, the rest folded away, and can run again.
+export const FailedTurn: Story = {
+    render: () => <PlannerAtStep turns={FAILED_PROMPT} />,
 };
 
 // A mapped collection's page, its mapping edited with the Map schema editor.
@@ -302,6 +375,32 @@ export const WriteInsteadOfAnswering: Story = {
     },
 };
 
+// The error's stack trace opens on demand, and Retry sends the failed prompt again.
+export const RetryFailedTurn: Story = {
+    tags: ["test-only"],
+    parameters: { msw: mockHandlers(setupHandlers(migrationMocks.proposalAsk(plannerAnswersFrames, fast))) },
+    render: () => <PlannerAtStep turns={FAILED_PROMPT} />,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const stackLine = /ConversationHandler\.RunAsync/;
+
+        expect(canvas.getByText(/Unexpected Status Code: GatewayTimeout$/)).toBeInTheDocument();
+        expect(canvas.queryByText(stackLine)).not.toBeInTheDocument();
+
+        await userEvent.click(canvas.getByRole("button", { name: "Show details" }));
+        expect(canvas.getByText(stackLine)).toBeInTheDocument();
+        expect(canvas.getByRole("button", { name: "Copy the error details" })).toBeInTheDocument();
+        // The stack trace's long names wrap instead of widening the alert past the chat.
+        const errorAlert = canvas.getByText(stackLine).closest<HTMLElement>("[role=alert]");
+        expect(errorAlert?.scrollWidth).toBeLessThanOrEqual(errorAlert?.clientWidth ?? 0);
+
+        await userEvent.click(canvas.getByRole("button", { name: "Retry" }));
+
+        await waitFor(() => expect(canvas.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument());
+        expect(canvas.getAllByText("Link every order line to its product.")).toHaveLength(2);
+    },
+};
+
 // Build starts the area's agent and opens the area, where its cards fill in; the conventions lock.
 export const BuildArea: Story = {
     tags: ["test-only"],
@@ -320,6 +419,29 @@ export const BuildArea: Story = {
         expect(await canvas.findByRole("button", { name: "Retry Products" })).toBeInTheDocument();
         expect(canvas.getByRole("button", { name: "Ask the planner to fix it" })).toBeInTheDocument();
         expect(useSetupWizardStore.getState().plannerStartedAreas).toEqual([SALES]);
+    },
+};
+
+// With collections left to build, the area's header folds them open, and Open still leads to its agent.
+export const FoldStoppedArea: Story = {
+    tags: ["test-only"],
+    render: () => <PlannerAtStep turns={SALES_STOPPED} />,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const sales = within(canvas.getByRole("region", { name: SALES }));
+        const header = sales.getByRole("button", { name: /^sales/i, expanded: false });
+
+        expect(sales.getByRole("button", { name: "Build the rest" })).toBeInTheDocument();
+
+        await userEvent.click(header);
+
+        expect(header).toHaveAttribute("aria-expanded", "true");
+        expect(sales.getByText("Products")).toBeInTheDocument();
+        expect(useSetupWizardStore.getState().plannerView.area).toBeNull();
+
+        await userEvent.click(sales.getByRole("button", { name: "Open" }));
+
+        expect(useSetupWizardStore.getState().plannerView.area).toBe(SALES);
     },
 };
 
@@ -418,6 +540,25 @@ export const CreateApp: Story = {
         await userEvent.click(canvas.getByRole("button", { name: /create app & continue/i }));
 
         await waitFor(() => expect(useSetupWizardStore.getState().mapOrigin).toMatchObject({ source: "planner" }));
+    },
+};
+
+// Applying the plan leaves the collection page on the table it shows.
+export const CreateAppKeepsSelectedTable: Story = {
+    tags: ["test-only"],
+    render: () => <PlannerAtStep turns={ALL_BUILT} view={{ area: SALES, collection: "Orders" }} />,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        await userEvent.click(canvas.getByRole("button", { name: /OrderLines/ }));
+        const selectedTable = useSetupWizardStore.getState().mapActiveTable;
+        expect(selectedTable).toMatchObject({ type: "embedded" });
+
+        await userEvent.click(canvas.getByRole("button", { name: /create app & continue/i }));
+
+        await waitFor(() => expect(useSetupWizardStore.getState().mapOrigin).toMatchObject({ source: "planner" }));
+        expect(useSetupWizardStore.getState().mapActiveTable).toEqual(selectedTable);
+        expect(canvas.queryByText("Select a table to view its configuration.")).not.toBeInTheDocument();
     },
 };
 
