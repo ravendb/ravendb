@@ -68,16 +68,16 @@ export default class TasksService {
         return new toggleOngoingTaskCommand(databaseName, taskType, task.taskId, task.taskName, !enable).execute();
     }
 
-    async getEtlProgress(databaseName: string, location: databaseLocationSpecifier) {
-        return new etlProgressCommand(databaseName, location, false).execute();
+    async getEtlProgress(databaseName: string, location: databaseLocationSpecifier, taskName?: string, exact = false) {
+        return new etlProgressCommand(databaseName, location, false, taskName, exact).execute();
     }
 
-    async getReplicationProgress(databaseName: string, location: databaseLocationSpecifier) {
-        return new replicationProgressCommand(databaseName, location, false).execute();
+    async getReplicationProgress(databaseName: string, location: databaseLocationSpecifier, exact = false) {
+        return new replicationProgressCommand(databaseName, location, false, exact).execute();
     }
 
-    async getInternalReplicationProgress(databaseName: string, location: databaseLocationSpecifier) {
-        return new internalReplicationProgressCommand(databaseName, location, false).execute();
+    async getInternalReplicationProgress(databaseName: string, location: databaseLocationSpecifier, exact = false) {
+        return new internalReplicationProgressCommand(databaseName, location, false, exact).execute();
     }
 
     async getManualBackup(databaseName: string) {

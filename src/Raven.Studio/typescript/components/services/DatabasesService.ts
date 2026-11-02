@@ -160,8 +160,8 @@ export default class DatabasesService {
         return new saveExpirationConfigurationCommand(databaseName, dto).execute();
     }
 
-    async getTombstonesState(databaseName: string, location: databaseLocationSpecifier) {
-        return new getTombstonesStateCommand(databaseName, location).execute();
+    async getTombstonesState(databaseName: string, location: databaseLocationSpecifier, exact = false) {
+        return new getTombstonesStateCommand(databaseName, location, exact).execute();
     }
 
     async forceTombstonesCleanup(databaseName: string, location: databaseLocationSpecifier) {
