@@ -155,15 +155,21 @@ internal static partial class QueryPlanBuilder
         foreach (ClauseInfo clause in clauses ?? [])
         {
             foreach (ParameterBinding binding in clause.Bindings ?? [])
-            {
-                if (binding is not { Source: BindingSource.QueryParameter, ParameterName: not null }) 
-                    continue;
-                if (slots.TryGetValue(binding.ParameterName, out int slot) == false)
-                    slots.Add(binding.ParameterName, slot = slots.Count);
-                binding.ParameterSlot = slot;
-            }
+                AssignParameterSlot(binding, slots);
 
-            AssignParameterSlots(clause.SubClauses, slots); 
+            if (clause.BoostBinding != null)
+                AssignParameterSlot(clause.BoostBinding, slots);
+
+            AssignParameterSlots(clause.SubClauses, slots);
+        }
+
+        static void AssignParameterSlot(ParameterBinding binding, Dictionary<string, int> slots)
+        {
+            if (binding is not { Source: BindingSource.QueryParameter, ParameterName: not null })
+                return;
+            if (slots.TryGetValue(binding.ParameterName, out int slot) == false)
+                slots.Add(binding.ParameterName, slot = slots.Count);
+            binding.ParameterSlot = slot;
         }
     }
 

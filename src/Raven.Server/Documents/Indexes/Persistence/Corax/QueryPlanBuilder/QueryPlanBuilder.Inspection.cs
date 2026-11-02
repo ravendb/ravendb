@@ -82,7 +82,7 @@ internal static partial class QueryPlanBuilder
                 var packed = clauseExec.PackedParamValue;
                 int inTermCount = clauseExec.InTermCount;
 
-                if (clauseExec.Clause.HasBoost || clauseExec.BoostFactor > 0)
+                if (clauseExec.Clause.BoostBinding != null)
                     parameters["Boost"] = clauseExec.BoostFactor.ToString(CultureInfo.InvariantCulture);
 
                 var term = FormatValueFromPlan(packed, exec, packed.Param1);

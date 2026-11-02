@@ -11,16 +11,19 @@ internal sealed class PlanEmitter
     private readonly List<PlanOp> _ops = [];
     private int _nextRangeIdx; // index for ctx.InRangeCounts[idx] at runtime.
     private int _matchIndex;
+    private readonly bool _hasBoost;
 
     private int _nextScratch = QueryPrimitives.EphemeralBitmapSlot + 1;
     private int _maxScratchUsed = QueryPrimitives.EphemeralBitmapSlot;
+
+    private PlanEmitter(bool hasBoost) => _hasBoost = hasBoost;
 
     public static (PlanOp[] Ops, int RequiredBitmaps) Emit(PlanTemplate template, List<ClauseExecution> executions, PlanParameters planParams, bool scanEligible)
     {
         if (executions.Count is 0) // a genuinely clause-less query (no WHERE) — match every doc.
             return ([new PlanOp { Kind = PlanOpKind.FillFromMatch, ParamIndex = 0 }], 2);
 
-        var emitter = new PlanEmitter();
+        var emitter = new PlanEmitter(planParams.HasBoost);
         // Entry scan filters candidates without going through the matches, so a scored query cannot use it either:
         // the scanned clauses would contribute nothing to the score.
         var (ops, bitmaps) = template.IsOr
@@ -36,6 +39,10 @@ internal sealed class PlanEmitter
         }
         return (ops, bitmaps);
     }
+
+    private MatchDispatch Dispatch(ClauseExecution exec) => _hasBoost 
+    ? MatchDispatch.QueryMatch 
+    : QueryPlanBuilder.GetDispatch(exec, planHasBoost: false);
 
     private (PlanOp[] Ops, int RequiredBitmaps) Complete()
     {
@@ -241,7 +248,7 @@ internal sealed class PlanEmitter
             default:
                 _ops.Add(new PlanOp
                 {
-                    Kind = ToPlanOpKind(merge, QueryPlanBuilder.GetDispatch(exec)),
+                    Kind = ToPlanOpKind(merge, Dispatch(exec)),
                     ParamIndex = _matchIndex++,
                     BitmapLocal = destSlot,
                     SkipEarlyExit = merge == MergeKind.AndInto && suppressEarlyExit,
@@ -434,7 +441,7 @@ internal sealed class PlanEmitter
             default:
                 _ops.Add(new PlanOp
                 {
-                    Kind = ToPlanOpKind(MergeKind.AndNotInto, QueryPlanBuilder.GetDispatch(exec)),
+                    Kind = ToPlanOpKind(MergeKind.AndNotInto, Dispatch(exec)),
                     ParamIndex = _matchIndex++,
                     BitmapLocal = destSlot,
                     DebugLabel = Label(exec)
