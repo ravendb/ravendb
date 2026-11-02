@@ -21,7 +21,7 @@ namespace Voron.Impl.Journal
     ///     - Drain:   flushes do not start writeback; the sync pushes the dirty ranges in bounded blocks before the fdatasync(), limiting the I/O we 
     ///                 generate benefitting from dead-write merging. 
     ///        
-    ///     Using device queue depth (the iostat "aqu-sz" number, sampled once a second).
+    ///     Using the device's queue depth (iostat "aqu-sz"), from its DeviceIoSampler.
     ///
     /// * Device classification:
     ///     - Fast (nvme-like: limits so high we never hit them)
@@ -50,24 +50,27 @@ namespace Voron.Impl.Journal
 
             DeviceWriteBudget Unlikely()
             {
-                var reader = DeviceQueueDepthReader.TryCreate(pathOnDevice, deviceId);
-                var candidate = new DeviceWriteBudget(reader, pathOnDevice, syncCostThresholdTicks, queueDepthThreshold, classifyAboveLatencyTicks);
+                var candidate = new DeviceWriteBudget(sampler: null, pathOnDevice, syncCostThresholdTicks, queueDepthThreshold, classifyAboveLatencyTicks)
+                {
+                    _deviceId = deviceId
+                };
                 var winner = DevicesById.GetOrAdd(deviceId, candidate);
-                if (ReferenceEquals(winner, candidate) == false)
-                    reader?.Dispose(); // lost the race - don't leak the device handle
+                if (ReferenceEquals(winner, candidate))
+                    candidate.TryAttachSampler(nowMs: 0); // only the winner: a sampler outlives every budget it feeds
                 return winner;
             }
         }
 
         public static DeviceWriteBudget CreateUnshared(StorageEnvironmentOptions opts) =>
-            new(queueReader: null, pathOnDevice: "(unshared)", opts.SyncWritebackBarrierCostThresholdTicks, opts.SyncWritebackDrainQueueDepthThreshold, opts.PipelineJournalWritesAboveLatencyInTicks);
+            new(sampler: null, pathOnDevice: "(unshared)", opts.SyncWritebackBarrierCostThresholdTicks, opts.SyncWritebackDrainQueueDepthThreshold, opts.PipelineJournalWritesAboveLatencyInTicks);
 
-        private const long SampleIntervalMs = 1_000;
         private const long ExitQuietMs = 30_000;
         internal const int RecentWriteActivityWindowMs = 3;
         // in Stopwatch.GetTimestamp units (Stopwatch.Frequency per second - NOT TimeSpan ticks)
         private static readonly long RecentWriteActivityWindowTimestampTicks = RecentWriteActivityWindowMs * Stopwatch.Frequency / 1000;
-        private readonly DeviceQueueDepthReader _queueReader; // null = no queue signal on this platform
+        private DeviceIoSampler _sampler; // null = no queue signal; the shared budget of a device asks again later
+        private ulong? _deviceId; // set for the shared budget of a device
+        private long _nextSamplerAttemptMs;
         private readonly string _pathOnDevice;
         private readonly long _syncThresholdTicks;
         private readonly double _enterQueueDepth;
@@ -79,13 +82,12 @@ namespace Voron.Impl.Journal
             validityMs: 60_000); // sync happens rarely, so we give it plenty of time to expire any measurements
         
         private Sparrow.Server.Utils.SimpleEwma<double> _queueDepth = new(smoothing: 4);
-        private long _lastSampleMs;
         private long _lastBusyMs;
         private bool _draining;
 
-        internal DeviceWriteBudget(DeviceQueueDepthReader queueReader, string pathOnDevice, long syncCostThresholdTicks, int queueDepthThreshold, long classifyAboveLatencyTicks)
+        internal DeviceWriteBudget(DeviceIoSampler sampler, string pathOnDevice, long syncCostThresholdTicks, int queueDepthThreshold, long classifyAboveLatencyTicks)
         {
-            _queueReader = queueReader;
+            _sampler = sampler;
             _pathOnDevice = pathOnDevice;
             _syncThresholdTicks = syncCostThresholdTicks;
             _enterQueueDepth = queueDepthThreshold;
@@ -171,7 +173,10 @@ namespace Voron.Impl.Journal
 
         public bool ShouldDrain()
         {
-            var (nowMs, queueDepth) = SampleQueue();
+            var nowMs = _clock.ElapsedMilliseconds;
+            if (Volatile.Read(ref _sampler) == null)
+                TryAttachSampler(nowMs);
+            var queueDepth = _queueDepth.Current;
             // either high device queue depth, or high sync cost (too much I/O for the device to keep up)
             if (queueDepth > _activeQueueThreshold || _syncCostTicksEwma.Current > _syncThresholdTicks)
             {
@@ -222,7 +227,7 @@ namespace Voron.Impl.Journal
 
         public bool TryStartReadAhead(long bytes)
         {
-            if (_queueReader == null)
+            if (Volatile.Read(ref _sampler) == null)
                 return true; // no queue signal, no budget
 
             if (Volatile.Read(ref _readAheadBytesLeft) >= bytes)
@@ -253,37 +258,26 @@ namespace Voron.Impl.Journal
 
         public static IEnumerable<DeviceWriteBudget> Devices => DevicesById.Values;
 
-        public static void Tick()
-        {
-            foreach (var device in DevicesById.Values)
-                device.SampleQueue();
-        }
-
         public string PathOnDevice => _pathOnDevice;
 
-        private (long NowMs, double QueueDepth) SampleQueue()
+        /// <summary>The device's last sample interval, null without a queue signal.</summary>
+        public DeviceIoStats DeviceStats => Volatile.Read(ref _sampler)?.Current;
+
+        // opening the device's counters failed: ask again, at most once per retry interval
+        private void TryAttachSampler(long nowMs)
         {
-            var nowMs = _clock.ElapsedMilliseconds;
-            if (_queueReader == null)
-                return (nowMs, _queueDepth.Current);
+            if (_deviceId is not { } deviceId || nowMs < _nextSamplerAttemptMs)
+                return;
+            _nextSamplerAttemptMs = nowMs + DeviceIoSampler.RetryIntervalMs;
+            var sampler = DeviceIoSampler.ForDevice(deviceId, _pathOnDevice);
+            if (sampler != null && Interlocked.CompareExchange(ref _sampler, sampler, null) == null)
+                sampler.Sampled += OnSample;
+        }
 
-            var last = _lastSampleMs;
-            if (nowMs - last < SampleIntervalMs ||
-                Interlocked.CompareExchange(ref _lastSampleMs, nowMs, last) != last)
-                return (nowMs, _queueDepth.Current); // not due yet, or another thread samples
-
-            try
-            {
-                var queueDepth = _queueReader.Read();
-                _queueDepth.Update(queueDepth);
-                AdjustReadAhead(queueDepth);
-            }
-            catch
-            {
-                // a failed read is a lost sample, nothing more
-            }
-
-            return (nowMs, _queueDepth.Current);
+        internal void OnSample(DeviceIoStats stats)
+        {
+            _queueDepth.Update(stats.QueueDepth);
+            AdjustReadAhead(stats.QueueDepth);
         }
     }
 }

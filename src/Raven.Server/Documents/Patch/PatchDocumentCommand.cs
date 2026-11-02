@@ -482,6 +482,13 @@ namespace Raven.Server.Documents.Patch
             _simplePatch = simplePatch;
         }
 
+        /// <summary>On a shard database, the shard must own the document.</summary>
+        internal static void ValidateId(DocumentsOperationContext context, string id)
+        {
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
+                context.DocumentDatabase.DocumentsStorage.ValidateId(context, lowerId, type: DocumentChangeTypes.Put);
+        }
+
         /// <summary>
         /// Completes the command without the merger: the patch did not change the document.
         /// </summary>
@@ -496,6 +503,8 @@ namespace Raven.Server.Documents.Patch
             var storage = context.DocumentDatabase.DocumentsStorage;
             using (DocumentIdWorker.GetLoweredIdSliceFromId(context, prepared.Id, out Slice lowerId))
             {
+                storage.ValidateId(context, lowerId, type: DocumentChangeTypes.Put);
+
                 // conflicts throw like the script runner's lookup does
                 if (storage.GetTableValueReaderForDocument(context, lowerId, throwOnConflict: true, out TableValueReader current) == false)
                 {
@@ -529,6 +538,7 @@ namespace Raven.Server.Documents.Patch
         {
             // the fast path is only used without an expected change vector, so the document's own one is the only check
             Debug.Assert(_expectedChangeVector == null, "a simple patch with an expected change vector");
+            ValidateId(context, _id);
             var storage = context.DocumentDatabase.DocumentsStorage;
             using (var current = storage.Get(context, _id))
             {

@@ -22,7 +22,6 @@ namespace Raven.Server.Utils
             if (configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             options.PrefetchSegmentSize = configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
-            options.PrefetchResetThreshold = configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
             options.SyncJournalsCountThreshold = configuration.Storage.SyncJournalsCountThreshold;
             options.MaxUnsyncedBytesBeforeSync = configuration.Storage.MaxUnsyncedSizeBeforeSync.GetValue(SizeUnit.Bytes);
             options.MaxUnsyncedBytesBeforeMandatorySync = configuration.Storage.MaxUnsyncedSizeBeforeMandatorySync.GetValue(SizeUnit.Bytes);

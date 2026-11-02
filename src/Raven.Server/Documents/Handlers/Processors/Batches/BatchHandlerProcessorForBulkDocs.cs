@@ -21,6 +21,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Index = Raven.Server.Documents.Indexes.Index;
 using System.Runtime.CompilerServices;
+using Voron.Impl.Paging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Batches;
 
@@ -48,14 +49,17 @@ internal sealed class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
     }
 
     // The merger is a single thread: the pages that putting, patching or deleting existing documents modifies are read here,
-    // so it does not stall on them. A new document (an id the server completes, or a prefix) has none to read.
+    // so it does not stall on them. A new document (an id the server completes or generates, or a prefix) has none to read.
     private ValueTask PrefetchDocumentsAsync(MergedBatchCommand command)
     {
         var database = RequestHandler.Database;
+        if (Pager.CanReadPagesAhead(database.DocumentsStorage.Environment.Options) == false)
+            return ValueTask.CompletedTask;
+
         List<string> ids = null;
         foreach (var cmd in command.ParsedCommands)
         {
-            if (cmd.Type is not (CommandType.PUT or CommandType.PATCH or CommandType.DELETE) || cmd.IdPrefixed || string.IsNullOrEmpty(cmd.Id))
+            if (cmd.Type is not (CommandType.PUT or CommandType.PATCH or CommandType.DELETE) || cmd.IdPrefixed || string.IsNullOrWhiteSpace(cmd.Id))
                 continue;
             var last = cmd.Id[^1];
             if (last == '/' || last == database.IdentityPartsSeparator)

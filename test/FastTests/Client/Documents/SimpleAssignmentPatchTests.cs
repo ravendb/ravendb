@@ -5,11 +5,14 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Exceptions.Sharding;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using PatchDocumentCommand = Raven.Server.Documents.Patch.PatchDocumentCommand;
 using PatchRequestType = Raven.Server.Documents.Patch.PatchRequestType;
 using SimpleAssignmentPatch = Raven.Server.Documents.Patch.SimpleAssignmentPatch;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -219,6 +222,57 @@ namespace FastTests.Client.Documents
             foreach (var (key, value) in values)
                 request.Values[key] = value;
             return store.Operations.Send(new PatchOperation(id, null, request));
+        }
+
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Sharding)]
+        public async Task AShardRefusesAPatchOfADocumentItDoesNotOwn()
+        {
+            using var store = Sharding.GetDocumentStore();
+            const string id = "items/1";
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Item { Name = "original" }, id);
+                await session.SaveChangesAsync();
+            }
+
+            var owner = await Sharding.GetShardNumberForAsync(store, id);
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            var other = record.Sharding.Shards.Keys.First(shard => shard != owner);
+            var wrongShard = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourceStore(ShardHelper.ToShardName(store.Database, other));
+
+            AssertRefused("changed"); // no copy on the shard: patched in the merger
+
+            // a copy on the wrong shard, as a bucket migration leaves before its cleanup
+            wrongShard.ForTestingPurposesOnly().EnableWritesToTheWrongShard = true;
+            using (var session = store.OpenAsyncSession(wrongShard.Name))
+            {
+                await session.StoreAsync(new Item { Name = "original" }, id);
+                await session.SaveChangesAsync();
+            }
+            wrongShard.ForTestingPurposesOnly().EnableWritesToTheWrongShard = false;
+
+            AssertRefused("changed"); // prepared outside the merger, written in it
+            AssertRefused("original"); // not modified: answered outside the merger
+
+            void AssertRefused(string value)
+            {
+                foreach (var script in new[] { "this.Name = args.v;", "this.Name = args.v; void 0;" }) // the fast path, the script engine
+                {
+                    var request = new PatchRequest { Script = script, Values = { ["v"] = value } };
+                    Assert.Throws<ShardMismatchException>(() => store.Operations.ForDatabase(wrongShard.Name).Send(new PatchOperation(id, null, request)));
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Patching)]
+        public void LowMemoryClearsTheScriptCache()
+        {
+            var script = $"this.Name = args.v; // {Guid.NewGuid()}";
+            Assert.NotNull(SimpleAssignmentPatch.TryGet(new Raven.Server.Documents.Patch.PatchRequest(script, PatchRequestType.Patch)));
+            Assert.True(SimpleAssignmentPatch.IsCached(script));
+
+            SimpleAssignmentPatch.LowMemoryForTesting();
+            Assert.False(SimpleAssignmentPatch.IsCached(script));
         }
 
         private static string Body(IDocumentStore store, string id)

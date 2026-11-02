@@ -6,6 +6,7 @@ using Raven.Server.Utils;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.LowMemory;
 
 namespace Raven.Server.Documents.Patch;
 
@@ -18,11 +19,26 @@ namespace Raven.Server.Documents.Patch;
 /// writing a number back as an integer or a double. Anything else (other expressions, objects and arrays, missing or
 /// mixed-type operands, '@' fields) is left to the script runner.
 /// </summary>
-internal sealed class SimpleAssignmentPatch
+internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
 {
-    private static readonly SizeLimitedConcurrentDictionary<string, SimpleAssignmentPatch> Cache = new(size: 1024, StringComparer.Ordinal);
+    private static readonly SimpleAssignmentPatch Scripts = new([], new(size: 1024, StringComparer.Ordinal)); // the notification holds its handlers weakly
     private static readonly SimpleAssignmentPatch NotSimple = new([]);
     private static readonly ParserOptions ParserOptions = ParserOptions.Default;
+
+    static SimpleAssignmentPatch()
+    {
+        LowMemoryNotification.Instance.RegisterLowMemoryHandler(Scripts);
+    }
+
+    public void LowMemory(LowMemorySeverity lowMemorySeverity) => _cache?.Clear();
+
+    public void LowMemoryOver()
+    {
+    }
+
+    internal static bool IsCached(string script) => Scripts._cache.TryGetValue(script, out _);
+
+    internal static void LowMemoryForTesting() => Scripts.LowMemory(LowMemorySeverity.ExtremelyLow);
 
     private enum UpdateKind
     {
@@ -42,10 +58,12 @@ internal sealed class SimpleAssignmentPatch
     private static readonly Operand One = new(null, 1d);
 
     private readonly Update[] _updates;
+    private readonly SizeLimitedConcurrentDictionary<string, SimpleAssignmentPatch> _cache; // the parsed scripts, only on Scripts
 
-    private SimpleAssignmentPatch(Update[] updates)
+    private SimpleAssignmentPatch(Update[] updates, SizeLimitedConcurrentDictionary<string, SimpleAssignmentPatch> cache = null)
     {
         _updates = updates;
+        _cache = cache;
     }
 
     public static SimpleAssignmentPatch TryGet(PatchRequest patch)
@@ -53,10 +71,10 @@ internal sealed class SimpleAssignmentPatch
         if (patch?.Script == null || patch.Type != PatchRequestType.Patch || patch.HasFunctions)
             return null;
 
-        if (Cache.TryGetValue(patch.Script, out var simple) == false)
+        if (Scripts._cache.TryGetValue(patch.Script, out var simple) == false)
         {
             simple = Parse(patch.Script) ?? NotSimple;
-            Cache.Set(patch.Script, simple);
+            Scripts._cache.Set(patch.Script, simple);
         }
 
         return ReferenceEquals(simple, NotSimple) ? null : simple;
@@ -333,34 +351,17 @@ internal sealed class SimpleAssignmentPatch
         }
     }
 
-    // JsBlittableBridge.WriteNumber: keep the original property's number type, otherwise an integer if the value is integral
     private static object ToWrittenNumber(BlittableJsonReaderObject document, string field, double d)
     {
+        var originalType = BlittableJsonToken.Null; // a new property
         var propertyIndex = document.GetPropertyIndex(field);
         if (propertyIndex != -1)
         {
             var property = new BlittableJsonReaderObject.PropertyDetails();
             document.GetPropertyByIndex(propertyIndex, ref property);
-            var type = property.Token & BlittableJsonReaderBase.TypesMask;
-            if (type == BlittableJsonToken.LazyNumber)
-                return d;
+            originalType = property.Token & BlittableJsonReaderBase.TypesMask;
         }
 
-        if (IsDoubleType(d))
-            return d;
-        return (long)d;
-
-        static bool IsDoubleType(double d)
-        {
-            var roundedNumber = Math.Round(d, 0);
-            if (roundedNumber.AlmostEquals(d))
-            {
-                var digitsAfterDecimalPoint = Math.Abs(roundedNumber - d);
-                if (digitsAfterDecimalPoint == 0 && Math.Abs(roundedNumber) <= long.MaxValue)
-                    return false;
-            }
-
-            return true;
-        }
+        return JsBlittableBridge.WriteAsDouble(originalType, d) ? d : (object)(long)d; // object: a plain ?: would make both a double
     }
 }

@@ -24,6 +24,7 @@ Set-Content src/rvngetpalver.c -Value $GenCode
 
 $shared = `
     "src/shared_all.c",
+"src/slots.c",
 "src/rvngetpalver.c"
 
 $win_files = `

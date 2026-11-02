@@ -14,6 +14,36 @@ namespace FastTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Configuration | RavenTestCategory.Voron)]
+        [InlineData("Storage.PrefetchRingMaxFiles", "-1")]
+        [InlineData("Storage.PrefetchRingEntries", "0")]
+        [InlineData("Storage.PrefetchRingQueueSize", "0")]
+        public void InvalidPrefetchRingSettingsFailWithClearError(string key, string value)
+        {
+            var configuration = RavenConfiguration.CreateForServer(null);
+            configuration.SetSetting(key, value);
+
+            var error = Assert.ThrowsAny<Exception>(() => configuration.Initialize());
+            Assert.Contains(key, error.Message);
+        }
+
+        [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Voron)]
+        public void PrefetchRingMaxFilesDefaultsToTheProcessLimit()
+        {
+            var configuration = RavenConfiguration.CreateForServer(null);
+            configuration.Initialize();
+            Assert.Null(configuration.Storage.PrefetchRingMaxFiles);
+        }
+
+        [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Voron)]
+        public void ZeroPrefetchRingMaxFilesTurnsTheRingOff()
+        {
+            var configuration = RavenConfiguration.CreateForServer(null);
+            configuration.SetSetting(RavenConfiguration.GetKey(x => x.Storage.PrefetchRingMaxFiles), "0");
+            configuration.Initialize();
+            Assert.Equal(0, configuration.Storage.PrefetchRingMaxFiles);
+        }
+
+        [RavenTheory(RavenTestCategory.Configuration | RavenTestCategory.Voron)]
         [InlineData("0")]
         [InlineData("1")]
         [InlineData("2")]

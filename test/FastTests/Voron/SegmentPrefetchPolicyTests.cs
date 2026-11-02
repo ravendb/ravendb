@@ -24,10 +24,12 @@ public class SegmentPrefetchPolicyTests(ITestOutputHelper output) : NoDisposalNe
         public readonly PrefetchPolicy Policy = new(TotalMemory, startTimer: false);
         public readonly SegmentPrefetchTable Table;
         public readonly List<long> Prefetches = new(); // segment numbers, in the order they were read ahead
+        public long FilePages; // the data file's current size
 
         public Harness(long fileSegments, DeviceWriteBudget device = null)
         {
             Table = new SegmentPrefetchTable(Policy, device, SegmentSize, fileSegments * SegmentSize);
+            FilePages = fileSegments * PagesPerSegment;
         }
 
         public void Memory(long freeBytes) => Policy.Tick(freeBytes);
@@ -36,7 +38,7 @@ public class SegmentPrefetchPolicyTests(ITestOutputHelper output) : NoDisposalNe
         {
             foreach (var page in pages)
             {
-                if (Table.ShouldPrefetchSegment(page, out var offset, out var bytes))
+                if (Table.ShouldPrefetchSegment(page, FilePages, out var offset, out var bytes))
                 {
                     Assert.Equal(SegmentSize, bytes);
                     Prefetches.Add(offset / SegmentSize);
@@ -138,15 +140,18 @@ public class SegmentPrefetchPolicyTests(ITestOutputHelper output) : NoDisposalNe
         }
     }
 
-    private sealed class FixedQueueDepth : DeviceQueueDepthReader
+    private sealed class NoCounters : DeviceCounters
     {
-        public override double Read() => 0;
-        public override void Dispose() { }
+        public override bool TrySample(long timestamp, out DeviceIoStats stats)
+        {
+            stats = null;
+            return false;
+        }
     }
 
     // queue depth threshold 5, as Storage.SyncWritebackDrainQueueDepthThreshold
     private static DeviceWriteBudget Device() =>
-        new(new FixedQueueDepth(), "test", syncCostThresholdTicks: long.MaxValue, queueDepthThreshold: 5, classifyAboveLatencyTicks: 0);
+        new(new DeviceIoSampler(0, "test", new NoCounters()), "test", syncCostThresholdTicks: long.MaxValue, queueDepthThreshold: 5, classifyAboveLatencyTicks: 0);
 
     [RavenFact(RavenTestCategory.Voron)]
     public void ReadAheadThatUsesItsWholeBudgetGetsTwiceAsMuchWhileTheQueueIsShort()
@@ -192,7 +197,7 @@ public class SegmentPrefetchPolicyTests(ITestOutputHelper output) : NoDisposalNe
     [RavenFact(RavenTestCategory.Voron)]
     public void WithoutAQueueSignalReadAheadIsNotLimited()
     {
-        var device = new DeviceWriteBudget(queueReader: null, "test", syncCostThresholdTicks: long.MaxValue, queueDepthThreshold: 5, classifyAboveLatencyTicks: 0);
+        var device = new DeviceWriteBudget(sampler: null, "test", syncCostThresholdTicks: long.MaxValue, queueDepthThreshold: 5, classifyAboveLatencyTicks: 0);
         for (var i = 0; i < 1_000; i++)
             Assert.True(device.TryStartReadAhead(SegmentSize));
     }
@@ -224,6 +229,22 @@ public class SegmentPrefetchPolicyTests(ITestOutputHelper output) : NoDisposalNe
         using var h = new Harness(fileSegments: 1);
         h.Memory(FreeMemory);
         h.Access(FirstPageOf(100, 1));
+        Assert.Empty(h.Prefetches); // not a page of the file yet
+
+        h.FilePages = 101 * PagesPerSegment; // the file grew
+        h.Access(FirstPageOf(100, 1));
         Assert.Equal([100L], h.Prefetches);
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void PagesOutsideTheFileAreNotReadAhead()
+    {
+        using var h = new Harness(fileSegments: 4);
+        h.Memory(FreeMemory);
+        h.Access([-1L, -PagesPerSegment * 64, long.MinValue, 4 * PagesPerSegment, long.MaxValue]); // a hint may carry -1 or a stale page
+        Assert.Empty(h.Prefetches);
+
+        h.Access([4 * PagesPerSegment - 1]);
+        Assert.Equal([3L], h.Prefetches);
     }
 }

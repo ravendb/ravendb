@@ -7,9 +7,8 @@ using Voron.Impl.Journal;
 namespace Voron.Impl.Paging;
 
 /// <summary>
-/// The per data file state of <see cref="PrefetchPolicy"/>: the warm-up in which each segment was last read ahead. It is
-/// updated on every page access without synchronization: two threads may both read ahead the same segment, which is
-/// harmless.
+/// Per data file state of <see cref="PrefetchPolicy"/>: the warm-up in which each segment was last read ahead on a first
+/// touch. Updated without synchronization: a segment read ahead twice is harmless.
 /// </summary>
 internal sealed class SegmentPrefetchTable
 {
@@ -30,13 +29,16 @@ internal sealed class SegmentPrefetchTable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool ShouldPrefetchSegment(long pageNumber, out long offset, out long bytes)
+    /// <param name="numberOfAllocatedPages">the file's current size: a hint may carry -1 or a stale page number</param>
+    public bool ShouldPrefetchSegment(long pageNumber, long numberOfAllocatedPages, out long offset, out long bytes)
     {
         offset = 0;
         bytes = 0;
         var generation = _policy.Generation;
         if (generation == 0)
             return false; // memory is full
+        if ((ulong)pageNumber >= (ulong)numberOfAllocatedPages)
+            return false; // not a page of the file
 
         var index = (pageNumber * Constants.Storage.PageSize) >> _segmentShift;
         var segments = _segments;

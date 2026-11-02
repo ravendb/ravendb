@@ -131,12 +131,6 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.PrefetchBatchSizeInKb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size PrefetchBatchSize { get; set; }
 
-        [Description("How many gigabytes of memory should be prefetched before restarting the prefetch tracker table. Experts only.")]
-        [DefaultValue(8)]
-        [SizeUnit(SizeUnit.Gigabytes)]
-        [ConfigurationEntry("Storage.PrefetchResetThresholdInGb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public Size PrefetchResetThreshold { get; set; }
-
         [Description("Minimal available free space in percentages on any disk used by a database before creating an alert. Set to null to disable.")]
         [DefaultValue(15)]
         [ConfigurationEntry("Storage.FreeSpaceAlertThresholdInPercentages", ConfigurationEntryScope.ServerWideOrPerDatabase)]
@@ -180,7 +174,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.MaxUnsyncedSizeBeforeMandatorySyncInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size MaxUnsyncedSizeBeforeMandatorySync { get; set; }
 
-        [Description("Time-weighted device queue depth threshold (iostat aqu-sz) that switches writeback from trickle to paced drain mode; reverts when queue stays below 60% of this value for 30 seconds.")]
+        [Description("Time-weighted device queue depth threshold (iostat aqu-sz, averaged over 1 second samples) that switches writeback from trickle to paced drain mode; reverts when queue stays below 60% of this value for 30 seconds.")]
         [DefaultValue(5)]
         [ConfigurationEntry("Storage.SyncWritebackDrainQueueDepthThreshold", ConfigurationEntryScope.ServerWideOnly)]
         public int SyncWritebackDrainQueueDepthThreshold { get; set; }
@@ -276,15 +270,20 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.IoRingQueueSize", ConfigurationEntryScope.ServerWideOnly)]
         public int IoRingQueueSize { get; set; }
 
+        [Description("EXPERT: The number of data files (one per database, index and internal store) that can be open with the I/O ring at the same time. Opening a data file beyond this number fails. By default, the process's limit on open files (RLIMIT_NOFILE) on Linux, and 1048576 on Windows. On Linux, the I/O ring holds at most the process's limit on open files, and older kernels (such as 5.10) at most 32768 files.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Storage.IoRingMaxFiles", ConfigurationEntryScope.ServerWideOnly)]
+        public int? IoRingMaxFiles { get; set; }
+
         [Description("EXPERT: The write mode for writing to the data file (Auto/VectoredFileIo/FileIo/IoRing).")]
         [DefaultValue(Pal.RvnWriteMode.Auto)]
         [ConfigurationEntry("Storage.WriteMode", ConfigurationEntryScope.ServerWideOnly)]
         public Pal.RvnWriteMode WriteMode { get; set; }
 
-        [Description("EXPERT: The number of data files that can be registered with the prefetch I/O ring (Linux). Opening a data file beyond this number fails.")]
-        [DefaultValue(4096)]
+        [Description("EXPERT: The number of data files that can be registered with the prefetch I/O ring (Linux). Opening a data file beyond this number fails. By default, the process's limit on open files (RLIMIT_NOFILE). 0 disables the ring and the read-ahead of data files.")]
+        [DefaultValue(null)]
         [ConfigurationEntry("Storage.PrefetchRingMaxFiles", ConfigurationEntryScope.ServerWideOnly)]
-        public int PrefetchRingMaxFiles { get; set; }
+        public int? PrefetchRingMaxFiles { get; set; }
 
         [Description("EXPERT: The number of prefetch requests the prefetch I/O ring (Linux) keeps in flight.")]
         [DefaultValue(256)]
@@ -310,6 +309,18 @@ namespace Raven.Server.Config.Categories
                 return;
 
             ValidateIoRingConfiguration();
+            ValidatePrefetchRingConfiguration();
+        }
+
+        private void ValidatePrefetchRingConfiguration()
+        {
+            if (PrefetchRingMaxFiles < 0)
+                throw new InvalidOperationException(
+                    $"'{RavenConfiguration.GetKey(x => x.Storage.PrefetchRingMaxFiles)}' is set to {PrefetchRingMaxFiles}. Use 0 to disable the prefetch ring, or a positive number of data files.");
+            if (PrefetchRingEntries < 1)
+                throw new InvalidOperationException($"'{RavenConfiguration.GetKey(x => x.Storage.PrefetchRingEntries)}' is set to {PrefetchRingEntries}, it must be at least 1.");
+            if (PrefetchRingQueueSize < 1)
+                throw new InvalidOperationException($"'{RavenConfiguration.GetKey(x => x.Storage.PrefetchRingQueueSize)}' is set to {PrefetchRingQueueSize}, it must be at least 1.");
         }
 
         private void ValidateIoRingConfiguration()
@@ -322,6 +333,14 @@ namespace Raven.Server.Config.Categories
                 throw new InvalidOperationException(
                     $"'{sizeKey}' is set to {IoRingQueueSize}, which is not a valid I/O ring queue size. " +
                     $"Use -1 to disable I/O ring (only supported with '{modeKey}={Pal.RvnWriteMode.Auto}') or a value of at least 3.");
+            }
+
+            if (IoRingMaxFiles < 1)
+            {
+                var maxFilesKey = RavenConfiguration.GetKey(x => x.Storage.IoRingMaxFiles);
+                throw new InvalidOperationException(
+                    $"'{maxFilesKey}' is set to {IoRingMaxFiles}, but the I/O ring needs room for at least one data file. " +
+                    $"Remove '{maxFilesKey}' to use the default (the process's limit on open files), or set '{modeKey}' to stop using the I/O ring.");
             }
 
             if (WriteMode == Pal.RvnWriteMode.IoRing && IoRingQueueSize == -1)

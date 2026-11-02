@@ -1,4 +1,6 @@
+using System;
 using System.Threading.Tasks;
+using Sparrow.Binary;
 using Sparrow.Server.Threading;
 using Tests.Infrastructure;
 using Xunit;
@@ -83,13 +85,16 @@ namespace FastTests.Sparrow
         {
             var max = new PerCoreValue<PerCoreMax>();
 
-            Parallel.For(0, 64, new ParallelOptions { MaxDegreeOfParallelism = 16 }, i =>
+            // one writer per slot: PerCoreMax is racy on purpose, two threads that share a slot can lose the larger value
+            int cores = Bits.PowerOf2(Environment.ProcessorCount);
+            Parallel.For(0, cores, core =>
             {
+                var slot = new PerCoreValue<PerCoreMax>.Slot(max, core);
                 for (int j = 1; j <= 1000; j++)
-                    max.Apply(i * 1000 + j);
+                    slot.Apply(core * 1000 + j);
             });
 
-            Assert.Equal(64_000, max.Value);
+            Assert.Equal(cores * 1000, max.Value);
         }
     }
 }

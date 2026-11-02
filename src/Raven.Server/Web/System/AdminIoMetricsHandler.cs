@@ -12,6 +12,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Platform;
+using Sparrow.Server.Utils;
 using Voron;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
@@ -56,7 +57,17 @@ namespace Raven.Server.Web.System
                     {
                         [nameof(DeviceWriteBudget.PathOnDevice)] = d.PathOnDevice,
                         [nameof(DeviceWriteBudget.QueueDepth)] = d.QueueDepth,
-                        [nameof(DeviceWriteBudget.ReadAheadBytesPerInterval)] = d.ReadAheadBytesPerInterval
+                        [nameof(DeviceWriteBudget.ReadAheadBytesPerInterval)] = d.ReadAheadBytesPerInterval,
+                        [nameof(DeviceWriteBudget.DeviceStats)] = d.DeviceStats == null ? null : new DynamicJsonValue
+                        {
+                            [nameof(DeviceIoStats.ReadsPerSecond)] = d.DeviceStats.ReadsPerSecond,
+                            [nameof(DeviceIoStats.WritesPerSecond)] = d.DeviceStats.WritesPerSecond,
+                            [nameof(DeviceIoStats.ReadBytesPerSecond)] = d.DeviceStats.ReadBytesPerSecond,
+                            [nameof(DeviceIoStats.WriteBytesPerSecond)] = d.DeviceStats.WriteBytesPerSecond,
+                            [nameof(DeviceIoStats.QueueDepth)] = d.DeviceStats.QueueDepth,
+                            [nameof(DeviceIoStats.ReadLatencyMs)] = d.DeviceStats.ReadLatencyMs,
+                            [nameof(DeviceIoStats.WriteLatencyMs)] = d.DeviceStats.WriteLatencyMs
+                        }
                     }))
                 });
             }

@@ -12,6 +12,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 using System.Runtime.CompilerServices;
+using Voron.Impl.Paging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
@@ -26,9 +27,14 @@ internal sealed class DocumentHandlerProcessorForPatch : AbstractDocumentHandler
     private ValueTask PrepareOutsideOfMerger(DocumentsOperationContext context, string id, PatchDocumentCommand command, SimpleAssignmentPatch simplePatch, BlittableJsonReaderObject args)
     {
         var storage = RequestHandler.Database.DocumentsStorage;
+        var readAhead = Pager.CanReadPagesAhead(storage.Environment.Options);
+        if (simplePatch == null && readAhead == false)
+            return ValueTask.CompletedTask; // only the read-ahead would read the document here
+
         using (context.OpenReadTransaction())
         using (var document = storage.Get(context, id, simplePatch == null ? DocumentFields.Data : DocumentFields.All, throwOnConflict: false))
         {
+            PatchDocumentCommand.ValidateId(context, id); // validate here, we may skip the merger
             if (document == null)
                 return ValueTask.CompletedTask;
 
@@ -41,7 +47,7 @@ internal sealed class DocumentHandlerProcessorForPatch : AbstractDocumentHandler
                 }
                 command.SetPrepared(document.Id, document.ChangeVector, document.Flags, modified);
             }
-            return storage.PrefetchDocumentAsync(context, document);
+            return readAhead ? storage.PrefetchDocumentAsync(context, document) : ValueTask.CompletedTask;
         }
     }
 
