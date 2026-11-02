@@ -8,9 +8,6 @@ namespace Raven.Server.Documents.Queries.AST
         public bool MinInclusive = true;
         public bool MaxInclusive = true;
 
-        // set by the query metadata when it assembles the between from two comparisons in an 'and' chain; such a between may
-        // be exclusive on either end and may pair value kinds a hand-written between cannot, so it prints and translates as the
-        // comparisons it came from wherever a hand-written between would not do
         public bool Folded;
 
         public BetweenExpression(QueryExpression source, ValueExpression min, ValueExpression max)
@@ -21,8 +18,7 @@ namespace Raven.Server.Documents.Queries.AST
             Type = ExpressionType.Between;
         }
 
-        // the two comparisons the between stands for, each with its own inclusivity; a between written in RQL is inclusive on
-        // both ends, one folded from 'Foo > $a and Foo < $b' is not
+        // the two comparisons the between stands for, each with its own inclusivity
         public BinaryExpression LowerBound() => new BinaryExpression(Source, Min, MinInclusive ? OperatorType.GreaterThanEqual : OperatorType.GreaterThan);
 
         public BinaryExpression UpperBound() => new BinaryExpression(Source, Max, MaxInclusive ? OperatorType.LessThanEqual : OperatorType.LessThan);
