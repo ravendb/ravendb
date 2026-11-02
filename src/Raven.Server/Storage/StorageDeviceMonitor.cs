@@ -66,9 +66,9 @@ namespace Raven.Server.Storage
                 _startedAt ??= now;
                 RestorePersistedHintsOnce();
 
-                Dictionary<DeviceWriteBudget, string> devices = GetDevices();
-                foreach (var (device, mountPoint) in devices)
-                    _trackers.GetOrAdd(device, d => new DeviceTracker(d, mountPoint));
+                Dictionary<DeviceWriteBudget, DeviceDrives> devices = GetDevices();
+                foreach (var (device, drives) in devices)
+                    _trackers.GetOrAdd(device, d => new DeviceTracker(d, drives.MountPoint)).JournalMountPoint = drives.JournalMountPoint;
 
                 foreach (var (device, tracker) in _trackers)
                 {
@@ -183,11 +183,11 @@ namespace Raven.Server.Storage
                 string queue = lastHour.TypicalQueueDepth is { } queueDepth && queueDepth > enterQueueDepth
                     ? $" (queue depth {queueDepth:#,#0.#}, pacing starts above {enterQueueDepth:#,#0.#})"
                     : string.Empty;
-                sentences.Add($"Disk {tracker.MountPoint} was congested {drainShare * 100:0}% of the last hour{queue}, so the server paced its data file writes.");
+                sentences.Add($"Disk {tracker.Name} was congested {drainShare * 100:0}% of the last hour{queue}, so the server paced its data file writes.");
             }
             else
             {
-                sentences.Add($"On disk {tracker.MountPoint}, {tracker.SaturationCause}.");
+                sentences.Add($"On disk {tracker.Name}, {tracker.SaturationCause}.");
             }
 
             if (lastHour.TypicalJournalWriteLatencyInMs is { } typical && lastHour.PeakJournalWriteLatencyInMs is { } peak)
@@ -321,31 +321,43 @@ namespace Raven.Server.Storage
 
         public DiskStatsResult GetDiskStats(string mountPoint) => mountPoint == null ? null : _serverStore.Server.DiskStatsGetter?.Get(mountPoint);
 
-        // device -> mount point (drive on Windows) of the first environment found on it
-        public Dictionary<DeviceWriteBudget, string> GetDevices()
+        public readonly record struct DeviceDrives(string MountPoint, string JournalMountPoint);
+
+        // device -> mount point (drive on Windows) of the first environment found on it, and where journals linked to another disk live
+        public Dictionary<DeviceWriteBudget, DeviceDrives> GetDevices()
         {
-            var devices = new Dictionary<DeviceWriteBudget, string>(ReferenceEqualityComparer.Instance);
+            var devices = new Dictionary<DeviceWriteBudget, DeviceDrives>(ReferenceEqualityComparer.Instance);
             foreach (EnvironmentOfDatabase env in GetEnvironments())
             {
                 StorageEnvironmentOptions options = env.Environment.Environment.Options;
                 DeviceWriteBudget device = options.DeviceWriteBudget;
-                if (device == null || devices.ContainsKey(device)) // null: the device could not be identified, the environment uses its own budget
+                if (device == null) // the device could not be identified, the environment uses its own budget
                     continue;
 
-                string mountPoint = null;
-                try
-                {
-                    mountPoint = options.DriveInfoByPath?.Value?.BasePath?.DriveName;
-                }
-                catch
-                {
-                    // best effort, falls back to the path root
-                }
-
-                devices[device] = mountPoint;
+                (string data, string journalsElsewhere) = GetDrives(options);
+                devices[device] = devices.TryGetValue(device, out DeviceDrives known)
+                    ? known with { JournalMountPoint = known.JournalMountPoint ?? journalsElsewhere }
+                    : new DeviceDrives(data, journalsElsewhere);
             }
 
             return devices;
+        }
+
+        // the device is the one of the data file, but journal writes are measured wherever the Journals directory really is,
+        // so a Journals directory linked to another disk is reported as such. Best effort: null falls back to the path root.
+        internal static (string Data, string JournalsElsewhere) GetDrives(StorageEnvironmentOptions options)
+        {
+            try
+            {
+                DriveInfoByPath drives = options.DriveInfoByPath?.Value;
+                string data = drives?.BasePath?.DriveName;
+                string journals = drives?.JournalPath?.DriveName;
+                return (data, data != null && journals != null && string.Equals(data, journals, StringComparison.OrdinalIgnoreCase) == false ? journals : null);
+            }
+            catch
+            {
+                return default;
+            }
         }
 
         public readonly record struct EnvironmentOfDatabase(string Database, StorageEnvironmentWithType Environment, DocumentDatabase Instance = null);
@@ -450,6 +462,12 @@ namespace Raven.Server.Storage
         public string SaturationCause { get; private set; }
 
         public string MountPoint { get; }
+
+        // set while environments on this disk keep their journals on another disk, where the journal write latency of this device is measured
+        public string JournalMountPoint { get; internal set; }
+
+        // the disk as texts name it
+        public string Name => JournalMountPoint == null ? MountPoint : $"{MountPoint} (journals on {JournalMountPoint})";
 
         public void Add(Sample sample, CongestionThresholds thresholds)
         {

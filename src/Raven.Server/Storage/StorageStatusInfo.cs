@@ -47,10 +47,10 @@ namespace Raven.Server.Storage
                 Disks = disks.Count,
                 Summary = status switch
                 {
-                    StorageDeviceStatus.Saturated => $"Disk {worst.MountPoint} is saturated: {worst.SaturationCause}. Writes and indexing are slowed down.",
+                    StorageDeviceStatus.Saturated => $"Disk {worst.Name} is saturated: {worst.SaturationCause}. Writes and indexing are slowed down.",
                     StorageDeviceStatus.Busy => worstLast.Value.Draining
-                        ? $"Disk {worst.MountPoint} is busy: in the last 10 seconds the server paced its writes so the disk can keep up."
-                        : $"Disk {worst.MountPoint} is busy: journal writes took {worstLast.Value.JournalWriteLatencyInMs:#,#0.##} ms in the last 10 seconds.",
+                        ? $"Disk {worst.Name} is busy: in the last 10 seconds the server paced its writes so the disk can keep up."
+                        : $"Disk {worst.Name} is busy: journal writes took {worstLast.Value.JournalWriteLatencyInMs:#,#0.##} ms in the last 10 seconds.",
                     _ => disks.Count == 1 ? "The disk keeps up with the writes." : $"All {disks.Count} disks keep up with the writes."
                 }
             };
