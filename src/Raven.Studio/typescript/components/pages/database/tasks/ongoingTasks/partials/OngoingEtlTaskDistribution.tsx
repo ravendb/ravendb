@@ -59,7 +59,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
             task.shared.taskName,
             true
         );
-        return Results[0]?.ProcessesProgress.map(mapEtlProgress);
+        return Results.find((x) => x.TaskName === task.shared.taskName)?.ProcessesProgress.map(mapEtlProgress);
     });
 
     return (
