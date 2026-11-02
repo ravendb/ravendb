@@ -1059,6 +1059,52 @@ namespace FastTests.Client
             }
         }
 
+        private class WithExtensionData
+        {
+            public string Id { get; set; }
+
+            public string Name { get; set; }
+
+            [JsonExtensionData]
+            public Dictionary<string, object> Extra { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task SessionStoresAndLoadsSystemTextJsonExtensionData()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.Serialization = new SystemTextJsonSerializationConventions()
+            });
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new WithExtensionData
+                {
+                    Name = "name",
+                    Extra = new Dictionary<string, object> { ["Age"] = 30, ["City"] = "Hadera" }
+                }, "items/1");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var raw = await session.LoadAsync<BlittableJsonReaderObject>("items/1");
+                Assert.Equal("name", raw["Name"].ToString());
+                Assert.Equal(30L, raw["Age"]);
+                Assert.Equal("Hadera", raw["City"].ToString());
+                Assert.False(raw.TryGet(nameof(WithExtensionData.Extra), out object _));
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var item = await session.LoadAsync<WithExtensionData>("items/1");
+                Assert.Equal(30L, item.Extra["Age"]);
+                Assert.Equal("Hadera", item.Extra["City"]);
+                Assert.False(session.Advanced.HasChanges);
+            }
+        }
+
         [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Querying)]
         public void VectorSearchFieldNamesFollowStoreConventions()
         {
