@@ -3144,7 +3144,7 @@ namespace Raven.Server.ServerWide
             {
                 if (isRestore == false)
                 {
-                    var dbRecordExist = Cluster.DatabaseExists(context, databaseName);
+                    var dbRecordExist = ClusterStateMachine.DatabaseExists(context, databaseName);
                     if (index.HasValue && dbRecordExist == false)
                         throw new BadRequestException($"Attempted to modify non-existing database: '{databaseName}'");
 

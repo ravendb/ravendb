@@ -137,7 +137,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public bool TryInsert(PeriodicBackupStatus backupStatus, string databaseName)
         {
-            var command = new UpdateLocalBackupStatusCommand(_serverStore.Cluster, backupStatus, databaseName, backupStatus.TaskId);
+            var command = new UpdateLocalBackupStatusCommand(backupStatus, databaseName, backupStatus.TaskId);
             _serverStore.Engine.TxMerger.EnqueueSync(command);
 
             if (_logger.IsInfoEnabled)

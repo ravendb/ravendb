@@ -476,7 +476,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                if (DatabaseValidation && ServerStore.Cluster.DatabaseExists(context, RestoreConfiguration.DatabaseName))
+                if (DatabaseValidation && ClusterStateMachine.DatabaseExists(context, RestoreConfiguration.DatabaseName))
                     throw new ArgumentException($"Cannot restore data to an existing database named {RestoreConfiguration.DatabaseName}");
 
                 return ServerStore.GetClusterTopology(context);
@@ -620,7 +620,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     bool databaseExists;
                     using (context.OpenReadTransaction())
                     {
-                        databaseExists = ServerStore.Cluster.DatabaseExists(context, RestoreConfiguration.DatabaseName);
+                        databaseExists = ClusterStateMachine.DatabaseExists(context, RestoreConfiguration.DatabaseName);
                     }
 
                     if (databaseExists == false)

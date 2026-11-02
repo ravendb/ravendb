@@ -3633,7 +3633,7 @@ namespace Raven.Server.ServerWide
             return ReadRawDatabaseRecord(context, name, out _);
         }
 
-        public bool DatabaseExists<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
+        public static bool DatabaseExists<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
             where TTransaction : RavenTransaction
         {
             name = ShardHelper.ToDatabaseName(name);

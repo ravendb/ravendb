@@ -493,6 +493,7 @@ namespace Raven.Server.Documents
                     }
                 }
 
+                RemoveWakeupTimer(dbName);
                 DeleteDatabaseNotifications(dbName, throwOnError: true);
                 DeleteDatabaseCachedInfo(dbName, throwOnError: true);
                 DeleteLocalBackupStatuses(dbName, throwOnError: true);
@@ -1417,7 +1418,11 @@ namespace Raven.Server.Documents
                         case IdleDatabaseActivityType.UpdateBackupStatusOnly:
 
                             if (_serverStore.IdleDatabases.ContainsKey(databaseName) == false)
+                            {
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Skipping the backup status update of the database '{databaseName}' because it is no longer idle");
                                 break;
+                            }
 
                             using (var backupStatusUpdate = _serverStore.ConcurrentBackupsCounter.TryStartIdleBackupStatusUpdate())
                             {
@@ -1445,9 +1450,15 @@ namespace Raven.Server.Documents
                             ForTestingPurposes?.AfterIdleBackupStatusSaved?.Invoke(databaseName);
 
                             if (_serverStore.IdleDatabases.ContainsKey(databaseName) == false)
+                            {
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Not rescheduling the backup status update of the database '{databaseName}' because it is no longer idle");
                                 break;
+                            }
 
                             // choose the next backup that will arrive the earliest
+                            // the retry keeps the original DateTime, so if the retries pushed the save past the next incremental backup,
+                            // the next backup is already due and the database will be woken up instead of skipping the incremental backup
                             nextIdleDatabaseActivity = BackupUtils.GetEarliestIdleDatabaseActivity(new BackupUtils.EarliestIdleDatabaseActivityParameters
                             {
                                 DatabaseName = databaseName,
@@ -1458,6 +1469,8 @@ namespace Raven.Server.Documents
                             });
 
                             RescheduleNextIdleDatabaseActivity(databaseName, nextIdleDatabaseActivity);
+                            if (_serverStore.IdleDatabases.ContainsKey(databaseName) == false)
+                                RemoveWakeupTimer(databaseName);
                             break;
 
                             int RescheduleBackupStatusUpdate()
@@ -1467,6 +1480,8 @@ namespace Raven.Server.Documents
                                 var delayInMs = _dueTimeOnRetry + Random.Shared.Next(0, _dueTimeOnRetry);
                                 nextIdleDatabaseActivity.RetryAt = DateTime.UtcNow.AddMilliseconds(delayInMs);
                                 RescheduleNextIdleDatabaseActivity(databaseName, nextIdleDatabaseActivity);
+                                if (_serverStore.IdleDatabases.ContainsKey(databaseName) == false)
+                                    RemoveWakeupTimer(databaseName);
                                 return delayInMs;
                             }
 
@@ -1563,6 +1578,8 @@ namespace Raven.Server.Documents
 
             // Unloading and then loading a database can use a lot of resources.
             // Therefore, we don't want to unload the database unless we're sure it will be loaded again soon.
+            // The wakeup timer is armed before the database is added to IdleDatabases, and the idle check in NextScheduledActivityCallback
+            // drops a timer of a database that isn't idle, so this due time must stay long enough for the timer not to fire in between.
             return idleDatabaseActivity.DueTime > TimeSpan.FromMinutes(5).TotalMilliseconds;
         }
 
