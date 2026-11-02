@@ -123,6 +123,7 @@ namespace Sparrow.Collections
             }
 
             item = cell.Value;
+            cell.Value = default; // must happen before the cell is handed back to enqueuers below
             Volatile.Write(ref cell.Sequence, pos + _buffer.Length); // This will perform a Volatile.Write on the sequence number.
             return true;
         }
