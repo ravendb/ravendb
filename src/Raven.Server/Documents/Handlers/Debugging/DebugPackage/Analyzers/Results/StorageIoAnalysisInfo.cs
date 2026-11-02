@@ -11,6 +11,9 @@ public class StorageIoAnalysisInfo
     // true: read from /admin/debug/storage/io; false: an older package, derived from the io-metrics it contains
     public bool FromStorageIoEndpoint { get; set; }
 
+    // false for packages from before 8.0: no paced writes, no disk classification, no Auto journal compression
+    public bool AdaptiveWritePath { get; set; } = true;
+
     // null in packages without /admin/debug/storage/io
     public StorageWriteModeInfo WriteMode { get; set; }
 

@@ -142,6 +142,23 @@ public class RavenDB_27827 : NoDisposalNeeded
         Assert.DoesNotContain(report.ForNode("B").DetectedIssues.ServerIssues, x => x.Title == "Slow disk not detected as bandwidth limited");
     }
 
+    [RavenFact(RavenTestCategory.Core)]
+    public void Analyzer_does_not_judge_a_disk_before_8_0_by_its_data_file_sync_cost()
+    {
+        // before 8.0 nothing is paced and a data file sync writes the whole dirty set, so long syncs next to fast journal writes are normal
+        using var package = ClusterPackage(new Dictionary<string, Dictionary<string, object>>
+        {
+            ["A"] = new() { ["server-wide/build.version.json"] = new { FullVersion = "5.4.208" }, ["server-wide/admin.io-metrics.json"] = IoMetrics(journalWriteMs: 2, syncMs: 600) },
+            ["B"] = new() { ["server-wide/build.version.json"] = new { FullVersion = "5.4.208" }, ["server-wide/admin.io-metrics.json"] = IoMetrics(journalWriteMs: 2, syncMs: 8) }
+        });
+
+        var report = new DebugPackageAnalyzer(package).Analyze();
+
+        Assert.DoesNotContain(report.ForNode("A").DetectedIssues.ServerIssues, x => x.Title.Contains("bottleneck"));
+        Assert.DoesNotContain(report.ClusterWideIssues.ClusterIssues, x => x.Title.Contains("held back by its disk"));
+        Assert.False(report.ForNode("A").Server.StorageIo.Devices.Single().LikelyDraining);
+    }
+
     private static StorageDeviceIoInfo Device(StorageDeviceStatus status, double drainShare, double latencyNow, Func<int, double> latencyOfSample)
     {
         var at = DateTime.UtcNow.AddHours(-1);

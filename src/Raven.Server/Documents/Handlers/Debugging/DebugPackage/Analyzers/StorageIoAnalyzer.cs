@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Errors;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Issues;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results;
@@ -63,10 +64,21 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
                 return false;
             }
 
-            StorageIo.Devices.Add(Derive(all));
+            StorageIo.AdaptiveWritePath = IsAdaptiveWritePath(serverEntries);
+            StorageIo.Devices.Add(Derive(all, StorageIo.AdaptiveWritePath));
         }
 
         return true;
+    }
+
+    // a package without a readable version is treated as current
+    private static bool IsAdaptiveWritePath(DebugPackageEntries serverEntries)
+    {
+        if (serverEntries.TryGetValue<BuildVersionHandler, string>(x => x.Get(), nameof(BuildNumber.FullVersion), out string fullVersion) == false ||
+            Version.TryParse(fullVersion?.Split('-')[0], out Version version) == false)
+            return true;
+
+        return version.Major >= 8;
     }
 
     protected override void DetectIssues(DebugPackageAnalysisIssues issues)
@@ -86,7 +98,7 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
             }
 
             // a congested disk taking tiny writes is never classified, so Auto compression stays on LZ4 exactly where Zstd would help
-            if (device.IsBottleneck && device.Class == DeviceWriteBudget.DeviceClass.Unknown && device.JournalWriteSizeInBytes > 0 &&
+            if (StorageIo.AdaptiveWritePath && device.IsBottleneck && device.Class == DeviceWriteBudget.DeviceClass.Unknown && device.JournalWriteSizeInBytes > 0 &&
                 device.JournalWriteSizeInBytes < DeviceWriteBudget.SmallWriteBytes && Latency(device) >= DefaultClassifyAboveLatencyInMs)
             {
                 issues.ServerIssues.Add(new DetectedIssue(
@@ -259,8 +271,9 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
         };
     }
 
-    // mirrors DeviceWriteBudget: EWMAs seeded by the first sample, smoothing 8 for journal writes and 4 for syncs
-    internal static StorageIoDeviceAnalysis Derive(List<IoMetricsDump> dumps)
+    // mirrors DeviceWriteBudget: EWMAs seeded by the first sample, smoothing 8 for journal writes and 4 for syncs.
+    // Before 8.0 nothing is paced and a data file sync writes the whole dirty set, so only the journal writes tell a slow disk.
+    internal static StorageIoDeviceAnalysis Derive(List<IoMetricsDump> dumps, bool adaptiveWritePath)
     {
         var writes = new List<IoMetricsItem>();
         var syncs = new List<IoMetricsItem>();
@@ -285,12 +298,14 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
             JournalWriteLatencyInMs = latency,
             JournalWriteSizeInBytes = (long)size,
             SyncCostInMs = syncCost,
-            LikelyDraining = syncCost > DefaultSyncCostDrainInMs,
+            LikelyDraining = adaptiveWritePath && syncCost > DefaultSyncCostDrainInMs,
             From = writes.Count > 0 ? writes[0].StartTime : null,
             To = writes.Count > 0 ? writes[^1].StartTime : null
         };
 
-        (device.Class, device.ClassDescription) = Classify(latency, size);
+        (device.Class, device.ClassDescription) = adaptiveWritePath
+            ? Classify(latency, size)
+            : (DeviceWriteBudget.DeviceClass.Unknown, "disks are not classified before 8.0");
         device.IsBottleneck = device.LikelyDraining || latency > DefaultCongestionLatencyInMs;
         return device;
     }

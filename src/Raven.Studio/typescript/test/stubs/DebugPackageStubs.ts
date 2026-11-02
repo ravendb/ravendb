@@ -900,6 +900,7 @@ export class DebugPackageStubs {
 
         return {
             FromStorageIoEndpoint: true,
+            AdaptiveWritePath: true,
             WriteMode: { Effective: "IoRing", Configured: "Auto", IoRingQueueSize: 1024, LowPriorityIo: false },
             Devices: [device],
             Databases: databases,
