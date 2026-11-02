@@ -212,9 +212,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     if (field.Name != name)
                         continue;
 
-                    if (_spatialCentersBuilder.Length > 0)
-                        _spatialCentersBuilder.Append(SpatialField.LuceneCentersSeparator);
-
                     _spatialCentersBuilder.Append(field.StringValue(null));
                 }
 
