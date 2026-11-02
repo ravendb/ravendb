@@ -9,6 +9,7 @@ import { selectHasSession, selectIsAnyChatWorking } from "@/pages/setup/add-app-
 export function PlannerHeaderActions({ isBusy }: WizardHeaderComponentProps) {
     const hasSession = useSetupWizardStore(selectHasSession);
     const isWorking = useSetupWizardStore(selectIsAnyChatWorking);
+    const isSaving = useSetupWizardStore((state) => state.plannerIsSaving);
     const isChatOpen = useSetupWizardStore((state) => state.plannerIsChatOpen);
     const setPlannerChatOpen = useSetupWizardStore((state) => state.setPlannerChatOpen);
     const startPlannerOver = useSetupWizardStore((state) => state.startPlannerOver);
@@ -31,7 +32,7 @@ export function PlannerHeaderActions({ isBusy }: WizardHeaderComponentProps) {
             )}
             <ConfirmDialog
                 trigger={
-                    <Button variant="outline" size="sm" disabled={isWorking || isBusy}>
+                    <Button variant="outline" size="sm" disabled={isWorking || isSaving || isBusy}>
                         <RotateCcw data-icon="inline-start" />
                         Start over
                     </Button>

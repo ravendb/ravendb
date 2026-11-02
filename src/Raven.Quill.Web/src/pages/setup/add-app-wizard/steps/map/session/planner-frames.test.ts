@@ -6,6 +6,7 @@ import {
     createReplyTurn,
     endPlannerTurn,
     endReplyTurn,
+    isAreaAlreadyStartedError,
     isAreaNotStartedError,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-frames";
 import {
@@ -300,5 +301,12 @@ describe("isAreaNotStartedError", () => {
     it("recognizes the answer for an area that never started", () => {
         expect(isAreaNotStartedError("The area Sales has not started; start it first.")).toBe(true);
         expect(isAreaNotStartedError("The turn was stopped.")).toBe(false);
+    });
+});
+
+describe("isAreaAlreadyStartedError", () => {
+    it("recognizes the answer for an area that started before", () => {
+        expect(isAreaAlreadyStartedError("The area Sales has already started; ask in it instead.")).toBe(true);
+        expect(isAreaAlreadyStartedError("The area Sales has not started; start it first.")).toBe(false);
     });
 });
