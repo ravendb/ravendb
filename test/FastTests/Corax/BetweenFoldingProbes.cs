@@ -214,6 +214,48 @@ namespace FastTests.Corax
             Assert.Equal(new[] { "items/15" }, session.Advanced.RawQuery<Item>(rql).Skip(1).ToList().Select(x => x.Id).ToArray());
         }
 
+        // N4: an inclusive pair of mixed kinds folds into a between a hand-written between is not allowed to be. Re-rendered
+        // for the shards it must print as the comparisons the user wrote, or the shard rejects it
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData("Price >= 10 and Price <= 15.5", SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
+        [RavenData("Price >= $lo and Price <= $hi", SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void InclusiveBoundsOfMixedKindsSurviveTheShardedRewrite(Options options, string where)
+        {
+            using var store = Seed(options,
+                new Item { Id = "items/10", Tag = "t", Price = 10 },
+                new Item { Id = "items/12", Tag = "t", Price = 12 },
+                new Item { Id = "items/15", Tag = "t", Price = 15 },
+                new Item { Id = "items/20", Tag = "t", Price = 20 });
+
+            using var session = store.OpenSession();
+            Assert.Equal(new[] { "items/10", "items/12", "items/15" }, Query(0));
+            Assert.Equal(new[] { "items/12", "items/15" }, Query(skip: 1));
+
+            string[] Query(int skip) => session.Advanced.RawQuery<Item>($"from index 'Items/ByTag' where Tag = 't' and {where} order by Price")
+                .AddParameter("lo", 10)
+                .AddParameter("hi", 15.5)
+                .Skip(skip)
+                .ToList()
+                .Select(x => x.Id)
+                .ToArray();
+        }
+
+        // N5: a hand-written between with a null side is an open-ended range on Corax; it must not be taken apart into a
+        // comparison against null, which the unary path rejects. Lucene never translated this shape and is not covered.
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+        [RavenData("Price between $lo and $hi", SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData("Price >= $lo and Price <= $hi", SearchEngineMode = RavenSearchEngineMode.Corax)]
+        public void BetweenWithANullSideIsOpenEndedOnCorax(Options options, string where)
+        {
+            using var store = Seed(options,
+                new Item { Id = "items/5", Tag = "t", Price = 5 },
+                new Item { Id = "items/12", Tag = "t", Price = 12 },
+                new Item { Id = "items/20", Tag = "t", Price = 20 });
+
+            Assert.Equal(new[] { "items/12", "items/5" }, Query(store, $"from index 'Items/ByTag' where {where}", ("lo", null), ("hi", 12)));
+            Assert.Equal(new[] { "items/12", "items/20" }, Query(store, $"from index 'Items/ByTag' where {where}", ("lo", 12), ("hi", null)));
+        }
+
         // N2: same-direction literal bounds of mixed numeric kinds on one field; a long literal compares against the long
         // term, so 10.5 fails 'Price > 10' even though it passes 'Price > 10.1'
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
