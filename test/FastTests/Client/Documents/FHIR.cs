@@ -113,10 +113,12 @@ namespace FastTests.Client.Documents
             {
                 ModifyDocumentStore = store =>
                 {
-                    var serializationConventions = (NewtonsoftJsonSerializationConventions)store.Conventions.Serialization;
-                    serializationConventions.CustomizeJsonSerializer = serializer =>
+                    store.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
-                        serializer.Converters.Add(new FhirResourceConverter<Observation>());
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.Converters.Add(new FhirResourceConverter<Observation>());
+                        }
                     };
                 }
             }))
