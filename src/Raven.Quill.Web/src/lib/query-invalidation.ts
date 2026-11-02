@@ -72,7 +72,9 @@ export function invalidateConsentBlockedSuggestions(queryClient: QueryClient) {
 }
 
 function isConsentRequiredResult(data: unknown) {
-    return typeof data === "object" && data != null && "isConsentRequired" in data && data.isConsentRequired === true;
+    return (
+        typeof data === "object" && data != null && "failureStatus" in data && data.failureStatus === "ConsentRequired"
+    );
 }
 
 function isConsentRequiredFailure(error: unknown) {

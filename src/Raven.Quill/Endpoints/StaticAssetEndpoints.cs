@@ -40,9 +40,11 @@ public static class StaticAssetEndpoints
         app.MapFallback("{*path:nonfile}", async context =>
         {
             var path = context.Request.Path;
+            var method = context.Request.Method;
             // /widget is the embeddable bundle, not the dashboard SPA: a missing asset there has to stay a
             // 404 rather than resolving to the dashboard's index.html.
-            if (path.StartsWithSegments("/api") || path.StartsWithSegments("/healthz") ||
+            if ((HttpMethods.IsGet(method) || HttpMethods.IsHead(method)) == false ||
+                path.StartsWithSegments("/api") || path.StartsWithSegments("/healthz") ||
                 path.StartsWithSegments("/embed") || path.StartsWithSegments("/widget") || IsAppsEmbedSubPath(path))
             {
                 context.Response.StatusCode = StatusCodes.Status404NotFound;
