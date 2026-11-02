@@ -6,7 +6,10 @@ import Col from "react-bootstrap/Col";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { FormDurationPicker, FormInput, FormSwitch } from "components/common/Form";
+import { getDefaultDurationPlaceholder, overriddenDurationPlaceholder } from "components/common/DurationPicker";
 import OverridableField from "components/common/OverridableField";
+import { useStudioTranslation } from "hooks/useStudioTranslation";
+import { i18n } from "common/i18n/i18n";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
@@ -23,6 +26,7 @@ import ServerExpirationConfiguration = Raven.Client.Documents.Operations.Expirat
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import appUrl from "common/appUrl";
 import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
@@ -38,6 +42,8 @@ export const defaultItemsToProcess = 65536;
 const defaultDeleteFrequencyInSec = 60;
 
 export default function DocumentExpiration() {
+    const commonT = useStudioTranslation("common");
+    const defaultItemsToProcessLabel = defaultItemsToProcess.toLocaleString(i18n.language);
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
 
@@ -69,7 +75,6 @@ export default function DocumentExpiration() {
         ],
     });
 
-    const buyLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
     const licenseLimitedFrequencyLabelId = useUniqueId("expiration-frequency-label-");
 
     const isLicenseLimited = minPeriodForExpirationInHours > 0;
@@ -194,12 +199,12 @@ export default function DocumentExpiration() {
                                                                     !formValues.isDocumentExpirationEnabled
                                                                 }
                                                                 aria-labelledby={licenseLimitedFrequencyLabelId}
-                                                                placeholder={overriddenDeleteFrequencyPlaceholder}
+                                                                placeholder={overriddenDurationPlaceholder}
                                                                 showSeconds
                                                             />
                                                         </div>
                                                     </div>
-                                                    <div className="d-flex flex-wrap align-items-center column-gap-2 mt-1 small">
+                                                    <div className="d-flex flex-wrap align-items-center column-gap-1 mt-1 small">
                                                         {isLimitWarningVisible && !formState.errors.deleteFrequency ? (
                                                             <span className="text-danger">
                                                                 <Icon icon="warning" />
@@ -211,9 +216,7 @@ export default function DocumentExpiration() {
                                                                 <strong>{minPeriodForExpirationInHours} hours</strong>.
                                                             </span>
                                                         )}
-                                                        <a href={buyLink} target="_blank">
-                                                            Compare license plans
-                                                        </a>
+                                                        <a href={appUrl.forAbout()}>See full comparison</a>
                                                     </div>
                                                 </div>
                                             ) : (
@@ -238,7 +241,7 @@ export default function DocumentExpiration() {
                                                                     aria-labelledby={labelId}
                                                                     placeholder={
                                                                         isOverridden
-                                                                            ? overriddenDeleteFrequencyPlaceholder
+                                                                            ? overriddenDurationPlaceholder
                                                                             : deleteFrequencyPlaceholder
                                                                     }
                                                                     showSeconds
@@ -254,8 +257,10 @@ export default function DocumentExpiration() {
                                                 valueName="maxItemsToProcess"
                                                 setValue={setValue}
                                                 optimalValue={defaultItemsToProcess}
-                                                optimalValueLabel={defaultItemsToProcess.toLocaleString()}
-                                                optimalValueHint={`Process at most ${defaultItemsToProcess.toLocaleString()} documents per run to keep each run short.`}
+                                                optimalValueLabel={defaultItemsToProcessLabel}
+                                                optimalValueHint={commonT("maxItemsOptimalHint", {
+                                                    items: defaultItemsToProcessLabel,
+                                                })}
                                                 label="Max number of documents to process in a single run"
                                                 disabled={
                                                     formState.isSubmitting || !formValues.isDocumentExpirationEnabled
@@ -316,18 +321,7 @@ export default function DocumentExpiration() {
     );
 }
 
-const deleteFrequencyPlaceholder = getDeleteFrequencyPlaceholder(defaultDeleteFrequencyInSec);
-const overriddenDeleteFrequencyPlaceholder = { hours: "0", minutes: "0", seconds: "0" };
-
-function getDeleteFrequencyPlaceholder(totalSeconds: number) {
-    const duration = moment.duration(totalSeconds, "seconds");
-
-    return {
-        hours: `Default (${Math.floor(duration.asHours())})`,
-        minutes: `Default (${duration.minutes()})`,
-        seconds: `Default (${duration.seconds()})`,
-    };
-}
+const deleteFrequencyPlaceholder = getDefaultDurationPlaceholder(defaultDeleteFrequencyInSec);
 
 function mapToFormData(dto: ServerExpirationConfiguration): DocumentExpirationFormData {
     if (!dto) {

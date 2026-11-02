@@ -1,6 +1,7 @@
 import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "components/pages/database/settings/remoteAttachments/RemoteAttachments.stories";
 import { rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
+import { within } from "@testing-library/dom";
 
 const { DefaultRemoteAttachments } = composeStories(stories);
 
@@ -19,7 +20,9 @@ describe("RemoteAttachments", () => {
         );
 
         const saveButton = screen.queryByRole("button", { name: selectors.titles.save });
-        const checkFrequencyInput = screen.getByName("checkFrequencyInSec");
+        const checkFrequencyInput = within(
+            screen.getByRole("group", { name: "Interval between remote attachments task runs" })
+        ).getByRole("spinbutton", { name: "Seconds" });
 
         // Save button is disabled, if none of inputs are dirty
         expect(saveButton).toBeDisabled();

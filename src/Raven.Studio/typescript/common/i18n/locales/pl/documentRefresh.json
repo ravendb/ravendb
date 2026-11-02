@@ -7,10 +7,9 @@
     "frequencyPlaceholder": "Domyślnie ({{value}})",
     "limitWarning": "Twoja licencja nie pozwala na częstotliwość odświeżania poniżej {{hours}} godzin.",
     "licenseMinimum": "Minimum dla Twojej licencji: <strong>{{hours}} godzin</strong>.",
-    "compareLicensePlans": "Porównaj plany licencji",
+    "seeFullComparison": "Zobacz pełne porównanie",
     "maxItemsLabel": "Maksymalna liczba dokumentów przetwarzanych w jednym przebiegu",
     "maxItemsPlaceholder": "Domyślnie (bez limitu)",
-    "maxItemsOptimalHint": "Przetwarzaj maksymalnie {{items}} dokumentów w jednym przebiegu, aby każdy przebieg był krótki.",
     "itemsAddon": "dokumentów",
     "about": {
         "intro": "Gdy <strong>odświeżanie dokumentów</strong> jest włączone:",

@@ -532,7 +532,10 @@ export function FormAceEditor<
 export function FormDurationPicker<
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
->(props: FormElementProps<TFieldValues, TName> & Omit<DurationPickerProps, "onChange" | "totalSeconds">) {
+>(
+    props: FormElementProps<TFieldValues, TName> &
+        Omit<DurationPickerProps, "onChange" | "totalSeconds" | "onInvalidPartMessageChange">
+) {
     const { name, control, defaultValue, rules, shouldUnregister, ...rest } = props;
 
     const {
@@ -547,12 +550,21 @@ export function FormDurationPicker<
         shouldUnregister,
     });
 
+    const [invalidPartMessage, setInvalidPartMessage] = useState<string>(null);
+    const message = invalidPartMessage ?? error?.message;
+
     return (
         <div className="position-relative flex-grow-1">
             <div className="d-flex flex-grow-1">
-                <DurationPicker totalSeconds={value} onChange={onChange} disabled={formState.isSubmitting} {...rest} />
+                <DurationPicker
+                    totalSeconds={value}
+                    onChange={onChange}
+                    onInvalidPartMessageChange={setInvalidPartMessage}
+                    disabled={formState.isSubmitting}
+                    {...rest}
+                />
             </div>
-            {error && <FormValidationMessage>{error.message}</FormValidationMessage>}
+            {message && <FormValidationMessage>{message}</FormValidationMessage>}
         </div>
     );
 }

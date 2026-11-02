@@ -12,7 +12,8 @@ import Form from "react-bootstrap/Form";
 import { AboutViewHeading } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import Card from "react-bootstrap/Card";
-import { FormInput, FormSwitch } from "components/common/Form";
+import { FormDurationPicker, FormInput, FormSwitch } from "components/common/Form";
+import { getDefaultDurationPlaceholder, overriddenDurationPlaceholder } from "components/common/DurationPicker";
 import OverridableField from "components/common/OverridableField";
 import { Icon } from "components/common/Icon";
 import React, { useEffect } from "react";
@@ -239,6 +240,8 @@ function DestinationsList() {
     );
 }
 
+const defaultCheckFrequencyPlaceholder = getDefaultDurationPlaceholder(60);
+
 function RemoteAttachmentsSettingsCard() {
     const { control, formState, setValue } = useFormContext<RemoteAttachmentsFormData>();
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
@@ -257,25 +260,29 @@ function RemoteAttachmentsSettingsCard() {
                 >
                     Enable Remote Attachments
                 </FormSwitch>
-                <OverridableField
-                    control={control}
-                    overrideName="isCheckFrequencyInSecEnabled"
-                    valueName="checkFrequencyInSec"
-                    setValue={setValue}
-                    label="Interval between remote attachments task runs"
-                    disabled={isSettingsDisabled}
-                >
-                    {({ isDisabled }) => (
-                        <FormInput
-                            name="checkFrequencyInSec"
-                            type="number"
-                            control={control}
-                            addon="seconds"
-                            placeholder="Default (60)"
-                            disabled={isDisabled}
-                        />
-                    )}
-                </OverridableField>
+                <div className="align-self-start mw-100">
+                    <OverridableField
+                        control={control}
+                        overrideName="isCheckFrequencyInSecEnabled"
+                        valueName="checkFrequencyInSec"
+                        setValue={setValue}
+                        label="Interval between remote attachments task runs"
+                        disabled={isSettingsDisabled}
+                    >
+                        {({ isOverridden, isDisabled, labelId }) => (
+                            <FormDurationPicker
+                                name="checkFrequencyInSec"
+                                control={control}
+                                disabled={isDisabled}
+                                aria-labelledby={labelId}
+                                placeholder={
+                                    isOverridden ? overriddenDurationPlaceholder : defaultCheckFrequencyPlaceholder
+                                }
+                                showSeconds
+                            />
+                        )}
+                    </OverridableField>
+                </div>
                 <OverridableField
                     control={control}
                     overrideName="isMaxItemsToProcessEnabled"

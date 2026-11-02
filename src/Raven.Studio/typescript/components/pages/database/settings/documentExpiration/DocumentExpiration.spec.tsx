@@ -1,6 +1,7 @@
 import React from "react";
 import { composeStories } from "@storybook/react-webpack5";
 import { rtlRender } from "test/rtlTestUtils";
+import appUrl from "common/appUrl";
 import * as stories from "./DocumentExpiration.stories";
 import { queryAllByClassName } from "test/byClassNameQueries";
 
@@ -123,7 +124,7 @@ describe("DocumentExpiration", () => {
         });
 
         expect(screen.getByText(licenseLimitWarning)).toBeInTheDocument();
-        expect(screen.getByRole("link", { name: "Compare license plans" })).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "See full comparison" })).toHaveAttribute("href", appUrl.forAbout());
     });
 
     it("does not offer a reset to default on a limited license", async () => {

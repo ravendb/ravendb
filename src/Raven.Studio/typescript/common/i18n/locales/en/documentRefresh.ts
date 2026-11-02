@@ -7,10 +7,9 @@ export default {
     frequencyPlaceholder: "Default ({{value}})",
     limitWarning: "Your license doesn't allow a refresh frequency below {{hours}} hours.",
     licenseMinimum: "Minimum on your license: <strong>{{hours}} hours</strong>.",
-    compareLicensePlans: "Compare license plans",
+    seeFullComparison: "See full comparison",
     maxItemsLabel: "Max number of documents to process in a single run",
     maxItemsPlaceholder: "Default (unlimited)",
-    maxItemsOptimalHint: "Process at most {{items}} documents per run to keep each run short.",
     itemsAddon: "items",
     about: {
         intro: "When <strong>Document Refresh</strong> is enabled:",

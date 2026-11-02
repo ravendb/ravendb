@@ -19,8 +19,11 @@ import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { FormInput, FormSwitch } from "components/common/Form";
+import { FormDurationPicker, FormInput, FormSwitch } from "components/common/Form";
+import { getDefaultDurationPlaceholder, overriddenDurationPlaceholder } from "components/common/DurationPicker";
 import OverridableField from "components/common/OverridableField";
+import { useStudioTranslation } from "hooks/useStudioTranslation";
+import { i18n } from "common/i18n/i18n";
 import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
@@ -38,8 +41,11 @@ import { useRavenLink } from "hooks/useRavenLink";
 import moment from "moment";
 
 const defaultItemsToProcess = 65536;
+const defaultArchiveFrequencyPlaceholder = getDefaultDurationPlaceholder(60);
 
 export default function DataArchival() {
+    const commonT = useStudioTranslation("common");
+    const defaultItemsToProcessLabel = defaultItemsToProcess.toLocaleString(i18n.language);
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const hasDataArchival = useAppSelector(licenseSelectors.statusValue("HasDataArchival"));
@@ -158,33 +164,43 @@ export default function DataArchival() {
                                             >
                                                 Enable Data Archival
                                             </FormSwitch>
-                                            <OverridableField
-                                                control={control}
-                                                overrideName="isArchiveFrequencyEnabled"
-                                                valueName="archiveFrequency"
-                                                setValue={setValue}
-                                                label="Archive frequency"
-                                                disabled={formState.isSubmitting || !formValues.isDataArchivalEnabled}
-                                            >
-                                                {({ isDisabled }) => (
-                                                    <FormInput
-                                                        name="archiveFrequency"
-                                                        control={control}
-                                                        type="number"
-                                                        disabled={isDisabled}
-                                                        placeholder="Default (60)"
-                                                        addon="seconds"
-                                                    />
-                                                )}
-                                            </OverridableField>
+                                            <div className="align-self-start mw-100">
+                                                <OverridableField
+                                                    control={control}
+                                                    overrideName="isArchiveFrequencyEnabled"
+                                                    valueName="archiveFrequency"
+                                                    setValue={setValue}
+                                                    label="Archive frequency"
+                                                    disabled={
+                                                        formState.isSubmitting || !formValues.isDataArchivalEnabled
+                                                    }
+                                                >
+                                                    {({ isOverridden, isDisabled, labelId }) => (
+                                                        <FormDurationPicker
+                                                            name="archiveFrequency"
+                                                            control={control}
+                                                            disabled={isDisabled}
+                                                            aria-labelledby={labelId}
+                                                            placeholder={
+                                                                isOverridden
+                                                                    ? overriddenDurationPlaceholder
+                                                                    : defaultArchiveFrequencyPlaceholder
+                                                            }
+                                                            showSeconds
+                                                        />
+                                                    )}
+                                                </OverridableField>
+                                            </div>
                                             <OverridableField
                                                 control={control}
                                                 overrideName="isLimitMaxItemsToProcessEnabled"
                                                 valueName="maxItemsToProcess"
                                                 setValue={setValue}
                                                 optimalValue={defaultItemsToProcess}
-                                                optimalValueLabel={defaultItemsToProcess.toLocaleString()}
-                                                optimalValueHint={`Process at most ${defaultItemsToProcess.toLocaleString()} documents per run to keep each run short.`}
+                                                optimalValueLabel={defaultItemsToProcessLabel}
+                                                optimalValueHint={commonT("maxItemsOptimalHint", {
+                                                    items: defaultItemsToProcessLabel,
+                                                })}
                                                 label="Max number of documents to process in a single run"
                                                 disabled={formState.isSubmitting || !formValues.isDataArchivalEnabled}
                                             >

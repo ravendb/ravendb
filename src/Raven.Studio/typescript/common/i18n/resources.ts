@@ -2,8 +2,10 @@ import aboutView from "./locales/en/aboutView";
 import common from "./locales/en/common";
 import conflicts from "./locales/en/conflicts";
 import documentRefresh from "./locales/en/documentRefresh";
+import durationPicker from "./locales/en/durationPicker";
 import editCustomSorter from "./locales/en/editCustomSorter";
 import featureAvailabilitySummary from "./locales/en/featureAvailabilitySummary";
+import overridableField from "./locales/en/overridableField";
 import revisionsBin from "./locales/en/revisionsBin";
 import studioGlobalConfiguration from "./locales/en/studioGlobalConfiguration";
 
@@ -25,8 +27,10 @@ export const en = {
     common,
     conflicts,
     documentRefresh,
+    durationPicker,
     editCustomSorter,
     featureAvailabilitySummary,
+    overridableField,
     revisionsBin,
     studioGlobalConfiguration,
 };

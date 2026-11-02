@@ -6,6 +6,7 @@ import Col from "react-bootstrap/Col";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { FormDurationPicker, FormInput, FormSwitch } from "components/common/Form";
+import { overriddenDurationPlaceholder } from "components/common/DurationPicker";
 import FieldLabel from "components/common/FieldLabel";
 import OverridableField from "components/common/OverridableField";
 import useUniqueId from "components/hooks/useUniqueId";
@@ -25,6 +26,7 @@ import { LoadError } from "components/common/LoadError";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import appUrl from "common/appUrl";
 import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
@@ -34,11 +36,11 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { useStudioTranslation } from "hooks/useStudioTranslation";
+import { i18n } from "common/i18n/i18n";
 import { StudioTrans } from "components/common/i18n/StudioTrans";
 
 const defaultItemsToProcess = 65536;
 const defaultRefreshFrequencyInSec = 60;
-const overriddenRefreshFrequencyPlaceholder = { hours: "0", minutes: "0", seconds: "0" };
 
 export default function DocumentRefresh() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -72,7 +74,6 @@ export default function DocumentRefresh() {
         ],
     });
 
-    const buyLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
     const licenseLimitedFrequencyLabelId = useUniqueId("refresh-frequency-label-");
 
     const isLicenseLimited = minPeriodForRefreshInHours > 0;
@@ -89,6 +90,7 @@ export default function DocumentRefresh() {
         isLicenseLimited && formValues.isDocumentRefreshEnabled && refreshFrequencyInHours < minPeriodForRefreshInHours;
 
     const licenseLimitMessage = t("limitWarning", { hours: minPeriodForRefreshInHours });
+    const defaultItemsToProcessLabel = defaultItemsToProcess.toLocaleString(i18n.language);
 
     const defaultRefreshFrequency = moment.duration(defaultRefreshFrequencyInSec, "seconds");
     const defaultRefreshFrequencyPlaceholder = {
@@ -201,12 +203,12 @@ export default function DocumentRefresh() {
                                                                     !formValues.isDocumentRefreshEnabled
                                                                 }
                                                                 aria-labelledby={licenseLimitedFrequencyLabelId}
-                                                                placeholder={overriddenRefreshFrequencyPlaceholder}
+                                                                placeholder={overriddenDurationPlaceholder}
                                                                 showSeconds
                                                             />
                                                         </div>
                                                     </div>
-                                                    <div className="d-flex flex-wrap align-items-center column-gap-2 mt-1 small">
+                                                    <div className="d-flex flex-wrap align-items-center column-gap-1 mt-1 small">
                                                         {isLimitWarningVisible && !formState.errors.refreshFrequency ? (
                                                             <span className="text-danger">
                                                                 <Icon icon="warning" />
@@ -222,9 +224,7 @@ export default function DocumentRefresh() {
                                                                 />
                                                             </span>
                                                         )}
-                                                        <a href={buyLink} target="_blank">
-                                                            {t("compareLicensePlans")}
-                                                        </a>
+                                                        <a href={appUrl.forAbout()}>{t("seeFullComparison")}</a>
                                                     </div>
                                                 </div>
                                             ) : (
@@ -249,7 +249,7 @@ export default function DocumentRefresh() {
                                                                     aria-labelledby={labelId}
                                                                     placeholder={
                                                                         isOverridden
-                                                                            ? overriddenRefreshFrequencyPlaceholder
+                                                                            ? overriddenDurationPlaceholder
                                                                             : defaultRefreshFrequencyPlaceholder
                                                                     }
                                                                     showSeconds
@@ -265,9 +265,9 @@ export default function DocumentRefresh() {
                                                 valueName="maxItemsToProcess"
                                                 setValue={setValue}
                                                 optimalValue={defaultItemsToProcess}
-                                                optimalValueLabel={defaultItemsToProcess.toLocaleString()}
-                                                optimalValueHint={t("maxItemsOptimalHint", {
-                                                    items: defaultItemsToProcess.toLocaleString(),
+                                                optimalValueLabel={defaultItemsToProcessLabel}
+                                                optimalValueHint={commonT("maxItemsOptimalHint", {
+                                                    items: defaultItemsToProcessLabel,
                                                 })}
                                                 label={t("maxItemsLabel")}
                                                 disabled={

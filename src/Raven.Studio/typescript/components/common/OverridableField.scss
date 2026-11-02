@@ -6,14 +6,9 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    column-gap: 0.5rem;
+    column-gap: sizes.$gutter-xxs;
     min-height: 1.75rem;
-    margin-bottom: 0.25rem;
-}
-
-.btn.overridable-field-action {
-    padding: 0;
-    border: 0;
+    margin-bottom: sizes.$gutter-xxxs;
 }
 
 .overridable-field-has-hint {
@@ -28,18 +23,15 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: sizes.$gutter-xxxs;
     padding: sizes.$gutter-xxxs sizes.$gutter-xs;
-    border: bs5variables.$input-border-width solid bs5variables.$input-border-color;
+    border: bs5variables.$input-border-width solid bs5variables.$border-color-light-var;
     border-top: 0;
     border-radius: 0 0 bs5variables.$input-border-radius bs5variables.$input-border-radius;
     background-color: var(--faded-primary);
-    font-size: sizes.pxToRem(10);
-    line-height: sizes.pxToRem(12);
 
     .overridable-field-use-optimal {
         font-size: inherit;
         line-height: inherit;
-        font-weight: 600;
+        font-weight: bs5variables.$font-weight-semibold;
     }
 }
