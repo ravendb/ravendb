@@ -956,7 +956,7 @@ namespace Raven.Server.Web.System
                 {
                     using (context.OpenReadTransaction())
                     {
-                        var databaseExists = ServerStore.Cluster.DatabaseExists(context, name);
+                        var databaseExists = ClusterStateMachine.DatabaseExists(context, name);
                         if (databaseExists == false)
                         {
                             resultList.Add(new DynamicJsonValue

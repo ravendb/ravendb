@@ -10,16 +10,14 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
 {
     public sealed class UpdateLocalBackupStatusCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
     {
-        private readonly ClusterStateMachine _cluster;
         private readonly DynamicJsonValue _backupStatusAsJson;
         private readonly string _databaseName;
         private readonly long _taskId;
 
         public bool Inserted { get; private set; }
 
-        public UpdateLocalBackupStatusCommand(ClusterStateMachine cluster, PeriodicBackupStatus backupStatus, string databaseName, long taskId)
+        public UpdateLocalBackupStatusCommand(PeriodicBackupStatus backupStatus, string databaseName, long taskId)
         {
-            _cluster = cluster ?? throw new ArgumentNullException(nameof(cluster));
             _backupStatusAsJson = (backupStatus ?? throw new ArgumentNullException(nameof(backupStatus))).ToJson();
             _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
             _taskId = taskId;
@@ -27,7 +25,7 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
 
         protected override long ExecuteCmd(ClusterOperationContext context)
         {
-            if (_cluster.DatabaseExists(context, _databaseName) == false)
+            if (ClusterStateMachine.DatabaseExists(context, _databaseName) == false)
             {
                 Inserted = false;
                 return 0;
