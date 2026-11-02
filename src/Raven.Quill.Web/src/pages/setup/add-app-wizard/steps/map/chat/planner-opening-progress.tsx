@@ -20,12 +20,16 @@ const STEP_COUNT = 3;
 
 /**
  * The planner's first turn while it runs. The schema goes out with the request, so reading it is done
- * from the start; the proposal ends the grouping, and the reply ends the questions.
+ * from the start; the proposal ends the grouping, and the reply ends the questions. The planner's latest note
+ * shows under the step it is on.
  */
 export function PlannerOpeningProgress({ turn }: { turn: PlannerReplyTurn }) {
     const { changeSelection } = usePlannerWorkspace();
     const tables = useSetupWizardStore((state) => state.plannerSelectedTables) ?? [];
-    const hasProposal = turn.activity.some((activity) => activity.type === "proposal");
+    const proposalIndex = turn.activity.findIndex((activity) => activity.type === "proposal");
+    const hasProposal = proposalIndex !== -1;
+    const activeStepActivity = hasProposal ? turn.activity.slice(proposalIndex + 1) : turn.activity;
+    const activeStepNote = activeStepActivity.findLast((activity) => activity.type === "note")?.text ?? null;
     const isSingleTable = tables.length === 1;
 
     return (
@@ -39,10 +43,10 @@ export function PlannerOpeningProgress({ turn }: { turn: PlannerReplyTurn }) {
                 <li className="flex flex-col gap-1.5">
                     <PlannerSelectedTables tables={tables} onChangeSelection={changeSelection} />
                 </li>
-                <ProgressStep state={hasProposal ? "done" : "active"}>
+                <ProgressStep state={hasProposal ? "done" : "active"} detail={hasProposal ? null : activeStepNote}>
                     {hasProposal ? "Grouped tables into collections" : "Grouping tables into collections…"}
                 </ProgressStep>
-                <ProgressStep state={hasProposal ? "active" : "pending"}>
+                <ProgressStep state={hasProposal ? "active" : "pending"} detail={hasProposal ? activeStepNote : null}>
                     {hasProposal ? "Checking what the schema can't answer…" : "Check what the schema can't answer"}
                 </ProgressStep>
             </PlannerWorkingActivity>
@@ -56,6 +60,10 @@ const STEP_ICONS: Record<StepState, ReactNode> = {
     pending: <PendingIcon />,
 };
 
-function ProgressStep({ state, children }: { state: StepState; children: ReactNode }) {
-    return <ActivityRowLayout icon={STEP_ICONS[state]}>{children}</ActivityRowLayout>;
+function ProgressStep({ state, detail, children }: { state: StepState; detail: string | null; children: ReactNode }) {
+    return (
+        <ActivityRowLayout icon={STEP_ICONS[state]} detail={detail}>
+            {children}
+        </ActivityRowLayout>
+    );
 }

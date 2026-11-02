@@ -160,6 +160,25 @@ describe("createPlannerSession", () => {
         expect(useSetupWizardStore.getState().plannerAreaChats.Sales.draft).toBe("");
     });
 
+    it("asks an area its agent says already started to build what is missing", async () => {
+        migration.areaStart.mockImplementation(() =>
+            streamOf({ type: "error", message: "The area Sales has already started; ask in it instead." }),
+        );
+        migration.areaAsk.mockImplementation(() => streamOf(DONE));
+        useSetupWizardStore
+            .getState()
+            .openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
+
+        await newSession().buildArea("Sales", ["Orders"]);
+
+        expect(migration.areaStart).toHaveBeenCalledOnce();
+        expect(migration.areaAsk).toHaveBeenCalledWith(
+            expect.objectContaining({ slug: "shop", area: "Sales" }),
+            expect.any(AbortSignal),
+        );
+        expect(useSetupWizardStore.getState().plannerStartedAreas).toEqual(["Sales"]);
+    });
+
     it("answers an area agent's questions in that area's chat", async () => {
         migration.areaStart.mockImplementation(() =>
             streamOf(

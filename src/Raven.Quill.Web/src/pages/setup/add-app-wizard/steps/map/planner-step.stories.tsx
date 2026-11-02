@@ -174,7 +174,16 @@ export const AiUnavailable: Story = {
 // The planner reads the schema and proposes the areas.
 export const Proposing: Story = {
     parameters: { msw: mockHandlers(setupHandlers(migrationMocks.proposalStart([], { isEndless: true }))) },
-    render: () => <PlannerAtStep turns={[{ frames: [], isWorking: true }]} />,
+    render: () => (
+        <PlannerAtStep
+            turns={[
+                {
+                    frames: [{ type: "note", text: "Proposing the Customers and Sales areas now." }],
+                    isWorking: true,
+                },
+            ]}
+        />
+    ),
 };
 
 // Its questions settle the conventions before any area starts; Build waits for the answers.
@@ -279,6 +288,12 @@ export const UnsavedChanges: Story = {
             }
         />
     ),
+    play: async ({ canvasElement }) => {
+        const composer = within(canvasElement).getByRole("textbox", { name: `Message for the ${SALES} agent` });
+
+        expect(composer).toBeDisabled();
+        expect(composer).toHaveAttribute("placeholder", `Save or discard your changes to message the ${SALES} agent.`);
+    },
 };
 
 // A 200-table plan, a few areas built.

@@ -21,15 +21,19 @@ import {
 } from "@/pages/setup/add-app-wizard/steps/map/planner-workspace-context";
 import type { PlanCollection } from "@/pages/setup/add-app-wizard/steps/map/session/planner-plan";
 import { describeMentionPlaceholder } from "@/pages/setup/add-app-wizard/steps/map/session/planner-prompts";
-import { selectBlockingChat, selectChat } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
+import {
+    selectBlockingChat,
+    selectChat,
+    selectHasUnsavedEdits,
+} from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
 import type { PlannerChatId } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 import { usePlannerSession } from "@/pages/setup/add-app-wizard/steps/map/session/use-planner-session";
 
 const MENTION_TRIGGER = "@";
 
 /**
- * While the agent works, what the operator writes waits here, to be sent once it is done or stopped. While another
- * chat's agent works, nothing here can stop it, so the composer waits too.
+ * While the agent works, what the operator writes waits here, to be sent once it is done or stopped. Any other wait,
+ * such as another chat's agent at work or unsaved changes, is not cleared from here, so writing waits too.
  */
 export function PlannerComposer({ chatId, collections }: { chatId: PlannerChatId; collections: PlanCollection[] }) {
     const { composerRef, isBusy } = usePlannerWorkspace();
@@ -37,6 +41,7 @@ export function PlannerComposer({ chatId, collections }: { chatId: PlannerChatId
     const canSendMessage = useCanSendMessage(chatId);
     const phase = useChatPhase(chatId);
     const hasProposal = useSetupWizardStore((state) => state.plannerProposal !== null);
+    const hasUnsavedEdits = useSetupWizardStore(selectHasUnsavedEdits);
     const draft = useSetupWizardStore((state) => selectChat(state, chatId).draft);
     const mentions = useSetupWizardStore((state) => selectChat(state, chatId).mentions);
     const setPlannerDraft = useSetupWizardStore((state) => state.setPlannerDraft);
@@ -50,9 +55,9 @@ export function PlannerComposer({ chatId, collections }: { chatId: PlannerChatId
     const blockingChatId = useSetupWizardStore((state) => selectBlockingChat(state, chatId));
 
     const isWorking = phase === "working";
-    const isWaitingForOtherChat = !isWorking && blockingChatId !== undefined;
     // Until the first plan is there, there is nothing yet to ask the planner about.
     const isReadingSchema = isWorking && chatId === null && !hasProposal;
+    const canWrite = isWorking ? !isBusy && !isReadingSchema : canSendMessage;
     const canSend = canSendMessage && draft.trim() !== "";
     const setDraft = (value: string) => setPlannerDraft(chatId, value);
 
@@ -128,9 +133,16 @@ export function PlannerComposer({ chatId, collections }: { chatId: PlannerChatId
                 ref={composerRef}
                 rows={1}
                 aria-label={chatId === null ? "Message for the planner" : `Message for the ${chatId} agent`}
-                placeholder={describePlaceholder({ chatId, isWorking, isReadingSchema, blockingChatId, mentions })}
+                placeholder={describePlaceholder({
+                    chatId,
+                    isWorking,
+                    isReadingSchema,
+                    blockingChatId,
+                    hasUnsavedEdits,
+                    mentions,
+                })}
                 value={draft}
-                disabled={isBusy || isReadingSchema || isWaitingForOtherChat}
+                disabled={!canWrite}
                 className="max-h-48 min-h-10 px-3.5"
                 onChange={changeDraft}
                 onKeyDown={(event) => {
@@ -260,12 +272,14 @@ function describePlaceholder({
     isWorking,
     isReadingSchema,
     blockingChatId,
+    hasUnsavedEdits,
     mentions,
 }: {
     chatId: PlannerChatId;
     isWorking: boolean;
     isReadingSchema: boolean;
     blockingChatId: PlannerChatId | undefined;
+    hasUnsavedEdits: boolean;
     mentions: string[];
 }): string {
     if (isReadingSchema) {
@@ -282,6 +296,10 @@ function describePlaceholder({
 
     if (blockingChatId !== undefined) {
         return `The ${blockingChatId} agent is working. Wait for it to finish, or stop it from its area, to send a message.`;
+    }
+
+    if (hasUnsavedEdits) {
+        return `Save or discard your changes to message ${chatId === null ? "the planner" : `the ${chatId} agent`}.`;
     }
 
     if (mentions.length > 0) {

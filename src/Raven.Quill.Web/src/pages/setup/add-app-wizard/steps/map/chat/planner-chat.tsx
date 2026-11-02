@@ -30,7 +30,6 @@ export function PlannerChat({ plan }: { plan: Plan }) {
     const chatId = useShownChatId();
     const viewedArea = useSetupWizardStore((state) => state.plannerView.area);
     const setPlannerChatOpen = useSetupWizardStore((state) => state.setPlannerChatOpen);
-    const hasUnsavedEdits = useSetupWizardStore(selectHasUnsavedEdits);
     const isAreaWaiting = viewedArea !== null && chatId === null;
     const collections =
         chatId === null ? plan.collections : (plan.areas.find((area) => area.name === chatId)?.collections ?? []);
@@ -70,12 +69,6 @@ export function PlannerChat({ plan }: { plan: Plan }) {
                 {isAreaWaiting && (
                     <Text variant="caption">
                         The {viewedArea} chat starts when you build this area. Until then, the planner answers here.
-                    </Text>
-                )}
-                {hasUnsavedEdits && (
-                    <Text variant="caption">
-                        Save or discard your changes to message{" "}
-                        {chatId === null ? "the planner" : `the ${chatId} agent`}.
                     </Text>
                 )}
                 <ChatBottom key={chatId ?? ""} chatId={chatId} collections={collections} />
@@ -137,6 +130,7 @@ function ChatBottom({ chatId, collections }: { chatId: string | null; collection
     const { composerRef } = usePlannerWorkspace();
     const questions = useSetupWizardStore((state) => getPendingQuestions(selectChat(state, chatId)));
     const latestReply = useSetupWizardStore((state) => getLatestReply(selectChat(state, chatId).turns));
+    const hasUnsavedEdits = useSetupWizardStore(selectHasUnsavedEdits);
     const [closedQuestionsReplyId, setClosedQuestionsReplyId] = useState<string | null>(null);
     const questionsRef = useRef<HTMLElement>(null);
     const latestReplyId = latestReply?.id ?? null;
@@ -159,13 +153,16 @@ function ChatBottom({ chatId, collections }: { chatId: string | null; collection
 
     if (isShowingQuestions) {
         return (
-            <PlannerQuestions
-                key={latestReplyId}
-                ref={questionsRef}
-                chatId={chatId}
-                questions={questions}
-                onClose={() => setClosedQuestionsReplyId(latestReplyId)}
-            />
+            <>
+                {hasUnsavedEdits && <Text variant="caption">Save or discard your changes to send your answers.</Text>}
+                <PlannerQuestions
+                    key={latestReplyId}
+                    ref={questionsRef}
+                    chatId={chatId}
+                    questions={questions}
+                    onClose={() => setClosedQuestionsReplyId(latestReplyId)}
+                />
+            </>
         );
     }
 

@@ -14,7 +14,11 @@ import {
     getSavedView,
     groupSaveIssues,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-edits";
-import { createTurnId, isAreaNotStartedError } from "@/pages/setup/add-app-wizard/steps/map/session/planner-frames";
+import {
+    createTurnId,
+    isAreaAlreadyStartedError,
+    isAreaNotStartedError,
+} from "@/pages/setup/add-app-wizard/steps/map/session/planner-frames";
 import {
     composeAnswersPrompt,
     composeBuildCollectionsPrompt,
@@ -30,6 +34,7 @@ import {
     selectBlockingChat,
     selectChat,
     selectHasUnsavedEdits,
+    selectIsAnyChatWorking,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
 import type {
     PlannerAnswer,
@@ -249,20 +254,29 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
         chatId === null ? askProposal(prompt) : askArea(chatId, prompt);
 
     /** Builds an area: its first build starts its agent, later ones ask it for what is still missing. */
-    const buildArea = (area: string, pendingCollections: string[]) => {
+    const buildArea = async (area: string, pendingCollections: string[]) => {
         if (!isAreaStarted(getStore(), area)) {
-            return startArea(area);
+            await startArea(area);
+
+            // An area that started but mapped nothing looks new after a reload; its agent's answer settles it.
+            const reply = getLatestReply(selectChat(getStore(), area).turns);
+            const hasStartedBefore =
+                reply?.status === "failed" && reply.error !== null && isAreaAlreadyStartedError(reply.error);
+
+            if (!hasStartedBefore) {
+                return;
+            }
         }
 
-        return pendingCollections.length > 0
-            ? sendAreaPrompt(area, {
-                  kind: "prompt",
-                  id: createTurnId(),
-                  isBuildRequest: true,
-                  text: composeBuildCollectionsPrompt(pendingCollections),
-                  mentions: [],
-              })
-            : Promise.resolve();
+        if (pendingCollections.length > 0) {
+            await sendAreaPrompt(area, {
+                kind: "prompt",
+                id: createTurnId(),
+                isBuildRequest: true,
+                text: composeBuildCollectionsPrompt(pendingCollections),
+                mentions: [],
+            });
+        }
     };
 
     const sendAnswers = (chatId: PlannerChatId, answers: PlannerAnswer[]) => {
@@ -374,7 +388,7 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
             const viewedCollection = store.plannerView.collection;
             const viewedEdit = viewedCollection ? store.plannerEdits[viewedCollection] : undefined;
 
-            if (!slug || changes.length === 0 || store.plannerIsSaving) {
+            if (!slug || changes.length === 0 || store.plannerIsSaving || selectIsAnyChatWorking(store)) {
                 return;
             }
 

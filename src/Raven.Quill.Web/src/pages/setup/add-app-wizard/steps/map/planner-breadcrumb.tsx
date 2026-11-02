@@ -16,7 +16,7 @@ export function PlannerBreadcrumb({ items, children }: { items: BreadcrumbStep[]
     const { openPlan } = usePlannerActions();
 
     return (
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="sticky top-0 z-10 -mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b bg-background py-3">
             <Breadcrumb>
                 <BreadcrumbList>
                     {items.map((item) => (

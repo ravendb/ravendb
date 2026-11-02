@@ -58,6 +58,10 @@ export function isAreaNotStartedError(message: string): boolean {
     return /^The area .+ has not started; start it first\.$/.test(message.trim());
 }
 
+export function isAreaAlreadyStartedError(message: string): boolean {
+    return /^The area .+ has already started; ask in it instead\.$/.test(message.trim());
+}
+
 /**
  * A frame belongs to its chat's last turn, the reply its stream opened. What an area agent registers is in
  * that area.
