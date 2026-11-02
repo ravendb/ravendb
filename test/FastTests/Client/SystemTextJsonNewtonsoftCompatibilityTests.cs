@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Dynamic;
 using System.Globalization;
@@ -1789,6 +1790,34 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
 
         Assert.Equal(2, read.Location?.Y);
         Assert.Null(read.Missing);
+    }
+
+    private class HoldsReadOnlyCollections
+    {
+        public ReadOnlyCollection<int> Numbers { get; set; }
+
+        public ReadOnlyCollection<string> Names { get; set; }
+
+        public ReadOnlyCollection<Animal> Animals { get; set; }
+
+        public ReadOnlyDictionary<string, int> Counts { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonReadsReadOnlyCollectionsLikeNewtonsoft()
+    {
+        var read = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new HoldsReadOnlyCollections
+        {
+            Numbers = new ReadOnlyCollection<int>([1, 2]),
+            Names = new ReadOnlyCollection<string>(["a"]),
+            Animals = new ReadOnlyCollection<Animal>([new Animal { Name = "animal" }, new Dog { Name = "dog", Barks = true }]),
+            Counts = new ReadOnlyDictionary<string, int>(new Dictionary<string, int> { ["a"] = 1 })
+        });
+
+        Assert.Equal([1, 2], read.Numbers);
+        Assert.Equal(["a"], read.Names);
+        Assert.IsType<Dog>(read.Animals[1]);
+        Assert.Equal(1, read.Counts["a"]);
     }
 
     private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)

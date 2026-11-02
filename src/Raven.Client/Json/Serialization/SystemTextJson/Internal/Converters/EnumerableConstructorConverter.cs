@@ -35,10 +35,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             if (type.IsClass == false || type.IsAbstract || type.IsArray || type == typeof(string))
                 return null;
 
-            if (type.Namespace != null && (type.Namespace == "System" || type.Namespace.StartsWith("System.", StringComparison.Ordinal)))
-                return null;
-
-            if (typeof(IDictionary).IsAssignableFrom(type) || typeof(IList).IsAssignableFrom(type))
+            if (typeof(IDictionary).IsAssignableFrom(type))
                 return null;
 
             Type[] enumerableInterfaces = type.GetInterfaces()
@@ -49,7 +46,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 return null;
 
             Type candidateElementType = enumerableInterfaces[0].GetGenericArguments()[0];
-            if (typeof(ICollection<>).MakeGenericType(candidateElementType).IsAssignableFrom(type))
+            if (IsCustomEnumerable(type, candidateElementType) == false && IsUninstantiableCollection(type, candidateElementType) == false)
                 return null;
 
             Type listType = typeof(List<>).MakeGenericType(candidateElementType);
@@ -64,6 +61,20 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             }
 
             return null;
+        }
+
+        private static bool IsCustomEnumerable(Type type, Type elementType)
+        {
+            if (type.Namespace != null && (type.Namespace == "System" || type.Namespace.StartsWith("System.", StringComparison.Ordinal)))
+                return false;
+
+            return typeof(IList).IsAssignableFrom(type) == false && typeof(ICollection<>).MakeGenericType(elementType).IsAssignableFrom(type) == false;
+        }
+
+        private static bool IsUninstantiableCollection(Type type, Type elementType)
+        {
+            bool polymorphicElement = elementType.IsValueType == false && elementType != typeof(string) && elementType.IsSealed == false;
+            return polymorphicElement == false && type.GetConstructor(Type.EmptyTypes) == null;
         }
 
         private sealed class EnumerableConstructorConverterInner<TEnumerable, TElement> : JsonConverter<TEnumerable>

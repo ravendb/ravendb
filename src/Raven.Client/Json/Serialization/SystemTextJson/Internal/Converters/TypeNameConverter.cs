@@ -350,9 +350,22 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
         private static object ReadDictionary(ref Utf8JsonReader reader, Type dictionaryType, Type valueType, JsonSerializerOptions options)
         {
             Type createdType = GetCreatedType(dictionaryType);
-            object dictionary = Activator.CreateInstance(createdType.IsInterface || createdType.IsAbstract
-                ? typeof(Dictionary<,>).MakeGenericType(typeof(string), valueType)
-                : createdType);
+            Type bufferType = typeof(Dictionary<,>).MakeGenericType(typeof(string), valueType);
+            ConstructorInfo dictionaryConstructor = null;
+
+            if (createdType.IsInterface || createdType.IsAbstract)
+            {
+                createdType = bufferType;
+            }
+            else if (createdType.IsValueType == false && createdType.GetConstructor(Type.EmptyTypes) == null)
+            {
+                dictionaryConstructor = createdType.GetConstructors()
+                    .FirstOrDefault(c => c.GetParameters() is { Length: 1 } parameters && parameters[0].ParameterType.IsAssignableFrom(bufferType));
+                if (dictionaryConstructor != null)
+                    createdType = bufferType;
+            }
+
+            object dictionary = Activator.CreateInstance(createdType);
 
             PropertyInfo indexer = dictionary is IDictionary ? null : typeof(IDictionary<,>).MakeGenericType(typeof(string), valueType).GetProperty("Item");
 
@@ -371,7 +384,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                     indexer.SetValue(dictionary, value, [key]);
             }
 
-            return dictionary;
+            return dictionaryConstructor == null ? dictionary : dictionaryConstructor.Invoke([dictionary]);
         }
 
         private static object ReadWrappedCollection(ref Utf8JsonReader reader, Type collectionType, JsonSerializerOptions options)
