@@ -239,8 +239,6 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
 
     private static StorageIoDeviceAnalysis FromEndpoint(StorageDeviceIoInfo device)
     {
-        double latencyThreshold = device.Thresholds?.CongestionJournalWriteLatencyInMs ?? DefaultCongestionLatencyInMs;
-
         // the 10 s samples of the last hour, not the average of the moment the package was taken
         List<double> latencies = (device.History ?? new List<StorageDeviceSample>())
             .Where(s => s.JournalWriteLatencyInMs != null)
@@ -248,7 +246,6 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
             .Order()
             .ToList();
         double? typical = latencies.Count > 0 ? latencies[latencies.Count / 2] : null;
-        double recentLatency = device.SecondsSinceLastJournalWrite < 60 ? device.JournalWriteLatencyInMs : 0;
 
         return new StorageIoDeviceAnalysis
         {
@@ -265,9 +262,9 @@ public class StorageIoAnalyzer(DebugPackageContent packageContent, DebugPackageA
             TypicalJournalWriteLatencyInMs = typical,
             PeakJournalWriteLatencyInMs = latencies.Count > 0 ? latencies[^1] : null,
             SlowestWrite = device.SlowWrites?.MaxBy(x => x.DurationInSec),
+            // the server's own rule, so the report never calls a disk the bottleneck while its status says it keeps up
             IsBottleneck = device.Status == StorageDeviceStatus.Saturated ||
-                           device.DrainShareOfLastHour > (device.Thresholds?.CongestionDrainShare ?? DefaultCongestionDrainShare) ||
-                           (typical ?? recentLatency) > latencyThreshold
+                           device.DrainShareOfLastHour > (device.Thresholds?.CongestionDrainShare ?? DefaultCongestionDrainShare)
         };
     }
 
