@@ -101,10 +101,8 @@ namespace Raven.Server.Documents.Queries
                 BuildFilterScript(query);
             }
 
-            // Rewritten once here rather than on every execution: this metadata is cached and shared by every request
-            // with the same query text, and the rewrite looks at structure only, never at parameter values. It runs after
-            // Build so the clause is validated exactly as the user wrote it; a between assembled from two comparisons
-            // may pair value kinds a hand-written between is not allowed to.
+            // once, since the metadata is cached and shared by every request with the same query text, and after Build,
+            // so the clause is validated as the user wrote it
             Query.Where = WhereClauseNormalizer.Normalize(Query.Where);
 
             CanCache = cacheKey != 0 && AddSpatialProperties == false;

@@ -6,14 +6,8 @@ using Raven.Server.Documents.Queries.AST;
 namespace Raven.Server.Documents.Queries;
 
 /// <summary>
-/// Rewrites a where clause once, when its query metadata is built, so every request sharing the cached query text gets
-/// the cheaper shape: a lower and an upper bound on the same field become one <see cref="BetweenExpression"/> regardless
-/// of how the 'and' chain is nested or parenthesized, duplicated bounds are dropped, literal bounds of one kind in the same
-/// direction keep only the tighter one, and the bounds on a field whose values are parameters are moved next to each other,
-/// and next to the between the pair folded into, so the query builders can keep the tighter ones once the values are known.
-/// Only the structure is looked at, never a parameter
-/// value, because the cached metadata serves requests with different parameter values. The input tree is never mutated
-/// and unchanged subtrees come back as the same instances.
+/// Rewrites a where clause once, when its query metadata is built: a lower and an upper bound on one field become a between
+/// however the 'and' chain is nested. Looks at structure only, never at parameter values, and never mutates the input tree.
 /// </summary>
 public static class WhereClauseNormalizer
 {
@@ -57,7 +51,7 @@ public static class WhereClauseNormalizer
                 return true;
             }
 
-            // exact() and boost() wrap a where clause of their own, which the builders translate like the outer one
+            // exact() and boost() wrap a where clause of their own
             case MethodExpression { Arguments.Count: > 0 } method when WrapsAWhereClause(method):
             {
                 if (TryNormalize(method.Arguments[0], out var inner) == false)
@@ -151,9 +145,8 @@ public static class WhereClauseNormalizer
         return changed;
     }
 
-    // 'Foo > 1 and Foo > 2' is 'Foo > 2'. Only numeric literals of one kind are compared here. A parameter's value is not
-    // known until the query is built, and the order of two string literals in the index depends on the analyzer and on
-    // whether the field holds dates, which only the query builders know; both are left to them.
+    // 'Foo > 1 and Foo > 2' is 'Foo > 2'; parameters and string literals are left to the builders, which know the values,
+    // the analyzer and whether the field holds dates
     private static bool MergeLiteralBoundsInTheSameDirection(List<QueryExpression> operands)
     {
         var changed = false;
@@ -212,9 +205,8 @@ public static class WhereClauseNormalizer
         return changed;
     }
 
-    // the bounds on a field with parameter values are placed next to each other, so the query builders, which know the
-    // values, find them as adjacent siblings and keep the tighter ones: a bound gathers the same-direction bounds behind it,
-    // and a between the pair folded into gathers the bounds of either direction and the other betweens on its field
+    // a bound gathers the same-direction bounds on its field behind it, a folded between the bounds of either direction and
+    // the other betweens, so the builders find what they must compare as adjacent siblings
     private static bool GroupBoundsOnTheSameField(List<QueryExpression> operands)
     {
         var changed = false;
@@ -287,10 +279,8 @@ public static class WhereClauseNormalizer
         return QueryBuilderHelper.IsSameField(first.Left, second.Left);
     }
 
-    // A long bound queries the long term of a numeric field and a double bound its double term, and the long term holds the
-    // value truncated: 'Price > 10' rejects 10.5 while 'Price > 10.1' accepts it. Neither bound can stand in for the other,
-    // so only bounds of one kind are compared. Two longs compare as longs: past 2^53 a double cannot tell neighbouring
-    // values apart, and a tick count is that large.
+    // a long bound queries the long term of the field and a double bound the double term, so only bounds of one kind are
+    // compared; two longs compare as longs, since past 2^53 a double cannot tell neighbours apart
     private static bool TryCompareNumericLiterals(ValueExpression first, ValueExpression second, out int comparison)
     {
         comparison = 0;

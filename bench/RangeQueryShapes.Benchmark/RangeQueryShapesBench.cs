@@ -15,10 +15,8 @@ using Xunit;
 namespace RangeQueryShapes.Benchmark;
 
 /// <summary>
-/// Compares the three ways a lower and an upper bound on one field reach the server: nested the way the .NET LINQ
-/// provider emits it, flat, and as an explicit 'between'. The server folds any 'and' chain holding such a pair into a
-/// single between query, so all three are expected to run the same; a gap between them means the fold stopped working.
-/// One database is seeded once for the whole run and indexed by both engines, each through its own index.
+/// Compares the nested (LINQ), flat and explicit between shapes of a range pair on both engines; the server folds all
+/// three into one between query, so a gap between them means the fold stopped working.
 /// </summary>
 public class RangeQueryShapesBench
 {

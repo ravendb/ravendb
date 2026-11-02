@@ -35,15 +35,13 @@ public static class QueryBuilderHelper
 {
     internal const int ScoreId = -1;
 
-    // a lower or an upper bound on a field against a literal or a parameter, the shape the between fold works on
     internal static bool IsRangeBound(BinaryExpression expression)
     {
         return expression.IsRangeOperation && expression.Right is ValueExpression;
     }
 
-    // the builders translate a between as a single kind; one the metadata folded from 'Foo > 1 and Foo < 2.5' mixes kinds,
-    // which a hand-written between cannot, so it is translated back as the two comparisons it came from. A hand-written
-    // between is left alone, and so is a null side, which the between translation reads as an open end
+    // a folded between may mix value kinds, which a between translates as one, so it is translated as the two comparisons
+    // it came from; a null side stays a between, which reads it as an open end
     internal static bool TryUnfoldBetweenOfMixedKinds(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, BetweenExpression between,
         out BinaryExpression lower, out BinaryExpression upper)
     {
@@ -63,8 +61,7 @@ public static class QueryBuilderHelper
         return true;
     }
 
-    // the paths must match in full: FieldExpression.Equals ignores the first segment to tolerate an alias,
-    // which would make 'Origin.X' and 'Destination.X' the same field
+    // FieldExpression.Equals ignores the first path segment to tolerate an alias, which would match 'Origin.X' with 'Destination.X'
     internal static bool IsSameField(QueryExpression first, QueryExpression second)
     {
         if (first is FieldExpression firstField && second is FieldExpression secondField)
@@ -85,15 +82,8 @@ public static class QueryBuilderHelper
         return comparison < 0 ? first : second;
     }
 
-    /// <summary>
-    /// 'Foo > $a and Foo > $b' needs only the tighter bound, and 'Foo between $a and $b and Foo > $c' only the between with
-    /// the tighter lower bound, but which one that is depends on the parameter values, which are known only while building
-    /// the query. <see cref="WhereClauseNormalizer"/> already placed the bounds on a field, and the betweens it folded pairs
-    /// into, next to each other along the left spine of the 'and' chain, so this walks that spine from <paramref name="and"/>
-    /// and tightens at every step. Values that cannot be compared stop the walk and stay as they are; what the walk did not
-    /// consume comes back as <paramref name="remainder"/>, null when the whole chain was bounds on this field.
-    /// Returns false when nothing was merged, without allocating.
-    /// </summary>
+    // walks the bounds on one field the metadata placed next to each other along the left spine of the 'and' chain and keeps
+    // the tighter ones; what the walk did not consume comes back as the remainder, null when it consumed the whole chain
     internal static bool TryMergeSameDirectionBounds(BinaryExpression and, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, Index index,
         out QueryExpression tighter, out QueryExpression remainder)
     {
@@ -149,7 +139,6 @@ public static class QueryBuilderHelper
         return true;
     }
 
-    // a bound against a literal or a parameter, or the between the query metadata folded such a pair into
     private static bool TryGetBoundField(QueryExpression expression, out QueryExpression field)
     {
         switch (expression)
@@ -166,10 +155,8 @@ public static class QueryBuilderHelper
         }
     }
 
-    // the lower bounds of the two keep the greater value and the upper bounds the lesser; both sides present make a between,
-    // one side a bound. Null when two values cannot be compared, and then both expressions stay as they are. Two bare bounds
-    // of opposite directions are never paired here: the metadata paired every pair it could, and a pair that reaches the
-    // builders apart is a between of mixed kinds taken apart on purpose, which must not be put together again
+    // null when the values cannot be compared. Two bare bounds of opposite directions stay apart: the metadata paired every
+    // pair it could, and one that reaches the builders apart is a between of mixed kinds taken apart on purpose
     private static QueryExpression Tighten(QueryExpression first, QueryExpression second, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters,
         Index index, QueryFieldName fieldName)
     {
@@ -221,8 +208,7 @@ public static class QueryBuilderHelper
         }
     }
 
-    // two longs compare as longs, two doubles as doubles, two dates as ticks when the index knows the field holds dates.
-    // A long against a double is not comparable: each queries its own term of the field (see WhereClauseNormalizer).
+    // a long against a double is not comparable, each queries its own term of the field
     private static int? CompareBoundValues(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, Index index, QueryFieldName fieldName,
         ValueExpression first, ValueExpression second)
     {

@@ -223,8 +223,7 @@ namespace Raven.Server.Documents.Queries
                         }
                     case OperatorType.And:
                         {
-                            // 'Foo > $a and Foo > $b' keeps only the tighter bound. The query metadata already placed such bounds
-                            // next to each other; their values are known only here.
+                            // keep only the tighter of adjacent bounds on one field, whose values are known only here
                             if (QueryBuilderHelper.TryMergeSameDirectionBounds(where, query, metadata, parameters, index, out var tighterBound, out var remainder))
                             {
                                 var mergedExpression = remainder == null ? tighterBound : new BinaryExpression(remainder, tighterBound, OperatorType.And);
@@ -532,7 +531,7 @@ namespace Raven.Server.Documents.Queries
                     }
                     else
                     {
-                        // as for a single comparison, an exact string range on an auto index queries the exact field
+                        // an exact string range on an auto index queries the exact field, as a single comparison does
                         if (exact && metadata.IsDynamic)
                             luceneFieldName = AutoIndexField.GetExactAutoIndexFieldName(luceneFieldName);
 
@@ -574,8 +573,8 @@ namespace Raven.Server.Documents.Queries
             var nextDayAfterFirst = ticksFirstAligned + TimeSpan.TicksPerDay;
 
             if (ticksFirstAligned == ticksFirst && ticksSecond == ticksSecondAligned || // already aligned on day boundary
-                ticksFirst >= ticksSecond || // empty or inverted, there is nothing to split
-                ticksSecond <= nextDayAfterFirst) // the whole range lies within the first day, up to and including its next midnight
+                ticksFirst >= ticksSecond || // empty or inverted
+                ticksSecond <= nextDayAfterFirst) // within the first day
             {
                 return LuceneQueryHelper.Between(index, luceneFieldName, ticksFirst, be.MinInclusive, ticksSecond, be.MaxInclusive);
             }
@@ -584,7 +583,7 @@ namespace Raven.Server.Documents.Queries
             var startInclusive = be.MinInclusive;
             if (ticksFirst != ticksFirstAligned)
             {
-                // the head runs up to the next midnight, which the day-aligned middle segment then covers inclusively
+                // the head ends before the next midnight, which the middle segment covers
                 ticksFirstAligned = nextDayAfterFirst;
                 bq.Add(LuceneQueryHelper.Between(index, luceneFieldName, ticksFirst, be.MinInclusive, ticksFirstAligned, false), Occur.SHOULD);
                 startInclusive = true;

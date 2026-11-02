@@ -175,11 +175,8 @@ namespace FastTests.Corax
             Assert.Equal(new[] { "users/1" }, QueryDynamic<User>(store, "from Users where exact((Age >= 0 and Name >= 'A') and Name < 'M')"));
         }
 
-        // B6: multi-valued field, one value above the lower bound and another one below the upper bound.
-        // As two clauses this matched, since any element may satisfy each bound on its own. Folded into a between it means
-        // "one element inside the range", which is what a hand-written between, the LINQ provider's own between and the
-        // old fold of adjacent bounds already meant, and what a range on a collection is read to mean. The fold makes
-        // that the meaning regardless of how the two bounds are nested.
+        // B6: multi-valued field, one value above the lower bound and another below the upper bound. As two clauses this
+        // matched; folded it means one element inside the range, as a hand-written between already did
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void RangePairOnMultiValuedField(Options options)
