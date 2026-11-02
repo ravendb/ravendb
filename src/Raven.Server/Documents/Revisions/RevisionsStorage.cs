@@ -537,8 +537,6 @@ namespace Raven.Server.Documents.Revisions
                     return;
                 }
 
-                // the clone is only needed for the duration of this transaction, so it is allocated from (and disposed with) the transaction context
-                // rather than from the context of the replicated document, which belongs to the replication batch (see also RavenDB-22027)
                 using var reverted = RevertSnapshotFlags(context, document.Clone(context), id);
                 _documentsStorage.Put(context, id, null, reverted, lastModifiedTicks, changeVector,
                     null, flags, nonPersistentFlags);
@@ -573,18 +571,24 @@ namespace Raven.Server.Documents.Revisions
             var metadataModified = RevertSnapshotFlag(metadata, Constants.Documents.Metadata.RevisionCounters, Constants.Documents.Metadata.Counters);
             metadataModified |= RevertSnapshotFlag(metadata, Constants.Documents.Metadata.RevisionTimeSeries, Constants.Documents.Metadata.TimeSeries);
 
-            if (metadataModified)
+            if (metadataModified == false)
+                return document;
+
+            // the document is owned by the caller, so it is left as it was
+            document.Modifications = new DynamicJsonValue(document)
             {
-                document.Modifications = new DynamicJsonValue(document)
-                {
-                    [Constants.Documents.Metadata.Key] = metadata
-                };
+                [Constants.Documents.Metadata.Key] = metadata
+            };
 
-                using (var old = document)
-                    document = context.ReadObject(document, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            try
+            {
+                return context.ReadObject(document, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             }
-
-            return document;
+            finally
+            {
+                document.Modifications = null;
+                metadata.Modifications = null;
+            }
         }
 
         public class DeleteOldRevisionsResult
@@ -2404,6 +2408,8 @@ namespace Raven.Server.Documents.Revisions
 
                 if (_idToChangeVector != null)
                 {
+                    _list.Clear(); // the command may be executed more than once
+
                     // Verify matching for all ids and cvs
                     foreach (var (id, cv) in _idToChangeVector)
                     {
@@ -2434,9 +2440,9 @@ namespace Raven.Server.Documents.Revisions
                     if (document.Data != null)
                     {
                         CollectionName collectionName = RemoveOldMetadataInfo(context, documentsStorage, document);
-                        InsertNewMetadataInfo(context, documentsStorage, document, collectionName);
+                        var data = InsertNewMetadataInfo(context, documentsStorage, document, collectionName);
 
-                        documentsStorage.Put(context, document.Id, null, document.Data, flags: flags);
+                        documentsStorage.Put(context, document.Id, null, data, flags: flags);
                     }
                     else
                     {
@@ -2475,12 +2481,13 @@ namespace Raven.Server.Documents.Revisions
                 }
             }
 
-            private static void InsertNewMetadataInfo(DocumentsOperationContext context, DocumentsStorage documentsStorage, Document document, CollectionName collectionName)
+            private static BlittableJsonReaderObject InsertNewMetadataInfo(DocumentsOperationContext context, DocumentsStorage documentsStorage, Document document, CollectionName collectionName)
             {
                 documentsStorage.AttachmentsStorage.PutAttachmentRevert(context, document.Id, document.Data, out bool has);
                 RevertCounters(context, documentsStorage, document, collectionName);
 
-                document.Data = RevertSnapshotFlags(context, document.Data, document.Id);
+                // the revision (owned by the caller) is left as it was, the reverted data belongs to the transaction
+                return RevertSnapshotFlags(context, document.Data, document.Id);
             }
 
             private static void RevertCounters(DocumentsOperationContext context, DocumentsStorage documentsStorage, Document document, CollectionName collectionName)
