@@ -742,6 +742,13 @@ public static partial class CoraxQueryBuilder
         var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, be.Source, metadata);
         var (valueFirst, valueFirstType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, be.Min);
         var (valueSecond, valueSecondType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, be.Max);
+
+        // as for a single comparison: the index may mark the field exact, and on an auto index an exact string range
+        // queries the exact field
+        exact = QueryBuilderHelper.IsExact(index, exact, fieldName);
+        if (exact && metadata.IsDynamic && valueFirstType == ValueTokenType.String && valueSecondType == ValueTokenType.String)
+            fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName), fieldName.IsQuoted);
+
         var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, exact: exact, hasBoost: builderParameters.HasBoost);
         var leftSideOperation = be.MinInclusive ? UnaryMatchOperation.GreaterThanOrEqual : UnaryMatchOperation.GreaterThan;
         var rightSideOperation = be.MaxInclusive ? UnaryMatchOperation.LessThanOrEqual : UnaryMatchOperation.LessThan;
@@ -755,7 +762,6 @@ public static partial class CoraxQueryBuilder
 
         IQueryMatch HandleStringBetween()
         {
-            exact = QueryBuilderHelper.IsExact(index, exact, fieldName);
             var valueFirstAsString = QueryBuilderHelper.CoraxGetValueAsString(valueFirst);
             var valueSecondAsString = QueryBuilderHelper.CoraxGetValueAsString(valueSecond);
 
