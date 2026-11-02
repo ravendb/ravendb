@@ -585,6 +585,15 @@ namespace Sparrow.Server
 
             if (segment.Size >= size)
             {
+                // Reset keeps the last segment, so a much bigger one would stay with a small context for good
+                if (segment.Size / 2 >= size)
+                {
+                    if (pool.TryEnqueue(segment) == false)
+                        segment.Dispose();
+
+                    goto ALLOCATE;
+                }
+
                 if (segment.InUse.Raise() == false)
                     goto ALLOCATE;
 
