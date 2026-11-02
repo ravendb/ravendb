@@ -1,8 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -269,6 +271,38 @@ namespace FastTests.Sparrow
             {
                 foreach (var context in contexts)
                     context.Dispose();
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Memory)]
+        public void SegmentTakenFromPoolIsChargedToTheThreadUsingIt()
+        {
+            // its segments go to the pool, still charged to this thread
+            RunOnNewThread(() =>
+            {
+                using (new ByteStringContext(SharedMultipleUseFlag.None))
+                {
+                }
+            });
+
+            // a new thread starts with no charge, so it must be charged exactly what its context holds
+            long chargedToThread = 0, heldByContext = 0;
+            RunOnNewThread(() =>
+            {
+                using (var context = new ByteStringContext(SharedMultipleUseFlag.None))
+                {
+                    chargedToThread = NativeMemory.CurrentThreadStats.Allocations;
+                    heldByContext = context._totalAllocated;
+                }
+            });
+
+            Assert.Equal(heldByContext, chargedToThread);
+
+            static void RunOnNewThread(Action action)
+            {
+                var thread = new Thread(() => action());
+                thread.Start();
+                thread.Join();
             }
         }
 
