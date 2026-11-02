@@ -8,6 +8,11 @@ namespace Raven.Server.Documents.Queries.AST
         public bool MinInclusive = true;
         public bool MaxInclusive = true;
 
+        // set by the query metadata when it assembles the between from two comparisons in an 'and' chain; such a between may
+        // be exclusive on either end and may pair value kinds a hand-written between cannot, so it prints and translates as the
+        // comparisons it came from wherever a hand-written between would not do
+        public bool Folded;
+
         public BetweenExpression(QueryExpression source, ValueExpression min, ValueExpression max)
         {
             Source = source;
