@@ -150,6 +150,17 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 ThrowPointersNotSupported();
         }
 
+        internal static bool OwnsUnknownProperties(JsonTypeInfo typeInfo)
+        {
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                if (typeInfo.Properties[i].IsExtensionData)
+                    return true;
+            }
+
+            return false;
+        }
+
         private void ModifyTypeInfo(JsonTypeInfo typeInfo)
         {
             if (typeInfo.Kind != JsonTypeInfoKind.Object || Nullable.GetUnderlyingType(typeInfo.Type) != null)

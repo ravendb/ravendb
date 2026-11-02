@@ -1105,6 +1105,49 @@ namespace FastTests.Client
             }
         }
 
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task SessionSavesEditsToSystemTextJsonExtensionData()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.Serialization = new SystemTextJsonSerializationConventions()
+            });
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Advanced.Defer(new PutCommandData("items/1", null, new DynamicJsonValue
+                {
+                    ["Name"] = "name",
+                    ["Age"] = 30,
+                    ["City"] = "Hadera",
+                    [Raven.Client.Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    {
+                        [Raven.Client.Constants.Documents.Metadata.Collection] = "Items"
+                    }
+                }));
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var item = await session.LoadAsync<WithExtensionData>("items/1");
+                Assert.False(session.Advanced.HasChanges);
+
+                item.Extra["City"] = "Tel Aviv";
+                item.Extra.Remove("Age");
+                item.Extra["Phone"] = "050-1234";
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var raw = await session.LoadAsync<BlittableJsonReaderObject>("items/1");
+                Assert.Equal("Tel Aviv", raw["City"].ToString());
+                Assert.Equal("050-1234", raw["Phone"].ToString());
+                Assert.False(raw.TryGet("Age", out object _));
+            }
+        }
+
         [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Querying)]
         public void VectorSearchFieldNamesFollowStoreConventions()
         {
