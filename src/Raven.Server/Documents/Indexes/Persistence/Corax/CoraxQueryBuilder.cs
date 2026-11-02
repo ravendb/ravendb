@@ -317,8 +317,7 @@ public static partial class CoraxQueryBuilder
                         IQueryMatch left = null;
                         IQueryMatch right = null;
 
-                        // 'Foo > $a and Foo > $b' keeps only the tighter bound. The query metadata already placed such bounds
-                        // next to each other; their values are known only here.
+                        // keep only the tighter of adjacent bounds on one field, whose values are known only here
                         if (QueryBuilderHelper.TryMergeSameDirectionBounds(where, metadata.Query, metadata, queryParameters, index, out var tighterBound, out var remainder))
                         {
                             var mergedExpression = remainder == null ? tighterBound : new BinaryExpression(remainder, tighterBound, OperatorType.And);
@@ -743,8 +742,7 @@ public static partial class CoraxQueryBuilder
         var (valueFirst, valueFirstType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, be.Min);
         var (valueSecond, valueSecondType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, be.Max);
 
-        // as for a single comparison: the index may mark the field exact, and on an auto index an exact string range
-        // queries the exact field
+        // an exact string range on an auto index queries the exact field, as a single comparison does
         exact = QueryBuilderHelper.IsExact(index, exact, fieldName);
         if (exact && metadata.IsDynamic && valueFirstType == ValueTokenType.String && valueSecondType == ValueTokenType.String)
             fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName), fieldName.IsQuoted);

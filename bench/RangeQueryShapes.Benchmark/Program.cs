@@ -13,9 +13,8 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        // the in-process toolchain avoids BenchmarkDotNet's generated-project build,
-        // which passes a global OutDir that makes the multi-targeting Sparrow TFM outputs
-        // overwrite each other and fails the Raven.Server compilation
+        // the in-process toolchain avoids the generated-project build, whose global OutDir makes the multi-targeting
+        // Sparrow outputs overwrite each other
         var config = new ManualConfig()
             .WithOptions(ConfigOptions.DisableOptimizationsValidator)
             .AddValidator(JitOptimizationsValidator.DontFailOnError)

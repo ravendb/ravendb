@@ -368,9 +368,8 @@ namespace FastTests.Corax
             }
         }
 
-        // a hand-written between must pair values of one kind, but a between assembled from two comparisons may mix a
-        // literal with a parameter or a long with a double; the metadata still folds it, and the query builders translate
-        // a between of mixed kinds as the two comparisons it came from, so each bound keeps exactly its own meaning
+        // a between assembled from two comparisons may mix a literal with a parameter or a long with a double; the builders
+        // translate such a between as the two comparisons it came from
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
         [RavenData("Amount > $a and Amount < 8", 6, "coins/3", SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("Amount < 8 and Amount > 6.5", 0, "coins/3", SearchEngineMode = RavenSearchEngineMode.All)]
@@ -421,9 +420,8 @@ namespace FastTests.Corax
             }
         }
 
-        // A folded between prints as the comparisons it came from: RQL has no exclusive between, and a hand-written between
-        // may not pair the value kinds a folded one may. A sharded query is re-rendered from the cached tree before it goes
-        // to the shards, each of which parses what the user wrote and folds it again.
+        // a folded between prints as the comparisons it came from; a sharded query is re-rendered from the cached tree and
+        // each shard parses what the user wrote and folds it again
         [RavenTheory(RavenTestCategory.Querying)]
         [InlineData("CreatedAt between $p1 and $p2", "CreatedAt BETWEEN $p1 AND $p2")]
         [InlineData("CreatedAt >= $p1 and CreatedAt <= $p2", "(CreatedAt >= $p1 AND CreatedAt <= $p2)")]
