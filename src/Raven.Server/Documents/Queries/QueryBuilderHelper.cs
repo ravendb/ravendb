@@ -86,54 +86,55 @@ public static class QueryBuilderHelper
     }
 
     /// <summary>
-    /// 'Foo > $a and Foo > $b' needs only the tighter bound, but which one that is depends on the parameter values, which
-    /// are known only while building the query. <see cref="WhereClauseNormalizer"/> already placed such bounds next to each
-    /// other along the left spine of the 'and' chain, so this walks that spine from <paramref name="and"/> and keeps the
-    /// tighter bound at every step. Values that cannot be compared stop the walk and stay as they are; what the walk did not
+    /// 'Foo > $a and Foo > $b' needs only the tighter bound, and 'Foo between $a and $b and Foo > $c' only the between with
+    /// the tighter lower bound, but which one that is depends on the parameter values, which are known only while building
+    /// the query. <see cref="WhereClauseNormalizer"/> already placed the bounds on a field, and the betweens it folded pairs
+    /// into, next to each other along the left spine of the 'and' chain, so this walks that spine from <paramref name="and"/>
+    /// and tightens at every step. Values that cannot be compared stop the walk and stay as they are; what the walk did not
     /// consume comes back as <paramref name="remainder"/>, null when the whole chain was bounds on this field.
-    /// Returns false when fewer than two bounds were merged, without allocating.
+    /// Returns false when nothing was merged, without allocating.
     /// </summary>
     internal static bool TryMergeSameDirectionBounds(BinaryExpression and, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, Index index,
-        out BinaryExpression tighter, out QueryExpression remainder)
+        out QueryExpression tighter, out QueryExpression remainder)
     {
         tighter = null;
         remainder = null;
 
-        if (and.Right is not BinaryExpression last || IsRangeBound(last) == false)
+        if (TryGetBoundField(and.Right, out var field) == false)
             return false;
 
         QueryFieldName fieldName = null;
         var merged = false;
-        tighter = last;
+        tighter = and.Right;
         QueryExpression node = and.Left;
 
         while (node != null)
         {
-            BinaryExpression candidate;
+            QueryExpression candidate;
             QueryExpression rest;
-            if (node is BinaryExpression { Operator: OperatorType.And } inner && inner.Right is BinaryExpression innerRight && IsRangeBound(innerRight))
+            if (node is BinaryExpression { Operator: OperatorType.And } inner && TryGetBoundField(inner.Right, out var candidateField))
             {
-                candidate = innerRight;
+                candidate = inner.Right;
                 rest = inner.Left;
             }
-            else if (node is BinaryExpression leaf && IsRangeBound(leaf))
+            else if (TryGetBoundField(node, out candidateField))
             {
-                candidate = leaf;
+                candidate = node;
                 rest = null;
             }
             else
                 break;
 
-            if (IsSameField(candidate.Left, tighter.Left) == false || candidate.IsGreaterThan != tighter.IsGreaterThan)
+            if (IsSameField(candidateField, field) == false)
                 break;
 
-            fieldName ??= ExtractIndexFieldName(query, parameters, tighter.Left, metadata);
+            fieldName ??= ExtractIndexFieldName(query, parameters, field, metadata);
 
-            var comparison = CompareBoundValues(query, metadata, parameters, index, fieldName, (ValueExpression)candidate.Right, (ValueExpression)tighter.Right);
-            if (comparison == null)
+            var tightened = Tighten(candidate, tighter, query, metadata, parameters, index, fieldName);
+            if (tightened == null)
                 break;
 
-            tighter = TighterBound(candidate, tighter, comparison.Value);
+            tighter = tightened;
             merged = true;
             node = rest;
         }
@@ -146,6 +147,78 @@ public static class QueryBuilderHelper
 
         remainder = node;
         return true;
+    }
+
+    // a bound against a literal or a parameter, or the between the query metadata folded such a pair into
+    private static bool TryGetBoundField(QueryExpression expression, out QueryExpression field)
+    {
+        switch (expression)
+        {
+            case BinaryExpression bound when IsRangeBound(bound):
+                field = bound.Left;
+                return true;
+            case BetweenExpression { Folded: true } between:
+                field = between.Source;
+                return true;
+            default:
+                field = null;
+                return false;
+        }
+    }
+
+    // the lower bounds of the two keep the greater value and the upper bounds the lesser; both sides present make a between,
+    // one side a bound. Null when two values cannot be compared, and then both expressions stay as they are. Two bare bounds
+    // of opposite directions are never paired here: the metadata paired every pair it could, and a pair that reaches the
+    // builders apart is a between of mixed kinds taken apart on purpose, which must not be put together again
+    private static QueryExpression Tighten(QueryExpression first, QueryExpression second, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters,
+        Index index, QueryFieldName fieldName)
+    {
+        if (first is BinaryExpression firstBound && second is BinaryExpression secondBound && firstBound.IsGreaterThan != secondBound.IsGreaterThan)
+            return null;
+
+        var (firstLower, firstUpper) = Sides(first);
+        var (secondLower, secondUpper) = Sides(second);
+
+        if (TryTightenSide(firstLower, secondLower, out var lower) == false || TryTightenSide(firstUpper, secondUpper, out var upper) == false)
+            return null;
+
+        if (lower == null)
+            return upper;
+
+        if (upper == null)
+            return lower;
+
+        return new BetweenExpression(lower.Left, (ValueExpression)lower.Right, (ValueExpression)upper.Right)
+        {
+            MinInclusive = lower.Operator == OperatorType.GreaterThanEqual,
+            MaxInclusive = upper.Operator == OperatorType.LessThanEqual,
+            Folded = true
+        };
+
+        bool TryTightenSide(BinaryExpression a, BinaryExpression b, out BinaryExpression side)
+        {
+            side = a ?? b;
+            if (a == null || b == null)
+                return true;
+
+            var comparison = CompareBoundValues(query, metadata, parameters, index, fieldName, (ValueExpression)a.Right, (ValueExpression)b.Right);
+            if (comparison == null)
+                return false;
+
+            side = TighterBound(a, b, comparison.Value);
+            return true;
+        }
+
+        static (BinaryExpression Lower, BinaryExpression Upper) Sides(QueryExpression expression)
+        {
+            return expression switch
+            {
+                BetweenExpression between => (between.LowerBound(), between.UpperBound()),
+                BinaryExpression { IsGreaterThan: true } lower => (lower, null),
+                BinaryExpression upper => (null, upper),
+                _ => throw new InvalidOperationException("Expected a range bound or a between, but got: " + expression)
+            };
+        }
     }
 
     // two longs compare as longs, two doubles as doubles, two dates as ticks when the index knows the field holds dates.

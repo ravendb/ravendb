@@ -222,8 +222,10 @@ namespace FastTests.Corax
         [InlineData("Amount > $a and CustomerId = 'x' and Amount > $b and EntityType = 'y' and Amount >= $c", "AND[ AND[ AND[ AND[ Amount > $a , Amount > $b ] , Amount >= $c ] , CustomerId = 'x' ] , EntityType = 'y' ]")]
         // a long and a double literal are grouped the same way, and the builders keep both
         [InlineData("Amount > 1 and CustomerId = 'x' and Amount > 1.5", "AND[ AND[ Amount > 1 , Amount > 1.5 ] , CustomerId = 'x' ]")]
-        // opposite directions still pair into a between first
-        [InlineData("Amount > $a and CustomerId = 'x' and Amount < $b and Amount > $c", "AND[ AND[ Amount between $a and $b , CustomerId = 'x' ] , Amount > $c ]")]
+        // opposite directions pair into a between first, and the bound left over is placed next to it for the builders
+        [InlineData("Amount > $a and CustomerId = 'x' and Amount < $b and Amount > $c", "AND[ AND[ Amount between $a and $b , Amount > $c ] , CustomerId = 'x' ]")]
+        [InlineData("Amount > $a and Amount < $b and CustomerId = 'x' and Amount > $c and Amount < $d", "AND[ AND[ Amount between $a and $b , Amount between $c and $d ] , CustomerId = 'x' ]")]
+        [InlineData("Amount > $a and Amount < $b and CustomerId = 'x' and Amount > $c and Amount > $d", "AND[ AND[ AND[ Amount between $a and $b , Amount > $c ] , Amount > $d ] , CustomerId = 'x' ]")]
         public void NormalizerGroupsSameDirectionBoundsItCannotCompare(string where, string expectedTree)
         {
             var query = Parse(where);
@@ -250,6 +252,12 @@ namespace FastTests.Corax
         [RavenData("Amount > $a and Amount > $b", 3.5, 6.5, "coins/1,coins/3,coins/4,coins/5", SearchEngineMode = RavenSearchEngineMode.All)]
         // three bounds on one field
         [RavenData("Amount > $a and Amount > $b and Amount > 4", 3, 6, "coins/1,coins/3,coins/4,coins/5", SearchEngineMode = RavenSearchEngineMode.All)]
+        // a bound left over after the pair folded tightens the side of the between it belongs to
+        [RavenData("Amount > $a and Amount < 50 and Amount > $b", 3, 6, "coins/1,coins/3", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Amount > $a and CustomerId in ($p0) and Amount < 50 and Amount > $b", 6, 3, "coins/1,coins/3", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Amount > $a and Amount < $b and Amount < 8", 3, 50, "coins/2,coins/3", SearchEngineMode = RavenSearchEngineMode.All)]
+        // two pairs on one field fold into two betweens, which tighten into one
+        [RavenData("Amount >= $a and Amount < 50 and Amount > $b and Amount <= 1000", 3, 6, "coins/1,coins/3", SearchEngineMode = RavenSearchEngineMode.All)]
         public void TheTighterOfSameDirectionParameterBoundsWins(Options options, string where, object a, object b, string expectedIds)
         {
             using (var store = GetDocumentStore(options))
