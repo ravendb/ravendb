@@ -4,6 +4,7 @@ import {
     describeConventions,
     getActivityHeadline,
     getActivityRows,
+    getLatestNote,
     getRegisteredOutcome,
     type PlanProgress,
 } from "@/pages/setup/add-app-wizard/steps/map/chat/planner-activity";
@@ -44,7 +45,9 @@ export function PlannerActivityCard({
                 {rows.map((activity, index) => (
                     <ActivityRow key={index} activity={activity} />
                 ))}
-                <ActivityRowLayout icon={<WorkingIcon />}>Working…</ActivityRowLayout>
+                <ActivityRowLayout icon={<WorkingIcon />} detail={getLatestNote(turn.activity)}>
+                    Working…
+                </ActivityRowLayout>
             </PlannerWorkingActivity>
         );
     }
@@ -75,9 +78,6 @@ function ActivityRow({ activity }: { activity: PlannerActivity }) {
                     {describeConventions(activity)}
                 </ActivityRowLayout>
             );
-
-        case "note":
-            return <ActivityRowLayout icon={<DoneIcon />}>{activity.text}</ActivityRowLayout>;
 
         case "lateError":
             return (
@@ -121,6 +121,7 @@ function ActivityRow({ activity }: { activity: PlannerActivity }) {
                 </ActivityRowLayout>
             );
 
+        case "note":
         case "proposal":
             return null;
     }

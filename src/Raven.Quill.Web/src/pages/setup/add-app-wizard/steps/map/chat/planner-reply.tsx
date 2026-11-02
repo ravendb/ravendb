@@ -6,6 +6,7 @@ import { Text } from "@/components/typography";
 import { formatCount } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
+import { hasActivityToShow } from "@/pages/setup/add-app-wizard/steps/map/chat/planner-activity";
 import { PlannerActivityCard } from "@/pages/setup/add-app-wizard/steps/map/chat/planner-activity-card";
 import { DoneIcon, WorkingIcon } from "@/pages/setup/add-app-wizard/steps/map/chat/planner-activity-parts";
 import { PlannerMessage } from "@/pages/setup/add-app-wizard/steps/map/chat/planner-message";
@@ -35,7 +36,7 @@ export function PlannerReply({
         return <PlannerOpeningProgress turn={turn} />;
     }
 
-    const hasActivity = turn.activity.some((activity) => activity.type !== "proposal");
+    const hasActivity = hasActivityToShow(turn);
     const hasReadSchema = chatId === null && turn.isOpening && (turn.activity.length > 0 || turn.reply !== null);
     const isAreaOpening = chatId !== null && turn.isOpening;
 
