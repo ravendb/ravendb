@@ -2,18 +2,25 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
+using Raven.Client;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Documents.QueueSink.Commands;
 using Raven.Server.Documents.Replication.Incoming;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.TransactionMerger.Commands;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -376,6 +383,118 @@ namespace SlowTests.Issues
                     Assert.Null(await session.LoadAsync<User>("users/invalid"));
                 }
             }
+        }
+
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Counters | RavenTestCategory.TimeSeries)]
+        public async Task RevertDocumentsCommand_CanBeReExecutedByTheTransactionMerger()
+        {
+            var baseline = RavenTestHelper.UtcToday;
+
+            using (var store = GetDocumentStore())
+            {
+                await RevisionsHelper.SetupRevisionsAsync(store);
+
+                DateTime last;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                    session.CountersFor("users/1").Increment("Downloads", 100);
+                    session.TimeSeriesFor("users/1", "Heartrate").Append(baseline, 60d, "watches/1");
+                    await session.SaveChangesAsync();
+                    last = DateTime.UtcNow;
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    user.Name = "Name2";
+                    session.CountersFor("users/1").Increment("Downloads2", 200);
+                    session.TimeSeriesFor("users/1", "Heartrate2").Append(baseline, 70d, "watches/2");
+                    await session.SaveChangesAsync();
+                }
+
+                var database = await GetDatabase(store.Database);
+
+                var failedCommands = await ExecuteWithForcedRetryAsync(database, command => command is RevisionsStorage.RevertDocumentsCommand, async () =>
+                {
+                    using (var token = new OperationCancelToken(database.Configuration.Databases.OperationTimeout.AsTimeSpan, database.DatabaseShutdown, CancellationToken.None))
+                    {
+                        var result = (RevertResult)await database.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null, token: token);
+                        Assert.Empty(result.Warnings);
+                    }
+                });
+
+                Assert.NotEmpty(failedCommands);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal("Name1", user.Name);
+
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    Assert.True(metadata.Keys.Contains(Constants.Documents.Metadata.Counters));
+                    Assert.True(metadata.Keys.Contains(Constants.Documents.Metadata.TimeSeries));
+                    Assert.False(metadata.Keys.Contains(Constants.Documents.Metadata.RevisionCounters));
+                    Assert.False(metadata.Keys.Contains(Constants.Documents.Metadata.RevisionTimeSeries));
+
+                    var counters = await session.CountersFor(user).GetAllAsync();
+                    Assert.Equal(100, Assert.Single(counters).Value);
+                    Assert.Equal("Downloads", counters.Keys.Single());
+
+                    Assert.Equal(new[] { "Heartrate", "Heartrate2" }, session.Advanced.GetTimeSeriesFor(user).OrderBy(x => x));
+                    Assert.Equal(60d, Assert.Single(await session.TimeSeriesFor(user, "Heartrate").GetAsync()).Value);
+                    Assert.Equal(70d, Assert.Single(await session.TimeSeriesFor(user, "Heartrate2").GetAsync()).Value);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Patching)]
+        public async Task MergedBatchCommand_PatchWithObjectArguments_CanBeReExecutedByTheTransactionMerger()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var database = await GetDatabase(store.Database);
+
+                var failedCommands = await ExecuteWithForcedRetryAsync(database, command => command is MergedBatchCommand, async () =>
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        // the script keeps both a nested object of the arguments and the arguments themselves in the document
+                        session.Advanced.Defer(new PatchCommandData("users/1", null, new PatchRequest
+                        {
+                            Script = "this.Address = args.address; this.Args = args;",
+                            Values = { ["address"] = new Address { City = "Hadera" } }
+                        }));
+
+                        await session.SaveChangesAsync();
+                    }
+                });
+
+                Assert.Single(failedCommands);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<PatchedUser>("users/1");
+                    Assert.Equal("Name1", user.Name);
+                    Assert.Equal("Hadera", user.Address.City);
+                    Assert.Equal("Hadera", Assert.Single(user.Args).Value.City);
+                }
+            }
+        }
+
+        private class PatchedUser
+        {
+            public string Name { get; set; }
+
+            public Address Address { get; set; }
+
+            public Dictionary<string, Address> Args { get; set; }
         }
 
 #if DEBUG
