@@ -94,7 +94,7 @@ function MainPanel({ mergable }: MergeIndexesCardProps) {
                                             </td>
 
                                             <td width={300}>
-                                                <div>{formatIndexCleanupDate(index.lastQueryTime)}</div>
+                                                <div>{formatIndexCleanupDate(index.lastQueryingTime)}</div>
                                             </td>
                                             <td width={300}>
                                                 <div>{formatIndexCleanupDate(index.lastIndexingTime)}</div>

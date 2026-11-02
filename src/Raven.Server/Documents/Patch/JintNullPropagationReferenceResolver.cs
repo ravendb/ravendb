@@ -41,6 +41,9 @@ namespace Raven.Server.Documents.Patch
 
         public virtual bool TryPropertyReference(Engine engine, Reference reference, ref JsValue value)
         {
+            if (value is PropagatedUndefined)
+                return true;
+
             JsValue referencedName = reference.ReferencedName;
 
             if (referencedName.IsString() == false)
@@ -100,6 +103,12 @@ namespace Raven.Server.Documents.Patch
             {
                 var baseValue = reference.Base;
 
+                if (baseValue is PropagatedUndefined)
+                {
+                    value = CreateNoOp(engine);
+                    return true;
+                }
+
                 if (baseValue.IsUndefined() ||
                     reference.IsUnresolvableReference ||
                     baseValue.IsArray() && baseValue.AsArray().Length == 0)
@@ -158,13 +167,53 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            value = new ClrFunction(engine, "function", static (_, _) => JsValue.Undefined);
+            value = CreateNoOp(engine);
             return true;
         }
 
         public bool CheckCoercible(JsValue value)
         {
             return true;
+        }
+
+        private static ClrFunction CreateNoOp(Engine engine)
+        {
+            return new ClrFunction(engine, "function", static (_, _) => PropagatedUndefined.Instance);
+        }
+
+        // Jint 4.16 no longer short-circuits a call chain on undefined, so a no-op result has to keep the rest of the chain undefined
+        private sealed class PropagatedUndefined : JsValue
+        {
+            public static readonly PropagatedUndefined Instance = new();
+
+            private PropagatedUndefined() : base(Types.Undefined)
+            {
+            }
+
+            public override object ToObject()
+            {
+                return null;
+            }
+
+            public override string ToString()
+            {
+                return "undefined";
+            }
+
+            public override bool Equals(JsValue other)
+            {
+                return other is not null && other.IsUndefined();
+            }
+
+            public override bool Equals(object other)
+            {
+                return other is JsValue jsValue && Equals(jsValue);
+            }
+
+            public override int GetHashCode()
+            {
+                return Undefined.GetHashCode();
+            }
         }
     }
 }

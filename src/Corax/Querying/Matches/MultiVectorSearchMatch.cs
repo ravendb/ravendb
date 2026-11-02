@@ -275,6 +275,8 @@ public struct MultiVectorSearchMatch : IPostFilterMatch
 
     public long Count { get; private set; }
 
+    internal bool ReturnsResultsByDistance => _sortByScore;
+
     public bool IsBoosting { get; }
 
     public QueryInspectionNode Inspect()

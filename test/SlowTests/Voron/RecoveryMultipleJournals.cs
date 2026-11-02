@@ -249,7 +249,9 @@ namespace SlowTests.Voron
 
             StopDatabase();
 
-            Assert.True(Env.Journal.CurrentFile.GetAvailable4Kbs(Env.CurrentStateRecord) - lastJournalPosition > 0);
+            // the corruption below must have room to hit one block past the write position
+            // (the journal header record at block 0 shifted the journal geometry, RavenDB-27397)
+            Assert.True(Env.Journal.CurrentFile.GetAvailable4Kbs(Env.CurrentStateRecord) > 0);
 
             for (var pos = lastJournalPosition - 2;
                 pos < lastJournalPosition + 1;

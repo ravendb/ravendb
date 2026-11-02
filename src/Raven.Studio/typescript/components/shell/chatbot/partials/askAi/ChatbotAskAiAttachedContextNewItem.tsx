@@ -1,7 +1,7 @@
 import { useAppDispatch, useAppSelector } from "components/store";
 import { chatbotActions, ChatbotAttachedContext, chatbotSelectors } from "../../store/chatbotSlice";
 import { Icon } from "components/common/Icon";
-import { ReactNode, useMemo, useState } from "react";
+import { ChangeEvent, ReactNode, useMemo, useState } from "react";
 import Dropdown from "react-bootstrap/Dropdown";
 import { CustomDropdownToggle } from "components/common/Dropdown";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -161,7 +161,7 @@ function DatabaseNameTab() {
                 <Form.Control
                     type="text"
                     value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setFilter(e.target.value)}
                     placeholder="Search database name"
                     className="rounded-pill ps-3 pe-4"
                 />
@@ -253,7 +253,7 @@ function DocumentIdTab() {
                 <Form.Control
                     type="text"
                     value={idPrefix}
-                    onChange={(e) => setIdPrefix(e.target.value)}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setIdPrefix(e.target.value)}
                     placeholder="Enter document ID prefix"
                     className="rounded-pill ps-3 pe-4"
                 />
@@ -332,7 +332,7 @@ function CollectionNameTab() {
                 <Form.Control
                     type="text"
                     value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setFilter(e.target.value)}
                     placeholder="Search collection name"
                     className="rounded-pill ps-3 pe-4"
                 />
@@ -421,7 +421,7 @@ function IndexNameTab() {
                 <Form.Control
                     type="text"
                     value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setFilter(e.target.value)}
                     placeholder="Search index name"
                     className="rounded-pill ps-3 pe-4"
                 />

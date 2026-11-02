@@ -256,15 +256,15 @@ public abstract partial class RachisConsensus
             };
         }
 
-        internal static unsafe RachisDebugLogEntry CreateFromLog(ClusterOperationContext context, Table.TableValueHolder value)
+        internal static unsafe RachisDebugLogEntry CreateFromLog(ClusterOperationContext context, in TableValueReader value)
         {
             RachisDebugLogEntry entry = new()
             {
-                Index = Bits.SwapBytes(*(long*)value.Reader.Read(0, out int size)),
-                Term = *(long*)value.Reader.Read(1, out size),
-                Entry = new BlittableJsonReaderObject(value.Reader.Read(2, out size), size, context),
+                Index = Bits.SwapBytes(*(long*)value.Read(0, out int size)),
+                Term = *(long*)value.Read(1, out size),
+                Entry = new BlittableJsonReaderObject(value.Read(2, out size), size, context),
                 SizeInBytes = size,
-                Flags = *(RachisEntryFlags*)value.Reader.Read(3, out size)
+                Flags = *(RachisEntryFlags*)value.Read(3, out size)
             };
 
             entry.Entry.TryGet(nameof(CommandBase.Type), out string commandType);

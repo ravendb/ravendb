@@ -8,7 +8,7 @@ import {
     SheetSlideTransition,
     useSheetSlideNavigation,
 } from "components/common/splitView/SheetSlideNavigation";
-import CellDocumentValue from "components/common/virtualTable/cells/CellDocumentValue";
+import CellDocumentId from "components/common/virtualTable/cells/CellDocumentId";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import genUtils from "common/generalUtils";
@@ -123,7 +123,7 @@ export default function TaskErrorDetailsSheet({
                     {error.errorType === "Item" && error.DocumentId && (
                         <SheetDetailRow>
                             <div className="small">Document ID</div>
-                            <CellDocumentValue value={error.DocumentId} databaseName={dbName} hasHyperlinkForIds />
+                            <CellDocumentId id={error.DocumentId} databaseName={dbName} hasHyperlink />
                         </SheetDetailRow>
                     )}
 

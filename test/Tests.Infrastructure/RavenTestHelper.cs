@@ -70,7 +70,6 @@ namespace Tests.Infrastructure
             public const string OracleSqlConnectionStringEnvName = "RAVEN_ORACLESQL_CONNECTION_STRING";
             public const string SnowflakeConnectionStringEnvName = "RAVEN_SNOWFLAKE_CONNECTION_STRING";
             public const string SnowflakeTestingBranchEnvName = "RAVEN_SNOWFLAKE_TESTING_BRANCH";
-            public const string MongoDbConnectionStringEnvName = "RAVEN_MONGODB_CONNECTION_STRING";
             public const string ElasticSearchNodeUrlsEnvName = "RAVEN_ELASTICSEARCH_NODE_URLS";
 
             // AI integrations - env var names
@@ -82,6 +81,7 @@ namespace Tests.Infrastructure
             public const string AiIntegrationGoogleApiKeyEnvName = "RAVEN_AI_INTEGRATION_GOOGLE_API_KEY";
             public const string AiIntegrationHuggingFaceApiKeyEnvName = "RAVEN_AI_INTEGRATION_HUGGINGFACE_API_KEY";
             public const string AiIntegrationMistralApiKeyEnvName = "RAVEN_AI_INTEGRATION_MISTRAL_API_KEY";
+            public const string AiIntegrationAnthropicApiKeyEnvName = "RAVEN_AI_INTEGRATION_ANTHROPIC_API_KEY";
             public const string AiIntegrationOllamaEmbUriEnvName = "RAVEN_AI_INTEGRATION_OLLAMA_EMB_URI";
             public const string AiIntegrationOllamaChatUriEnvName = "RAVEN_AI_INTEGRATION_OLLAMA_CHAT_URI";
             public const string AiIntegrationVllmApiKeyEnvName = "RAVEN_AI_INTEGRATION_VLLM_API_KEY";
@@ -164,7 +164,6 @@ namespace Tests.Infrastructure
             public static readonly string OracleSqlConnectionString;
             public static readonly string SnowflakeConnectionString;
             public static readonly string SnowflakeTestingBranch;
-            public static readonly string MongoDbConnectionString;
             public static readonly string ElasticSearchNodeUrls;
 
             // SQL / external databases - HasXxx
@@ -174,7 +173,6 @@ namespace Tests.Infrastructure
             public static readonly bool HasOracleSqlConnectionString;
             public static readonly bool HasSnowflakeConnectionString;
             public static readonly bool HasSnowflakeTestingBranch;
-            public static readonly bool HasMongoDbConnectionString;
             public static readonly bool HasElasticSearchNodeUrls;
 
             // AI integrations - values
@@ -186,6 +184,7 @@ namespace Tests.Infrastructure
             public static readonly string AiIntegrationGoogleApiKey;
             public static readonly string AiIntegrationHuggingFaceApiKey;
             public static readonly string AiIntegrationMistralApiKey;
+            public static readonly string AiIntegrationAnthropicApiKey;
             public static readonly string AiIntegrationOllamaEmbUri;
             public static readonly string AiIntegrationOllamaChatUri;
             public static readonly string AiIntegrationVllmApiKey;
@@ -205,6 +204,7 @@ namespace Tests.Infrastructure
             public static readonly bool HasAiIntegrationGoogleApiKey;
             public static readonly bool HasAiIntegrationHuggingFaceApiKey;
             public static readonly bool HasAiIntegrationMistralApiKey;
+            public static readonly bool HasAiIntegrationAnthropicApiKey;
             public static readonly bool HasAiIntegrationOllamaEmbUri;
             public static readonly bool HasAiIntegrationOllamaChatUri;
             public static readonly bool HasAiIntegrationVllmApiKey;
@@ -282,7 +282,6 @@ namespace Tests.Infrastructure
                 (OracleSqlConnectionString, HasOracleSqlConnectionString) = ParseString(OracleSqlConnectionStringEnvName);
                 (SnowflakeConnectionString, HasSnowflakeConnectionString) = ParseString(SnowflakeConnectionStringEnvName);
                 (SnowflakeTestingBranch, HasSnowflakeTestingBranch) = ParseString(SnowflakeTestingBranchEnvName);
-                (MongoDbConnectionString, HasMongoDbConnectionString) = ParseString(MongoDbConnectionStringEnvName);
                 (ElasticSearchNodeUrls, HasElasticSearchNodeUrls) = ParseString(ElasticSearchNodeUrlsEnvName);
 
                 // AI integrations
@@ -294,6 +293,7 @@ namespace Tests.Infrastructure
                 (AiIntegrationGoogleApiKey, HasAiIntegrationGoogleApiKey) = ParseString(AiIntegrationGoogleApiKeyEnvName);
                 (AiIntegrationHuggingFaceApiKey, HasAiIntegrationHuggingFaceApiKey) = ParseString(AiIntegrationHuggingFaceApiKeyEnvName);
                 (AiIntegrationMistralApiKey, HasAiIntegrationMistralApiKey) = ParseString(AiIntegrationMistralApiKeyEnvName);
+                (AiIntegrationAnthropicApiKey, HasAiIntegrationAnthropicApiKey) = ParseString(AiIntegrationAnthropicApiKeyEnvName);
                 (AiIntegrationOllamaEmbUri, HasAiIntegrationOllamaEmbUri) = ParseString(AiIntegrationOllamaEmbUriEnvName);
                 (AiIntegrationOllamaChatUri, HasAiIntegrationOllamaChatUri) = ParseString(AiIntegrationOllamaChatUriEnvName);
                 (AiIntegrationVllmApiKey, HasAiIntegrationVllmApiKey) = ParseString(AiIntegrationVllmApiKeyEnvName);

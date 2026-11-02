@@ -155,8 +155,11 @@ namespace StressTests.Voron.Issues
                     if (page.IsCompressed)
                         Assert.Equal(0, page.NumberOfEntries); // written back: nothing left in the uncompressed section, in particular no tombstone
 
-                    using (page.IsCompressed ? (DecompressedLeafPage)(page = tree.DecompressPage(page, DecompressionUsage.Read, skipCache: true)) : null)
+                    using (var decompressed = page.IsCompressed ? tree.DecompressPage(page, DecompressionUsage.Read, skipCache: true) : null)
                     {
+                        if (decompressed != null)
+                            page = decompressed.Page;
+
                         entries += page.NumberOfEntries;
                         overflowPages += CountOverflowPages(tx, page);
                     }

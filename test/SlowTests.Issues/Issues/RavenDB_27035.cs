@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Json;
 using Tests.Infrastructure;
@@ -653,6 +655,81 @@ public class RavenDB_27035 : RavenTestBase
             var expected = BitmapPipelineIds(store, rql);
             var actual = Ids(store, rql);
             Assert.True(expected.SequenceEqual(actual), $"{rql}: expected [{string.Join(", ", expected)}], got [{string.Join(", ", actual)}]");
+        }
+    }
+
+    private class Movies_ByTitleWithDynamicField : AbstractIndexCreationTask<Movie>
+    {
+        public Movies_ByTitleWithDynamicField()
+        {
+            Map = movies => from m in movies
+                            select new
+                            {
+                                m.Title,
+                                _ = CreateField("Dyn", m.Year)
+                            };
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void AnIndexWithDynamicFieldsThatRecordsTheMarkerPerEntryKeepsTheOrderByOptimizations(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        using (var session = store.OpenSession())
+        {
+            for (var i = 0; i < 10; i++)
+                session.Store(new Movie { Id = $"movies/{i}", Title = (long)(9 - i), Year = 2000 + i });
+
+            session.SaveChanges();
+        }
+
+        store.ExecuteIndex(new Movies_ByTitleWithDynamicField());
+        Indexes.WaitForIndexing(store);
+
+        const string rql = "from index 'Movies/ByTitleWithDynamicField' order by Title as long";
+
+        using var session2 = store.OpenSession();
+        var scanned = session2.Advanced.RawQuery<Movie>(rql + " include timings()")
+            .Timings(out var timings)
+            .ToList();
+
+        var plan = Assert.IsType<QueryInspectionNode>(timings.QueryPlan);
+        Assert.True(PlanContains(plan, "DirectScan"), PlanOperations(plan));
+        Assert.False(PlanContains(plan, "SortingMatch"), PlanOperations(plan));
+        Assert.Equal(BitmapPipelineIds(store, rql), scanned.Select(x => x.Id).ToArray());
+    }
+
+    // the snapshot holds an index built by 7.2.6, before the marker was recorded per entry
+    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    public void AnIndexWrittenBeforeThePerEntryMarkerStillSortsItsDynamicFields()
+    {
+        var backupPath = NewDataPath(forceCreateDir: true);
+        using (var file = File.Create(Path.Combine(backupPath, "RavenDB_27565.ravendb-snapshot")))
+        using (var stream = typeof(RavenDB_27035).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_27565.RavenDB_27565.ravendb-snapshot"))
+        {
+            Assert.NotNull(stream);
+            stream.CopyTo(file);
+        }
+
+        var databaseName = GetDatabaseName();
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration { BackupLocation = backupPath, DatabaseName = databaseName }))
+        {
+            const string rql = "from index 'Items/ByCategoryAndTag' order by Tag desc";
+
+            using var session = store.OpenSession(databaseName);
+            var results = session.Advanced.RawQuery<Item>(rql + " include timings()")
+                .Timings(out var timings)
+                .ToList();
+
+            var plan = Assert.IsType<QueryInspectionNode>(timings.QueryPlan);
+            Assert.False(PlanContains(plan, "DirectScan"), PlanOperations(plan));
+
+            using var bitmapSession = store.OpenSession(databaseName);
+            var expected = bitmapSession.Advanced.RawQuery<Item>(rql).AddParameter("rvn_corax_strategy", "BitmapPipeline").ToList().Select(x => x.Id).ToArray();
+            Assert.Equal(expected, results.Select(x => x.Id).ToArray());
         }
     }
 

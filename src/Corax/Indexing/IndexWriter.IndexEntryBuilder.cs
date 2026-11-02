@@ -36,6 +36,9 @@ public partial class IndexWriter
 
         public void Boost(float boost)
         {
+            if (float.IsNaN(boost) || float.IsPositiveInfinity(boost))
+                throw new ArgumentOutOfRangeException(nameof(boost), boost, "Document boost cannot be NaN or positive infinity.");
+
             _parent.BoostEntry(_entryId, boost);
         }
 
@@ -165,11 +168,6 @@ public partial class IndexWriter
             wordsBuffer = _parent._analyzersContext.EncodingBufferHandler;
             tokens = _parent._analyzersContext.TokensBufferHandler;
             analyzer.Execute(value, ref wordsBuffer, ref tokens, ref _parent._analyzersContext.Utf8ConverterBufferHandler);
-
-            if (tokens.Length > 1)
-            {
-                field.HasMultipleTermsPerField = true;
-            }
         }
 
         ref EntriesModifications ExactInsert(IndexedField field, ReadOnlySpan<byte> value, InserterMode inserterMode, bool forceExactInsert = false)
@@ -191,10 +189,7 @@ public partial class IndexWriter
                 scope = null; // We don't want the fieldname (slice) to be returned.
             }
 
-            if (_buildingList > 0)
-            {
-                field.HasMultipleTermsPerField = true;
-            }
+            field.RecordTermForEntry(_entryId);
 
             ref var term = ref field.Storage.GetAsRef(termLocation);
             term.Addition(_parent._entriesAllocator, _entryId, _termPerEntryIndex, freq: 1, inserterMode);

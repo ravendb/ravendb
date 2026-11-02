@@ -69,7 +69,7 @@ namespace FastTests.Voron.Tables
                 {
                     AssertKey(id, etag, reader.Key);
 
-                    var handle = reader.Result.Reader;
+                    var handle = reader.Result;
                     Assert.Equal("{'Name': 'Oren'}", handle.ReadString(3));
 
                     gotValues = true;
@@ -155,58 +155,12 @@ namespace FastTests.Voron.Tables
                     AssertKey(id, etag: 2, reader.Key);
 
                     var handle = reader.Result;
-                    Assert.Equal("{'Name': 'Eini'}", handle.Reader.ReadString(3));
+                    Assert.Equal("{'Name': 'Eini'}", handle.ReadString(3));
                     gotValues = true;
                     break;
                 }
 
                 Assert.True(gotValues);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Voron)]
-        public void CanUpdateByDynamic_ManyItems()
-        {
-            using (var tx = Env.WriteTransaction())
-            {
-                DocsSchema.Create(tx, "docs", 16);
-
-                tx.Commit();
-            }
-
-            const string idPrefix = "users/";
-
-            for (long i = 0; i < 10_000; i++)
-            {
-                using (var tx = Env.WriteTransaction())
-                {
-                    var docs = tx.OpenTable(DocsSchema, "docs");
-                    var id = $"{idPrefix}/{i}";
-
-                    SetHelper(docs, id, "Users", i, $"{{'Name': 'Oren-{i}'}}");
-                    tx.Commit();
-                }
-            }
-
-            using (var tx = Env.ReadTransaction())
-            {
-                var docs = tx.OpenTable(DocsSchema, "docs");
-
-                long count = 0;
-                foreach (var item in docs.SeekByPrefix(DocsSchema.DynamicKeyIndexes[IndexName], Slices.BeforeAllKeys, Slices.Empty, 0))
-                {
-                    var handle = item.Result;
-                    
-                    var id = handle.Reader.ReadString(0);
-                    var etag = Bits.SwapBytes(handle.Reader.ReadLong(2));
-
-                    AssertKey(id, etag, item.Key);
-
-                    Assert.Equal($"{{'Name': 'Oren-{etag}'}}", handle.Reader.ReadString(3));
-                    count++;
-                }
-
-                Assert.Equal(10_000, count);
             }
         }
 
@@ -276,7 +230,7 @@ namespace FastTests.Voron.Tables
                         Assert.Equal(bucketToCheck, b);
 
                         var handle = reader.Result;
-                        long etag = Bits.SwapBytes(handle.Reader.ReadLong(2));
+                        long etag = Bits.SwapBytes(handle.ReadLong(2));
 
                         if (prevEtag == -1)
                             Assert.True(etag >= startEtag);
@@ -285,12 +239,12 @@ namespace FastTests.Voron.Tables
 
                         prevEtag = etag;
 
-                        var id = handle.Reader.ReadString(0);
+                        var id = handle.ReadString(0);
 
                         Assert.True(bucketInfo.TryGetValue(id, out var expectedEtag));
                         Assert.Equal(expectedEtag, etag * 100);
 
-                        var data = handle.Reader.ReadString(3);
+                        var data = handle.ReadString(3);
                         Assert.Equal($"{{'Name': 'Oren-{etag}'}}", data);
                         count++;
 
@@ -364,7 +318,7 @@ namespace FastTests.Voron.Tables
                     AssertKey(id, etag: 123456789L, reader.Key);
 
                     var handle = reader.Result;
-                    Assert.Equal("{'Name': 'ayende'}", handle.Reader.ReadString(3));
+                    Assert.Equal("{'Name': 'ayende'}", handle.ReadString(3));
                     gotValues = true;
                     break;
                 }
@@ -386,10 +340,12 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        private void AssertKey(string id, long etag, Slice key)
+        private void AssertKey(string id, long etag, Slice key) => AssertKey(Allocator, id, etag, key);
+
+        public static void AssertKey(ByteStringContext allocator, string id, long etag, Slice key)
         {
-            using (Allocator.Allocate(sizeof(long) + sizeof(int), out var buffer))
-            using (Slice.From(Allocator, id, out var idSlice))
+            using (allocator.Allocate(sizeof(long) + sizeof(int), out var buffer))
+            using (Slice.From(allocator, id, out var idSlice))
             {
                 var expectedHash = Hashing.XXHash64.Calculate(idSlice.Content.Ptr, (ulong)idSlice.Size);
                 var expectedBucket = (int)(expectedHash % 100);
@@ -405,7 +361,7 @@ namespace FastTests.Voron.Tables
         }
 
         [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope IndexKeyGenerator(Transaction tx, ref TableValueReader tvr, out Slice slice)
+        public static ByteStringContext.Scope IndexKeyGenerator(Transaction tx, in TableValueReader tvr, out Slice slice)
         {
             var scope = tx.Allocator.Allocate(sizeof(long) + sizeof(int), out var buffer);
 
@@ -423,7 +379,7 @@ namespace FastTests.Voron.Tables
             return scope;
         }
 
-        internal static void UpdateStats(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
+        internal static void UpdateStats(Transaction tx, Slice key, in TableValueReader oldValue, in TableValueReader newValue)
         {
             var tree = tx.ReadTree(StatsTree);
             var bucket = *(int*)key.Content.Ptr;

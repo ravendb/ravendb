@@ -29,6 +29,8 @@ public class ParallelTestBase : LinuxRaceConditionWorkAround, IAsyncLifetime
 
     static ParallelTestBase()
     {
+        PalTestConfiguration.Apply();
+
         DebugStuff.Attach();
 
         var maxNumberOfConcurrentTests = Math.Max(ProcessorInfo.ProcessorCount / 2, 2);

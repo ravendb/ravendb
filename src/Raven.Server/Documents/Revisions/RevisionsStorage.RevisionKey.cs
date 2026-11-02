@@ -171,12 +171,12 @@ namespace Raven.Server.Documents.Revisions
         internal void DeleteRevisionByKey(Table table, in RevisionKey key)
             => DualForm.Delete(table, key.PrefixedHash, key.Raw);
 
-        internal static unsafe ChangeVector ReadChangeVectorFromTvr(DocumentsOperationContext context, ref TableValueReader tvr)
+        internal static unsafe ChangeVector ReadChangeVectorFromTvr(DocumentsOperationContext context, in TableValueReader tvr)
         {
             // Hashed-form rows (post-migration) carry the full canonical CV in field 12.
             // Legacy 12-field rows have no field 12; their field 0 holds version-only rawCv as v6.2 wrote it
             if (tvr.Count > (int)RevisionsTable.FullChangeVector)
-                return TableValueToChangeVector(context, (int)RevisionsTable.FullChangeVector, ref tvr);
+                return TableValueToChangeVector(context, (int)RevisionsTable.FullChangeVector, tvr);
 
             byte* pkPtr = tvr.Read((int)RevisionsTable.RevisionPk, out int pkSize);
             return context.GetChangeVector(System.Text.Encoding.UTF8.GetString(pkPtr, pkSize));

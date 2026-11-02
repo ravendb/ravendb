@@ -2,34 +2,14 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Raven.Client;
+using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents
 {
-    public sealed class CollectionNameComparer : IEqualityComparer<CollectionName>
-    {
-        public static readonly CollectionNameComparer Instance = new CollectionNameComparer();
-
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Equals(CollectionName x, CollectionName y)
-        {
-            if (x == y)
-                return true;
-            if (x == null || y == null)
-                return false;
-            return string.Equals(x.Name, y.Name, StringComparison.OrdinalIgnoreCase);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetHashCode(CollectionName obj)
-        {
-            return obj.Name != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Name) : 0;
-        }
-    }
-
     public sealed class CollectionName
     {
         public const string HiLoCollection = "@hilo";
@@ -77,6 +57,8 @@ namespace Raven.Server.Documents
             _timeSeriesStats = GetName(CollectionTableType.TimeSeriesStats);
 
         }
+
+        public int Index = -1;
 
         public bool IsHiLo => (bool)(_isHiLo ?? (_isHiLo = IsHiLoCollection(Name)));
 
@@ -143,6 +125,25 @@ namespace Raven.Server.Documents
         public static bool operator !=(CollectionName left, CollectionName right)
         {
             return Equals(left, right) == false;
+        }
+
+        private static readonly HashSet<string> SystemCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            HiLoCollection,
+            Constants.Documents.Collections.EmbeddingsCacheCollection,
+            CdcSinkTaskState.CollectionName
+        };
+
+        /// <summary>
+        /// Closed list on purpose - a leading '@' alone isn't a system collection (example `@conversations`)
+        /// </summary>
+        public static bool IsSystemCollection(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+                return false;
+
+            return SystemCollections.Contains(name) ||
+                   name.StartsWith(EmbeddingsHelper.EmbeddingDocumentCollectionNamePrefix, StringComparison.OrdinalIgnoreCase);
         }
 
         public static bool IsHiLoCollection(string name)

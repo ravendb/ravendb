@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Client.Documents.Operations.Backups;
@@ -60,8 +60,8 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                         var writeIdentitiesTable = step.WriteTx.OpenTable(newIdentitiesSchema, ClusterStateMachine.Identities);
                         foreach (var item in readIdentitiesTable.SeekByPrimaryKeyPrefix(keyPrefix, Slices.Empty, 0))
                         {
-                            var value = TableValueToLong((int)ClusterStateMachine.IdentitiesTable.Value, ref item.Value.Reader);
-                            var index = TableValueToLong((int)ClusterStateMachine.IdentitiesTable.Index, ref item.Value.Reader);
+                            var value = TableValueToLong((int)ClusterStateMachine.IdentitiesTable.Value, item.Value);
+                            var index = TableValueToLong((int)ClusterStateMachine.IdentitiesTable.Index, item.Value);
 
                             // if value is not 0 than we come from v4.2 and could have wrong index value
                             if (index != 0)

@@ -7,7 +7,7 @@ import { InlineCode } from "@/components/data/inline-code";
 import { NumberedSteps } from "@/components/data/numbered-steps";
 import { SectionCard } from "@/pages/apps/section-card";
 
-// Read-only "how to reach this bot" view — the Telegram analogue of the web widget's Embed tab.
+// Read-only "how to reach this bot" view — the Telegram analogue of the embedded chat channel's Embed tab.
 // Everything here is either data already on the channel (the bot username) or documentation of the
 // bot's existing /start and /clear commands. No secrets, nothing editable.
 export function TelegramConnectTab({ channel }: { channel: ChannelSummaryResponse }) {

@@ -201,13 +201,13 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
 
     public EmbeddingsGenerationTestScriptResult RunTest(IEnumerable<EmbeddingGenerationScriptResult> records, DocumentsOperationContext context)
     {
-        (IEmbeddingGenerator<string, Embedding<float>> embeddingService, _) = AiHelper.CreateEmbeddingServicesForTest(
-            new EmbeddingsGenerationConfiguration { Connection = new AiConnectionString { EmbeddedSettings = new EmbeddedSettings() } });
+        (IEmbeddingGenerator<string, Embedding<float>> embeddingService, _) = AiHelper.CreateEmbeddingServicesForTest(Configuration);
 
         var result = new EmbeddingsGenerationTestScriptResult();
         List<string> chunks = [];
         List<EmbeddingsGenerationTestScriptResult.Item> allItems = [];
-        foreach (var record in records)
+        var additions = records is EmbeddingsGenerationScriptRun run ? run.Additions : [];
+        foreach (var record in additions)
         {
             foreach (var (name, values) in record.Fields)
             {
@@ -218,7 +218,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
                     foreach(var chunked in TextChunker.Chunk(value, chunking))
                     {
                         var item = new EmbeddingsGenerationTestScriptResult.Item(chunked);
-                        chunks.Add(name);
+                        chunks.Add(chunked);
                         allItems.Add(item);
                         items.Add(item);
                     }

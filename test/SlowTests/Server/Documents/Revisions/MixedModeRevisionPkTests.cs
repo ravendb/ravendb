@@ -227,10 +227,10 @@ namespace SlowTests.Server.Documents.Revisions
                         // Rule B: field 12 carries the INCOMING full canonical CV (with the order prefix),
                         // not the row-side version-only that ReadChangeVectorFromTvr would have produced on
                         // the Legacy row. This pins MarkRevisionAsConflicted's incoming-CV plumbing.
-                        Raven.Server.Utils.ChangeVector cvOnRow = RevisionsStorage.ReadChangeVectorFromTvr(readCtx, ref hashTvr);
+                        Raven.Server.Utils.ChangeVector cvOnRow = RevisionsStorage.ReadChangeVectorFromTvr(readCtx, hashTvr);
                         Assert.Equal(fullCvString, cvOnRow.AsString());
 
-                        DocumentFlags flagsOnRow = DocumentsStorage.TableValueToFlags((int)RevisionsTable.Flags, ref hashTvr);
+                        DocumentFlags flagsOnRow = DocumentsStorage.TableValueToFlags((int)RevisionsTable.Flags, hashTvr);
                         Assert.True(flagsOnRow.Contain(DocumentFlags.Conflicted),
                             $"Row flags must include Conflicted after the marking re-Put; got {flagsOnRow}.");
                     }
@@ -374,7 +374,7 @@ namespace SlowTests.Server.Documents.Revisions
                         Assert.True(table.ReadByKey(key.PrefixedHash, out var hashTvr));
                         Assert.False(table.ReadByKey(key.Raw, out _));
 
-                        var fullCv = RevisionsStorage.ReadChangeVectorFromTvr(readCtx, ref hashTvr);
+                        var fullCv = RevisionsStorage.ReadChangeVectorFromTvr(readCtx, hashTvr);
                         Assert.Equal(compoundCvString, fullCv.AsString());
                     }
                 }
@@ -728,7 +728,7 @@ namespace SlowTests.Server.Documents.Revisions
                         Assert.True(table.ReadByKey(key.PrefixedHash, out var tvr));
                         Assert.False(table.ReadByKey(key.Raw, out _));
 
-                        var fullCv = RevisionsStorage.ReadChangeVectorFromTvr(readCtx, ref tvr);
+                        var fullCv = RevisionsStorage.ReadChangeVectorFromTvr(readCtx, tvr);
                         Assert.Equal(compoundCvString, fullCv.AsString());
 
                         unsafe

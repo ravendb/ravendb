@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -574,7 +574,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 foreach (var (nextKey, tvh) in _table.SeekByPrimaryKeyPrefix(prefix, current, 0))
                 {
-                    _tvr = tvh.Reader;
+                    _tvr = tvh;
 
                     InitializeSegment(out baselineMilliseconds, out _currentSegment);
 
@@ -608,13 +608,13 @@ namespace Raven.Server.Documents.TimeSeries
 
         internal string GetCurrentSegmentChangeVector()
         {
-            return DocumentsStorage.TableValueToChangeVector(_context, (int)TimeSeriesTable.ChangeVector, ref _tvr);
+            return DocumentsStorage.TableValueToChangeVector(_context, (int)TimeSeriesTable.ChangeVector, _tvr);
         }
 
         internal (long Etag, string ChangeVector, DateTime Baseline) GetSegmentInfo()
         {
             var changeVector = GetCurrentSegmentChangeVector();
-            var etag = DocumentsStorage.TableValueToEtag((int)TimeSeriesTable.Etag, ref _tvr);
+            var etag = DocumentsStorage.TableValueToEtag((int)TimeSeriesTable.Etag, _tvr);
             var baseline = new DateTime(ReadBaseline() * 10_000);
 
             return (etag, changeVector, baseline);

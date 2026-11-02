@@ -69,7 +69,8 @@ internal static partial class QueryPlanBuilder
         if (orderByFields is null)
         {   
             if (p.HasBoost && p.Index is { } indexForScore && // add order by score() if we have boost
-                (indexForScore.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved || indexForScore.Configuration.CoraxVectorSearchOrderByScoreAutomatically))
+                (indexForScore.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved
+                 || (p.Metadata.HasVectorSearch && indexForScore.Configuration.CoraxVectorSearchOrderByScoreAutomatically)))
             {
                 return new SortMetadataTemplate
                 {
@@ -317,7 +318,7 @@ internal static partial class QueryPlanBuilder
                     bool mayHaveMissingEntries = p.MayHaveMissingEntries
                         || indexSearcher.GetDistinctTermCountInField(fieldMeta) == 0 // no entries at all
                         || indexSearcher.HasAnyNonExistingEntries(fieldMeta)
-                        || builderParameters.HasDynamics
+                        || indexSearcher.AssumeMultipleTermsInEveryField
                         || indexSearcher.SortFieldTreeCoversAllEntries(fieldMeta, p.FieldType) == false;
                     result[target] = new OrderMetadata(fieldMeta, p.Ascending, p.FieldType, p.NullsSortMode, mayHaveMissingEntries);
                     break;

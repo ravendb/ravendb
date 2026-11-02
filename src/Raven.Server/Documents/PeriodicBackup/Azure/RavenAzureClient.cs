@@ -9,6 +9,7 @@ using Azure.Core;
 using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Azure.Storage.Sas;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Documents.PeriodicBackup.Restore;
@@ -38,6 +39,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         private readonly CancellationToken _cancellationToken;
         private readonly BlobContainerClient _client;
+        private readonly BlobSasQueryParameters _sas;
+        private readonly bool _canReadContainerProperties;
+
+        private static readonly TimeSpan SasTokenClockSkew = TimeSpan.FromMinutes(15);
 
         public string RemoteFolderName { get; }
         private readonly string _storageContainer;
@@ -81,12 +86,18 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             };
 
             if (hasAccountKey)
+            {
                 _client = new BlobContainerClient(serverUrlForContainer, new StorageSharedKeyCredential(azureSettings.AccountName, azureSettings.AccountKey), options);
+                _canReadContainerProperties = true;
+            }
 
             if (hasSasToken)
             {
-                VerifySasToken(azureSettings.SasToken);
-                _client = new BlobContainerClient(serverUrlForContainer, new AzureSasCredential(azureSettings.SasToken), options);
+                var sasToken = azureSettings.SasToken.Trim().TrimStart('?');
+                VerifySasToken(sasToken);
+                _sas = ParseSasToken(serverUrlForContainer, sasToken);
+                _client = new BlobContainerClient(serverUrlForContainer, new AzureSasCredential(sasToken), options);
+                _canReadContainerProperties = CanReadContainerProperties(_sas);
             }
 
             _progress = progress;
@@ -188,15 +199,106 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public async Task TestConnectionAsync()
         {
+            if (_sas != null && string.IsNullOrEmpty(_sas.Resource) && _sas.ResourceTypes?.HasFlag(AccountSasResourceTypes.Object) != true)
+                throw new ArgumentException($"{nameof(AzureSettings.SasToken)} can't be used to upload blobs, the 'srt' parameter must include 'o'");
+
             try
             {
                 if (await _client.ExistsAsync(cancellationToken: _cancellationToken) == false)
                     throw new ContainerNotFoundException($"Container '{_storageContainer}' wasn't found!");
             }
-            catch (UnauthorizedAccessException)
+            catch (RequestFailedException e) when (_canReadContainerProperties == false && IsAuthorizationFailure(e))
             {
-                // we don't have the permissions to see if the container exists
             }
+        }
+
+        private static bool IsAuthorizationFailure(RequestFailedException e)
+        {
+            // report the errors that fail every request, not only Get Container Properties
+            return e.Status == 403 &&
+                   e.ErrorCode != BlobErrorCode.AuthenticationFailed.ToString() &&
+                   e.ErrorCode != BlobErrorCode.AuthorizationSourceIPMismatch.ToString() &&
+                   e.ErrorCode != BlobErrorCode.AccountIsDisabled.ToString();
+        }
+
+        private static bool CanReadContainerProperties(BlobSasQueryParameters sas)
+        {
+            // a service / user delegation SAS (has 'sr') can't read container properties at all,
+            // an account SAS needs srt=c and sp=r
+            // https://learn.microsoft.com/en-us/rest/api/storageservices/create-account-sas#blob-service
+            return string.IsNullOrEmpty(sas.Resource) &&
+                   sas.ResourceTypes?.HasFlag(AccountSasResourceTypes.Container) == true &&
+                   sas.Permissions?.Contains('r') == true;
+        }
+
+        private static BlobSasQueryParameters ParseSasToken(Uri containerUri, string sasToken)
+        {
+            if (sasToken.Any(char.IsWhiteSpace))
+                throw new ArgumentException($"{nameof(AzureSettings.SasToken)} isn't in the correct format, it contains whitespace");
+
+            BlobSasQueryParameters sas;
+            try
+            {
+                sas = new BlobUriBuilder(new UriBuilder(containerUri) { Query = sasToken }.Uri).Sas;
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentException($"{nameof(AzureSettings.SasToken)} isn't in the correct format", e);
+            }
+
+            if (sas == null)
+                throw new ArgumentException(GetUnrecognizedSasTokenMessage(sasToken));
+
+            if (string.IsNullOrEmpty(sas.Signature))
+                throw new ArgumentException($"{nameof(AzureSettings.SasToken)} isn't in the correct format, the 'sig' parameter is missing");
+
+            if (string.IsNullOrEmpty(sas.Resource))
+            {
+                if (sas.Services?.HasFlag(AccountSasServices.Blobs) != true)
+                    throw new ArgumentException($"{nameof(AzureSettings.SasToken)} doesn't grant access to the Blob service, the 'ss' parameter must include 'b'");
+
+                if (sas.ResourceTypes == null)
+                    throw new ArgumentException($"{nameof(AzureSettings.SasToken)} isn't in the correct format, the 'srt' parameter is missing");
+            }
+            else if (sas.Resource != "c" && sas.Resource != "d")
+            {
+                throw new ArgumentException($"{nameof(AzureSettings.SasToken)} must be scoped to a container (sr=c) or a directory (sr=d), but it has sr={sas.Resource}");
+            }
+
+            var now = DateTimeOffset.UtcNow;
+
+            if (sas.ExpiresOn == default)
+            {
+                // a stored access policy ('si') can define the expiry time instead of the token
+                if (string.IsNullOrEmpty(sas.Identifier))
+                    throw new ArgumentException($"{nameof(AzureSettings.SasToken)} isn't in the correct format, the 'se' parameter is missing");
+            }
+            else if (sas.ExpiresOn < now - SasTokenClockSkew)
+            {
+                throw new ArgumentException($"{nameof(AzureSettings.SasToken)} expired at {sas.ExpiresOn:O}");
+            }
+
+            if (sas.StartsOn != default && sas.StartsOn > now + SasTokenClockSkew)
+                throw new ArgumentException($"{nameof(AzureSettings.SasToken)} isn't valid before {sas.StartsOn:O}");
+
+            if (sas.KeyExpiresOn != default && sas.KeyExpiresOn < now - SasTokenClockSkew)
+                throw new ArgumentException($"{nameof(AzureSettings.SasToken)} is a user delegation SAS whose key expired at {sas.KeyExpiresOn:O}");
+
+            return sas;
+        }
+
+        private static string GetUnrecognizedSasTokenMessage(string sasToken)
+        {
+            if (sasToken.StartsWith("https://", StringComparison.OrdinalIgnoreCase) || sasToken.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                return $"{nameof(AzureSettings.SasToken)} isn't in the correct format, it's a SAS URL. Use only its query part, after the '?'";
+
+            if (sasToken.Contains("SharedAccessSignature=", StringComparison.OrdinalIgnoreCase))
+                return $"{nameof(AzureSettings.SasToken)} isn't in the correct format, it's a connection string. Use only its SharedAccessSignature value";
+
+            if (sasToken[0] is '"' or '\'')
+                return $"{nameof(AzureSettings.SasToken)} isn't in the correct format, it's wrapped in quotes. Remove them";
+
+            return $"{nameof(AzureSettings.SasToken)} isn't in the correct format, the 'sv' parameter is missing";
         }
 
         public void Report(long value)

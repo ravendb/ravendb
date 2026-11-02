@@ -32,6 +32,7 @@ namespace Corax.Querying;
 public sealed unsafe partial class IndexSearcher : IDisposable
 {
     internal static readonly long BitmapMemoryRequiredThresholdInBytes = new Size(32, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
+    private const int DocumentBoostLookupRatio = 32;
     internal readonly Transaction _transaction;
     private Dictionary<string, Slice> _dynamicFieldNameMapping;
 
@@ -122,6 +123,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private bool _nonExistingPostingListsTreeLoaded;
 
     public long MaxFacetQueryFilterSizeInBytes = 128 * 1024 * 1024;
+
+    public bool AssumeMultipleTermsInEveryField;
  
     public bool DocumentsAreBoosted => GetDocumentBoostTree().NumberOfEntries > 0;
 
@@ -469,6 +472,24 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return covered >= NumberOfEntries;
     }
 
+    /// <summary>
+    /// The number of terms a pass over the terms of the field visits, as <see cref="TextualAggregation"/> does: one per
+    /// distinct value, plus one for null when any entry holds a null. <see cref="GetDistinctTermCountInField"/> adds the number
+    /// of entries holding a null instead.
+    /// </summary>
+    public long GetNumberOfDistinctTermsInField(in FieldMetadata field)
+    {
+        if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field.FieldName, out var fieldTree) == false)
+            return 0;
+
+        var numberOfTerms = fieldTree.NumberOfEntries;
+
+        if (TryGetPostingListForNull(field, out var nullPostingListId) && GetPostingList(nullPostingListId)?.State.NumberOfEntries > 0)
+            numberOfTerms++;
+
+        return numberOfTerms;
+    }
+
     public bool TryGetTermsOfField(in FieldMetadata field, out ExistsTermsProvider<Lookup<CompactKeyLookup>.ForwardIterator> existsTermsProvider)
     {
         return TryGetTermsOfField<Lookup<CompactKeyLookup>.ForwardIterator>(field, out existsTermsProvider);
@@ -548,6 +569,53 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     internal FixedSizeTree GetDocumentBoostTree()
     {
         return _transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
+    }
+
+    internal void BoostDocuments(Span<long> matches, Span<float> scores, bool sortedById)
+    {
+        var tree = GetDocumentBoostTree();
+        if (tree.NumberOfEntries == 0 || matches.IsEmpty)
+            return;
+
+        Debug.Assert(sortedById == false || IsSortedById(matches), "Matches flagged as sorted by id are not sorted by id.");
+
+        if (tree.NumberOfEntries > (long)matches.Length * DocumentBoostLookupRatio || sortedById == false)
+        {
+            for (var i = 0; i < matches.Length; i++)
+            {
+                var boost = (float*)tree.ReadPtr(matches[i], out _);
+                if (boost != null)
+                    scores[i] *= *boost;
+            }
+
+            return;
+        }
+
+        using var iterator = tree.Iterate();
+        if (iterator.Seek(matches[0]) == false)
+            return;
+
+        var position = 0;
+        do
+        {
+            position = Bm25Relevance.FindLowerBound(matches, position, iterator.CurrentKey, gallop: true);
+            if (position == matches.Length)
+                return;
+
+            if (matches[position] == iterator.CurrentKey)
+                scores[position] *= *(float*)iterator.ValuePtr(out _);
+        } while (iterator.MoveNext());
+
+        static bool IsSortedById(Span<long> matches)
+        {
+            for (var i = 1; i < matches.Length; i++)
+            {
+                if (matches[i - 1] > matches[i])
+                    return false;
+            }
+
+            return true;
+        }
     }
 
 
@@ -670,6 +738,9 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public bool HasMultipleTermsInField(string fieldName)
     {
+        if (AssumeMultipleTermsInEveryField)
+            return true;
+
         if (_fieldsWithMultipleTerms is { } snapshot)
             return snapshot.Contains(fieldName);
 
@@ -690,6 +761,9 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private Dictionary<Slice, bool> _hasMultipleTermsInFieldCache;
     private bool HasMultipleTermsInField(Slice fieldName)
     {
+        if (AssumeMultipleTermsInEveryField)
+            return true;
+
         if (_multipleTermsInField is null)
             return false;
 

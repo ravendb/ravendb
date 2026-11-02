@@ -92,31 +92,36 @@ namespace Raven.Server.Documents.Handlers
         private readonly LazyStringValue _expectedChangeVector;
         private readonly BlittableJsonReaderObject _document;
         private readonly DocumentDatabase _database;
-        private readonly bool _shouldValidateAttachments;
+        private readonly string _collectionName;
+        private readonly BlittableJsonReaderObject _metadata;
+        private readonly BlittableJsonReaderArray _attachmentsToValidate;
+        private readonly bool _hasAttachmentsToValidate;
         public DocumentsStorage.PutOperationResults PutResult;
-        
+
         public MergedPutCommand(BlittableJsonReaderObject doc, string id, LazyStringValue changeVector, DocumentDatabase database, bool shouldValidateAttachments = false)
         {
             _document = doc;
             _id = id;
             _expectedChangeVector = changeVector;
             _database = database;
-            _shouldValidateAttachments = shouldValidateAttachments;
+            _collectionName = CollectionName.GetCollectionName(doc);
+            doc.TryGet(Constants.Documents.Metadata.Key, out _metadata);
+            if (shouldValidateAttachments && _metadata != null &&
+                _metadata.TryGet(Constants.Documents.Metadata.Attachments, out _attachmentsToValidate))
+            {
+                _hasAttachmentsToValidate = true;
+            }
         }
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            if (_shouldValidateAttachments)
+            if (_hasAttachmentsToValidate)
             {
-                if (_document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata)
-                    && metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
-                {
-                    ValidateAttachments(attachments, context, _id);
-                }
+                ValidateAttachments(_attachmentsToValidate, context, _id);
             }
             try
             {
-                PutResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _document);
+                PutResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _document, knownCollectionName: _collectionName, knownMetadata: _metadata);
             }
             catch (Voron.Exceptions.VoronConcurrencyErrorException e)
             {

@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeFrameworkVersion>10.0.13</RuntimeFrameworkVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>Zstd.Benchmark</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <PackageId>Zstd.Benchmark</PackageId>
+    <RuntimeIdentifiers>win-x64;win-x86;linux-x64</RuntimeIdentifiers>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\src\Raven.Server\Web\Studio\EmbeddedData\Northwind.ravendbdump" Link="Data\Northwind.ravendbdump">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\Micro.Benchmark\Data\monsters.json" Link="Data\monsters.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
+    <ProjectReference Include="..\..\src\Sparrow.Server\Sparrow.Server.csproj" />
+    <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
+  </ItemGroup>
+</Project>

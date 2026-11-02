@@ -1,4 +1,4 @@
-﻿using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Documents.TimeSeries;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
@@ -36,6 +36,11 @@ namespace Raven.Server.Documents.Schemas
             TransactionMarker = 5
         }
 
+        internal static readonly TableSchema.FixedSizeKeyIndexDef AllTimeSeriesEtagIndex;
+        internal static readonly TableSchema.FixedSizeKeyIndexDef CollectionTimeSeriesEtagsIndex;
+
+        internal static readonly TableSchema.DynamicKeyIndexDef TimeSeriesBucketAndEtagIndex;
+
         static TimeSeries()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -45,6 +50,28 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, "TimeSeriesKeys", ByteStringType.Immutable, out TimeSeriesKeysSlice);
                 Slice.From(ctx, "TimeSeriesBucketAndEtag", ByteStringType.Immutable, out TimeSeriesBucketAndEtagSlice);
             }
+
+            AllTimeSeriesEtagIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)TimeSeriesTable.Etag,
+                Name = AllTimeSeriesEtagSlice,
+                IsGlobal = true
+            };
+
+            CollectionTimeSeriesEtagsIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)TimeSeriesTable.Etag,
+                Name = CollectionTimeSeriesEtagsSlice
+            };
+            TimeSeriesBucketAndEtagIndex = new TableSchema.DynamicKeyIndexDef
+            {
+                GenerateKey = TimeSeriesStorage.GenerateBucketAndEtagIndexKeyForTimeSeries,
+                OnEntryChanged = TimeSeriesStorage.UpdateBucketStatsForTimeSeries,
+                IsGlobal = true,
+                Name = TimeSeriesBucketAndEtagSlice
+            };
+
+
 
             DefineIndexesForTimeSeriesSchema(TimeSeriesSchemaBase);
             DefineIndexesForShardingTimeSeriesSchemaBase();
@@ -59,31 +86,16 @@ namespace Raven.Server.Documents.Schemas
                     IsGlobal = true
                 });
 
-                schema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)TimeSeriesTable.Etag,
-                    Name = AllTimeSeriesEtagSlice,
-                    IsGlobal = true
-                });
+                schema.DefineFixedSizeIndex(AllTimeSeriesEtagIndex);
 
-                schema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)TimeSeriesTable.Etag,
-                    Name = CollectionTimeSeriesEtagsSlice
-                });
+                schema.DefineFixedSizeIndex(CollectionTimeSeriesEtagsIndex);
             }
 
             void DefineIndexesForShardingTimeSeriesSchemaBase()
             {
                 DefineIndexesForTimeSeriesSchema(ShardingTimeSeriesSchemaBase);
 
-                ShardingTimeSeriesSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
-                {
-                    GenerateKey = TimeSeriesStorage.GenerateBucketAndEtagIndexKeyForTimeSeries,
-                    OnEntryChanged = TimeSeriesStorage.UpdateBucketStatsForTimeSeries,
-                    IsGlobal = true,
-                    Name = TimeSeriesBucketAndEtagSlice
-                });
+                ShardingTimeSeriesSchemaBase.DefineIndex(TimeSeriesBucketAndEtagIndex);
             }
         }
     }

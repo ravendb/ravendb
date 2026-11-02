@@ -1,23 +1,14 @@
 import "@/index.css";
 import type { Preview } from "@storybook/react-vite";
-import { initialize, mswLoader } from "msw-storybook-addon";
 import { defaultApiMocks } from "@/mocks/default-mocks";
 import { withProviders } from "./decorators";
-
-// MSW serves story API requests from a service worker, so the app's networking code
-// runs unchanged. Non-API traffic (Storybook internals, HMR, fonts) passes through
-// silently; an unmocked server endpoint is a story bug, so make it loud.
-initialize({
-    onUnhandledRequest: (request, print) => {
-        if (new URL(request.url).pathname.startsWith("/api/")) {
-            print.warning();
-        }
-    },
-});
+import { mswLoader } from "./mock-service-worker";
+import { resetAllStores } from "./zustand";
 
 const preview: Preview = {
     decorators: [withProviders],
     loaders: [mswLoader],
+    beforeEach: resetAllStores,
     initialGlobals: {
         theme: "light",
     },

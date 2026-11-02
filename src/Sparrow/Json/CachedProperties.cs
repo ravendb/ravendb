@@ -148,17 +148,11 @@ namespace Sparrow.Json
             }
         }
 
-        private sealed class PropertyPosition
+        private struct PropertyPosition(PropertyName property, int sortedPosition)
         {
-            public PropertyName Property;
-            public int SortedPosition;
+            public PropertyName Property = property;
+            public int SortedPosition = sortedPosition;
             public BlittableJsonDocumentBuilder.PropertyTag Tmp;
-
-            public PropertyPosition(PropertyName property, int sortedPosition)
-            {
-                Property = property;
-                SortedPosition = sortedPosition;
-            }
         }
 
         private sealed class CachedSort
@@ -168,7 +162,7 @@ namespace Sparrow.Json
 
             public override string ToString()
             {
-                return string.Join(", ", Sorting.Select(x => x.Property.Comparer));
+                return string.Join(", ", Sorting.Select(x => x.Property?.Comparer));
             }
 
             public void Clear()
@@ -295,7 +289,7 @@ namespace Sparrow.Json
             var sortingList = cachedSort.Sorting;
             for (int i = 0; i < properties.Count; i++)
             {
-                var sortingProp = sortingList[i];
+                ref var sortingProp = ref sortingList.GetAsRef(i);
                 var sortedProp = properties[i];
 
                 if (sortingProp.Property.Equals(sortedProp.Property))
@@ -313,7 +307,7 @@ namespace Sparrow.Json
             int sortingListCount = sortingList.Count;
             for (int i = 0; i < sortingListCount; i++)
             {
-                var sortingProp = sortingList[i];
+                ref var sortingProp = ref sortingList.GetAsRef(i);
                 properties[sortingProp.SortedPosition] = sortingProp.Tmp;
             }
 
@@ -391,7 +385,7 @@ namespace Sparrow.Json
 
             for (int i = 0; i < sorting.Count; i++)
             {
-                var propPos = sorting[i];
+                ref var propPos = ref sorting.GetAsRef(i);
                 propPos.SortedPosition = -1;
                 for (int j = 0; j < properties.Count; j++)
                 {

@@ -15,10 +15,10 @@
         border-radius: sizes.$border-radius-pill 0 0 sizes.$border-radius-pill !important;
         background-color: colors.$panel-header-bg-var;
     }
+}
 
-    .database-name {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
+.database-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }

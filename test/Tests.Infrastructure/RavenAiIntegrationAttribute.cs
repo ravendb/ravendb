@@ -28,9 +28,10 @@ public enum RavenAiIntegration
     MistralAi = 1 << 7,
     Vertex = 1 << 8,
     vLLM = 1 << 9,
+    Anthropic = 1 << 10,
 
-    All = OpenAi | AzureOpenAI | vLLM | Onnx | Google | HuggingFace | MistralAi | Vertex,
-    NonInternal = OpenAi | AzureOpenAI | vLLM | Google | HuggingFace | MistralAi | Vertex
+    All = OpenAi | AzureOpenAI | vLLM | Onnx | Google | HuggingFace | MistralAi | Vertex | Anthropic,
+    NonInternal = OpenAi | AzureOpenAI | vLLM | Google | HuggingFace | MistralAi | Vertex | Anthropic
 }
 
 public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDataAttributeBase
@@ -156,6 +157,9 @@ public class RavenGenAiDataAttribute : AbstractRavenAiIntegrationDataAttribute<G
 
         if (aiIntegration.HasFlag(RavenAiIntegration.Google))
             yield return GenAiGoogleConnectorForTesting.Instance;
+
+        if (aiIntegration.HasFlag(RavenAiIntegration.Anthropic))
+            yield return GenAiAnthropicConnectorForTesting.Instance;
     }
 
     public override IEnumerable<IAiConnectorForTesting<GenAiConfiguration>> GetAiConnectionStringsSingleton(RavenAiIntegration aiIntegration) => GetAiConnectionStrings(aiIntegration);

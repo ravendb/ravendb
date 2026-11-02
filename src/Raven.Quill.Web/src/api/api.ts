@@ -9,7 +9,7 @@ import { createAppsQueries } from "@/api/queries/apps-queries";
 import { createAgentsQueries } from "@/api/queries/agents-queries";
 import { createAssistantQueries } from "@/api/queries/assistant-queries";
 import { createChannelsQueries } from "@/api/queries/channels-queries";
-import { createWebWidgetQueries } from "@/api/queries/web-widget-queries";
+import { createChatWidgetQueries } from "@/api/queries/chat-widget-queries";
 import { createEmbedLinksQueries } from "@/api/queries/embed-links-queries";
 import { createBootstrapQueries } from "@/api/queries/bootstrap-queries";
 import { createSetupQueries } from "@/api/queries/setup-queries";
@@ -36,7 +36,7 @@ export type ApiQueries = {
     channels: ReturnType<typeof createChannelsQueries>;
     slack: ReturnType<typeof createSlackQueries>;
     discord: ReturnType<typeof createDiscordQueries>;
-    webWidget: ReturnType<typeof createWebWidgetQueries>;
+    chatWidget: ReturnType<typeof createChatWidgetQueries>;
     embedLinks: ReturnType<typeof createEmbedLinksQueries>;
     setup: ReturnType<typeof createSetupQueries>;
     aiConnectionStrings: ReturnType<typeof createAiConnectionStringsQueries>;
@@ -75,7 +75,7 @@ export function createApi(options?: ApiClientOptions): Api {
             channels: createChannelsQueries(services.channels),
             slack: createSlackQueries(services.slack),
             discord: createDiscordQueries(services.discord),
-            webWidget: createWebWidgetQueries(services.iframe),
+            chatWidget: createChatWidgetQueries(services.iframe),
             embedLinks: createEmbedLinksQueries(services.embedLinks),
             setup: createSetupQueries(services.setup),
             aiConnectionStrings: createAiConnectionStringsQueries(services.aiConnectionStrings),

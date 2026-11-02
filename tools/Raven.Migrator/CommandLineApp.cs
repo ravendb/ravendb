@@ -3,21 +3,12 @@ using System.Linq;
 using McMaster.Extensions.CommandLineUtils;
 using Newtonsoft.Json;
 using Raven.Migrator.CosmosDB;
-using Raven.Migrator.MongoDB;
 
 namespace Raven.Migrator
 {
     internal static class CommandLineApp
     {
         private const string HelpOptionString = "-h | -? | --help";
-
-        private static readonly string MongoDbDescription =
-            "Connect to MongoDB, pass configuration as JSON" + Environment.NewLine +
-            $"   {nameof(MongoDBConfiguration.Command)} - available commands: databases, collections, export" + Environment.NewLine +
-            $"   {nameof(MongoDBConfiguration.ConnectionString)} - MongoDB connection string" + Environment.NewLine +
-            $"   {nameof(MongoDBConfiguration.DatabaseName)} - the database name, applicable only for the collections and export commands" + Environment.NewLine +
-            $"   {nameof(MongoDBConfiguration.MigrateGridFS)} - (Optional) migrate GridFS that is associated with the provided database" + Environment.NewLine +
-            $"   {nameof(MongoDBConfiguration.CollectionsToMigrate)} - (Optional) a list of collections to rename during the export";
 
         private static readonly string CosmosDbDescription =
             "Connect to CosmosDB, pass configuration as JSON" + Environment.NewLine +
@@ -42,8 +33,6 @@ namespace Raven.Migrator
 
             _app.HelpOption(HelpOptionString);
 
-            ConfigureMigrationFromNoSqlDatabaseCommand<MongoDBConfiguration>(
-                "mongodb", MongoDbDescription, config => new MongoDBMigrator(config));
             ConfigureMigrationFromNoSqlDatabaseCommand<CosmosDBConfiguration>(
                 "cosmosdb", CosmosDbDescription, config => new CosmosDBMigrator(config));
 

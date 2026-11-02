@@ -157,9 +157,8 @@ namespace Raven.Server.Storage.Schema.Updates.Server
             
             using (var jsonContext = JsonOperationContext.ShortTermSingleUse())
             {
-                foreach (var existingNotification in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
+                foreach (var reader in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                 {
-                    var reader = existingNotification.Reader;
                     
                     var id = reader.Read(LegacyNotificationsTable.IdIndex, out var idSize);
                     var createdAt = reader.Read(LegacyNotificationsTable.CreatedAtIndex, out var createdAtSize);

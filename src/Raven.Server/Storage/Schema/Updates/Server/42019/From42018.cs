@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Server.ServerWide;
@@ -46,7 +46,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                             foreach (var holder in items.SeekByPrimaryKeyPrefix(startWith, Slices.Empty, skip))
                             {
                                 skip++;
-                                var reader = holder.Value.Reader;
+                                var reader = holder.Value;
                                 var ptr = reader.Read(2, out int size);
                                 using (var doc = new BlittableJsonReaderObject(ptr, size, ctx))
                                 {

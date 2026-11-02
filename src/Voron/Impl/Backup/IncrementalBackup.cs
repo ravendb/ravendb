@@ -166,6 +166,10 @@ namespace Voron.Impl.Backup
 
                         using (var stream = part.Open())
                         {
+                            // validating the entries needs the incarnation of the file, which is in its header record
+                            if (startBackupAt > 0 && StartsWithJournalHeaderRecord(journalFile))
+                                copier.ToStream(env, journalFile, 0, WriteAheadJournal.JournalHeaderRecord.SizeIn4Kb, stream);
+
                             copier.ToStream(env, journalFile, startBackupAt, numberOf4KbsToCopy, stream);
                             infoNotify(string.Format("Voron Incr copy journal number {0}", num));
                         }
@@ -234,6 +238,20 @@ namespace Voron.Impl.Backup
 
         // The returned journal already holds one reference (taken on every return path);
         // callers own that reference and must release it exactly once via Release(), without calling AddRef again.
+        // legacy journals have none, their first 4KB is a transaction
+        private static bool StartsWithJournalHeaderRecord(JournalFile journalFile)
+        {
+            var buffer = new byte[WriteAheadJournal.JournalHeaderRecord.SizeIn4Kb * 4 * Constants.Size.Kilobyte];
+            fixed (byte* p = buffer)
+            {
+                journalFile.JournalWriter.Read(p, buffer.Length, 0);
+
+                var header = (TransactionHeader*)p;
+                return header->HeaderMarker == Constants.TransactionHeaderMarker &&
+                       (header->Flags & TransactionPersistenceModeFlags.JournalHeaderRecord) != 0;
+            }
+        }
+
         internal static JournalFile GetJournalFile(StorageEnvironment env, long journalNum, IncrementalBackupInfo backupInfo, JournalInfo journalInfo)
         {
             var journalFile = env.Journal.Files.FirstOrDefault(x => x.Number == journalNum); // first check journal files currently being in use
@@ -244,7 +262,7 @@ namespace Voron.Impl.Backup
             }
 
             long journalSize = Bits.PowerOf2(env.Options.GetJournalFileSize(journalNum, journalInfo));
-            journalFile = new JournalFile(env, env.Options.CreateJournalWriter(journalNum, journalSize), journalNum, FrozenSet<Guid>.Empty);
+            journalFile = new JournalFile(env.Options.CreateJournalWriter(journalNum, journalSize), journalNum, FrozenSet<Guid>.Empty);
             journalFile.AddRef();
             return journalFile;
         }

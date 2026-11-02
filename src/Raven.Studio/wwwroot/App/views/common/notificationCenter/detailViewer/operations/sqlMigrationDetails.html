@@ -72,7 +72,11 @@
                 <button class="btn btn-default btn-sm" data-bind="click: toggleDetails, text: detailsVisible() ? 'Hide details':'Show details', clickBubble: false">
                 </button>
             </div>
-            <pre class="margin-top migration-messages" data-bind="visible: detailsVisible, if: detailsVisible"><code data-bind="text: messagesJoined"></code></pre>
+            <div class="d-flex margin-top" data-bind="visible: operationFailed">
+                <div class="flex-grow"></div>
+                <button type="button" class="btn btn-default btn-sm" data-bind="click: copyErrorDetails"><i class="icon-copy-to-clipboard"></i><span>Copy error message</span></button>
+            </div>
+            <pre class="migration-messages" data-bind="visible: detailsVisible, if: detailsVisible, css: { 'margin-top': !operationFailed() }"><code data-bind="text: messagesJoined"></code></pre>
         </div>
         <div class="modal-footer" data-bind="compose: $root.footerPartialView">
         </div>

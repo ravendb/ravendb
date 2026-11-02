@@ -14,6 +14,7 @@ import { ServerWideConnectionStringDto } from "components/pages/database/setting
 import TaskErrors = Raven.Server.Documents.TasksErrors.TaskErrors;
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 import OngoingTaskPullReplicationAsHub = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub;
+import CdcTestResult = Raven.Client.Documents.Operations.CdcSink.Test.CdcTestResult;
 
 function handlerIdForLocation(handlerId: string, location: databaseLocationSpecifier) {
     return [handlerId, location.nodeTag, location.shardNumber].filter((x) => x != null).join("-");
@@ -57,6 +58,28 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         );
     }
 
+    withImportDatabaseFromFile() {
+        this.mocks.validateSmugglerOptions.mockResolvedValue(undefined);
+        this.mocks.getNextOperationId.mockResolvedValue(1234);
+        this.mocks.getDatabaseForStudio.mockResolvedValue({
+            ...DatabasesStubs.nonShardedSingleNodeDatabaseDto(),
+            HasRevisionsConfiguration: true,
+        });
+
+        this.mocks.importDatabaseFromFile.mockImplementation(
+            async (
+                _db: unknown,
+                operationId: number,
+                _file: unknown,
+                _dto: unknown,
+                onUploadProgress: (percentComplete: number) => void
+            ) => {
+                onUploadProgress(100);
+                return { OperationId: operationId };
+            }
+        );
+    }
+
     withGetTasksPerLocation(
         customize: (dto: OngoingTasksResult, location: databaseLocationSpecifier) => void,
         shouldThrow?: (location: databaseLocationSpecifier) => boolean
@@ -82,6 +105,19 @@ export default class MockTasksService extends AutoMockService<TasksService> {
             } else {
                 return withLocationSpecificHubHandlerIds(mockedValue, location);
             }
+        });
+    }
+
+    withHangingGetTasks(
+        shouldHang: (location: databaseLocationSpecifier) => boolean,
+        dto?: MockedValue<OngoingTasksResult>
+    ) {
+        const mockedValue = this.createValue(dto, TasksStubs.getTasksList());
+        return this.mocks.getOngoingTasks.mockImplementation((_, location) => {
+            if (shouldHang(location)) {
+                return new Promise<OngoingTasksResult>(() => {});
+            }
+            return Promise.resolve(withLocationSpecificHubHandlerIds(mockedValue, location));
         });
     }
 
@@ -168,6 +204,14 @@ export default class MockTasksService extends AutoMockService<TasksService> {
 
     withGetCdcSinkTaskSchema(dto?: MockedValue<Raven.Client.Documents.Operations.CdcSink.Schema.CdcSinkSourceSchema>) {
         return this.mockResolvedValue(this.mocks.getCdcSinkTaskSchema, dto, TasksStubs.cdcSinkTaskSchema());
+    }
+
+    withVerifyCdcSink(dto?: MockedValue<CdcTestResult>) {
+        return this.mockResolvedValue(this.mocks.verifyCdcSink, dto, TasksStubs.verifyCdcSink());
+    }
+
+    withThrowingVerifyCdcSink() {
+        this.mocks.verifyCdcSink.mockRejectedValue(new Error());
     }
 
     withTestSnowflakeConnectionString(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {

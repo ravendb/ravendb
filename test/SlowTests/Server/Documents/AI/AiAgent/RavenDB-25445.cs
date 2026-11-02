@@ -34,7 +34,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
                 using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out var context))
                 {
-                    if (AbstractChatCompletionClientSettings.TryGetParameters(config.Connection, out var settings) == false)
+                    if (AbstractChatCompletionProvider.TryGetParameters(config.Connection, out var settings) == false)
                         throw new InvalidOperationException("Could not get settings from connection.");
 
                     var client = new ChatCompletionClient(store.GetRequestExecutor().ContextPool, settings);

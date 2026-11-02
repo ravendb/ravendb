@@ -19,7 +19,7 @@ class etlProgressCommand extends commandBase {
         const url = endpoints.databases.etl.etlProgress;
         const args = this.location;
 
-        return this.query<resultsDto<Raven.Server.Documents.ETL.Stats.EtlTaskProgress>>(url, args, this.db)
+        return this.query<resultsDto<Raven.Server.Documents.ETL.Stats.EtlTaskProgress>>(url, args, this.db, null, { timeout: commandBase.perNodeRequestTimeoutMs })
             .fail((response: JQueryXHR) => {
                 if (this.reportFailure) {
                     this.reportError(`Failed to fetch Etl progress`, response.responseText);    

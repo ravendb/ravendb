@@ -346,9 +346,21 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
                 var token = CreateBackgroundOperationToken();
-                var transformScript = migrationConfiguration.TransformScript;
+                // the authorization status must be read before the request ends, the import runs in the background
+                var options = new DatabaseSmugglerOptionsServerSide(GetAuthorizationStatusForSmuggler(DatabaseName))
+                {
+                    TransformScript = migrationConfiguration.TransformScript
+                };
 
                 var description = $"{EnumHelper.GetDescription(OperationType.DatabaseMigration)} from: '{migrationConfiguration.DatabaseTypeName}'";
+
+                if (RavenLogManager.Instance.IsAuditEnabled)
+                {
+                    // must be logged before the request ends, the audit log reads the client certificate from the request
+                    var optionsString = context.ReadObject(options.ToAuditJson(), nameof(DatabaseSmugglerOptionsServerSide)).ToString();
+                    LogAuditForDatabase("IMPORT", $"{description} using options: '{optionsString}'");
+                }
+
                 _ = Database.Operations.AddLocalOperation(
                     operationId,
                     OperationType.DatabaseMigration,
@@ -364,17 +376,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             {
                                 using (ContextPool.AllocateOperationContext(out DocumentsOperationContext migrateContext))
                                 {
-                                    var options = new DatabaseSmugglerOptionsServerSide(GetAuthorizationStatusForSmuggler(DatabaseName))
-                                    {
-                                        TransformScript = transformScript
-                                    };
                                     await DoImportInternalAsync(migrateContext, process.StandardOutput.BaseStream, options, result, onProgress, operationId, token);
-
-                                    if (RavenLogManager.Instance.IsAuditEnabled)
-                                    {
-                                        var optionsString = migrateContext.ReadObject(options.ToAuditJson(), nameof(DatabaseSmugglerOptionsServerSide)).ToString();
-                                        LogAuditForDatabase("IMPORT", $"{description} using options: '{optionsString}'");
-                                    }
                                 }
                             }
                             catch (OperationCanceledException)
@@ -589,7 +591,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         {
             await using (stream)
             using (token)
-            using (var source = new StreamSource(stream, context, Database.Name, new DatabaseSmugglerOptionsServerSide(GetAuthorizationStatusForSmuggler(DatabaseName))))
+            // runs in the background, after the request has finished, so the authorization status can't be read from the request here
+            using (var source = new StreamSource(stream, context, Database.Name, new DatabaseSmugglerOptionsServerSide(options.AuthorizationStatus)))
             {
                 var destination = Database.Smuggler.CreateDestination(token.Token);
                 var smuggler = Database.Smuggler.Create(source, destination, context, options, result, onProgress, token.Token);

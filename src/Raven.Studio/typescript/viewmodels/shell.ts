@@ -239,9 +239,11 @@ class shell extends viewModelBase {
         const menuItems = ko.pureComputed(() => {
             // we hide "What's new" menu item for all builds that buildNumber is less than 60_000, so nightly, local, etc
             const isWhatsNewVisible = buildInfo.serverBuildVersion()?.BuildVersion >= 60_000;
+            const db = activeDatabaseTracker.default.database();
 
             return generateMenuItems({
-                db: activeDatabaseTracker.default.database(),
+                db,
+                isSharded: db?.root.isSharded() ?? false,
                 isWhatsNewVisible,
             });
         });
@@ -383,7 +385,6 @@ class shell extends viewModelBase {
                         (_name, setting: simpleStudioSetting<string>) =>
                             shell.applyMonospaceFont(setting.getValue())
                     );
-
                     // bind event handles before we connect to server wide notification center
                     // (connection will be started after executing this method) - it was just scheduled 2 lines above
                     // please notice we don't wait here for connection to be established

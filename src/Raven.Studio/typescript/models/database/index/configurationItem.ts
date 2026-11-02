@@ -59,7 +59,6 @@ class configurationItem {
         "Indexing.Corax.VectorSearch.OrderByScoreAutomatically",
         "Indexing.Corax.VectorSearch.MaximumConcurrentBatchesForHnswAcceleration",
         "Indexing.Corax.VectorSearch.VectorSearchScanningThreshold",
-        "Storage.JournalsCompressionAcceleration",
         "Indexing.Storage.DisableSharedJournals",
         "Indexing.ElapsedSinceQueriedPersistIntervalInMin",
         "Indexing.Querying.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery",

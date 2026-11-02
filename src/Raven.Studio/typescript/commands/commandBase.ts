@@ -19,6 +19,10 @@ class commandBase {
 
     static ravenStudioVersionHeader = 'Raven-Studio-Version';
 
+    static readonly perNodeRequestTimeoutMs = 30_000;
+
+    protected readonly showProtractedRequestMessage: boolean = true;
+
     execute(): JQueryPromise<any> | Promise<any> {
         throw new Error("Execute must be overridden.");
     }
@@ -97,7 +101,9 @@ class commandBase {
     }
 
     protected ajax<T>(relativeUrl: string, args: any, method: string, db?: database | string, options?: JQueryAjaxSettings, timeToAlert = 9000, baseUrl?: string): JQueryPromise<T> {
-        const requestExecution = protractedCommandsDetector.instance.requestStarted(5000, timeToAlert);
+        const requestExecution = this.showProtractedRequestMessage
+            ? protractedCommandsDetector.instance.requestStarted(5000, timeToAlert)
+            : null;
 
         // ContentType:
         //
@@ -118,7 +124,7 @@ class commandBase {
                 if (evt.lengthComputable) {
                     const percentComplete = (evt.loaded / evt.total) * 100;
                     if (percentComplete < 100) {
-                        requestExecution.markProgress();
+                        requestExecution?.markProgress();
                     }
                 }
             }, false);
@@ -161,7 +167,7 @@ class commandBase {
 
         return $.ajax(defaultOptions)
             .always(() => {
-                requestExecution.markCompleted();
+                requestExecution?.markCompleted();
             }) as any;
     }
 

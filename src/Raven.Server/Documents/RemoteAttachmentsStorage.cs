@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -121,7 +121,7 @@ public class RemoteAttachmentsStorage : AbstractBackgroundWorkStorage<DocumentEx
     }
 
     [StorageIndexEntryKeyGenerator]
-    internal static unsafe ByteStringContext.Scope GenerateFlagAndHashForAttachments(Transaction tx, ref TableValueReader tvr, out Slice slice)
+    internal static unsafe ByteStringContext.Scope GenerateFlagAndHashForAttachments(Transaction tx, in TableValueReader tvr, out Slice slice)
     {
         var hashPtr = tvr.Read((int)Schemas.Attachments.AttachmentsTable.Hash, out var hashSize);
 

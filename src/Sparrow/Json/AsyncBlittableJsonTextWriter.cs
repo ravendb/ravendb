@@ -47,14 +47,14 @@ namespace Sparrow.Json
         public bool ShouldFlushAsync
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _innerStream.Length * 2 > _innerStream.Capacity;
+            get => _innerStream.Length * 2 > _innerStream.Capacity64;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<long> MaybeFlushAsync(CancellationToken token = default)
         {
             // PERF: Use cached RecyclableMemoryStream reference
-            if (_innerStream.Length * 2 <= _innerStream.Capacity)
+            if (_innerStream.Length * 2 <= _innerStream.Capacity64)
                 return new ValueTask<long>(0);
 
             FlushInternal(); // this is OK, because inner stream is a RecyclableMemoryStream
@@ -99,11 +99,15 @@ namespace Sparrow.Json
             {
                 // PERF: Check if flush completed synchronously to avoid async state machine
                 var flushTask = FlushAsync(_cancellationToken);
-                if (flushTask.IsCompletedSuccessfully == false)
+                if (flushTask.IsCompletedSuccessfully)
+                {
+                    // Fast synchronous path: consume the completed task, releasing its pooled source
+                    flushTask.GetAwaiter().GetResult();
+                }
+                else
+                {
                     return DisposeAsyncSlow(flushTask);
-
-                // Fast synchronous path
-                flushTask.GetAwaiter().GetResult();
+                }
                 if (_wroteToOutputStream)
                 {
                     var outputFlushTask = _outputStream.FlushAsync(_cancellationToken);

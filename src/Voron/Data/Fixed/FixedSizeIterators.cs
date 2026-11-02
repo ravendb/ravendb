@@ -236,18 +236,27 @@ namespace Voron.Data.Fixed
             public bool Seek(TVal key)
             {
                 _currentPage = _parent.FindPageFor(key);
-                return _currentPage.LastMatch <= 0 || MoveNext();
+                if (_currentPage.LastMatch > 0 || _currentPage.IsTombstoned(_currentPage.LastSearchPosition))
+                    return MoveNext();
+
+                return true;
             }
 
             public bool SeekBackward(TVal key)
             {
                 _currentPage = _parent.FindPageFor(key);
-                return _currentPage.LastMatch >= 0 || MovePrev();
+                if (_currentPage.LastMatch < 0 || _currentPage.IsTombstoned(_currentPage.LastSearchPosition))
+                    return MovePrev();
+
+                return true;
             }
 
             public bool SeekToLast()
             {
                 _currentPage = _parent.FindPageFor(TVal.MaxValue);
+                if (_currentPage.IsTombstoned(_currentPage.LastSearchPosition))
+                    return MovePrev();
+
                 return true;
             }
 
@@ -255,7 +264,7 @@ namespace Voron.Data.Fixed
             {
                 get
                 {
-                    if (_currentPage == null)
+                    if (_currentPage.IsValid == false)
                         throw new InvalidOperationException("No current page was set");
 
                     return _currentPage.GetKey(_currentPage.LastSearchPosition);
@@ -264,7 +273,7 @@ namespace Voron.Data.Fixed
 
             public ByteStringContext.Scope Value(out Slice slice)
             {
-                if (_currentPage == null)
+                if (_currentPage.IsValid == false)
                     throw new InvalidOperationException("No current page was set");
 
                 return Slice.External(_allocator,
@@ -275,7 +284,7 @@ namespace Voron.Data.Fixed
 
             public byte* ValuePtr(out int valueSize)
             {
-                if (_currentPage == null)
+                if (_currentPage.IsValid == false)
                     throw new InvalidOperationException("No current page was set");
 
                 valueSize = _parent._valSize;
@@ -318,7 +327,7 @@ namespace Voron.Data.Fixed
             {
                 AssertNoChanges();
 
-                while (_currentPage != null)
+                while (_currentPage.IsValid)
                 {
                     _currentPage.LastSearchPosition++;
                     if (_currentPage.LastSearchPosition < _currentPage.NumberOfEntries)
@@ -339,32 +348,80 @@ namespace Voron.Data.Fixed
 
                             _currentPage.LastSearchPosition = 0;
                         }
+
+                        if (_currentPage.IsTombstoned(_currentPage.LastSearchPosition))
+                            continue; // the entry is only physically there, move past it
+
                         return true;// there is another entry in this page
                     }
                     if (_parent._cursor.Count == 0)
                         break;
                     _currentPage = _parent._cursor.Pop();
                 }
-                _currentPage = null;
+                _currentPage = default;
 
                 return false;
+            }
+
+            private static bool HasTombstones(in FixedSizeTreePageHeader header)
+            {
+                return (header.TreeFlags & FixedSizeTreePageFlags.HasTombstonesBitmap) == FixedSizeTreePageFlags.HasTombstonesBitmap &&
+                       header.NumberOfTombstones != 0;
+            }
+
+            private int ActiveEntriesFrom(in FixedSizeTreePageHeader header, int position)
+            {
+                if (position >= header.NumberOfEntries)
+                    return 0;
+
+                if (HasTombstones(header))
+                    return _parent.GetReadOnlyPage(header.PageNumber).CountActiveEntriesFrom(position);
+
+                return header.NumberOfEntries - position;
+            }
+
+            private int ActiveEntriesBefore(in FixedSizeTreePageHeader header, int position)
+            {
+                if (position <= 0)
+                    return 0;
+
+                if (HasTombstones(header))
+                    return _parent.GetReadOnlyPage(header.PageNumber).CountActiveEntriesBefore(position);
+
+                return position;
+            }
+
+            private int AdvanceToActiveEntry(in FixedSizeTreePageHeader header, int position, int count)
+            {
+                if (HasTombstones(header))
+                    return _parent.GetReadOnlyPage(header.PageNumber).AdvanceToActiveEntry(position, count);
+
+                return Math.Min(position + count, header.NumberOfEntries);
+            }
+
+            private int RetreatToActiveEntry(in FixedSizeTreePageHeader header, int position, int count)
+            {
+                if (HasTombstones(header))
+                    return _parent.GetReadOnlyPage(header.PageNumber).RetreatToActiveEntry(position, count);
+
+                return position - count;
             }
 
             private bool MovePrev(long skip)
             {
                 AssertNoChanges();
 
-                if (_currentPage == null || _currentPage.IsLeaf == false)
+                if (_currentPage.IsValid == false || _currentPage.IsLeaf == false)
                     throw new InvalidOperationException("No current page was set or is wasn't a leaf!");
 
                 var currentPageHeader = _currentPage.PageHeader;
-                var lastSearchPosition = _currentPage.LastSearchPosition;
+                int lastSearchPosition = _currentPage.LastSearchPosition;
 
                 while (skip >= 0)
                 {
-                    var skipInPage = (int)Math.Min(lastSearchPosition, skip);
+                    var skipInPage = (int)Math.Min(ActiveEntriesBefore(currentPageHeader, lastSearchPosition), skip);
                     skip -= skipInPage;
-                    lastSearchPosition -= skipInPage;
+                    lastSearchPosition = RetreatToActiveEntry(currentPageHeader, lastSearchPosition, skipInPage);
 
                     if (skip == 0)
                     {
@@ -375,16 +432,18 @@ namespace Voron.Data.Fixed
                         if (_currentPage.PageNumber != currentPageHeader.PageNumber)
                             _currentPage = _parent.GetReadOnlyPage(currentPageHeader.PageNumber);
 
-                        _currentPage.LastSearchPosition = lastSearchPosition;
+                        _currentPage.LastSearchPosition = (short)lastSearchPosition;
 
                         return true;
                     }
                     
                     while (true)
                     {
-                        if (_parent._cursor.TryPeek(out var parent) == false)
+                        if (_parent._cursor.Count == 0)
                             return false;
-                        
+
+                        ref var parent = ref _parent._cursor.TopByRef();
+
                         parent.LastSearchPosition--;
                         
                         if (parent.LastSearchPosition < 0)
@@ -401,7 +460,7 @@ namespace Voron.Data.Fixed
 
                             // we move one beyond the end of elements because in both cases
                             // (branch and leaf) we first decrement and then run it
-                            childPage.LastSearchPosition = childPage.NumberOfEntries;
+                            childPage.LastSearchPosition = (short)childPage.NumberOfEntries;
 
                             _parent._cursor.Push(childPage);
                             continue;
@@ -412,7 +471,7 @@ namespace Voron.Data.Fixed
                         break;
                     }
                 }
-                _currentPage = null;
+                _currentPage = default;
 
                 return false;
             }
@@ -421,17 +480,17 @@ namespace Voron.Data.Fixed
             {
                 AssertNoChanges();
 
-                if (_currentPage == null || _currentPage.IsLeaf == false)
+                if (_currentPage.IsValid == false || _currentPage.IsLeaf == false)
                     throw new InvalidOperationException("No current page was set or is wasn't a leaf!");
 
                 var currentPageHeader = _currentPage.PageHeader;
-                var lastSearchPosition = _currentPage.LastSearchPosition;
+                int lastSearchPosition = _currentPage.LastSearchPosition;
 
                 while (skip >= 0)
                 {
-                    var skipInPage = (int)Math.Min(currentPageHeader.NumberOfEntries - lastSearchPosition, skip);
+                    var skipInPage = (int)Math.Min(ActiveEntriesFrom(currentPageHeader, lastSearchPosition), skip);
                     skip -= skipInPage;
-                    lastSearchPosition += skipInPage;
+                    lastSearchPosition = AdvanceToActiveEntry(currentPageHeader, lastSearchPosition, skipInPage);
 
                     if (skip == 0)
                     {
@@ -443,7 +502,7 @@ namespace Voron.Data.Fixed
                         if (_currentPage.PageNumber != currentPageHeader.PageNumber)
                             _currentPage = _parent.GetReadOnlyPage(currentPageHeader.PageNumber);
 
-                        _currentPage.LastSearchPosition = lastSearchPosition;
+                        _currentPage.LastSearchPosition = (short)lastSearchPosition;
 
                         if (_currentPage.LastSearchPosition >= _currentPage.NumberOfEntries)
                             return MoveNext();
@@ -452,9 +511,11 @@ namespace Voron.Data.Fixed
                     
                     while (true)
                     {
-                        if (_parent._cursor.TryPeek(out var parent) == false)
+                        if (_parent._cursor.Count == 0)
                             return false;
-                        
+
+                        ref var parent = ref _parent._cursor.TopByRef();
+
                         parent.LastSearchPosition++;
                         
                         if (parent.LastSearchPosition >= parent.NumberOfEntries)
@@ -481,7 +542,7 @@ namespace Voron.Data.Fixed
                         break;
                     }
                 }
-                _currentPage = null;
+                _currentPage = default;
 
                 return false;
             }
@@ -491,10 +552,10 @@ namespace Voron.Data.Fixed
             {
                 AssertNoChanges();
 
-                if (_currentPage == null)
+                if (_currentPage.IsValid == false)
                     throw new InvalidOperationException("No current page was set");
 
-                while (_currentPage != null)
+                while (_currentPage.IsValid)
                 {
                     _currentPage.LastSearchPosition--;
                     if (_currentPage.LastSearchPosition >= 0)
@@ -506,15 +567,19 @@ namespace Voron.Data.Fixed
                             var childParentNumber = _currentPage.GetEntry(_currentPage.LastSearchPosition)->PageNumber;
                             _currentPage = _parent.GetReadOnlyPage(childParentNumber);
 
-                            _currentPage.LastSearchPosition = _currentPage.NumberOfEntries - 1;
+                            _currentPage.LastSearchPosition = (short)(_currentPage.NumberOfEntries - 1);
                         }
+
+                        if (_currentPage.IsTombstoned(_currentPage.LastSearchPosition))
+                            continue; // the entry is only physically there, move past it
+
                         return true;// there is another entry in this page
                     }
                     if (_parent._cursor.Count == 0)
                         break;
                     _currentPage = _parent._cursor.Pop();
                 }
-                _currentPage = null;
+                _currentPage = default;
 
                 return false;
             }
@@ -522,7 +587,7 @@ namespace Voron.Data.Fixed
 
             public ValueReader CreateReaderForCurrent()
             {
-                if (_currentPage == null)
+                if (_currentPage.IsValid == false)
                     throw new InvalidOperationException("No current page was set");
 
                 return new ValueReader(_currentPage.Pointer + _currentPage.StartPosition + (_parent._entrySize * _currentPage.LastSearchPosition) + sizeof(long), _parent._valSize);
@@ -541,9 +606,9 @@ namespace Voron.Data.Fixed
                         return false;
                 }
 
-                var seek = _currentPage != null && _currentPage.LastSearchPosition != _currentPage.NumberOfEntries;
+                var seek = _currentPage.IsValid && _currentPage.LastSearchPosition != _currentPage.NumberOfEntries;
                 if (seek == false)
-                    _currentPage = null;
+                    _currentPage = default;
                 return seek;
             }
         }

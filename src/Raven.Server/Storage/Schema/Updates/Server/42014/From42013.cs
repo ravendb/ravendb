@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Raven.Server.ServerWide;
 using Voron;
 using Voron.Data.Tables;
@@ -55,14 +55,14 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                         var writeIdentitiesTable = step.WriteTx.OpenTable(newIdentitiesSchema, ClusterStateMachine.Identities);
                         foreach (var item in readIdentitiesTable.SeekByPrimaryKeyPrefix(keyPrefix, Slices.Empty, 0))
                         {
-                            var indexPtr = item.Value.Reader.Read((int)ClusterStateMachine.IdentitiesTable.Index, out var size);
+                            var indexPtr = item.Value.Read((int)ClusterStateMachine.IdentitiesTable.Index, out var size);
 
                             // we come from v4.2 RC1
                             if (size == sizeof(int))
                             {
                                 var indexIntValue = *(int*)indexPtr;
                                 long index = (long)indexIntValue;
-                                var value = TableValueToLong((int)ClusterStateMachine.IdentitiesTable.Value, ref item.Value.Reader);
+                                var value = TableValueToLong((int)ClusterStateMachine.IdentitiesTable.Value, item.Value);
 
                                 using (GetPrefixIndexSlices(step.ReadTx.Allocator, db, index, out var buffer))
                                 using (Slice.External(step.WriteTx.Allocator, buffer.Ptr, buffer.Length, out var prefixIndexSlice))

@@ -123,6 +123,9 @@ namespace Sparrow.Platform
             if (RunningOnWindows == false)
                 return null;
 
+            if (RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+                return "https://aka.ms/vs/17/release/vc_redist.arm64.exe";
+
             if (Is32Bits)
                 return "https://aka.ms/vs/17/release/vc_redist.x86.exe";
 

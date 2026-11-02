@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { Send, Square } from "lucide-react";
 import { useAssistantChatStore } from "@/components/layout/assistant-chat-store";
 import { useAssistantStore } from "@/components/layout/assistant-store";
@@ -12,6 +13,7 @@ type PromptFormData = {
 };
 
 export function AssistantComposer() {
+    const queryClient = useQueryClient();
     const sendPrompt = useAssistantChatStore((state) => state.sendPrompt);
     const stopStreaming = useAssistantChatStore((state) => state.stopStreaming);
     const isStreaming = useAssistantChatStore((state) => state.isStreaming);
@@ -41,7 +43,7 @@ export function AssistantComposer() {
         const trimmedPrompt = prompt.trim();
         form.reset();
         form.setFocus("prompt");
-        void sendPrompt(trimmedPrompt);
+        void sendPrompt(trimmedPrompt, queryClient);
     }
 
     return (

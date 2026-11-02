@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Tests.Infrastructure;
 using Voron.Impl.Scratch;
 using Xunit;
@@ -20,7 +21,7 @@ namespace SlowTests.Voron.Storage
             var buffer = new byte[1024];
             random.NextBytes(buffer);
 
-            HashSet<PageFromScratchBuffer> scratchPagesOfUncommittedTransaction;
+            HashSet<(int FileNumber, long Position, long Size, int NumberOfPages)> scratchPagesOfUncommittedTransaction;
 
             using (var tx = Env.WriteTransaction())
             {
@@ -30,12 +31,12 @@ namespace SlowTests.Voron.Storage
                     tree.Add("items/" + i, new MemoryStream(buffer));
                 }
 
-                scratchPagesOfUncommittedTransaction = new HashSet<PageFromScratchBuffer>(tx.LowLevelTransaction.GetTransactionPages(), PageFromScratchBufferEqualityComparer.Instance);
+                scratchPagesOfUncommittedTransaction = ScratchPositionsOf(tx);
 
                 // tx.Commit() - intentionally not committing
             }
 
-            HashSet<PageFromScratchBuffer> scratchPagesOfCommittedTransaction;
+            HashSet<(int FileNumber, long Position, long Size, int NumberOfPages)> scratchPagesOfCommittedTransaction;
 
             using (var tx = Env.WriteTransaction())
             {
@@ -46,7 +47,7 @@ namespace SlowTests.Voron.Storage
                     tree.Add("items/" + i, new MemoryStream(buffer));
                 }
 
-                scratchPagesOfCommittedTransaction = new HashSet<PageFromScratchBuffer>(tx.LowLevelTransaction.GetTransactionPages(), PageFromScratchBufferEqualityComparer.Instance);
+                scratchPagesOfCommittedTransaction = ScratchPositionsOf(tx);
 
                 tx.Commit();
             }
@@ -57,6 +58,13 @@ namespace SlowTests.Voron.Storage
             {
                 Assert.Contains(uncommittedPage, scratchPagesOfCommittedTransaction);
             }
+        }
+
+        private static HashSet<(int FileNumber, long Position, long Size, int NumberOfPages)> ScratchPositionsOf(global::Voron.Impl.Transaction tx)
+        {
+            return tx.LowLevelTransaction.GetTransactionPages()
+                .Select(p => (p.File.Number, p.PositionInScratchBuffer, p.Size, p.NumberOfPages))
+                .ToHashSet();
         }
     }
 }

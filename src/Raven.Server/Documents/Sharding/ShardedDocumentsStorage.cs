@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Changes;
@@ -81,9 +81,9 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
     {
         var table = context.DocumentsTable(this);
 
-        foreach (var result in GetItemsByBucket(context.Allocator, table, DocsSchema.DynamicKeyIndexes[AllDocsBucketAndEtagSlice], bucket, etag, skip, take))
+        foreach (var result in GetItemsByBucket(context.Allocator, table, Schemas.Documents.AllDocsBucketAndEtagIndex, bucket, etag, skip, take))
         {
-            yield return TableValueToDocument(context, ref result.Result.Reader, fields);
+            yield return TableValueToDocument(context, result.Result, fields);
         }
     }
 
@@ -149,18 +149,18 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
     }
 
     [StorageIndexEntryKeyGenerator]
-    internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForDocuments(Transaction tx, ref TableValueReader tvr, out Slice slice)
+    internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForDocuments(Transaction tx, in TableValueReader tvr, out Slice slice)
     {
-        return GenerateBucketAndEtagIndexKey(tx, idIndex: (int)DocumentsTable.LowerId, etagIndex: (int)DocumentsTable.Etag, ref tvr, out slice);
+        return GenerateBucketAndEtagIndexKey(tx, idIndex: (int)DocumentsTable.LowerId, etagIndex: (int)DocumentsTable.Etag, tvr, out slice);
     }
 
     [StorageIndexEntryKeyGenerator]
-    internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTombstones(Transaction tx, ref TableValueReader tvr, out Slice slice)
+    internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTombstones(Transaction tx, in TableValueReader tvr, out Slice slice)
     {
-        return ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(tx, (int)TombstoneTable.LowerId, etagIndex: (int)TombstoneTable.Etag, ref tvr, out slice);
+        return ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(tx, (int)TombstoneTable.LowerId, etagIndex: (int)TombstoneTable.Etag, tvr, out slice);
     }
 
-    internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(Transaction tx, int idIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
+    internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(Transaction tx, int idIndex, int etagIndex, in TableValueReader tvr, out Slice slice)
     {
         var lowerId = tvr.Read(idIndex, out int size);
         size = GetSizeOfTombstoneId(lowerId, size);
@@ -168,7 +168,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
         return GenerateBucketAndEtagSlice(tx, lowerId, size, etag, out slice);
     }
 
-    internal static ByteStringContext.Scope ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(Transaction tx, int keyIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
+    internal static ByteStringContext.Scope ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(Transaction tx, int keyIndex, int etagIndex, in TableValueReader tvr, out Slice slice)
     {
         var keyPtr = tvr.Read(keyIndex, out var keySize);
 
@@ -201,7 +201,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
         return scope;
     }
 
-    internal static void UpdateBucketStatsForDocument(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
+    internal static void UpdateBucketStatsForDocument(Transaction tx, Slice key, in TableValueReader oldValue, in TableValueReader newValue)
     {
         int numOfDocsChanged = 0;
         if (oldValue.Size == 0)
@@ -215,14 +215,14 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
             numOfDocsChanged = -1;
         }
 
-        UpdateBucketStatsInternal(tx, key, ref newValue, changeVectorIndex: (int)DocumentsTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size, numOfDocsChanged);
+        UpdateBucketStatsInternal(tx, key, newValue, changeVectorIndex: (int)DocumentsTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size, numOfDocsChanged);
     }
 
-    internal static void UpdateBucketStatsForTombstones(Transaction tx, Slice key, ref TableValueReader oldValue, ref TableValueReader newValue)
+    internal static void UpdateBucketStatsForTombstones(Transaction tx, Slice key, in TableValueReader oldValue, in TableValueReader newValue)
     {
         if (newValue.Size > 0)
         {
-            var flags = TableValueToFlags((int)TombstoneTable.Flags, ref newValue);
+            var flags = TableValueToFlags((int)TombstoneTable.Flags, newValue);
             if (flags.Contain(DocumentFlags.Artificial))
             {
                 // we don't want to update the merged-cv of the bucket for artificial tombstones
@@ -231,10 +231,10 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
             }
         }
 
-        UpdateBucketStatsInternal(tx, key, ref newValue, changeVectorIndex: (int)TombstoneTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
+        UpdateBucketStatsInternal(tx, key, newValue, changeVectorIndex: (int)TombstoneTable.ChangeVector, sizeChange: newValue.Size - oldValue.Size);
     }
 
-    internal static void UpdateBucketStatsInternal(Transaction tx, Slice key, ref TableValueReader value, int changeVectorIndex, long sizeChange, int numOfDocsChanged = 0)
+    internal static void UpdateBucketStatsInternal(Transaction tx, Slice key, in TableValueReader value, int changeVectorIndex, long sizeChange, int numOfDocsChanged = 0)
     {
         if (tx.Owner is not DocumentsOperationContext { DocumentDatabase: ShardedDocumentDatabase documentDatabase } context)
             return;
@@ -253,7 +253,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
 
         // item was inserted/updated 
         // need to update the merged-cv of the bucket
-        inMemoryBucketStats.UpdateBucketAndChangeVector(context, bucket, nowTicks, sizeChange, numOfDocsChanged, changeVectorIndex, ref value);
+        inMemoryBucketStats.UpdateBucketAndChangeVector(context, bucket, nowTicks, sizeChange, numOfDocsChanged, changeVectorIndex, value);
     }
 
     internal static void UpdateBucketStatsInternal(Transaction tx, Slice key, long sizeChange, int numOfDocsChanged = 0)
@@ -307,9 +307,9 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
     {
         var table = context.TombstonesTable(this);
 
-        foreach (var result in GetItemsByBucket(context.Allocator, table, TombstonesSchema.DynamicKeyIndexes[TombstonesBucketAndEtagSlice], bucket, etag))
+        foreach (var result in GetItemsByBucket(context.Allocator, table, Schemas.Tombstones.TombstonesBucketAndEtagIndex, bucket, etag))
         {
-            yield return TableValueToTombstone(context, ref result.Result.Reader);
+            yield return TableValueToTombstone(context, result.Result);
         }
     }
 
@@ -388,10 +388,8 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
     private void MarkTombstonesAsArtificial(DocumentsOperationContext context, int bucket, ChangeVector upTo)
     {
         long lastProcessedEtag = 0;
-        bool hasMore = true, collectionNamesUpdated = false;
-        var collectionNames = new Dictionary<string, CollectionName>(_collectionsCache, StringComparer.OrdinalIgnoreCase);
-        var holder = new Table.TableValueHolder(); // reused across iterations to avoid a per-row allocation
-
+        bool hasMore = true;
+        var collectionNames = GetCollectionsMap(context.Transaction.InnerTransaction.LowLevelTransaction);
         while (hasMore)
         {
             hasMore = false;
@@ -419,12 +417,9 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
                     case Tombstone.TombstoneType.Document:
                         var collection = tombstone.Collection;
                         if (collectionNames.TryGetValue(collection, out var collectionName) == false)
-                        {
-                            collectionNames[collection] = collectionName = new CollectionName(collection);
-                            collectionNamesUpdated = true;
-                        }
+                            throw new InvalidOperationException($"Found a tombstone of collection '{collection}' in bucket {bucket} of '{_documentDatabase.Name}', but that collection is not in the collections map. The tombstone cannot exist without it.");
 
-                        writeTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+                        writeTable = context.Transaction.GetOrOpenTombstonesTable(collectionName, TombstonesSchema);
                         break;
 
                     case Tombstone.TombstoneType.Revision:
@@ -446,13 +441,13 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
                 var cv = ChangeVector.MergeWithDatabaseChangeVector(context, tombstoneChangeVector);
                 var flags = tombstone.Flags | DocumentFlags.Artificial | DocumentFlags.FromResharding;
 
-                writeTable.DirectRead(tombstone.StorageId, out holder.Reader);
+                writeTable.DirectRead(tombstone.StorageId, out TableValueReader holder);
 
-                using (TableValueReaderUtil.CloneTableValueReader(context, holder))
+                using (TableValueReaderUtil.CloneTableValueReader(context, ref holder))
                 using (Slice.From(context.Allocator, cv, out var cvSlice))
                 using (writeTable.Allocate(out TableValueBuilder tvb))
                 {
-                    for (int i = 0; i < holder.Reader.Count; i++)
+                    for (int i = 0; i < holder.Count; i++)
                     {
                         switch ((TombstoneTable)i)
                         {
@@ -466,7 +461,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
                                 tvb.Add(cvSlice.Content.Ptr, cvSlice.Size);
                                 break;
                             default:
-                                var ptr = holder.Reader.Read(i, out int size);
+                                var ptr = holder.Read(i, out int size);
                                 tvb.Add(ptr, size);
                                 break;
                         }
@@ -482,18 +477,6 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
                 hasMore = true;
                 break;
             }
-        }
-
-        if (collectionNamesUpdated)
-        {
-            // Add to cache ONLY if the transaction was committed.
-            // this would prevent NREs next time a PUT is run,since if a transaction
-            // is not committed, DocsSchema and TombstonesSchema will not be actually created..
-            // has to happen after the commit, but while we are holding the write tx lock
-            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ =>
-            {
-                _collectionsCache = collectionNames;
-            };
         }
 
     }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
@@ -68,7 +68,8 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
              IJsonWriter writer,
              bool removeIdentityProperty = true)
         {
-            var usesDefaultContractResolver = ((JsonSerializer)serializer).ContractResolver.GetType() == typeof(DefaultRavenContractResolver);
+            var contractResolver = ((JsonSerializer)serializer).ContractResolver;
+            var usesDefaultContractResolver = contractResolver.GetType() == typeof(DefaultRavenContractResolver);
             var type = entity.GetType();
             var isDynamicObject = entity is IDynamicMetaObjectProvider;
             var willUseDefaultContractResolver = usesDefaultContractResolver && isDynamicObject == false;
@@ -78,6 +79,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             {
                 DefaultRavenContractResolver.RootEntity = removeIdentityProperty && hasIdentityProperty ? entity : null;
                 DefaultRavenContractResolver.RemovedIdentityProperty = false;
+                DefaultRavenContractResolver.RootObject = removeIdentityProperty ? entity : null;
 
                 // PERF: By moving the try..finally statement we forgo the need for prolog and epilog when it is not needed.
                 try
@@ -87,6 +89,20 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                 finally
                 {
                     DefaultRavenContractResolver.RootEntity = null;
+                    DefaultRavenContractResolver.RootObject = null;
+                }
+            }
+            else if (removeIdentityProperty && contractResolver is DefaultRavenContractResolver)
+            {
+                DefaultRavenContractResolver.RootObject = entity;
+
+                try
+                {
+                    serializer.Serialize(writer, entity);
+                }
+                finally
+                {
+                    DefaultRavenContractResolver.RootObject = null;
                 }
             }
             else
@@ -145,8 +161,12 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
         private static bool TrySimplifyJson(BlittableJsonReaderObject document, Type rootType)
         {
             var simplified = false;
-            foreach (var propertyName in document.GetPropertyNames())
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            for (int i = 0; i < document.Count; i++)
             {
+                document.GetPropertyByIndex(i, ref prop);
+
+                string propertyName = prop.Name;
                 var propertyType = GetPropertyType(propertyName, rootType);
                 if (propertyType == typeof(JObject) || propertyType == typeof(JArray) || propertyType == typeof(JValue))
                 {
@@ -154,7 +174,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                     continue;
                 }
 
-                var propertyValue = document[propertyName];
+                var propertyValue = prop.Value;
 
                 if (propertyValue is BlittableJsonReaderArray propertyArray)
                 {

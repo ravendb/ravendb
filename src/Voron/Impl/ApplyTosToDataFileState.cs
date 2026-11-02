@@ -6,7 +6,7 @@ namespace Voron.Impl;
 
 record ApplyLogsToDataFileState(
     List<PageFromScratchBuffer> Buffers,
-    List<(long Start, long Count)> SparseRegions,
+    List<(long FreedInTransaction, List<(long Start, long Count)> Regions)> SparseRegions,
     EnvironmentStateRecord Record)
 {
     public override string ToString()

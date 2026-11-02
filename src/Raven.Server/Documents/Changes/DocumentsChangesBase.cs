@@ -12,19 +12,27 @@ public abstract class DocumentsChangesBase<TChangesClientConnection, TOperationC
 {
     public readonly ConcurrentDictionary<long, TChangesClientConnection> Connections = new();
 
+    // ConcurrentDictionary.IsEmpty is costly to poll on the hot put path, this is cheaper
+    private int _connectionsCount;
+    public bool HasConnections => System.Threading.Volatile.Read(ref _connectionsCount) > 0;
+
     public event Action<OperationStatusChange> OnOperationStatusChange;
 
     public event Action<TopologyChange> OnTopologyChange;
 
     public void Connect(TChangesClientConnection connection)
     {
-        Connections.TryAdd(connection.Id, connection);
+        if (Connections.TryAdd(connection.Id, connection))
+            System.Threading.Interlocked.Increment(ref _connectionsCount);
     }
 
     public void Disconnect(long id)
     {
         if (Connections.TryRemove(id, out TChangesClientConnection connection))
+        {
+            System.Threading.Interlocked.Decrement(ref _connectionsCount);
             connection.Dispose();
+        }
     }
 
     public void RaiseNotifications(TopologyChange topologyChange)

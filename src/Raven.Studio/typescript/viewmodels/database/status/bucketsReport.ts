@@ -31,6 +31,9 @@ class bucketsReport extends shardViewModelBase {
 
     private currentPath: KnockoutComputed<Array<bucketReportItem>>;
 
+    sort = ko.observable<bucketReportSort>(null);
+    sortedChildren: KnockoutComputed<Array<bucketReportItem>>;
+
     private x: d3.scale.Linear<number, number>;
     private y: d3.scale.Linear<number, number>;
     private root: bucketReportItem;
@@ -54,7 +57,7 @@ class bucketsReport extends shardViewModelBase {
         super(db, location);
         
         this.shardNumbers(db.isSharded() ? db.shards().map(x => x.shardNumber) : []);
-        this.bindToCurrentInstance("onClick", "moveToDifferentShard");
+        this.bindToCurrentInstance("onClick", "moveToDifferentShard", "sortBy", "sortIcon");
     }
 
     activate(args: any) {
@@ -117,6 +120,35 @@ class bucketsReport extends shardViewModelBase {
 
             return items;
         });
+
+        this.sortedChildren = ko.pureComputed(() => {
+            const node = this.node();
+            const children = node ? node.internalChildren : null;
+
+            if (!children) {
+                return [];
+            }
+
+            const sort = this.sort();
+
+            return sort
+                ? children.slice().sort(bucketReportItem.sortComparator(sort.column, sort.direction))
+                : children.slice();
+        });
+    }
+
+    sortBy(column: bucketReportSortColumn) {
+        this.sort(bucketReportItem.nextSort(this.sort(), column));
+    }
+
+    sortIcon(column: bucketReportSortColumn): string {
+        const sort = this.sort();
+
+        if (!sort || sort.column !== column) {
+            return "icon-sortby";
+        }
+
+        return sort.direction === "asc" ? "icon-arrow-filled-up" : "icon-arrow-filled-down";
     }
 
     private processData(data: Raven.Server.Web.Studio.Processors.BucketsResults) {
@@ -148,11 +180,13 @@ class bucketsReport extends shardViewModelBase {
         const item = new bucketReportItem(name, dto.RangeSize, dto.NumberOfBuckets, dto.DocumentsCount, dto.ShardNumbers);
         item.fromRange = dto.FromBucket;
         item.toRange = dto.ToBucket;
+        item.ownerShard = dto.OwnerShardNumber ?? null;
         item.lazyLoadChildren = !leafBucket;
         if (leafBucket) {
             const leafItem = new bucketReportItem("Bucket: " + dto.FromBucket, dto.RangeSize, dto.NumberOfBuckets, dto.DocumentsCount, dto.ShardNumbers);
             leafItem.fromRange = dto.FromBucket;
             leafItem.toRange = dto.ToBucket;
+            leafItem.ownerShard = dto.OwnerShardNumber ?? null;
             item.internalChildren = [leafItem];
         }
         
@@ -471,7 +505,7 @@ class bucketsReport extends shardViewModelBase {
         let html = "<div class='tooltip-li'>Range: <div class='value'>" + d.name + "</div></div>";
         html += "<div class='tooltip-li'>Documents Count: <div class='value'>" + d.documentsCount + "</div></div>";
         html += "<div class='tooltip-li'>Buckets Count: <div class='value'>" + d.numberOfBuckets + "</div></div>";
-        html += "<div class='tooltip-li'>Shards: <div class='value'>" + d.shards.map(x => `<span># ${x}</span>`).join("") + "</div></div>";
+        html += "<div class='tooltip-li'>Shards: <div class='value'>" + d.shards.map(x => d.isShardPendingRemoval(x) ? `<span># ${x} (pending removal)</span>` : `<span># ${x}</span>`).join("") + "</div></div>";
         html += "<div class='tooltip-li'>Size: <div class='value'>" + generalUtils.formatBytesToSize(d.size) + "</div></div>";
 
         this.tooltip.html(html);

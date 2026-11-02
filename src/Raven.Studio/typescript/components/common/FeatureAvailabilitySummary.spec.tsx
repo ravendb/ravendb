@@ -1,6 +1,7 @@
 import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "./FeatureAvailabilitySummary.stories";
 import { rtlRender } from "test/rtlTestUtils";
+import { FeatureAvailabilityFootnote } from "./FeatureAvailabilitySummary";
 
 type LicenseType = Raven.Server.Commercial.LicenseType;
 
@@ -41,6 +42,46 @@ describe("FeatureAvailabilitySummary", () => {
             expect(screen.queryByRole("link", { name: selectors.developerLicenseLink })).toBeInTheDocument();
         }
     );
+
+    describe("footnotes", () => {
+        const embeddedFootnote: FeatureAvailabilityFootnote = {
+            title: "Available connectors",
+            items: [{ label: "Embedded" }],
+        };
+        const allFootnote: FeatureAvailabilityFootnote = {
+            title: "Available connectors",
+            items: [{ label: "OpenAI" }, { label: "Embedded" }],
+        };
+
+        const renderWithFootnotes = () =>
+            rtlRender(
+                <FeatureAvailabilitySummaryStory
+                    community={{ value: true, footnote: embeddedFootnote }}
+                    professional={{ value: true, footnote: embeddedFootnote }}
+                    enterprise={{ value: true, footnote: allFootnote }}
+                />
+            );
+
+        it("can show footnotes numbered in order of appearance", () => {
+            const { screen } = renderWithFootnotes();
+
+            expect(screen.getByText("Available connectors: Embedded").previousElementSibling).toHaveTextContent("1");
+            expect(screen.getByText("Available connectors: OpenAI, Embedded").previousElementSibling).toHaveTextContent(
+                "2"
+            );
+        });
+
+        it("can describe footnote marks with their footnotes", () => {
+            const { screen } = renderWithFootnotes();
+
+            screen
+                .getAllByText("1", { selector: "sup" })
+                .forEach((mark) => expect(mark).toHaveAccessibleDescription("Available connectors: Embedded"));
+            screen
+                .getAllByText("2", { selector: "sup" })
+                .forEach((mark) => expect(mark).toHaveAccessibleDescription("Available connectors: OpenAI, Embedded"));
+        });
+    });
 
     it(`can hide '${selectors.ifYouDevelopingText}' for Developer license`, () => {
         const { screen } = rtlRender(<FeatureAvailabilitySummaryStory licenseType="Developer" />);

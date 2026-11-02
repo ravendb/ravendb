@@ -1,4 +1,6 @@
-﻿@chart-data-color: @color-5-2;
+@import "../sortable-header.less";
+
+@chart-data-color: @color-5-2;
 @chart-documents-color: @color-5-1;
 @chart-reserved-color: @color-5;
 @chart-journal-color: @color-4-3;
@@ -17,6 +19,9 @@
 @chart-configuration-color: @color-5-3;
 @chart-sharedjournals-color: @color-4-3;
 @chart-free-color: @gray-darker;
+@chart-database-color: @chart-documents-color;
+@chart-shard-color: darken(@chart-documents-color, 10%);
+@chart-system-color: @color-4;
 
 
 #storage-report {
@@ -374,6 +379,30 @@
             }
         }
 
+        &.database {
+            fill: @chart-database-color;
+
+            &:hover {
+                fill: lighten(@chart-database-color, 5%);
+            }
+        }
+
+        &.shard {
+            fill: @chart-shard-color;
+
+            &:hover {
+                fill: lighten(@chart-shard-color, 5%);
+            }
+        }
+
+        &.system {
+            fill: @chart-system-color;
+
+            &:hover {
+                fill: lighten(@chart-system-color, 5%);
+            }
+        }
+
         rect {
             fill-opacity: 1;
             stroke: transparent;
@@ -575,6 +604,14 @@
                     background-color: lighten(@chart-structure-color,5%);
                 }
             }
+
+            &.system {
+                background-color: @chart-system-color;
+
+                &:hover {
+                    background-color: lighten(@chart-system-color,5%);
+                }
+            }
         }
 
         i {
@@ -594,16 +631,79 @@
             min-width: 200px;
         }
 
+        .sort-header {
+            display: inline-flex;
+            align-items: center;
+            color: inherit;
+
+            i {
+                margin-left: 4px;
+                font-size: 14px;
+
+                &.icon-sortby {
+                    opacity: .3;
+                }
+            }
+
+            &:hover {
+                color: @brand-primary;
+
+                i.icon-sortby {
+                    opacity: 1;
+                }
+            }
+        }
+
         .table-items {
             position: absolute;
             display: flex;
             width: 100%;
             padding-right: 20px;
         }
+
+        th {
+            .sortable-header();
+        }
+
+        .sort-button {
+            padding: 0;
+            border: 0;
+            background: none;
+            color: inherit;
+            font: inherit;
+            white-space: nowrap;
+
+            .sortable-controls {
+                display: inline-flex;
+                flex-direction: column;
+                vertical-align: middle;
+                margin-left: 4px;
+            }
+        }
     }
 
     .table-item-name {
         display: block;
         white-space: nowrap;
+
+        .badge {
+            margin-top: -3px;
+        }
+    }
+
+    .label.shard-pending-removal {
+        background-color: transparent;
+        border: 1px dashed @brand-warning;
+        color: @brand-warning;
+        cursor: help;
+
+        i {
+            margin-right: 3px;
+        }
+
+        .pending-removal-text {
+            margin-left: 4px;
+            font-weight: normal;
+        }
     }
 }

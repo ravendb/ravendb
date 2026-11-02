@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -390,7 +390,7 @@ namespace SlowTests.Issues
                         Assert.True(readTable.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out tvr));
                     }
 
-                    var data = GetCounterValuesData(context, ref tvr);
+                    var data = GetCounterValuesData(context, tvr);
                     Assert.True(data.TryGet(Values, out BlittableJsonReaderObject counterValues));
                     Assert.True(data.TryGet(CounterNames, out BlittableJsonReaderObject counterNames));
 
@@ -495,7 +495,7 @@ namespace SlowTests.Issues
                         Assert.True(readTable.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out tvr));
                     }
 
-                    var data = GetCounterValuesData(context, ref tvr);
+                    var data = GetCounterValuesData(context, tvr);
                     Assert.True(data.TryGet(Values, out BlittableJsonReaderObject counterValues));
                     Assert.True(data.TryGet(CounterNames, out BlittableJsonReaderObject counterNames));
 
@@ -630,7 +630,7 @@ namespace SlowTests.Issues
                         Assert.True(readTable.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out tvr));
                     }
 
-                    var data = GetCounterValuesData(context, ref tvr);
+                    var data = GetCounterValuesData(context, tvr);
                     Assert.True(data.TryGet(Values, out BlittableJsonReaderObject counterValues));
                     Assert.True(data.TryGet(CounterNames, out BlittableJsonReaderObject counterNames));
 
@@ -757,7 +757,7 @@ namespace SlowTests.Issues
                         Assert.True(readTable.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out tvr));
                     }
 
-                    var data = GetCounterValuesData(context, ref tvr);
+                    var data = GetCounterValuesData(context, tvr);
                     Assert.True(data.TryGet(Values, out BlittableJsonReaderObject counterValues));
                     Assert.True(data.TryGet(CounterNames, out BlittableJsonReaderObject counterNames));
 
@@ -815,7 +815,7 @@ namespace SlowTests.Issues
                         Assert.True(readTable.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out tvr));
                     }
 
-                    var data = GetCounterValuesData(context, ref tvr);
+                    var data = GetCounterValuesData(context, tvr);
                     Assert.True(data.TryGet(Values, out BlittableJsonReaderObject counterValues));
                     Assert.True(data.TryGet(CounterNames, out BlittableJsonReaderObject counterNames));
 
@@ -889,7 +889,7 @@ namespace SlowTests.Issues
                 if (id == null)
                 {
                     id = "users/1";
-                    tvr = readTable.ReadFirst(database.DocumentsStorage.CountersStorage.CountersSchema.FixedSizeIndexes[Counters.AllCountersEtagSlice]).Reader;
+                    Assert.True(readTable.ReadFirst(database.DocumentsStorage.CountersStorage.CountersSchema.FixedSizeIndexes[Counters.AllCountersEtagSlice], out tvr));
                 }
                 else
                 {
@@ -900,7 +900,7 @@ namespace SlowTests.Issues
                 }
 
                 BlittableJsonReaderObject data;
-                using (data = GetCounterValuesData(context, ref tvr))
+                using (data = GetCounterValuesData(context, tvr))
                 {
                     data = data.Clone(context);
                 }
@@ -918,10 +918,10 @@ namespace SlowTests.Issues
                     data = context.ReadObject(data, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 }
 
-                using var changeVector = DocumentsStorage.TableValueToString(context, (int)Counters.CountersTable.ChangeVector, ref tvr);
-                var groupEtag = DocumentsStorage.TableValueToEtag((int)Counters.CountersTable.Etag, ref tvr);
+                using var changeVector = DocumentsStorage.TableValueToString(context, (int)Counters.CountersTable.ChangeVector, tvr);
+                var groupEtag = DocumentsStorage.TableValueToEtag((int)Counters.CountersTable.Etag, tvr);
 
-                using (var counterGroupKey = DocumentsStorage.TableValueToString(context, (int)Counters.CountersTable.CounterKey, ref tvr))
+                using (var counterGroupKey = DocumentsStorage.TableValueToString(context, (int)Counters.CountersTable.CounterKey, tvr))
                 using (context.Allocator.Allocate(counterGroupKey.Size, out var buffer))
                 {
                     counterGroupKey.CopyTo(buffer.Ptr);

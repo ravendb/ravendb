@@ -32,7 +32,7 @@ namespace FastTests.Voron.Journal
                 
                 // tx.Commit(); do not commit
             }
-            Assert.False(Env.WriteTransactionPool.ScratchPagesInUse.ContainsKey(pageAllocatedInUncommittedTransaction));
+            Assert.False(Env.CurrentStateRecord.ScratchPagesTable.ContainsKey(pageAllocatedInUncommittedTransaction));
         }
     }
 }

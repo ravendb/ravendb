@@ -586,7 +586,9 @@ namespace Raven.Client.Documents
         /// <param name="fieldSelector">Path to the field used for searching.</param>
         /// <param name="boost">Defines boost value for documents matched by this search statement, increasing their score. By default, documents with higher score are
         /// returned first.</param>
-        /// <param name="options">Defines a logical conjunction between this and previous search statement. Default: SearchOptions.Guess.</param>
+        /// <param name="options">Defines a logical conjunction between this and the previous search statement; default: SearchOptions.Guess.
+        /// It relates this search to the previous search only - it does not apply after a non-search clause and does not affect the clause that follows,
+        /// so Search(a, SearchOptions.Or).Where(x) does not give "a or x".</param>
         public static IRavenQueryable<T> Search<T>(this IQueryable<T> self, Expression<Func<T, object>> fieldSelector, string searchTerms,
                                                    decimal boost = 1,
                                                    SearchOptions options = SearchOptions.Guess,

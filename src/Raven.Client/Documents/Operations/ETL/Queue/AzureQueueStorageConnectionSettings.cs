@@ -142,6 +142,36 @@ public sealed class AzureQueueStorageConnectionSettings
         return json;
     }
 
+    public DynamicJsonValue ToAuditJson()
+    {
+        var json = new DynamicJsonValue();
+
+        if (string.IsNullOrEmpty(ConnectionString) == false)
+        {
+            json[nameof(ConnectionString)] = "<Contains-Secrets>";
+        }
+
+        if (EntraId != null)
+        {
+            json[nameof(EntraId)] = new DynamicJsonValue
+            {
+                [nameof(EntraId.StorageAccountName)] = EntraId.StorageAccountName,
+                [nameof(EntraId.TenantId)] = EntraId.TenantId,
+                [nameof(EntraId.ClientId)] = EntraId.ClientId
+            };
+        }
+
+        if (Passwordless != null)
+        {
+            json[nameof(Passwordless)] = new DynamicJsonValue
+            {
+                [nameof(Passwordless.StorageAccountName)] = Passwordless.StorageAccountName
+            };
+        }
+
+        return json;
+    }
+
     private bool Equals(AzureQueueStorageConnectionSettings other)
     {
         return Equals(EntraId, other.EntraId) && ConnectionString == other.ConnectionString && Equals(Passwordless, other.Passwordless);

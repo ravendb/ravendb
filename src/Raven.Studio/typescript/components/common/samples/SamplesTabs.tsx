@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { ChangeEvent, KeyboardEvent, useRef, useState } from "react";
 import Tab from "react-bootstrap/Tab";
 import Nav from "react-bootstrap/Nav";
 import Card from "react-bootstrap/Card";
@@ -75,8 +75,8 @@ export default function SamplesTabs({ tabs, onSelect, onClose }: SamplesTabsProp
                             placeholder={activeTab.searchPlaceholder ?? "Search"}
                             className="rounded-1 methods-search-input"
                             value={activeSearch}
-                            onChange={(e) => handleSearchChange(e.target.value)}
-                            onKeyDown={(e) => {
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => handleSearchChange(e.target.value)}
+                            onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
                                 // the panel can be rendered inside a form - Enter must not submit it
                                 if (e.key === "Enter") {
                                     e.preventDefault();

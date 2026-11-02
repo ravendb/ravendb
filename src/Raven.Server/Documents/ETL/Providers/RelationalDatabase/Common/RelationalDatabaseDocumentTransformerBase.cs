@@ -115,7 +115,7 @@ where TRelationalEtlConfiguration: EtlConfiguration<TRelationalConnectionString>
 
         var buffer = value.Buffer;
 
-        if ("$attachment/"u8.IsEqualConstant(buffer, value.Size) ||
+        if (Transformation.AttachmentMarkerAsSpan.IsEqualConstant(buffer, value.Size) ||
             *(int*)(buffer + 8) != 796159589) // ent/
         {
             attachmentName = null;

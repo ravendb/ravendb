@@ -310,6 +310,9 @@ internal static partial class QueryPlanBuilder
                 _ => 1f
             }
         };
+
+        if (float.IsFinite(exec.BoostFactor) == false || exec.BoostFactor < 0)
+            throw new InvalidQueryException($"The boost value must be a finite, non-negative number, but was {boostVal}", builderParameters?.Metadata?.QueryText, queryParameters);
     }
 
     /// <summary> Foo BETWEEN $x AND $y - where $x > $y - returns nothing</summary>
@@ -717,12 +720,6 @@ internal static partial class QueryPlanBuilder
         if (ctx.PlanParams.IndexSearcher.HasMultipleTermsInField(ctx.OrderByFields[0].Field))
         {
             rejectReason = "the sort field holds multiple values per document, so its filter can't be safely skipped during the walk";
-            return false;
-        }
-
-        if (ctx.BuilderParams.HasDynamics)
-        {
-            rejectReason = "the index writes dynamic fields, which can give a document several values of the sort field without marking it multi-valued";
             return false;
         }
 

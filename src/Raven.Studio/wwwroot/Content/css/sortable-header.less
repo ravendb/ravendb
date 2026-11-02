@@ -1,0 +1,30 @@
+.sortable-header() {
+    .sortable-controls {
+        &:before, &:after {
+            font-family: 'icomoon' !important;
+            opacity: 0.2;
+            font-size: 10px;
+            line-height: 8px;
+        }
+
+        &:before {
+            content: '\f128';
+        }
+
+        &:after {
+            content: '\f114';
+        }
+    }
+
+    &:hover .sortable-controls {
+        &:before, &:after {
+            opacity: 0.5;
+        }
+    }
+
+    &.asc .sortable-controls:before,
+    &.desc .sortable-controls:after {
+        opacity: 1;
+        color: var(--bs-primary);
+    }
+}

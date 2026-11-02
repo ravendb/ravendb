@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -20,6 +21,12 @@ namespace Voron.Util
 
         public void Add(LowLevelTransaction tx)
         {
+            Debug.Assert(tx.ScratchSnapshotSeq >= 0,
+                $"Transaction {tx.Id} registered as active before publishing the scratch visibility bound it captured");
+            Debug.Assert(tx.Id >= 0, $"Transaction registered as active before its id was assigned (id {tx.Id})");
+            Debug.Assert(tx.Flags is not TransactionFlags.ReadWrite || tx.Id > 0,
+                $"Write transaction registered with id {tx.Id}, which cannot come from a published record");
+
             var oldTx = _oldestTransaction;
             _activeTxs.Add(tx);
             while (oldTx == 0 || oldTx > tx.Id)

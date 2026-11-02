@@ -1,11 +1,6 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
-type migrationOptions = "MongoDB" | "CosmosDB";
-
-interface IMongoDbMigrationConfiguration extends IAbstractMigrationConfiguration {
-    ConnectionString: string;
-    MigrateGridFS: boolean;
-}
+type migrationOptions = "CosmosDB";
 
 interface ICosmosDbMigrationConfiguration extends IAbstractMigrationConfiguration {
     AzureEndpointUrl: string;
@@ -95,19 +90,6 @@ abstract class noSqlMigrationModel {
     }
 }
 
-class mongoDbMigrationModel extends noSqlMigrationModel {
-    connectionString = ko.observable<string>();
-    migrateGridFs = ko.observable<boolean>(false);
-    hasGridFs = ko.observable<boolean>();
-
-    toDto(): IMongoDbMigrationConfiguration {
-        const dto = super.toDto() as IMongoDbMigrationConfiguration;
-        dto.ConnectionString = this.connectionString();
-        dto.MigrateGridFS = this.migrateGridFs();
-        return dto;
-    }
-}
-
 class cosmosDbMigrationModel extends noSqlMigrationModel {
     azureEndpointUrl = ko.observable<string>();
     primaryKey = ko.observable<string>();
@@ -122,9 +104,8 @@ class cosmosDbMigrationModel extends noSqlMigrationModel {
 
 class migrateDatabaseModel {
     
-    static allowedMongoDbPrefixes = ["mongodb://", "mongodb+srv://"];
-    
-    selectMigrationOption = ko.observable<migrationOptions>();
+    // CosmosDB is the only source
+    selectMigrationOption = ko.observable<migrationOptions>("CosmosDB");
     
     migratorFullPath = ko.observable<string>();
     migratorPathInConfiguration = ko.observable<boolean>();
@@ -132,11 +113,9 @@ class migrateDatabaseModel {
     showTransformScript = ko.observable<boolean>(false);
     transformScript = ko.observable<string>();
 
-    mongoDbConfiguration = new mongoDbMigrationModel();
     cosmosDbConfiguration = new cosmosDbMigrationModel();
 
     activeConfiguration: KnockoutComputed<noSqlMigrationModel>;
-    showMongoDbOptions: KnockoutComputed<boolean>;
     showCosmosDbOptions: KnockoutComputed<boolean>;
 
     validationGroup: KnockoutValidationGroup;
@@ -161,8 +140,6 @@ class migrateDatabaseModel {
     private initObservables() {
         this.activeConfiguration = ko.pureComputed(() => {
             switch (this.selectMigrationOption()) {
-                case "MongoDB":
-                    return this.mongoDbConfiguration;
                 case "CosmosDB":
                     return this.cosmosDbConfiguration;
                 default:
@@ -170,56 +147,10 @@ class migrateDatabaseModel {
             }
         });
 
-        this.showMongoDbOptions = ko.pureComputed(() => this.selectMigrationOption() === "MongoDB");
         this.showCosmosDbOptions = ko.pureComputed(() => this.selectMigrationOption() === "CosmosDB");
     }
     
     private initValidation() {
-        this.selectMigrationOption.extend({
-            validation: [
-                {
-                    validator: (value: migrationOptions) => !!value,
-                    message: "Please choose source"
-                }
-            ]
-        });
-
-        this.mongoDbConfiguration.databaseName.extend({
-            required: {
-                onlyIf: () => this.showMongoDbOptions()
-            }
-        });
-
-        this.mongoDbConfiguration.connectionString.extend({
-            required: {
-                onlyIf: () => this.showMongoDbOptions()
-            },
-            validation: [
-                {
-                    validator: (value: string) => {
-                        if (!this.showMongoDbOptions()) {
-                            return true;
-                        }
-                        
-                        if (!value) {
-                            return false;
-                        }
-                        
-                        const valueLower = value.toLowerCase();
-
-                        for (const prefix of migrateDatabaseModel.allowedMongoDbPrefixes) {
-                            if (valueLower.startsWith(prefix)) {
-                                return value.length > prefix.length + 1;
-                            }
-                        }
-                        
-                        return false;
-                    },
-                    message: "Invalid MongoDB connection string"
-                }
-            ]
-        });
-
         this.cosmosDbConfiguration.databaseName.extend({
             required: {
                 onlyIf: () => this.showCosmosDbOptions()
@@ -241,9 +172,6 @@ class migrateDatabaseModel {
 
         this.validationGroup = ko.validatedObservable({
             migratorFullPath: this.migratorFullPath,
-            selectMigrationOption: this.selectMigrationOption,
-            mongoDbDatabaseName: this.mongoDbConfiguration.databaseName,
-            connectionString: this.mongoDbConfiguration.connectionString,
             cosmosDbDatabaseName: this.cosmosDbConfiguration.databaseName,
             azureEndpointUrl: this.cosmosDbConfiguration.azureEndpointUrl,
             primaryKey: this.cosmosDbConfiguration.primaryKey
@@ -251,8 +179,6 @@ class migrateDatabaseModel {
 
         this.validationGroupDatabaseNames = ko.validatedObservable({
             migratorFullPath: this.migratorFullPath,
-            selectMigrationOption: this.selectMigrationOption,
-            connectionString: this.mongoDbConfiguration.connectionString,
             azureEndpointUrl: this.cosmosDbConfiguration.azureEndpointUrl,
             primaryKey: this.cosmosDbConfiguration.primaryKey
         });

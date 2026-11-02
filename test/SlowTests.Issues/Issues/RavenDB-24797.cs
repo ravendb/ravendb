@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -451,7 +451,7 @@ namespace SlowTests.Issues
                         Assert.True(readTable.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out tvr));
                     }
 
-                    var data = CountersStorage.GetCounterValuesData(context, ref tvr);
+                    var data = CountersStorage.GetCounterValuesData(context, tvr);
                     data.TryGet(CountersStorage.DbIds, out BlittableJsonReaderArray dbIds);
 
                     var validDbIds = dbIds.All(x => CountersRepairTask.IsBase64String(x as LazyStringValue));
@@ -556,7 +556,7 @@ namespace SlowTests.Issues
                         Assert.True(readTable.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out tvr));
                     }
 
-                    var data = CountersStorage.GetCounterValuesData(context, ref tvr);
+                    var data = CountersStorage.GetCounterValuesData(context, tvr);
                     data.TryGet(CountersStorage.DbIds, out BlittableJsonReaderArray dbIds);
 
                     var validDbIds = dbIds.All(x => CountersRepairTask.IsBase64String(x as LazyStringValue));
@@ -631,7 +631,7 @@ namespace SlowTests.Issues
                 }
 
                 BlittableJsonReaderObject data;
-                using (data = CountersStorage.GetCounterValuesData(context, ref tvr))
+                using (data = CountersStorage.GetCounterValuesData(context, tvr))
                 {
                     data = data.Clone(context);
                 }
@@ -650,10 +650,10 @@ namespace SlowTests.Issues
                     data = context.ReadObject(data, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 }
 
-                using var changeVector = DocumentsStorage.TableValueToString(context, (int)Counters.CountersTable.ChangeVector, ref tvr);
-                var groupEtag = DocumentsStorage.TableValueToEtag((int)Counters.CountersTable.Etag, ref tvr);
+                using var changeVector = DocumentsStorage.TableValueToString(context, (int)Counters.CountersTable.ChangeVector, tvr);
+                var groupEtag = DocumentsStorage.TableValueToEtag((int)Counters.CountersTable.Etag, tvr);
 
-                using (var counterGroupKey = DocumentsStorage.TableValueToString(context, (int)Counters.CountersTable.CounterKey, ref tvr))
+                using (var counterGroupKey = DocumentsStorage.TableValueToString(context, (int)Counters.CountersTable.CounterKey, tvr))
                 using (context.Allocator.Allocate(counterGroupKey.Size, out var buffer))
                 {
                     counterGroupKey.CopyTo(buffer.Ptr);

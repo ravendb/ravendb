@@ -255,7 +255,7 @@ public class TelegramChannelEndpointsTests(ITestOutputHelper output, QuillTelegr
 
         // app B provisions the same bot: A's channel doc is missing, so B reclaims the "orphan"
         var created = await appB.ProvisionChannelAsync(
-            new ProvisionChannelRequest(ChannelType.Telegram, agentB, null, Telegram: new(token)));
+            new ProvisionChannelRequest(ChannelType.Telegram, agentB, null, DisplayName: "Support bot", Telegram: new(token)));
 
         // app A's channel doc lands after B won; A's stale change vector must fail the confirm
         using (var session = appA.Store.OpenAsyncSession(appA.Slug))

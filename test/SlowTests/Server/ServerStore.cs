@@ -25,7 +25,7 @@ namespace SlowTests.Server
         {
             using (GetDocumentStore())
             {
-                var certificate = CertificateHelper.CreateCertificateFromPfx(Certificates.GenerateAndSaveSelfSignedCertificate().ServerCertificatePath, (string)null, X509KeyStorageFlags.UserKeySet);
+                var certificate = Certificates.GenerateAndSaveSelfSignedCertificate().ServerCertificate.Value;
 
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
@@ -60,7 +60,7 @@ namespace SlowTests.Server
         {
             using (GetDocumentStore())
             {
-                var certificate = CertificateHelper.CreateCertificateFromPfx(Certificates.GenerateAndSaveSelfSignedCertificate().ServerCertificatePath, (string)null, X509KeyStorageFlags.UserKeySet);
+                var certificate = Certificates.GenerateAndSaveSelfSignedCertificate().ServerCertificate.Value;
 
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))

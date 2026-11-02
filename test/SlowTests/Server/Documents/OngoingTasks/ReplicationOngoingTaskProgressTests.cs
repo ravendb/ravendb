@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -511,36 +511,19 @@ namespace SlowTests.Server.Documents.OngoingTasks
 
         private async Task AssertReplicationBatchCompletedAsync(DocumentStore store, DocumentDatabase database, RavenServer server)
         {
-            var (lastSentEtag, sourceChangeVector, destinationChangeVector) = GetReplicationHandlerState(database);
-
-            IReplicationTaskProgress[] results = null;
-            await WaitForValueAsync(async () =>
+            await WaitForAssertionAsync(async () =>
             {
-                results = await GetReplicationProgress(store, database.Name, server);
-                if (results == null || results.Length != 1)
-                    return false;
+                // Heartbeats can change the destination CV (including to null for sharded replication), so refresh the snapshot on each attempt.
+                var (lastSentEtag, sourceChangeVector, destinationChangeVector) = GetReplicationHandlerState(database);
+                var results = await GetReplicationProgress(store, database.Name, server);
+                var result = Assert.Single(results);
+                var processProgress = Assert.Single(result.ProcessesProgress);
 
-                var result = results[0];
-                if (result.ProcessesProgress.Count != 1)
-                    return false;
-
-                if (result.ProcessesProgress[0].LastSentEtag != lastSentEtag)
-                    return false;
-
-                if (result.ProcessesProgress[0].DestinationChangeVector == null)
-                    return false;
-
-                return true;
-            }, true);
-
-            Assert.NotEmpty(results);
-            var result = Assert.Single(results);
-            var processProgress = Assert.Single(result.ProcessesProgress);
-
-            Assert.Equal(lastSentEtag, processProgress.LastSentEtag);
-            Assert.Equal(sourceChangeVector, processProgress.SourceChangeVector);
-            Assert.Equal(destinationChangeVector, processProgress.DestinationChangeVector);
-            Assert.True(processProgress.Completed);
+                Assert.Equal(lastSentEtag, processProgress.LastSentEtag);
+                Assert.Equal(sourceChangeVector, processProgress.SourceChangeVector);
+                Assert.Equal(destinationChangeVector, processProgress.DestinationChangeVector);
+                Assert.True(processProgress.Completed);
+            });
         }
 
         private void AssertPendingItemsToProcess(IReplicationTaskProgress[] result, ReplicationProcessProgress processProgress = null,

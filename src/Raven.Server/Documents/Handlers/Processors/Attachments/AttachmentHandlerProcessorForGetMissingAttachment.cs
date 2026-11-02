@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
 
         protected override void CheckCollectionAndThrowIfNeeded(string collection)
         {
-            if (RequestHandler.Database.DocumentsStorage.GetCollection(collection, true) == null)
+            if (RequestHandler.Database.DocumentsStorage.GetCollectionFromLatestCommittedState(collection, throwIfDoesNotExist: true) == null)
                 throw new ArgumentException($"Query string '{collection}' was not recognized as valid collection name");
         }
     }

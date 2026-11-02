@@ -6,6 +6,7 @@ import getEnvironmentStorageReportCommand = require("commands/database/debug/get
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 import generalUtils = require("common/generalUtils");
 import storageReportItem = require("models/database/status/storageReportItem");
+import storageReportSort = require("models/database/status/storageReportSort");
 import d3 = require("d3");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import database = require("models/resources/database");
@@ -52,6 +53,9 @@ class storageReport extends shardViewModelBase {
     showOnDiskColumn: KnockoutObservable<boolean>;
     allocatedNodeSize: KnockoutComputed<string>;
     onDiskNodeSize: KnockoutComputed<string>;
+
+    readonly sort = new storageReportSort.storageReportSort();
+    sortedChildren: KnockoutComputed<storageReportItem[]>;
 
     documentsCompressionUrl: KnockoutComputed<string>;
 
@@ -120,6 +124,9 @@ class storageReport extends shardViewModelBase {
             generalUtils.formatBytesToSize(this.node().physicalSize ?? this.node().size)
         );
 
+        this.sortedChildren = ko.pureComputed(() => this.sort.apply(this.node().internalChildren));
+        this.node.subscribe(() => this.sort.reset());
+
         this.documentsCompressionUrl = ko.pureComputed(() => appUrl.forDocumentsCompression(this.db));
     }
 
@@ -163,6 +170,9 @@ class storageReport extends shardViewModelBase {
                 + (journals.physicalSize ?? journals.size)
                 + tempFiles.size;
         }
+
+        item.dataSize = dataFile.size + journals.size;
+        item.tempBuffersSize = tempFiles.size;
 
         return item;
     }
@@ -713,25 +723,6 @@ class storageReport extends shardViewModelBase {
         this.tooltip.transition()
             .duration(500)
             .style("opacity", 0);
-    }
-
-    dataSizeFormatted(item: storageReportItem) {
-        if (!item.isStorageEnvironment()) {
-            return "n/a";
-        }
-        
-        const data = item.internalChildren.find(x => x.type === "data");
-        const journals = item.internalChildren.find(x => x.type === "journals");
-        return generalUtils.formatBytesToSize(data.size + journals.size);
-    }
-    
-    tempSizeFormatted(item: storageReportItem) {
-        if (!item.isStorageEnvironment()) {
-            return "n/a";
-        }
-
-        const tempFiles = item.internalChildren.find(x => x.type === "tempFiles");
-        return generalUtils.formatBytesToSize(tempFiles.size);
     }
 
     onDiskSizeFormatted(item: storageReportItem) {

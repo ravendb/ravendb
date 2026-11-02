@@ -2,6 +2,7 @@ param(
     $Target="",
     [switch]$WinX64,
     [switch]$WinX86,
+    [switch]$WinArm64,
     [switch]$LinuxX64,
     [switch]$MacOs,
     [switch]$MacOsArm,
@@ -89,7 +90,6 @@ $SPARROW_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Sparrow")
 $SPARROW_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Sparrow", "bin", "Release")
 
 $TYPINGS_GENERATOR_SRC_DIR = [io.path]::combine($PROJECT_DIR, "tools", "TypingsGenerator")
-$TYPINGS_GENERATOR_BIN_DIR = [io.path]::combine($TYPINGS_GENERATOR_SRC_DIR, "bin")
 
 $STUDIO_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio")
 $STUDIO_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio", "wwwroot", "dist")
@@ -110,6 +110,10 @@ if ([string]::IsNullOrEmpty($Target) -eq $false) {
 
     if ($WinX86) {
         $Target = @( "win-x86" );
+    }
+
+    if ($WinArm64) {
+        $Target = @( "win-arm64" );
     }
 
     if ($LinuxX64) {
@@ -183,7 +187,6 @@ if ($JustStudio -eq $False -and (-not $Quill)) {
 }
 
 if (ShouldBuildStudio $STUDIO_OUT_DIR $DontRebuildStudio $DontBuildStudio) {
-    BuildTypingsGenerator $TYPINGS_GENERATOR_SRC_DIR
     BuildStudio $STUDIO_SRC_DIR $version
     write-host "Studio built successfully."
 } else {
@@ -195,7 +198,7 @@ if (($JustStudio -eq $False) -and ($IsPosix -eq $False) -and (-not $Quill)) {
     $studioZipPath = [io.path]::combine($STUDIO_OUT_DIR, "Raven.Studio.zip")
     BuildEmbeddedNuget $PROJECT_DIR $OUT_DIR $SERVER_SRC_DIR $studioZipPath
     $embeddedDir = [io.path]::combine($OUT_DIR, "RavenDB.Embedded")
-    if ($target.Name -eq "windows-x64") {
+    if ($targets.Name -contains "windows-x64") {
         Validate-AssemblyVersion $(Join-Path -Path $embeddedDir -ChildPath "lib/netstandard2.0/Raven.Embedded.dll" ) $versionObj
     }
 
@@ -246,7 +249,7 @@ Foreach ($target in $targets) {
 
     #ValidateRuntimeConfig $target $specOutDirs.Server
 
-    if ($target.Name -eq "windows-x64") {
+    if ($target.IsUnix -eq $False) {
         Validate-ExecutableVersion $(Join-Path -Path $specOutDirs.Server -ChildPath "Raven.Server.exe" ) $versionObj
         Validate-ExecutableVersion $(Join-Path -Path $specOutDirs.Rvn -ChildPath "rvn.exe" ) $versionObj
         Validate-ExecutableVersion $(Join-Path -Path $specOutDirs.Migrator -ChildPath "Raven.Migrator.exe" ) $versionObj

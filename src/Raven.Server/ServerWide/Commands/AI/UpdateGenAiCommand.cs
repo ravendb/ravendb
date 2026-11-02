@@ -131,7 +131,7 @@ public sealed class UpdateGenAiCommand : UpdateEtlCommand<GenAiConfiguration, Ai
         //        }
 
         //        var differences = oldConnectionStringConfig.Compare(newConnectionStringConfig);
-        //        if (differences.HasFlag(AiSettingsCompareDifferences.RequiresEmbeddingsRegeneration))
+        //        if ((differences & AiSettingsCompareDifferences.RequiresEmbeddingsRegeneration) != AiSettingsCompareDifferences.None)
         //        {
         //            throw new RachisApplyException(
         //                $"Cannot update Embeddings Generation task '{Configuration.Name}' because it contains critical changes ({differences}) in the connection settings that would affect the structure or creation process of embeddings. " +

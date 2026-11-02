@@ -1,4 +1,4 @@
-﻿using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.Sharding;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
@@ -45,6 +45,11 @@ namespace Raven.Server.Documents.Schemas
             TransactionMarker = 7
         }
 
+        internal static readonly TableSchema.FixedSizeKeyIndexDef CollectionEtagsIndex;
+        internal static readonly TableSchema.FixedSizeKeyIndexDef AllDocsEtagsIndex;
+
+        internal static readonly TableSchema.DynamicKeyIndexDef AllDocsBucketAndEtagIndex;
+
         static Documents()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -55,17 +60,40 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, "AllDocsBucketAndEtag", ByteStringType.Immutable, out AllDocsBucketAndEtagSlice);
             }
 
+            CollectionEtagsIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)DocumentsTable.Etag,
+                Name = CollectionEtagsSlice,
+                IsGlobal = false
+            };
+
+            AllDocsEtagsIndex = new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)DocumentsTable.Etag,
+                Name = AllDocsEtagsSlice,
+                IsGlobal = true
+            };
+            AllDocsBucketAndEtagIndex = new TableSchema.DynamicKeyIndexDef
+            {
+                GenerateKey = ShardedDocumentsStorage.GenerateBucketAndEtagIndexKeyForDocuments,
+                OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStatsForDocument,
+                IsGlobal = true,
+                Name = AllDocsBucketAndEtagSlice
+            };
+
+
+
             DefineIndexesForDocsSchemaBase(DocsSchemaBase);
             DefineIndexesForDocsSchemaBase(CompressedDocsSchemaBase);
 
-            DocsSchemaBase.CompressValues(DocsSchemaBase.FixedSizeIndexes[CollectionEtagsSlice], compress: false);
-            CompressedDocsSchemaBase.CompressValues(CompressedDocsSchemaBase.FixedSizeIndexes[CollectionEtagsSlice], compress: true);
+            DocsSchemaBase.CompressValues(CollectionEtagsIndex, compress: false);
+            CompressedDocsSchemaBase.CompressValues(CollectionEtagsIndex, compress: true);
 
             DefineIndexesForShardingDocsSchemaBase(ShardingDocsSchemaBase);
             DefineIndexesForShardingDocsSchemaBase(ShardingCompressedDocsSchemaBase);
 
-            ShardingDocsSchemaBase.CompressValues(DocsSchemaBase.FixedSizeIndexes[CollectionEtagsSlice], compress: false);
-            ShardingCompressedDocsSchemaBase.CompressValues(CompressedDocsSchemaBase.FixedSizeIndexes[CollectionEtagsSlice], compress: true);
+            ShardingDocsSchemaBase.CompressValues(CollectionEtagsIndex, compress: false);
+            ShardingCompressedDocsSchemaBase.CompressValues(CollectionEtagsIndex, compress: true);
 
             void DefineIndexesForDocsSchemaBase(TableSchema docsSchema)
             {
@@ -76,31 +104,15 @@ namespace Raven.Server.Documents.Schemas
                     IsGlobal = true, 
                     Name = DocsSlice
                 });
-                docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)DocumentsTable.Etag, 
-                    IsGlobal = false, 
-                    Name = CollectionEtagsSlice
-                });
-                docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
-                {
-                    StartIndex = (int)DocumentsTable.Etag, 
-                    IsGlobal = true, 
-                    Name = AllDocsEtagsSlice
-                });
+                docsSchema.DefineFixedSizeIndex(CollectionEtagsIndex);
+                docsSchema.DefineFixedSizeIndex(AllDocsEtagsIndex);
             }
 
             void DefineIndexesForShardingDocsSchemaBase(TableSchema docsSchema)
             {
                 DefineIndexesForDocsSchemaBase(docsSchema);
 
-                docsSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
-                {
-                    GenerateKey = ShardedDocumentsStorage.GenerateBucketAndEtagIndexKeyForDocuments,
-                    OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStatsForDocument,
-                    IsGlobal = true,
-                    Name = AllDocsBucketAndEtagSlice
-                });
+                docsSchema.DefineIndex(AllDocsBucketAndEtagIndex);
             }
         }
     }

@@ -146,15 +146,17 @@ public class RavenDB_22561_LLT : NoDisposalNeeded
         }
     }
 
+    // the 10_000 items cases run in SlowTests.Corax.RavenDB_22561_LLT
     [RavenTheory(RavenTestCategory.Corax)]
     [InlineDataWithRandomSeed(100)]
     [InlineDataWithRandomSeed(1_000)]
-    [InlineDataWithRandomSeed(10_000)]
     [InlineData(100, 2103911694)]
     [InlineData(1000, 1078327866)]
-    [InlineData(10000, 52744038)]
-    public void CanHeapSortDataString(int size, int seed)
+    public void CanHeapSortDataString(int size, int seed) => AssertHeapSortDataString(size, seed);
+
+    public static void AssertHeapSortDataString(int size, int seed)
     {
+        ContextBoundNativeList<float> scorePlaceHolder = default;
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         var random = new System.Random(seed);
         var sourceData = Enumerable.Range(0, size).Select(x => RandomString(random.Next(6, 16))).ToArray();
@@ -174,7 +176,7 @@ public class RavenDB_22561_LLT : NoDisposalNeeded
                 sorter.Insert(docPos, Encodings.Utf8.GetBytes(sourceData[docPos]));
 
             ContextBoundNativeList<long> result = new ContextBoundNativeList<long>(bsc);
-            sorter.Fill(positions, ref result, ref _scorePlaceHolder, Span<float>.Empty, default);
+            sorter.Fill(positions, ref result, ref scorePlaceHolder, Span<float>.Empty, default);
 
             var expectedOrder = sourceData.OrderBy(x => x, AlphaNumericFieldComparator.StringAlphanumComparer.Instance).Take(pageSize).ToArray();
             List<string> orderFromSorter = new();

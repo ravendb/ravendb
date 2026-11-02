@@ -262,7 +262,7 @@ void *do_ring_work(void *arg)
                     if (result != 0)
                     {
                         cur->submittion->error = true;
-                        cur->submittion->result = result;
+                        cur->submittion->result = -result; // cqe->res is -errno
                     }
                     notify_work_completed(ring, cur);
                     break;
@@ -312,11 +312,9 @@ void *do_ring_work(void *arg)
                     else
                     {
                         cur->submittion->error = true;
-                        if (result == 0)
-                        {
-                            // this usually happens if we a disk full, or some
-                            cur->submittion->result = ENOSPC;
-                        }
+                        // cqe->res is -errno (e.g. -ENOSPC when a punched region cannot get blocks on a full disk),
+                        // a write of zero bytes usually means the disk is full as well
+                        cur->submittion->result = result == 0 ? ENOSPC : -result;
                     }
                     notify_work_completed(ring, cur);
                     break;
@@ -409,7 +407,9 @@ wait_for_work_completion(struct handle *handle_ptr, struct submittion *submittio
 
     if (submittion->error)
     {
-        *detailed_error_code = submittion->result;
+        // never report a failed operation as a success, even if its error code was lost
+        *detailed_error_code = submittion->result ? submittion->result : EIO;
+        return FAIL_IO_RING_WRITE_RESULT;
     }
     return SUCCESS;
 }
@@ -421,7 +421,7 @@ rvn_sync_pager(void *handle,
     struct handle *handle_ptr = handle;
     if (!io_ring_setup_successful())
     {
-        if (_flush_file(handle_ptr->file_fd))
+        if (fdatasync(handle_ptr->file_fd) != 0)
         {
             *detailed_error_code = errno;
             return FAIL_SYNC_FILE;
@@ -555,6 +555,10 @@ int32_t rvn_write_io_ring(
     {
         rc = FAIL_IO_RING_WRITE_RESULT;
     }
+    else if (rc == SUCCESS)
+    {
+        _mark_dirty_pages(handle, buffers, count);
+    }
 
     int unlock_rc = pthread_mutex_unlock(&handle_ptr->global_state->writes_arena.lock);
     if (unlock_rc && rc == SUCCESS)
@@ -588,10 +592,6 @@ rvn_one_time_init(int32_t* detailed_error_code)
 
         case rvn_write_mode_file_io:
             g_cfg.write_mode = rvn_write_mode_file_io;
-            return SUCCESS;
-
-        case rvn_write_mode_mmap:
-            g_cfg.write_mode = rvn_write_mode_mmap;
             return SUCCESS;
 
         default:

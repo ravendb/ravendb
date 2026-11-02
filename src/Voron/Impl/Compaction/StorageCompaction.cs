@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -522,10 +522,11 @@ namespace Voron.Impl.Compaction
 
                             foreach (var tvr in inputTable.SeekForwardFrom(variableSizeIndex, lastSlice, skip))
                             {
+
                                 // The table will take care of reconstructing indexes automatically
-                                outputTable.Insert(ref tvr.Result.Reader);
+                                outputTable.Insert(tvr.Result);
                                 copiedEntries++;
-                                transactionSize += tvr.Result.Reader.Size;
+                                transactionSize += tvr.Result.Size;
 
                                 // Count rows under the current key (SliceComparer compares bytes; ByteString '==' is reference equality).
                                 if (haveCurrentKey && SliceComparer.AreEqual(currentKey, tvr.Key))
@@ -550,7 +551,7 @@ namespace Voron.Impl.Compaction
                                     committedUnderLastSlice = committedUnderCurrentKey;
                                     break;
                                 }
-                                innerTxr.ForgetAbout(tvr.Result.Reader.Id);
+                                innerTxr.ForgetAbout(tvr.Result.Id);
                             }
                         }
                         else
@@ -563,11 +564,12 @@ namespace Voron.Impl.Compaction
 
                             foreach (var entry in inputTable.SeekForwardFrom(fixedSizeIndex, lastFixedIndex, lastFixedIndex > 0 ? 1 : 0))
                             {
+
                                 token.ThrowIfCancellationRequested();
                                 // The table will take care of reconstructing indexes automatically
-                                outputTable.Insert(ref entry.Reader);
+                                outputTable.Insert(entry);
                                 copiedEntries++;
-                                transactionSize += entry.Reader.Size;
+                                transactionSize += entry.Size;
 
                                 ReportIfNeeded(sp, copiedTrees, totalTreesCount, copiedEntries, numberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{numberOfEntries:#,#;;0} entries.", treeName);
 
@@ -575,10 +577,10 @@ namespace Voron.Impl.Compaction
                                 // size before a flush
                                 if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2 || ShouldCloseTxFor32Bit(transactionSize, compactedEnv))
                                 {
-                                    lastFixedIndex = fixedSizeIndex.GetValue(ref entry.Reader);
+                                    lastFixedIndex = fixedSizeIndex.GetValue(entry);
                                     break;
                                 }
-                                innerTxr.ForgetAbout(entry.Reader.Id);
+                                innerTxr.ForgetAbout(entry.Id);
                             }
                         }
                     }
@@ -587,23 +589,24 @@ namespace Voron.Impl.Compaction
                         // The table has a primary key, inserts in that order are expected to be faster
                         foreach (var entry in inputTable.SeekByPrimaryKey(lastSlice, 0))
                         {
+
                             token.ThrowIfCancellationRequested();
 
                             // The transaction has surpassed the allowed
                             // size before a flush
                             if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2 || ShouldCloseTxFor32Bit(transactionSize, compactedEnv))
                             {
-                                schema.Key.GetValue(txr.Allocator, ref entry.Reader, out var slice);
+                                schema.Key.GetValue(txr.Allocator, entry, out var slice);
                                 lastSlice = slice.Clone(lastSliceAllocator);
                                 break;
                             }
 
                             // The table will take care of reconstructing indexes automatically
-                            outputTable.Insert(ref entry.Reader);
+                            outputTable.Insert(entry);
                             copiedEntries++;
-                            transactionSize += entry.Reader.Size;
+                            transactionSize += entry.Size;
                             ReportIfNeeded(sp, copiedTrees, totalTreesCount, copiedEntries, numberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{numberOfEntries:#,#;;0} entries.", treeName);
-                            innerTxr.ForgetAbout(entry.Reader.Id);
+                            innerTxr.ForgetAbout(entry.Id);
                         }
                     }
 

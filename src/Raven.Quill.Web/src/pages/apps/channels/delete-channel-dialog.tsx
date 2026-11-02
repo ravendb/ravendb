@@ -44,11 +44,16 @@ export function DeleteChannelDialog({
         },
     });
 
+    const deleteConsequence =
+        channel.type === "IFrame"
+            ? "chat widgets embedded with it will stop working"
+            : "it will stop replying to messages";
+
     return (
         <DestructiveConfirmDialog
             trigger={trigger}
             title="Delete channel?"
-            description={`“${channel.displayName}” will be permanently removed and widgets embedded with it will stop working. This can’t be undone.`}
+            description={`“${channel.displayName}” will be permanently removed and ${deleteConsequence}. This can’t be undone.`}
             confirmLabel="Delete"
             isOpen={isOpen}
             onOpenChange={(open) => {

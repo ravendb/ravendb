@@ -1,0 +1,33 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.file-upload-panel {
+    .file-upload-summary {
+        margin-top: sizes.$gutter-sm;
+        margin-bottom: sizes.$gutter-xs;
+        font-size: sizes.$font-size-sm;
+    }
+
+    .file-upload-summary__line {
+        display: flex;
+        align-items: baseline;
+        gap: sizes.$gutter-xs;
+        padding: 0 sizes.$gutter-xxs;
+    }
+
+    .file-upload-summary__heading {
+        color: colors.$text-color-var;
+        font-weight: 600;
+    }
+
+    .file-upload-summary__bar {
+        height: 4px;
+        margin: sizes.$gutter-xxxs sizes.$gutter-xxs 0;
+    }
+
+    .file-upload-summary__dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+    }
+}

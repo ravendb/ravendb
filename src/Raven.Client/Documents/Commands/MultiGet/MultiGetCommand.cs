@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
@@ -285,8 +285,12 @@ namespace Raven.Client.Documents.Commands.MultiGet
                             UnmanagedJsonParserHelper.ReadObject(builder, peepingTomStream, parser, buffer);
                             using (var headersJson = builder.CreateReader())
                             {
-                                foreach (var propertyName in headersJson.GetPropertyNames())
-                                    getResponse.Headers[propertyName] = headersJson[propertyName].ToString();
+                                var prop = new BlittableJsonReaderObject.PropertyDetails();
+                                for (int i = 0; i < headersJson.Count; i++)
+                                {
+                                    headersJson.GetPropertyByIndex(i, ref prop);
+                                    getResponse.Headers[prop.Name] = prop.Value.ToString();
+                                }
                             }
                         }
                         continue;

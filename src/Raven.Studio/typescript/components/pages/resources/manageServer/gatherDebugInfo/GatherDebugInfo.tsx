@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { ChangeEvent, useState } from "react";
 import "./GatherDebugInfo.scss";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
@@ -179,7 +179,9 @@ function GatherDebugInfo() {
                                             type="text"
                                             placeholder="Search for database"
                                             value={dbSearchQuery}
-                                            onChange={(e) => setDbSearchQuery(e.target.value)}
+                                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                                setDbSearchQuery(e.target.value)
+                                            }
                                         />
                                         {dbSearchQuery && (
                                             <div className="clear-button">

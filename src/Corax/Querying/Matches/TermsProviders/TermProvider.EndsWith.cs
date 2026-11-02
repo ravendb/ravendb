@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Raven.Server.ServerWide;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -34,10 +34,10 @@ namespace Raven.Server.Storage.Schema.Updates.Server
             var table = tx.OpenTable(ClusterStateMachine.CompareExchangeSchema, ClusterStateMachine.CompareExchange);
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                foreach (var tvr in table.SeekForwardFrom(ClusterStateMachine.CompareExchangeSchema.Indexes[ClusterStateMachine.CompareExchangeIndex], Slices.BeforeAllKeys, 0))
+                foreach (var tvr in table.SeekForwardFrom(ClusterStateMachine.CompareExchangeIndexDef, Slices.BeforeAllKeys, 0))
                 {
-                    var key = ReadCompareExchangeKey(context, tvr.Result.Reader);
-                    var value = ReadCompareExchangeValue(context, tvr.Result.Reader);
+                    var key = ReadCompareExchangeKey(context, tvr.Result);
+                    var value = ReadCompareExchangeValue(context, tvr.Result);
 
                     using (value)
                     using (Slice.From(tx.Allocator, key, out var keySlice))
@@ -48,12 +48,12 @@ namespace Raven.Server.Storage.Schema.Updates.Server
             }
         }
 
-        private static unsafe BlittableJsonReaderObject ReadCompareExchangeValue(JsonOperationContext context, TableValueReader reader)
+        private static unsafe BlittableJsonReaderObject ReadCompareExchangeValue(JsonOperationContext context, in TableValueReader reader)
         {
             return new BlittableJsonReaderObject(reader.Read((int)ClusterStateMachine.CompareExchangeTable.Value, out var size), size, context);
         }
 
-        private static unsafe LazyStringValue ReadCompareExchangeKey(JsonOperationContext context, TableValueReader reader)
+        private static unsafe LazyStringValue ReadCompareExchangeKey(JsonOperationContext context, in TableValueReader reader)
         {
             var ptr = reader.Read((int)ClusterStateMachine.CompareExchangeTable.Key, out var size);
             return context.AllocateStringValue(null, ptr, size);

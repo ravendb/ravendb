@@ -405,40 +405,49 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
     [RavenFact(RavenTestCategory.Voron)]
     public void SubtractRanges_ShouldRemoveFlushedPagesFromSparseRegions()
     {
+        const long freedInTx = 10;
+        const long newer = freedInTx + 1;
+
         static void AssertSubtract(
             List<(long Start, long Count)> sparseRegions,
-            List<(long Start, long Count)> flushedPageRanges,
+            List<(long Start, long Count, long AllocatedInTransaction)> flushedPageRanges,
             List<(long Start, long Count)> expected)
         {
-            WriteAheadJournal.JournalApplicator.SubtractRanges(sparseRegions, flushedPageRanges);
+            WriteAheadJournal.JournalApplicator.SubtractRanges(sparseRegions, flushedPageRanges, freedInTx);
             Assert.Equal(expected, sparseRegions);
         }
 
         // no overlap
-        AssertSubtract([(100, 50)], [(10, 20), (200, 30)], [(100, 50)]);
+        AssertSubtract([(100, 50)], [(10, 20, newer), (200, 30, newer)], [(100, 50)]);
 
         // touching boundaries are not overlaps
-        AssertSubtract([(100, 50)], [(80, 20), (150, 10)], [(100, 50)]);
+        AssertSubtract([(100, 50)], [(80, 20, newer), (150, 10, newer)], [(100, 50)]);
 
         // exact cover and superset remove the region entirely
-        AssertSubtract([(100, 50)], [(100, 50)], []);
-        AssertSubtract([(100, 50)], [(90, 100)], []);
+        AssertSubtract([(100, 50)], [(100, 50, newer)], []);
+        AssertSubtract([(100, 50)], [(90, 100, newer)], []);
 
         // trim head, trim tail
-        AssertSubtract([(100, 50)], [(90, 20)], [(110, 40)]);
-        AssertSubtract([(100, 50)], [(140, 20)], [(100, 40)]);
+        AssertSubtract([(100, 50)], [(90, 20, newer)], [(110, 40)]);
+        AssertSubtract([(100, 50)], [(140, 20, newer)], [(100, 40)]);
 
         // a flushed range strictly inside splits the region
-        AssertSubtract([(100, 50)], [(120, 10)], [(100, 20), (130, 20)]);
+        AssertSubtract([(100, 50)], [(120, 10, newer)], [(100, 20), (130, 20)]);
 
         // multiple holes in one region
-        AssertSubtract([(100, 100)], [(110, 10), (150, 10), (190, 20)], [(100, 10), (120, 30), (160, 30)]);
+        AssertSubtract([(100, 100)], [(110, 10, newer), (150, 10, newer), (190, 20, newer)], [(100, 10), (120, 30), (160, 30)]);
 
         // one flushed range spanning two regions must trim both
-        AssertSubtract([(100, 50), (200, 50)], [(140, 70)], [(100, 40), (210, 40)]);
+        AssertSubtract([(100, 50), (200, 50)], [(140, 70, newer)], [(100, 40), (210, 40)]);
+
+        // a write older than or as old as the free does not subtract
+        AssertSubtract([(100, 50)], [(100, 50, freedInTx)], [(100, 50)]);
+        AssertSubtract([(100, 50)], [(100, 50, freedInTx - 1)], [(100, 50)]);
+        AssertSubtract([(100, 100)], [(110, 10, freedInTx - 1), (150, 10, newer), (190, 20, freedInTx)], [(100, 50), (160, 40)]);
+        AssertSubtract([(100, 50), (200, 50)], [(140, 70, freedInTx)], [(100, 50), (200, 50)]);
 
         // empty inputs
-        AssertSubtract([], [(100, 50)], []);
+        AssertSubtract([], [(100, 50, newer)], []);
         AssertSubtract([(100, 50)], [], [(100, 50)]);
     }
 
@@ -454,10 +463,15 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
             var sparseRegions = GenerateSortedRanges(random, maxEntries: 24, minGap: 1, maxGap: 64, maxCount: 96);
             var flushedPageRanges = GenerateSortedRanges(random, maxEntries: 48, minGap: 0, maxGap: 48, maxCount: 48);
 
-            var expected = SubtractByPage(sparseRegions, flushedPageRanges);
+            long freedInTx = 8; // in the middle of the write tx range, so both older and newer writes occur
+            var flushedWithTx = new List<(long Start, long Count, long AllocatedInTransaction)>();
+            foreach (var (start, count) in flushedPageRanges)
+                flushedWithTx.Add((start, count, random.Next(1, 16)));
+
+            var expected = SubtractByPage(sparseRegions, flushedWithTx, freedInTx);
 
             var actual = new List<(long Start, long Count)>(sparseRegions);
-            WriteAheadJournal.JournalApplicator.SubtractRanges(actual, flushedPageRanges);
+            WriteAheadJournal.JournalApplicator.SubtractRanges(actual, flushedWithTx, freedInTx);
 
             Assert.Equal(expected, actual);
         }
@@ -477,16 +491,21 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
             return result;
         }
 
-        static List<(long Start, long Count)> SubtractByPage(List<(long Start, long Count)> regions, List<(long Start, long Count)> ranges)
+        static List<(long Start, long Count)> SubtractByPage(List<(long Start, long Count)> regions, List<(long Start, long Count, long AllocatedInTransaction)> ranges, long freedInTx)
         {
             var pages = new HashSet<long>();
             foreach (var (start, count) in regions)
                 for (long page = start; page < start + count; page++)
                     pages.Add(page);
 
-            foreach (var (start, count) in ranges)
+            foreach (var (start, count, allocatedInTx) in ranges)
+            {
+                if (allocatedInTx <= freedInTx)
+                    continue;
+
                 for (long page = start; page < start + count; page++)
                     pages.Remove(page);
+            }
 
             var sorted = new List<long>(pages);
             sorted.Sort();

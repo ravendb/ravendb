@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public bool ContainsKey(string key)
         {
-            return BlittableJson.GetPropertyNames().Contains(key);
+            return BlittableJson.GetPropertyIndex(key) != -1;
         }
 
         protected override bool TryGetByName(string name, out object result)
@@ -207,17 +207,23 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public IEnumerator<object> GetEnumerator()
         {
-            foreach (var propertyName in BlittableJson.GetPropertyNames())
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            using var propertiesByInsertionOrder = BlittableJson.GetPropertiesByInsertionOrder();
+            for (int i = 0; i < BlittableJson.Count; i++)
             {
-                yield return new KeyValuePair<object, object>(TypeConverter.ToDynamicType(propertyName), TypeConverter.ToDynamicType(BlittableJson[propertyName]));
+                BlittableJson.GetPropertyByIndex(propertiesByInsertionOrder.GetPropertyIdByInsertionOrder(i), ref prop);
+                yield return new KeyValuePair<object, object>(TypeConverter.ToDynamicType((string)prop.Name), TypeConverter.ToDynamicType(prop.Value));
             }
         }
 
         IEnumerator<KeyValuePair<object, object>> IEnumerable<KeyValuePair<object, object>>.GetEnumerator()
         {
-            foreach (var propertyName in BlittableJson.GetPropertyNames())
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            using var propertiesByInsertionOrder = BlittableJson.GetPropertiesByInsertionOrder();
+            for (int i = 0; i < BlittableJson.Count; i++)
             {
-                yield return new KeyValuePair<object, object>(TypeConverter.ToDynamicType(propertyName), TypeConverter.ToDynamicType(BlittableJson[propertyName]));
+                BlittableJson.GetPropertyByIndex(propertiesByInsertionOrder.GetPropertyIdByInsertionOrder(i), ref prop);
+                yield return new KeyValuePair<object, object>(TypeConverter.ToDynamicType((string)prop.Name), TypeConverter.ToDynamicType(prop.Value));
             }
         }
 

@@ -92,7 +92,6 @@ namespace FastTests.Issues
                 "Indexing.Querying.Corax.NullsSortMode",
                 
                 
-                "Storage.JournalsCompressionAcceleration",
 
                 "Indexing.Corax.VectorSearch.CacheSizeInMb",
                 "Indexing.Corax.VectorSearch.DefaultMinimumSimilarity",

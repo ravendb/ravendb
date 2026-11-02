@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow.Compression;
@@ -145,6 +145,14 @@ namespace Sparrow.Json
             {
                 NoCache = NoCache
             };
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal ReadOnlySpan<byte> ReadStringAsSpan(int pos)
+        {
+            AssertContextNotDisposed();
+            var size = VariableSizeEncoding.Read<int>(_mem + pos, out var offset);
+            return new ReadOnlySpan<byte>(_mem + pos + offset, size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

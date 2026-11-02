@@ -35,7 +35,7 @@ public readonly unsafe struct PostingListLeafPage
     public static void InitLeaf(PostingListLeafPageHeader* header)
     {
         header->Flags = PageFlags.Single | PageFlags.Other;
-        header->PostingListFlags = ExtendedPageType.PostingListLeaf;
+        header->PostingListFlags = PageCollapsedLevels.SetPageType(header->PostingListFlags, ExtendedPageType.PostingListLeaf);
         header->SizeUsed = 0;
         header->NumberOfEntries = 0;
     }
@@ -262,8 +262,9 @@ public readonly unsafe struct PostingListLeafPage
         var scope = allocator.Allocate(Constants.Storage.PageSize, out ByteString tmp);
         var tmpPtr = tmp.Ptr;
         var newHeader = (PostingListLeafPageHeader*)tmpPtr;
-        newHeader->PageNumber = dest->PageNumber;
+        Memory.Copy(tmpPtr, dest, PageHeader.SizeOf);
         InitLeaf(newHeader);
+        newHeader->CollapsedLevels = Math.Max(first->CollapsedLevels, second->CollapsedLevels);
 
         // using +256 here to ensure that we always have at least 256 available in the buffer
         var mergedList = new ContextBoundNativeList<long>(allocator, first->NumberOfEntries + second->NumberOfEntries + 256);

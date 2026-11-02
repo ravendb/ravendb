@@ -111,4 +111,7 @@ public sealed class OllamaSettings : AbstractAiSettings, IAiSettings
     /// </summary>
     public string Endpoint => Uri;
     public Uri GetBaseEndpointUri() => new Uri(Endpoint);
+
+    // Ollama has no prompt cache setting, so it always follows the default.
+    bool? IAiSettings.EnablePromptCache => null;
 }

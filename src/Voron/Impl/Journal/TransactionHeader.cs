@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using Voron.Data.BTrees;
 using Voron.Global;
@@ -57,7 +59,7 @@ namespace Voron.Impl.Journal
         public TransactionMarker TxMarker;
 
         [FieldOffset(111)]
-        public bool Reserved2;
+        public byte DurableTxIdDeltaAtSubmit;
 
         [FieldOffset(112)]
         public long CompressedSize;
@@ -89,7 +91,38 @@ namespace Voron.Impl.Journal
             var timestamp = new DateTime(TimeStampTicksUtc).ToString("g");
             return $"HeaderMarker: {validMarker}, TransactionId: {TransactionId}, JournalId: {JournalId} NextPageNumber: {NextPageNumber}, LastPageNumber: {LastPageNumber}, " +
                    $"PageCount: {PageCount}, Hash: {Hash}, Root: {Root}, TxMarker: {TxMarker}, CompressedSize: {CompressedSize}," +
-                   $" UncompressedSize: {UncompressedSize}, TimeStamp: {timestamp}";
+                   $" UncompressedSize: {UncompressedSize}, LastDurableTxIdAtSubmit: {LastDurableTxIdAtSubmit}, TimeStamp: {timestamp}";
+        }
+
+        public static ulong IncarnationTag(Guid incarnation)
+        {
+            // we XOR the two halves of the guid to get a single ulong value that is unique to this incarnation
+            // this way, we *fail* the validation for transactions from older file incarnations
+            var halves = MemoryMarshal.Cast<Guid, ulong>(new ReadOnlySpan<Guid>(in incarnation));
+            return halves[0] ^ halves[1];
+        }
+
+        public long LastDurableTxIdAtSubmit => DurableTxIdDeltaAtSubmit == 0 ? TransactionId : TransactionId - DurableTxIdDeltaAtSubmit;
+
+        public void SetLastDurableTxIdAtSubmit(long lastDurableTxId)
+        {
+            var delta = TransactionId - lastDurableTxId;
+            if (delta < 0)
+                ThrowInvalidLastDurableTxIdAtSubmit(lastDurableTxId, delta);
+
+            Debug.Assert(delta <= StorageEnvironmentOptions.MaxSupportedConcurrentJournalWrites + 1,
+                $"Durability watermark delta of transaction {TransactionId} is {delta}, which is above the {StorageEnvironmentOptions.MaxSupportedConcurrentJournalWrites} journal writes we allow in flight");
+
+            DurableTxIdDeltaAtSubmit = (byte)Math.Clamp(delta, 0, byte.MaxValue);
+        }
+
+        [DoesNotReturn]
+        private void ThrowInvalidLastDurableTxIdAtSubmit(long lastDurableTxId, long delta)
+        {
+            throw new InvalidOperationException(
+                $"Cannot record the durability watermark of transaction {TransactionId}: the last durable transaction of its environment is {lastDurableTxId}, " +
+                $"which is {-delta} transactions ahead of it. Journal transaction ids are handed out in order under the write lock, " +
+                "so a later transaction cannot already be durable - the durability tracking of this environment no longer matches its journal.");
         }
     }
     

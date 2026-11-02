@@ -16,6 +16,7 @@
 #include <libgen.h>
 #include <limits.h>
 #include <string.h>
+#include <time.h>
 #if !__APPLE__
 #include <sys/eventfd.h>
 #endif
@@ -25,6 +26,36 @@
 #include "internal_posix.h"
 
 extern struct rvn_configuration g_cfg;
+
+static int64_t
+_stopwatch(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (int64_t)ts.tv_sec * 1000000000 + ts.tv_nsec;
+}
+
+static int64_t
+_elapsed(int64_t start, int64_t now)
+{
+    return (now - start) / 100;
+}
+
+#include "../pager_writeback.inl"
+
+EXPORT int32_t
+rvn_pager_get_device_id(void *handle, uint64_t *device_id, int32_t *detailed_error_code)
+{
+    struct handle *handle_ptr = handle;
+    struct stat st;
+    if (fstat(handle_ptr->file_fd, &st) == -1)
+    {
+        *detailed_error_code = errno;
+        return FAIL_STAT_FILE;
+    }
+    *device_id = (uint64_t)st.st_dev;
+    return SUCCESS;
+}
 
 int32_t rvn_lock_memory(struct handle *handle, void *mem, int64_t size, int32_t *detailed_error_code)
 {
@@ -199,6 +230,7 @@ void delete_global_state(struct handle_global_state *global_state)
         close(global_state->fsync_dir_arena.eventfd);
     free(global_state->writes_arena.arena);
     free(global_state->fsync_dir_arena.arena);
+    _free_dirty_bitmaps(global_state->dirty_bitmap);
     free(global_state->file_path);
     pthread_mutex_destroy(&global_state->writes_arena.lock);
     pthread_mutex_destroy(&global_state->fsync_dir_arena.lock);
@@ -229,12 +261,6 @@ rvn_init_pager(const char *filename,
     {
         *detailed_error_code = ENOMEM;
         return FAIL_NOMEM;
-    }
-
-    rvn_write_mode write_mode = g_cfg.write_mode;
-    if (write_mode == rvn_write_mode_mmap && ((open_flags & OPEN_FILE_READ_ONLY) != OPEN_FILE_READ_ONLY))
-    {
-        open_flags |= OPEN_FILE_WRITABLE_MAP;
     }
 
     global_state->open_flags = open_flags;
@@ -588,133 +614,6 @@ int32_t rvn_write_file_io(
         if (rc != SUCCESS)
             return rc;
     }
+    _mark_dirty_pages(handle, buffers, count);
     return SUCCESS;
 }
-
-int32_t rvn_write_mmap(
-    void *handle,
-    struct page_to_write *buffers,
-    int32_t count,
-    int32_t *detailed_error_code)
-{
-    struct handle *handle_ptr = handle;
-    for (int32_t i = 0; i < count; i++)
-    {
-        int64_t offset = buffers[i].page_num * VORON_PAGE_SIZE;
-        int64_t size = (int64_t)buffers[i].count_of_pages * VORON_PAGE_SIZE;
-        memcpy((char *)handle_ptr->write_address + offset, buffers[i].ptr, (size_t)size);
-    }
-    return SUCCESS;
-}
-
-int32_t rvn_write_invalid_setup(
-    void *handle,
-    struct page_to_write *buffers,
-    int32_t count,
-    int32_t *detailed_error_code)
-{
-    *detailed_error_code = ENOTSUP;
-    return FAIL_INVALID_HANDLE;
-}
-
-int32_t rvn_write_mmap32(
-    void *handle,
-    struct page_to_write *buffers,
-    int32_t count,
-    int32_t *detailed_error_code)
-{
-    int32_t rc = SUCCESS;
-
-    void* mapped_view = NULL;
-    int64_t mapped_start_page = -1;  // Start page of currently mapped region
-    int64_t mapped_page_count = 0;   // Number of pages in currently mapped region
-
-    for (int32_t i = 0; i < count; i++)
-    {
-        int64_t page_number = buffers[i].page_num;
-        int64_t number_of_pages = buffers[i].count_of_pages;
-
-        // Check if the current write fits in the currently mapped region
-        bool needs_remap = (mapped_view == NULL) ||
-                          (page_number < mapped_start_page) ||
-                          (page_number + number_of_pages > mapped_start_page + mapped_page_count);
-
-        if (needs_remap)
-        {
-            // Flush and unmap the previous region if it exists
-            if (mapped_view != NULL)
-            {
-                int64_t mapped_size = mapped_page_count * VORON_PAGE_SIZE;
-
-                // due to 32-bit memory constraints and safety concerns, we force writing dirty pages before unmapping regions which
-                // promptly frees up address space for subsequent mappings and catches disk I/O errors early
-                if (msync(mapped_view, (size_t)mapped_size, MS_SYNC))
-                {
-                    *detailed_error_code = errno;
-                    int32_t dummy_error = 0;
-                    rvn_unmap_memory(handle, mapped_view, mapped_size, &dummy_error);
-                    return FAIL_SYNC_FILE;
-                }
-
-                rc = rvn_unmap_memory(handle, mapped_view, mapped_size, detailed_error_code);
-                if (rc != SUCCESS)
-                {
-                    return rc;
-                }
-                mapped_view = NULL;
-            }
-
-            // Calculate mapping parameters for the current write
-            int64_t distance_from_start = page_number % NUMBER_OF_PAGES_IN_ALLOCATION_GRANULARITY;
-            int64_t allocation_start_position = page_number - distance_from_start;
-
-            // Map enough to cover the current write, rounded to allocation granularity
-            int64_t pages_needed = distance_from_start + number_of_pages;
-            int64_t mapped_offset = allocation_start_position * VORON_PAGE_SIZE;
-            int64_t mapped_size = nearest_size_to_allocation_granularity(pages_needed * VORON_PAGE_SIZE);
-
-            // Map the memory
-            rc = rvn_map_memory(handle, mapped_offset, mapped_size, &mapped_view, detailed_error_code);
-            if (rc != SUCCESS)
-            {
-                return rc;
-            }
-
-            mapped_start_page = allocation_start_position;
-            mapped_page_count = mapped_size / VORON_PAGE_SIZE;
-        }
-
-        // Write to the mapped region
-        int64_t offset_in_mapping = (page_number - mapped_start_page) * VORON_PAGE_SIZE;
-        char* write_position = (char*)mapped_view + offset_in_mapping;
-        int64_t bytes_to_write = number_of_pages * VORON_PAGE_SIZE;
-        char* source_ptr = buffers[i].ptr;
-
-        memcpy(write_position, source_ptr, (size_t)bytes_to_write);
-    }
-
-    // Flush and unmap the last mapped region
-    if (mapped_view != NULL)
-    {
-        int64_t mapped_size = mapped_page_count * VORON_PAGE_SIZE;
-
-        // due to 32-bit memory constraints and safety concerns, we force writing dirty pages before unmapping regions which
-        // promptly frees up address space for subsequent mappings and catches disk I/O errors early
-        if (msync(mapped_view, (size_t)mapped_size, MS_SYNC))
-        {
-            *detailed_error_code = errno;
-            int32_t dummy_error = 0;
-            rvn_unmap_memory(handle, mapped_view, mapped_size, &dummy_error);
-            return FAIL_SYNC_FILE;
-        }
-
-        rc = rvn_unmap_memory(handle, mapped_view, mapped_size, detailed_error_code);
-        if (rc != SUCCESS)
-        {
-            return rc;
-        }
-    }
-
-    return SUCCESS;
-}
-

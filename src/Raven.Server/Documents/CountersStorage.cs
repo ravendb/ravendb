@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -124,9 +124,9 @@ namespace Raven.Server.Documents
             var table = context.CountersTable(this);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[AllCountersEtagSlice], etag, 0))
+            foreach (var result in table.SeekForwardFrom(Schemas.Counters.AllCountersEtagIndex, etag, 0))
             {
-                var countersItem = CreateReplicationBatchItem(context, ref result.Reader);
+                var countersItem = CreateReplicationBatchItem(context, result);
 
                 if (caseInsensitiveNames)
                 {
@@ -181,18 +181,18 @@ namespace Raven.Server.Documents
             var table = context.CountersTable(this);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[AllCountersEtagSlice], etag, skip))
+            foreach (var result in table.SeekForwardFrom(Schemas.Counters.AllCountersEtagIndex, etag, skip))
             {
                 if (take-- <= 0)
                     yield break;
 
-                yield return TableValueToCounterGroupDetail(context, ref result.Reader);
+                yield return TableValueToCounterGroupDetail(context, result);
             }
         }
 
         public IEnumerable<CounterGroupDetail> GetCountersFrom(DocumentsOperationContext context, string collection, long etag, long skip, long take)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 yield break;
 
@@ -201,19 +201,19 @@ namespace Raven.Server.Documents
             if (table == null)
                 yield break;
 
-            foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice], etag, skip))
+            foreach (var result in table.SeekForwardFrom(Schemas.Counters.CollectionCountersEtagsIndex, etag, skip))
             {
                 if (take-- <= 0)
                     yield break;
 
-                yield return TableValueToCounterGroupDetail(context, ref result.Reader);
+                yield return TableValueToCounterGroupDetail(context, result);
             }
         }
 
         public long GetNumberOfCounterGroupsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount,
             Stopwatch overallDuration)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
             {
                 totalCount = 0;
@@ -228,34 +228,32 @@ namespace Raven.Server.Documents
                 return 0;
             }
 
-            var indexDef = CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice];
-
-            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount, overallDuration);
+            return table.GetNumberOfEntriesAfter(CollectionCountersEtagsIndex, afterEtag, out totalCount, overallDuration);
         }
 
-        public static CounterGroupDetail TableValueToCounterGroupDetail(JsonOperationContext context, ref TableValueReader tvr)
+        public static CounterGroupDetail TableValueToCounterGroupDetail(JsonOperationContext context, in TableValueReader tvr)
         {
-            var docId = ExtractDocId(context, ref tvr);
+            var docId = ExtractDocId(context, tvr);
 
             return new CounterGroupDetail
             {
                 DocumentId = docId,
-                ChangeVector = TableValueToString(context, (int)CountersTable.ChangeVector, ref tvr),
-                Etag = TableValueToEtag((int)CountersTable.Etag, ref tvr),
-                Values = GetCounterValuesData(context, ref tvr)
+                ChangeVector = TableValueToString(context, (int)CountersTable.ChangeVector, tvr),
+                Etag = TableValueToEtag((int)CountersTable.Etag, tvr),
+                Values = GetCounterValuesData(context, tvr)
             };
         }
 
-        public static CounterTombstoneDetail TableValueToCounterTombstoneDetail(JsonOperationContext context, ref TableValueReader tvr)
+        public static CounterTombstoneDetail TableValueToCounterTombstoneDetail(JsonOperationContext context, in TableValueReader tvr)
         {
-            ExtractDocIdAndCounterNameFromCounterTombstoneKey(context, ref tvr, out var docId, out var name);
+            ExtractDocIdAndCounterNameFromCounterTombstoneKey(context, tvr, out var docId, out var name);
 
             return new CounterTombstoneDetail
             {
                 DocumentId = docId,
                 Name = name,
-                ChangeVector = TableValueToString(context, (int)CounterTombstonesTable.ChangeVector, ref tvr),
-                Etag = TableValueToEtag((int)CounterTombstonesTable.Etag, ref tvr)
+                ChangeVector = TableValueToString(context, (int)CounterTombstonesTable.ChangeVector, tvr),
+                Etag = TableValueToEtag((int)CounterTombstonesTable.Etag, tvr)
             };
         }
 
@@ -273,20 +271,20 @@ namespace Raven.Server.Documents
             return tx.OpenTable(CountersSchema, tableName);
         }
 
-        internal static CounterReplicationItem CreateReplicationBatchItem(DocumentsOperationContext context, ref TableValueReader reader)
+        internal static CounterReplicationItem CreateReplicationBatchItem(DocumentsOperationContext context, in TableValueReader reader)
         {
-            var data = GetCounterValuesData(context, ref reader);
-            var docId = ExtractDocId(context, ref reader);
+            var data = GetCounterValuesData(context, reader);
+            var docId = ExtractDocId(context, reader);
 
             return new CounterReplicationItem
             {
                 Type = ReplicationBatchItem.ReplicationItemType.CounterGroup,
                 Id = docId,
-                ChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref reader),
+                ChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, reader),
                 Values = data,
-                Collection = TableValueToId(context, (int)CountersTable.Collection, ref reader),
-                Etag = TableValueToEtag((int)CountersTable.Etag, ref reader),
-                TransactionMarker = TableValueToShort((int)CountersTable.TransactionMarker, nameof(CountersTable.TransactionMarker), ref reader)
+                Collection = TableValueToId(context, (int)CountersTable.Collection, reader),
+                Etag = TableValueToEtag((int)CountersTable.Etag, reader),
+                TransactionMarker = TableValueToShort((int)CountersTable.TransactionMarker, nameof(CountersTable.TransactionMarker), reader)
             };
         }
 
@@ -339,9 +337,9 @@ namespace Raven.Server.Documents
                     else
                     {
                         countersGroupKeyScope = Slice.From(context.Allocator, existing.Read((int)CountersTable.CounterKey, out var size), size, out countersGroupKey);
-                        existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref existing);
+                        existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, existing);
 
-                        using (data = GetCounterValuesData(context, ref existing))
+                        using (data = GetCounterValuesData(context, existing))
                         {
                             // Common case is that we modify the data IN PLACE
                             // as such, we must copy it before modification
@@ -437,15 +435,8 @@ namespace Raven.Server.Documents
                         UpdateMetrics(countersGroupKey, name, changeVector, collection);
                     }
 
-                    context.Transaction.AddAfterCommitNotification(new CounterChange
-                    {
-                        ChangeVector = changeVector,
-                        DocumentId = documentId,
-                        Name = name,
-                        CollectionName = collectionName.Name,
-                        Type = exists ? CounterChangeTypes.Increment : CounterChangeTypes.Put,
-                        Value = value
-                    });
+                    context.Transaction.AddAfterCommitNotification(collectionName.Name, documentId, name, changeVector,
+                        exists ? CounterChangeTypes.Increment : CounterChangeTypes.Put, value);
 
                     return changeVector;
                 }
@@ -947,7 +938,7 @@ namespace Raven.Server.Documents
                             if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, counterKeySlice, out var tvr) == false)
                                 continue;
 
-                            using (var counterGroupKey = TableValueToString(context, (int)CountersTable.CounterKey, ref tvr))
+                            using (var counterGroupKey = TableValueToString(context, (int)CountersTable.CounterKey, tvr))
                             {
                                 if (entriesToUpdate.TryGetValue(counterGroupKey, out var putCountersData))
                                 {
@@ -955,7 +946,7 @@ namespace Raven.Server.Documents
                                 }
                                 else
                                 {
-                                    var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref tvr);
+                                    var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, tvr);
                                     if (sourceCounterNames != null)
                                     {
                                         // 5.0 source
@@ -963,7 +954,7 @@ namespace Raven.Server.Documents
                                             continue;
                                     }
 
-                                    using (data = GetCounterValuesData(context, ref tvr))
+                                    using (data = GetCounterValuesData(context, tvr))
                                     {
                                         data = data.Clone(context);
                                     }
@@ -1036,15 +1027,7 @@ namespace Raven.Server.Documents
                                 if (localCounterValues != null)
                                     value = InternalGetCounterValue(localCounterValues, documentId, counterName, capOnOverflow: true);
 
-                                context.Transaction.AddAfterCommitNotification(new CounterChange
-                                {
-                                    ChangeVector = changeVector,
-                                    DocumentId = documentId,
-                                    CollectionName = collectionName.Name,
-                                    Name = counterName,
-                                    Value = value,
-                                    Type = changeType
-                                });
+                                context.Transaction.AddAfterCommitNotification(collectionName.Name, documentId, counterName, changeVector, changeType, value);
 
                                 UpdateMetrics(counterKeySlice, counterName, changeVector, collection);
                             }
@@ -1531,7 +1514,7 @@ namespace Raven.Server.Documents
             {
                 foreach (var counterGroup in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
                 {
-                    using (var data = GetCounterValuesData(context, ref counterGroup.Value.Reader))
+                    using (var data = GetCounterValuesData(context, counterGroup.Value))
                     {
                         if (data.TryGet(CounterNames, out BlittableJsonReaderObject names) == false)
                             return 0;
@@ -1569,7 +1552,7 @@ namespace Raven.Server.Documents
 
             foreach (var counterGroup in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
             {
-                var data = GetCounterValuesData(context, ref counterGroup.Value.Reader);
+                var data = GetCounterValuesData(context, counterGroup.Value);
                 if (data.TryGet(CounterNames, out BlittableJsonReaderObject names) == false)
                     ThrowMissingProperty(counterGroup.Key, CounterNames);
 
@@ -1582,8 +1565,9 @@ namespace Raven.Server.Documents
                 for (var i = 0; i < names.Count; i++)
                 {
                     names.GetPropertyByIndex(i, ref prop);
-                    if (counterValues.TryGet(prop.Name, out object existing) == false ||
-                        existing is LazyStringValue) // skip names of 'dead' counters
+                    var valueIndex = counterValues.GetPropertyIndex(prop.Name);
+                    if (valueIndex == -1 ||
+                        counterValues.GetValueByIndex(valueIndex) is LazyStringValue) // skip names of 'dead' counters
                         continue;
                     var originalName = GetLazyStringCounterName(prop.Name, prop.Value);
                     all.Add(originalName);
@@ -1593,7 +1577,7 @@ namespace Raven.Server.Documents
             return all;
         }
 
-        internal static BlittableJsonReaderObject GetCounterValuesData(JsonOperationContext context, ref TableValueReader existing)
+        internal static BlittableJsonReaderObject GetCounterValuesData(JsonOperationContext context, in TableValueReader existing)
         {
             return new BlittableJsonReaderObject(existing.Read((int)CountersTable.Data, out int oldSize), oldSize, context);
         }
@@ -1625,8 +1609,8 @@ namespace Raven.Server.Documents
                 if (table.SeekOneBackwardByPrimaryKeyPrefix(documentIdPrefix, counterKeySlice, out var tvr) == false)
                     return false;
 
-                var data = GetCounterValuesData(context, ref tvr);
-                etag = GetCounterGroupEtag(ref tvr);
+                var data = GetCounterValuesData(context, tvr);
+                etag = GetCounterGroupEtag(tvr);
                 var lowerName = Encodings.Utf8.GetString(counterNameSlice.Content.Ptr, counterNameSlice.Content.Length);
 
                 if (data.TryGet(Values, out BlittableJsonReaderObject counters) == false ||
@@ -1662,8 +1646,8 @@ namespace Raven.Server.Documents
                 if (table.SeekOneBackwardByPrimaryKeyPrefix(documentIdPrefix, counterKeySlice, out var tvr) == false)
                     yield break;
 
-                var data = GetCounterValuesData(context, ref tvr);
-                var etag = GetCounterGroupEtag(ref tvr);
+                var data = GetCounterValuesData(context, tvr);
+                var etag = GetCounterGroupEtag(tvr);
                 var lowerName = counterNameSlice.ToString();
                 if (data.TryGet(DbIds, out BlittableJsonReaderArray dbIds) == false ||
                     data.TryGet(Values, out BlittableJsonReaderObject counters) == false ||
@@ -1715,7 +1699,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static long GetCounterGroupEtag(ref TableValueReader tvr)
+        private static long GetCounterGroupEtag(in TableValueReader tvr)
         {
             return Bits.SwapBytes(*(long*)tvr.Read((int)CountersTable.Etag, out _));
         }
@@ -1733,7 +1717,7 @@ namespace Raven.Server.Documents
             {
                 foreach (var result in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
                 {
-                    yield return TableValueToCounterGroupDetail(context, ref result.Value.Reader);
+                    yield return TableValueToCounterGroupDetail(context, result.Value);
                 }
             }
         }
@@ -1774,7 +1758,7 @@ namespace Raven.Server.Documents
                 if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, counterKeySlice, out var existing) == false)
                     return null;
 
-                var data = GetCounterValuesData(context, ref existing);
+                var data = GetCounterValuesData(context, existing);
 
                 if (data.TryGet(Values, out BlittableJsonReaderObject counters) == false)
                     return null;
@@ -1816,14 +1800,7 @@ namespace Raven.Server.Documents
                     table.Set(tvb);
                 }
 
-                context.Transaction.AddAfterCommitNotification(new CounterChange
-                {
-                    ChangeVector = newChangeVector,
-                    DocumentId = documentId,
-                    CollectionName = collectionName.Name,
-                    Name = counterName,
-                    Type = CounterChangeTypes.Delete
-                });
+                context.Transaction.AddAfterCommitNotification(collectionName.Name, documentId, counterName, newChangeVector, CounterChangeTypes.Delete);
 
                 return newChangeVector;
             }
@@ -1911,7 +1888,7 @@ namespace Raven.Server.Documents
             {
                 if (table.ReadByKey(counterTombstoneKeySlice, out var tableValueReader))
                 {
-                    var existingChangeVector = ExtractCounterTombstoneChangeVector(context, ref tableValueReader);
+                    var existingChangeVector = ExtractCounterTombstoneChangeVector(context, tableValueReader);
                     if (ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
                     {
                         // do nothing...
@@ -1931,7 +1908,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static ChangeVector ExtractCounterTombstoneChangeVector(DocumentsOperationContext context, ref TableValueReader reader)
+        private static ChangeVector ExtractCounterTombstoneChangeVector(DocumentsOperationContext context, in TableValueReader reader)
         {
             var changeVectorPtr = reader.Read((int)CounterTombstonesTable.ChangeVector, out int changeVectorSize);
             return context.GetChangeVector(Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize));
@@ -1942,9 +1919,9 @@ namespace Raven.Server.Documents
             var table = context.CountersTombstonesTable(this);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(CounterTombstonesSchema.FixedSizeIndexes[AllCounterTombstonesEtagSlice], etag, 0))
+            foreach (var result in table.SeekForwardFrom(Schemas.CounterTombstones.AllCounterTombstonesEtagIndex, etag, 0))
             {
-                var item = TableValueToCounterTombstoneDetail(context, ref result.Reader);
+                var item = TableValueToCounterTombstoneDetail(context, result);
                 if (item.Etag > toEtag)
                     yield break;
                 yield return item;
@@ -1955,9 +1932,9 @@ namespace Raven.Server.Documents
         {
             var table = new Table(CounterTombstonesSchema, context.Transaction.InnerTransaction);
 
-            foreach (var result in table.SeekForwardFrom(CounterTombstonesSchema.FixedSizeIndexes[AllCounterTombstonesEtagSlice], etag, 0))
+            foreach (var result in table.SeekForwardFrom(Schemas.CounterTombstones.AllCounterTombstonesEtagIndex, etag, 0))
             {
-                var tombstoneDetail = TableValueToCounterTombstoneDetail(context, ref result.Reader);
+                var tombstoneDetail = TableValueToCounterTombstoneDetail(context, result);
                 var documentOrTombstone = _documentsStorage.GetDocumentOrTombstone(context, tombstoneDetail.DocumentId);
 
                 if (documentOrTombstone.Missing)
@@ -1974,7 +1951,7 @@ namespace Raven.Server.Documents
 
         public long PurgeCountersAndCounterTombstones(DocumentsOperationContext context, string collection, long upto, long numberOfEntriesToDelete)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 return 0;
 
@@ -2035,7 +2012,7 @@ namespace Raven.Server.Documents
                             return deleted;
 
                         BlittableJsonReaderObject data;
-                        using (data = GetCounterValuesData(context, ref existing))
+                        using (data = GetCounterValuesData(context, existing))
                         {
                             data = data.Clone(context);
                         }
@@ -2153,7 +2130,7 @@ namespace Raven.Server.Documents
             if (tombstonesTable == null || tombstonesTable.NumberOfEntries == 0 || numberOfEntriesToDelete <= 0)
                 return 0;
 
-            return tombstonesTable.DeleteBackwardFrom(CounterTombstonesSchema.FixedSizeIndexes[CollectionCounterTombstonesEtagsSlice], upto, numberOfEntriesToDelete);
+            return tombstonesTable.DeleteBackwardFrom(Schemas.CounterTombstones.CollectionCounterTombstonesEtagsIndex, upto, numberOfEntriesToDelete);
         }
 
         private static void AppendDbIdAndEtag(StringBuilder sb, string dbId, long etag)
@@ -2168,12 +2145,11 @@ namespace Raven.Server.Documents
 
         public long GetNumberOfCounterTombstoneEntries(DocumentsOperationContext context)
         {
-            var fstIndex = CounterTombstonesSchema.FixedSizeIndexes[AllCounterTombstonesEtagSlice];
-            var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.Name, sizeof(long));
+            var fst = context.Transaction.InnerTransaction.FixedTreeFor(AllCounterTombstonesEtagIndex.Name, sizeof(long));
             return fst.NumberOfEntries;
         }
 
-        public static LazyStringValue ExtractDocId(JsonOperationContext context, ref TableValueReader tvr)
+        public static LazyStringValue ExtractDocId(JsonOperationContext context, in TableValueReader tvr)
         {
             var p = tvr.Read((int)CountersTable.CounterKey, out var size);
             int sizeOfDocId = 0;
@@ -2186,7 +2162,7 @@ namespace Raven.Server.Documents
             return context.AllocateStringValue(null, p, sizeOfDocId);
         }
 
-        public static void ExtractDocIdAndCounterNameFromCounterTombstoneKey(JsonOperationContext context, ref TableValueReader tvr, out LazyStringValue docId, out LazyStringValue counterName)
+        public static void ExtractDocIdAndCounterNameFromCounterTombstoneKey(JsonOperationContext context, in TableValueReader tvr, out LazyStringValue docId, out LazyStringValue counterName)
         {
             var p = tvr.Read((int)CounterTombstonesTable.CounterTombstoneKey, out var size);
             int sizeOfDocId = 0;
@@ -2507,14 +2483,13 @@ namespace Raven.Server.Documents
 
         public long GetNumberOfCounterEntries(DocumentsOperationContext context)
         {
-            var fstIndex = CountersSchema.FixedSizeIndexes[AllCountersEtagSlice];
-            var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.Name, sizeof(long));
+            var fst = context.Transaction.InnerTransaction.FixedTreeFor(AllCountersEtagIndex.Name, sizeof(long));
             return fst.NumberOfEntries;
         }
 
         public long GetLastCounterEtag(DocumentsOperationContext context, string collection)
         {
-            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = _documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
             if (collectionName == null)
                 return 0;
 
@@ -2524,11 +2499,10 @@ namespace Raven.Server.Documents
             if (table == null)
                 return 0;
 
-            var result = table.ReadLast(CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice]);
-            if (result == null)
+            if (table.ReadLast(Schemas.Counters.CollectionCountersEtagsIndex, out var reader) == false)
                 return 0;
 
-            return TableValueToEtag((int)CountersTable.Etag, ref result.Reader);
+            return TableValueToEtag((int)CountersTable.Etag, reader);
         }
 
         public sealed class IndexingMethods
@@ -2543,9 +2517,8 @@ namespace Raven.Server.Documents
             public CounterGroupItemMetadata GetCountersMetadata(DocumentsOperationContext context, long etag)
             {
                 var table = context.CountersTable(_countersStorage);
-                var index = _countersStorage.CountersSchema.FixedSizeIndexes[AllCountersEtagSlice];
 
-                if (table.Read(context.Allocator, index, etag, out var tvr) == false)
+                if (table.Read(context.Allocator, AllCountersEtagIndex, etag, out var tvr) == false)
                     return null;
 
                 foreach (var item in TableValueToCounterGroupItemMetadata(context, tvr))
@@ -2583,19 +2556,19 @@ namespace Raven.Server.Documents
             {
                 var table = context.CountersTable(_countersStorage);
 
-                foreach (var result in table.SeekForwardFrom(_countersStorage.CountersSchema.FixedSizeIndexes[AllCountersEtagSlice], etag, skip))
+                foreach (var result in table.SeekForwardFrom(Schemas.Counters.AllCountersEtagIndex, etag, skip))
                 {
                     if (take-- <= 0)
                         yield break;
 
-                    foreach (var item in TableValueToCounterGroupItemMetadata(context, result.Reader))
+                    foreach (var item in TableValueToCounterGroupItemMetadata(context, result))
                         yield return item;
                 }
             }
 
             public IEnumerable<CounterGroupItemMetadata> GetCountersMetadataFrom(DocumentsOperationContext context, string collection, long etag, long skip, long take)
             {
-                var collectionName = _countersStorage._documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+                var collectionName = _countersStorage._documentsStorage.GetCollection(context.Transaction.InnerTransaction, collection, throwIfDoesNotExist: false);
                 if (collectionName == null)
                     yield break;
 
@@ -2604,12 +2577,12 @@ namespace Raven.Server.Documents
                 if (table == null)
                     yield break;
 
-                foreach (var result in table.SeekForwardFrom(_countersStorage.CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice], etag, skip))
+                foreach (var result in table.SeekForwardFrom(Schemas.Counters.CollectionCountersEtagsIndex, etag, skip))
                 {
                     if (take-- <= 0)
                         yield break;
 
-                    foreach (var item in TableValueToCounterGroupItemMetadata(context, result.Reader))
+                    foreach (var item in TableValueToCounterGroupItemMetadata(context, result))
                         yield return item;
                 }
             }
@@ -2631,9 +2604,9 @@ namespace Raven.Server.Documents
 
             private static IEnumerable<CounterGroupItemMetadata> TableValueToCounterGroupItemMetadata(DocumentsOperationContext context, TableValueReader tvr, LazyStringValue loweredCounterNameToFilter = null)
             {
-                var etag = TableValueToEtag((int)CountersTable.Etag, ref tvr);
+                var etag = TableValueToEtag((int)CountersTable.Etag, tvr);
 
-                var valuesData = GetCounterValuesData(context, ref tvr);
+                var valuesData = GetCounterValuesData(context, tvr);
                 int size = 0;
 
                 if (valuesData != null)

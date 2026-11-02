@@ -12,6 +12,8 @@ public static class TaskProcessErrors
 
     public static readonly Slice ByCreatedAt;
 
+    public static readonly TableSchema.IndexDef ByCreatedAtIndex;
+
     public const string TaskProcessErrorsTree = "ProcessErrors";
 
     public static class TaskProcessErrorsTable
@@ -29,6 +31,12 @@ public static class TaskProcessErrors
         {
             Slice.From(ctx, "ByCreatedAt", ByteStringType.Immutable, out ByCreatedAt);
         }
+        ByCreatedAtIndex = new TableSchema.IndexDef // might be the same ticks, so duplicates are allowed - cannot use fixed size index
+        {
+            StartIndex = TaskProcessErrorsTable.CreatedAtIndex,
+            Name = ByCreatedAt
+        };
+
 
         TaskProcessErrorsSchemaBase.DefineKey(new TableSchema.IndexDef
         {
@@ -36,10 +44,6 @@ public static class TaskProcessErrors
             Count = 1
         });
 
-        TaskProcessErrorsSchemaBase.DefineIndex(new TableSchema.IndexDef // might be the same ticks, so duplicates are allowed - cannot use fixed size index
-        {
-            StartIndex = TaskProcessErrorsTable.CreatedAtIndex,
-            Name = ByCreatedAt
-        });
+        TaskProcessErrorsSchemaBase.DefineIndex(ByCreatedAtIndex);
     }
 }

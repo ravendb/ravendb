@@ -774,7 +774,7 @@ namespace SlowTests.Sharding.Cluster
                         var table = new Table(schema, ctx.Transaction.InnerTransaction);
                         foreach (var result in table.SeekForwardFrom(schema.FixedSizeIndexes[Documents.AllDocsEtagsSlice], 0, 0))
                         {
-                            tableValuesSize += result.Reader.Size;
+                            tableValuesSize += result.Size;
                         }
 
                         schema = db.DocumentsStorage.AttachmentsStorage.AttachmentsSchema;
@@ -782,9 +782,9 @@ namespace SlowTests.Sharding.Cluster
 
                         foreach (var result in table.SeekForwardFrom(schema.FixedSizeIndexes[Attachments.AttachmentsEtagSlice], 0, 0))
                         {
-                            var attachment = AttachmentsStorage.TableValueToAttachment(ctx, ref result.Reader);
+                            var attachment = AttachmentsStorage.TableValueToAttachment(ctx, result);
                             var size = attachment.Size;
-                            tableValuesSize += result.Reader.Size;
+                            tableValuesSize += result.Size;
                             tableValuesSize += size;
                         }
 

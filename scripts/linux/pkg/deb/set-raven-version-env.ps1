@@ -1,3 +1,3 @@
 if (-not $env:RAVENDB_VERSION) {
-    $env:RAVENDB_VERSION = "8.0.0"
+    throw "Setting RAVENDB_VERSION is mandatory."
 }

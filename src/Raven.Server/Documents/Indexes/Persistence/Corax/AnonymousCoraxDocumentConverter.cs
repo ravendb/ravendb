@@ -110,8 +110,8 @@ public abstract class AnonymousCoraxDocumentConverterBase : CoraxDocumentConvert
                 if (fields.Length != 2)
                     throw new NotSupportedInCoraxException("Currently compound indexes are only supporting exactly 2 fields");
                 
-                var firstValueLen = AppendFieldValue(fields[0], accessor.GetValue(fields[0], doc), 0, builder);
-                var totalLen = AppendFieldValue(fields[1], accessor.GetValue(fields[1], doc), firstValueLen, builder);
+                var firstValueLen = AppendFieldValue(fields[0], accessor.GetValue(fields[0], documentToProcess), 0, builder);
+                var totalLen = AppendFieldValue(fields[1], accessor.GetValue(fields[1], documentToProcess), firstValueLen, builder);
                 
                 Debug.Assert(firstValueLen <= byte.MaxValue, "firstValueLen <= byte.MaxValue, checked in the AppendFieldValue already");
                 Debug.Assert(totalLen < _compoundFieldsBuffer.Length, "totalLen < _compoundFieldsBuffer.Length, ensured by AppendFieldValue");

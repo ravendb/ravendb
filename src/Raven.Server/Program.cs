@@ -206,7 +206,7 @@ namespace Raven.Server
             {
                 try
                 {
-                    WindowsServiceRunner.Run(CommandLineSwitches.ServiceName, configuration, configurationArgs);
+                    WindowsServiceRunner.Run(configuration, configurationArgs);
                 }
                 catch (Exception e)
                 {
@@ -224,6 +224,8 @@ namespace Raven.Server
                 RestartServerMre.Set();
                 ShutdownServerMre.Set();
             };
+
+            ShutdownServer = () => ShutdownServerMre.Set();
 
             var rerun = false;
             RavenConfiguration configBeforeRestart = configuration;
@@ -251,12 +253,8 @@ namespace Raven.Server
 
                 try
                 {
-                    ServerRestarted?.Invoke(null, new OnServerRestartedEventArgs()
-                    {
-                        OldDataDirectory = oldDataDirectory,
-                        NewDataDirectory = configuration.Core.DataDirectory.FullPath
-                    });
-                    
+                    OnServerRestarted(oldDataDirectory, configuration.Core.DataDirectory.FullPath);
+
                     using (var server = new RavenServer(configuration))
                     {
                         try
@@ -273,7 +271,7 @@ namespace Raven.Server
                             }
 
                             server.Initialize();
-                            ServerInitialized?.Invoke(server, null);
+                            OnServerInitialized(server);
 
                             configuration.UpdateLicenseType(server.ServerStore.LicenseManager.LicenseStatus.Type);
 
@@ -467,9 +465,24 @@ namespace Raven.Server
         public static ManualResetEvent RestartServerMre = new ManualResetEvent(false);
         public static ManualResetEvent ShutdownCompleteMre = new ManualResetEvent(false);
         public static Action RestartServer;
+        public static Action ShutdownServer;
         public static event EventHandler<OnServerRestartedEventArgs> ServerRestarted;
         public static event EventHandler ServerInitialized;
-        
+
+        internal static void OnServerRestarted(string oldDataDirectory, string newDataDirectory)
+        {
+            ServerRestarted?.Invoke(null, new OnServerRestartedEventArgs
+            {
+                OldDataDirectory = oldDataDirectory,
+                NewDataDirectory = newDataDirectory
+            });
+        }
+
+        internal static void OnServerInitialized(RavenServer server)
+        {
+            ServerInitialized?.Invoke(server, null);
+        }
+
         public class OnServerRestartedEventArgs : EventArgs
         {
             public string OldDataDirectory { get; set; }
@@ -477,6 +490,8 @@ namespace Raven.Server
         } 
 
         public static bool IsRunningNonInteractive;
+
+        public static bool IsRunningAsWindowsService;
 
         public static bool RunAsNonInteractive()
         {

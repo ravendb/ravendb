@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.CompilerServices;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.TransactionMerger.Commands;
@@ -91,7 +91,7 @@ namespace Raven.Server.Commercial
                         return null;
                 }
 
-                using (var firstServerStartDateJson = Read(context, ref infoTvr))
+                using (var firstServerStartDateJson = Read(context, infoTvr))
                 {
                     if (firstServerStartDateJson.TryGet(FirstServerStartDateKey, out DateTime result))
                         return result;
@@ -139,7 +139,7 @@ namespace Raven.Server.Commercial
                         return null;
                 }
 
-                using (var blittable = Read(context, ref infoTvr))
+                using (var blittable = Read(context, infoTvr))
                 {
                     return JsonDeserializationServer.BuildNumber(blittable);
                 }
@@ -167,7 +167,7 @@ namespace Raven.Server.Commercial
                         return null;
                 }
 
-                using (var blittable = Read(context, ref infoTvr))
+                using (var blittable = Read(context, infoTvr))
                 {
                     return JsonDeserializationServer.LicenseVersionInformation(blittable);
                 }
@@ -175,7 +175,7 @@ namespace Raven.Server.Commercial
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe BlittableJsonReaderObject Read(JsonOperationContext context, ref TableValueReader reader)
+        private static unsafe BlittableJsonReaderObject Read(JsonOperationContext context, in TableValueReader reader)
         {
             var ptr = reader.Read(LicenseInfoSchema.LicenseTable.JsonIndex, out int size);
             return new BlittableJsonReaderObject(ptr, size, context);

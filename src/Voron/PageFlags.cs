@@ -1,4 +1,5 @@
 ﻿using System;
+using Voron.Data;
 
 namespace Voron
 {
@@ -24,5 +25,6 @@ namespace Voron
         PostingListBranch = 2,
         Container = 3,
         ContainerOverflow = 4,
+        Reserved = PageCollapsedLevels.Mask, // not available here, PageCollapsedLevels keeps the count in them
     }
 }

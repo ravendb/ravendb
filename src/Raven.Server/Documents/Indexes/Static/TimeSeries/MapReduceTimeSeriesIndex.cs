@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         protected override void HandleDocumentChange(DocumentChange change)
         {
-            if (change.Type == DocumentChangeTypes.Delete && (HandleAllDocs || Collections.Contains(change.CollectionName)))
+            if ((change.Type & DocumentChangeTypes.Delete) != 0 && (HandleAllDocs || Collections.Contains(change.CollectionName)))
             {
                 // in time series we need to subscribe only to deletions of source documents
 

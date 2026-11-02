@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -88,7 +88,7 @@ namespace Voron.Data.Tables
             return _elementSize == default(TConstant).N;
         }
 
-        public static bool TryCast<TConstant>(ref TableValueReader reader, out TableValueReader<TConstant> output) 
+        public static bool TryCast<TConstant>(in TableValueReader reader, out TableValueReader<TConstant> output) 
             where TConstant : struct, INumericConstant
         {
             if (reader._elementSize == default(TConstant).N)

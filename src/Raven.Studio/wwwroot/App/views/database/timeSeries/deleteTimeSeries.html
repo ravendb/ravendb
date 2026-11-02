@@ -13,60 +13,9 @@
                         You're deleting <strong>all</strong> entries from <strong data-bind="text: timeSeriesName"></strong> time series.
                     </div>
                     <div data-bind="visible: criteria.mode === 'selection'">
-                        You're deleting <strong data-bind="text: criteria.selection.length.toLocaleString()"></strong> 
+                        You're deleting <strong data-bind="text: criteria.selection.length.toLocaleString()"></strong>
                         <span data-bind="text: pluralize(criteria.selection.length, 'entry', 'entries', true)"></span>
                         from <strong data-bind="text: timeSeriesName"></strong> time series.
-                    </div>
-                    <div data-bind="visible: criteria.mode === 'range'">
-                        <div class="margin-bottom">
-                            Please specify date range to delete:
-                        </div>
-                        <div class="form-group" >
-                            <label for="startDate" class="control-label">Start Date</label>
-                            <div class="flex-grow">
-                                <div class="checkbox margin-bottom margin-bottom-sm">
-                                    <input id="useMinStartDate" class="styled" type="checkbox" data-bind="checked: $root.useMinStartDate">
-                                    <label for="useMinStartDate">
-                                        Use minimum
-                                    </label>
-                                </div>
-                                <div class="input-group margin-top margin-top-sm" data-bind="visible: !$root.useMinStartDate(), validationElement: startDateLocal">
-                                    <input type="text" class="form-control" id="startDate" placeholder="Start date"
-                                           data-bind="datePicker: startDateLocal, datepickerOptions: $root.datePickerOptions" />
-                                    <div class="input-group-addon">(local)</div>
-                                    <span class="help-block" data-bind="validationMessage: startDateLocal"></span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="endDate" class="control-label">End Date</label>
-                            <div class="flex-grow">
-                                <div class="checkbox">
-                                    <input id="useMinEndDate" class="styled" type="checkbox" data-bind="checked: $root.useMaxEndDate">
-                                    <label for="useMinEndDate">
-                                        Use maximum
-                                    </label>
-                                </div>
-                                <div class="input-group margin-top margin-top-sm" data-bind="visible: !$root.useMaxEndDate(), validationElement: endDateLocal">
-                                    <input type="text" class="form-control" id="endDate" placeholder="End date"
-                                           data-bind="datePicker: endDateLocal, datepickerOptions: $root.datePickerOptions" />
-                                    <div class="input-group-addon">(local)</div>
-                                    <span class="help-block" data-bind="validationMessage: endDateLocal"></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div data-bind="if: showWarning, visible: showWarning">
-                    <div class="bg-warning text-warning padding flex-horizontal">
-                        <div class="flex-start"><i class="icon-warning"></i></div>
-                        <div data-bind="visible: !useMinStartDate() || !useMaxEndDate()">
-                            <div>You're deleting all time series entries matching time range:</div>
-                            <strong data-bind="text: startDateUTC() || 'Minimum'"></strong> - <strong data-bind="text: endDateUTC() || 'Maximum'"></strong>
-                        </div>
-                        <div data-bind="visible: useMinStartDate() && useMaxEndDate()">
-                            <div>You're deleting all time series entries</div>
-                        </div>
                     </div>
                 </div>
             </div>

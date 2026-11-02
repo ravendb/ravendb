@@ -124,6 +124,7 @@ function GetManifestTags {
     return @(
         "${repo}:latest",
         "${repo}:8.0-latest"
+        "${repo}:${version}"
     )
 }
 

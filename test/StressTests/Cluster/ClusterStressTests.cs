@@ -17,7 +17,7 @@ namespace StressTests.Cluster
         {
             await using (var test = new ParallelClusterTransactionsTests(Output))
             {
-                await test.ParallelClusterTransactions(7);
+                await test.ParallelClusterTransactionsInternal(7);
             }
         }
     }
