@@ -1148,6 +1148,68 @@ namespace FastTests.Client
             }
         }
 
+        private class WithNewtonsoftExtensionData
+        {
+            public string Id { get; set; }
+
+            public string Name { get; set; }
+
+            [Newtonsoft.Json.JsonExtensionData]
+            public IDictionary<string, object> Extra { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task NewtonsoftExtensionDataLoadsMetadataAndKeepsItAndTheRootIdentityOutOfTheDocument()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.Serialization = new SystemTextJsonSerializationConventions()
+            });
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Advanced.Defer(new PutCommandData("users/1", null, new DynamicJsonValue
+                {
+                    ["Name"] = "name",
+                    ["Age"] = 30,
+                    ["City"] = "Hadera",
+                    [Raven.Client.Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    {
+                        [Raven.Client.Constants.Documents.Metadata.Collection] = "Users"
+                    }
+                }));
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var user = await session.LoadAsync<WithNewtonsoftExtensionData>("users/1");
+                Assert.Equal(["@metadata", "Age", "City"], user.Extra.Keys.OrderBy(x => x, StringComparer.Ordinal));
+                Assert.False(session.Advanced.HasChanges);
+
+                var metadata = Assert.IsAssignableFrom<IDictionary<string, object>>(user.Extra[Raven.Client.Constants.Documents.Metadata.Key]);
+                Assert.Equal("users/1", ((Raven.Client.Json.JsonDynamicValue)metadata[Raven.Client.Constants.Documents.Metadata.Id]).Value);
+
+                metadata[Raven.Client.Constants.Documents.Metadata.Collection] = "Hacked";
+                user.Extra["Id"] = "users/2";
+                user.Extra[Raven.Client.Constants.Documents.Metadata.Id] = "users/2";
+                user.Extra["Phone"] = "050-1234";
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var raw = await session.LoadAsync<BlittableJsonReaderObject>("users/1");
+                Assert.Equal("050-1234", raw["Phone"].ToString());
+                Assert.Equal(30L, raw["Age"]);
+                Assert.Equal("Hadera", raw["City"].ToString());
+                Assert.False(raw.TryGet("Id", out object _));
+                Assert.False(raw.TryGet(Raven.Client.Constants.Documents.Metadata.Id, out object _));
+                Assert.Equal("Users", ((BlittableJsonReaderObject)raw[Raven.Client.Constants.Documents.Metadata.Key])[Raven.Client.Constants.Documents.Metadata.Collection].ToString());
+                Assert.Null(await session.LoadAsync<WithNewtonsoftExtensionData>("users/2"));
+            }
+        }
+
         [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Querying)]
         public void VectorSearchFieldNamesFollowStoreConventions()
         {

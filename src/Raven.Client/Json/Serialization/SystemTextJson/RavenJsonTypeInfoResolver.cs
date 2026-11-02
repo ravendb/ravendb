@@ -16,6 +16,7 @@ using System.Text.Json.Serialization.Metadata;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters;
+using Raven.Client.Util;
 using Sparrow.Extensions;
 using Sparrow.Json;
 
@@ -70,6 +71,12 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         [ThreadStatic]
         internal static bool RemovedIdentityProperty;
+
+        [ThreadStatic]
+        internal static object RootDocument;
+
+        [ThreadStatic]
+        private static HashSet<object> _serializing;
 
         public RavenJsonTypeInfoResolver(SystemTextJsonSerializationConventions conventions, TypeNameHandling typeNameHandling)
         {
@@ -154,8 +161,15 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         {
             for (int i = 0; i < typeInfo.Properties.Count; i++)
             {
-                if (typeInfo.Properties[i].IsExtensionData)
-                    return true;
+                JsonPropertyInfo property = typeInfo.Properties[i];
+                if (property.IsExtensionData == false)
+                    continue;
+
+                object attribute = property.AttributeProvider is MemberInfo member && member.IsDefined(typeof(JsonExtensionDataAttribute), inherit: true) == false
+                    ? GetNewtonsoftAttribute(member, NewtonsoftJsonExtensionDataAttributeName)
+                    : null;
+
+                return attribute == null || (GetNewtonsoftFlag(attribute, "ReadData") && GetNewtonsoftFlag(attribute, "WriteData"));
             }
 
             return false;
@@ -171,11 +185,12 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             FilterProperties(typeInfo, isRecord);
             AddNonPublicMembers(typeInfo, isRecord);
             ApplyNewtonsoftMemberSerialization(typeInfo);
+            NewtonsoftExtensionData extensionData = ApplyNewtonsoftExtensionData(typeInfo);
             ApplyStringDictionaryComparers(typeInfo);
             ApplyTypeNameHandling(typeInfo);
             ApplyPropertyRenames(typeInfo);
             ApplyPropertyNameConverter(typeInfo);
-            AddMetadataIdentityProperties(typeInfo);
+            AddMetadataIdentityProperties(typeInfo, extensionData);
             SetupNonPublicConstructor(typeInfo);
             SetupUnboundParameterizedConstructor(typeInfo);
             PopulateReadOnlyMembers(typeInfo);
@@ -242,10 +257,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
                 if (jsonProperty != null)
                     AssertNewtonsoftItemConverterIsTranslated(jsonProperty, property.PropertyType, $"Member '{member.DeclaringType?.FullName}.{member.Name}'");
-
-                if (member.IsDefined(typeof(JsonExtensionDataAttribute), inherit: true) == false &&
-                    GetNewtonsoftAttribute(member, NewtonsoftJsonExtensionDataAttributeName) != null)
-                    ThrowNewtonsoftExtensionDataNotSupported(member);
             }
         }
 
@@ -856,7 +867,136 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return false;
         }
 
-        private void AddMetadataIdentityProperties(JsonTypeInfo typeInfo)
+        private NewtonsoftExtensionData ApplyNewtonsoftExtensionData(JsonTypeInfo typeInfo)
+        {
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                JsonPropertyInfo property = typeInfo.Properties[i];
+                if (property.IsExtensionData || property.AttributeProvider is not MemberInfo member)
+                    continue;
+
+                object attribute = GetNewtonsoftAttribute(member, NewtonsoftJsonExtensionDataAttributeName);
+                if (attribute == null)
+                    continue;
+
+                if (property.Get == null || HasExtensionDataProperty(typeInfo) ||
+                    typeof(IDictionary<string, object>).IsAssignableFrom(property.PropertyType) == false ||
+                    property.PropertyType.IsAssignableFrom(typeof(Dictionary<string, object>)) == false)
+                    ThrowNewtonsoftExtensionDataNotSupported(member, property.PropertyType);
+
+                return ToExtensionData(typeInfo, property, attribute);
+            }
+
+            return null;
+        }
+
+        private NewtonsoftExtensionData ToExtensionData(JsonTypeInfo typeInfo, JsonPropertyInfo property, object attribute)
+        {
+            bool readData = GetNewtonsoftFlag(attribute, "ReadData");
+            bool writeData = GetNewtonsoftFlag(attribute, "WriteData");
+            Func<object, object> get = property.Get;
+            Action<object, object> set = property.Set;
+            string identityPropertyName = _conventions.Conventions?.GetIdentityProperty(typeInfo.Type)?.Name;
+            HashSet<string> mappedNames = null;
+
+            property.IsExtensionData = true;
+            property.Get = target =>
+            {
+                if (_serializing?.Contains(target) != true)
+                    return readData ? get(target) : new Dictionary<string, object>();
+
+                if (writeData == false)
+                    return null;
+
+                mappedNames ??= GetMappedNames(typeInfo, property);
+                return WithoutReservedKeys(target, (IDictionary<string, object>)get(target), mappedNames, identityPropertyName);
+            };
+
+            Action<object> onSerializing = typeInfo.OnSerializing;
+            Action<object> onSerialized = typeInfo.OnSerialized;
+            typeInfo.OnSerializing = target =>
+            {
+                onSerializing?.Invoke(target);
+                (_serializing ??= new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default)).Add(target);
+            };
+            typeInfo.OnSerialized = target =>
+            {
+                _serializing?.Remove(target);
+                onSerialized?.Invoke(target);
+            };
+
+            return new NewtonsoftExtensionData(get, set, readData);
+        }
+
+        private static bool HasExtensionDataProperty(JsonTypeInfo typeInfo)
+        {
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                if (typeInfo.Properties[i].IsExtensionData)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool GetNewtonsoftFlag(object attribute, string name)
+        {
+            return attribute.GetType().GetProperty(name)?.GetValue(attribute) is not false;
+        }
+
+        private static HashSet<string> GetMappedNames(JsonTypeInfo typeInfo, JsonPropertyInfo extensionProperty)
+        {
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                JsonPropertyInfo property = typeInfo.Properties[i];
+                if (property != extensionProperty && property.AttributeProvider != null)
+                    names.Add(property.Name);
+            }
+
+            return names;
+        }
+
+        private static Dictionary<string, object> WithoutReservedKeys(object target, IDictionary<string, object> dictionary, HashSet<string> mappedNames, string identityPropertyName)
+        {
+            if (dictionary == null)
+                return null;
+
+            bool isRoot = ReferenceEquals(target, RootDocument);
+            var result = new Dictionary<string, object>(dictionary.Count);
+            foreach (KeyValuePair<string, object> entry in dictionary)
+            {
+                if (entry.Key == Constants.Documents.Metadata.Key ||
+                    isRoot && (entry.Key == Constants.Documents.Metadata.Id || entry.Key == identityPropertyName) ||
+                    mappedNames.Contains(entry.Key))
+                    continue;
+
+                result[entry.Key] = entry.Value;
+            }
+
+            return result;
+        }
+
+        private sealed class NewtonsoftExtensionData(Func<object, object> get, Action<object, object> set, bool readData)
+        {
+            public bool ReadData { get; } = readData;
+
+            public void Add(object target, string key, object value)
+            {
+                if (get(target) is not IDictionary<string, object> dictionary)
+                {
+                    if (set == null)
+                        return;
+
+                    dictionary = new Dictionary<string, object>();
+                    set(target, dictionary);
+                }
+
+                dictionary[key] = value;
+            }
+        }
+
+        private void AddMetadataIdentityProperties(JsonTypeInfo typeInfo, NewtonsoftExtensionData extensionData)
         {
             DocumentConventions conventions = _conventions.Conventions;
             if (conventions == null || conventions.GetIdentityProperty(typeInfo.Type) == null)
@@ -871,12 +1011,20 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
             GenerateEntityIdOnTheClient identity = _identity ??= new GenerateEntityIdOnTheClient(conventions, generateIdAsync: null);
 
+            bool capture = extensionData is { ReadData: true };
+
             JsonPropertyInfo metadata = typeInfo.CreateJsonPropertyInfo(typeof(MetadataIdentity), Constants.Documents.Metadata.Key);
-            metadata.CustomConverter = MetadataIdentityConverter.Instance;
+            metadata.CustomConverter = capture ? MetadataIdentityConverter.Capturing : MetadataIdentityConverter.Instance;
             metadata.Set = (target, value) =>
             {
-                if (value is MetadataIdentity { Id: not null } metadataIdentity)
+                if (value is not MetadataIdentity metadataIdentity)
+                    return;
+
+                if (metadataIdentity.Id != null)
                     identity.TrySetIdentity(target, metadataIdentity.Id, metadataIdentity.IsProjection);
+
+                if (capture)
+                    extensionData.Add(target, Constants.Documents.Metadata.Key, metadataIdentity.Document);
             };
             typeInfo.Properties.Add(metadata);
 
@@ -885,6 +1033,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             {
                 if (value is string id && (identity.TryGetIdFromInstance(target, out string existing) == false || existing == null))
                     identity.TrySetIdentity(target, id);
+
+                if (capture && value is string capturedId)
+                    extensionData.Add(target, Constants.Documents.Metadata.Id, capturedId);
             };
             typeInfo.Properties.Add(topLevelId);
         }
@@ -894,11 +1045,22 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             public string Id;
 
             public bool IsProjection;
+
+            public object Document;
         }
 
         private sealed class MetadataIdentityConverter : JsonConverter<MetadataIdentity>
         {
-            public static readonly MetadataIdentityConverter Instance = new();
+            public static readonly MetadataIdentityConverter Instance = new(capture: false);
+
+            public static readonly MetadataIdentityConverter Capturing = new(capture: true);
+
+            private readonly bool _capture;
+
+            private MetadataIdentityConverter(bool capture)
+            {
+                _capture = capture;
+            }
 
             public override MetadataIdentity Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
@@ -906,6 +1068,20 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 {
                     reader.Skip();
                     return null;
+                }
+
+                if (_capture)
+                {
+                    var document = (IDictionary<string, object>)JsonDynamicConverters.ReadDocument(ref reader);
+                    document.TryGetValue(Constants.Documents.Metadata.Id, out object id);
+                    document.TryGetValue(Constants.Documents.Metadata.Projection, out object projection);
+
+                    return new MetadataIdentity
+                    {
+                        Document = document,
+                        Id = (id as JsonDynamicValue)?.Value as string,
+                        IsProjection = projection is JsonDynamicValue { Value: true }
+                    };
                 }
 
                 var metadataIdentity = new MetadataIdentity();
@@ -1388,10 +1564,11 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 $"{nameof(SystemTextJsonSerializationConventions)} requires object, dynamic, System.Text.Json.JsonElement or System.Text.Json.Nodes.JsonNode for untyped JSON.");
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static void ThrowNewtonsoftExtensionDataNotSupported(MemberInfo member) =>
+        private static void ThrowNewtonsoftExtensionDataNotSupported(MemberInfo member, Type memberType) =>
             throw new NotSupportedException(
-                $"Member '{member.DeclaringType?.FullName}.{member.Name}' is annotated with {NewtonsoftJsonExtensionDataAttributeName}. " +
-                $"{nameof(SystemTextJsonSerializationConventions)} requires System.Text.Json.Serialization.JsonExtensionDataAttribute.");
+                $"Member '{member.DeclaringType?.FullName}.{member.Name}' of type '{memberType.FullName}' is annotated with {NewtonsoftJsonExtensionDataAttributeName}. " +
+                $"{nameof(SystemTextJsonSerializationConventions)} supports it on a single readable IDictionary<string, object> member per type. " +
+                "For other dictionary types use System.Text.Json.Serialization.JsonExtensionDataAttribute.");
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void ThrowNewtonsoftReferencesNotSupported(string target) =>

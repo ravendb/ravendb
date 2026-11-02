@@ -217,6 +217,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             long start = stream.Position;
 
             RavenJsonTypeInfoResolver.RootEntity = hasIdentityProperty ? entity : null;
+            RavenJsonTypeInfoResolver.RootDocument = entity;
             RavenJsonTypeInfoResolver.RemovedIdentityProperty = false;
             try
             {
@@ -225,6 +226,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             finally
             {
                 RavenJsonTypeInfoResolver.RootEntity = null;
+                RavenJsonTypeInfoResolver.RootDocument = null;
             }
 
             if (hasIdentityProperty && RavenJsonTypeInfoResolver.RemovedIdentityProperty == false)
