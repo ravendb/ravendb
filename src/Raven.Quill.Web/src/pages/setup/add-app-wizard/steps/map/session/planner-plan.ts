@@ -190,6 +190,10 @@ export function countBuilt(collections: PlanCollection[]): number {
     return collections.filter(isBuilt).length;
 }
 
+export function getBuildLabel(area: PlanArea): string {
+    return area.collections.some(isBuilt) ? "Build the rest" : "Build";
+}
+
 export function toSearchKey(...names: string[]): string {
     return names.join("\n").toLowerCase();
 }

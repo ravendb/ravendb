@@ -183,6 +183,131 @@ describe("createPlannerSession", () => {
         expect(migration.proposalAsk).not.toHaveBeenCalled();
     });
 
+    it("sends a failed prompt again, with its mentions, as a new turn", async () => {
+        migration.proposalAsk
+            .mockImplementationOnce(() => streamOf({ type: "error", message: "Gateway timeout." }))
+            .mockImplementationOnce(() => streamOf(DONE));
+        useSetupWizardStore
+            .getState()
+            .openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
+        const session = newSession();
+
+        await session.askProposal({ text: "Link everything.", mentions: ["Orders"] });
+        expect(latestReply(null)?.status).toBe("failed");
+
+        await session.retry(null, []);
+
+        expect(migration.proposalAsk).toHaveBeenCalledTimes(2);
+        expect(migration.proposalAsk).toHaveBeenLastCalledWith(
+            { slug: "shop", prompt: "About the Orders collection: Link everything." },
+            expect.any(AbortSignal),
+        );
+        expect(latestReply(null)?.status).toBe("done");
+    });
+
+    it("sends failed answers again, though the questions they answer are no longer open", async () => {
+        migration.areaStart.mockImplementation(() =>
+            streamOf(
+                { type: "reply", reply: "Embed or link?", openQuestions: [{ question: "Lines?", options: ["Embed"] }] },
+                DONE,
+            ),
+        );
+        migration.areaAsk
+            .mockImplementationOnce(() => streamOf({ type: "error", message: "Gateway timeout." }))
+            .mockImplementationOnce(() => streamOf(DONE));
+        useSetupWizardStore
+            .getState()
+            .openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
+        const session = newSession();
+
+        await session.buildArea("Sales", ["Orders"]);
+        await session.answer("Sales", [{ question: "Lines?", answer: "Embed" }]);
+        await session.retry("Sales", ["Products"]);
+
+        expect(migration.areaAsk).toHaveBeenCalledTimes(2);
+        expect(migration.areaAsk).toHaveBeenLastCalledWith(
+            { slug: "shop", area: "Sales", prompt: "Answers to your open questions:\n1. Lines?\n   Embed" },
+            expect.any(AbortSignal),
+        );
+        expect(latestReply("Sales")?.status).toBe("done");
+    });
+
+    it("asks a failed build again only for what is still missing", async () => {
+        migration.areaStart.mockImplementation(() => streamOf(DONE));
+        migration.areaAsk
+            .mockImplementationOnce(() => streamOf({ type: "error", message: "Gateway timeout." }))
+            .mockImplementationOnce(() => streamOf(DONE));
+        useSetupWizardStore
+            .getState()
+            .openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
+        const session = newSession();
+
+        await session.buildArea("Sales", ["Orders"]);
+        await session.buildArea("Sales", ["Products", "Customers"]);
+        await session.retry("Sales", ["Customers"]);
+
+        expect(migration.areaAsk).toHaveBeenLastCalledWith(
+            { slug: "shop", area: "Sales", prompt: "Build Customers." },
+            expect.any(AbortSignal),
+        );
+    });
+
+    it("asks a failed first build again for what is still missing, as the area's agent may have started", async () => {
+        migration.areaStart.mockImplementation(() => streamOf({ type: "error", message: "Gateway timeout." }));
+        migration.areaAsk.mockImplementation(() => streamOf(DONE));
+        useSetupWizardStore
+            .getState()
+            .openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
+        const session = newSession();
+
+        await session.buildArea("Sales", ["Orders", "Products"]);
+        await session.retry("Sales", ["Products"]);
+
+        expect(migration.areaStart).toHaveBeenCalledOnce();
+        expect(migration.areaAsk).toHaveBeenCalledWith(
+            { slug: "shop", area: "Sales", prompt: "Build Products." },
+            expect.any(AbortSignal),
+        );
+    });
+
+    it("asks the planner to carry on when its failed first turn already proposed a plan, since a new start replaces it", async () => {
+        migration.proposalStart.mockImplementation(() =>
+            streamOf(
+                { type: "proposal", proposal: { areas: [], dropped: [], enables: [] } },
+                { type: "error", message: "Gateway timeout." },
+            ),
+        );
+        migration.proposalAsk.mockImplementation(() => streamOf(DONE));
+        const session = newSession();
+
+        await session.start();
+        await session.retry(null, []);
+
+        expect(migration.proposalStart).toHaveBeenCalledOnce();
+        expect(migration.proposalAsk).toHaveBeenCalledWith(
+            { slug: "shop", prompt: "Your last turn failed before it finished. Carry on from where it stopped." },
+            expect.any(AbortSignal),
+        );
+    });
+
+    it("waits for every area to finish before the planner starts a turn", async () => {
+        const { stream, stop } = stoppableStream();
+        migration.areaStart.mockImplementation(stream);
+        setup.migrationStop.mockImplementation(async () => stop());
+        useSetupWizardStore
+            .getState()
+            .openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
+        const session = newSession();
+
+        const build = session.buildArea("Sales", ["Orders"]);
+        const isKeptInChat = await session.askProposal({ text: "Link everything.", mentions: [] });
+        await session.stop("Sales");
+        await build;
+
+        expect(isKeptInChat).toBe(false);
+        expect(migration.proposalAsk).not.toHaveBeenCalled();
+    });
+
     it("stops a turn on the server and lets its stream end by itself", async () => {
         const { stream, stop } = stoppableStream();
         migration.areaStart.mockImplementation(stream);
@@ -200,7 +325,7 @@ describe("createPlannerSession", () => {
         expect(latestReply("Sales")?.status).toBe("stopped");
     });
 
-    it("keeps a prompt refused for a running turn in the composer, to send again", async () => {
+    it("leaves a prompt refused for a running turn in the chat, where Retry sends it again", async () => {
         migration.proposalAsk.mockImplementation(() => {
             throw new ApiError("a planner turn is already running for this conversation", 409, undefined);
         });
@@ -211,10 +336,7 @@ describe("createPlannerSession", () => {
 
         await newSession().sendDraft(null);
 
-        expect(useSetupWizardStore.getState().plannerProposalChat).toMatchObject({
-            draft: "Use camelCase.",
-            mentions: ["Orders"],
-        });
+        expect(useSetupWizardStore.getState().plannerProposalChat).toMatchObject({ draft: "", mentions: [] });
         expect(latestReply(null)).toMatchObject({
             status: "failed",
             error: "a planner turn is already running for this conversation",
@@ -293,23 +415,38 @@ describe("createPlannerSession", () => {
     });
 
     it("stops every running turn on the server when the session is reset", async () => {
-        const proposal = stoppableStream();
-        const area = stoppableStream();
-        migration.proposalAsk.mockImplementation(proposal.stream);
-        migration.areaStart.mockImplementation(area.stream);
+        const sales = stoppableStream();
+        const billing = stoppableStream();
+        migration.areaStart.mockImplementationOnce(sales.stream).mockImplementationOnce(billing.stream);
         const store = useSetupWizardStore.getState();
         store.openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
         const session = newSession();
 
-        void session.askProposal({ text: "Add the audit log.", mentions: [] });
         void session.buildArea("Sales", ["Orders"]);
-        await vi.waitFor(() => expect(migration.areaStart).toHaveBeenCalled());
+        void session.buildArea("Billing", ["Invoices"]);
+        await vi.waitFor(() => expect(migration.areaStart).toHaveBeenCalledTimes(2));
         store.resetPlannerState();
 
         await vi.waitFor(() => expect(setup.migrationStop).toHaveBeenCalledTimes(2));
-        expect(setup.migrationStop).toHaveBeenCalledWith({ slug: "shop", agent: "Proposal" });
         expect(setup.migrationStop).toHaveBeenCalledWith({ slug: "shop", agent: "Area", area: "Sales" });
-        proposal.stop();
-        area.stop();
+        expect(setup.migrationStop).toHaveBeenCalledWith({ slug: "shop", agent: "Area", area: "Billing" });
+        sales.stop();
+        billing.stop();
+    });
+
+    it("stops the planner's turn on the server as the proposal agent", async () => {
+        const { stream, stop } = stoppableStream();
+        migration.proposalAsk.mockImplementation(stream);
+        setup.migrationStop.mockImplementation(async () => stop());
+        useSetupWizardStore
+            .getState()
+            .openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
+        const session = newSession();
+
+        const turn = session.askProposal({ text: "Add the audit log.", mentions: [] });
+        await session.stop(null);
+        await turn;
+
+        expect(setup.migrationStop).toHaveBeenCalledWith({ slug: "shop", agent: "Proposal" });
     });
 });

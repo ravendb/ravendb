@@ -8,6 +8,8 @@ Frontend for Raven Quill. It is a Vite + React + TypeScript app and is finally b
 - Keep code boring, readable, and explicit. Avoid clever shortcuts, magic values, over-abstraction, and premature optimization.
 - Let code be self-explanatory. Add a comment only for non-obvious _why_ (intent, edge cases, workarounds), never to restate what the code already shows. Prefer clear names over explanatory comments.
 - Do not declare a `let` only to assign it inside `try`/`catch`. Extract a small helper that returns from the `try` (and throws a friendly error in `catch`) so the caller keeps a `const`.
+- Do not nest ternaries. Move the choice into a small function with early returns, so each case reads on its own line.
+- Write a value where it is used when it is used once and reads clearly there, such as a user-facing message. Extract a module constant only when it is shared, when its name explains a magic value, or when it must keep a stable reference (e.g. an empty array returned from a store selector).
 - Avoid `useEffect` unless it is genuinely needed. Prefer derived state, event handlers, React Query, React Hook Form, Zod, and existing framework mechanisms.
 - Do not add `useMemo`/`useCallback` just for routine render optimization; React Compiler is enabled.
 - API code should use the generated server API by default. Add custom services only when generated API is not enough.

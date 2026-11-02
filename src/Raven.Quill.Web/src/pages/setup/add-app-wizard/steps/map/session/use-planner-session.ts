@@ -18,12 +18,16 @@ import { createTurnId, isAreaNotStartedError } from "@/pages/setup/add-app-wizar
 import {
     composeAnswersPrompt,
     composeBuildCollectionsPrompt,
+    composeContinuePrompt,
     composePlannerPrompt,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-prompts";
 import {
     getChatPhase,
     getLatestReply,
+    getLatestUserTurn,
     isAreaStarted,
+    isBuildTurn,
+    selectBlockingChat,
     selectChat,
     selectHasUnsavedEdits,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
@@ -49,8 +53,9 @@ export type PlannerSession = ReturnType<typeof createPlannerSession>;
 let latestPlanRead = 0;
 
 /**
- * Drives the proposal agent's chat and one chat per area; different chats run side by side. Requests carry
- * only the slug, since the server holds the plan and the conversations. A turn's frames move the plan forward.
+ * Drives the proposal agent's chat and one chat per area; areas run side by side, the planner alone. Requests
+ * carry only the slug, since the server holds the plan and the conversations. A turn's frames move the plan
+ * forward.
  */
 export function usePlannerSession(): PlannerSession {
     const { getValues } = useFormContext<AppFormData>();
@@ -154,7 +159,7 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
         return isApiError(streamError) ? streamError : null;
     };
 
-    /** What the operator wrote goes back to the composer when it did not reach the agent, to send again. */
+    /** What the operator wrote goes back to the composer when the chat did not keep it, to send again. */
     const keepDraft = (chatId: PlannerChatId, prompt: PlannerPrompt) => {
         const store = getStore();
         const chat = selectChat(store, chatId);
@@ -167,24 +172,35 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
         const store = getStore();
 
         return (
-            !store.plannerIsSaving &&
-            !selectHasUnsavedEdits(store) &&
-            getChatPhase(selectChat(store, chatId)) !== "working"
+            !store.plannerIsSaving && !selectHasUnsavedEdits(store) && selectBlockingChat(store, chatId) === undefined
         );
     };
 
-    /** Resolves to whether the prompt reached the agent. */
+    const start = async () => {
+        if (!canStartTurn(null)) {
+            return;
+        }
+
+        const selectedTables = getSelectedTables();
+        openSession();
+
+        await runTurn(null, { userTurn: null, isOpening: true }, (slug, signal) =>
+            api.services.migration.proposalStart({ slug, selectedTables }, signal),
+        );
+    };
+
+    /** Resolves to whether the chat kept the prompt, sent or failed with Retry to send it again. */
     const askProposal = async (prompt: PlannerPrompt): Promise<boolean> => {
         if (!canStartTurn(null)) {
             return false;
         }
 
-        const turn: PlannerPromptTurn = { kind: "prompt", id: createTurnId(), ...prompt };
-        const refusal = await runTurn(null, { userTurn: turn, isOpening: false }, (slug, signal) =>
+        const turn: PlannerPromptTurn = { kind: "prompt", id: createTurnId(), isBuildRequest: false, ...prompt };
+        await runTurn(null, { userTurn: turn, isOpening: false }, (slug, signal) =>
             api.services.migration.proposalAsk({ slug, prompt: composePlannerPrompt(prompt) }, signal),
         );
 
-        return refusal === null;
+        return true;
     };
 
     const startArea = async (area: string) => {
@@ -203,20 +219,15 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
         }
     };
 
-    /** Resolves to whether the prompt reached the agent. */
-    const askArea = async (area: string, prompt: PlannerPrompt): Promise<boolean> => {
+    /** Resolves to whether the chat kept the prompt, sent or failed with Retry to send it again. */
+    const sendAreaPrompt = async (area: string, turn: PlannerPromptTurn): Promise<boolean> => {
         if (!canStartTurn(area)) {
             return false;
         }
 
-        const turn: PlannerPromptTurn = { kind: "prompt", id: createTurnId(), ...prompt };
-        const refusal = await runTurn(area, { userTurn: turn, isOpening: false }, (slug, signal) =>
-            api.services.migration.areaAsk({ slug, area, prompt: composePlannerPrompt(prompt) }, signal),
+        await runTurn(area, { userTurn: turn, isOpening: false }, (slug, signal) =>
+            api.services.migration.areaAsk({ slug, area, prompt: composePlannerPrompt(turn) }, signal),
         );
-
-        if (refusal) {
-            return false;
-        }
 
         // Whether an area started is a guess; the agent's answer settles it. The area builds
         // first, and the prompt, which never reached the agent, can be sent again once it is built.
@@ -229,6 +240,40 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
         }
 
         return true;
+    };
+
+    const askArea = (area: string, prompt: PlannerPrompt) =>
+        sendAreaPrompt(area, { kind: "prompt", id: createTurnId(), isBuildRequest: false, ...prompt });
+
+    const ask = (chatId: PlannerChatId, prompt: PlannerPrompt) =>
+        chatId === null ? askProposal(prompt) : askArea(chatId, prompt);
+
+    /** Builds an area: its first build starts its agent, later ones ask it for what is still missing. */
+    const buildArea = (area: string, pendingCollections: string[]) => {
+        if (!isAreaStarted(getStore(), area)) {
+            return startArea(area);
+        }
+
+        return pendingCollections.length > 0
+            ? sendAreaPrompt(area, {
+                  kind: "prompt",
+                  id: createTurnId(),
+                  isBuildRequest: true,
+                  text: composeBuildCollectionsPrompt(pendingCollections),
+                  mentions: [],
+              })
+            : Promise.resolve();
+    };
+
+    const sendAnswers = (chatId: PlannerChatId, answers: PlannerAnswer[]) => {
+        const turn: PlannerAnswersTurn = { kind: "answers", id: createTurnId(), answers };
+        const prompt = composeAnswersPrompt(turn);
+
+        return runTurn(chatId, { userTurn: turn, isOpening: false }, (slug, signal) =>
+            chatId === null
+                ? api.services.migration.proposalAsk({ slug, prompt }, signal)
+                : api.services.migration.areaAsk({ slug, area: chatId, prompt }, signal),
+        );
     };
 
     const takeDraft = (chatId: PlannerChatId): PlannerPrompt | null => {
@@ -246,52 +291,53 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
     };
 
     return {
-        start: async () => {
-            if (!canStartTurn(null)) {
-                return;
-            }
-
-            const selectedTables = getSelectedTables();
-            openSession();
-
-            await runTurn(null, { userTurn: null, isOpening: true }, (slug, signal) =>
-                api.services.migration.proposalStart({ slug, selectedTables }, signal),
-            );
-        },
+        start,
 
         askProposal,
 
         answer: async (chatId: PlannerChatId, answers: PlannerAnswer[]) => {
-            const store = getStore();
-
-            if (
-                store.plannerIsSaving ||
-                selectHasUnsavedEdits(store) ||
-                getChatPhase(selectChat(store, chatId)) !== "awaitingAnswers"
-            ) {
+            if (!canStartTurn(chatId) || getChatPhase(selectChat(getStore(), chatId)) !== "awaitingAnswers") {
                 return;
             }
 
-            const turn: PlannerAnswersTurn = { kind: "answers", id: createTurnId(), answers };
-            const prompt = composeAnswersPrompt(turn);
-
-            await runTurn(chatId, { userTurn: turn, isOpening: false }, (slug, signal) =>
-                chatId === null
-                    ? api.services.migration.proposalAsk({ slug, prompt }, signal)
-                    : api.services.migration.areaAsk({ slug, area: chatId, prompt }, signal),
-            );
+            await sendAnswers(chatId, answers);
         },
 
-        /** Builds an area: its first build starts its agent, later ones ask it for what is still missing. */
-        buildArea: (area: string, pendingCollections: string[]) => {
-            if (!isAreaStarted(getStore(), area)) {
-                return startArea(area);
+        /** Runs a chat's failed turn again, as a new turn. A build asks only for what is still missing by now. */
+        retry: async (chatId: PlannerChatId, pendingCollections: string[]) => {
+            if (!canStartTurn(chatId)) {
+                return;
             }
 
-            return pendingCollections.length > 0
-                ? askArea(area, { text: composeBuildCollectionsPrompt(pendingCollections), mentions: [] })
-                : Promise.resolve();
+            const chat = selectChat(getStore(), chatId);
+
+            if (chatId !== null && isBuildTurn(chat)) {
+                await buildArea(chatId, pendingCollections);
+                return;
+            }
+
+            const userTurn = getLatestUserTurn(chat);
+
+            if (userTurn?.kind === "answers") {
+                await sendAnswers(chatId, userTurn.answers);
+                return;
+            }
+
+            if (userTurn?.kind === "prompt") {
+                await ask(chatId, { text: userTurn.text, mentions: userTurn.mentions });
+                return;
+            }
+
+            // What is left is the planner's first turn. Starting over would replace a plan it already proposed.
+            if (getStore().plannerProposal) {
+                await askProposal({ text: composeContinuePrompt(), mentions: [] });
+                return;
+            }
+
+            await start();
         },
+
+        buildArea,
 
         askArea,
 
@@ -306,9 +352,9 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
                 return;
             }
 
-            const isDelivered = chatId === null ? await askProposal(prompt) : await askArea(chatId, prompt);
+            const isKeptInChat = await ask(chatId, prompt);
 
-            if (!isDelivered) {
+            if (!isKeptInChat) {
                 keepDraft(chatId, prompt);
             }
         },

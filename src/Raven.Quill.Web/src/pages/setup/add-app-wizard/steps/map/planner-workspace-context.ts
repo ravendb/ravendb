@@ -3,6 +3,7 @@ import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-sto
 import {
     getChatPhase,
     isAreaStarted,
+    selectBlockingChat,
     selectCanEditPlan,
     selectChat,
     selectHasUnsavedEdits,
@@ -51,12 +52,12 @@ export function useCanAsk(chatId: PlannerChatId): boolean {
 
 /** The operator may close the planner's questions and write in the chat instead; the message drops them. */
 export function useCanSendMessage(chatId: PlannerChatId): boolean {
-    const phase = useChatPhase(chatId);
+    const isWaitingForAgent = useSetupWizardStore((state) => selectBlockingChat(state, chatId) !== undefined);
     const isSaving = useSetupWizardStore((state) => state.plannerIsSaving);
     const hasUnsavedEdits = useSetupWizardStore(selectHasUnsavedEdits);
     const { isBusy } = usePlannerWorkspace();
 
-    return phase !== "working" && !isSaving && !isBusy && !hasUnsavedEdits;
+    return !isWaitingForAgent && !isSaving && !isBusy && !hasUnsavedEdits;
 }
 
 export function useCanEditPlan(): boolean {
