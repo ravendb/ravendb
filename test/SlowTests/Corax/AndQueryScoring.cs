@@ -43,7 +43,7 @@ public class AndQueryScoring(ITestOutputHelper output) : RavenTestBase(output)
         Assert.True(scores["products/1"] > scores["products/2"], $"products/1: {scores["products/1"]}, products/2: {scores["products/2"]}");
     }
 
-    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying, Skip = "Corax 2.0 has not ported RavenDB-27606: an AND under an OR still adds its score to documents it rejects")]
+    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     public void AndUnderOrReachedViaAndWithDoesNotScoreDocumentsItRejects()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax, includeScoresAndDistances: true));

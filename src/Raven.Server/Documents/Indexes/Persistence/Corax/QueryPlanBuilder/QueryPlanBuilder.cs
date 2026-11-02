@@ -110,6 +110,9 @@ internal static partial class QueryPlanBuilder
         AssignParameterSlots(walkerCtx.SpatialClauses, slots);
         AssignParameterSlots(walkerCtx.VectorClauses, slots);
 
+        if (p.HasBoost)
+            AssignScoringGroups(walkerCtx.Clauses, walkerCtx.IsOr, count: 0);
+
         string[] parameterSlots = slots.Keys.ToArray();
         p.Metadata.CachedSlotBindings = walkerCtx.SlotBindings.ToArray();
 
@@ -135,6 +138,20 @@ internal static partial class QueryPlanBuilder
             SortSeekUseParam2 = sortSeekUseParam2,
             ValueOrdinalCount = walkerCtx.SlotBindings.Count,
         };
+    }
+
+    private static int AssignScoringGroups(List<ClauseInfo> clauses, bool parentIsOr, int count)
+    {
+        RuntimeHelpers.EnsureSufficientExecutionStack();
+        foreach (ClauseInfo clause in clauses ?? [])
+        {
+            if (parentIsOr && clause.ClauseType == ClauseType.AndGroup)
+                clause.ScoringGroupIndex = count++;
+
+            count = AssignScoringGroups(clause.SubClauses, clause.ClauseType == ClauseType.OrGroup, count);
+        }
+
+        return count;
     }
 
     private static ParameterBinding[] ExtractSlotBindings(PlanParameters p)

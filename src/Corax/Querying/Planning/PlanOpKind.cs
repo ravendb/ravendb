@@ -70,6 +70,9 @@ public enum PlanOpKind : byte
     /// bitmap is repaired once at the done label before it can be iterated. BitmapLocal = target, ParamIndex2 = source.</summary>
     LazyOrBitmaps,
 
+    /// <summary>Copy bitmap[BitmapLocal], an AND group under an OR, into ctx.ScoringGroups[ParamIndex] for the score pass.</summary>
+    SaveScoringGroup,
+
     /// <summary>Short-circuit the plan when a bitmap slot is empty.</summary>
     GotoDoneIfEmpty,
 
