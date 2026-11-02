@@ -56,10 +56,29 @@ public static class WhereClauseNormalizer
                 return true;
             }
 
+            // exact() and boost() wrap a where clause of their own, which the builders translate like the outer one
+            case MethodExpression { Arguments.Count: > 0 } method when WrapsAWhereClause(method):
+            {
+                if (TryNormalize(method.Arguments[0], out var inner) == false)
+                {
+                    normalized = method;
+                    return false;
+                }
+
+                var arguments = new List<QueryExpression>(method.Arguments) { [0] = inner };
+                normalized = new MethodExpression(method.Name, arguments) { Alias = method.Alias };
+                return true;
+            }
+
             default:
                 normalized = expression;
                 return false;
         }
+    }
+
+    private static bool WrapsAWhereClause(MethodExpression method)
+    {
+        return QueryMethod.GetMethodType(method.Name.Value, throwIfNoMatch: false) is MethodType.Exact or MethodType.Boost;
     }
 
     private static bool TryNormalizeAndChain(BinaryExpression root, out QueryExpression normalized)

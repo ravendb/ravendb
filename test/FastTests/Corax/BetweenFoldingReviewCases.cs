@@ -84,15 +84,20 @@ namespace FastTests.Corax
             Assert.Equal(new[] { "orders/2" }, QueryIds<Order>(store, $"from Orders where {where}"));
         }
 
+        // the pair folds inside exact() too, and the between it becomes queries the exact field, so the lower-case name
+        // stays outside the upper-case range
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
         [RavenData("exact(Age = 30 and Name >= 'A' and Name < 'C')", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("exact((Age = 30 and Name >= 'A') and Name < 'C')", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Age = 30 and exact(Name >= 'A' and Name < 'C')", SearchEngineMode = RavenSearchEngineMode.All)]
         public void ExactStringRangeOnAutoIndexUsesTheExactField(Options options, string where)
         {
             using var store = GetDocumentStore(options);
             Store(store,
                 new User { Id = "users/1", Name = "Alice", Age = 30 },
                 new User { Id = "users/2", Name = "Bob", Age = 30 },
-                new User { Id = "users/3", Name = "Carl", Age = 30 });
+                new User { Id = "users/3", Name = "Carl", Age = 30 },
+                new User { Id = "users/4", Name = "alice", Age = 30 });
 
             Assert.Equal(new[] { "users/1", "users/2" }, QueryIds<User>(store, $"from Users where {where}"));
         }
