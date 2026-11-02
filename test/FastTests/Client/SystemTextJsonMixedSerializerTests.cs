@@ -264,7 +264,7 @@ public class SystemTextJsonMixedSerializerTests(ITestOutputHelper output) : Rave
         using (var session = patcher.OpenAsyncSession())
         {
             session.Advanced.Patch<Order, Animal>("orders/1", x => x.Pet, new Dog { Name = "Patched", Barks = true });
-            session.Advanced.Patch<Order, Status>("orders/1", x => x.Status, Status.Done);
+            session.Advanced.Patch<Order, Status>("orders/1", x => x.Status, Status.InReview);
             await session.SaveChangesAsync();
         }
 
@@ -272,7 +272,7 @@ public class SystemTextJsonMixedSerializerTests(ITestOutputHelper output) : Rave
         {
             Order order = await session.LoadAsync<Order>("orders/1");
             Assert.Equal("Patched", Assert.IsType<Dog>(order.Pet).Name);
-            Assert.Equal(Status.Done, order.Status);
+            Assert.Equal(Status.InReview, order.Status);
             Assert.False(session.Advanced.HasChanges);
         }
     }
