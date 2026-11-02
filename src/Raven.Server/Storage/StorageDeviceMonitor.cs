@@ -122,7 +122,6 @@ namespace Raven.Server.Storage
                     return;
 
                 tracker.HintRaised = false;
-                tracker.HintStored = false;
                 tracker.HintRestored = false;
                 _serverStore.NotificationCenter.Dismiss(id, sendNotificationEvenIfDoesntExist: false);
 
@@ -140,7 +139,6 @@ namespace Raven.Server.Storage
                 return;
 
             PerformanceHint hint = CreateHint(tracker, now);
-            tracker.HintStored = _serverStore.Configuration.Notifications.ShouldFilterOut(hint) == false;
             _serverStore.NotificationCenter.Add(hint);
             tracker.HintRaised = true;
             tracker.HintRestored = false;
@@ -226,19 +224,9 @@ namespace Raven.Server.Storage
 
         internal static string FormatMs(double ms) => ms >= 1000 ? $"{ms / 1000:#,#0.#} s" : $"{ms:#,#0.#} ms";
 
-        /// <summary>
-        /// Called for every slow write a database detects. The write always becomes evidence for its disk; returns true when the
-        /// congestion hint of that disk is shown, so the database does not raise its own Slow IO hint for the same problem.
-        /// </summary>
-        public bool RecordSlowWrite(DeviceWriteBudget device, IoChange ioChange)
-        {
-            DeviceTracker tracker = GetTracker(device);
-            if (tracker == null)
-                return false;
-
-            tracker.RecordSlowWrite(ioChange, UtcNow);
-            return tracker.HintStored;
-        }
+        // every slow write a database detects is evidence for the congestion hint of its disk. The database still raises its own
+        // Slow IO hint: the disk hint is for Operators only.
+        public void RecordSlowWrite(DeviceWriteBudget device, IoChange ioChange) => GetTracker(device)?.RecordSlowWrite(ioChange, UtcNow);
 
         // touched by the sampler only, under _sampleLock
         private readonly HashSet<string> _persistedHints = new();
@@ -502,7 +490,6 @@ namespace Raven.Server.Storage
             {
                 _lastBusyAt ??= restartedAt;
                 HintRaised = true;
-                HintStored = true;
                 HintRestored = true;
             }
         }
@@ -518,8 +505,6 @@ namespace Raven.Server.Storage
 
         // the hint shown is the one stored before the restart, not one raised from the samples since
         internal bool HintRestored { get; set; }
-
-        internal bool HintStored { get; set; }
 
         internal DateTime LastHintUpdate { get; set; }
 
