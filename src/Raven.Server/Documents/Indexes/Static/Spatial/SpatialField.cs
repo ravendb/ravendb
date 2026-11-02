@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Buffers;
+using System.Buffers.Binary;
+using System.Buffers.Text;
 using System.Collections.Generic;
-using System.Globalization;
+using System.Diagnostics;
 using Corax.Utils;
 using GeoAPI;
 using Lucene.Net.Documents;
@@ -10,6 +13,7 @@ using NetTopologySuite;
 using Raven.Client;
 using Raven.Client.Exceptions.Corax;
 using Sparrow.Json;
+using Sparrow.Server;
 using Spatial4n.Context.Nts;
 using Spatial4n.Distance;
 using Spatial4n.Shapes;
@@ -24,7 +28,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
     {
         internal const string LuceneCentersFieldSuffix = "_spatial(centers)";
 
-        internal const char LuceneCentersSeparator = ';';
+        private const int LuceneCenterLength = 22;
 
         private static readonly NtsSpatialContext GeoContext;
 
@@ -92,7 +96,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                 var fields = Strategy.CreateIndexableFields(shape);
                 Array.Resize(ref fields, fields.Length + 1);
                 fields[^1] = indexCenterForSorting
-                    ? CreateLuceneCenterField(LuceneCentersFieldName, FormatCenter(shape.Center))
+                    ? CreateLuceneCenterField(LuceneCentersFieldName, shape.Center)
                     : new Field(Constants.Documents.Indexing.Fields.SpatialShapeFieldName, WriteShape(shape), Field.Store.YES, Field.Index.NO);
 
                 return fields;
@@ -101,31 +105,49 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             return Array.Empty<AbstractField>();
         }
         
-        internal static Field CreateLuceneCenterField(string name, string centers)
+        private static Field CreateLuceneCenterField(string name, IPoint center)
         {
-            return new Field(name, centers, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS) { OmitTermFreqAndPositions = true };
+            Span<byte> coordinates = stackalloc byte[2 * sizeof(double)];
+            BinaryPrimitives.WriteDoubleLittleEndian(coordinates, center.Y);
+            BinaryPrimitives.WriteDoubleLittleEndian(coordinates[sizeof(double)..], center.X);
+
+            return CreateLuceneCenterField(name, Format.ToBase64Unpadded(coordinates));
         }
 
-        private static string FormatCenter(IPoint center)
+        internal static Field CreateLuceneCenterField(string name, string centers)
         {
-            return center.Y.ToString("R", CultureInfo.InvariantCulture) + " " + center.X.ToString("R", CultureInfo.InvariantCulture);
+            Debug.Assert(centers.Length % LuceneCenterLength == 0, $"Invalid spatial centers length: {centers.Length}");
+
+            return new Field(name, centers, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS) { OmitTermFreqAndPositions = true };
         }
 
         internal static void ParseCenters(ReadOnlySpan<byte> centers, List<(double Latitude, double Longitude)> points)
         {
-            while (centers.IsEmpty == false)
+            if (centers.Length % LuceneCenterLength != 0)
             {
-                var separator = centers.IndexOf((byte)LuceneCentersSeparator);
-                var point = separator < 0 ? centers : centers[..separator];
-                centers = separator < 0 ? ReadOnlySpan<byte>.Empty : centers[(separator + 1)..];
+                Debug.Assert(false, $"Invalid spatial centers length: {centers.Length}");
+                return;
+            }
 
-                var space = point.IndexOf((byte)' ');
-                if (space < 0 ||
-                    double.TryParse(point[..space], NumberStyles.Float, CultureInfo.InvariantCulture, out var latitude) == false ||
-                    double.TryParse(point[(space + 1)..], NumberStyles.Float, CultureInfo.InvariantCulture, out var longitude) == false)
+            Span<byte> center = stackalloc byte[LuceneCenterLength + 2];
+            center[LuceneCenterLength..].Fill((byte)'=');
+
+            Span<byte> coordinates = stackalloc byte[2 * sizeof(double)];
+
+            for (var i = 0; i < centers.Length; i += LuceneCenterLength)
+            {
+                centers.Slice(i, LuceneCenterLength).CopyTo(center);
+
+                if (Base64.DecodeFromUtf8(center, coordinates, out var bytesConsumed, out var bytesWritten) != OperationStatus.Done)
+                {
+                    Debug.Assert(false, "Invalid spatial center");
                     continue; // invalid points are skipped
+                }
 
-                points.Add((latitude, longitude));
+                Debug.Assert(bytesConsumed == center.Length);
+                Debug.Assert(bytesWritten == coordinates.Length);
+
+                points.Add((BinaryPrimitives.ReadDoubleLittleEndian(coordinates), BinaryPrimitives.ReadDoubleLittleEndian(coordinates[sizeof(double)..])));
             }
         }
 
