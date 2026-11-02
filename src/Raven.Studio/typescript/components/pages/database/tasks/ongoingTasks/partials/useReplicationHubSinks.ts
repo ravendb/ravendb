@@ -94,7 +94,7 @@ function getSinkFilterCategories(
             icon: "database",
             type: "text",
             value: filters.databaseName,
-            placeholder: "e.g. name",
+            placeholder: "e.g. Orders",
             onChange: (databaseName) => updateFilters({ databaseName }),
         },
         {
@@ -133,7 +133,7 @@ function getSinkFilterCategories(
             icon: "server",
             type: "text",
             value: filters.url,
-            placeholder: "e.g. https://",
+            placeholder: "e.g. sink.example.com",
             onChange: (url) => updateFilters({ url }),
         },
         {

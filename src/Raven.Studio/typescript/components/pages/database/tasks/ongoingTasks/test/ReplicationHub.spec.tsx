@@ -64,7 +64,7 @@ describe("Replication Hub", function () {
         const filterDropdown = within(filterToggle.parentElement);
         await fireClick(filterToggle);
         await fireClick(await filterDropdown.findByRole("button", { name: /Sink database name/ }));
-        await user.type(await filterDropdown.findByPlaceholderText("e.g. name"), "berlin");
+        await user.type(await filterDropdown.findByPlaceholderText("e.g. Orders"), "berlin");
 
         expect(container.getAllByTitle(/^Expand distribution details for /)).toHaveLength(1);
         expect(container.getByTitle("Expand distribution details for Sink-Berlin")).toBeInTheDocument();
@@ -95,7 +95,7 @@ describe("Replication Hub", function () {
 
         await fireClick(filterToggle);
         await fireClick(await filterDropdown.findByRole("button", { name: /Sink database name/ }));
-        await user.type(await filterDropdown.findByPlaceholderText("e.g. name"), "no-such-sink");
+        await user.type(await filterDropdown.findByPlaceholderText("e.g. Orders"), "no-such-sink");
 
         expect(container.queryAllByTitle(/^Expand distribution details for /)).toHaveLength(0);
         expect(container.getByText("No sinks match the selected filters")).toBeInTheDocument();
@@ -213,7 +213,7 @@ describe("Replication Hub", function () {
 
         await fireClick(filterDropdown.getByRole("button", { name: /Sink database name/ }));
 
-        expect(filterDropdown.getByPlaceholderText("e.g. name")).toHaveFocus();
+        expect(filterDropdown.getByPlaceholderText("e.g. Orders")).toHaveFocus();
 
         await user.keyboard("berlin{Enter}");
 
@@ -248,7 +248,7 @@ describe("Replication Hub", function () {
         const chipToggle = container.getByTitle(/Change "Sink database name" filter/);
         const chipDropdown = within(chipToggle.parentElement.parentElement);
         await fireClick(chipToggle);
-        const chipInput = chipDropdown.getByPlaceholderText("e.g. name");
+        const chipInput = chipDropdown.getByPlaceholderText("e.g. Orders");
 
         await user.clear(chipInput);
 
