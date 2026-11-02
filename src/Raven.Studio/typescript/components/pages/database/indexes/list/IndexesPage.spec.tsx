@@ -130,9 +130,8 @@ describe("IndexesPage", function () {
         }
     });
 
-    it("keeps the exact counts when a superseded exact progress request fails", async () => {
+    it("does not send a second exact progress request while the first is pending", async () => {
         jest.useFakeTimers({ advanceTimers: true });
-        const reportError = jest.spyOn(messagePublisher, "reportError").mockImplementation(() => {});
         const getProgress = mockServices.indexesService.mock.getProgress as unknown as jest.Mock;
 
         try {
@@ -141,13 +140,16 @@ describe("IndexesPage", function () {
             await screen.findByText("StaleInProgress");
 
             const [, staleProgress] = IndexesStubs.getStaleInProgressIndex();
-            let rejectToggleRequest: (reason: unknown) => void;
+            let resolveExactRequest: (progress: IndexProgress[]) => void;
             let exactCalls = 0;
+            let estimatedCalls = 0;
             getProgress.mockImplementation((...args: Parameters<IndexesService["getProgress"]>) => {
                 const [, , , exact] = args;
-                if (exact && exactCalls++ === 0) {
-                    return new Promise((_, reject) => (rejectToggleRequest = reject));
+                if (exact) {
+                    exactCalls++;
+                    return new Promise((resolve) => (resolveExactRequest = resolve));
                 }
+                estimatedCalls++;
                 return Promise.resolve([staleProgress]);
             });
 
@@ -155,18 +157,21 @@ describe("IndexesPage", function () {
             await user.hover(distributionItems[0]);
 
             await fireClick(await screen.findByText("show exact counts"));
+            await waitFor(() => expect(exactCalls).toBe(1));
+
+            act(() => {
+                jest.advanceTimersByTime(15_000);
+            });
+            await waitFor(() => expect(estimatedCalls).toBeGreaterThan(0));
+            expect(exactCalls).toBe(1);
+
+            await act(async () => resolveExactRequest([staleProgress]));
 
             act(() => {
                 jest.advanceTimersByTime(15_000);
             });
             await waitFor(() => expect(exactCalls).toBe(2));
-
-            await act(async () => rejectToggleRequest({ responseText: "timeout" }));
-
-            expect(await screen.findByText("show estimated counts")).toBeInTheDocument();
-            expect(reportError).not.toHaveBeenCalled();
         } finally {
-            reportError.mockRestore();
             getProgress.mockReset();
             jest.useRealTimers();
         }

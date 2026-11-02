@@ -166,98 +166,92 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
         return () => progressRequestIdsRef.current.get(key) === requestId;
     };
 
-    const fetchProgress = async (location: databaseLocationSpecifier) => {
-        const nodeKey = locationKey(location);
-        const isLatestRequest = startProgressRequest(nodeKey);
-
-        // an index toggled while this request is in flight already has newer progress, so it is skipped
+    // an index toggled while a request is in flight already has newer progress, so it is skipped
+    const trackIndexesToggledSinceNow = (nodeKey: string) => {
         const requestIdsAtStart = new Map(progressRequestIdsRef.current);
-        const indexesToggledSinceStart = () =>
+
+        return () =>
             Array.from(progressRequestIdsRef.current)
                 .filter(([key, id]) => key.startsWith(`${nodeKey}/`) && requestIdsAtStart.get(key) !== id)
                 .map(([key]) => key.slice(nodeKey.length + 1));
+    };
 
-        // the exact calculation is expensive, so it runs only for the stale indexes the user asked for
-        const exactNames = staleIndexNamesRef.current.filter((x) => indexesWithExactProgressRef.current.has(x));
+    // the exact calculation is expensive, so it runs only for the stale indexes the user asked for
+    const getExactProgressIndexNames = () =>
+        staleIndexNamesRef.current.filter((x) => indexesWithExactProgressRef.current.has(x));
 
-        if (exactNames.length === 0) {
-            try {
-                const progress = await indexesService.getProgress(db.name, location);
+    // the exact calculation has no server time limit, so a node never runs two of them at once
+    const nodesWithExactRequestInFlightRef = useRef(new Set<string>());
 
-                if (!isLatestRequest()) {
-                    return;
-                }
+    const getExactProgress = async (location: databaseLocationSpecifier, indexNames: string[]) => {
+        const nodeKey = locationKey(location);
+        nodesWithExactRequestInFlightRef.current.add(nodeKey);
 
-                dispatch({
-                    type: "ProgressLoaded",
-                    progress,
-                    location,
-                    exclude: indexesToggledSinceStart(),
-                });
-            } catch (e) {
-                if (!isLatestRequest()) {
-                    return;
-                }
+        try {
+            return await indexesService.getProgress(db.name, location, indexNames, true);
+        } finally {
+            nodesWithExactRequestInFlightRef.current.delete(nodeKey);
+        }
+    };
 
-                dispatch({
-                    type: "ProgressLoadError",
-                    error: e,
-                    location,
-                });
+    const fetchProgress = async (location: databaseLocationSpecifier) => {
+        const nodeKey = locationKey(location);
+        const isLatestRequest = startProgressRequest(nodeKey);
+        const indexesToggledSinceStart = trackIndexesToggledSinceNow(nodeKey);
+        const exactNames = getExactProgressIndexNames();
+
+        try {
+            // not scoped, so the server also reports the indexes that became stale since the last stats refresh
+            const progress = await indexesService.getProgress(db.name, location);
+
+            if (!isLatestRequest()) {
+                return;
             }
-            return;
-        }
-
-        // the estimated request is not scoped, so the server also reports the indexes that became stale
-        // since the last stats refresh; the exact request covers only the indexes the user asked for
-        const [estimated, exact] = await Promise.allSettled([
-            indexesService.getProgress(db.name, location),
-            indexesService.getProgress(db.name, location, exactNames, true),
-        ]);
-
-        if (!isLatestRequest()) {
-            return;
-        }
-
-        const toggledNames = indexesToggledSinceStart();
-        const exactNamesToApply = exactNames.filter((x) => !toggledNames.includes(x));
-
-        if (estimated.status === "rejected") {
-            dispatch({
-                type: "ProgressLoadError",
-                error: estimated.reason,
-                location,
-            });
-            return;
-        }
-
-        if (exact.status === "rejected") {
-            // fall back to the estimated counts, so the failing exact request is not repeated on every refresh
-            exactNamesToApply.forEach((name) => setExactProgress(name, false));
-            messagePublisher.reportError("Failed to get exact index progress", exact.reason?.responseText);
 
             dispatch({
                 type: "ProgressLoaded",
-                progress: estimated.value,
+                progress,
                 location,
-                exclude: toggledNames,
+                exclude: [...exactNames, ...indexesToggledSinceStart()],
             });
+        } catch (e) {
+            if (!isLatestRequest()) {
+                return;
+            }
+
+            dispatch({
+                type: "ProgressLoadError",
+                error: e,
+                location,
+            });
+        }
+    };
+
+    const fetchExactProgress = async (location: databaseLocationSpecifier) => {
+        const nodeKey = locationKey(location);
+        const exactNames = getExactProgressIndexNames();
+
+        if (exactNames.length === 0 || nodesWithExactRequestInFlightRef.current.has(nodeKey)) {
             return;
         }
 
-        dispatch({
-            type: "ProgressLoaded",
-            progress: estimated.value,
-            location,
-            exclude: [...exactNames, ...toggledNames],
-        });
+        const indexesToggledSinceStart = trackIndexesToggledSinceNow(nodeKey);
+        const exactNamesToApply = () => exactNames.filter((x) => !indexesToggledSinceStart().includes(x));
 
-        dispatch({
-            type: "ProgressLoaded",
-            progress: exact.value,
-            location,
-            scope: exactNamesToApply,
-        });
+        try {
+            const progress = await getExactProgress(location, exactNames);
+
+            dispatch({
+                type: "ProgressLoaded",
+                progress,
+                location,
+                scope: exactNamesToApply(),
+            });
+        } catch (e) {
+            // fall back to the estimated counts, so the failing exact request is not repeated on every refresh
+            exactNamesToApply().forEach((name) => setExactProgress(name, false));
+            messagePublisher.reportError("Failed to get exact index progress", e?.responseText);
+        }
     };
 
     const fetchSingleIndexProgress = async (
@@ -265,16 +259,18 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
         location: databaseLocationSpecifier,
         exact: boolean
     ) => {
-        // keyed per index, so it does not supersede the periodic refresh of the other indexes on the node,
-        // but a periodic refresh started later already uses the requested accuracy and supersedes it
+        // keyed per index, so it does not supersede the periodic refresh of the other indexes on the node
         const nodeKey = locationKey(location);
         const isLatestIndexRequest = startProgressRequest(`${nodeKey}/${index.name}`);
         const nodeRequestId = progressRequestIdsRef.current.get(nodeKey);
+        // an estimated periodic refresh started later is newer, while an exact index is excluded from it
         const isLatestRequest = () =>
-            isLatestIndexRequest() && progressRequestIdsRef.current.get(nodeKey) === nodeRequestId;
+            isLatestIndexRequest() && (exact || progressRequestIdsRef.current.get(nodeKey) === nodeRequestId);
 
         try {
-            const progress = await indexesService.getProgress(db.name, location, [index.name], exact);
+            const progress = exact
+                ? await getExactProgress(location, [index.name])
+                : await indexesService.getProgress(db.name, location, [index.name], false);
 
             if (!isLatestRequest()) {
                 return;
@@ -346,7 +342,10 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
 
     const throttledProgressRefresh = useRef(
         _.throttle(() => {
-            locations.forEach((location) => fetchProgress(location));
+            locations.forEach((location) => {
+                fetchProgress(location);
+                fetchExactProgress(location);
+            });
         }, 10_000)
     );
 
