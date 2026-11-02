@@ -1820,6 +1820,34 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         Assert.Equal(1, read.Counts["a"]);
     }
 
+    private class HoldsDates
+    {
+        public DateTime When { get; set; }
+
+        public DateTime? MaybeWhen { get; set; }
+
+        public DateTimeOffset At { get; set; }
+
+        public DateTimeOffset? MaybeAt { get; set; }
+    }
+
+    [RavenTheory(RavenTestCategory.ClientApi)]
+    [InlineData(nameof(HoldsDates.When))]
+    [InlineData(nameof(HoldsDates.MaybeWhen))]
+    [InlineData(nameof(HoldsDates.At))]
+    [InlineData(nameof(HoldsDates.MaybeAt))]
+    public void SystemTextJsonRejectsUnparseableDatesLikeNewtonsoft(string member)
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory($"{{\"{member}\":\"2026-01-02\"}}", "dates"))
+        {
+            Assert.ThrowsAny<Exception>(() => Newtonsoft.Serialization.DefaultConverter.FromBlittable<HoldsDates>(json));
+
+            var exception = Assert.ThrowsAny<Exception>(() => SystemTextJson.Serialization.DefaultConverter.FromBlittable<HoldsDates>(json));
+            Assert.Contains("2026-01-02", exception.ToString());
+        }
+    }
+
     private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())

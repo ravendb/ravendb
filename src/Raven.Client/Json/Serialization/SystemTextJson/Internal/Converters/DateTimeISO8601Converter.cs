@@ -34,6 +34,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             return NullableDateTimeOffsetConverterInner.Instance;
         }
 
+        private static void ThrowUnparseable(string value, Type type) =>
+            throw new JsonException($"The JSON value '{value}' could not be converted to {type}.");
+
         private sealed class DateTimeConverterInner : JsonConverter<DateTime>
         {
             public static readonly DateTimeConverterInner Instance = new();
@@ -53,6 +56,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                     DateTime lucene = LuceneDateTimeConverter.TryParseLucene(s);
                     if (lucene != default)
                         return DateTime.SpecifyKind(lucene, DateTimeKind.Local);
+
+                    ThrowUnparseable(s, typeToConvert);
                 }
 
                 return default;
@@ -88,6 +93,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                     DateTime lucene = LuceneDateTimeConverter.TryParseLucene(s);
                     if (lucene != default)
                         return DateTime.SpecifyKind(lucene, DateTimeKind.Local);
+
+                    ThrowUnparseable(s, typeToConvert);
                 }
 
                 return null;
@@ -123,6 +130,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                     DateTime lucene = LuceneDateTimeConverter.TryParseLucene(s);
                     if (lucene != default)
                         return new DateTimeOffset(lucene, DateTimeOffset.Now.Offset);
+
+                    ThrowUnparseable(s, typeToConvert);
                 }
 
                 return default;
@@ -152,6 +161,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                     DateTime lucene = LuceneDateTimeConverter.TryParseLucene(s);
                     if (lucene != default)
                         return new DateTimeOffset(lucene, DateTimeOffset.Now.Offset);
+
+                    ThrowUnparseable(s, typeToConvert);
                 }
 
                 return null;
