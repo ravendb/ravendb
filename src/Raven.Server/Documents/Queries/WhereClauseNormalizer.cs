@@ -9,8 +9,9 @@ namespace Raven.Server.Documents.Queries;
 /// Rewrites a where clause once, when its query metadata is built, so every request sharing the cached query text gets
 /// the cheaper shape: a lower and an upper bound on the same field become one <see cref="BetweenExpression"/> regardless
 /// of how the 'and' chain is nested or parenthesized, duplicated bounds are dropped, literal bounds of one kind in the same
-/// direction keep only the tighter one, and same-direction bounds whose values are parameters are moved next to each other
-/// so the query builders can keep the tighter one once the values are known. Only the structure is looked at, never a parameter
+/// direction keep only the tighter one, and the bounds on a field whose values are parameters are moved next to each other,
+/// and next to the between the pair folded into, so the query builders can keep the tighter ones once the values are known.
+/// Only the structure is looked at, never a parameter
 /// value, because the cached metadata serves requests with different parameter values. The input tree is never mutated
 /// and unchanged subtrees come back as the same instances.
 /// </summary>
@@ -89,7 +90,7 @@ public static class WhereClauseNormalizer
         changed |= DropDuplicateBounds(operands);
         changed |= MergeLiteralBoundsInTheSameDirection(operands);
         changed |= FoldOppositeBoundsIntoBetween(operands);
-        changed |= GroupBoundsInTheSameDirection(operands);
+        changed |= GroupBoundsOnTheSameField(operands);
 
         if (changed == false)
         {
@@ -211,24 +212,26 @@ public static class WhereClauseNormalizer
         return changed;
     }
 
-    // same-direction bounds with parameter values are placed next to each other, so the query builders, which know the
-    // values, find them as adjacent siblings and keep the tighter one
-    private static bool GroupBoundsInTheSameDirection(List<QueryExpression> operands)
+    // the bounds on a field with parameter values are placed next to each other, so the query builders, which know the
+    // values, find them as adjacent siblings and keep the tighter ones: a bound gathers the same-direction bounds behind it,
+    // and a between the pair folded into gathers the bounds of either direction and the other betweens on its field
+    private static bool GroupBoundsOnTheSameField(List<QueryExpression> operands)
     {
         var changed = false;
         for (var i = 0; i < operands.Count; i++)
         {
-            if (IsBound(operands[i], out var first) == false)
+            if (TryGetAnchor(operands[i], out var field, out var direction) == false)
                 continue;
 
             var insertAt = i + 1;
             for (var j = i + 1; j < operands.Count; j++)
             {
-                if (IsBound(operands[j], out var other) == false || OnSameField(first, other) == false || first.IsGreaterThan != other.IsGreaterThan)
+                if (Gathers(field, direction, operands[j]) == false)
                     continue;
 
                 if (j != insertAt)
                 {
+                    var other = operands[j];
                     operands.RemoveAt(j);
                     operands.Insert(insertAt, other);
                     changed = true;
@@ -239,6 +242,38 @@ public static class WhereClauseNormalizer
         }
 
         return changed;
+    }
+
+    private static bool TryGetAnchor(QueryExpression expression, out QueryExpression field, out bool? isGreaterThan)
+    {
+        switch (expression)
+        {
+            case BinaryExpression bound when QueryBuilderHelper.IsRangeBound(bound):
+                field = bound.Left;
+                isGreaterThan = bound.IsGreaterThan;
+                return true;
+            case BetweenExpression { Folded: true } between:
+                field = between.Source;
+                isGreaterThan = null;
+                return true;
+            default:
+                field = null;
+                isGreaterThan = null;
+                return false;
+        }
+    }
+
+    private static bool Gathers(QueryExpression field, bool? isGreaterThan, QueryExpression candidate)
+    {
+        switch (candidate)
+        {
+            case BinaryExpression bound when QueryBuilderHelper.IsRangeBound(bound):
+                return QueryBuilderHelper.IsSameField(field, bound.Left) && (isGreaterThan == null || isGreaterThan == bound.IsGreaterThan);
+            case BetweenExpression { Folded: true } between:
+                return isGreaterThan == null && QueryBuilderHelper.IsSameField(field, between.Source);
+            default:
+                return false;
+        }
     }
 
     private static bool IsBound(QueryExpression expression, out BinaryExpression bound)
