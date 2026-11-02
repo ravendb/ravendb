@@ -1967,6 +1967,26 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class HoldsVersion
+    {
+        public Version Value { get; set; }
+    }
+
+    [RavenTheory(RavenTestCategory.ClientApi)]
+    [InlineData("\"1.2.3.4\"", "1.2.3.4")]
+    [InlineData("{\"Major\":1,\"Minor\":2,\"Build\":3,\"Revision\":4,\"MajorRevision\":0,\"MinorRevision\":4}", "1.2.3.4")]
+    [InlineData("{\"Major\":1,\"Minor\":2,\"Build\":3,\"Revision\":-1,\"MajorRevision\":-1,\"MinorRevision\":-1}", "1.2.3")]
+    [InlineData("{\"Major\":1,\"Minor\":2,\"Build\":-1,\"Revision\":-1,\"MajorRevision\":-1,\"MinorRevision\":-1}", "1.2")]
+    public void SystemTextJsonReadsVersionsWrittenAsStringsAndAsNetFrameworkNewtonsoftObjects(string value, string expected)
+    {
+        var written = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new HoldsVersion { Value = Version.Parse(expected) });
+        Assert.Equal(Version.Parse(expected), written.Value);
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory($"{{\"Value\":{value}}}", "version"))
+            Assert.Equal(Version.Parse(expected), SystemTextJson.Serialization.DefaultConverter.FromBlittable<HoldsVersion>(json).Value);
+    }
+
     private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())
