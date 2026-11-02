@@ -1879,6 +1879,59 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class ReadOnlyFields
+    {
+        [JsonProperty]
+        public readonly int Marked;
+
+        public readonly int Unmarked;
+
+        public ReadOnlyFields()
+        {
+        }
+
+        public ReadOnlyFields(int marked, int unmarked)
+        {
+            Marked = marked;
+            Unmarked = unmarked;
+        }
+    }
+
+    [DataContract]
+    private class ContractReadOnlyField
+    {
+        [DataMember]
+        public readonly string Name;
+
+        public ContractReadOnlyField()
+        {
+        }
+
+        public ContractReadOnlyField(string name)
+        {
+            Name = name;
+        }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonSetsReadOnlyFieldsWithMemberAttributesLikeNewtonsoft()
+    {
+        var fields = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new ReadOnlyFields(5, 6));
+        Assert.Equal(5, fields.Marked);
+        Assert.Equal(0, fields.Unmarked);
+
+        var contract = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new ContractReadOnlyField("name"));
+        Assert.Equal("name", contract.Name);
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Marked\":5,\"Unmarked\":6}", "fields"))
+        {
+            var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<ReadOnlyFields>(json);
+            Assert.Equal(expected.Marked, fields.Marked);
+            Assert.Equal(expected.Unmarked, fields.Unmarked);
+        }
+    }
+
     private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())

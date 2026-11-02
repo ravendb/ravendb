@@ -168,6 +168,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             SetupNonPublicConstructor(typeInfo);
             SetupUnboundParameterizedConstructor(typeInfo);
             PopulateReadOnlyMembers(typeInfo);
+            ApplyNewtonsoftReadOnlyFieldSetters(typeInfo);
             SetupIdentityPropertyConditionalSerialization(typeInfo);
             ApplyNewtonsoftMemberOrder(typeInfo);
             ApplyNewtonsoftNullValueHandling(typeInfo);
@@ -490,12 +491,27 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
                 bool serialized = memberSerialization == NewtonsoftMemberSerializationFields
                     ? member is FieldInfo
-                    : (member.IsDefined(typeof(DataMemberAttribute), inherit: true) && HasDataContract(member.DeclaringType)) ||
-                      GetNewtonsoftAttribute(member, NewtonsoftJsonPropertyAttributeName) != null ||
-                      GetNewtonsoftAttribute(member, NewtonsoftJsonRequiredAttributeName) != null;
+                    : HasNewtonsoftMemberAttribute(member);
 
                 if (serialized == false)
                     typeInfo.Properties.RemoveAt(i);
+            }
+        }
+
+        private static bool HasNewtonsoftMemberAttribute(MemberInfo member)
+        {
+            return (member.IsDefined(typeof(DataMemberAttribute), inherit: true) && HasDataContract(member.DeclaringType)) ||
+                   GetNewtonsoftAttribute(member, NewtonsoftJsonPropertyAttributeName) != null ||
+                   GetNewtonsoftAttribute(member, NewtonsoftJsonRequiredAttributeName) != null;
+        }
+
+        private static void ApplyNewtonsoftReadOnlyFieldSetters(JsonTypeInfo typeInfo)
+        {
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                JsonPropertyInfo property = typeInfo.Properties[i];
+                if (property.Set == null && property.AttributeProvider is FieldInfo { IsInitOnly: true } field && HasNewtonsoftMemberAttribute(field))
+                    property.Set = field.SetValue;
             }
         }
 
