@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import classNames from "classnames";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
@@ -208,7 +209,15 @@ export default function DocumentRefresh() {
                                                             />
                                                         </div>
                                                     </div>
-                                                    <div className="d-flex flex-wrap align-items-center column-gap-1 mt-1 small">
+                                                    <div
+                                                        className={classNames(
+                                                            "d-flex flex-wrap align-items-center column-gap-1 mt-1 small",
+                                                            {
+                                                                "item-disabled pe-none":
+                                                                    !formValues.isDocumentRefreshEnabled,
+                                                            }
+                                                        )}
+                                                    >
                                                         {isLimitWarningVisible && !formState.errors.refreshFrequency ? (
                                                             <span className="text-danger">
                                                                 <Icon icon="warning" />
@@ -224,7 +233,15 @@ export default function DocumentRefresh() {
                                                                 />
                                                             </span>
                                                         )}
-                                                        <a href={appUrl.forAbout()}>{t("seeFullComparison")}</a>
+                                                        <a
+                                                            href={appUrl.forAbout()}
+                                                            aria-disabled={!formValues.isDocumentRefreshEnabled}
+                                                            tabIndex={
+                                                                formValues.isDocumentRefreshEnabled ? undefined : -1
+                                                            }
+                                                        >
+                                                            {t("seeFullComparison")}
+                                                        </a>
                                                     </div>
                                                 </div>
                                             ) : (

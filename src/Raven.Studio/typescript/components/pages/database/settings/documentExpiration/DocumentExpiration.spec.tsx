@@ -156,6 +156,22 @@ describe("DocumentExpiration", () => {
         expect(screen.queryByText(licenseLimitWarning)).not.toBeInTheDocument();
     });
 
+    it("disables the plan comparison link while Document Expiration is turned off", async () => {
+        const { screen, fireClick } = rtlRender(<LicenseRestricted />);
+
+        const documentExpirationSwitch = await screen.findByRole("checkbox", { name: "Enable Document Expiration" });
+        const comparisonLink = screen.getByRole("link", { name: "See full comparison" });
+        expect(comparisonLink).not.toHaveAttribute("aria-disabled", "true");
+
+        await fireClick(documentExpirationSwitch);
+        expect(comparisonLink).toHaveAttribute("aria-disabled", "true");
+        expect(comparisonLink).toHaveAttribute("tabindex", "-1");
+
+        await fireClick(documentExpirationSwitch);
+        expect(comparisonLink).not.toHaveAttribute("aria-disabled", "true");
+        expect(comparisonLink).not.toHaveAttribute("tabindex");
+    });
+
     it("blocks saving while the frequency is below the license minimum", async () => {
         const { screen, user } = rtlRender(<LicenseRestricted />);
 

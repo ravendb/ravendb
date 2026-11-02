@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import classNames from "classnames";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
@@ -204,7 +205,15 @@ export default function DocumentExpiration() {
                                                             />
                                                         </div>
                                                     </div>
-                                                    <div className="d-flex flex-wrap align-items-center column-gap-1 mt-1 small">
+                                                    <div
+                                                        className={classNames(
+                                                            "d-flex flex-wrap align-items-center column-gap-1 mt-1 small",
+                                                            {
+                                                                "item-disabled pe-none":
+                                                                    !formValues.isDocumentExpirationEnabled,
+                                                            }
+                                                        )}
+                                                    >
                                                         {isLimitWarningVisible && !formState.errors.deleteFrequency ? (
                                                             <span className="text-danger">
                                                                 <Icon icon="warning" />
@@ -216,7 +225,15 @@ export default function DocumentExpiration() {
                                                                 <strong>{minPeriodForExpirationInHours} hours</strong>.
                                                             </span>
                                                         )}
-                                                        <a href={appUrl.forAbout()}>See full comparison</a>
+                                                        <a
+                                                            href={appUrl.forAbout()}
+                                                            aria-disabled={!formValues.isDocumentExpirationEnabled}
+                                                            tabIndex={
+                                                                formValues.isDocumentExpirationEnabled ? undefined : -1
+                                                            }
+                                                        >
+                                                            See full comparison
+                                                        </a>
                                                     </div>
                                                 </div>
                                             ) : (
