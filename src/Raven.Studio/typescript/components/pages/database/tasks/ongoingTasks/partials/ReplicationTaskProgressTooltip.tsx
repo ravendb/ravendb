@@ -7,6 +7,7 @@ import { NodeInfoFailure } from "components/pages/database/tasks/ongoingTasks/pa
 import { loadStatus } from "components/models/common";
 import { Icon } from "components/common/Icon";
 import Button from "react-bootstrap/Button";
+import { CalculateExactProgressLink } from "components/pages/database/tasks/ongoingTasks/partials/CalculateExactProgressLink";
 
 interface ReplicationTaskProgressTooltipProps {
     target: HTMLElement;
@@ -16,6 +17,8 @@ interface ReplicationTaskProgressTooltipProps {
     sourceDatabaseChangeVector: string;
     lastAcceptedChangeVectorFromDestination: string;
     toggleErrorModal: () => void;
+    calculateExact: () => void;
+    isCalculatingExact: boolean;
 }
 
 export function ReplicationTaskProgressTooltip(props: ReplicationTaskProgressTooltipProps) {
@@ -27,6 +30,8 @@ export function ReplicationTaskProgressTooltip(props: ReplicationTaskProgressToo
         sourceDatabaseChangeVector,
         lastAcceptedChangeVectorFromDestination,
         toggleErrorModal,
+        calculateExact,
+        isCalculatingExact,
     } = props;
 
     if (status === "failure") {
@@ -98,6 +103,9 @@ export function ReplicationTaskProgressTooltip(props: ReplicationTaskProgressToo
                             </div>
                         );
                     })}
+                {progress?.some((x) => x.estimated) && (
+                    <CalculateExactProgressLink isCalculating={isCalculatingExact} calculate={calculateExact} />
+                )}
             </div>
         </PopoverWithHover>
     );
