@@ -17,7 +17,8 @@ import { useEventsCollector } from "hooks/useEventsCollector";
 import { tryHandleSubmit } from "components/utils/common";
 import { AboutViewHeading } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { FormDurationPicker, FormGroup, FormInput, FormSwitch } from "components/common/Form";
+import { FormDurationPicker, FormGroup, FormSwitch } from "components/common/Form";
+import { getDefaultDurationPlaceholder, overriddenDurationPlaceholder } from "components/common/DurationPicker";
 import OverridableField from "components/common/OverridableField";
 import { RevisionsBinCleanerInfoHub } from "components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleanerInfoHub";
 import { LoadingView } from "components/common/LoadingView";
@@ -28,6 +29,8 @@ import { revisionsBinCleanerUtils } from "components/pages/database/settings/rev
 import { Icon } from "components/common/Icon";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import Form from "react-bootstrap/Form";
+
+const defaultCleanerFrequencyPlaceholder = getDefaultDurationPlaceholder(300);
 
 export default function RevisionsBinCleaner() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -158,29 +161,35 @@ export default function RevisionsBinCleaner() {
                                                 </FormGroup>
                                             </div>
                                         </Collapse>
-                                        <OverridableField
-                                            control={control}
-                                            overrideName="isCleanerFrequencyInSecEnabled"
-                                            valueName="cleanerFrequencyInSec"
-                                            setValue={setValue}
-                                            label="Cleaner frequency"
-                                            disabled={
-                                                !hasDatabaseAdminAccess ||
-                                                formState.isSubmitting ||
-                                                !formValues.isRevisionsBinCleanerEnabled
-                                            }
-                                        >
-                                            {({ isDisabled }) => (
-                                                <FormInput
-                                                    name="cleanerFrequencyInSec"
-                                                    control={control}
-                                                    type="number"
-                                                    disabled={isDisabled}
-                                                    placeholder="Default (300)"
-                                                    addon="seconds"
-                                                />
-                                            )}
-                                        </OverridableField>
+                                        <div className="align-self-start mw-100">
+                                            <OverridableField
+                                                control={control}
+                                                overrideName="isCleanerFrequencyInSecEnabled"
+                                                valueName="cleanerFrequencyInSec"
+                                                setValue={setValue}
+                                                label="Cleaner frequency"
+                                                disabled={
+                                                    !hasDatabaseAdminAccess ||
+                                                    formState.isSubmitting ||
+                                                    !formValues.isRevisionsBinCleanerEnabled
+                                                }
+                                            >
+                                                {({ isOverridden, isDisabled, labelId }) => (
+                                                    <FormDurationPicker
+                                                        name="cleanerFrequencyInSec"
+                                                        control={control}
+                                                        disabled={isDisabled}
+                                                        aria-labelledby={labelId}
+                                                        placeholder={
+                                                            isOverridden
+                                                                ? overriddenDurationPlaceholder
+                                                                : defaultCleanerFrequencyPlaceholder
+                                                        }
+                                                        showSeconds
+                                                    />
+                                                )}
+                                            </OverridableField>
+                                        </div>
                                     </Card.Body>
                                 </Card>
                             </Col>

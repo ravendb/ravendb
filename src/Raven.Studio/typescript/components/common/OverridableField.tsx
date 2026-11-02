@@ -17,6 +17,7 @@ import FieldLabel from "components/common/FieldLabel";
 import { Icon } from "components/common/Icon";
 import { PopoverWithHoverProps } from "components/common/PopoverWithHover";
 import useUniqueId from "components/hooks/useUniqueId";
+import { useStudioTranslation } from "hooks/useStudioTranslation";
 import "./OverridableField.scss";
 
 export interface OverridableFieldRenderState {
@@ -63,6 +64,7 @@ export default function OverridableField<
     optimalValueLabel = String(optimalValue),
     optimalValueHint,
 }: OverridableFieldProps<TFieldValues, TOverrideName, TValueName>) {
+    const t = useStudioTranslation("overridableField");
     const isOverrideOn = !!useWatch({ control, name: overrideName });
     const value = useWatch({ control, name: valueName });
     const isOverridden = value != null && value !== "";
@@ -78,7 +80,9 @@ export default function OverridableField<
         }
 
         setValue(overrideName, isOverridden as PathValue<TFieldValues, TOverrideName>);
-        setValue(valueName, value, { shouldValidate: true });
+        setValue(valueName, isOverridden ? value : (null as PathValue<TFieldValues, TValueName>), {
+            shouldValidate: true,
+        });
     }, [isOverrideOn, isOverridden, value, overrideName, valueName, setValue]);
 
     const changeValue = (newValue: PathValue<TFieldValues, TValueName>) => {
@@ -98,7 +102,7 @@ export default function OverridableField<
                     </FieldLabel>
                     {isOptimal && (
                         <Badge bg="faded-primary" pill>
-                            Optimal
+                            {t("optimal")}
                         </Badge>
                     )}
                 </div>
@@ -106,30 +110,30 @@ export default function OverridableField<
                     <Button
                         variant="link"
                         size="sm"
-                        className="overridable-field-action"
+                        className="p-0 border-0"
                         onClick={() => changeValue(null as PathValue<TFieldValues, TValueName>)}
                         disabled={isSubmitting}
                         aria-describedby={labelId}
                     >
                         <Icon icon="reset" />
-                        Reset to default
+                        {t("resetToDefault")}
                     </Button>
                 )}
             </div>
             <div className={classNames({ "overridable-field-has-hint": isOptimalSuggested })}>
                 {children({ isOverridden, isDisabled: disabled, controlId, labelId })}
                 {isOptimalSuggested && (
-                    <div className="overridable-field-hint">
-                        <span>{optimalValueHint ?? `Optimal value: ${optimalValueLabel}.`}</span>
+                    <div className="overridable-field-hint column-gap-1 font-size-10 line-height-12">
+                        <span>{optimalValueHint ?? t("optimalValueHint", { value: optimalValueLabel })}</span>
                         <Button
                             variant="link"
                             size="sm"
-                            className="overridable-field-action overridable-field-use-optimal"
+                            className="overridable-field-use-optimal p-0 border-0"
                             onClick={() => changeValue(optimalValue)}
                             disabled={isSubmitting}
                             aria-describedby={labelId}
                         >
-                            Use {optimalValueLabel}
+                            {t("useOptimalValue", { value: optimalValueLabel })}
                         </Button>
                     </div>
                 )}

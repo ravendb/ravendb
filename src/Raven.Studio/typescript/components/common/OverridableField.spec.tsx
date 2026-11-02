@@ -110,6 +110,53 @@ describe("OverridableField", () => {
         expect(within(durationPicker).getByRole("spinbutton", { name: "Seconds" })).toHaveValue(0);
     });
 
+    it("goes back to the default when every duration part is cleared", async () => {
+        const { screen, user } = rtlRender(<States />);
+
+        const durationPicker = await screen.findByRole("group", { name: "Duration" });
+        for (const part of within(durationPicker).getAllByRole("spinbutton")) {
+            await user.clear(part);
+        }
+
+        expect(screen.queryByRole("button", { name: "Reset to default", description: "Duration" })).toBeNull();
+    });
+
+    it.each([
+        ["-5", "Please enter positive number"],
+        ["1.5", "Please enter integer number"],
+    ])("rejects a duration part of %s even when the total is positive", async (minutes, message) => {
+        const { screen, user } = rtlRender(<States />);
+
+        const durationPicker = await screen.findByRole("group", { name: "Duration" });
+        const minutesInput = within(durationPicker).getByRole("spinbutton", { name: "Minutes" });
+        await user.clear(minutesInput);
+        await user.type(minutesInput, minutes);
+
+        expect(await screen.findByText(message)).toBeInTheDocument();
+
+        await user.clear(minutesInput);
+        await user.type(minutesInput, "5");
+
+        expect(screen.queryByText(message)).toBeNull();
+        expect(within(durationPicker).getByRole("spinbutton", { name: "Hours" })).toHaveValue(1);
+    });
+
+    it("switches the message when a negative part becomes a fraction", async () => {
+        const { screen, user } = rtlRender(<States />);
+
+        const durationPicker = await screen.findByRole("group", { name: "Duration" });
+        const minutesInput = within(durationPicker).getByRole("spinbutton", { name: "Minutes" });
+        await user.clear(minutesInput);
+        await user.type(minutesInput, "-5");
+        expect(await screen.findByText("Please enter positive number")).toBeInTheDocument();
+
+        await user.clear(minutesInput);
+        await user.type(minutesInput, "0.5");
+
+        expect(await screen.findByText("Please enter integer number")).toBeInTheDocument();
+        expect(screen.queryByText("Please enter positive number")).toBeNull();
+    });
+
     it("suggests the optimal value while it is not in use", async () => {
         const { screen } = rtlRender(<States />);
 

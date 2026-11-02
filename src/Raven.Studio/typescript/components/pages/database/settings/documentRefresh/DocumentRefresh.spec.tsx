@@ -2,6 +2,7 @@ import React from "react";
 import { composeStories } from "@storybook/react-webpack5";
 import { within } from "@testing-library/dom";
 import { rtlRender } from "test/rtlTestUtils";
+import appUrl from "common/appUrl";
 import * as stories from "./DocumentRefresh.stories";
 
 const { DefaultDocumentRefresh, LicenseRestricted, InitialDocumentRefresh } = composeStories(stories);
@@ -94,7 +95,7 @@ describe("DocumentRefresh", () => {
         expect(within(durationPicker).getByRole("spinbutton", { name: "Minutes" })).toHaveValue(59);
         expect(within(durationPicker).getByRole("spinbutton", { name: "Seconds" })).toHaveValue(59);
         expect(screen.getByText(licenseLimitWarning)).toBeInTheDocument();
-        expect(screen.getByRole("link", { name: "Compare license plans" })).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "See full comparison" })).toHaveAttribute("href", appUrl.forAbout());
     });
 
     it("does not offer a reset to default on a limited license", async () => {
