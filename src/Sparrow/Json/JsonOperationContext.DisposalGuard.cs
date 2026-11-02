@@ -10,20 +10,16 @@ namespace Sparrow.Json
         private static DisposalGuard _activeDisposalGuard;
 
         /// <summary>
-        /// Until the returned scope is disposed, disposing (on the current thread) a context-owned object (<see cref="BlittableJsonReaderObject"/>,
-        /// <see cref="LazyStringValue"/>) that is owned by a context other than <paramref name="context"/>, or than a context that was allocated
-        /// (on the current thread) while the scope is active, is reported as an error.
-        /// <para>
-        /// This is meant for code that may be executed more than once with a different context each time (e.g. a transaction merger command),
-        /// where the objects that are allocated from the current context (or from a context that lives only during the current execution)
-        /// die with it anyway, while disposing an object that outlives the current execution (one that is owned by the caller) would break
-        /// the next execution.
-        /// </para>
-        /// <para>The verification is done in DEBUG builds only.</para>
+        /// DEBUG only: until the scope is disposed, disposing a blittable or a lazy string that is not owned by <paramref name="context"/>
+        /// (or by a context allocated during the scope) throws, since such an object outlives the current execution
         /// </summary>
         public static DisposalGuardScope RestrictDisposalTo(JsonOperationContext context, string description)
         {
+#if DEBUG
             return new DisposalGuardScope(new DisposalGuard(context, description));
+#else
+            return default;
+#endif
         }
 
         [Conditional("DEBUG")]
@@ -37,9 +33,7 @@ namespace Sparrow.Json
         }
 
         /// <summary>
-        /// Declares that the objects owned by <paramref name="context"/> may be disposed during the current guarded execution (on the current thread),
-        /// for a context that the execution deliberately allocates from and consumes (e.g. to let some output outlive the execution).
-        /// Has no effect when no disposal guard is active.
+        /// DEBUG only: the objects owned by <paramref name="context"/> may be disposed during the current guarded execution
         /// </summary>
         [Conditional("DEBUG")]
         public static void AllowDisposalFrom(JsonOperationContext context)
@@ -47,10 +41,6 @@ namespace Sparrow.Json
             _activeDisposalGuard?.Allow(context);
         }
 
-        /// <summary>
-        /// A context that is allocated while a disposal guard is active (on the current thread) lives only during the guarded execution,
-        /// so the objects that it owns may be disposed during it
-        /// </summary>
         [Conditional("DEBUG")]
         internal static void RegisterContextAllocation(JsonOperationContext context)
         {
@@ -103,7 +93,9 @@ namespace Sparrow.Json
 
             public void Dispose()
             {
+#if DEBUG
                 _activeDisposalGuard = _previous;
+#endif
             }
         }
     }

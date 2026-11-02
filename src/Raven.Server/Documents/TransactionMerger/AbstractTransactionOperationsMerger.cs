@@ -60,8 +60,6 @@ namespace Raven.Server.Documents.TransactionMerger
 
         private bool _initialized;
 
-        private const string DisposalGuardDescription = "the command is being executed by the transaction merger";
-
         internal TestingStuff ForTestingPurposes;
 
         internal TestingStuff ForTestingPurposesOnly()
@@ -74,15 +72,8 @@ namespace Raven.Server.Documents.TransactionMerger
 
         internal sealed class TestingStuff
         {
-            /// <summary>
-            /// Invoked after a command was executed as part of a merged transaction (not when the commands are re-executed independently).
-            /// Throwing from here simulates a failure of the merged transaction.
-            /// </summary>
             internal Action<MergedTransactionCommand<TOperationContext, TTransaction>> AfterExecutingCommandInMergedTransaction;
 
-            /// <summary>
-            /// When a merged transaction fails, re-execute its commands independently even when the transaction had a single command
-            /// </summary>
             internal bool RerunSingleCommandIndependentlyOnFailure;
         }
 
@@ -742,13 +733,7 @@ namespace Raven.Server.Documents.TransactionMerger
                 }
 
                 meter.IncrementCounter(1);
-
-                // the command may be executed again (with a different context) if this merged transaction fails,
-                // so it must not dispose anything that it doesn't own through the transaction context (verified in debug builds)
-                using (JsonOperationContext.RestrictDisposalTo(context, DisposalGuardDescription))
-                {
-                    meter.IncrementCommands(op.Execute(context, _recording.State));
-                }
+                meter.IncrementCommands(op.Execute(context, _recording.State));
 
                 ForTestingPurposes?.AfterExecutingCommandInMergedTransaction?.Invoke(op);
 
@@ -942,10 +927,7 @@ namespace Raven.Server.Documents.TransactionMerger
                                 {
                                     op.RetryOnError = false;
 
-                                    using (JsonOperationContext.RestrictDisposalTo(context, DisposalGuardDescription))
-                                    {
-                                        op.Execute(context, _recording.State);
-                                    }
+                                    op.Execute(context, _recording.State);
 
                                     _recording.State?.TryRecord(context, TxInstruction.Commit);
                                     tx.Commit();
