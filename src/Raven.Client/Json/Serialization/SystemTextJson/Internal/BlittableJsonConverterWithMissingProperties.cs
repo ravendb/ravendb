@@ -110,13 +110,18 @@ internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJ
     private bool RestoreObject(object instance, BlittableJsonReaderObject json)
     {
         bool modified = false;
-        if (MissingProperties.TryGetValue(instance, out Dictionary<object, object> missingProperties) && missingProperties.Count > 0)
+        if (MissingProperties.TryGetValue(instance, out Dictionary<object, object> missingProperties))
         {
-            json.Modifications ??= new DynamicJsonValue(json);
             foreach (KeyValuePair<object, object> missingProperty in missingProperties)
-                json.Modifications[(string)missingProperty.Key] = missingProperty.Value;
+            {
+                var name = (string)missingProperty.Key;
+                if (json.GetPropertyIndex(name) != -1)
+                    continue;
 
-            modified = true;
+                json.Modifications ??= new DynamicJsonValue(json);
+                json.Modifications[name] = missingProperty.Value;
+                modified = true;
+            }
         }
 
         Type type = instance.GetType();
