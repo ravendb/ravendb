@@ -47,7 +47,10 @@ export function getTurnOutcomes(activity: PlannerActivity[]): TurnOutcomes {
     };
 }
 
-/** A turn's steps, each collection once: where it first came up, as its latest frame left it. */
+/**
+ * A turn's steps, each collection once: where it first came up, as its latest frame left it. Notes are not
+ * steps: they say what the planner is doing now, so only the latest one shows, under the spinner.
+ */
 export function getActivityRows(activity: PlannerActivity[]): PlannerActivity[] {
     const latest = new Map<string, PlannerActivity>();
 
@@ -60,7 +63,7 @@ export function getActivityRows(activity: PlannerActivity[]): PlannerActivity[] 
     const shown = new Set<string>();
 
     return activity.flatMap((item) => {
-        if (item.type === "proposal") {
+        if (item.type === "proposal" || item.type === "note") {
             return [];
         }
 
@@ -75,6 +78,19 @@ export function getActivityRows(activity: PlannerActivity[]): PlannerActivity[] 
         shown.add(item.collection);
         return [latest.get(item.collection) ?? item];
     });
+}
+
+export function getLatestNote(activity: PlannerActivity[]): string | null {
+    return activity.findLast((item) => item.type === "note")?.text ?? null;
+}
+
+/** A working turn shows its latest note under the spinner, so a note alone is enough for the card then. */
+export function hasActivityToShow(turn: PlannerReplyTurn): boolean {
+    if (turn.status === "working" && getLatestNote(turn.activity) !== null) {
+        return true;
+    }
+
+    return getActivityRows(turn.activity).length > 0;
 }
 
 export function getRegisteredOutcome(version: number): "built" | "updated" {

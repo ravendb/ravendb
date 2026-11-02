@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Text } from "@/components/typography";
 import { formatCount } from "@/lib/format";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
+import { getLatestNote } from "@/pages/setup/add-app-wizard/steps/map/chat/planner-activity";
 import {
     ActivityRowLayout,
     DoneIcon,
@@ -29,7 +30,7 @@ export function PlannerOpeningProgress({ turn }: { turn: PlannerReplyTurn }) {
     const proposalIndex = turn.activity.findIndex((activity) => activity.type === "proposal");
     const hasProposal = proposalIndex !== -1;
     const activeStepActivity = hasProposal ? turn.activity.slice(proposalIndex + 1) : turn.activity;
-    const activeStepNote = activeStepActivity.findLast((activity) => activity.type === "note")?.text ?? null;
+    const activeStepNote = getLatestNote(activeStepActivity);
     const isSingleTable = tables.length === 1;
 
     return (

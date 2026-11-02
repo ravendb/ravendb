@@ -108,7 +108,7 @@ export function PlannerQuestions({
                 <Text variant="muted" as="span">
                     {questions.length === 1 ? `${asker} has a question` : `${asker} has ${questions.length} questions`}
                 </Text>
-                <Text variant="muted" as="span" className="ml-auto">
+                <Text variant="muted" as="span" className="ml-auto shrink-0 whitespace-nowrap">
                     {index + 1} of {questions.length}
                 </Text>
                 <div className="flex gap-0.5">

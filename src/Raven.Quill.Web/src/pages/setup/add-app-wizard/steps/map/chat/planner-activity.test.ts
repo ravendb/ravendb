@@ -4,8 +4,10 @@ import {
     describeWork,
     getActivityHeadline,
     getActivityRows,
+    getLatestNote,
     getSuggestedReplies,
     getTurnOutcomes,
+    hasActivityToShow,
 } from "@/pages/setup/add-app-wizard/steps/map/chat/planner-activity";
 import { createReplyTurn } from "@/pages/setup/add-app-wizard/steps/map/session/planner-frames";
 import type { PlannerActivity, PlannerReplyTurn } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
@@ -133,14 +135,48 @@ describe("describeWork", () => {
 
 describe("getActivityRows", () => {
     it("shows each collection once, where it first came up, as its latest frame left it", () => {
-        const note: PlannerActivity = { type: "note", text: "Read the DDL." };
+        const conventions: PlannerActivity = {
+            type: "conventions",
+            propertyCase: "CamelCase",
+            propertyLanguage: null,
+            notes: null,
+        };
         const retrying: PlannerActivity = { type: "transientError", collection: "Products", errors: ["x"] };
 
-        expect(getActivityRows([note, retrying, built("Orders"), failed("Products"), { type: "proposal" }])).toEqual([
-            note,
-            failed("Products"),
-            built("Orders"),
-        ]);
+        expect(
+            getActivityRows([conventions, retrying, built("Orders"), failed("Products"), { type: "proposal" }]),
+        ).toEqual([conventions, failed("Products"), built("Orders")]);
+    });
+
+    it("leaves notes out, as they are not steps", () => {
+        expect(getActivityRows([{ type: "note", text: "Read the DDL." }, built("Orders")])).toEqual([built("Orders")]);
+    });
+});
+
+describe("getLatestNote", () => {
+    it("takes the planner's latest note", () => {
+        expect(
+            getLatestNote([
+                { type: "note", text: "Read the DDL." },
+                built("Orders"),
+                { type: "note", text: "Fixing." },
+            ]),
+        ).toBe("Fixing.");
+        expect(getLatestNote([built("Orders")])).toBeNull();
+    });
+});
+
+describe("hasActivityToShow", () => {
+    const note: PlannerActivity = { type: "note", text: "Fixing the plan." };
+
+    it("counts a note only while the turn works, as it shows under the spinner", () => {
+        expect(hasActivityToShow(turn([note], "working"))).toBe(true);
+        expect(hasActivityToShow(turn([note]))).toBe(false);
+    });
+
+    it("counts the steps of a finished turn", () => {
+        expect(hasActivityToShow(turn([note, built("Orders")]))).toBe(true);
+        expect(hasActivityToShow(turn([{ type: "proposal" }]))).toBe(false);
     });
 });
 
