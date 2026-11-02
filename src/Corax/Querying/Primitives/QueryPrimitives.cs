@@ -55,6 +55,12 @@ public static class QueryPrimitives
         OrWithMatch(ctx.Searcher.AllEntries(), ref ctx.Bitmaps[bitmapSlot], ctx.OpLimit);
     }
 
+    public static void CtxSaveScoringGroup(Matches.CompiledQueryMatch ctx, int bitmapSlot, int groupIndex)
+    {
+        Array.Resize(ref ctx.ScoringGroups, Math.Max(groupIndex + 1, ctx.ScoringGroups?.Length ?? 0));
+        ctx.ScoringGroups[groupIndex] = ctx.Bitmaps[bitmapSlot].Clone();
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void CtxFillFromTreeScan(Matches.CompiledQueryMatch ctx, int paramIndex, int bitmapSlot)
     {
