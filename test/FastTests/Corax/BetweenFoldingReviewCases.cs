@@ -97,6 +97,24 @@ namespace FastTests.Corax
             Assert.Equal(new[] { "users/1", "users/2" }, QueryIds<User>(store, $"from Users where {where}"));
         }
 
+        // a hand-written between inside exact() queries the exact field of the auto index, as the comparisons do; the
+        // lower-case name falls outside an upper-case range only there
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData("exact(Age = 30 and Name between 'A' and 'C')", "users/1,users/2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("exact(Name between 'A' and 'M')", "users/1,users/2,users/3", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Name between 'A' and 'M'", "users/1,users/2,users/3,users/4", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ExactBetweenOnAutoIndexUsesTheExactField(Options options, string where, string expectedIds)
+        {
+            using var store = GetDocumentStore(options);
+            Store(store,
+                new User { Id = "users/1", Name = "Alice", Age = 30 },
+                new User { Id = "users/2", Name = "Bob", Age = 30 },
+                new User { Id = "users/3", Name = "Carl", Age = 30 },
+                new User { Id = "users/4", Name = "alice", Age = 30 });
+
+            Assert.Equal(expectedIds.Split(','), QueryIds<User>(store, $"from Users where {where}"));
+        }
+
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Lucene)]
         [RavenData("Company = 'companies/1' and OrderedAt >= $from and OrderedAt < $to", "2020-01-01T12:00:00.0000000", "2020-01-02T00:00:00.0000000", "orders/1", SearchEngineMode = RavenSearchEngineMode.Lucene)]
         [RavenData("Company = 'companies/1' and OrderedAt >= $from and OrderedAt < $to", "2020-01-03T05:00:00.0000000", "2020-01-01T03:00:00.0000000", "", SearchEngineMode = RavenSearchEngineMode.Lucene)]

@@ -532,6 +532,10 @@ namespace Raven.Server.Documents.Queries
                     }
                     else
                     {
+                        // as for a single comparison, an exact string range on an auto index queries the exact field
+                        if (exact && metadata.IsDynamic)
+                            luceneFieldName = AutoIndexField.GetExactAutoIndexFieldName(luceneFieldName);
+
                         var valueFirstAsString = QueryBuilderHelper.GetValueAsString(valueFirst);
                         var valueSecondAsString = QueryBuilderHelper.GetValueAsString(valueSecond);
                         betweenQuery = LuceneQueryHelper.Between(index, luceneFieldName, termType, valueFirstAsString, be.MinInclusive, valueSecondAsString,
