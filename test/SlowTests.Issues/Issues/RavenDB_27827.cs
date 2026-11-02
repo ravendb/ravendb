@@ -159,7 +159,27 @@ public class RavenDB_27827 : NoDisposalNeeded
         Assert.False(report.ForNode("A").Server.StorageIo.Devices.Single().LikelyDraining);
     }
 
-    private static StorageDeviceIoInfo Device(StorageDeviceStatus status, double drainShare, double latencyNow, Func<int, double> latencyOfSample)
+    [RavenFact(RavenTestCategory.Core)]
+    public void Analyzer_does_not_call_a_disk_the_bottleneck_while_the_server_says_it_keeps_up()
+    {
+        // bursts of 70 ms journal writes with idle intervals in between: never 10 minutes in a row above 50 ms, so the server status is OK
+        var a = Device(StorageDeviceStatus.Ok, drainShare: 0, latencyNow: 70, latencyOfSample: i => i % 4 == 3 ? null : 70);
+        a.StatusReason = "The disk keeps up with the writes.";
+        var b = Device(StorageDeviceStatus.Ok, drainShare: 0, latencyNow: 1, latencyOfSample: _ => 1);
+
+        using var package = ClusterPackage(new Dictionary<string, Dictionary<string, object>>
+        {
+            ["A"] = new() { ["server-wide/admin.storage.io.json"] = new StorageIoReport { Devices = [a], Environments = [], SharedJournals = [] } },
+            ["B"] = new() { ["server-wide/admin.storage.io.json"] = new StorageIoReport { Devices = [b], Environments = [], SharedJournals = [] } }
+        });
+
+        var report = new DebugPackageAnalyzer(package).Analyze();
+
+        Assert.DoesNotContain(report.ForNode("A").DetectedIssues.ServerIssues, x => x.Title.Contains("bottleneck"));
+        Assert.DoesNotContain(report.ClusterWideIssues.ClusterIssues, x => x.Title.Contains("held back by its disk"));
+    }
+
+    private static StorageDeviceIoInfo Device(StorageDeviceStatus status, double drainShare, double latencyNow, Func<int, double?> latencyOfSample)
     {
         var at = DateTime.UtcNow.AddHours(-1);
         var history = new List<StorageDeviceSample>();
