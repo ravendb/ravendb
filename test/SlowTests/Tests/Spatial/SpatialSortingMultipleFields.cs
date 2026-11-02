@@ -1,3 +1,5 @@
+using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -127,8 +129,23 @@ namespace SlowTests.Tests.Spatial
 
                 var terms = await store.Maintenance.SendAsync(new GetTermsOperation(index.IndexName, "Branches_spatial(centers)", fromValue: null));
 
-                Assert.Equal(new[] { "12 12", "5 40;10.5 10.5" }, terms.OrderBy(x => x));
+                var centers = terms.Select(DecodeCenters).OrderBy(x => x.Length).ToArray();
+
+                Assert.Equal(2, centers.Length);
+                Assert.Equal(new[] { (12d, 12d) }, centers[0]);
+                Assert.Equal(new[] { (5d, 40d), (10.5d, 10.5d) }, centers[1]);
             }
+        }
+
+        // every center is the 16 bytes of (latitude, longitude) as unpadded base64 (22 characters)
+        private static (double Latitude, double Longitude)[] DecodeCenters(string term)
+        {
+            Assert.Equal(0, term.Length % 22);
+
+            return term.Chunk(22)
+                .Select(chunk => Convert.FromBase64String(new string(chunk) + "=="))
+                .Select(bytes => (BinaryPrimitives.ReadDoubleLittleEndian(bytes), BinaryPrimitives.ReadDoubleLittleEndian(bytes.AsSpan(sizeof(double)))))
+                .ToArray();
         }
 
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Spatial | RavenTestCategory.Indexes)]
