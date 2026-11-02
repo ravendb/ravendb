@@ -79,6 +79,12 @@ namespace FastTests.Corax
         // The chain sits under an 'or'.
         private const string UnderOrShape = "CustomerId in ($p0) and CreatedAt >= $p1 and CreatedAt < $p2 and EntityType in ($p3) or CustomerId = 'customers/none'";
 
+        // The pair sits inside exact(), which wraps a where clause of its own.
+        private const string InsideExactShape = "CustomerId in ($p0) and exact(CreatedAt >= $p1 and CreatedAt < $p2) and EntityType in ($p3)";
+
+        // The pair sits inside boost(), nested the way the LINQ provider nests it.
+        private const string InsideBoostShape = "CustomerId in ($p0) and boost((EntityType in ($p3) and CreatedAt >= $p1) and CreatedAt < $p2, 2)";
+
         [RavenTheory(RavenTestCategory.Querying)]
         [InlineData(ClientShape, "AND[ AND[ CustomerId in ($p0) , CreatedAt between $p1 and $p2 ] , EntityType in ($p3) ]")]
         [InlineData(ProposedShape, "AND[ AND[ CustomerId in ($p0) , CreatedAt between $p1 and $p2 ] , EntityType in ($p3) ]")]
@@ -90,6 +96,8 @@ namespace FastTests.Corax
         // the second 'CreatedAt >= $p1' is the same bound twice and is dropped
         [InlineData(DuplicateDirectionShape, "AND[ AND[ CreatedAt between $p1 and $p2 , CustomerId in ($p0) ] , EntityType in ($p3) ]")]
         [InlineData(NegatedOperandShape, "AND[ AND[ CustomerId in ($p0) , CreatedAt between $p1 and $p2 ] , NOT[ EntityType = 'Withdrawal' ] ]")]
+        [InlineData(InsideExactShape, "AND[ AND[ CustomerId in ($p0) , exact( CreatedAt between $p1 and $p2 ) ] , EntityType in ($p3) ]")]
+        [InlineData(InsideBoostShape, "AND[ CustomerId in ($p0) , boost( AND[ EntityType in ($p3) , CreatedAt between $p1 and $p2 ] , 2 ) ]")]
         public void FoldRewritesAnyAndChainIntoBetween(string where, string expectedTree)
         {
             var query = Parse(where);
@@ -465,6 +473,8 @@ namespace FastTests.Corax
         [RavenData(SplitAcrossGroupsShape, SearchEngineMode = RavenSearchEngineMode.Corax)]
         [RavenData(NegatedOperandShape, SearchEngineMode = RavenSearchEngineMode.Corax)]
         [RavenData(UnderOrShape, SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(InsideExactShape, SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(InsideBoostShape, SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void CoraxRunsOneBoundedScanOnCreatedAtRegardlessOfShape(Options options, string where)
         {
             using (var store = GetDocumentStore(options))
@@ -504,6 +514,8 @@ namespace FastTests.Corax
         [RavenData(DuplicateDirectionShape, SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData(NegatedOperandShape, SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData(UnderOrShape, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(InsideExactShape, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(InsideBoostShape, SearchEngineMode = RavenSearchEngineMode.All)]
         public void FoldedQueriesKeepHalfOpenRangeSemantics(Options options, string where)
         {
             using (var store = GetDocumentStore(options))
@@ -832,6 +844,8 @@ namespace FastTests.Corax
                     return $"{Dump(between.Source)} between {Dump(between.Min)} and {Dump(between.Max)}";
                 case InExpression @in:
                     return $"{Dump(@in.Source)} in ({string.Join(", ", @in.Values.Select(Dump))})";
+                case MethodExpression method:
+                    return $"{method.Name}( {string.Join(" , ", method.Arguments.Select(Dump))} )";
                 case FieldExpression field:
                     return field.FieldValue;
                 case ValueExpression value:
