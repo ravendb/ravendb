@@ -1768,6 +1768,43 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private struct Coordinates
+    {
+        public int X { get; set; }
+
+        public int Y { get; set; }
+    }
+
+    private class HoldsNullableStruct
+    {
+        public Coordinates? Location { get; set; }
+
+        public Coordinates? Missing { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonWritesAndReadsNullableStructsLikeNewtonsoft()
+    {
+        var read = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new HoldsNullableStruct { Location = new Coordinates { X = 1, Y = 2 } });
+
+        Assert.Equal(2, read.Location?.Y);
+        Assert.Null(read.Missing);
+    }
+
+    private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(value, context))
+        using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(value, context))
+        {
+            JObject expectedJson = JObject.Parse(expected.ToString());
+            JObject actualJson = JObject.Parse(actual.ToString());
+            Assert.True(JToken.DeepEquals(expectedJson, actualJson), $"Expected {expectedJson} but got {actualJson}");
+
+            return SystemTextJson.Serialization.DefaultConverter.FromBlittable<T>(expected);
+        }
+    }
+
     private static DocumentConventions Newtonsoft { get; } = new() { Serialization = new NewtonsoftJsonSerializationConventions() };
 
     private static DocumentConventions SystemTextJson { get; } = new() { Serialization = new SystemTextJsonSerializationConventions() };

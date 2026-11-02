@@ -152,7 +152,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private void ModifyTypeInfo(JsonTypeInfo typeInfo)
         {
-            if (typeInfo.Kind != JsonTypeInfoKind.Object)
+            if (typeInfo.Kind != JsonTypeInfoKind.Object || Nullable.GetUnderlyingType(typeInfo.Type) != null)
                 return;
 
             bool isRecord = typeInfo.Type.IsRecord();
