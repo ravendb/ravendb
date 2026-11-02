@@ -1077,7 +1077,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             for (int i = 0; i < typeInfo.Properties.Count; i++)
             {
                 JsonPropertyInfo property = typeInfo.Properties[i];
-                if (property.CustomConverter != null)
+                if (property.CustomConverter != null || property.IsExtensionData)
                     continue;
 
                 JsonConverter converter = TypeNameConverter.TryCreate(property.PropertyType, _typeNameHandling, typeInfo.Options);
