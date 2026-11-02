@@ -321,9 +321,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                     await Task.WhenAll(new Task[] { errorReadTask, outputReadTask }).ConfigureAwait(false);
 
-                    Debug.Assert(process.HasExited, "Migrator is still running!");
+                    // the output streams can reach EOF before the process exit is observed
+                    await process.WaitForExitAsync().ConfigureAwait(false);
 
-                    if (process.ExitCode == -1)
+                    // on POSIX the exit code is truncated to a byte, so -1 is reported as 255
+                    if (process.ExitCode != 0)
                     {
                         await ExitWithException(errorReadTask, null).ConfigureAwait(false);
                     }
