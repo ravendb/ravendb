@@ -66,8 +66,7 @@ namespace Raven.Server.Documents
             public readonly BlittableJsonReaderArray DbIdsBlittableArray;
             public readonly List<LazyStringValue> DbIdsList;
 
-            // the db ids that were read from the local counter group are owned by this holder,
-            // the ones that are added later (from the source counter group) are owned by the caller
+            // only the db ids read from the local counter group are owned by the holder, the added ones belong to the source
             private readonly int _numberOfLocalDbIds;
 
             public DbIdsHolder(BlittableJsonReaderArray dbIds)
@@ -99,8 +98,6 @@ namespace Raven.Server.Documents
 
             public void Dispose()
             {
-                // the db ids that came from the source counter group must not be disposed here: they belong to the source data,
-                // which outlives this operation (e.g. a replication batch or a smuggler batch that the transaction merger may execute again)
                 for (var i = 0; i < _numberOfLocalDbIds; i++)
                 {
                     DbIdsList[i].Dispose();

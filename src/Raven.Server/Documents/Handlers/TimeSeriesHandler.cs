@@ -418,9 +418,6 @@ namespace Raven.Server.Documents.Handlers
 
                 _isDisposed = true;
 
-                // the items are owned by this command and must not be disposed from ExecuteCmd(),
-                // since the transaction merger may execute the same command instance more than once
-                // (e.g. when a merged transaction fails and the commands are re-executed independently)
                 foreach (var items in _deletedRanges.Values)
                 {
                     foreach (var item in items)

@@ -1468,9 +1468,7 @@ namespace Raven.Server.Rachis
             if (guid == RaftIdGenerator.DontCareId)
             {
                 var newGuid = $"DontCare/{term}-{lastIndex}";
-                // the original command is owned by the caller and will be used again if the transaction merger
-                // re-executes this command (e.g. when a merged transaction fails), so it must not be disposed here.
-                // the copy is only needed for the duration of this transaction, so it is allocated from its context
+                // the original is owned by the caller, only the copy belongs to this transaction
                 var original = cmd;
                 original.Modifications = new DynamicJsonValue { [nameof(CommandBase.UniqueRequestId)] = newGuid };
                 try

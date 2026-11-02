@@ -426,7 +426,6 @@ namespace Raven.Server.Documents.Handlers
             {
                 foreach (var toUpdate in _counterUpdates)
                 {
-                    // the document (and its data) belongs to the transaction context, there is no need to dispose it
                     UpdateDocumentCountersAfterImportBatch(context, toUpdate.Key, toUpdate.Value);
                 }
             }
@@ -470,9 +469,7 @@ namespace Raven.Server.Documents.Handlers
                     [CounterNames] = originalNames
                 };
 
-                // the counter group is owned by this command, so the fixed values must be allocated from the command's context
-                // (and not from the transaction context) since the command may be executed again with a different transaction context.
-                // the previous values are not disposed here, they will be released together with the command's context
+                // allocated from the command's context (not the transaction's), since it is kept by the command
                 counterGroup.Values = _context.ReadObject(counterGroup.Values, counterGroup.DocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             }
 
@@ -650,9 +647,6 @@ namespace Raven.Server.Documents.Handlers
 
                 _isDisposed = true;
 
-                // the counter groups are owned by this command and must not be disposed from ExecuteCmd(),
-                // since the transaction merger may execute the same command instance more than once
-                // (e.g. when a merged transaction fails and the commands are re-executed independently)
                 foreach (var cgd in _counterGroups)
                 {
                     cgd.Values?.Dispose();
